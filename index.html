@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dog Boarding Calendar</title>
-    <!-- Load FullCalendar style and logic scripts -->
     <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css" rel="stylesheet" />
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
     <style>
@@ -15,7 +14,7 @@
         .btn-add { display: block; width: 100%; box-sizing: border-box; text-align: center; background: #27ae60; color: white; padding: 14px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .btn-add:hover { background: #219653; }
         /* Style calendar events */
-        .fc-event { cursor: pointer; padding: 2px 5px; font-size: 13px; }
+        .fc-event { cursor: pointer; padding: 4px 6px; font-size: 13px; border: none !important; border-radius: 4px; font-weight: 500; }
     </style>
 </head>
 <body>
@@ -23,22 +22,21 @@
 <div class="container">
     <h2>🐾 Dog Boarding Calendar</h2>
     
-    <!-- 1. PASTE YOUR GOOGLE FORM URL HERE -->
     <a href="https://docs.google.com/forms/d/e/1FAIpQLScszSqsaxw9THyebWt2g0khVTIzP9L8hPbor1mUB0fp_0KPAw/viewform?usp=dialog" target="_blank" class="btn-add">+ Add New Booking</a>
     
     <div id="calendar"></div>
 </div>
 
 <script>
-    // 2. PASTE YOUR GOOGLE SHEET CSV URL HERE
-    const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT63UsPjcg3GB4lTB6cewLaTRS_yJP4kpOMSMsTTnvTw1Wbjn3CgtZc_c6li28ihjzkHnphFt0XcFTt/pub?gid=1639615540&single=true&output=csv';
+    // 2. PASTE YOUR GOOGLE SHEET CSV URL HERE (Make sure it ends with output=csv)
+    const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT63UsPjcg3GB41TB6cewLaTRS_yJP4kpOMSmsTTnvTwlWbjn3CgtZc_c6li28ihjzhNnphFt0XCFtt/pub?gid=1639615540&single=true&output=csv';
 
     document.addEventListener('DOMContentLoaded', function() {
         const calendarEl = document.getElementById('calendar');
         
         const calendar = new FullCalendar.Calendar(calendarEl, {
             initialView: 'dayGridMonth',
-            displayEventTime: false, // Hides timestamp on all-day bookings
+            displayEventTime: false, 
             headerToolbar: {
                 left: 'prev,next today',
                 center: 'title',
@@ -57,7 +55,6 @@
                     });
             },
             eventClick: function(info) {
-                // Displays complete information when a calendar bar is tapped
                 alert(
                     "🐶 Dog Name: " + info.event.title + "\n" +
                     "📋 Breed: " + info.event.extendedProps.breed + "\n" +
@@ -70,64 +67,79 @@
         calendar.render();
     });
 
-  // Helper function to turn spreadsheet rows into calendar items
-function parseCSVToEvents(csvText) {
-    const lines = csvText.split(/\r?\n/);
-    const events = [];
-
-    for (let i = 1; i < lines.length; i++) {
-        if (!lines[i].trim()) continue;
-        
-        const columns = lines[i].split(","); 
-        
-        const dogName = columns[1];
-        const breed = columns[2];
-        const startDate = columns[3];
-        const endDate = columns[4];
-        const ownerName = columns[5];
-        const phone = columns[6];
-
-        if (dogName && startDate) {
-            let startParsed = startDate.trim();
-            let endParsed = endDate ? endDate.trim() : startParsed;
-
-            // Convert D/M/YYYY or DD/MM/YYYY to YYYY-MM-DD
-            if (startParsed.includes('/')) {
-                const parts = startParsed.split('/');
-                if (parts[2]) {
-                    startParsed = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
-                }
-            }
-            if (endParsed.includes('/')) {
-                const parts = endParsed.split('/');
-                if (parts[2]) {
-                    endParsed = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
-                }
-            }
-
-            // FullCalendar treats end dates as exclusive. 
-            // To make a booking display through the final day correctly, add 1 day to the end date.
-            let finalEndDate = new Date(endParsed);
-            if (!isNaN(finalEndDate.getTime())) {
-                finalEndDate.setDate(finalEndDate.getDate() + 1);
-                endParsed = finalEndDate.toISOString().split('T')[0];
-            }
-
-            events.push({
-                title: dogName.trim(),
-                start: startParsed,
-                end: endParsed,
-                allDay: true,
-                extendedProps: {
-                    breed: breed ? breed.trim() : "Unknown",
-                    owner: ownerName ? ownerName.trim() : "N/A",
-                    phone: phone ? phone.trim() : "N/A"
-                }
-            });
+    // Generates a distinct pastel color based on text input string
+    function stringToColor(str) {
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+            hash = str.charCodeAt(i) + ((hash << 5) - hash);
         }
+        // Use HSL color formatting to keep colors bright, distinct, and pleasant (pastel-ish)
+        const hue = Math.abs(hash) % 360;
+        return `hsl(${hue}, 65%, 45%)`; 
     }
-    return events;
-}
+
+    // Helper function to turn spreadsheet rows into calendar items
+    function parseCSVToEvents(csvText) {
+        const lines = csvText.split(/\r?\n/);
+        const events = [];
+
+        for (let i = 1; i < lines.length; i++) {
+            if (!lines[i].trim()) continue;
+            
+            const columns = lines[i].split(","); 
+            
+            const dogName = columns[1];
+            const breed = columns[2];
+            const startDate = columns[3];
+            const endDate = columns[4];
+            const ownerName = columns[5];
+            const phone = columns[6];
+
+            if (dogName && startDate) {
+                let startParsed = startDate.trim();
+                let endParsed = endDate ? endDate.trim() : startParsed;
+
+                // Convert D/M/YYYY or DD/MM/YYYY to YYYY-MM-DD
+                if (startParsed.includes('/')) {
+                    const parts = startParsed.split('/');
+                    if (parts[2]) {
+                        startParsed = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+                    }
+                }
+                if (endParsed.includes('/')) {
+                    const parts = endParsed.split('/');
+                    if (parts[2]) {
+                        endParsed = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+                    }
+                }
+
+                // Adjust exclusive multi-day end date spacing
+                let finalEndDate = new Date(endParsed);
+                if (!isNaN(finalEndDate.getTime())) {
+                    finalEndDate.setDate(finalEndDate.getDate() + 1);
+                    endParsed = finalEndDate.toISOString().split('T')[0];
+                }
+
+                // Generate color dynamically using the dog's name
+                const eventColor = stringToColor(dogName.trim());
+
+                events.push({
+                    title: dogName.trim(),
+                    start: startParsed,
+                    end: endParsed,
+                    allDay: true,
+                    backgroundColor: eventColor,
+                    textColor: '#ffffff', // Ensures text contrast is clean and crisp
+                    extendedProps: {
+                        breed: breed ? breed.trim() : "Unknown",
+                        owner: ownerName ? ownerName.trim() : "N/A",
+                        phone: phone ? phone.trim() : "N/A"
+                    }
+                });
+            }
+        }
+        return events;
+    }
 </script>
 </body>
 </html>
