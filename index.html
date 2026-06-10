@@ -7,20 +7,46 @@
     <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css" rel="stylesheet" />
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
     <style>
+        /* Base desktop and tablet layout styles */
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 15px; background-color: #f8f9fa; }
         .container { max-width: 950px; margin: 0 auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-        h2 { text-align: center; color: #2c3e50; margin-top: 0; }
+        h2 { text-align: center; color: #2c3e50; margin-top: 0; font-size: 24px; }
         #calendar { margin-top: 20px; }
         .btn-add { display: block; width: 100%; box-sizing: border-box; text-align: center; background: #27ae60; color: white; padding: 14px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .btn-add:hover { background: #219653; }
-        /* Style calendar events */
-        .fc-event { cursor: pointer; padding: 4px 6px; font-size: 13px; border: none !important; border-radius: 4px; font-weight: 500; }
+        
+        /* Event styles */
+        .fc-event { cursor: pointer; padding: 4px 6px; font-size: 13px; border: none !important; border-radius: 4px; font-weight: 600; margin-bottom: 2px; }
+
+        /* 📱 RESPONSIVE MOBILE OPTIMISATIONS */
+        @media (max-width: 600px) {
+            body { margin: 5px; }
+            .container { padding: 10px; border-radius: 6px; }
+            h2 { font-size: 20px; margin-bottom: 10px; }
+            .btn-add { padding: 12px; font-size: 15px; margin-bottom: 15px; }
+            
+            /* Shrink calendar header title and fix layout wrapping */
+            .fc .fc-toolbar-title { font-size: 16px !important; }
+            .fc .fc-button { padding: 6px 8px !important; font-size: 12px !important; }
+            .fc .fc-toolbar { gap: 5px; flex-direction: row; justify-content: space-between; align-items: center; }
+
+            /* Compact layout for calendar table grids */
+            .fc th { font-size: 11px !important; padding: 2px 0 !important; } /* Shrink day headers (Sun, Mon...) */
+            .fc-daygrid-day-number { font-size: 11px !important; padding: 2px !important; } /* Shrink date numbers */
+            
+            /* Compact dog event banners on tiny mobile screens */
+            .fc-event { font-size: 11px !important; padding: 2px 4px !important; margin-bottom: 1px; }
+            
+            /* Reduce minimum height of calendar day boxes so you don't have to scroll for miles */
+            .fc .fc-daygrid-body { min-height: unset !important; }
+            .fc .fc-scroller { overflow: hidden !important; }
+        }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>🐾 Dog Boarding Calendar</h2>
+    <h2>🐾 Waffle House Calendar</h2>
     
     <a href="https://docs.google.com/forms/d/e/1FAIpQLScszSqsaxw9THyebWt2g0khVTIzP9L8hPbor1mUB0fp_0KPAw/viewform?usp=dialog" target="_blank" class="btn-add">+ Add New Booking</a>
     
@@ -29,7 +55,7 @@
 
 <script>
     // Live Google Sheet CSV Data Export URL
-    const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT63UsPjcg3GB4lTB6cewLaTRS_yJP4kpOMSMsTTnvTw1Wbjn3CgtZc_c6li28ihjzkHnphFt0XcFTt/pub?gid=1639615540&single=true&output=csv';
+    const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT63UsPjcg3GB41TB6cewLaTRS_yJP4kpOMSmsTTnvTwlWbjn3CgtZc_c6li28ihjzhNnphFt0XCFtt/pub?gid=1639615540&single=true&output=csv';
 
     document.addEventListener('DOMContentLoaded', function() {
         const calendarEl = document.getElementById('calendar');
@@ -37,6 +63,7 @@
         const calendar = new FullCalendar.Calendar(calendarEl, {
             initialView: 'dayGridMonth',
             displayEventTime: false, 
+            height: 'auto', // Fixes mobile vertical scaling overflow issues
             headerToolbar: {
                 left: 'prev,next today',
                 center: 'title',
@@ -67,14 +94,14 @@
         calendar.render();
     });
 
-    // Generates a distinct pastel color based on text input string
+    // Generates a distinct color based on text input string
     function stringToColor(str) {
         let hash = 0;
         for (let i = 0; i < str.length; i++) {
             hash = str.charCodeAt(i) + ((hash << 5) - hash);
         }
         const hue = Math.abs(hash) % 360;
-        return 'hsl(' + hue + ', 65%, 45%)'; 
+        return 'hsl(' + hue + ', 70%, 40%)'; 
     }
 
     // Helper function to turn spreadsheet rows into calendar items
@@ -95,47 +122,48 @@
             const phone = columns[6];
 
             if (dogName && startDate) {
-                let startParsed = startDate.trim();
-                let endParsed = endDate ? endDate.trim() : startParsed;
+                let startParsed = "";
+                let endParsed = "";
 
-                // Convert D/M/YYYY or DD/MM/YYYY to YYYY-MM-DD
-                if (startParsed.includes('/')) {
-                    const parts = startParsed.split('/');
-                    if (parts[2]) {
-                        startParsed = parts[2] + '-' + parts[1].padStart(2, '0') + '-' + parts[0].padStart(2, '0');
-                    }
-                }
-                if (endParsed.includes('/')) {
-                    const parts = endParsed.split('/');
-                    if (parts[2]) {
-                        endParsed = parts[2] + '-' + parts[1].padStart(2, '0') + '-' + parts[0].padStart(2, '0');
+                // STRICT DD/MM/YYYY PARSING FOR AUSTRALIAN FORMAT
+                if (startDate.includes('/')) {
+                    const sParts = startDate.trim().split('/');
+                    if (sParts[2]) {
+                        startParsed = sParts[2] + '-' + sParts[1].padStart(2, '0') + '-' + sParts[0].padStart(2, '0');
                     }
                 }
 
-                // Adjust exclusive multi-day end date spacing
-                let finalEndDate = new Date(startParsed); // Default fallback
-                let validEnd = new Date(endParsed);
-                if (!isNaN(validEnd.getTime())) {
-                    validEnd.setDate(validEnd.getDate() + 1);
-                    endParsed = validEnd.toISOString().split('T')[0];
+                if (endDate && endDate.includes('/')) {
+                    const eParts = endDate.trim().split('/');
+                    if (eParts[2]) {
+                        endParsed = eParts[2] + '-' + eParts[1].padStart(2, '0') + '-' + eParts[0].padStart(2, '0');
+                    }
+                } else {
+                    endParsed = startParsed;
                 }
 
-                // Generate color dynamically using the dog's name
-                const eventColor = stringToColor(dogName.trim());
+                if (startParsed && endParsed) {
+                    let endBlock = new Date(endParsed);
+                    if (!isNaN(endBlock.getTime())) {
+                        endBlock.setDate(endBlock.getDate() + 1);
+                        const finalEndStr = endBlock.toISOString().split('T')[0];
+                        const eventColor = stringToColor(dogName.trim());
 
-                events.push({
-                    title: dogName.trim(),
-                    start: startParsed,
-                    end: endParsed,
-                    allDay: true,
-                    backgroundColor: eventColor,
-                    textColor: '#ffffff',
-                    extendedProps: {
-                        breed: breed ? breed.trim() : "Unknown",
-                        owner: ownerName ? ownerName.trim() : "N/A",
-                        phone: phone ? phone.trim() : "N/A"
+                        events.push({
+                            title: dogName.trim(),
+                            start: startParsed,
+                            end: finalEndStr,
+                            allDay: true,
+                            backgroundColor: eventColor,
+                            textColor: '#ffffff',
+                            extendedProps: {
+                                breed: breed ? breed.trim() : "Unknown",
+                                owner: ownerName ? ownerName.trim() : "N/A",
+                                phone: phone ? phone.trim() : "N/A"
+                            }
+                        });
                     }
-                });
+                }
             }
         }
         return events;
