@@ -15,28 +15,31 @@
         .btn-add { display: block; width: 100%; box-sizing: border-box; text-align: center; background: #27ae60; color: white; padding: 14px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .btn-add:hover { background: #219653; }
         
-        /* Dashboard Summary Table Styles */
-        .summary-dashboard { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px; }
-        .summary-card { background: #f1f5f9; padding: 15px; border-radius: 8px; border-left: 5px solid #2c3e50; }
-        .summary-card.active-now { border-left-color: #3498db; }
-        .summary-card.upcoming-now { border-left-color: #f39c12; }
-        .summary-card h3 { margin: 0 0 10px 0; font-size: 15px; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; }
+        /* Expanded Dashboard Summary Styles */
+        .summary-dashboard { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 25px; }
+        .summary-card { background: #f1f5f9; padding: 15px; border-radius: 8px; border-top: 4px solid #2c3e50; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+        .summary-card.active-now { border-top-color: #3498db; }
+        .summary-card.leaving-now { border-top-color: #e74c3c; }
+        .summary-card.upcoming-now { border-top-color: #f39c12; }
+        .summary-card h3 { margin: 0 0 10px 0; font-size: 13px; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 6px; }
         .summary-list { list-style: none; padding: 0; margin: 0; font-size: 14px; color: #1e293b; }
-        .summary-list li { padding: 6px 0; border-bottom: 1px solid #e2e8f0; font-weight: 500; }
+        .summary-list li { padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-weight: 500; }
         .summary-list li:last-child { border-bottom: none; }
-        .no-dogs { color: #94a3b8; font-style: italic; }
+        .no-dogs { color: #94a3b8; font-style: italic; font-size: 13px; padding: 5px 0; }
+        .date-badge { float: right; font-size: 11px; background: #e2e8f0; padding: 2px 6px; border-radius: 4px; color: #475569; font-weight: bold; }
+        .date-badge.today-badge { background: #fde8e8; color: #c81e1e; }
 
         /* Event styles */
         .fc-event { cursor: pointer; padding: 4px 6px; font-size: 13px; border: none !important; border-radius: 4px; font-weight: 600; margin-bottom: 2px; }
 
         /* 📱 RESPONSIVE MOBILE OPTIMISATIONS */
-        @media (max-width: 600px) {
+        @media (max-width: 768px) {
             body { margin: 5px; }
             .container { padding: 10px; border-radius: 6px; }
             h2 { font-size: 20px; margin-bottom: 10px; }
             .btn-add { padding: 12px; font-size: 15px; margin-bottom: 15px; }
             
-            /* Stack dashboard on mobile mobile screen */
+            /* Stack dashboard columns into a single list on mobile devices */
             .summary-dashboard { grid-template-columns: 1fr; gap: 10px; margin-bottom: 15px; }
             .summary-card { padding: 12px; }
             
@@ -68,6 +71,14 @@
                 <li class="no-dogs">Loading status...</li>
             </ul>
         </div>
+        
+        <div class="summary-card leaving-now">
+            <h3>👋 Leaving Today / Soon</h3>
+            <ul id="leaving-list" class="summary-list">
+                <li class="no-dogs">Loading status...</li>
+            </ul>
+        </div>
+
         <div class="summary-card upcoming-now">
             <h3>📅 Arriving Next 7 Days</h3>
             <ul id="upcoming-list" class="summary-list">
@@ -135,7 +146,7 @@
         const lines = csvText.split(/\r?\n/);
         const events = [];
         
-        // Get precise system timestamps for calculations
+        // Setup strict system midnights for comparison
         const today = new Date();
         today.setHours(0,0,0,0);
         
@@ -144,6 +155,7 @@
         sevenDaysFromNow.setHours(23,59,59,999);
 
         const atHomeDogs = [];
+        const leavingDogs = [];
         const upcomingDogs = [];
 
         for (let i = 1; i < lines.length; i++) {
@@ -188,19 +200,28 @@
 
                     if (!isNaN(checkStart.getTime()) && !isNaN(checkEnd.getTime())) {
                         
-                        // DASHBOARD LOGIC CALCULATIONS
-                        // 1. Is the dog currently at home right now?
-                        if (today >= checkStart && today <= checkEnd) {
-                            atHomeDogs.push(dogName.trim() + ' (' + (breed ? breed.trim() : 'Unknown') + ')');
-                        } 
-                        // 2. Is the dog arriving in the next 7 days (and not already here)?
-                        else if (checkStart > today && checkStart <= sevenDaysFromNow) {
-                            // Format display text neatly with entry date mapping
-                            const dateLabel = checkStart.getDate() + '/' + (checkStart.getMonth() + 1);
-                            upcomingDogs.push(dogName.trim() + ' — ' + dateLabel);
+                        const breedTxt = breed ? breed.trim() : 'Unknown';
+                        const displayDate = checkEnd.getDate() + '/' + (checkEnd.getMonth() + 1);
+
+                        // 1. CHECKOUT LOGIC (Leaving today or next 7 days)
+                        if (checkEnd.getTime() === today.getTime()) {
+                            leavingDogs.push('<li>🐾 ' + dogName.trim() + ' (' + breedTxt + ') <span class="date-badge today-badge">TODAY</span></li>');
+                        } else if (checkEnd > today && checkEnd <= sevenDaysFromNow) {
+                            leavingDogs.push('<li>🐾 ' + dogName.trim() + ' (' + breedTxt + ') <span class="date-badge">' + displayDate + '</span></li>');
                         }
 
-                        // FullCalendar Layout Render Injection (+1 day padding rule)
+                        // 2. AT HOME LOGIC (Staying here today, but not checking out today)
+                        if (today >= checkStart && today <= checkEnd && checkEnd.getTime() !== today.getTime()) {
+                            atHomeDogs.push('<li>🐾 ' + dogName.trim() + ' (' + breedTxt + ')</li>');
+                        } 
+
+                        // 3. ARRIVAL LOGIC (Arriving next 7 days)
+                        if (checkStart > today && checkStart <= sevenDaysFromNow) {
+                            const arrivalDate = checkStart.getDate() + '/' + (checkStart.getMonth() + 1);
+                            upcomingDogs.push('<li>⏳ ' + dogName.trim() + ' <span class="date-badge">' + arrivalDate + '</span></li>');
+                        }
+
+                        // Calendar Visual Processing Configuration
                         let calendarEnd = new Date(checkEnd);
                         calendarEnd.setDate(calendarEnd.getDate() + 1);
                         const finalEndStr = calendarEnd.toISOString().split('T')[0];
@@ -214,7 +235,7 @@
                             backgroundColor: eventColor,
                             textColor: '#ffffff',
                             extendedProps: {
-                                breed: breed ? breed.trim() : "Unknown",
+                                breed: breedTxt,
                                 owner: ownerName ? ownerName.trim() : "N/A",
                                 phone: phone ? phone.trim() : "N/A"
                             }
@@ -224,21 +245,10 @@
             }
         }
 
-        // UPDATE THE HTML DISPLAY LISTS
-        const atHomeListEl = document.getElementById('at-home-list');
-        const upcomingListEl = document.getElementById('upcoming-list');
-
-        if (atHomeDogs.length > 0) {
-            atHomeListEl.innerHTML = atHomeDogs.map(name => '<li>🐾 ' + name + '</li>').join('');
-        } else {
-            atHomeListEl.innerHTML = '<li class="no-dogs">No furry guests at home right now</li>';
-        }
-
-        if (upcomingDogs.length > 0) {
-            upcomingListEl.innerHTML = upcomingDogs.map(name => '<li>⏳ ' + name + '</li>').join('');
-        } else {
-            upcomingListEl.innerHTML = '<li class="no-dogs">No bookings scheduled this week</li>';
-        }
+        // UPDATE THE HTML DISPLAY BOARDS
+        document.getElementById('at-home-list').innerHTML = atHomeDogs.length > 0 ? atHomeDogs.join('') : '<li class="no-dogs">No remaining guests at home right now</li>';
+        document.getElementById('leaving-list').innerHTML = leavingDogs.length > 0 ? leavingDogs.join('') : '<li class="no-dogs">No checkouts scheduled this week</li>';
+        document.getElementById('upcoming-list').innerHTML = upcomingDogs.length > 0 ? upcomingDogs.join('') : '<li class="no-dogs">No new arrivals scheduled this week</li>';
 
         return events;
     }
