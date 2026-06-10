@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Waffle's Dog Boarding Calendar</title>
+    <title>Waffle House Calendar</title>
     <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css" rel="stylesheet" />
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
     <style>
@@ -15,6 +15,17 @@
         .btn-add { display: block; width: 100%; box-sizing: border-box; text-align: center; background: #27ae60; color: white; padding: 14px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .btn-add:hover { background: #219653; }
         
+        /* Dashboard Summary Table Styles */
+        .summary-dashboard { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px; }
+        .summary-card { background: #f1f5f9; padding: 15px; border-radius: 8px; border-left: 5px solid #2c3e50; }
+        .summary-card.active-now { border-left-color: #3498db; }
+        .summary-card.upcoming-now { border-left-color: #f39c12; }
+        .summary-card h3 { margin: 0 0 10px 0; font-size: 15px; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; }
+        .summary-list { list-style: none; padding: 0; margin: 0; font-size: 14px; color: #1e293b; }
+        .summary-list li { padding: 6px 0; border-bottom: 1px solid #e2e8f0; font-weight: 500; }
+        .summary-list li:last-child { border-bottom: none; }
+        .no-dogs { color: #94a3b8; font-style: italic; }
+
         /* Event styles */
         .fc-event { cursor: pointer; padding: 4px 6px; font-size: 13px; border: none !important; border-radius: 4px; font-weight: 600; margin-bottom: 2px; }
 
@@ -25,19 +36,19 @@
             h2 { font-size: 20px; margin-bottom: 10px; }
             .btn-add { padding: 12px; font-size: 15px; margin-bottom: 15px; }
             
+            /* Stack dashboard on mobile mobile screen */
+            .summary-dashboard { grid-template-columns: 1fr; gap: 10px; margin-bottom: 15px; }
+            .summary-card { padding: 12px; }
+            
             /* Shrink calendar header title and fix layout wrapping */
             .fc .fc-toolbar-title { font-size: 16px !important; }
             .fc .fc-button { padding: 6px 8px !important; font-size: 12px !important; }
             .fc .fc-toolbar { gap: 5px; flex-direction: row; justify-content: space-between; align-items: center; }
 
             /* Compact layout for calendar table grids */
-            .fc th { font-size: 11px !important; padding: 2px 0 !important; } /* Shrink day headers (Sun, Mon...) */
-            .fc-daygrid-day-number { font-size: 11px !important; padding: 2px !important; } /* Shrink date numbers */
-            
-            /* Compact dog event banners on tiny mobile screens */
+            .fc th { font-size: 11px !important; padding: 2px 0 !important; } 
+            .fc-daygrid-day-number { font-size: 11px !important; padding: 2px !important; } 
             .fc-event { font-size: 11px !important; padding: 2px 4px !important; margin-bottom: 1px; }
-            
-            /* Reduce minimum height of calendar day boxes so you don't have to scroll for miles */
             .fc .fc-daygrid-body { min-height: unset !important; }
             .fc .fc-scroller { overflow: hidden !important; }
         }
@@ -50,12 +61,27 @@
     
     <a href="https://docs.google.com/forms/d/e/1FAIpQLScszSqsaxw9THyebWt2g0khVTIzP9L8hPbor1mUB0fp_0KPAw/viewform?usp=dialog" target="_blank" class="btn-add">+ Add New Booking</a>
     
+    <div class="summary-dashboard">
+        <div class="summary-card active-now">
+            <h3>🏡 At Home Right Now</h3>
+            <ul id="at-home-list" class="summary-list">
+                <li class="no-dogs">Loading status...</li>
+            </ul>
+        </div>
+        <div class="summary-card upcoming-now">
+            <h3>📅 Arriving Next 7 Days</h3>
+            <ul id="upcoming-list" class="summary-list">
+                <li class="no-dogs">Loading status...</li>
+            </ul>
+        </div>
+    </div>
+
     <div id="calendar"></div>
 </div>
 
 <script>
     // Live Google Sheet CSV Data Export URL
-    const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT63UsPjcg3GB4lTB6cewLaTRS_yJP4kpOMSMsTTnvTw1Wbjn3CgtZc_c6li28ihjzkHnphFt0XcFTt/pub?gid=1639615540&single=true&output=csv';
+    const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT63UsPjcg3GB41TB6cewLaTRS_yJP4kpOMSmsTTnvTwlWbjn3CgtZc_c6li28ihjzhNnphFt0XCFtt/pub?gid=1639615540&single=true&output=csv';
 
     document.addEventListener('DOMContentLoaded', function() {
         const calendarEl = document.getElementById('calendar');
@@ -63,7 +89,7 @@
         const calendar = new FullCalendar.Calendar(calendarEl, {
             initialView: 'dayGridMonth',
             displayEventTime: false, 
-            height: 'auto', // Fixes mobile vertical scaling overflow issues
+            height: 'auto',
             headerToolbar: {
                 left: 'prev,next today',
                 center: 'title',
@@ -104,10 +130,21 @@
         return 'hsl(' + hue + ', 70%, 40%)'; 
     }
 
-    // Helper function to turn spreadsheet rows into calendar items
+    // Helper function to turn spreadsheet rows into calendar items and build dashboard list
     function parseCSVToEvents(csvText) {
         const lines = csvText.split(/\r?\n/);
         const events = [];
+        
+        // Get precise system timestamps for calculations
+        const today = new Date();
+        today.setHours(0,0,0,0);
+        
+        const sevenDaysFromNow = new Date();
+        sevenDaysFromNow.setDate(today.getDate() + 7);
+        sevenDaysFromNow.setHours(23,59,59,999);
+
+        const atHomeDogs = [];
+        const upcomingDogs = [];
 
         for (let i = 1; i < lines.length; i++) {
             if (!lines[i].trim()) continue;
@@ -125,7 +162,7 @@
                 let startParsed = "";
                 let endParsed = "";
 
-                // STRICT DD/MM/YYYY PARSING FOR AUSTRALIAN FORMAT
+                // STRICT DD/MM/YYYY PARSING
                 if (startDate.includes('/')) {
                     const sParts = startDate.trim().split('/');
                     if (sParts[2]) {
@@ -143,10 +180,30 @@
                 }
 
                 if (startParsed && endParsed) {
-                    let endBlock = new Date(endParsed);
-                    if (!isNaN(endBlock.getTime())) {
-                        endBlock.setDate(endBlock.getDate() + 1);
-                        const finalEndStr = endBlock.toISOString().split('T')[0];
+                    const checkStart = new Date(startParsed);
+                    const checkEnd = new Date(endParsed);
+                    
+                    checkStart.setHours(0,0,0,0);
+                    checkEnd.setHours(0,0,0,0);
+
+                    if (!isNaN(checkStart.getTime()) && !isNaN(checkEnd.getTime())) {
+                        
+                        // DASHBOARD LOGIC CALCULATIONS
+                        // 1. Is the dog currently at home right now?
+                        if (today >= checkStart && today <= checkEnd) {
+                            atHomeDogs.push(dogName.trim() + ' (' + (breed ? breed.trim() : 'Unknown') + ')');
+                        } 
+                        // 2. Is the dog arriving in the next 7 days (and not already here)?
+                        else if (checkStart > today && checkStart <= sevenDaysFromNow) {
+                            // Format display text neatly with entry date mapping
+                            const dateLabel = checkStart.getDate() + '/' + (checkStart.getMonth() + 1);
+                            upcomingDogs.push(dogName.trim() + ' — ' + dateLabel);
+                        }
+
+                        // FullCalendar Layout Render Injection (+1 day padding rule)
+                        let calendarEnd = new Date(checkEnd);
+                        calendarEnd.setDate(calendarEnd.getDate() + 1);
+                        const finalEndStr = calendarEnd.toISOString().split('T')[0];
                         const eventColor = stringToColor(dogName.trim());
 
                         events.push({
@@ -166,6 +223,23 @@
                 }
             }
         }
+
+        // UPDATE THE HTML DISPLAY LISTS
+        const atHomeListEl = document.getElementById('at-home-list');
+        const upcomingListEl = document.getElementById('upcoming-list');
+
+        if (atHomeDogs.length > 0) {
+            atHomeListEl.innerHTML = atHomeDogs.map(name => '<li>🐾 ' + name + '</li>').join('');
+        } else {
+            atHomeListEl.innerHTML = '<li class="no-dogs">No furry guests at home right now</li>';
+        }
+
+        if (upcomingDogs.length > 0) {
+            upcomingListEl.innerHTML = upcomingDogs.map(name => '<li>⏳ ' + name + '</li>').join('');
+        } else {
+            upcomingListEl.innerHTML = '<li class="no-dogs">No bookings scheduled this week</li>';
+        }
+
         return events;
     }
 </script>
