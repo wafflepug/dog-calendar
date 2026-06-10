@@ -14,6 +14,19 @@
         
         .btn-add { display: block; width: 100%; box-sizing: border-box; text-align: center; background: #27ae60; color: white; padding: 14px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .btn-add:hover { background: #219653; }
+        /* Styling for the new banner image layout */
+        .calendar-banner-container {
+        text-align: center;
+        margin-bottom: 20px; /* Space between the image and the green button */
+        }
+
+        .calendar-banner {
+        max-width: 100%;     /* Prevents the image from overflowing on small screens */
+        height: auto;        /* Maintains the original aspect ratio */
+        border-radius: 8px;  /* Matches your design's rounded corners */
+        max-height: 250px;   /* Limits the vertical height so it doesn't take over the page */
+        object-fit: cover;   /* Cleanly clips the image if a maximum height constraint is met */
+        }
         
         .search-container { margin-bottom: 20px; }
         .search-input { width: 100%; box-sizing: border-box; padding: 12px; font-size: 14px; border: 2px solid #e2e8f0; border-radius: 8px; outline: none; transition: border-color 0.2s; }
@@ -64,6 +77,10 @@
 
 <div class="container">
     <h2>🐾 Waffle House Calendar</h2>
+    
+    <div class="calendar-banner-container">
+        <img src="https://lh3.googleusercontent.com/d/1M5FMz5NWWmc6XvIkWqL49ry_FKM8L6g1" alt="Waffle House Banner" class="calendar-banner">
+    </div>
     
     <a href="https://docs.google.com/forms/d/e/1FAIpQLScszSqsaxw9THyebWt2g0khVTIzP9L8hPbor1mUB0fp_0KPAw/viewform?usp=dialog" target="_blank" class="btn-add">+ Add New Booking</a>
     
