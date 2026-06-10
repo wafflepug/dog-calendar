@@ -283,7 +283,7 @@
         if(globalCalendar) globalCalendar.render();
     }
 
-    function parseCSVToEvents(csvText) {
+function parseCSVToEvents(csvText) {
     if (!csvText) return [];
     const lines = csvText.split(/\r?\n/);
     const events = [];
@@ -303,27 +303,35 @@
         if (dogName && startDate) {
             let startParsed = "", endParsed = "";
 
+            // Standardize Start Date Text
             if (startDate.includes('/')) {
                 const sParts = startDate.trim().split('/');
                 if (sParts[2]) startParsed = sParts[2] + '-' + sParts[1].padStart(2, '0') + '-' + sParts[0].padStart(2, '0');
+            } else if (startDate.includes('-')) {
+                startParsed = startDate.trim().split('T')[0];
             }
+            
+            // Standardize End Date Text
             if (endDate && endDate.includes('/')) {
                 const eParts = endDate.trim().split('/');
                 if (eParts[2]) endParsed = eParts[2] + '-' + eParts[1].padStart(2, '0') + '-' + eParts[0].padStart(2, '0');
+            } else if (endDate && endDate.includes('-')) {
+                endParsed = endDate.trim().split('T')[0];
             } else {
                 endParsed = startParsed;
             }
 
             if (startParsed && endParsed) {
-                const checkStart = new Date(startParsed); checkStart.setHours(0,0,0,0);
-                const checkEnd = new Date(endParsed); checkEnd.setHours(0,0,0,0);
+                // Force a clean local midnight timestamp instance (Avoiding local timezone shifting issues)
+                const checkStart = new Date(startParsed + 'T00:00:00');
+                const checkEnd = new Date(endParsed + 'T00:00:00');
 
                 if (!isNaN(checkStart.getTime()) && !isNaN(checkEnd.getTime())) {
                     const breedTxt = breed ? breed.trim() : 'Unknown';
                     const displayDate = checkEnd.getDate() + '/' + (checkEnd.getMonth() + 1);
                     
-                    // Populate capacity heatmap allocations day-by-day
-                    let tempLoopDate = new Date(checkStart);
+                    // Populate capacity heatmap allocations accurately day-by-day
+                    let tempLoopDate = new Date(checkStart.getTime());
                     while (tempLoopDate <= checkEnd) {
                         const tempStr = tempLoopDate.toISOString().split('T')[0];
                         dailyCapacityCounts[tempStr] = (dailyCapacityCounts[tempStr] || 0) + 1;
@@ -332,7 +340,7 @@
 
                     const listLabel = (dogName.includes('&') || dogName.toLowerCase().includes('and')) ? '👥 ' + dogName.trim() : '🐾 ' + dogName.trim();
 
-                    // Dashboard filters
+                    // Dashboard Logic Lists
                     if (checkEnd.getTime() === today.getTime()) {
                         leavingDogs.push('<li><span>' + listLabel + ' (' + breedTxt + ')</span> <span class="date-badge today-badge">TODAY</span></li>');
                     } else if (checkEnd > today && checkEnd <= sevenDaysFromNow) {
@@ -348,16 +356,15 @@
                         upcomingDogs.push('<li><span>⏳ ' + dogName.trim() + '</span> <span class="date-badge">' + arrivalDate + '</span></li>');
                     }
 
-                    // 🔥 THE FIX: Extend visual display calendar date parameters by +1 day 
-                    // This satisfies FullCalendar's exclusive 'end' date rule without changing spreadsheet records
-                    let calendarDisplayEnd = new Date(checkEnd);
-                    calendarDisplayEnd.setDate(calendarDisplayEnd.getDate() + 1);
+                    // 🔥 CRITICAL FIX: Push the display boundary out by exactly +1 day explicitly via millisecond value
+                    // This forces FullCalendar to draw all-day blocks entirely through the checkout day box.
+                    const calendarDisplayEnd = new Date(checkEnd.getTime() + (24 * 60 * 60 * 1000));
                     const finalEndString = calendarDisplayEnd.toISOString().split('T')[0];
 
                     events.push({
                         title: dogName.trim(),
                         start: startParsed,
-                        end: finalEndString, // Uses the safely extended display boundary string
+                        end: finalEndString, 
                         allDay: true,
                         backgroundColor: stringToColor(dogName.trim()),
                         textColor: '#ffffff',
