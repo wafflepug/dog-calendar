@@ -56,12 +56,27 @@
         body.dark-theme .container { background: #1e293b; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
         body.dark-theme h2 { color: #f1f5f9; }
         body.dark-theme .search-input { background-color: #334155; border-color: #475569; color: white; }
+        
+        /* Dashboard Card Title Visibility Fix */
         body.dark-theme .summary-card { background: #334155; color: #f1f5f9; }
+        body.dark-theme .summary-card h3 { color: #cbd5e1 !important; font-weight: 700; text-shadow: 0 1px 2px rgba(0,0,0,0.2); }
         body.dark-theme .summary-list li { border-bottom-color: #475569; color: #e2e8f0; }
         body.dark-theme .date-badge { background: #475569; color: #cbd5e1; }
 
-        /* FullCalendar Dark Mode Adjustments */
+        /* FullCalendar Text & Number Contrast Visibility Fixes */
         body.dark-theme .fc { color: #f1f5f9; }
+        
+        /* Forces Sunday-Saturday day headers to be crisp white */
+        body.dark-theme .fc .fc-col-header-cell-cushion { color: #ffffff !important; font-weight: 700; }
+        
+        /* Forces month day grid numbers (1, 2, 3...) to be clearly readable */
+        body.dark-theme .fc .fc-daygrid-day-number { color: #f1f5f9 !important; font-weight: 600; padding: 4px !important; }
+        
+        /* Fixes button icons/text inside the calendar header toolbar */
+        body.dark-theme .fc .fc-button .fc-icon { color: #ffffff !important; }
+        body.dark-theme .fc .fc-toolbar-title { color: #ffffff !important; }
+
+        /* Grid lines and structural borders */
         body.dark-theme .fc td, 
         body.dark-theme .fc th,
         body.dark-theme .fc-theme-standard td, 
