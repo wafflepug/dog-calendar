@@ -3,57 +3,50 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Waffle House Calendar</title>
+    <title>Waffle House Boarding Calendar</title>
     <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css" rel="stylesheet" />
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
     <style>
-        /* Base desktop and tablet layout styles */
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 15px; background-color: #f8f9fa; }
         .container { max-width: 950px; margin: 0 auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
         h2 { text-align: center; color: #2c3e50; margin-top: 0; font-size: 24px; }
         #calendar { margin-top: 20px; }
-        .btn-add { display: block; width: 100%; box-sizing: border-box; text-align: center; background: #27ae60; color: white; padding: 14px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        
+        .btn-add { display: block; width: 100%; box-sizing: border-box; text-align: center; background: #27ae60; color: white; padding: 14px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .btn-add:hover { background: #219653; }
         
-        /* Expanded Dashboard Summary Styles */
+        /* Search Bar Styling */
+        .search-container { margin-bottom: 20px; }
+        .search-input { width: 100%; box-sizing: border-box; padding: 12px; font-size: 14px; border: 2px solid #e2e8f0; border-radius: 8px; outline: none; transition: border-color 0.2s; }
+        .search-input:focus { border-color: #3498db; }
+
+        /* Dashboard Summary Styles */
         .summary-dashboard { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 25px; }
         .summary-card { background: #f1f5f9; padding: 15px; border-radius: 8px; border-top: 4px solid #2c3e50; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
         .summary-card.active-now { border-top-color: #3498db; }
         .summary-card.leaving-now { border-top-color: #e74c3c; }
         .summary-card.upcoming-now { border-top-color: #f39c12; }
-        .summary-card h3 { margin: 0 0 10px 0; font-size: 13px; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 6px; }
+        .summary-card h3 { margin: 0 0 10px 0; font-size: 13px; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; }
         .summary-list { list-style: none; padding: 0; margin: 0; font-size: 14px; color: #1e293b; }
-        .summary-list li { padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-weight: 500; }
+        .summary-list li { padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-weight: 500; display: flex; justify-content: space-between; align-items: center; }
         .summary-list li:last-child { border-bottom: none; }
-        .no-dogs { color: #94a3b8; font-style: italic; font-size: 13px; padding: 5px 0; }
-        .date-badge { float: right; font-size: 11px; background: #e2e8f0; padding: 2px 6px; border-radius: 4px; color: #475569; font-weight: bold; }
+        .no-dogs { color: #94a3b8; font-style: italic; font-size: 13px; padding: 5px 0; display: block !important; }
+        
+        .date-badge { font-size: 11px; background: #e2e8f0; padding: 2px 6px; border-radius: 4px; color: #475569; font-weight: bold; }
         .date-badge.today-badge { background: #fde8e8; color: #c81e1e; }
 
-        /* Event styles */
         .fc-event { cursor: pointer; padding: 4px 6px; font-size: 13px; border: none !important; border-radius: 4px; font-weight: 600; margin-bottom: 2px; }
 
-        /* 📱 RESPONSIVE MOBILE OPTIMISATIONS */
         @media (max-width: 768px) {
             body { margin: 5px; }
             .container { padding: 10px; border-radius: 6px; }
             h2 { font-size: 20px; margin-bottom: 10px; }
-            .btn-add { padding: 12px; font-size: 15px; margin-bottom: 15px; }
-            
-            /* Stack dashboard columns into a single list on mobile devices */
             .summary-dashboard { grid-template-columns: 1fr; gap: 10px; margin-bottom: 15px; }
-            .summary-card { padding: 12px; }
-            
-            /* Shrink calendar header title and fix layout wrapping */
             .fc .fc-toolbar-title { font-size: 16px !important; }
             .fc .fc-button { padding: 6px 8px !important; font-size: 12px !important; }
-            .fc .fc-toolbar { gap: 5px; flex-direction: row; justify-content: space-between; align-items: center; }
-
-            /* Compact layout for calendar table grids */
             .fc th { font-size: 11px !important; padding: 2px 0 !important; } 
             .fc-daygrid-day-number { font-size: 11px !important; padding: 2px !important; } 
             .fc-event { font-size: 11px !important; padding: 2px 4px !important; margin-bottom: 1px; }
-            .fc .fc-daygrid-body { min-height: unset !important; }
-            .fc .fc-scroller { overflow: hidden !important; }
         }
     </style>
 </head>
@@ -64,26 +57,22 @@
     
     <a href="https://docs.google.com/forms/d/e/1FAIpQLScszSqsaxw9THyebWt2g0khVTIzP9L8hPbor1mUB0fp_0KPAw/viewform?usp=dialog" target="_blank" class="btn-add">+ Add New Booking</a>
     
+    <div class="search-container">
+        <input type="text" id="calendarSearch" class="search-input" placeholder="🔍 Type dog name or breed to filter calendar instantly...">
+    </div>
+
     <div class="summary-dashboard">
         <div class="summary-card active-now">
             <h3>🏡 At Home Right Now</h3>
-            <ul id="at-home-list" class="summary-list">
-                <li class="no-dogs">Loading status...</li>
-            </ul>
+            <ul id="at-home-list" class="summary-list"><li class="no-dogs">Loading...</li></ul>
         </div>
-        
         <div class="summary-card leaving-now">
             <h3>👋 Leaving Today / Soon</h3>
-            <ul id="leaving-list" class="summary-list">
-                <li class="no-dogs">Loading status...</li>
-            </ul>
+            <ul id="leaving-list" class="summary-list"><li class="no-dogs">Loading...</li></ul>
         </div>
-
         <div class="summary-card upcoming-now">
             <h3>📅 Arriving Next 7 Days</h3>
-            <ul id="upcoming-list" class="summary-list">
-                <li class="no-dogs">Loading status...</li>
-            </ul>
+            <ul id="upcoming-list" class="summary-list"><li class="no-dogs">Loading...</li></ul>
         </div>
     </div>
 
@@ -91,13 +80,13 @@
 </div>
 
 <script>
-    // Live Google Sheet CSV Data Export URL
     const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT63UsPjcg3GB4lTB6cewLaTRS_yJP4kpOMSMsTTnvTw1Wbjn3CgtZc_c6li28ihjzkHnphFt0XcFTt/pub?gid=1639615540&single=true&output=csv';
+    let globalCalendar;
 
     document.addEventListener('DOMContentLoaded', function() {
         const calendarEl = document.getElementById('calendar');
         
-        const calendar = new FullCalendar.Calendar(calendarEl, {
+        globalCalendar = new FullCalendar.Calendar(calendarEl, {
             initialView: 'dayGridMonth',
             displayEventTime: false, 
             height: 'auto',
@@ -107,15 +96,21 @@
                 right: 'dayGridMonth,timeGridWeek'
             },
             events: function(info, successCallback, failureCallback) {
+                // Improvement: Load cached content instantly before hitting network data strings
+                const cachedData = localStorage.getItem('boardingDataCache');
+                if (cachedData) {
+                    successCallback(parseCSVToEvents(cachedData));
+                }
+
                 fetch(SHEET_CSV_URL)
                     .then(response => response.text())
                     .then(csvText => {
-                        const events = parseCSVToEvents(csvText);
-                        successCallback(events);
+                        localStorage.setItem('boardingDataCache', csvText); // Update local device cache
+                        successCallback(parseCSVToEvents(csvText));
                     })
                     .catch(error => {
-                        console.error("Error loading calendar data:", error);
-                        failureCallback(error);
+                        console.error("Error loading data:", error);
+                        if(!cachedData) failureCallback(error);
                     });
             },
             eventClick: function(info) {
@@ -128,124 +123,109 @@
             }
         });
 
-        calendar.render();
+        globalCalendar.render();
+
+        // Improvement: Active Input listener setup mapping filtering event criteria
+        document.getElementById('calendarSearch').addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase().trim();
+            
+            globalCalendar.getEvents().forEach(ev => {
+                const title = ev.title.toLowerCase();
+                const breed = (ev.extendedProps.breed || '').toLowerCase();
+                
+                if (title.includes(searchTerm) || breed.includes(searchTerm)) {
+                    ev.setProp('display', 'auto');
+                } else {
+                    ev.setProp('display', 'none'); // Hides non-matching bars completely
+                }
+            });
+        });
     });
 
-    // Generates a distinct color based on text input string
     function stringToColor(str) {
         let hash = 0;
         for (let i = 0; i < str.length; i++) {
             hash = str.charCodeAt(i) + ((hash << 5) - hash);
         }
-        const hue = Math.abs(hash) % 360;
-        return 'hsl(' + hue + ', 70%, 40%)'; 
+        return 'hsl(' + (Math.abs(hash) % 360) + ', 70%, 40%)'; 
     }
 
-    // Helper function to turn spreadsheet rows into calendar items and build dashboard list
     function parseCSVToEvents(csvText) {
         const lines = csvText.split(/\r?\n/);
         const events = [];
         
-        // Setup strict system midnights for comparison
-        const today = new Date();
-        today.setHours(0,0,0,0);
-        
-        const sevenDaysFromNow = new Date();
-        sevenDaysFromNow.setDate(today.getDate() + 7);
-        sevenDaysFromNow.setHours(23,59,59,999);
+        const today = new Date(); today.setHours(0,0,0,0);
+        const sevenDaysFromNow = new Date(); sevenDaysFromNow.setDate(today.getDate() + 7); sevenDaysFromNow.setHours(23,59,59,999);
 
-        const atHomeDogs = [];
-        const leavingDogs = [];
-        const upcomingDogs = [];
+        const atHomeDogs = []; const leavingDogs = []; const upcomingDogs = [];
 
         for (let i = 1; i < lines.length; i++) {
             if (!lines[i].trim()) continue;
-            
             const columns = lines[i].split(","); 
             
-            const dogName = columns[1];
-            const breed = columns[2];
-            const startDate = columns[3];
-            const endDate = columns[4];
-            const ownerName = columns[5];
-            const phone = columns[6];
+            const dogName = columns[1]; const breed = columns[2]; const startDate = columns[3];
+            const endDate = columns[4]; const ownerName = columns[5]; const phone = columns[6];
 
             if (dogName && startDate) {
-                let startParsed = "";
-                let endParsed = "";
+                let startParsed = "", endParsed = "";
 
-                // STRICT DD/MM/YYYY PARSING
                 if (startDate.includes('/')) {
                     const sParts = startDate.trim().split('/');
-                    if (sParts[2]) {
-                        startParsed = sParts[2] + '-' + sParts[1].padStart(2, '0') + '-' + sParts[0].padStart(2, '0');
-                    }
+                    if (sParts[2]) startParsed = sParts[2] + '-' + sParts[1].padStart(2, '0') + '-' + sParts[0].padStart(2, '0');
                 }
-
                 if (endDate && endDate.includes('/')) {
                     const eParts = endDate.trim().split('/');
-                    if (eParts[2]) {
-                        endParsed = eParts[2] + '-' + eParts[1].padStart(2, '0') + '-' + eParts[0].padStart(2, '0');
-                    }
+                    if (eParts[2]) endParsed = eParts[2] + '-' + eParts[1].padStart(2, '0') + '-' + eParts[0].padStart(2, '0');
                 } else {
                     endParsed = startParsed;
                 }
 
                 if (startParsed && endParsed) {
-                    const checkStart = new Date(startParsed);
-                    const checkEnd = new Date(endParsed);
-                    
-                    checkStart.setHours(0,0,0,0);
-                    checkEnd.setHours(0,0,0,0);
+                    const checkStart = new Date(startParsed); checkStart.setHours(0,0,0,0);
+                    const checkEnd = new Date(endParsed); checkEnd.setHours(0,0,0,0);
 
                     if (!isNaN(checkStart.getTime()) && !isNaN(checkEnd.getTime())) {
-                        
                         const breedTxt = breed ? breed.trim() : 'Unknown';
                         const displayDate = checkEnd.getDate() + '/' + (checkEnd.getMonth() + 1);
+                        
+                        // Improvement Check: Identify multi-dog entries gracefully
+                        const listLabel = (dogName.includes('&') || dogName.toLowerCase().includes('and')) ? '👥 ' + dogName.trim() : '🐾 ' + dogName.trim();
 
-                        // 1. CHECKOUT LOGIC (Leaving today or next 7 days)
+                        // 1. Checkouts
                         if (checkEnd.getTime() === today.getTime()) {
-                            leavingDogs.push('<li>🐾 ' + dogName.trim() + ' (' + breedTxt + ') <span class="date-badge today-badge">TODAY</span></li>');
+                            leavingDogs.push('<li><span>' + listLabel + ' (' + breedTxt + ')</span> <span class="date-badge today-badge">TODAY</span></li>');
                         } else if (checkEnd > today && checkEnd <= sevenDaysFromNow) {
-                            leavingDogs.push('<li>🐾 ' + dogName.trim() + ' (' + breedTxt + ') <span class="date-badge">' + displayDate + '</span></li>');
+                            leavingDogs.push('<li><span>' + listLabel + ' (' + breedTxt + ')</span> <span class="date-badge">' + displayDate + '</span></li>');
                         }
 
-                        // 2. AT HOME LOGIC (Staying here today, but not checking out today)
+                        // 2. Staying Here
                         if (today >= checkStart && today <= checkEnd && checkEnd.getTime() !== today.getTime()) {
-                            atHomeDogs.push('<li>🐾 ' + dogName.trim() + ' (' + breedTxt + ')</li>');
+                            atHomeDogs.push('<li><span>' + listLabel + ' (' + breedTxt + ')</span></li>');
                         } 
 
-                        // 3. ARRIVAL LOGIC (Arriving next 7 days)
+                        // 3. Arrivals
                         if (checkStart > today && checkStart <= sevenDaysFromNow) {
                             const arrivalDate = checkStart.getDate() + '/' + (checkStart.getMonth() + 1);
-                            upcomingDogs.push('<li>⏳ ' + dogName.trim() + ' <span class="date-badge">' + arrivalDate + '</span></li>');
+                            upcomingDogs.push('<li><span>⏳ ' + dogName.trim() + '</span> <span class="date-badge">' + arrivalDate + '</span></li>');
                         }
 
-                        // Calendar Visual Processing Configuration
                         let calendarEnd = new Date(checkEnd);
                         calendarEnd.setDate(calendarEnd.getDate() + 1);
-                        const finalEndStr = calendarEnd.toISOString().split('T')[0];
-                        const eventColor = stringToColor(dogName.trim());
 
                         events.push({
                             title: dogName.trim(),
                             start: startParsed,
-                            end: finalEndStr,
+                            end: calendarEnd.toISOString().split('T')[0],
                             allDay: true,
-                            backgroundColor: eventColor,
+                            backgroundColor: stringToColor(dogName.trim()),
                             textColor: '#ffffff',
-                            extendedProps: {
-                                breed: breedTxt,
-                                owner: ownerName ? ownerName.trim() : "N/A",
-                                phone: phone ? phone.trim() : "N/A"
-                            }
+                            extendedProps: { breed: breedTxt, owner: ownerName ? ownerName.trim() : "N/A", phone: phone ? phone.trim() : "N/A" }
                         });
                     }
                 }
             }
         }
 
-        // UPDATE THE HTML DISPLAY BOARDS
         document.getElementById('at-home-list').innerHTML = atHomeDogs.length > 0 ? atHomeDogs.join('') : '<li class="no-dogs">No remaining guests at home right now</li>';
         document.getElementById('leaving-list').innerHTML = leavingDogs.length > 0 ? leavingDogs.join('') : '<li class="no-dogs">No checkouts scheduled this week</li>';
         document.getElementById('upcoming-list').innerHTML = upcomingDogs.length > 0 ? upcomingDogs.join('') : '<li class="no-dogs">No new arrivals scheduled this week</li>';
