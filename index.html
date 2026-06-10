@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dog Boarding Calendar</title>
+    <title>Waffle's Dog Boarding Calendar</title>
     <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css" rel="stylesheet" />
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
     <style>
@@ -28,7 +28,7 @@
 </div>
 
 <script>
-    // 2. PASTE YOUR GOOGLE SHEET CSV URL HERE (Make sure it ends with output=csv)
+    // Live Google Sheet CSV Data Export URL
     const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT63UsPjcg3GB41TB6cewLaTRS_yJP4kpOMSmsTTnvTwlWbjn3CgtZc_c6li28ihjzhNnphFt0XCFtt/pub?gid=1639615540&single=true&output=csv';
 
     document.addEventListener('DOMContentLoaded', function() {
@@ -73,9 +73,8 @@
         for (let i = 0; i < str.length; i++) {
             hash = str.charCodeAt(i) + ((hash << 5) - hash);
         }
-        // Use HSL color formatting to keep colors bright, distinct, and pleasant (pastel-ish)
         const hue = Math.abs(hash) % 360;
-        return `hsl(${hue}, 65%, 45%)`; 
+        return 'hsl(' + hue + ', 65%, 45%)'; 
     }
 
     // Helper function to turn spreadsheet rows into calendar items
@@ -103,21 +102,22 @@
                 if (startParsed.includes('/')) {
                     const parts = startParsed.split('/');
                     if (parts[2]) {
-                        startParsed = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+                        startParsed = parts[2] + '-' + parts[1].padStart(2, '0') + '-' + parts[0].padStart(2, '0');
                     }
                 }
                 if (endParsed.includes('/')) {
                     const parts = endParsed.split('/');
                     if (parts[2]) {
-                        endParsed = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+                        endParsed = parts[2] + '-' + parts[1].padStart(2, '0') + '-' + parts[0].padStart(2, '0');
                     }
                 }
 
                 // Adjust exclusive multi-day end date spacing
-                let finalEndDate = new Date(endParsed);
-                if (!isNaN(finalEndDate.getTime())) {
-                    finalEndDate.setDate(finalEndDate.getDate() + 1);
-                    endParsed = finalEndDate.toISOString().split('T')[0];
+                let finalEndDate = new Date(startParsed); // Default fallback
+                let validEnd = new Date(endParsed);
+                if (!isNaN(validEnd.getTime())) {
+                    validEnd.setDate(validEnd.getDate() + 1);
+                    endParsed = validEnd.toISOString().split('T')[0];
                 }
 
                 // Generate color dynamically using the dog's name
@@ -129,7 +129,7 @@
                     end: endParsed,
                     allDay: true,
                     backgroundColor: eventColor,
-                    textColor: '#ffffff', // Ensures text contrast is clean and crisp
+                    textColor: '#ffffff',
                     extendedProps: {
                         breed: breed ? breed.trim() : "Unknown",
                         owner: ownerName ? ownerName.trim() : "N/A",
