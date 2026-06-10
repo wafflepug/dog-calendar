@@ -288,6 +288,9 @@ function parseCSVToEvents(csvText) {
     const lines = csvText.split(/\r?\n/);
     const events = [];
     
+    // Reset our global capacity tracker mapping object
+    dailyCapacityCounts = {};
+    
     const today = new Date(); today.setHours(0,0,0,0);
     const sevenDaysFromNow = new Date(); sevenDaysFromNow.setDate(today.getDate() + 7); sevenDaysFromNow.setHours(23,59,59,999);
 
@@ -303,7 +306,7 @@ function parseCSVToEvents(csvText) {
         if (dogName && startDate) {
             let startParsed = "", endParsed = "";
 
-            // Standardize Start Date Text
+            // 1. Standardize Start Date Text Formatting (DD/MM/YYYY vs YYYY-MM-DD)
             if (startDate.includes('/')) {
                 const sParts = startDate.trim().split('/');
                 if (sParts[2]) startParsed = sParts[2] + '-' + sParts[1].padStart(2, '0') + '-' + sParts[0].padStart(2, '0');
@@ -311,7 +314,7 @@ function parseCSVToEvents(csvText) {
                 startParsed = startDate.trim().split('T')[0];
             }
             
-            // Standardize End Date Text
+            // 2. Standardize End Date Text Formatting
             if (endDate && endDate.includes('/')) {
                 const eParts = endDate.trim().split('/');
                 if (eParts[2]) endParsed = eParts[2] + '-' + eParts[1].padStart(2, '0') + '-' + eParts[0].padStart(2, '0');
@@ -322,7 +325,7 @@ function parseCSVToEvents(csvText) {
             }
 
             if (startParsed && endParsed) {
-                // Force a clean local midnight timestamp instance (Avoiding local timezone shifting issues)
+                // Generate clean, local-timezone safe Date objects for logic evaluations
                 const checkStart = new Date(startParsed + 'T00:00:00');
                 const checkEnd = new Date(endParsed + 'T00:00:00');
 
@@ -330,7 +333,7 @@ function parseCSVToEvents(csvText) {
                     const breedTxt = breed ? breed.trim() : 'Unknown';
                     const displayDate = checkEnd.getDate() + '/' + (checkEnd.getMonth() + 1);
                     
-                    // Populate capacity heatmap allocations accurately day-by-day
+                    // 3. Populate Capacity Heatmap Allocations Day-by-Day accurately
                     let tempLoopDate = new Date(checkStart.getTime());
                     while (tempLoopDate <= checkEnd) {
                         const tempStr = tempLoopDate.toISOString().split('T')[0];
@@ -340,7 +343,7 @@ function parseCSVToEvents(csvText) {
 
                     const listLabel = (dogName.includes('&') || dogName.toLowerCase().includes('and')) ? '👥 ' + dogName.trim() : '🐾 ' + dogName.trim();
 
-                    // Dashboard Logic Lists
+                    // 4. Populate Live Dashboard Queue Data Lists
                     if (checkEnd.getTime() === today.getTime()) {
                         leavingDogs.push('<li><span>' + listLabel + ' (' + breedTxt + ')</span> <span class="date-badge today-badge">TODAY</span></li>');
                     } else if (checkEnd > today && checkEnd <= sevenDaysFromNow) {
@@ -356,15 +359,20 @@ function parseCSVToEvents(csvText) {
                         upcomingDogs.push('<li><span>⏳ ' + dogName.trim() + '</span> <span class="date-badge">' + arrivalDate + '</span></li>');
                     }
 
-                    // 🔥 CRITICAL FIX: Push the display boundary out by exactly +1 day explicitly via millisecond value
-                    // This forces FullCalendar to draw all-day blocks entirely through the checkout day box.
-                    const calendarDisplayEnd = new Date(checkEnd.getTime() + (24 * 60 * 60 * 1000));
-                    const finalEndString = calendarDisplayEnd.toISOString().split('T')[0];
+                    // 5. THE FORCE-STRETCH FIX: Parse string parts and push visual timeline out by +1 day
+                    const parts = endParsed.split('-');
+                    const dateObject = new Date(parts[0], parts[1] - 1, parts[2]);
+                    dateObject.setDate(dateObject.getDate() + 1);
+                    
+                    const forcedDisplayEnd = dateObject.getFullYear() + '-' + 
+                        String(dateObject.getMonth() + 1).padStart(2, '0') + '-' + 
+                        String(dateObject.getDate()).padStart(2, '0');
 
+                    // 6. Append complete data profile item into the UI compilation array
                     events.push({
                         title: dogName.trim(),
                         start: startParsed,
-                        end: finalEndString, 
+                        end: forcedDisplayEnd, // Safe, extended rendering boundary string
                         allDay: true,
                         backgroundColor: stringToColor(dogName.trim()),
                         textColor: '#ffffff',
@@ -375,6 +383,7 @@ function parseCSVToEvents(csvText) {
         }
     }
 
+    // Update Dashboard UI Elements live
     document.getElementById('at-home-list').innerHTML = atHomeDogs.length > 0 ? atHomeDogs.join('') : '<li class="no-dogs">No remaining guests at home right now</li>';
     document.getElementById('leaving-list').innerHTML = leavingDogs.length > 0 ? leavingDogs.join('') : '<li class="no-dogs">No checkouts scheduled this week</li>';
     document.getElementById('upcoming-list').innerHTML = upcomingDogs.length > 0 ? upcomingDogs.join('') : '<li class="no-dogs">No new arrivals scheduled this week</li>';
