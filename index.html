@@ -15,7 +15,6 @@
         .btn-add { display: block; width: 100%; box-sizing: border-box; text-align: center; background: #27ae60; color: white; padding: 14px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .btn-add:hover { background: #219653; }
         
-        /* Search Bar Styling */
         .search-container { margin-bottom: 20px; }
         .search-input { width: 100%; box-sizing: border-box; padding: 12px; font-size: 14px; border: 2px solid #e2e8f0; border-radius: 8px; outline: none; transition: border-color 0.2s; }
         .search-input:focus { border-color: #3498db; }
@@ -35,7 +34,18 @@
         .date-badge { font-size: 11px; background: #e2e8f0; padding: 2px 6px; border-radius: 4px; color: #475569; font-weight: bold; }
         .date-badge.today-badge { background: #fde8e8; color: #c81e1e; }
 
+        /* General Interactive Event Hover Rules */
         .fc-event { cursor: pointer; padding: 4px 6px; font-size: 13px; border: none !important; border-radius: 4px; font-weight: 600; margin-bottom: 2px; }
+        .fc-daygrid-day { cursor: pointer; }
+        .fc-daygrid-day:hover { background-color: #f8fafc; }
+
+        /* Capacity Heatmap Styling Classes */
+        .capacity-warning { background-color: #fffbeb !important; } 
+        .capacity-full { background-color: #fdf2f2 !important; }    
+        
+        .capacity-badge { float: left; font-size: 9px; font-weight: bold; padding: 1px 4px; border-radius: 3px; margin-right: 4px; margin-top: 2px; }
+        .badge-warning { background-color: #fde68a; color: #78350f; }
+        .badge-full { background-color: #fca5a5; color: #991b1b; }
 
         @media (max-width: 768px) {
             body { margin: 5px; }
@@ -58,7 +68,7 @@
     <a href="https://docs.google.com/forms/d/e/1FAIpQLScszSqsaxw9THyebWt2g0khVTIzP9L8hPbor1mUB0fp_0KPAw/viewform?usp=dialog" target="_blank" class="btn-add">+ Add New Booking</a>
     
     <div class="search-container">
-        <input type="text" id="calendarSearch" class="search-input" placeholder="🔍 Type dog name or breed to filter calendar instantly...">
+        <input type="text" id="calendarSearch" class="search-input" placeholder="🔍 Type dog name or breed to filter calendar..." autocomplete="off">
     </div>
 
     <div class="summary-dashboard">
@@ -82,6 +92,7 @@
 <script>
     const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT63UsPjcg3GB4lTB6cewLaTRS_yJP4kpOMSMsTTnvTw1Wbjn3CgtZc_c6li28ihjzkHnphFt0XcFTt/pub?gid=1639615540&single=true&output=csv';
     let globalCalendar;
+    let dailyCapacityCounts = {}; 
 
     document.addEventListener('DOMContentLoaded', function() {
         const calendarEl = document.getElementById('calendar');
@@ -95,48 +106,117 @@
                 center: 'title',
                 right: 'dayGridMonth,timeGridWeek'
             },
-            events: function(info, successCallback, failureCallback) {
-                // Improvement: Load cached content instantly before hitting network data strings
-                const cachedData = localStorage.getItem('boardingDataCache');
-                if (cachedData) {
-                    successCallback(parseCSVToEvents(cachedData));
-                }
+            // Enable manual cell clicking selection parameters
+            selectable: true,
+            dateClick: function(info) {
+                // Trigger Meet and Greet creation prompt logic flow
+                const dogName = prompt("🤝 Enter Dog Name to create a temporary Meet & Greet booking on this date:");
+                if (dogName && dogName.trim() !== "") {
+                    const breed = prompt("📋 Enter Breed (Optional):") || "N/A";
+                    
+                    const newMeet = {
+                        id: 'meet_' + Date.now(), // Generate unique index marker
+                        title: "🤝 Meet & Greet: " + dogName.trim(),
+                        start: info.dateStr,
+                        end: info.dateStr,
+                        allDay: true,
+                        backgroundColor: '#8e44ad', // Standout purple branding asset
+                        textColor: '#ffffff',
+                        extendedProps: {
+                            isMeetGreet: true,
+                            breed: breed.trim(),
+                            owner: "Temporary Booking",
+                            phone: "N/A"
+                        }
+                    };
 
+                    // Pull current array, append new entry, write to memory storage
+                    let localMeets = JSON.parse(localStorage.getItem('temporaryMeetGreets') || '[]');
+                    localMeets.push(newMeet);
+                    localStorage.setItem('temporaryMeetGreets', JSON.stringify(localMeets));
+                    
+                    // Instant runtime refresh trigger
+                    globalCalendar.refetchEvents();
+                }
+            },
+            events: function(info, successCallback, failureCallback) {
+                // Pull active sheet storage fallback strings
+                const cachedSheet = localStorage.getItem('boardingDataCache') || "";
+                
                 fetch(SHEET_CSV_URL)
                     .then(response => response.text())
                     .then(csvText => {
-                        localStorage.setItem('boardingDataCache', csvText); // Update local device cache
-                        successCallback(parseCSVToEvents(csvText));
+                        localStorage.setItem('boardingDataCache', csvText);
+                        processCombinedData(csvText, successCallback);
                     })
                     .catch(error => {
-                        console.error("Error loading data:", error);
-                        if(!cachedData) failureCallback(error);
+                        console.error("Network error fetching live rows, falling back to cache.", error);
+                        processCombinedData(cachedSheet, successCallback);
                     });
             },
             eventClick: function(info) {
-                alert(
-                    "🐶 Dog Name: " + info.event.title + "\n" +
-                    "📋 Breed: " + info.event.extendedProps.breed + "\n" +
-                    "👤 Owner: " + info.event.extendedProps.owner + "\n" +
-                    "📞 Contact: " + info.event.extendedProps.phone
-                );
+                // If it is a Meet & Greet, offer immediate deletion options
+                if (info.event.extendedProps.isMeetGreet) {
+                    const confirmDelete = confirm(
+                        info.event.title + "\n" +
+                        "📋 Breed: " + info.event.extendedProps.breed + "\n" +
+                        "⚠️ This is a temporary booking. Do you want to CANCEL/DELETE this Meet & Greet?"
+                    );
+                    
+                    if (confirmDelete) {
+                        let localMeets = JSON.parse(localStorage.getItem('temporaryMeetGreets') || '[]');
+                        // Filter out the deleted entry matching the ID string
+                        localMeets = localMeets.filter(m => m.id !== info.event.id);
+                        localStorage.setItem('temporaryMeetGreets', JSON.stringify(localMeets));
+                        
+                        // Instantly refresh interface layouts
+                        globalCalendar.refetchEvents();
+                    }
+                } else {
+                    // Regular Google Sheet entry logic profile popup alert
+                    alert(
+                        "🐶 Dog Name: " + info.event.title + "\n" +
+                        "📋 Breed: " + info.event.extendedProps.breed + "\n" +
+                        "👤 Owner: " + info.event.extendedProps.owner + "\n" +
+                        "📞 Contact: " + info.event.extendedProps.phone
+                    );
+                }
+            },
+            dayCellDidMount: function(info) {
+                const dateStr = info.date.toISOString().split('T')[0];
+                const count = dailyCapacityCounts[dateStr] || 0;
+                
+                const oldBadge = info.el.querySelector('.capacity-badge');
+                if (oldBadge) oldBadge.remove();
+
+                const numberFrame = info.el.querySelector('.fc-daygrid-day-top');
+
+                if (count === 3) {
+                    info.el.classList.add('capacity-warning');
+                    if (numberFrame) {
+                        numberFrame.insertAdjacentHTML('afterbegin', '<span class="capacity-badge badge-warning">BUSY</span>');
+                    }
+                } else if (count >= 4) {
+                    info.el.classList.add('capacity-full');
+                    if (numberFrame) {
+                        numberFrame.insertAdjacentHTML('afterbegin', '<span class="capacity-badge badge-full">⚠️ FULL</span>');
+                    }
+                }
             }
         });
 
         globalCalendar.render();
 
-        // Improvement: Active Input listener setup mapping filtering event criteria
+        // Live Filter Input logic setup parameters
         document.getElementById('calendarSearch').addEventListener('input', function(e) {
             const searchTerm = e.target.value.toLowerCase().trim();
-            
             globalCalendar.getEvents().forEach(ev => {
                 const title = ev.title.toLowerCase();
                 const breed = (ev.extendedProps.breed || '').toLowerCase();
-                
                 if (title.includes(searchTerm) || breed.includes(searchTerm)) {
                     ev.setProp('display', 'auto');
                 } else {
-                    ev.setProp('display', 'none'); // Hides non-matching bars completely
+                    ev.setProp('display', 'none');
                 }
             });
         });
@@ -150,7 +230,32 @@
         return 'hsl(' + (Math.abs(hash) % 360) + ', 70%, 40%)'; 
     }
 
+    // New helper method to blend Google sheet records seamlessly with local storage entries
+    function processCombinedData(csvText, successCallback) {
+        dailyCapacityCounts = {}; // Flush index variables on load arrays
+        
+        let spreadsheetEvents = parseCSVToEvents(csvText);
+        let localMeets = JSON.parse(localStorage.getItem('temporaryMeetGreets') || '[]');
+        
+        // Loop through temporary meet and greets to apply capacity mapping rules natively
+        localMeets.forEach(meet => {
+            if (dailyCapacityCounts[meet.start] !== undefined) {
+                dailyCapacityCounts[meet.start] += 1;
+            } else {
+                dailyCapacityCounts[meet.start] = 1;
+            }
+        });
+
+        // Combine both data streams together into a single master layout loop array
+        const masterEventArray = spreadsheetEvents.concat(localMeets);
+        successCallback(masterEventArray);
+        
+        // Force rendering logic updates once computations settle complete
+        if(globalCalendar) globalCalendar.render();
+    }
+
     function parseCSVToEvents(csvText) {
+        if (!csvText) return [];
         const lines = csvText.split(/\r?\n/);
         const events = [];
         
@@ -188,22 +293,27 @@
                         const breedTxt = breed ? breed.trim() : 'Unknown';
                         const displayDate = checkEnd.getDate() + '/' + (checkEnd.getMonth() + 1);
                         
-                        // Improvement Check: Identify multi-dog entries gracefully
+                        // Populate heatmap allocations
+                        let tempLoopDate = new Date(checkStart);
+                        while (tempLoopDate <= checkEnd) {
+                            const tempStr = tempLoopDate.toISOString().split('T')[0];
+                            dailyCapacityCounts[tempStr] = (dailyCapacityCounts[tempStr] || 0) + 1;
+                            tempLoopDate.setDate(tempLoopDate.getDate() + 1);
+                        }
+
                         const listLabel = (dogName.includes('&') || dogName.toLowerCase().includes('and')) ? '👥 ' + dogName.trim() : '🐾 ' + dogName.trim();
 
-                        // 1. Checkouts
+                        // Dashboard filter structures
                         if (checkEnd.getTime() === today.getTime()) {
                             leavingDogs.push('<li><span>' + listLabel + ' (' + breedTxt + ')</span> <span class="date-badge today-badge">TODAY</span></li>');
                         } else if (checkEnd > today && checkEnd <= sevenDaysFromNow) {
                             leavingDogs.push('<li><span>' + listLabel + ' (' + breedTxt + ')</span> <span class="date-badge">' + displayDate + '</span></li>');
                         }
 
-                        // 2. Staying Here
                         if (today >= checkStart && today <= checkEnd && checkEnd.getTime() !== today.getTime()) {
                             atHomeDogs.push('<li><span>' + listLabel + ' (' + breedTxt + ')</span></li>');
                         } 
 
-                        // 3. Arrivals
                         if (checkStart > today && checkStart <= sevenDaysFromNow) {
                             const arrivalDate = checkStart.getDate() + '/' + (checkStart.getMonth() + 1);
                             upcomingDogs.push('<li><span>⏳ ' + dogName.trim() + '</span> <span class="date-badge">' + arrivalDate + '</span></li>');
