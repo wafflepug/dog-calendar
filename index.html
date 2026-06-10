@@ -143,15 +143,27 @@
                 // Pull active sheet storage fallback strings
                 const cachedSheet = localStorage.getItem('boardingDataCache') || "";
                 
+                // 1. Immediately render using cached data so the heatmap shows up instantly at startup
+                if (cachedSheet) {
+                    processCombinedData(cachedSheet, successCallback);
+                    setTimeout(() => { globalCalendar.render(); }, 50);
+                }
+                
+                // 2. Fetch the live data from Google Sheets in the background
                 fetch(SHEET_CSV_URL)
                     .then(response => response.text())
                     .then(csvText => {
                         localStorage.setItem('boardingDataCache', csvText);
                         processCombinedData(csvText, successCallback);
+                        
+                        // 3. FORCE FullCalendar to completely re-evaluate and draw the day cells right now
+                        setTimeout(() => {
+                            globalCalendar.render();
+                        }, 100);
                     })
                     .catch(error => {
                         console.error("Network error fetching live rows, falling back to cache.", error);
-                        processCombinedData(cachedSheet, successCallback);
+                        if (!cachedSheet) failureCallback(error);
                     });
             },
             eventClick: function(info) {
