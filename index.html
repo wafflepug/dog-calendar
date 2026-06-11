@@ -56,54 +56,25 @@
         body.dark-theme .container { background: #1e293b; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
         body.dark-theme h2 { color: #f1f5f9; }
         body.dark-theme .search-input { background-color: #334155; border-color: #475569; color: white; }
-        
-        /* Dashboard Card Title Visibility Fix */
         body.dark-theme .summary-card { background: #334155; color: #f1f5f9; }
-        body.dark-theme .summary-card h3 { color: #cbd5e1 !important; font-weight: 700; text-shadow: 0 1px 2px rgba(0,0,0,0.2); }
+        body.dark-theme .summary-card h3 { color: #ffffff !important; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Apple Color Emoji", "Segoe UI Emoji", sans-serif !important; font-weight: 700 !important; font-size: 14px !important; letter-spacing: 0.5px !important; }
         body.dark-theme .summary-list li { border-bottom-color: #475569; color: #e2e8f0; }
         body.dark-theme .date-badge { background: #475569; color: #cbd5e1; }
 
-        /* FullCalendar Text & Number Contrast Visibility Fixes */
-        body.dark-theme .fc { 
-            color: #f1f5f9; 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Apple Color Emoji", "Segoe UI Emoji", sans-serif !important;
-        }
-        
-        /* 🔥 THE CRITICAL WEEKDAY HEADER VISIBILITY FIX (Sun, Mon, Tue...) */
+        /* FullCalendar Dark Mode Visibility Fixes */
+        body.dark-theme .fc { color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Apple Color Emoji", "Segoe UI Emoji", sans-serif !important; }
         body.dark-theme .fc th.fc-col-header-cell,
         body.dark-theme .fc .fc-col-header-cell-cushion,
         body.dark-theme .fc .fc-col-header-cell a,
-        body.dark-theme .fc-theme-standard th .fc-col-header-cell-cushion { 
-            color: #ffffff !important; 
-            font-weight: 800 !important; 
-            opacity: 1 !important;
-            text-decoration: none !important;
-        }
-        
-        /* Forces month day grid numbers (1, 2, 3...) to be clearly readable */
+        body.dark-theme .fc-theme-standard th .fc-col-header-cell-cushion { color: #ffffff !important; font-weight: 800 !important; opacity: 1 !important; text-decoration: none !important; }
         body.dark-theme .fc .fc-daygrid-day-number,
-        body.dark-theme .fc .fc-daygrid-day-top a { 
-            color: #ffffff !important; 
-            font-weight: 700 !important; 
-            opacity: 1 !important;
-            padding: 4px !important; 
-        }
-        
-        /* Fixes button icons/text inside the calendar header toolbar */
+        body.dark-theme .fc .fc-daygrid-day-top a { color: #ffffff !important; font-weight: 700 !important; opacity: 1 !important; padding: 4px !important; }
         body.dark-theme .fc .fc-button .fc-icon { color: #ffffff !important; }
         body.dark-theme .fc .fc-toolbar-title { color: #ffffff !important; }
-
-        /* Grid lines and structural borders */
-        body.dark-theme .fc td, 
-        body.dark-theme .fc th,
-        body.dark-theme .fc-theme-standard td, 
-        body.dark-theme .fc-theme-standard th,
-        body.dark-theme .fc-scrollgrid { border-color: #475569 !important; }
+        body.dark-theme .fc td, body.dark-theme .fc th, body.dark-theme .fc-theme-standard td, body.dark-theme .fc-theme-standard th, body.dark-theme .fc-scrollgrid { border-color: #475569 !important; }
         body.dark-theme .fc-daygrid-day:hover { background-color: #334155; }
         body.dark-theme .fc-button { background-color: #475569 !important; border-color: #64748b !important; color: white !important; }
         body.dark-theme .fc-button-active { background-color: #1e293b !important; border-color: #3498db !important; }
-
-        /* Heatmap Adjustments for Dark Mode */
         body.dark-theme .capacity-warning { background-color: #2d2a15 !important; }
         body.dark-theme .capacity-full { background-color: #3b1e1e !important; }
 
@@ -124,13 +95,13 @@
 
 <div class="container">
     <h2>🐾 Waffle House Calendar</h2>
-
-    <div class="calendar-banner-container">
-        <img src="https://lh3.googleusercontent.com/d/1M5FMz5NWWmc6XvIkWqL49ry_FKM8L6g1" alt="Waffle House Banner" class="calendar-banner">
-    </div>
     
     <div class="calendar-banner-container" style="display: none;">
         <img src="" alt="Waffle House Banner" class="calendar-banner">
+    </div>
+
+    <div class="calendar-banner-container">
+        <img src="https://lh3.googleusercontent.com/d/1M5FMz5NWWmc6XvIkWqL49ry_FKM8L6g1" alt="Waffle House Banner" class="calendar-banner">
     </div>
     
     <a href="https://docs.google.com/forms/d/e/1FAIpQLScszSqsaxw9THyebWt2g0khVTIzP9L8hPbor1mUB0fp_0KPAw/viewform?usp=dialog" target="_blank" class="btn-add">+ Add New Booking</a>
@@ -160,7 +131,7 @@
 <button id="themeToggle" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; background: #2c3e50; color: white; border: none; border-radius: 50%; width: 50px; height: 50px; font-size: 22px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.2); display: flex; align-items: center; justify-content: center;">🌙</button>
 
 <script>
-    const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT63UsPjcg3GB4lTB6cewLaTRS_yJP4kpOMSMsTTnvTw1Wbjn3CgtZc_c6li28ihjzkHnphFt0XcFTt/pub?gid=1639615540&single=true&output=csv';
+    const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT63UsPjcg3GB41TB6cewLaTRS_yJP4kpOMSmsTTnvTwlWbjn3CgtZc_c6li28ihjzhNnphFt0XCFtt/pub?gid=1639615540&single=true&output=csv';
     let globalCalendar;
     let dailyCapacityCounts = {}; 
 
@@ -194,7 +165,10 @@
                             isMeetGreet: true,
                             breed: breed.trim(),
                             owner: "Temporary Booking",
-                            phone: "N/A"
+                            phone: "N/A",
+                            likes: "N/A",
+                            dislikes: "N/A",
+                            notes: "Temporary placement"
                         }
                     };
 
@@ -208,17 +182,27 @@
             events: function(info, successCallback, failureCallback) {
                 const cachedSheet = localStorage.getItem('boardingDataCache') || "";
                 
+                // Track if the network request updates the UI so we can ignore any late cache triggers
+                let dataLoaded = false; 
+
                 if (cachedSheet) {
-                    processCombinedData(cachedSheet, successCallback);
-                    setTimeout(() => { globalCalendar.render(); }, 50);
+                    processCombinedData(cachedSheet, (events) => {
+                        if (!dataLoaded) successCallback(events);
+                    });
                 }
                 
                 fetch(SHEET_CSV_URL)
                     .then(response => response.text())
                     .then(csvText => {
+                        dataLoaded = true; // Signal that the live sheet data is in control
                         localStorage.setItem('boardingDataCache', csvText);
-                        processCombinedData(csvText, successCallback);
-                        setTimeout(() => { globalCalendar.render(); }, 100);
+                        
+                        processCombinedData(csvText, (events) => {
+                            // Clear old cache objects and drop clean events to stop stacked duplicates
+                            successCallback(events);
+                        });
+                        
+                        setTimeout(() => { globalCalendar.render(); }, 50);
                     })
                     .catch(error => {
                         console.error("Network error fetching live rows, falling back to cache.", error);
@@ -245,7 +229,10 @@
                         "🐶 Dog Name: " + info.event.title + "\n" +
                         "📋 Breed: " + info.event.extendedProps.breed + "\n" +
                         "👤 Owner: " + info.event.extendedProps.owner + "\n" +
-                        "📞 Contact: " + info.event.extendedProps.phone
+                        "📞 Contact: " + info.event.extendedProps.phone + "\n\n" +
+                        "❤️ Likes: " + info.event.extendedProps.likes + "\n" +
+                        "❌ Dislikes: " + info.event.extendedProps.dislikes + "\n" +
+                        "📝 Notes: " + info.event.extendedProps.notes
                     );
                 }
             },
@@ -300,7 +287,6 @@
                 localStorage.setItem('theme', 'light');
             }
         });
-
     }); 
 
     function applyCurrentSearchFilter() {
@@ -362,10 +348,19 @@
 
         for (let i = 1; i < lines.length; i++) {
             if (!lines[i].trim()) continue;
-            const columns = lines[i].split(","); 
             
-            const dogName = columns[1]; const breed = columns[2]; const startDate = columns[3];
-            const endDate = columns[4]; const ownerName = columns[5]; const phone = columns[6];
+            // Clean handling for commas embedded within sheet text notes
+            const columns = lines[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/); 
+            
+            const dogName = columns[1] ? columns[1].replace(/^"|"$/g, '') : '';
+            const breed = columns[2] ? columns[2].replace(/^"|"$/g, '') : '';
+            const startDate = columns[3];
+            const endDate = columns[4];
+            const ownerName = columns[5] ? columns[5].replace(/^"|"$/g, '') : '';
+            const phone = columns[6] ? columns[6].replace(/^"|"$/g, '') : '';
+            const likes = columns[7] ? columns[7].replace(/^"|"$/g, '') : '';
+            const dislikes = columns[8] ? columns[8].replace(/^"|"$/g, '') : '';
+            const notes = columns[9] ? columns[9].replace(/^"|"$/g, '') : '';
 
             if (dogName && startDate) {
                 let startParsed = "", endParsed = "";
@@ -434,7 +429,14 @@
                             allDay: true,
                             backgroundColor: stringToColor(dogName.trim()),
                             textColor: '#ffffff',
-                            extendedProps: { breed: breedTxt, owner: ownerName ? ownerName.trim() : "N/A", phone: phone ? phone.trim() : "N/A" }
+                            extendedProps: { 
+                                breed: breedTxt, 
+                                owner: ownerName ? ownerName.trim() : "N/A", 
+                                phone: phone ? phone.trim() : "N/A",
+                                likes: likes ? likes.trim() : "None listed",
+                                dislikes: dislikes ? dislikes.trim() : "None listed",
+                                notes: notes ? notes.trim() : "None"
+                            }
                         });
                     }
                 }
