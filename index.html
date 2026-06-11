@@ -7,16 +7,16 @@
     <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css" rel="stylesheet" />
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
     <style>
+        /* --- Core Layout Styling --- */
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 15px; background-color: #f8f9fa; transition: background-color 0.3s, color 0.3s; }
         .container { max-width: 950px; margin: 0 auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); transition: background-color 0.3s, box-shadow 0.3s; }
         
-        /* Page Header Branding Wrapper */
+        /* --- Page Header & Branding Elements --- */
         .calendar-header-branding { display: flex; flex-direction: column; align-items: center; justify-content: center; margin-bottom: 20px; gap: 12px; text-align: center; }
         .calendar-header-branding h2 { color: #2c3e50; font-size: 24px; font-weight: 800; margin: 0; display: flex; align-items: center; justify-content: center; gap: 8px; }
-        
-        /* Responsive & Centered Branding Image Layout Rules */
         .calendar-brand-img { width: 20%; max-width: 160px; min-width: 100px; height: auto; border-radius: 12px; object-fit: cover; display: block; }
 
+        /* --- Buttons and Interactive Controls --- */
         .btn-add { display: block; width: 100%; box-sizing: border-box; text-align: center; background: #27ae60; color: white; padding: 14px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .btn-add:hover { background: #219653; }
         
@@ -24,35 +24,34 @@
         .search-input { width: 100%; box-sizing: border-box; padding: 12px; font-size: 14px; border: 2px solid #e2e8f0; border-radius: 8px; outline: none; transition: border-color 0.2s, background-color 0.3s, border-color 0.3s, color 0.3s; }
         .search-input:focus { border-color: #3498db; }
 
-        /* Dashboard Summary Styles */
+        /* --- Summary Dashboard Panels --- */
         .summary-dashboard { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 25px; }
         .summary-card { background: #f1f5f9; padding: 15px; border-radius: 8px; border-top: 4px solid #2c3e50; box-shadow: 0 2px 4px rgba(0,0,0,0.02); transition: background-color 0.3s, color 0.3s; }
         .summary-card.active-now { border-top-color: #3498db; }
         .summary-card.leaving-now { border-top-color: #e74c3c; }
         .summary-card.upcoming-now { border-top-color: #f39c12; }
         .summary-card h3 { margin: 0 0 10px 0; font-size: 13px; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; }
+        
         .summary-list { list-style: none; padding: 0; margin: 0; font-size: 14px; color: #1e293b; }
         .summary-list li { padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-weight: 500; display: flex; justify-content: space-between; align-items: center; transition: border-color 0.3s; }
         .summary-list li:last-child { border-bottom: none; }
         .no-dogs { color: #94a3b8; font-style: italic; font-size: 13px; padding: 5px 0; display: block !important; }
         
+        /* --- Badge UI Classes --- */
         .date-badge { font-size: 11px; background: #e2e8f0; padding: 2px 6px; border-radius: 4px; color: #475569; font-weight: bold; transition: background-color 0.3s, color 0.3s; }
         .date-badge.today-badge { background: #fde8e8; color: #c81e1e; }
-
-        /* General Interactive Event Hover Rules */
-        .fc-event { cursor: pointer; padding: 4px 6px; font-size: 13px; border: none !important; border-radius: 4px; font-weight: 600; margin-bottom: 2px; }
-        .fc-daygrid-day { cursor: pointer; }
-        .fc-daygrid-day:hover { background-color: #f8fafc; }
-
-        /* Capacity Heatmap Styling Classes */
-        .capacity-warning { background-color: #fffbeb !important; transition: background-color 0.3s; } 
-        .capacity-full { background-color: #fdf2f2 !important; transition: background-color 0.3s; }    
-        
         .capacity-badge { float: left; font-size: 9px; font-weight: bold; padding: 1px 4px; border-radius: 3px; margin-right: 4px; margin-top: 2px; }
         .badge-warning { background-color: #fde68a; color: #78350f; }
         .badge-full { background-color: #fca5a5; color: #991b1b; }
 
-        /* Dark Mode Core Theme Overrides */
+        /* --- FullCalendar Layout & Cell Tweaks --- */
+        .fc-event { cursor: pointer; padding: 4px 6px; font-size: 13px; border: none !important; border-radius: 4px; font-weight: 600; margin-bottom: 2px; }
+        .fc-daygrid-day { cursor: pointer; }
+        .fc-daygrid-day:hover { background-color: #f8fafc; }
+        .capacity-warning { background-color: #fffbeb !important; transition: background-color 0.3s; } 
+        .capacity-full { background-color: #fdf2f2 !important; transition: background-color 0.3s; }    
+
+        /* --- Dark Mode Theme Overrides --- */
         body.dark-theme { background-color: #0f172a; color: #f8fafc; }
         body.dark-theme .container { background: #1e293b; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
         body.dark-theme .calendar-header-branding h2 { color: #f1f5f9; }
@@ -63,7 +62,7 @@
         body.dark-theme .date-badge { background: #475569; color: #cbd5e1; }
         body.dark-theme .search-container select { background-color: #334155 !important; border-color: #475569 !important; color: white !important; }
 
-        /* FullCalendar Dark Mode Visibility Fixes */
+        /* --- FullCalendar Specific Dark Mode Overrides --- */
         body.dark-theme .fc { color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important; }
         body.dark-theme .fc th.fc-col-header-cell,
         body.dark-theme .fc .fc-col-header-cell-cushion,
@@ -80,15 +79,12 @@
         body.dark-theme .capacity-warning { background-color: #2d2a15 !important; }
         body.dark-theme .capacity-full { background-color: #3b1e1e !important; }
 
-        /* Responsive Media Queries Optimization */
+        /* --- Media Queries (Mobile & Viewport Adjustments) --- */
         @media (max-width: 768px) {
             body { margin: 5px; }
             .container { padding: 10px; border-radius: 6px; }
             .calendar-header-branding h2 { font-size: 20px; }
-            
-            /* Compact mobile width parameters for optimized layout */
             .calendar-brand-img { width: 28%; max-width: 110px; min-width: 85px; }
-            
             .search-container { flex-direction: column; align-items: stretch !important; gap: 8px; }
             .quick-navigate-container { display: grid !important; grid-template-columns: 1fr 1fr; gap: 5px; }
             .summary-dashboard { grid-template-columns: 1fr; gap: 10px; margin-bottom: 15px; }
@@ -104,6 +100,7 @@
 
 <div class="container">
     <div class="calendar-header-branding">
+        <img src="https://wafflepug.github.io/Waffle.jpg" alt="Waffle Pug" class="calendar-brand-img" onerror="this.style.display='none';">
         <h2>🐾 Waffle House Calendar</h2>
     </div>
     
@@ -204,7 +201,8 @@
                             phone: "N/A",
                             likes: "N/A",
                             dislikes: "N/A",
-                            notes: "Temporary placement"
+                            notes: "Temporary placement",
+                            editLink: ""
                         }
                     };
 
@@ -229,15 +227,28 @@
                         refreshCalendarData();
                     }
                 } else {
-                    alert(
-                        "🐶 Dog Name: " + info.event.title + "\n" +
-                        "📋 Breed: " + info.event.extendedProps.breed + "\n" +
-                        "👤 Owner: " + info.event.extendedProps.owner + "\n" +
-                        "📞 Contact: " + info.event.extendedProps.phone + "\n\n" +
-                        "❤️ Likes: " + info.event.extendedProps.likes + "\n" +
-                        "❌ Dislikes: " + info.event.extendedProps.dislikes + "\n" +
-                        "📝 Notes: " + info.event.extendedProps.notes
-                    );
+                    const targetSheetUrl = info.event.extendedProps.editLink;
+
+                    if (targetSheetUrl && targetSheetUrl.startsWith("http")) {
+                        const confirmRedirect = confirm(
+                            "🐶 Open Spreadsheet Editor?\n\n" +
+                            "Would you like to open Google Sheets to edit " + info.event.title + "'s records on its specific row line?"
+                        );
+                        if (confirmRedirect) {
+                            window.open(targetSheetUrl, '_blank');
+                        }
+                    } else {
+                        // Fallback alerts panel interface display
+                        alert(
+                            "🐶 Booking Details:\n" +
+                            "-----------------------------\n" +
+                            "Dog Name: " + info.event.title + "\n" +
+                            "Breed: " + info.event.extendedProps.breed + "\n" +
+                            "Owner: " + info.event.extendedProps.owner + "\n" +
+                            "Contact: " + info.event.extendedProps.phone + "\n\n" +
+                            "💡 Tip: Map a formula formula column to column 11 (K) on Google Sheets to enable direct row navigation persistence features seamlessly."
+                        );
+                    }
                 }
             },
             dayCellDidMount: function(info) {
@@ -427,6 +438,7 @@
             const likes = columns[7] ? columns[7].replace(/^"|"$/g, '') : '';
             const dislikes = columns[8] ? columns[8].replace(/^"|"$/g, '') : '';
             const notes = columns[9] ? columns[9].replace(/^"|"$/g, '') : '';
+            const editLink = columns[10] ? columns[10].replace(/^"|"$/g, '') : ''; // Row Edit Link Column Parsing Mapping
 
             if (dogName && startDate) {
                 let startParsed = "", endParsed = "";
@@ -500,7 +512,8 @@
                                 phone: phone ? phone.trim() : "N/A",
                                 likes: likes ? likes.trim() : "None listed",
                                 dislikes: dislikes ? dislikes.trim() : "None listed",
-                                notes: notes ? notes.trim() : "None"
+                                notes: notes ? notes.trim() : "None",
+                                editLink: editLink ? editLink.trim() : ""
                             }
                         });
                     }
