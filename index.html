@@ -10,10 +10,12 @@
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 15px; background-color: #f8f9fa; transition: background-color 0.3s, color 0.3s; }
         .container { max-width: 950px; margin: 0 auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); transition: background-color 0.3s, box-shadow 0.3s; }
         
-        /* Page Header Branding Wrapper */
+        /* Resized Page Header Branding Wrapper */
         .calendar-header-branding { text-align: center; margin-bottom: 15px; }
-        .calendar-header-branding h2 { color: #2c3e50; font-size: 26px; font-weight: 800; margin: 10px 0 5px 0; display: flex; align-items: center; justify-content: center; gap: 8px; }
-        .calendar-brand-img { max-width: 160px; height: auto; border-radius: 50%; object-fit: cover; margin-top: 5px; }
+        .calendar-header-branding h2 { color: #2c3e50; font-size: 24px; font-weight: 800; margin: 10px 0 5px 0; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        
+        /* Fixed: Resized pug image to be smaller and proportional */
+        .calendar-brand-img { width: 140px; height: auto; border-radius: 12px; object-fit: cover; margin-top: 5px; }
 
         .btn-add { display: block; width: 100%; box-sizing: border-box; text-align: center; background: #27ae60; color: white; padding: 14px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .btn-add:hover { background: #219653; }
@@ -82,6 +84,7 @@
             body { margin: 5px; }
             .container { padding: 10px; border-radius: 6px; }
             .calendar-header-branding h2 { font-size: 20px; }
+            .calendar-brand-img { width: 110px; }
             .search-container { flex-direction: column; align-items: stretch !important; gap: 8px; }
             .quick-navigate-container { display: grid !important; grid-template-columns: 1fr 1fr; gap: 5px; }
             .summary-dashboard { grid-template-columns: 1fr; gap: 10px; margin-bottom: 15px; }
@@ -100,10 +103,6 @@
         <h2>🐾 Waffle House Calendar</h2>
         <img src="https://wafflepug.github.io/Waffle.jpg" alt="Waffle Pug" class="calendar-brand-img" onerror="this.style.display='none';">
     </div>
-
-   <div class="calendar-banner-container">
-        <img src="https://lh3.googleusercontent.com/d/1M5FMz5NWWmc6XvIkWqL49ry_FKM8L6g1" alt="Waffle House Banner" class="calendar-banner">
-     </div>
     
     <a href="https://docs.google.com/forms/d/e/1FAIpQLScszSqsaxw9THyebWt2g0khVTIzP9L8hPbor1mUB0fp_0KPAw/viewform?usp=dialog" target="_blank" class="btn-add">+ Add New Booking</a>
     
@@ -156,7 +155,7 @@
     const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT63UsPjcg3GB41TB6cewLaTRS_yJP4kpOMSmsTTnvTwlWbjn3CgtZc_c6li28ihjzhNnphFt0XCFtt/pub?gid=1639615540&single=true&output=csv';
     let globalCalendar;
     let dailyCapacityCounts = {}; 
-    let isUpdatingDropdowns = false; // Flag to prevent cyclic navigation triggers
+    let isUpdatingDropdowns = false; 
 
     document.addEventListener('DOMContentLoaded', function() {
         const calendarEl = document.getElementById('calendar');
@@ -172,11 +171,10 @@
             },
             selectable: true,
             
-            // Re-render dashboard elements only when the view dates change
             datesSet: function(info) {
-                updateDashboardAndBadges();
+                applyCurrentSearchFilter();
 
-                // Sync dropdown menus without triggering event loops
+                // Smoothly update selection controls without cyclic rendering loops
                 if (!isUpdatingDropdowns) {
                     const viewCurrentDate = globalCalendar.getDate();
                     document.getElementById('jumpMonth').value = String(viewCurrentDate.getMonth()).padStart(2, '0');
@@ -265,7 +263,7 @@
 
         globalCalendar.render();
 
-        // Dropdown Navigation Dropdown Configuration
+        // Dropdown Navigation Configuration
         const jumpMonthSelect = document.getElementById('jumpMonth');
         const jumpYearSelect = document.getElementById('jumpYear');
 
@@ -289,7 +287,7 @@
         jumpMonthSelect.addEventListener('change', executeCalendarJump);
         jumpYearSelect.addEventListener('change', executeCalendarJump);
 
-        // Secure Spreadsheet Sync Engine
+        // Secure Cloud Sync Controller
         document.getElementById('manualRefreshBtn').addEventListener('click', function() {
             const btn = this;
             btn.innerText = "⏳ Syncing...";
@@ -357,19 +355,19 @@
             }
         });
 
-        // Initial Data Load Injection
+        // Initial Boot Data Pipeline Injection
         refreshCalendarData();
     });
 
-    // Fetches the data array and updates the master FullCalendar engine layer safely
+    // Safely feeds unified datasets directly into FullCalendar without duplicate layer stacking
     function refreshCalendarData() {
         if (!globalCalendar) return;
         
-        // Clean event container arrays safely
+        // Purge old event data references completely
         globalCalendar.getEventSources().forEach(source => source.remove());
 
         const csvText = localStorage.getItem('boardingDataCache') || "";
-        dailyCapacityCounts = {}; // Reset baseline maps
+        dailyCapacityCounts = {}; // Flush old capacity calculations
         
         let spreadsheetEvents = parseCSVToEvents(csvText);
         let localMeets = JSON.parse(localStorage.getItem('temporaryMeetGreets') || '[]');
@@ -380,13 +378,8 @@
 
         const unifiedEvents = spreadsheetEvents.concat(localMeets);
         
-        // Add events directly — do NOT run globalCalendar.render() afterwards
+        // Dynamic addition of source payload handles layout refreshing seamlessly without .render() overhead
         globalCalendar.addEventSource(unifiedEvents);
-    }
-
-    // Secondary UI cleanup tasks triggered on date shifts
-    function updateDashboardAndBadges() {
-        applyCurrentSearchFilter();
     }
 
     function applyCurrentSearchFilter() {
