@@ -36,6 +36,18 @@
         .summary-list li { padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-weight: 500; display: flex; justify-content: space-between; align-items: center; transition: border-color 0.3s; }
         .summary-list li:last-child { border-bottom: none; }
         .no-dogs { color: #94a3b8; font-style: italic; font-size: 13px; padding: 5px 0; display: block !important; }
+
+        /* --- Detailed Directory Layout --- */
+        .directory-dashboard { background: #f8fafc; border: 1px solid #e2e8f0; padding: 20px; border-radius: 10px; margin-bottom: 25px; transition: background-color 0.3s, border-color 0.3s; }
+        .directory-dashboard h3 { margin: 0 0 15px 0; font-size: 16px; color: #1e293b; display: flex; align-items: center; gap: 8px; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; }
+        .directory-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px; max-height: 400px; overflow-y: auto; padding-right: 5px; }
+        .directory-card { background: white; border: 1px solid #e2e8f0; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); display: flex; flex-direction: column; gap: 6px; transition: background-color 0.3s, border-color 0.3s; }
+        .directory-card h4 { margin: 0 0 4px 0; font-size: 16px; color: #2c3e50; font-weight: 700; border-bottom: 1px dashed #e2e8f0; padding-bottom: 4px; display: flex; justify-content: space-between; align-items: center; }
+        .directory-card p { margin: 0; font-size: 13px; color: #475569; line-height: 1.4; }
+        .directory-card strong { color: #1e293b; font-weight: 600; }
+        .directory-status-tag { font-size: 10px; font-weight: bold; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; }
+        .tag-at-home { background: #e0f2fe; color: #0369a1; }
+        .tag-upcoming { background: #fef3c7; color: #b45309; }
         
         /* --- Badge UI Classes --- */
         .date-badge { font-size: 11px; background: #e2e8f0; padding: 2px 6px; border-radius: 4px; color: #475569; font-weight: bold; transition: background-color 0.3s, color 0.3s; }
@@ -57,13 +69,22 @@
         body.dark-theme .calendar-header-branding h2 { color: #f1f5f9; }
         body.dark-theme .search-input { background-color: #334155; border-color: #475569; color: white; }
         body.dark-theme .summary-card { background: #334155; color: #f1f5f9; }
-        body.dark-theme .summary-card h3 { color: #ffffff !important; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important; font-weight: 700 !important; font-size: 14px !important; letter-spacing: 0.5px !important; }
+        body.dark-theme .summary-card h3 { color: #ffffff !important; font-weight: 700 !important; font-size: 14px !important; letter-spacing: 0.5px !important; }
         body.dark-theme .summary-list li { border-bottom-color: #475569; color: #e2e8f0; }
         body.dark-theme .date-badge { background: #475569; color: #cbd5e1; }
         body.dark-theme .search-container select { background-color: #334155 !important; border-color: #475569 !important; color: white !important; }
 
+        body.dark-theme .directory-dashboard { background: #1e293b; border-color: #334155; }
+        body.dark-theme .directory-dashboard h3 { color: #f1f5f9; border-bottom-color: #334155; }
+        body.dark-theme .directory-card { background: #334155; border-color: #475569; }
+        body.dark-theme .directory-card h4 { color: #ffffff; border-bottom-color: #475569; }
+        body.dark-theme .directory-card p { color: #cbd5e1; }
+        body.dark-theme .directory-card strong { color: #f8fafc; }
+        body.dark-theme .tag-at-home { background: #0c4a6e; color: #7dd3fc; }
+        body.dark-theme .tag-upcoming { background: #78350f; color: #fde68a; }
+
         /* --- FullCalendar Specific Dark Mode Overrides --- */
-        body.dark-theme .fc { color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important; }
+        body.dark-theme .fc { color: #f1f5f9; }
         body.dark-theme .fc th.fc-col-header-cell,
         body.dark-theme .fc .fc-col-header-cell-cushion,
         body.dark-theme .fc .fc-col-header-cell a,
@@ -88,6 +109,7 @@
             .search-container { flex-direction: column; align-items: stretch !important; gap: 8px; }
             .quick-navigate-container { display: grid !important; grid-template-columns: 1fr 1fr; gap: 5px; }
             .summary-dashboard { grid-template-columns: 1fr; gap: 10px; margin-bottom: 15px; }
+            .directory-grid { grid-template-columns: 1fr; max-height: 300px; }
             .fc .fc-toolbar-title { font-size: 16px !important; }
             .fc .fc-button { padding: 6px 8px !important; font-size: 12px !important; }
             .fc th { font-size: 11px !important; padding: 2px 0 !important; } 
@@ -107,7 +129,7 @@
     <a href="https://docs.google.com/forms/d/e/1FAIpQLScszSqsaxw9THyebWt2g0khVTIzP9L8hPbor1mUB0fp_0KPAw/viewform?usp=dialog" target="_blank" class="btn-add">+ Add New Booking</a>
     
     <div class="search-container" style="display: flex; gap: 10px; align-items: center; margin-bottom: 20px; flex-wrap: wrap;">
-        <input type="text" id="calendarSearch" class="search-input" style="flex: 1; min-width: 200px;" placeholder="🔍 Type dog name or breed to filter calendar..." autocomplete="off">
+        <input type="text" id="calendarSearch" class="search-input" style="flex: 1; min-width: 200px;" placeholder="🔍 Type dog name or breed to filter data..." autocomplete="off">
         
         <div class="quick-navigate-container" style="display: flex; gap: 5px;">
             <select id="jumpMonth" style="padding: 12px; font-size: 14px; border: 2px solid #e2e8f0; border-radius: 8px; background: white; outline: none; cursor: pointer; font-weight: bold; transition: background-color 0.3s, border-color 0.3s, color 0.3s;">
@@ -146,13 +168,19 @@
         </div>
     </div>
 
+    <div class="directory-dashboard">
+        <h3>📋 Detailed Guest Directory (Current & Upcoming)</h3>
+        <div id="directory-grid" class="directory-grid">
+            </div>
+    </div>
+
     <div id="calendar"></div>
 </div>
 
 <button id="themeToggle" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; background: #2c3e50; color: white; border: none; border-radius: 50%; width: 50px; height: 50px; font-size: 22px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.2); display: flex; align-items: center; justify-content: center;">🌙</button>
 
 <script>
-    const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT63UsPjcg3GB4lTB6cewLaTRS_yJP4kpOMSMsTTnvTw1Wbjn3CgtZc_c6li28ihjzkHnphFt0XcFTt/pub?gid=1639615540&single=true&output=csv';
+    const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT63UsPjcg3GB41TB6cewLaTRS_yJP4kpOMSmsTTnvTwlWbjn3CgtZc_c6li28ihjzhNnphFt0XCFtt/pub?gid=1639615540&single=true&output=csv';
     let globalCalendar;
     let dailyCapacityCounts = {}; 
     let isUpdatingDropdowns = false; 
@@ -238,7 +266,6 @@
                             window.open(targetSheetUrl, '_blank');
                         }
                     } else {
-                        // Fallback alerts panel interface display
                         alert(
                             "🐶 Booking Details:\n" +
                             "-----------------------------\n" +
@@ -246,7 +273,7 @@
                             "Breed: " + info.event.extendedProps.breed + "\n" +
                             "Owner: " + info.event.extendedProps.owner + "\n" +
                             "Contact: " + info.event.extendedProps.phone + "\n\n" +
-                            "💡 Tip: Map a formula formula column to column 11 (K) on Google Sheets to enable direct row navigation persistence features seamlessly."
+                            "💡 Tip: Map a formula column to column 11 (K) on Google Sheets to enable direct row navigation persistence features seamlessly."
                         );
                     }
                 }
@@ -404,6 +431,17 @@
                 }
             }
         });
+
+        // Sync directory cards visibility with search box input parameters
+        const cards = document.querySelectorAll('.directory-card');
+        cards.forEach(card => {
+            if (searchTerm === "") {
+                card.style.display = 'flex';
+            } else {
+                const text = card.innerText.toLowerCase();
+                card.style.display = text.includes(searchTerm) ? 'flex' : 'none';
+            }
+        });
     }
 
     function stringToColor(str) {
@@ -423,6 +461,7 @@
         const sevenDaysFromNow = new Date(); sevenDaysFromNow.setDate(today.getDate() + 7); sevenDaysFromNow.setHours(23,59,59,999);
 
         const atHomeDogs = []; const leavingDogs = []; const upcomingDogs = [];
+        const directoryCardsHTML = [];
 
         for (let i = 1; i < lines.length; i++) {
             if (!lines[i].trim()) continue;
@@ -438,7 +477,7 @@
             const likes = columns[7] ? columns[7].replace(/^"|"$/g, '') : '';
             const dislikes = columns[8] ? columns[8].replace(/^"|"$/g, '') : '';
             const notes = columns[9] ? columns[9].replace(/^"|"$/g, '') : '';
-            const editLink = columns[10] ? columns[10].replace(/^"|"$/g, '') : ''; // Row Edit Link Column Parsing Mapping
+            const editLink = columns[10] ? columns[10].replace(/^"|"$/g, '') : '';
 
             if (dogName && startDate) {
                 let startParsed = "", endParsed = "";
@@ -476,19 +515,41 @@
 
                         const listLabel = (dogName.includes('&') || dogName.toLowerCase().includes('and')) ? '👥 ' + dogName.trim() : '🐾 ' + dogName.trim();
 
+                        let isAtHome = (today >= checkStart && today <= checkEnd && checkEnd.getTime() !== today.getTime());
+                        let isUpcoming = (checkStart > today && checkStart <= sevenDaysFromNow);
+
                         if (checkEnd.getTime() === today.getTime()) {
                             leavingDogs.push('<li><span>' + listLabel + ' (' + breedTxt + ')</span> <span class="date-badge today-badge">TODAY</span></li>');
                         } else if (checkEnd > today && checkEnd <= sevenDaysFromNow) {
                             leavingDogs.push('<li><span>' + listLabel + ' (' + breedTxt + ')</span> <span class="date-badge">' + displayDate + '</span></li>');
                         }
 
-                        if (today >= checkStart && today <= checkEnd && checkEnd.getTime() !== today.getTime()) {
+                        if (isAtHome) {
                             atHomeDogs.push('<li><span>' + listLabel + ' (' + breedTxt + ')</span></li>');
                         } 
 
-                        if (checkStart > today && checkStart <= sevenDaysFromNow) {
+                        if (isUpcoming) {
                             const arrivalDate = checkStart.getDate() + '/' + (checkStart.getMonth() + 1);
                             upcomingDogs.push('<li><span>⏳ ' + dogName.trim() + '</span> <span class="date-badge">' + arrivalDate + '</span></li>');
+                        }
+
+                        // Generate Detailed Grid Card if dog is at home or arriving soon
+                        if (isAtHome || isUpcoming) {
+                            const statusTag = isAtHome ? 
+                                '<span class="directory-status-tag tag-at-home">At Home</span>' : 
+                                '<span class="directory-status-tag tag-upcoming">Upcoming</span>';
+
+                            directoryCardsHTML.push(`
+                                <div class="directory-card">
+                                    <h4><span>🐾 ${dogName.trim()}</span> ${statusTag}</h4>
+                                    <p><strong>Breed:</strong> ${breedTxt}</p>
+                                    <p><strong>Owner:</strong> ${ownerName ? ownerName.trim() : 'N/A'}</p>
+                                    <p><strong>Contact:</strong> ${phone ? phone.trim() : 'N/A'}</p>
+                                    <p><strong>Likes:</strong> ${likes ? likes.trim() : 'None listed'}</p>
+                                    <p><strong>Dislikes:</strong> ${dislikes ? dislikes.trim() : 'None listed'}</p>
+                                    <p><strong>Notes:</strong> ${notes ? notes.trim() : 'None'}</p>
+                                </div>
+                            `);
                         }
 
                         const parts = endParsed.split('-');
@@ -521,9 +582,14 @@
             }
         }
 
+        // Render Summary Columns
         document.getElementById('at-home-list').innerHTML = atHomeDogs.length > 0 ? atHomeDogs.join('') : '<li class="no-dogs">No remaining guests at home right now</li>';
         document.getElementById('leaving-list').innerHTML = leavingDogs.length > 0 ? leavingDogs.join('') : '<li class="no-dogs">No checkouts scheduled this week</li>';
         document.getElementById('upcoming-list').innerHTML = upcomingDogs.length > 0 ? upcomingDogs.join('') : '<li class="no-dogs">No new arrivals scheduled this week</li>';
+
+        // Render Directory Section Grid
+        document.getElementById('directory-grid').innerHTML = directoryCardsHTML.length > 0 ? 
+            directoryCardsHTML.join('') : '<div class="no-dogs" style="grid-column: 1/-1; text-align: center; padding: 20px;">No current or upcoming guests meet this criteria this week.</div>';
 
         return events;
     }
