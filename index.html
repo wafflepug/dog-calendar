@@ -138,7 +138,7 @@
     document.addEventListener('DOMContentLoaded', function() {
         const calendarEl = document.getElementById('calendar');
         
-        globalCalendar = new FullCalendar.Calendar(calendarEl, {
+globalCalendar = new FullCalendar.Calendar(calendarEl, {
             initialView: 'dayGridMonth',
             displayEventTime: false, 
             height: 'auto',
@@ -148,6 +148,12 @@
                 right: 'dayGridMonth,timeGridWeek'
             },
             selectable: true,
+            
+            // Fires automatically on initialization and whenever you change months
+            datesSet: function(info) {
+                fetchCalendarData();
+            },
+            
             dateClick: function(info) {
                 const dogName = prompt("🤝 Enter Dog Name to create a temporary Meet & Greet booking on this date:");
                 if (dogName && dogName.trim() !== "") {
@@ -176,39 +182,11 @@
                     localMeets.push(newMeet);
                     localStorage.setItem('temporaryMeetGreets', JSON.stringify(localMeets));
                     
-                    globalCalendar.refetchEvents();
+                    // Refetches data cleanly through our unified engine
+                    fetchCalendarData();
                 }
             },
-            events: function(info, successCallback, failureCallback) {
-                const cachedSheet = localStorage.getItem('boardingDataCache') || "";
-                
-                // Track if the network request updates the UI so we can ignore any late cache triggers
-                let dataLoaded = false; 
-
-                if (cachedSheet) {
-                    processCombinedData(cachedSheet, (events) => {
-                        if (!dataLoaded) successCallback(events);
-                    });
-                }
-                
-                fetch(SHEET_CSV_URL)
-                    .then(response => response.text())
-                    .then(csvText => {
-                        dataLoaded = true; // Signal that the live sheet data is in control
-                        localStorage.setItem('boardingDataCache', csvText);
-                        
-                        processCombinedData(csvText, (events) => {
-                            // Clear old cache objects and drop clean events to stop stacked duplicates
-                            successCallback(events);
-                        });
-                        
-                        setTimeout(() => { globalCalendar.render(); }, 50);
-                    })
-                    .catch(error => {
-                        console.error("Network error fetching live rows, falling back to cache.", error);
-                        if (!cachedSheet) failureCallback(error);
-                    });
-            },
+            
             eventClick: function(info) {
                 if (info.event.extendedProps.isMeetGreet) {
                     const confirmDelete = confirm(
@@ -222,7 +200,7 @@
                         localMeets = localMeets.filter(m => m.id !== info.event.id);
                         localStorage.setItem('temporaryMeetGreets', JSON.stringify(localMeets));
                         
-                        globalCalendar.refetchEvents();
+                        fetchCalendarData();
                     }
                 } else {
                     alert(
@@ -236,9 +214,11 @@
                     );
                 }
             },
+            
             viewDidMount: function(info) {
                 applyCurrentSearchFilter();
             },
+            
             dayCellDidMount: function(info) {
                 const dateStr = info.date.toISOString().split('T')[0];
                 const count = dailyCapacityCounts[dateStr] || 0;
@@ -448,6 +428,45 @@
         document.getElementById('upcoming-list').innerHTML = upcomingDogs.length > 0 ? upcomingDogs.join('') : '<li class="no-dogs">No new arrivals scheduled this week</li>';
 
         return events;
+    }
+
+    // Engine to clear out old rows and draw fresh ones safely without stacking
+    function fetchCalendarData() {
+        if (!globalCalendar) return;
+
+        const cachedSheet = localStorage.getItem('boardingDataCache') || "";
+        let localDataRendered = false;
+
+        // 1. Wipe out all current layers to prevent triplicated tracks
+        globalCalendar.getEventSources().forEach(source => source.remove());
+
+        // 2. Render cache instantly if available so there is no loading lag
+        if (cachedSheet) {
+            processCombinedData(cachedSheet, (events) => {
+                if (!localDataRendered) {
+                    globalCalendar.addEventSource(events);
+                }
+            });
+        }
+
+        // 3. Grab the live sheet data, update cache, and force-swap the calendar array cleanly
+        fetch(SHEET_CSV_URL)
+            .then(response => response.text())
+            .then(csvText => {
+                localDataRendered = true;
+                localStorage.setItem('boardingDataCache', csvText);
+                
+                // Remove the cache event track we just drew
+                globalCalendar.getEventSources().forEach(source => source.remove());
+                
+                // Inject the live sheet array cleanly
+                processCombinedData(csvText, (events) => {
+                    globalCalendar.addEventSource(events);
+                });
+            })
+            .catch(error => {
+                console.error("Network error pulling live rows, remaining on local cache fallback.", error);
+            });
     }
 </script>
 </body>
