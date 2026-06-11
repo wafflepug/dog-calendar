@@ -490,68 +490,74 @@
     }
 
     function parseCSVToEvents(csvText) {
-        if (!csvText) return [];
-        const lines = csvText.split(/\r?\n/);
-        const events = [];
+    if (!csvText) return [];
+    const lines = csvText.split(/\r?\n/);
+    const events = [];
+    
+    const today = new Date(); today.setHours(0,0,0,0);
+    const sevenDaysFromNow = new Date(); sevenDaysFromNow.setDate(today.getDate() + 7); sevenDaysFromNow.setHours(23,59,59,999);
+
+    const atHomeDogs = []; const leavingDogs = []; const upcomingDogs = [];
+    const directoryCardsHTML = [];
+
+    for (let i = 1; i < lines.length; i++) {
+        if (!lines[i].trim()) continue;
         
-        const today = new Date(); today.setHours(0,0,0,0);
-        const sevenDaysFromNow = new Date(); sevenDaysFromNow.setDate(today.getDate() + 7); sevenDaysFromNow.setHours(23,59,59,999);
+        // Advanced Split to respect quotes around commas
+        const columns = lines[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/); 
+        
+        const dogName = columns[1] ? columns[1].replace(/^"|"$/g, '') : '';
+        const breed = columns[2] ? columns[2].replace(/^"|"$/g, '') : '';
+        const startDate = columns[3];
+        const endDate = columns[4];
+        const ownerName = columns[5] ? columns[5].replace(/^"|"$/g, '') : '';
+        const phone = columns[6] ? columns[6].replace(/^"|"$/g, '') : '';
+        const likes = columns[7] ? columns[7].replace(/^"|"$/g, '') : '';
+        const dislikes = columns[8] ? columns[8].replace(/^"|"$/g, '') : '';
+        const notes = columns[9] ? columns[9].replace(/^"|"$/g, '') : '';
+        const editLink = columns[10] ? columns[10].replace(/^"|"$/g, '') : '';
+        
+        // NEW: Pull Column L (Index 11) for the Meet & Greet type tag
+        const bookingType = columns[11] ? columns[11].replace(/^"|"$/g, '').trim() : '';
+        const isMeetGreetType = (bookingType.toLowerCase() === 'meet & greet');
 
-        const atHomeDogs = []; const leavingDogs = []; const upcomingDogs = [];
-        const directoryCardsHTML = [];
+        if (dogName && startDate) {
+            let startParsed = "", endParsed = "";
 
-        for (let i = 1; i < lines.length; i++) {
-            if (!lines[i].trim()) continue;
+            if (startDate.includes('/')) {
+                const sParts = startDate.trim().split('/');
+                if (sParts[2]) startParsed = sParts[2] + '-' + sParts[1].padStart(2, '0') + '-' + sParts[0].padStart(2, '0');
+            } else if (startDate.includes('-')) {
+                startParsed = startDate.trim().split('T')[0];
+            }
             
-            const columns = lines[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/); 
-            
-            const dogName = columns[1] ? columns[1].replace(/^"|"$/g, '') : '';
-            const breed = columns[2] ? columns[2].replace(/^"|"$/g, '') : '';
-            const startDate = columns[3];
-            const endDate = columns[4];
-            const ownerName = columns[5] ? columns[5].replace(/^"|"$/g, '') : '';
-            const phone = columns[6] ? columns[6].replace(/^"|"$/g, '') : '';
-            const likes = columns[7] ? columns[7].replace(/^"|"$/g, '') : '';
-            const dislikes = columns[8] ? columns[8].replace(/^"|"$/g, '') : '';
-            const notes = columns[9] ? columns[9].replace(/^"|"$/g, '') : '';
-            const editLink = columns[10] ? columns[10].replace(/^"|"$/g, '') : '';
+            if (endDate && endDate.includes('/')) {
+                const eParts = endDate.trim().split('/');
+                if (eParts[2]) endParsed = eParts[2] + '-' + eParts[1].padStart(2, '0') + '-' + eParts[0].padStart(2, '0');
+            } else if (endDate && endDate.includes('-')) {
+                endParsed = endDate.trim().split('T')[0];
+            } else {
+                endParsed = startParsed;
+            }
 
-            if (dogName && startDate) {
-                let startParsed = "", endParsed = "";
+            if (startParsed && endParsed) {
+                const checkStart = new Date(startParsed + 'T00:00:00');
+                const checkEnd = new Date(endParsed + 'T00:00:00');
 
-                if (startDate.includes('/')) {
-                    const sParts = startDate.trim().split('/');
-                    if (sParts[2]) startParsed = sParts[2] + '-' + sParts[1].padStart(2, '0') + '-' + sParts[0].padStart(2, '0');
-                } else if (startDate.includes('-')) {
-                    startParsed = startDate.trim().split('T')[0];
-                }
-                
-                if (endDate && endDate.includes('/')) {
-                    const eParts = endDate.trim().split('/');
-                    if (eParts[2]) endParsed = eParts[2] + '-' + eParts[1].padStart(2, '0') + '-' + eParts[0].padStart(2, '0');
-                } else if (endDate && endDate.includes('-')) {
-                    endParsed = endDate.trim().split('T')[0];
-                } else {
-                    endParsed = startParsed;
-                }
+                if (!isNaN(checkStart.getTime()) && !isNaN(checkEnd.getTime())) {
+                    const breedTxt = breed ? breed.trim() : 'Unknown';
+                    const displayDate = checkEnd.getDate() + '/' + (checkEnd.getMonth() + 1);
+                    
+                    let tempLoopDate = new Date(checkStart.getTime());
+                    while (tempLoopDate <= checkEnd) {
+                        const tempStr = tempLoopDate.toISOString().split('T')[0];
+                        dailyCapacityCounts[tempStr] = (dailyCapacityCounts[tempStr] || 0) + 1;
+                        tempLoopDate.setDate(tempLoopDate.getDate() + 1);
+                    }
 
-                if (startParsed && endParsed) {
-                    const checkStart = new Date(startParsed + 'T00:00:00');
-                    const checkEnd = new Date(endParsed + 'T00:00:00');
-
-                    if (!isNaN(checkStart.getTime()) && !isNaN(checkEnd.getTime())) {
-                        const breedTxt = breed ? breed.trim() : 'Unknown';
-                        const displayDate = checkEnd.getDate() + '/' + (checkEnd.getMonth() + 1);
-                        
-                        let tempLoopDate = new Date(checkStart.getTime());
-                        while (tempLoopDate <= checkEnd) {
-                            const tempStr = tempLoopDate.toISOString().split('T')[0];
-                            dailyCapacityCounts[tempStr] = (dailyCapacityCounts[tempStr] || 0) + 1;
-                            tempLoopDate.setDate(tempLoopDate.getDate() + 1);
-                        }
-
+                    // ONLY process for Dashboard Metrics and Guest Directory if it's a standard boarding event
+                    if (!isMeetGreetType) {
                         const listLabel = (dogName.includes('&') || dogName.toLowerCase().includes('and')) ? '👥 ' + dogName.trim() : '🐾 ' + dogName.trim();
-
                         let isAtHome = (today >= checkStart && today <= checkEnd && checkEnd.getTime() !== today.getTime());
                         let isUpcoming = (checkStart > today && checkStart <= sevenDaysFromNow);
 
@@ -604,46 +610,52 @@
                                 </div>
                             `);
                         }
-
-                        const parts = endParsed.split('-');
-                        const dateObject = new Date(parts[0], parts[1] - 1, parts[2]);
-                        dateObject.setDate(dateObject.getDate() + 1);
-                        
-                        const forcedDisplayEnd = dateObject.getFullYear() + '-' + 
-                            String(dateObject.getMonth() + 1).padStart(2, '0') + '-' + 
-                            String(dateObject.getDate()).padStart(2, '0');
-
-                        events.push({
-                            title: dogName.trim(),
-                            start: startParsed,
-                            end: forcedDisplayEnd, 
-                            allDay: true,
-                            backgroundColor: stringToColor(dogName.trim()),
-                            textColor: '#ffffff',
-                            extendedProps: { 
-                                breed: breedTxt, 
-                                owner: ownerName ? ownerName.trim() : "N/A", 
-                                phone: phone ? phone.trim() : "N/A",
-                                likes: likes ? likes.trim() : "None listed",
-                                dislikes: dislikes ? dislikes.trim() : "None listed",
-                                notes: notes ? notes.trim() : "None",
-                                editLink: editLink ? editLink.trim() : ""
-                            }
-                        });
                     }
+
+                    const parts = endParsed.split('-');
+                    const dateObject = new Date(parts[0], parts[1] - 1, parts[2]);
+                    dateObject.setDate(dateObject.getDate() + 1);
+                    
+                    const forcedDisplayEnd = dateObject.getFullYear() + '-' + 
+                        String(dateObject.getMonth() + 1).padStart(2, '0') + '-' + 
+                        String(dateObject.getDate()).padStart(2, '0');
+
+                    // Standard display titles vs time-prefixed Meet & Greets from the database
+                    const finalTitle = isMeetGreetType ? `${notes.trim()} - ${dogName.trim()}` : dogName.trim();
+                    const finalColor = isMeetGreetType ? '#8e44ad' : stringToColor(dogName.trim());
+
+                    events.push({
+                        title: finalTitle,
+                        start: startParsed,
+                        end: forcedDisplayEnd, 
+                        allDay: true,
+                        backgroundColor: finalColor,
+                        textColor: '#ffffff',
+                        extendedProps: { 
+                            isMeetGreet: isMeetGreetType,
+                            breed: breedTxt, 
+                            owner: ownerName ? ownerName.trim() : "N/A", 
+                            phone: phone ? phone.trim() : "N/A",
+                            likes: likes ? likes.trim() : "None listed",
+                            dislikes: dislikes ? dislikes.trim() : "None listed",
+                            notes: notes ? notes.trim() : "None",
+                            editLink: editLink ? editLink.trim() : ""
+                        }
+                    });
                 }
             }
         }
-
-        document.getElementById('at-home-list').innerHTML = atHomeDogs.length > 0 ? atHomeDogs.join('') : '<li class="no-dogs">No remaining guests at home right now</li>';
-        document.getElementById('leaving-list').innerHTML = leavingDogs.length > 0 ? leavingDogs.join('') : '<li class="no-dogs">No checkouts scheduled this week</li>';
-        document.getElementById('upcoming-list').innerHTML = upcomingDogs.length > 0 ? upcomingDogs.join('') : '<li class="no-dogs">No new arrivals scheduled this week</li>';
-
-        document.getElementById('directory-grid').innerHTML = directoryCardsHTML.length > 0 ? 
-            directoryCardsHTML.join('') : '<div class="no-dogs" style="grid-column: 1/-1; text-align: center; padding: 20px;">No current or upcoming guests meet this criteria this week.</div>';
-
-        return events;
     }
+
+    document.getElementById('at-home-list').innerHTML = atHomeDogs.length > 0 ? atHomeDogs.join('') : '<li class="no-dogs">No remaining guests at home right now</li>';
+    document.getElementById('leaving-list').innerHTML = leavingDogs.length > 0 ? leavingDogs.join('') : '<li class="no-dogs">No checkouts scheduled this week</li>';
+    document.getElementById('upcoming-list').innerHTML = upcomingDogs.length > 0 ? upcomingDogs.join('') : '<li class="no-dogs">No new arrivals scheduled this week</li>';
+
+    document.getElementById('directory-grid').innerHTML = directoryCardsHTML.length > 0 ? 
+        directoryCardsHTML.join('') : '<div class="no-dogs" style="grid-column: 1/-1; text-align: center; padding: 20px;">No current or upcoming guests meet this criteria this week.</div>';
+
+    return events;
+}
 </script>
 </body>
 </html>
