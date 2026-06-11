@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Waffle House Boarding Calendar</title>
+    <!-- Dependencies: FullCalendar CSS & JavaScript Global Bundle -->
     <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css" rel="stylesheet" />
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
     <style>
@@ -43,8 +44,12 @@
         .directory-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px; max-height: 400px; overflow-y: auto; padding-right: 5px; }
         .directory-card { background: white; border: 1px solid #e2e8f0; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); display: flex; flex-direction: column; gap: 6px; transition: background-color 0.3s, border-color 0.3s; }
         .directory-card h4 { margin: 0 0 4px 0; font-size: 16px; color: #2c3e50; font-weight: 700; border-bottom: 1px dashed #e2e8f0; padding-bottom: 4px; display: flex; justify-content: space-between; align-items: center; }
-        .directory-card p { margin: 0; font-size: 13px; color: #475569; line-height: 1.4; }
-        .directory-card strong { color: #1e293b; font-weight: 600; }
+        
+        /* Interactive Attribute Rows */
+        .editable-row { padding: 4px; border-radius: 4px; cursor: pointer; display: block; font-size: 13px; color: #475569; transition: background 0.2s; }
+        .editable-row:hover { background: #edf2f7; color: #2b6cb0; }
+        .editable-row strong { color: #1e293b; }
+        
         .directory-status-tag { font-size: 10px; font-weight: bold; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; }
         .tag-at-home { background: #e0f2fe; color: #0369a1; }
         .tag-upcoming { background: #fef3c7; color: #b45309; }
@@ -78,7 +83,8 @@
         body.dark-theme .directory-dashboard h3 { color: #f1f5f9; border-bottom-color: #334155; }
         body.dark-theme .directory-card { background: #334155; border-color: #475569; }
         body.dark-theme .directory-card h4 { color: #ffffff; border-bottom-color: #475569; }
-        body.dark-theme .directory-card p { color: #cbd5e1; }
+        body.dark-theme .editable-row { color: #cbd5e1; }
+        body.dark-theme .editable-row:hover { background: #475569; color: #63b3ed; }
         body.dark-theme .directory-card strong { color: #f8fafc; }
         body.dark-theme .tag-at-home { background: #0c4a6e; color: #7dd3fc; }
         body.dark-theme .tag-upcoming { background: #78350f; color: #fde68a; }
@@ -100,7 +106,7 @@
         body.dark-theme .capacity-warning { background-color: #2d2a15 !important; }
         body.dark-theme .capacity-full { background-color: #3b1e1e !important; }
 
-        /* --- Media Queries (Mobile & Viewport Adjustments) --- */
+        /* --- Media Queries --- */
         @media (max-width: 768px) {
             body { margin: 5px; }
             .container { padding: 10px; border-radius: 6px; }
@@ -121,13 +127,16 @@
 <body>
 
 <div class="container">
+    <!-- Header Area -->
     <div class="calendar-header-branding">
         <img src="https://wafflepug.github.io/Waffle.jpg" alt="Waffle Pug" class="calendar-brand-img" onerror="this.style.display='none';">
         <h2>🐾 Waffle House Calendar</h2>
     </div>
     
+    <!-- Action Trigger Link -->
     <a href="https://docs.google.com/forms/d/e/1FAIpQLScszSqsaxw9THyebWt2g0khVTIzP9L8hPbor1mUB0fp_0KPAw/viewform?usp=dialog" target="_blank" class="btn-add">+ Add New Booking</a>
     
+    <!-- Filters Container -->
     <div class="search-container" style="display: flex; gap: 10px; align-items: center; margin-bottom: 20px; flex-wrap: wrap;">
         <input type="text" id="calendarSearch" class="search-input" style="flex: 1; min-width: 200px;" placeholder="🔍 Type dog name or breed to filter data..." autocomplete="off">
         
@@ -147,12 +156,14 @@
                 <option value="11">December</option>
             </select>
             <select id="jumpYear" style="padding: 12px; font-size: 14px; border: 2px solid #e2e8f0; border-radius: 8px; background: white; outline: none; cursor: pointer; font-weight: bold; transition: background-color 0.3s, border-color 0.3s, color 0.3s;">
-                </select>
+                <!-- Generated programmatically dynamically inside script block -->
+            </select>
         </div>
 
         <button id="manualRefreshBtn" style="background: #3498db; color: white; border: none; padding: 12px 18px; border-radius: 8px; font-weight: bold; font-size: 14px; cursor: pointer; white-space: nowrap; transition: background 0.2s;">🔄 Sync Spreadsheet</button>
     </div>
 
+    <!-- Status Tracking Metrics Panels -->
     <div class="summary-dashboard">
         <div class="summary-card active-now">
             <h3>🏡 At Home Right Now</h3>
@@ -168,15 +179,19 @@
         </div>
     </div>
 
+    <!-- Detailed Guest Directory Grid -->
     <div class="directory-dashboard">
         <h3>📋 Detailed Guest Directory (Current & Upcoming)</h3>
         <div id="directory-grid" class="directory-grid">
-            </div>
+            <!-- Populated dynamically via parseCSVToEvents -->
+        </div>
     </div>
 
+    <!-- FullCalendar Canvas Target Anchor Element -->
     <div id="calendar"></div>
 </div>
 
+<!-- Floating Dark Mode Selector Feature Control Button Toggle -->
 <button id="themeToggle" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; background: #2c3e50; color: white; border: none; border-radius: 50%; width: 50px; height: 50px; font-size: 22px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.2); display: flex; align-items: center; justify-content: center;">🌙</button>
 
 <script>
@@ -255,27 +270,7 @@
                         refreshCalendarData();
                     }
                 } else {
-                    const targetSheetUrl = info.event.extendedProps.editLink;
-
-                    if (targetSheetUrl && targetSheetUrl.startsWith("http")) {
-                        const confirmRedirect = confirm(
-                            "🐶 Open Spreadsheet Editor?\n\n" +
-                            "Would you like to open Google Sheets to edit " + info.event.title + "'s records on its specific row line?"
-                        );
-                        if (confirmRedirect) {
-                            window.open(targetSheetUrl, '_blank');
-                        }
-                    } else {
-                        alert(
-                            "🐶 Booking Details:\n" +
-                            "-----------------------------\n" +
-                            "Dog Name: " + info.event.title + "\n" +
-                            "Breed: " + info.event.extendedProps.breed + "\n" +
-                            "Owner: " + info.event.extendedProps.owner + "\n" +
-                            "Contact: " + info.event.extendedProps.phone + "\n\n" +
-                            "💡 Tip: Map a formula column to column 11 (K) on Google Sheets to enable direct row navigation persistence features seamlessly."
-                        );
-                    }
+                    routeToDatabaseCell(info.event.extendedProps.editLink, 'B', info.event.title);
                 }
             },
             dayCellDidMount: function(info) {
@@ -395,6 +390,25 @@
         refreshCalendarData();
     });
 
+    // Helper utility to safely route users to cell-specific column ranges inside Google Sheets
+    function routeToDatabaseCell(baseEditLink, targetColumnLetter, petName, attributeName = "Booking Details") {
+        if (baseEditLink && baseEditLink.startsWith("http")) {
+            const confirmRedirect = confirm(`✏️ Edit ${attributeName} for ${petName}?\n\nWould you like to open your Google Sheet database right on this precise property field cell?`);
+            if (confirmRedirect) {
+                // Dynamically swaps out whatever range ending is on your base formula column link with the exact target cell coordinates
+                let targetUrl = baseEditLink.replace(/range=\d+/, `range=${targetColumnLetter}\$&`).replace("range=", `range=${targetColumnLetter}`);
+                if (!targetUrl.includes('range=')) {
+                    const rowMatch = baseEditLink.match(/range=(\d+)/) || baseEditLink.match(/=(\d+)$/);
+                    const rowNum = rowMatch ? rowMatch[1] : '';
+                    targetUrl = baseEditLink.split('&range=')[0] + `&range=${targetColumnLetter}${rowNum}`;
+                }
+                window.open(targetUrl, '_blank');
+            }
+        } else {
+            alert(`📝 ${petName} - ${attributeName}\n\nTo directly jump and persist inline changes back to your master database table, make sure column 11 (K) has your row link assignment formula working!`);
+        }
+    }
+
     function refreshCalendarData() {
         if (!globalCalendar) return;
         
@@ -432,7 +446,6 @@
             }
         });
 
-        // Sync directory cards visibility with search box input parameters
         const cards = document.querySelectorAll('.directory-card');
         cards.forEach(card => {
             if (searchTerm === "") {
@@ -533,21 +546,39 @@
                             upcomingDogs.push('<li><span>⏳ ' + dogName.trim() + '</span> <span class="date-badge">' + arrivalDate + '</span></li>');
                         }
 
-                        // Generate Detailed Grid Card if dog is at home or arriving soon
+                        // Generate Detailed Grid Card with direct column cell bindings for sync persistence
                         if (isAtHome || isUpcoming) {
                             const statusTag = isAtHome ? 
                                 '<span class="directory-status-tag tag-at-home">At Home</span>' : 
                                 '<span class="directory-status-tag tag-upcoming">Upcoming</span>';
 
+                            // Cleaned field values to prevent raw HTML breakages
+                            const cleanName = dogName.trim().replace(/'/g, "\\'");
+                            const cleanLnk = editLink.trim();
+
                             directoryCardsHTML.push(`
                                 <div class="directory-card">
-                                    <h4><span>🐾 ${dogName.trim()}</span> ${statusTag}</h4>
-                                    <p><strong>Breed:</strong> ${breedTxt}</p>
-                                    <p><strong>Owner:</strong> ${ownerName ? ownerName.trim() : 'N/A'}</p>
-                                    <p><strong>Contact:</strong> ${phone ? phone.trim() : 'N/A'}</p>
-                                    <p><strong>Likes:</strong> ${likes ? likes.trim() : 'None listed'}</p>
-                                    <p><strong>Dislikes:</strong> ${dislikes ? dislikes.trim() : 'None listed'}</p>
-                                    <p><strong>Notes:</strong> ${notes ? notes.trim() : 'None'}</p>
+                                    <h4 onclick="routeToDatabaseCell('${cleanLnk}', 'B', '${cleanName}', 'Dog Name')" title="Click to edit name in spreadsheet" style="cursor:pointer;">
+                                        <span>🐾 ${dogName.trim()}</span> ${statusTag}
+                                    </h4>
+                                    <span class="editable-row" onclick="routeToDatabaseCell('${cleanLnk}', 'C', '${cleanName}', 'Breed')" title="Click to edit Breed">
+                                        <strong>Breed:</strong> ${breedTxt}
+                                    </span>
+                                    <span class="editable-row" onclick="routeToDatabaseCell('${cleanLnk}', 'F', '${cleanName}', 'Owner')" title="Click to edit Owner">
+                                        <strong>Owner:</strong> ${ownerName ? ownerName.trim() : 'N/A'}
+                                    </span>
+                                    <span class="editable-row" onclick="routeToDatabaseCell('${cleanLnk}', 'G', '${cleanName}', 'Contact')" title="Click to edit Contact">
+                                        <strong>Contact:</strong> ${phone ? phone.trim() : 'N/A'}
+                                    </span>
+                                    <span class="editable-row" onclick="routeToDatabaseCell('${cleanLnk}', 'H', '${cleanName}', 'Likes')" title="Click to edit Likes">
+                                        <strong>Likes:</strong> ${likes ? likes.trim() : 'None listed'}
+                                    </span>
+                                    <span class="editable-row" onclick="routeToDatabaseCell('${cleanLnk}', 'I', '${cleanName}', 'Dislikes')" title="Click to edit Dislikes">
+                                        <strong>Dislikes:</strong> ${dislikes ? dislikes.trim() : 'None listed'}
+                                    </span>
+                                    <span class="editable-row" onclick="routeToDatabaseCell('${cleanLnk}', 'J', '${cleanName}', 'Notes')" title="Click to edit Notes">
+                                        <strong>Notes:</strong> ${notes ? notes.trim() : 'None'}
+                                    </span>
                                 </div>
                             `);
                         }
