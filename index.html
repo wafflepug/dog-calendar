@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Waffle House Boarding Calendar</title>
-    <!-- Dependencies: FullCalendar CSS & JavaScript Global Bundle -->
     <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css" rel="stylesheet" />
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
     <style>
@@ -106,7 +105,6 @@
         body.dark-theme .capacity-warning { background-color: #2d2a15 !important; }
         body.dark-theme .capacity-full { background-color: #3b1e1e !important; }
 
-        /* --- Media Queries --- */
         @media (max-width: 768px) {
             body { margin: 5px; }
             .container { padding: 10px; border-radius: 6px; }
@@ -127,16 +125,13 @@
 <body>
 
 <div class="container">
-    <!-- Header Area -->
     <div class="calendar-header-branding">
         <img src="https://wafflepug.github.io/Waffle.jpg" alt="Waffle Pug" class="calendar-brand-img" onerror="this.style.display='none';">
         <h2>🐾 Waffle House Calendar</h2>
     </div>
     
-    <!-- Action Trigger Link -->
     <a href="https://docs.google.com/forms/d/e/1FAIpQLScszSqsaxw9THyebWt2g0khVTIzP9L8hPbor1mUB0fp_0KPAw/viewform?usp=dialog" target="_blank" class="btn-add">+ Add New Booking</a>
     
-    <!-- Filters Container -->
     <div class="search-container" style="display: flex; gap: 10px; align-items: center; margin-bottom: 20px; flex-wrap: wrap;">
         <input type="text" id="calendarSearch" class="search-input" style="flex: 1; min-width: 200px;" placeholder="🔍 Type dog name or breed to filter data..." autocomplete="off">
         
@@ -156,14 +151,12 @@
                 <option value="11">December</option>
             </select>
             <select id="jumpYear" style="padding: 12px; font-size: 14px; border: 2px solid #e2e8f0; border-radius: 8px; background: white; outline: none; cursor: pointer; font-weight: bold; transition: background-color 0.3s, border-color 0.3s, color 0.3s;">
-                <!-- Generated programmatically dynamically inside script block -->
-            </select>
+                </select>
         </div>
 
         <button id="manualRefreshBtn" style="background: #3498db; color: white; border: none; padding: 12px 18px; border-radius: 8px; font-weight: bold; font-size: 14px; cursor: pointer; white-space: nowrap; transition: background 0.2s;">🔄 Sync Spreadsheet</button>
     </div>
 
-    <!-- Status Tracking Metrics Panels -->
     <div class="summary-dashboard">
         <div class="summary-card active-now">
             <h3>🏡 At Home Right Now</h3>
@@ -179,23 +172,23 @@
         </div>
     </div>
 
-    <!-- Detailed Guest Directory Grid -->
     <div class="directory-dashboard">
         <h3>📋 Detailed Guest Directory (Current & Upcoming)</h3>
         <div id="directory-grid" class="directory-grid">
-            <!-- Populated dynamically via parseCSVToEvents -->
-        </div>
+            </div>
     </div>
 
-    <!-- FullCalendar Canvas Target Anchor Element -->
     <div id="calendar"></div>
 </div>
 
-<!-- Floating Dark Mode Selector Feature Control Button Toggle -->
 <button id="themeToggle" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; background: #2c3e50; color: white; border: none; border-radius: 50%; width: 50px; height: 50px; font-size: 22px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.2); display: flex; align-items: center; justify-content: center;">🌙</button>
 
 <script>
     const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT63UsPjcg3GB41TB6cewLaTRS_yJP4kpOMSmsTTnvTwlWbjn3CgtZc_c6li28ihjzhNnphFt0XCFtt/pub?gid=1639615540&single=true&output=csv';
+    
+    // ⚠️ PASTE YOUR DEPLOYED GOOGLE APPS SCRIPT WEB APP URL HERE
+    const APPS_SCRIPT_WEBAPP_URL = 'YOUR_APPS_SCRIPT_WEBAPP_URL_HERE';
+
     let globalCalendar;
     let dailyCapacityCounts = {}; 
     let isUpdatingDropdowns = false; 
@@ -216,7 +209,6 @@
             
             datesSet: function(info) {
                 applyCurrentSearchFilter();
-
                 if (!isUpdatingDropdowns) {
                     const viewCurrentDate = globalCalendar.getDate();
                     document.getElementById('jumpMonth').value = String(viewCurrentDate.getMonth()).padStart(2, '0');
@@ -225,50 +217,80 @@
             },
             
             dateClick: function(info) {
-                const dogName = prompt("🤝 Enter Dog Name to create a temporary Meet & Greet booking on this date:");
-                if (dogName && dogName.trim() !== "") {
-                    const breed = prompt("📋 Enter Breed (Optional):") || "N/A";
-                    
-                    const newMeet = {
-                        id: 'meet_' + Date.now(), 
-                        title: "🤝 Meet & Greet: " + dogName.trim(),
-                        start: info.dateStr,
-                        end: info.dateStr,
-                        allDay: true,
-                        backgroundColor: '#8e44ad', 
-                        textColor: '#ffffff',
-                        extendedProps: {
-                            isMeetGreet: true,
-                            breed: breed.trim(),
-                            owner: "Temporary Booking",
-                            phone: "N/A",
-                            likes: "N/A",
-                            dislikes: "N/A",
-                            notes: "Temporary placement",
-                            editLink: ""
-                        }
+                const dogName = prompt("🤝 Enter Dog Name for Meet & Greet booking:");
+                if (!dogName || dogName.trim() === "") return;
+
+                const bookingTime = prompt("⏰ Enter Booking Time (e.g., 14:00, 2:30 PM):", "10:00");
+                if (!bookingTime) return;
+
+                const breed = prompt("📋 Enter Breed (Optional):", "N/A") || "N/A";
+                
+                const timePrefix = bookingTime.trim();
+                const displayTitle = `⏰ ${timePrefix} - Meet & Greet: ${dogName.trim()}`;
+
+                const newMeet = {
+                    id: 'meet_' + Date.now(), 
+                    title: displayTitle,
+                    start: info.dateStr,
+                    end: info.dateStr,
+                    allDay: true,
+                    backgroundColor: '#8e44ad', 
+                    textColor: '#ffffff',
+                    extendedProps: {
+                        isMeetGreet: true,
+                        breed: breed.trim(),
+                        time: timePrefix,
+                        dogName: dogName.trim(),
+                        owner: "Temporary Booking",
+                        phone: "N/A",
+                        likes: "N/A",
+                        dislikes: "N/A",
+                        notes: "Saving to database...",
+                        editLink: ""
+                    }
+                };
+
+                // 1. Immediately render locally for snappy user experience
+                let localMeets = JSON.parse(localStorage.getItem('temporaryMeetGreets') || '[]');
+                localMeets.push(newMeet);
+                localStorage.setItem('temporaryMeetGreets', JSON.stringify(localMeets));
+                refreshCalendarData();
+
+                // 2. Persist to backend cloud database (Google Sheet)
+                if (APPS_SCRIPT_WEBAPP_URL && APPS_SCRIPT_WEBAPP_URL !== 'YOUR_APPS_SCRIPT_WEBAPP_URL_HERE') {
+                    const payload = {
+                        dogName: dogName.trim(),
+                        breed: breed.trim(),
+                        startDate: info.dateStr,
+                        endDate: info.dateStr,
+                        notes: `Meet & Greet scheduled at ${timePrefix}`
                     };
 
-                    let localMeets = JSON.parse(localStorage.getItem('temporaryMeetGreets') || '[]');
-                    localMeets.push(newMeet);
-                    localStorage.setItem('temporaryMeetGreets', JSON.stringify(localMeets));
-                    
-                    refreshCalendarData();
+                    fetch(APPS_SCRIPT_WEBAPP_URL, {
+                        method: 'POST',
+                        mode: 'no-cors', // Bypasses browser CORS policy restrictions
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    })
+                    .then(() => {
+                        console.log("Booking successfully submitted to Google Sheets.");
+                    })
+                    .catch(err => {
+                        console.error("Database connection failure:", err);
+                        alert("Local event saved, but could not sync to Google Sheets database directly.");
+                    });
+                } else {
+                    console.warn("Apps Script URL missing. Booking cached locally in browser only.");
                 }
             },
             eventClick: function(info) {
                 if (info.event.extendedProps.isMeetGreet) {
-                    const confirmDelete = confirm(
+                    alert(
                         info.event.title + "\n" +
                         "📋 Breed: " + info.event.extendedProps.breed + "\n" +
-                        "⚠️ This is a temporary booking. Do you want to CANCEL/DELETE this Meet & Greet?"
+                        "⏰ Scheduled Time: " + info.event.extendedProps.time + "\n\n" +
+                        "To modify or cancel this entry, open your master Google Sheet database row entry."
                     );
-                    if (confirmDelete) {
-                        let localMeets = JSON.parse(localStorage.getItem('temporaryMeetGreets') || '[]');
-                        localMeets = localMeets.filter(m => m.id !== info.event.id);
-                        localStorage.setItem('temporaryMeetGreets', JSON.stringify(localMeets));
-                        refreshCalendarData();
-                    }
                 } else {
                     routeToDatabaseCell(info.event.extendedProps.editLink, 'B', info.event.title);
                 }
@@ -340,6 +362,10 @@
                     }
 
                     localStorage.setItem('boardingDataCache', csvText);
+                    
+                    // Clear the local cache optimization now that database sync catch-up is valid
+                    localStorage.removeItem('temporaryMeetGreets');
+                    
                     refreshCalendarData();
                     
                     btn.innerText = "✅ Synced!";
@@ -390,12 +416,10 @@
         refreshCalendarData();
     });
 
-    // Helper utility to safely route users to cell-specific column ranges inside Google Sheets
     function routeToDatabaseCell(baseEditLink, targetColumnLetter, petName, attributeName = "Booking Details") {
         if (baseEditLink && baseEditLink.startsWith("http")) {
             const confirmRedirect = confirm(`✏️ Edit ${attributeName} for ${petName}?\n\nWould you like to open your Google Sheet database right on this precise property field cell?`);
             if (confirmRedirect) {
-                // Dynamically swaps out whatever range ending is on your base formula column link with the exact target cell coordinates
                 let targetUrl = baseEditLink.replace(/range=\d+/, `range=${targetColumnLetter}\$&`).replace("range=", `range=${targetColumnLetter}`);
                 if (!targetUrl.includes('range=')) {
                     const rowMatch = baseEditLink.match(/range=(\d+)/) || baseEditLink.match(/=(\d+)$/);
@@ -546,13 +570,11 @@
                             upcomingDogs.push('<li><span>⏳ ' + dogName.trim() + '</span> <span class="date-badge">' + arrivalDate + '</span></li>');
                         }
 
-                        // Generate Detailed Grid Card with direct column cell bindings for sync persistence
                         if (isAtHome || isUpcoming) {
                             const statusTag = isAtHome ? 
                                 '<span class="directory-status-tag tag-at-home">At Home</span>' : 
                                 '<span class="directory-status-tag tag-upcoming">Upcoming</span>';
 
-                            // Cleaned field values to prevent raw HTML breakages
                             const cleanName = dogName.trim().replace(/'/g, "\\'");
                             const cleanLnk = editLink.trim();
 
@@ -613,12 +635,10 @@
             }
         }
 
-        // Render Summary Columns
         document.getElementById('at-home-list').innerHTML = atHomeDogs.length > 0 ? atHomeDogs.join('') : '<li class="no-dogs">No remaining guests at home right now</li>';
         document.getElementById('leaving-list').innerHTML = leavingDogs.length > 0 ? leavingDogs.join('') : '<li class="no-dogs">No checkouts scheduled this week</li>';
         document.getElementById('upcoming-list').innerHTML = upcomingDogs.length > 0 ? upcomingDogs.join('') : '<li class="no-dogs">No new arrivals scheduled this week</li>';
 
-        // Render Directory Section Grid
         document.getElementById('directory-grid').innerHTML = directoryCardsHTML.length > 0 ? 
             directoryCardsHTML.join('') : '<div class="no-dogs" style="grid-column: 1/-1; text-align: center; padding: 20px;">No current or upcoming guests meet this criteria this week.</div>';
 
