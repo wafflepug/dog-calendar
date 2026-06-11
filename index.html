@@ -106,8 +106,9 @@
     
     <a href="https://docs.google.com/forms/d/e/1FAIpQLScszSqsaxw9THyebWt2g0khVTIzP9L8hPbor1mUB0fp_0KPAw/viewform?usp=dialog" target="_blank" class="btn-add">+ Add New Booking</a>
     
-    <div class="search-container">
-        <input type="text" id="calendarSearch" class="search-input" placeholder="🔍 Type dog name or breed to filter calendar..." autocomplete="off">
+    <div class="search-container" style="display: flex; gap: 10px; align-items: center; margin-bottom: 20px;">
+        <input type="text" id="calendarSearch" class="search-input" style="flex: 1;" placeholder="🔍 Type dog name or breed to filter calendar..." autocomplete="off">
+        <button id="manualRefreshBtn" style="background: #3498db; color: white; border: none; padding: 12px 18px; border-radius: 8px; font-weight: bold; font-size: 14px; cursor: pointer; white-space: nowrap; transition: background 0.2s;">🔄 Sync Spreadsheet</button>
     </div>
 
     <div class="summary-dashboard">
@@ -131,14 +132,14 @@
 <button id="themeToggle" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; background: #2c3e50; color: white; border: none; border-radius: 50%; width: 50px; height: 50px; font-size: 22px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.2); display: flex; align-items: center; justify-content: center;">🌙</button>
 
 <script>
-    const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT63UsPjcg3GB4lTB6cewLaTRS_yJP4kpOMSMsTTnvTw1Wbjn3CgtZc_c6li28ihjzkHnphFt0XcFTt/pub?gid=1639615540&single=true&output=csv';
+    const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT63UsPjcg3GB41TB6cewLaTRS_yJP4kpOMSmsTTnvTwlWbjn3CgtZc_c6li28ihjzhNnphFt0XCFtt/pub?gid=1639615540&single=true&output=csv';
     let globalCalendar;
     let dailyCapacityCounts = {}; 
 
     document.addEventListener('DOMContentLoaded', function() {
         const calendarEl = document.getElementById('calendar');
         
-globalCalendar = new FullCalendar.Calendar(calendarEl, {
+        globalCalendar = new FullCalendar.Calendar(calendarEl, {
             initialView: 'dayGridMonth',
             displayEventTime: false, 
             height: 'auto',
@@ -149,9 +150,9 @@ globalCalendar = new FullCalendar.Calendar(calendarEl, {
             },
             selectable: true,
             
-            // Fires automatically on initialization and whenever you change months
+            // STABILIZE MONTH CHANGES: pure static local parsing. No background network fetches!
             datesSet: function(info) {
-                fetchCalendarData();
+                renderCurrentView();
             },
             
             dateClick: function(info) {
@@ -182,11 +183,9 @@ globalCalendar = new FullCalendar.Calendar(calendarEl, {
                     localMeets.push(newMeet);
                     localStorage.setItem('temporaryMeetGreets', JSON.stringify(localMeets));
                     
-                    // Refetches data cleanly through our unified engine
-                    fetchCalendarData();
+                    renderCurrentView();
                 }
             },
-            
             eventClick: function(info) {
                 if (info.event.extendedProps.isMeetGreet) {
                     const confirmDelete = confirm(
@@ -194,15 +193,14 @@ globalCalendar = new FullCalendar.Calendar(calendarEl, {
                         "📋 Breed: " + info.event.extendedProps.breed + "\n" +
                         "⚠️ This is a temporary booking. Do you want to CANCEL/DELETE this Meet & Greet?"
                     );
-                    
                     if (confirmDelete) {
                         let localMeets = JSON.parse(localStorage.getItem('temporaryMeetGreets') || '[]');
                         localMeets = localMeets.filter(m => m.id !== info.event.id);
                         localStorage.setItem('temporaryMeetGreets', JSON.stringify(localMeets));
-                        
-                        fetchCalendarData();
+                        renderCurrentView();
                     }
                 } else {
+                    // Detailed Display including Likes, Dislikes, and Custom Spreadsheet Notes
                     alert(
                         "🐶 Dog Name: " + info.event.title + "\n" +
                         "📋 Breed: " + info.event.extendedProps.breed + "\n" +
@@ -214,11 +212,9 @@ globalCalendar = new FullCalendar.Calendar(calendarEl, {
                     );
                 }
             },
-            
             viewDidMount: function(info) {
                 applyCurrentSearchFilter();
             },
-            
             dayCellDidMount: function(info) {
                 const dateStr = info.date.toISOString().split('T')[0];
                 const count = dailyCapacityCounts[dateStr] || 0;
@@ -244,21 +240,52 @@ globalCalendar = new FullCalendar.Calendar(calendarEl, {
 
         globalCalendar.render();
 
+        // LINK THE MANUAL SPREADSHEET SYNC BUTTON PIPELINE
+        document.getElementById('manualRefreshBtn').addEventListener('click', function() {
+            const btn = this;
+            btn.innerText = "⏳ Syncing...";
+            btn.style.background = "#7f8c8d";
+            btn.disabled = true;
+
+            fetch(SHEET_CSV_URL)
+                .then(response => response.text())
+                .then(csvText => {
+                    localStorage.setItem('boardingDataCache', csvText);
+                    renderCurrentView();
+                    
+                    btn.innerText = "✅ Synced!";
+                    btn.style.background = "#2ecc71";
+                    setTimeout(() => {
+                        btn.innerText = "🔄 Sync Spreadsheet";
+                        btn.style.background = "#3498db";
+                        btn.disabled = false;
+                    }, 2000);
+                })
+                .catch(error => {
+                    console.error("Sync failed:", error);
+                    alert("Spreadsheet sync failed. Checking offline cache instead.");
+                    btn.innerText = "❌ Failed";
+                    btn.style.background = "#e74c3c";
+                    setTimeout(() => {
+                        btn.innerText = "🔄 Sync Spreadsheet";
+                        btn.style.background = "#3498db";
+                        btn.disabled = false;
+                    }, 2000);
+                });
+        });
+
         document.getElementById('calendarSearch').addEventListener('input', function(e) {
             applyCurrentSearchFilter();
         });
 
-        // Dark Mode Logic Toggle Engine
+        // Dark Mode Logic Engine Toggle
         const themeToggleBtn = document.getElementById('themeToggle');
-        
         if (localStorage.getItem('theme') === 'dark') {
             document.body.classList.add('dark-theme');
             themeToggleBtn.innerText = '☀️';
         }
-
         themeToggleBtn.addEventListener('click', function() {
             document.body.classList.toggle('dark-theme');
-            
             if (document.body.classList.contains('dark-theme')) {
                 themeToggleBtn.innerText = '☀️';
                 localStorage.setItem('theme', 'dark');
@@ -267,7 +294,25 @@ globalCalendar = new FullCalendar.Calendar(calendarEl, {
                 localStorage.setItem('theme', 'light');
             }
         });
-    }); 
+    });
+
+    // SECURE ISOLATED LOCAL RENDERING (Clears and writes data exactly once)
+    function renderCurrentView() {
+        if (!globalCalendar) return;
+
+        // Strip previous sources entirely to prevent stacked duplicate rows
+        globalCalendar.getEventSources().forEach(source => source.remove());
+
+        const cachedSheet = localStorage.getItem('boardingDataCache') || "";
+        
+        processCombinedData(cachedSheet, (events) => {
+            globalCalendar.addEventSource(events);
+        });
+
+        setTimeout(() => { 
+            globalCalendar.render(); 
+        }, 25);
+    }
 
     function applyCurrentSearchFilter() {
         if (!globalCalendar) return;
@@ -329,7 +374,7 @@ globalCalendar = new FullCalendar.Calendar(calendarEl, {
         for (let i = 1; i < lines.length; i++) {
             if (!lines[i].trim()) continue;
             
-            // Clean handling for commas embedded within sheet text notes
+            // Clean parsing strategy supporting internal paragraph commas inside quotes
             const columns = lines[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/); 
             
             const dogName = columns[1] ? columns[1].replace(/^"|"$/g, '') : '';
@@ -393,7 +438,7 @@ globalCalendar = new FullCalendar.Calendar(calendarEl, {
                             upcomingDogs.push('<li><span>⏳ ' + dogName.trim() + '</span> <span class="date-badge">' + arrivalDate + '</span></li>');
                         }
 
-                        // FORCE-STRETCH PARSER: Shift visual display boundaries safely by precisely +1 day
+                        // FORCE-STRETCH PARSER: Shifts visual grid bounding precisely by +1 day
                         const parts = endParsed.split('-');
                         const dateObject = new Date(parts[0], parts[1] - 1, parts[2]);
                         dateObject.setDate(dateObject.getDate() + 1);
@@ -428,45 +473,6 @@ globalCalendar = new FullCalendar.Calendar(calendarEl, {
         document.getElementById('upcoming-list').innerHTML = upcomingDogs.length > 0 ? upcomingDogs.join('') : '<li class="no-dogs">No new arrivals scheduled this week</li>';
 
         return events;
-    }
-
-    // Engine to clear out old rows and draw fresh ones safely without stacking
-    function fetchCalendarData() {
-        if (!globalCalendar) return;
-
-        const cachedSheet = localStorage.getItem('boardingDataCache') || "";
-        let localDataRendered = false;
-
-        // 1. Wipe out all current layers to prevent triplicated tracks
-        globalCalendar.getEventSources().forEach(source => source.remove());
-
-        // 2. Render cache instantly if available so there is no loading lag
-        if (cachedSheet) {
-            processCombinedData(cachedSheet, (events) => {
-                if (!localDataRendered) {
-                    globalCalendar.addEventSource(events);
-                }
-            });
-        }
-
-        // 3. Grab the live sheet data, update cache, and force-swap the calendar array cleanly
-        fetch(SHEET_CSV_URL)
-            .then(response => response.text())
-            .then(csvText => {
-                localDataRendered = true;
-                localStorage.setItem('boardingDataCache', csvText);
-                
-                // Remove the cache event track we just drew
-                globalCalendar.getEventSources().forEach(source => source.remove());
-                
-                // Inject the live sheet array cleanly
-                processCombinedData(csvText, (events) => {
-                    globalCalendar.addEventSource(events);
-                });
-            })
-            .catch(error => {
-                console.error("Network error pulling live rows, remaining on local cache fallback.", error);
-            });
     }
 </script>
 </body>
