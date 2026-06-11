@@ -9,12 +9,11 @@
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 15px; background-color: #f8f9fa; transition: background-color 0.3s, color 0.3s; }
         .container { max-width: 950px; margin: 0 auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); transition: background-color 0.3s, box-shadow 0.3s; }
-        h2 { text-align: center; color: #2c3e50; margin-top: 0; font-size: 24px; transition: color 0.3s; }
-        #calendar { margin-top: 20px; }
         
-        /* Optional Header Banner Image Styles */
-        .calendar-banner-container { text-align: center; margin-bottom: 20px; }
-        .calendar-banner { max-width: 100%; height: auto; border-radius: 8px; max-height: 250px; object-fit: cover; }
+        /* Updated Page Header Branding Wrapper matches image layout */
+        .calendar-header-branding { text-align: center; margin-bottom: 15px; }
+        .calendar-header-branding h2 { color: #2c3e50; font-size: 26px; font-weight: 800; margin: 10px 0 5px 0; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .calendar-brand-img { max-width: 160px; height: auto; border-radius: 50%; object-fit: cover; margin-top: 5px; }
 
         .btn-add { display: block; width: 100%; box-sizing: border-box; text-align: center; background: #27ae60; color: white; padding: 14px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .btn-add:hover { background: #219653; }
@@ -54,18 +53,16 @@
         /* Dark Mode Core Theme Overrides */
         body.dark-theme { background-color: #0f172a; color: #f8fafc; }
         body.dark-theme .container { background: #1e293b; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
-        body.dark-theme h2 { color: #f1f5f9; }
+        body.dark-theme .calendar-header-branding h2 { color: #f1f5f9; }
         body.dark-theme .search-input { background-color: #334155; border-color: #475569; color: white; }
         body.dark-theme .summary-card { background: #334155; color: #f1f5f9; }
-        body.dark-theme .summary-card h3 { color: #ffffff !important; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Apple Color Emoji", "Segoe UI Emoji", sans-serif !important; font-weight: 700 !important; font-size: 14px !important; letter-spacing: 0.5px !important; }
+        body.dark-theme .summary-card h3 { color: #ffffff !important; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important; font-weight: 700 !important; font-size: 14px !important; letter-spacing: 0.5px !important; }
         body.dark-theme .summary-list li { border-bottom-color: #475569; color: #e2e8f0; }
         body.dark-theme .date-badge { background: #475569; color: #cbd5e1; }
-        
-        /* Dropdown Select Elements styling parameters inside Dark Theme */
         body.dark-theme .search-container select { background-color: #334155 !important; border-color: #475569 !important; color: white !important; }
 
         /* FullCalendar Dark Mode Visibility Fixes */
-        body.dark-theme .fc { color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Apple Color Emoji", "Segoe UI Emoji", sans-serif !important; }
+        body.dark-theme .fc { color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important; }
         body.dark-theme .fc th.fc-col-header-cell,
         body.dark-theme .fc .fc-col-header-cell-cushion,
         body.dark-theme .fc .fc-col-header-cell a,
@@ -84,7 +81,7 @@
         @media (max-width: 768px) {
             body { margin: 5px; }
             .container { padding: 10px; border-radius: 6px; }
-            h2 { font-size: 20px; margin-bottom: 10px; }
+            .calendar-header-branding h2 { font-size: 20px; }
             .search-container { flex-direction: column; align-items: stretch !important; gap: 8px; }
             .quick-navigate-container { display: grid !important; grid-template-columns: 1fr 1fr; gap: 5px; }
             .summary-dashboard { grid-template-columns: 1fr; gap: 10px; margin-bottom: 15px; }
@@ -99,15 +96,14 @@
 <body>
 
 <div class="container">
-    <h2>🐾 Waffle House Calendar</h2>
-    
-    <div class="calendar-banner-container" style="display: none;">
-        <img src="" alt="Waffle House Banner" class="calendar-banner">
+    <div class="calendar-header-branding">
+        <h2>🐾 Waffle House Calendar</h2>
+        <img src="https://wafflepug.github.io/Waffle.jpg" alt="Waffle Pug" class="calendar-brand-img" onerror="this.style.display='none';">
     </div>
 
    <div class="calendar-banner-container">
         <img src="https://lh3.googleusercontent.com/d/1M5FMz5NWWmc6XvIkWqL49ry_FKM8L6g1" alt="Waffle House Banner" class="calendar-banner">
-    </div>
+     </div>
     
     <a href="https://docs.google.com/forms/d/e/1FAIpQLScszSqsaxw9THyebWt2g0khVTIzP9L8hPbor1mUB0fp_0KPAw/viewform?usp=dialog" target="_blank" class="btn-add">+ Add New Booking</a>
     
@@ -139,15 +135,15 @@
     <div class="summary-dashboard">
         <div class="summary-card active-now">
             <h3>🏡 At Home Right Now</h3>
-            <ul id="at-home-list" class="summary-list"><li class="no-dogs">Loading...</li></ul>
+            <ul id="at-home-list" class="summary-list"><li class="no-dogs">No remaining guests at home right now</li></ul>
         </div>
         <div class="summary-card leaving-now">
             <h3>👋 Leaving Today / Soon</h3>
-            <ul id="leaving-list" class="summary-list"><li class="no-dogs">Loading...</li></ul>
+            <ul id="leaving-list" class="summary-list"><li class="no-dogs">No checkouts scheduled this week</li></ul>
         </div>
         <div class="summary-card upcoming-now">
             <h3>📅 Arriving Next 7 Days</h3>
-            <ul id="upcoming-list" class="summary-list"><li class="no-dogs">Loading...</li></ul>
+            <ul id="upcoming-list" class="summary-list"><li class="no-dogs">No new arrivals scheduled this week</li></ul>
         </div>
     </div>
 
@@ -157,7 +153,7 @@
 <button id="themeToggle" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; background: #2c3e50; color: white; border: none; border-radius: 50%; width: 50px; height: 50px; font-size: 22px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.2); display: flex; align-items: center; justify-content: center;">🌙</button>
 
 <script>
-    const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT63UsPjcg3GB4lTB6cewLaTRS_yJP4kpOMSMsTTnvTw1Wbjn3CgtZc_c6li28ihjzkHnphFt0XcFTt/pub?gid=1639615540&single=true&output=csv';
+    const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT63UsPjcg3GB41TB6cewLaTRS_yJP4kpOMSmsTTnvTwlWbjn3CgtZc_c6li28ihjzhNnphFt0XCFtt/pub?gid=1639615540&single=true&output=csv';
     let globalCalendar;
     let dailyCapacityCounts = {}; 
 
@@ -175,7 +171,6 @@
             },
             selectable: true,
             
-            // STABILIZE VIEW SETS: pure offline local cache assembly. Eliminates background duplication bugs.
             datesSet: function(info) {
                 renderCurrentView();
             },
@@ -264,7 +259,7 @@
 
         globalCalendar.render();
 
-        // QUICK-JUMP DROPDOWN ENGINE INITIALIZATION
+        // Dropdown Quick Navigation Init
         const jumpMonthSelect = document.getElementById('jumpMonth');
         const jumpYearSelect = document.getElementById('jumpYear');
 
@@ -286,23 +281,35 @@
         jumpMonthSelect.addEventListener('change', executeCalendarJump);
         jumpYearSelect.addEventListener('change', executeCalendarJump);
 
-        // Bi-directional binding sync: keeps dropdown indicators aligned if native arrows are pressed
         globalCalendar.on('datesSet', function(info) {
             const viewCurrentDate = globalCalendar.getDate();
             jumpMonthSelect.value = String(viewCurrentDate.getMonth()).padStart(2, '0');
             jumpYearSelect.value = viewCurrentDate.getFullYear();
         });
 
-        // CONNECT CLOUD SPREADSHEET MANUAL REFRESH CORE PIPELINE
+        // REFACTORED SECURE CLOUD SPREADSHEET SYNC ENGINE
         document.getElementById('manualRefreshBtn').addEventListener('click', function() {
             const btn = this;
             btn.innerText = "⏳ Syncing...";
             btn.style.background = "#7f8c8d";
             btn.disabled = true;
 
-            fetch(SHEET_CSV_URL)
-                .then(response => response.text())
+            // Cache data in local state container before fetch to build rollback capability
+            const backupCache = localStorage.getItem('boardingDataCache');
+
+            fetch(SHEET_CSV_URL, { cache: "no-store" })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error("HTTP Network error status code: " + response.status);
+                    }
+                    return response.text();
+                })
                 .then(csvText => {
+                    // Fail-safe validation block: ensures we received genuine data lines
+                    if (!csvText || csvText.trim().length < 20 || !csvText.includes(',')) {
+                        throw new Error("The returned spreadsheet document payload appears corrupted or unparsable.");
+                    }
+
                     localStorage.setItem('boardingDataCache', csvText);
                     renderCurrentView();
                     
@@ -316,14 +323,30 @@
                 })
                 .catch(error => {
                     console.error("Sync pipeline hit an unexpected error:", error);
-                    alert("Spreadsheet sync failed. Reverting safely to offline device cache.");
+                    
+                    // Safe state roll-back deployment
+                    if (backupCache) {
+                        localStorage.setItem('boardingDataCache', backupCache);
+                        renderCurrentView();
+                    }
+                    
+                    // Detailed error breakdown context alert
+                    alert(
+                        "⚠️ SPREADSHEET SYNC FAILED\n\n" +
+                        "Reason: " + error.message + "\n\n" +
+                        "Troubleshooting Steps for PC:\n" +
+                        "1. Verify that your PC has an active internet connection.\n" +
+                        "2. Ensure you haven't un-published or changed permissions on your Google Spreadsheet.\n" +
+                        "3. Check if an aggressive browser ad-blocker or VPN on your PC is blocking the Google Sheets URL request."
+                    );
+                    
                     btn.innerText = "❌ Failed";
                     btn.style.background = "#e74c3c";
                     setTimeout(() => {
                         btn.innerText = "🔄 Sync Spreadsheet";
                         btn.style.background = "#3498db";
                         btn.disabled = false;
-                    }, 2000);
+                    }, 3000);
                 });
         });
 
@@ -347,9 +370,11 @@
                 localStorage.setItem('theme', 'light');
             }
         });
+
+        // Initial setup load on container ready
+        renderCurrentView();
     });
 
-    // ISOLATED DATA RENDER CORE: Wipes canvas clean and mounts exactly 1 clear event layer
     function renderCurrentView() {
         if (!globalCalendar) return;
         globalCalendar.getEventSources().forEach(source => source.remove());
