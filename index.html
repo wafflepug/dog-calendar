@@ -181,17 +181,46 @@
     <div id="calendar"></div>
 </div>
 
+<div id="customBookingModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 10000; align-items: center; justify-content: center;">
+    <div style="background: white; padding: 25px; border-radius: 12px; max-width: 380px; width: 90%; box-shadow: 0 10px 25px rgba(0,0,0,0.2); font-family: inherit; box-sizing: border-box;" class="modal-content-panel">
+        <h3 style="margin-top: 0; color: #2c3e50; font-size: 18px; display: flex; align-items: center; gap: 8px;" id="modalTitle">🤝 Meet & Greet Booking</h3>
+        
+        <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 5px; color: #475569;">🐾 Dog Name:</label>
+        <input type="text" id="modalDogName" style="width: 100%; padding: 10px; margin-bottom: 15px; border: 2px solid #e2e8f0; border-radius: 6px; box-sizing: border-box;" placeholder="e.g. Buster">
+        
+        <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 5px; color: #475569;">⏰ Booking Time:</label>
+        <input type="text" id="modalBookingTime" style="width: 100%; padding: 10px; margin-bottom: 15px; border: 2px solid #e2e8f0; border-radius: 6px; box-sizing: border-box;" value="10:00">
+        
+        <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 5px; color: #475569;">📋 Breed (Optional):</label>
+        <input type="text" id="modalBreed" style="width: 100%; padding: 10px; margin-bottom: 20px; border: 2px solid #e2e8f0; border-radius: 6px; box-sizing: border-box;" placeholder="e.g. Pug">
+        
+        <div style="display: flex; gap: 10px; justify-content: flex-end;">
+            <button id="closeModalBtn" style="background: #94a3b8; color: white; border: none; padding: 10px 16px; border-radius: 6px; cursor: pointer; font-weight: bold;">Cancel</button>
+            <button id="saveModalBtn" style="background: #27ae60; color: white; border: none; padding: 10px 16px; border-radius: 6px; cursor: pointer; font-weight: bold;">Save Booking</button>
+        </div>
+    </div>
+</div>
+
 <button id="themeToggle" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; background: #2c3e50; color: white; border: none; border-radius: 50%; width: 50px; height: 50px; font-size: 22px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.2); display: flex; align-items: center; justify-content: center;">🌙</button>
 
+<style>
+    /* Dark theme style compliance targets */
+    body.dark-theme .modal-content-panel { background: #1e293b !important; color: white; }
+    body.dark-theme .modal-content-panel h3 { color: white !important; }
+    body.dark-theme .modal-content-panel label { color: #cbd5e1 !important; }
+    body.dark-theme .modal-content-panel input { background: #334155; border-color: #475569; color: white; }
+</style>
+
 <script>
-    const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT63UsPjcg3GB4lTB6cewLaTRS_yJP4kpOMSMsTTnvTw1Wbjn3CgtZc_c6li28ihjzkHnphFt0XcFTt/pub?gid=1639615540&single=true&output=csv';
+    const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT63UsPjcg3GB41TB6cewLaTRS_yJP4kpOMSmsTTnvTwlWbjn3CgtZc_c6li28ihjzhNnphFt0XCFtt/pub?gid=1639615540&single=true&output=csv';
     
     // ⚠️ PASTE YOUR DEPLOYED GOOGLE APPS SCRIPT WEB APP URL HERE
-    const APPS_SCRIPT_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbx46l0-khjzzARaZA_D1UdhzrLuW8hDXb0qik2zKk_8FIUqcyw68-q1fy_dBF_6FyNjfg/exec';
+    const APPS_SCRIPT_WEBAPP_URL = 'YOUR_APPS_SCRIPT_WEBAPP_URL_HERE';
 
     let globalCalendar;
     let dailyCapacityCounts = {}; 
     let isUpdatingDropdowns = false; 
+    let selectedClickDateStr = ""; 
 
     document.addEventListener('DOMContentLoaded', function() {
         const calendarEl = document.getElementById('calendar');
@@ -217,71 +246,15 @@
             },
             
             dateClick: function(info) {
-                const dogName = prompt("🤝 Enter Dog Name for Meet & Greet booking:");
-                if (!dogName || dogName.trim() === "") return;
-
-                const bookingTime = prompt("⏰ Enter Booking Time (e.g., 14:00, 2:30 PM):", "10:00");
-                if (!bookingTime) return;
-
-                const breed = prompt("📋 Enter Breed (Optional):", "N/A") || "N/A";
+                selectedClickDateStr = info.dateStr;
                 
-                const timePrefix = bookingTime.trim();
-                const displayTitle = `⏰ ${timePrefix} - Meet & Greet: ${dogName.trim()}`;
-
-                const newMeet = {
-                    id: 'meet_' + Date.now(), 
-                    title: displayTitle,
-                    start: info.dateStr,
-                    end: info.dateStr,
-                    allDay: true,
-                    backgroundColor: '#8e44ad', 
-                    textColor: '#ffffff',
-                    extendedProps: {
-                        isMeetGreet: true,
-                        breed: breed.trim(),
-                        time: timePrefix,
-                        dogName: dogName.trim(),
-                        owner: "Temporary Booking",
-                        phone: "N/A",
-                        likes: "N/A",
-                        dislikes: "N/A",
-                        notes: "Saving to database...",
-                        editLink: ""
-                    }
-                };
-
-                // 1. Immediately render locally for snappy user experience
-                let localMeets = JSON.parse(localStorage.getItem('temporaryMeetGreets') || '[]');
-                localMeets.push(newMeet);
-                localStorage.setItem('temporaryMeetGreets', JSON.stringify(localMeets));
-                refreshCalendarData();
-
-                // 2. Persist to backend cloud database (Google Sheet)
-                if (APPS_SCRIPT_WEBAPP_URL && APPS_SCRIPT_WEBAPP_URL !== 'YOUR_APPS_SCRIPT_WEBAPP_URL_HERE') {
-                    const payload = {
-                        dogName: dogName.trim(),
-                        breed: breed.trim(),
-                        startDate: info.dateStr,
-                        endDate: info.dateStr,
-                        notes: `Meet & Greet scheduled at ${timePrefix}`
-                    };
-
-                    fetch(APPS_SCRIPT_WEBAPP_URL, {
-                        method: 'POST',
-                        mode: 'no-cors', // Bypasses browser CORS policy restrictions
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    })
-                    .then(() => {
-                        console.log("Booking successfully submitted to Google Sheets.");
-                    })
-                    .catch(err => {
-                        console.error("Database connection failure:", err);
-                        alert("Local event saved, but could not sync to Google Sheets database directly.");
-                    });
-                } else {
-                    console.warn("Apps Script URL missing. Booking cached locally in browser only.");
-                }
+                document.getElementById('modalDogName').value = "";
+                document.getElementById('modalBreed').value = "";
+                document.getElementById('modalBookingTime').value = "10:00";
+                
+                const modal = document.getElementById('customBookingModal');
+                modal.style.display = "flex";
+                document.getElementById('modalDogName').focus();
             },
             eventClick: function(info) {
                 if (info.event.extendedProps.isMeetGreet) {
@@ -319,6 +292,74 @@
         });
 
         globalCalendar.render();
+
+        // Wire up modal exit trigger
+        document.getElementById('closeModalBtn').addEventListener('click', function() {
+            document.getElementById('customBookingModal').style.display = "none";
+        });
+
+        // Wire up modal save workflow pipeline
+        document.getElementById('saveModalBtn').addEventListener('click', function() {
+            const dogName = document.getElementById('modalDogName').value;
+            const bookingTime = document.getElementById('modalBookingTime').value;
+            const breed = document.getElementById('modalBreed').value || "N/A";
+            
+            if (!dogName || dogName.trim() === "") {
+                alert("Please enter a dog name.");
+                return;
+            }
+            
+            document.getElementById('customBookingModal').style.display = "none";
+            
+            const timePrefix = bookingTime.trim();
+            const displayTitle = `⏰ ${timePrefix} - Meet & Greet: ${dogName.trim()}`;
+
+            const newMeet = {
+                id: 'meet_' + Date.now(), 
+                title: displayTitle,
+                start: selectedClickDateStr,
+                end: selectedClickDateStr,
+                allDay: true,
+                backgroundColor: '#8e44ad', 
+                textColor: '#ffffff',
+                extendedProps: {
+                    isMeetGreet: true,
+                    breed: breed.trim(),
+                    time: timePrefix,
+                    dogName: dogName.trim(),
+                    owner: "Temporary Booking",
+                    phone: "N/A",
+                    likes: "N/A",
+                    dislikes: "N/A",
+                    notes: `Meet & Greet scheduled at ${timePrefix}`,
+                    editLink: ""
+                }
+            };
+
+            let localMeets = JSON.parse(localStorage.getItem('temporaryMeetGreets') || '[]');
+            localMeets.push(newMeet);
+            localStorage.setItem('temporaryMeetGreets', JSON.stringify(localMeets));
+            refreshCalendarData();
+
+            if (APPS_SCRIPT_WEBAPP_URL && APPS_SCRIPT_WEBAPP_URL !== 'YOUR_APPS_SCRIPT_WEBAPP_URL_HERE') {
+                const payload = {
+                    dogName: dogName.trim(),
+                    breed: breed.trim(),
+                    startDate: selectedClickDateStr,
+                    endDate: selectedClickDateStr,
+                    notes: `Meet & Greet scheduled at ${timePrefix}`
+                };
+
+                fetch(APPS_SCRIPT_WEBAPP_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                })
+                .then(() => console.log("Database write verified."))
+                .catch(err => console.error("Database connection failure:", err));
+            }
+        });
 
         const jumpMonthSelect = document.getElementById('jumpMonth');
         const jumpYearSelect = document.getElementById('jumpYear');
@@ -362,10 +403,7 @@
                     }
 
                     localStorage.setItem('boardingDataCache', csvText);
-                    
-                    // Clear the local cache optimization now that database sync catch-up is valid
                     localStorage.removeItem('temporaryMeetGreets');
-                    
                     refreshCalendarData();
                     
                     btn.innerText = "✅ Synced!";
@@ -490,172 +528,176 @@
     }
 
     function parseCSVToEvents(csvText) {
-    if (!csvText) return [];
-    const lines = csvText.split(/\r?\n/);
-    const events = [];
-    
-    const today = new Date(); today.setHours(0,0,0,0);
-    const sevenDaysFromNow = new Date(); sevenDaysFromNow.setDate(today.getDate() + 7); sevenDaysFromNow.setHours(23,59,59,999);
-
-    const atHomeDogs = []; const leavingDogs = []; const upcomingDogs = [];
-    const directoryCardsHTML = [];
-
-    for (let i = 1; i < lines.length; i++) {
-        if (!lines[i].trim()) continue;
+        if (!csvText) return [];
+        const lines = csvText.split(/\r?\n/);
+        const events = [];
         
-        // Advanced Split to respect quotes around commas
-        const columns = lines[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/); 
-        
-        const dogName = columns[1] ? columns[1].replace(/^"|"$/g, '') : '';
-        const breed = columns[2] ? columns[2].replace(/^"|"$/g, '') : '';
-        const startDate = columns[3];
-        const endDate = columns[4];
-        const ownerName = columns[5] ? columns[5].replace(/^"|"$/g, '') : '';
-        const phone = columns[6] ? columns[6].replace(/^"|"$/g, '') : '';
-        const likes = columns[7] ? columns[7].replace(/^"|"$/g, '') : '';
-        const dislikes = columns[8] ? columns[8].replace(/^"|"$/g, '') : '';
-        const notes = columns[9] ? columns[9].replace(/^"|"$/g, '') : '';
-        const editLink = columns[10] ? columns[10].replace(/^"|"$/g, '') : '';
-        
-        // NEW: Pull Column L (Index 11) for the Meet & Greet type tag
-        const bookingType = columns[11] ? columns[11].replace(/^"|"$/g, '').trim() : '';
-        const isMeetGreetType = (bookingType.toLowerCase() === 'meet & greet');
+        const today = new Date(); today.setHours(0,0,0,0);
+        const sevenDaysFromNow = new Date(); sevenDaysFromNow.setDate(today.getDate() + 7); sevenDaysFromNow.setHours(23,59,59,999);
 
-        if (dogName && startDate) {
-            let startParsed = "", endParsed = "";
+        // Fetch current Sydney timezone configurations
+        const sydneyHour = new Date().toLocaleString("en-AU", {timeZone: "Australia/Sydney", hour: 'numeric', hour12: false});
+        const isAfterSixPM = parseInt(sydneyHour) >= 18;
 
-            if (startDate.includes('/')) {
-                const sParts = startDate.trim().split('/');
-                if (sParts[2]) startParsed = sParts[2] + '-' + sParts[1].padStart(2, '0') + '-' + sParts[0].padStart(2, '0');
-            } else if (startDate.includes('-')) {
-                startParsed = startDate.trim().split('T')[0];
-            }
+        const atHomeDogs = []; const leavingDogs = []; const upcomingDogs = [];
+        const directoryCardsHTML = [];
+
+        for (let i = 1; i < lines.length; i++) {
+            if (!lines[i].trim()) continue;
             
-            if (endDate && endDate.includes('/')) {
-                const eParts = endDate.trim().split('/');
-                if (eParts[2]) endParsed = eParts[2] + '-' + eParts[1].padStart(2, '0') + '-' + eParts[0].padStart(2, '0');
-            } else if (endDate && endDate.includes('-')) {
-                endParsed = endDate.trim().split('T')[0];
-            } else {
-                endParsed = startParsed;
-            }
+            const columns = lines[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/); 
+            
+            const dogName = columns[1] ? columns[1].replace(/^"|"$/g, '') : '';
+            const breed = columns[2] ? columns[2].replace(/^"|"$/g, '') : '';
+            const startDate = columns[3];
+            const endDate = columns[4];
+            const ownerName = columns[5] ? columns[5].replace(/^"|"$/g, '') : '';
+            const phone = columns[6] ? columns[6].replace(/^"|"$/g, '') : '';
+            const likes = columns[7] ? columns[7].replace(/^"|"$/g, '') : '';
+            const dislikes = columns[8] ? columns[8].replace(/^"|"$/g, '') : '';
+            const notes = columns[9] ? columns[9].replace(/^"|"$/g, '') : '';
+            const editLink = columns[10] ? columns[10].replace(/^"|"$/g, '') : '';
+            
+            const bookingType = columns[11] ? columns[11].replace(/^"|"$/g, '').trim() : '';
+            const isMeetGreetType = (bookingType.toLowerCase() === 'meet & greet');
 
-            if (startParsed && endParsed) {
-                const checkStart = new Date(startParsed + 'T00:00:00');
-                const checkEnd = new Date(endParsed + 'T00:00:00');
+            if (dogName && startDate) {
+                let startParsed = "", endParsed = "";
 
-                if (!isNaN(checkStart.getTime()) && !isNaN(checkEnd.getTime())) {
-                    const breedTxt = breed ? breed.trim() : 'Unknown';
-                    const displayDate = checkEnd.getDate() + '/' + (checkEnd.getMonth() + 1);
-                    
-                    let tempLoopDate = new Date(checkStart.getTime());
-                    while (tempLoopDate <= checkEnd) {
-                        const tempStr = tempLoopDate.toISOString().split('T')[0];
-                        dailyCapacityCounts[tempStr] = (dailyCapacityCounts[tempStr] || 0) + 1;
-                        tempLoopDate.setDate(tempLoopDate.getDate() + 1);
+                if (startDate.includes('/')) {
+                    const sParts = startDate.trim().split('/');
+                    if (sParts[2]) startParsed = sParts[2] + '-' + sParts[1].padStart(2, '0') + '-' + sParts[0].padStart(2, '0');
+                } else if (startDate.includes('-')) {
+                    startParsed = startDate.trim().split('T')[0];
+                }
+                
+                if (endDate && endDate.includes('/')) {
+                    const eParts = endDate.trim().split('/');
+                    if (eParts[2]) endParsed = eParts[2] + '-' + eParts[1].padStart(2, '0') + '-' + eParts[0].padStart(2, '0');
+                } else if (endDate && endDate.includes('-')) {
+                    endParsed = endDate.trim().split('T')[0];
+                } else {
+                    endParsed = startParsed;
+                }
+
+                if (startParsed && endParsed) {
+                    const checkStart = new Date(startParsed + 'T00:00:00');
+                    const checkEnd = new Date(endParsed + 'T00:00:00');
+
+                    if (!isNaN(checkStart.getTime()) && !isNaN(checkEnd.getTime())) {
+                        const breedTxt = breed ? breed.trim() : 'Unknown';
+                        const displayDate = checkEnd.getDate() + '/' + (checkEnd.getMonth() + 1);
+                        
+                        let tempLoopDate = new Date(checkStart.getTime());
+                        while (tempLoopDate <= checkEnd) {
+                            const tempStr = tempLoopDate.toISOString().split('T')[0];
+                            dailyCapacityCounts[tempStr] = (dailyCapacityCounts[tempStr] || 0) + 1;
+                            tempLoopDate.setDate(tempLoopDate.getDate() + 1);
+                        }
+
+                        if (!isMeetGreetType) {
+                            const listLabel = (dogName.includes('&') || dogName.toLowerCase().includes('and')) ? '👥 ' + dogName.trim() : '🐾 ' + dogName.trim();
+                            
+                            let isTodayTheEndDate = (checkEnd.getTime() === today.getTime());
+                            let isCurrentlyAtHome = (today >= checkStart && today < checkEnd) || (isTodayTheEndDate && !isAfterSixPM);
+                            let isUpcoming = (checkStart > today && checkStart <= sevenDaysFromNow);
+
+                            if (isCurrentlyAtHome) {
+                                atHomeDogs.push('<li><span>' + listLabel + ' (' + breedTxt + ')</span></li>');
+                            }
+
+                            if (isTodayTheEndDate) {
+                                if (isAfterSixPM) {
+                                    leavingDogs.push('<li><span>' + listLabel + ' (' + breedTxt + ')</span> <span class="date-badge today-badge">TODAY</span></li>');
+                                }
+                            } else if (checkEnd > today && checkEnd <= sevenDaysFromNow) {
+                                leavingDogs.push('<li><span>' + listLabel + ' (' + breedTxt + ')</span> <span class="date-badge">' + displayDate + '</span></li>');
+                            }
+
+                            if (isUpcoming) {
+                                const arrivalDate = checkStart.getDate() + '/' + (checkStart.getMonth() + 1);
+                                upcomingDogs.push('<li><span>⏳ ' + dogName.trim() + '</span> <span class="date-badge">' + arrivalDate + '</span></li>');
+                            }
+
+                            if (isCurrentlyAtHome || isUpcoming) {
+                                const statusTag = isCurrentlyAtHome ? 
+                                    '<span class="directory-status-tag tag-at-home">At Home</span>' : 
+                                    '<span class="directory-status-tag tag-upcoming">Upcoming</span>';
+
+                                const cleanName = dogName.trim().replace(/'/g, "\\'");
+                                const cleanLnk = editLink.trim();
+
+                                directoryCardsHTML.push(`
+                                    <div class="directory-card">
+                                        <h4 onclick="routeToDatabaseCell('${cleanLnk}', 'B', '${cleanName}', 'Dog Name')" title="Click to edit name in spreadsheet" style="cursor:pointer;">
+                                            <span>🐾 ${dogName.trim()}</span> ${statusTag}
+                                        </h4>
+                                        <span class="editable-row" onclick="routeToDatabaseCell('${cleanLnk}', 'C', '${cleanName}', 'Breed')" title="Click to edit Breed">
+                                            <strong>Breed:</strong> ${breedTxt}
+                                        </span>
+                                        <span class="editable-row" onclick="routeToDatabaseCell('${cleanLnk}', 'F', '${cleanName}', 'Owner')" title="Click to edit Owner">
+                                            <strong>Owner:</strong> ${ownerName ? ownerName.trim() : 'N/A'}
+                                        </span>
+                                        <span class="editable-row" onclick="routeToDatabaseCell('${cleanLnk}', 'G', '${cleanName}', 'Contact')" title="Click to edit Contact">
+                                            <strong>Contact:</strong> ${phone ? phone.trim() : 'N/A'}
+                                        </span>
+                                        <span class="editable-row" onclick="routeToDatabaseCell('${cleanLnk}', 'H', '${cleanName}', 'Likes')" title="Click to edit Likes">
+                                            <strong>Likes:</strong> ${likes ? likes.trim() : 'None listed'}
+                                        </span>
+                                        <span class="editable-row" onclick="routeToDatabaseCell('${cleanLnk}', 'I', '${cleanName}', 'Dislikes')" title="Click to edit Dislikes">
+                                            <strong>Dislikes:</strong> ${dislikes ? dislikes.trim() : 'None listed'}
+                                        </span>
+                                        <span class="editable-row" onclick="routeToDatabaseCell('${cleanLnk}', 'J', '${cleanName}', 'Notes')" title="Click to edit Notes">
+                                            <strong>Notes:</strong> ${notes ? notes.trim() : 'None'}
+                                        </span>
+                                    </div>
+                                `);
+                            }
+                        }
+
+                        const parts = endParsed.split('-');
+                        const dateObject = new Date(parts[0], parts[1] - 1, parts[2]);
+                        dateObject.setDate(dateObject.getDate() + 1);
+                        
+                        const forcedDisplayEnd = dateObject.getFullYear() + '-' + 
+                            String(dateObject.getMonth() + 1).padStart(2, '0') + '-' + 
+                            String(dateObject.getDate()).padStart(2, '0');
+
+                        const finalTitle = isMeetGreetType ? `${notes.trim()} - ${dogName.trim()}` : dogName.trim();
+                        const finalColor = isMeetGreetType ? '#8e44ad' : stringToColor(dogName.trim());
+
+                        events.push({
+                            title: finalTitle,
+                            start: startParsed,
+                            end: forcedDisplayEnd, 
+                            allDay: true,
+                            backgroundColor: finalColor,
+                            textColor: '#ffffff',
+                            extendedProps: { 
+                                isMeetGreet: isMeetGreetType,
+                                breed: breedTxt, 
+                                owner: ownerName ? ownerName.trim() : "N/A", 
+                                phone: phone ? phone.trim() : "N/A",
+                                likes: likes ? likes.trim() : "None listed",
+                                dislikes: dislikes ? dislikes.trim() : "None listed",
+                                notes: notes ? notes.trim() : "None",
+                                editLink: editLink ? editLink.trim() : ""
+                            }
+                        });
                     }
-
-                    // ONLY process for Dashboard Metrics and Guest Directory if it's a standard boarding event
-                    if (!isMeetGreetType) {
-                        const listLabel = (dogName.includes('&') || dogName.toLowerCase().includes('and')) ? '👥 ' + dogName.trim() : '🐾 ' + dogName.trim();
-                        let isAtHome = (today >= checkStart && today <= checkEnd && checkEnd.getTime() !== today.getTime());
-                        let isUpcoming = (checkStart > today && checkStart <= sevenDaysFromNow);
-
-                        if (checkEnd.getTime() === today.getTime()) {
-                            leavingDogs.push('<li><span>' + listLabel + ' (' + breedTxt + ')</span> <span class="date-badge today-badge">TODAY</span></li>');
-                        } else if (checkEnd > today && checkEnd <= sevenDaysFromNow) {
-                            leavingDogs.push('<li><span>' + listLabel + ' (' + breedTxt + ')</span> <span class="date-badge">' + displayDate + '</span></li>');
-                        }
-
-                        if (isAtHome) {
-                            atHomeDogs.push('<li><span>' + listLabel + ' (' + breedTxt + ')</span></li>');
-                        } 
-
-                        if (isUpcoming) {
-                            const arrivalDate = checkStart.getDate() + '/' + (checkStart.getMonth() + 1);
-                            upcomingDogs.push('<li><span>⏳ ' + dogName.trim() + '</span> <span class="date-badge">' + arrivalDate + '</span></li>');
-                        }
-
-                        if (isAtHome || isUpcoming) {
-                            const statusTag = isAtHome ? 
-                                '<span class="directory-status-tag tag-at-home">At Home</span>' : 
-                                '<span class="directory-status-tag tag-upcoming">Upcoming</span>';
-
-                            const cleanName = dogName.trim().replace(/'/g, "\\'");
-                            const cleanLnk = editLink.trim();
-
-                            directoryCardsHTML.push(`
-                                <div class="directory-card">
-                                    <h4 onclick="routeToDatabaseCell('${cleanLnk}', 'B', '${cleanName}', 'Dog Name')" title="Click to edit name in spreadsheet" style="cursor:pointer;">
-                                        <span>🐾 ${dogName.trim()}</span> ${statusTag}
-                                    </h4>
-                                    <span class="editable-row" onclick="routeToDatabaseCell('${cleanLnk}', 'C', '${cleanName}', 'Breed')" title="Click to edit Breed">
-                                        <strong>Breed:</strong> ${breedTxt}
-                                    </span>
-                                    <span class="editable-row" onclick="routeToDatabaseCell('${cleanLnk}', 'F', '${cleanName}', 'Owner')" title="Click to edit Owner">
-                                        <strong>Owner:</strong> ${ownerName ? ownerName.trim() : 'N/A'}
-                                    </span>
-                                    <span class="editable-row" onclick="routeToDatabaseCell('${cleanLnk}', 'G', '${cleanName}', 'Contact')" title="Click to edit Contact">
-                                        <strong>Contact:</strong> ${phone ? phone.trim() : 'N/A'}
-                                    </span>
-                                    <span class="editable-row" onclick="routeToDatabaseCell('${cleanLnk}', 'H', '${cleanName}', 'Likes')" title="Click to edit Likes">
-                                        <strong>Likes:</strong> ${likes ? likes.trim() : 'None listed'}
-                                    </span>
-                                    <span class="editable-row" onclick="routeToDatabaseCell('${cleanLnk}', 'I', '${cleanName}', 'Dislikes')" title="Click to edit Dislikes">
-                                        <strong>Dislikes:</strong> ${dislikes ? dislikes.trim() : 'None listed'}
-                                    </span>
-                                    <span class="editable-row" onclick="routeToDatabaseCell('${cleanLnk}', 'J', '${cleanName}', 'Notes')" title="Click to edit Notes">
-                                        <strong>Notes:</strong> ${notes ? notes.trim() : 'None'}
-                                    </span>
-                                </div>
-                            `);
-                        }
-                    }
-
-                    const parts = endParsed.split('-');
-                    const dateObject = new Date(parts[0], parts[1] - 1, parts[2]);
-                    dateObject.setDate(dateObject.getDate() + 1);
-                    
-                    const forcedDisplayEnd = dateObject.getFullYear() + '-' + 
-                        String(dateObject.getMonth() + 1).padStart(2, '0') + '-' + 
-                        String(dateObject.getDate()).padStart(2, '0');
-
-                    // Standard display titles vs time-prefixed Meet & Greets from the database
-                    const finalTitle = isMeetGreetType ? `${notes.trim()} - ${dogName.trim()}` : dogName.trim();
-                    const finalColor = isMeetGreetType ? '#8e44ad' : stringToColor(dogName.trim());
-
-                    events.push({
-                        title: finalTitle,
-                        start: startParsed,
-                        end: forcedDisplayEnd, 
-                        allDay: true,
-                        backgroundColor: finalColor,
-                        textColor: '#ffffff',
-                        extendedProps: { 
-                            isMeetGreet: isMeetGreetType,
-                            breed: breedTxt, 
-                            owner: ownerName ? ownerName.trim() : "N/A", 
-                            phone: phone ? phone.trim() : "N/A",
-                            likes: likes ? likes.trim() : "None listed",
-                            dislikes: dislikes ? dislikes.trim() : "None listed",
-                            notes: notes ? notes.trim() : "None",
-                            editLink: editLink ? editLink.trim() : ""
-                        }
-                    });
                 }
             }
         }
+
+        document.getElementById('at-home-list').innerHTML = atHomeDogs.length > 0 ? atHomeDogs.join('') : '<li class="no-dogs">No remaining guests at home right now</li>';
+        document.getElementById('leaving-list').innerHTML = leavingDogs.length > 0 ? leavingDogs.join('') : '<li class="no-dogs">No checkouts scheduled this week</li>';
+        document.getElementById('upcoming-list').innerHTML = upcomingDogs.length > 0 ? upcomingDogs.join('') : '<li class="no-dogs">No new arrivals scheduled this week</li>';
+
+        document.getElementById('directory-grid').innerHTML = directoryCardsHTML.length > 0 ? 
+            directoryCardsHTML.join('') : '<div class="no-dogs" style="grid-column: 1/-1; text-align: center; padding: 20px;">No current or upcoming guests meet this criteria this week.</div>';
+
+        return events;
     }
-
-    document.getElementById('at-home-list').innerHTML = atHomeDogs.length > 0 ? atHomeDogs.join('') : '<li class="no-dogs">No remaining guests at home right now</li>';
-    document.getElementById('leaving-list').innerHTML = leavingDogs.length > 0 ? leavingDogs.join('') : '<li class="no-dogs">No checkouts scheduled this week</li>';
-    document.getElementById('upcoming-list').innerHTML = upcomingDogs.length > 0 ? upcomingDogs.join('') : '<li class="no-dogs">No new arrivals scheduled this week</li>';
-
-    document.getElementById('directory-grid').innerHTML = directoryCardsHTML.length > 0 ? 
-        directoryCardsHTML.join('') : '<div class="no-dogs" style="grid-column: 1/-1; text-align: center; padding: 20px;">No current or upcoming guests meet this criteria this week.</div>';
-
-    return events;
-}
 </script>
 </body>
 </html>
