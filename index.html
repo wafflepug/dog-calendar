@@ -56,9 +56,41 @@
         /* --- Badge UI Classes --- */
         .date-badge { font-size: 11px; background: #e2e8f0; padding: 2px 6px; border-radius: 4px; color: #475569; font-weight: bold; transition: background-color 0.3s, color 0.3s; }
         .date-badge.today-badge { background: #fde8e8; color: #c81e1e; }
-        .capacity-badge { position: absolute; top: 2px; right: 2px; font-size: 10px; padding: 2px 4px; border-radius: 3px; font-weight: bold; z-index: 4; color: #fff; }
-        .busy-badge { background: #f59e0b; }
-        .full-badge { background: #ef4444; }
+
+        /* --- Option 1 Alignment Refactoring Rules (Prevents Flag Interferences) --- */
+        .fc .fc-daygrid-day-top {
+            display: flex !important;
+            flex-direction: row !important;
+            justify-content: space-between !important;
+            align-items: center !important;
+            padding: 4px 6px !important;
+            position: relative !important;
+        }
+        .fc .fc-daygrid-day-number {
+            order: 2 !important;
+            margin-left: auto !important;
+            padding: 0 !important;
+            font-weight: 700 !important;
+            font-size: 13px !important;
+            float: none !important;
+        }
+        .capacity-badge {
+            order: 1 !important;
+            position: static !important;
+            font-size: 10px !important;
+            padding: 2px 5px !important;
+            border-radius: 4px !important;
+            font-weight: 800 !important;
+            letter-spacing: 0.5px !important;
+            line-height: 1.2 !important;
+            white-space: nowrap !important;
+            display: inline-block !important;
+            float: none !important;
+            color: #ffffff !important;
+            z-index: 4;
+        }
+        .busy-badge { background-color: #f59e0b !important; }
+        .full-badge { background-color: #ef4444 !important; }
 
         /* --- FullCalendar Layout & Cell Tweaks --- */
         .fc-event { cursor: pointer; padding: 4px 6px; font-size: 13px; border: none !important; border-radius: 4px; font-weight: 600; margin-bottom: 2px; }
@@ -93,7 +125,7 @@
         body.dark-theme .fc .fc-col-header-cell a,
         body.dark-theme .fc-theme-standard th .fc-col-header-cell-cushion { color: #ffffff !important; font-weight: 800 !important; opacity: 1 !important; text-decoration: none !important; }
         body.dark-theme .fc .fc-daygrid-day-number,
-        body.dark-theme .fc .fc-daygrid-day-top a { color: #ffffff !important; font-weight: 700 !important; opacity: 1 !important; padding: 4px !important; }
+        body.dark-theme .fc .fc-daygrid-day-top a { color: #ffffff !important; font-weight: 700 !important; opacity: 1 !important; }
         body.dark-theme .fc .fc-button .fc-icon { color: #ffffff !important; }
         body.dark-theme .fc .fc-toolbar-title { color: #ffffff !important; }
         body.dark-theme .fc td, body.dark-theme .fc th, body.dark-theme .fc-theme-standard td, body.dark-theme .fc-theme-standard th, body.dark-theme .fc-scrollgrid { border-color: #475569 !important; }
@@ -113,7 +145,7 @@
             .fc .fc-toolbar-title { font-size: 16px !important; }
             .fc .fc-button { padding: 6px 8px !important; font-size: 12px !important; }
             .fc th { font-size: 11px !important; padding: 2px 0 !important; } 
-            .fc-daygrid-day-number { font-size: 11px !important; padding: 2px !important; } 
+            .fc-daygrid-day-number { font-size: 11px !important; padding: 0 !important; } 
             .fc-event { font-size: 11px !important; padding: 2px 4px !important; margin-bottom: 1px; }
         }
     </style>
@@ -222,13 +254,13 @@
     }
 
     document.addEventListener('DOMContentLoaded', function() {
-        // 1. Prime the capacity counts from cache BEFORE FullCalendar maps out its layout structures
+        // 1. Prime capacity matrix array from data cache before drawing the layout framework
         const cachedData = localStorage.getItem('boardingDataCache');
         if (cachedData) {
             parseCSVToEvents(cachedData); 
         }
 
-        // 2. Setup Year Dropdown List Values
+        // 2. Setup Year Option Selections
         const jumpYearSelect = document.getElementById('jumpYear');
         const currentYear = new Date().getFullYear();
         for (let y = currentYear - 2; y <= currentYear + 3; y++) {
@@ -238,7 +270,7 @@
         }
         document.getElementById('jumpMonth').value = String(new Date().getMonth()).padStart(2, '0');
 
-        // 3. Initialize FullCalendar Component
+        // 3. Initialize FullCalendar Instance
         const calendarEl = document.getElementById('calendar');
         globalCalendar = new FullCalendar.Calendar(calendarEl, {
             initialView: 'dayGridMonth',
@@ -324,12 +356,12 @@
 
         globalCalendar.render();
 
-        // 4. Force a quick layout evaluation update after rendering to make badges load instantly
+        // 4. Forces an instant background event layout redraw pass 100ms after load sequence starts
         setTimeout(function() {
             if (globalCalendar) globalCalendar.refetchEvents();
         }, 100);
 
-        // --- Event Listeners Hooks Setup ---
+        // --- Interactive Controller Listeners ---
         document.getElementById('closeModalBtn').addEventListener('click', function() {
             document.getElementById('customBookingModal').style.display = "none";
         });
@@ -347,7 +379,7 @@
         jumpMonthSelect.addEventListener('change', executeCalendarJump);
         jumpYearSelect.addEventListener('change', executeCalendarJump);
 
-        // Theme Switcher Interface Hook
+        // UI Color Preference Scheme Toggler
         const themeToggleBtn = document.getElementById('themeToggle');
         if (localStorage.getItem('theme') === 'dark') { document.body.classList.add('dark-theme'); themeToggleBtn.innerText = '☀️'; }
         themeToggleBtn.addEventListener('click', function() {
@@ -356,7 +388,7 @@
             else { themeToggleBtn.innerText = '🌙'; localStorage.setItem('theme', 'light'); }
         });
 
-        // Manual Refresh / Fetch Spreadsheet Controller
+        // Online Sync Event Processor
         document.getElementById('manualRefreshBtn').addEventListener('click', function() {
             const btn = this; btn.innerText = "⏳ Syncing..."; btn.style.background = "#7f8c8d"; btn.disabled = true;
             const backupCache = localStorage.getItem('boardingDataCache');
@@ -380,7 +412,7 @@
                 });
         });
 
-        // Modal Action Trigger Save
+        // New/Edit Modal Registration Flow Submission
         document.getElementById('saveModalBtn').addEventListener('click', function() {
             const dogName = document.getElementById('modalDogName').value.trim();
             const bookingTime = document.getElementById('modalBookingTime').value.trim();
@@ -429,7 +461,7 @@
             }
         });
 
-        // Modal Action Trigger Delete
+        // Removal Handler Trigger Loop
         document.getElementById('deleteModalBtn').addEventListener('click', function() {
             if (!activeEditingEvent) return;
             const originalProps = activeEditingEvent.extendedProps;
