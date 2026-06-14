@@ -130,7 +130,7 @@
         <h2>🐾 Waffle House Calendar</h2>
     </div>
     
-    <a href="https://docs.google.com/forms/d/e/1FAIpQLScszSqsaxw9THyebWt2g0khVTIzP9L8hPbor1mUB0fp_0KPAw/viewform?usp=dialog" target="_blank" class="btn-add">+ Add New Booking</a>
+    <a href="https://docs.google.com/forms/d/e/1FAIpQLScszSqsaxw9THyebWt2g0khVTIzP9L8hPbor1mUB0fp_0KPAw/viewform?usp=dialog" target="_blank" class="btn-add">+ Add New Boarding Booking</a>
     
     <div class="search-container" style="display: flex; gap: 10px; align-items: center; margin-bottom: 20px; flex-wrap: wrap;">
         <input type="text" id="calendarSearch" class="search-input" style="flex: 1; min-width: 200px;" placeholder="🔍 Type dog name or breed to filter data..." autocomplete="off">
@@ -141,7 +141,7 @@
                 <option value="01">February</option>
                 <option value="02">March</option>
                 <option value="03">April</option>
-                <option value="04 May">May</option>
+                <option value="04">May</option>
                 <option value="05">June</option>
                 <option value="06">July</option>
                 <option value="07">August</option>
@@ -194,9 +194,10 @@
         <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 5px; color: #475569;">📋 Breed (Optional):</label>
         <input type="text" id="modalBreed" style="width: 100%; padding: 10px; margin-bottom: 20px; border: 2px solid #e2e8f0; border-radius: 6px; box-sizing: border-box;" placeholder="e.g. Pug">
         
-        <div style="display: flex; gap: 10px; justify-content: flex-end;">
-            <button id="closeModalBtn" style="background: #94a3b8; color: white; border: none; padding: 10px 16px; border-radius: 6px; cursor: pointer; font-weight: bold;">Cancel</button>
-            <button id="saveModalBtn" style="background: #27ae60; color: white; border: none; padding: 10px 16px; border-radius: 6px; cursor: pointer; font-weight: bold;">Save Booking</button>
+        <div style="display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap;">
+            <button id="deleteModalBtn" style="background: #e74c3c; color: white; border: none; padding: 10px 14px; border-radius: 6px; cursor: pointer; font-weight: bold; margin-right: auto; display: none;">Delete</button>
+            <button id="closeModalBtn" style="background: #94a3b8; color: white; border: none; padding: 10px 14px; border-radius: 6px; cursor: pointer; font-weight: bold;">Cancel</button>
+            <button id="saveModalBtn" style="background: #27ae60; color: white; border: none; padding: 10px 14px; border-radius: 6px; cursor: pointer; font-weight: bold;">Save</button>
         </div>
     </div>
 </div>
@@ -204,7 +205,6 @@
 <button id="themeToggle" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; background: #2c3e50; color: white; border: none; border-radius: 50%; width: 50px; height: 50px; font-size: 22px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.2); display: flex; align-items: center; justify-content: center;">🌙</button>
 
 <style>
-    /* Dark theme style compliance targets */
     body.dark-theme .modal-content-panel { background: #1e293b !important; color: white; }
     body.dark-theme .modal-content-panel h3 { color: white !important; }
     body.dark-theme .modal-content-panel label { color: #cbd5e1 !important; }
@@ -221,6 +221,17 @@
     let dailyCapacityCounts = {}; 
     let isUpdatingDropdowns = false; 
     let selectedClickDateStr = ""; 
+    
+    // Tracking references for context editing actions
+    let activeEditingEvent = null; 
+
+    function getLocalTodayDateString() {
+        const d = new Date();
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
 
     document.addEventListener('DOMContentLoaded', function() {
         const calendarEl = document.getElementById('calendar');
@@ -229,11 +240,7 @@
             initialView: 'dayGridMonth',
             displayEventTime: false, 
             height: 'auto',
-            headerToolbar: {
-                left: 'prev,next today',
-                center: 'title',
-                right: 'dayGridMonth,timeGridWeek'
-            },
+            headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek' },
             selectable: true,
             
             datesSet: function(info) {
@@ -246,129 +253,174 @@
             },
             
             dateClick: function(info) {
+                // Creation flow trigger
+                activeEditingEvent = null;
                 selectedClickDateStr = info.dateStr;
                 
+                document.getElementById('modalTitle').innerText = "🤝 New Meet & Greet";
                 document.getElementById('modalDogName').value = "";
                 document.getElementById('modalBreed').value = "";
                 document.getElementById('modalBookingTime').value = "10:00";
+                document.getElementById('deleteModalBtn').style.display = "none";
                 
-                const modal = document.getElementById('customBookingModal');
-                modal.style.display = "flex";
+                document.getElementById('customBookingModal').style.display = "flex";
                 document.getElementById('modalDogName').focus();
             },
+            
             eventClick: function(info) {
                 if (info.event.extendedProps.isMeetGreet) {
-                    alert(
-                        info.event.title + "\n" +
-                        "📋 Breed: " + info.event.extendedProps.breed + "\n" +
-                        "⏰ Scheduled Time: " + info.event.extendedProps.time + "\n\n" +
-                        "To modify or cancel this entry, open your master Google Sheet database row entry."
-                    );
+                    // Modification/Deletion flow interceptor
+                    activeEditingEvent = info.event;
+                    selectedClickDateStr = info.event.startStr;
+                    
+                    document.getElementById('modalTitle').innerText = "✏️ Edit Meet & Greet";
+                    document.getElementById('modalDogName').value = info.event.extendedProps.dogName || "";
+                    document.getElementById('modalBreed').value = info.event.extendedProps.breed === "N/A" ? "" : info.event.extendedProps.breed;
+                    document.getElementById('modalBookingTime').value = info.event.extendedProps.time || "10:00";
+                    document.getElementById('deleteModalBtn').style.display = "inline-block";
+                    
+                    document.getElementById('customBookingModal').style.display = "flex";
                 } else {
                     routeToDatabaseCell(info.event.extendedProps.editLink, 'B', info.event.title);
                 }
             },
+            
             dayCellDidMount: function(info) {
                 const dateStr = info.date.toISOString().split('T')[0];
                 const count = dailyCapacityCounts[dateStr] || 0;
-                
                 const oldBadge = info.el.querySelector('.capacity-badge');
                 if (oldBadge) oldBadge.remove();
 
                 const numberFrame = info.el.querySelector('.fc-daygrid-day-top');
-
                 if (count === 3) {
                     info.el.classList.add('capacity-warning');
-                    if (numberFrame) {
-                        numberFrame.insertAdjacentHTML('afterbegin', '<span class="capacity-badge badge-warning">BUSY</span>');
-                    }
+                    if (numberFrame) numberFrame.insertAdjacentHTML('afterbegin', '<span class="capacity-badge badge-warning">BUSY</span>');
                 } else if (count >= 4) {
                     info.el.classList.add('capacity-full');
-                    if (numberFrame) {
-                        numberFrame.insertAdjacentHTML('afterbegin', '<span class="capacity-badge badge-full">⚠️ FULL</span>');
-                    }
+                    if (numberFrame) numberFrame.insertAdjacentHTML('afterbegin', '<span class="capacity-badge badge-full">⚠️ FULL</span>');
                 }
             }
         });
 
         globalCalendar.render();
 
-        // Wire up modal exit trigger
         document.getElementById('closeModalBtn').addEventListener('click', function() {
             document.getElementById('customBookingModal').style.display = "none";
         });
 
-        // Wire up modal save workflow pipeline
+        // SAVE BUTTON ROUTER (Handles both Create and Update execution logic)
         document.getElementById('saveModalBtn').addEventListener('click', function() {
-            const dogName = document.getElementById('modalDogName').value;
-            const bookingTime = document.getElementById('modalBookingTime').value;
-            const breed = document.getElementById('modalBreed').value || "N/A";
+            const dogName = document.getElementById('modalDogName').value.trim();
+            const bookingTime = document.getElementById('modalBookingTime').value.trim();
+            const breed = document.getElementById('modalBreed').value.trim() || "N/A";
             
-            if (!dogName || dogName.trim() === "") {
+            if (!dogName) {
                 alert("Please enter a dog name.");
                 return;
             }
             
             document.getElementById('customBookingModal').style.display = "none";
-            
-            const timePrefix = bookingTime.trim();
-            const displayTitle = `⏰ ${timePrefix} - Meet & Greet: ${dogName.trim()}`;
-
-            const newMeet = {
-                id: 'meet_' + Date.now(), 
-                title: displayTitle,
-                start: selectedClickDateStr,
-                end: selectedClickDateStr,
-                allDay: true,
-                backgroundColor: '#8e44ad', 
-                textColor: '#ffffff',
-                extendedProps: {
-                    isMeetGreet: true,
-                    breed: breed.trim(),
-                    time: timePrefix,
-                    dogName: dogName.trim(),
-                    owner: "Temporary Booking",
-                    phone: "N/A",
-                    likes: "N/A",
-                    dislikes: "N/A",
-                    notes: `Meet & Greet scheduled at ${timePrefix}`,
-                    editLink: ""
-                }
-            };
+            const displayTitle = `⏰ ${bookingTime} - Meet & Greet: ${dogName}`;
 
             let localMeets = JSON.parse(localStorage.getItem('temporaryMeetGreets') || '[]');
-            localMeets.push(newMeet);
-            localStorage.setItem('temporaryMeetGreets', JSON.stringify(localMeets));
-            refreshCalendarData();
+            
+            if (activeEditingEvent) {
+                // ==========================================
+                // SUBMIT UPDATE PAYLOAD VIA FETCH
+                // ==========================================
+                const originalProps = activeEditingEvent.extendedProps;
+                
+                // Update interface local tracking copy
+                localMeets = localMeets.map(meet => {
+                    if (meet.start === selectedClickDateStr && meet.extendedProps.dogName === originalProps.dogName) {
+                        meet.title = displayTitle;
+                        meet.extendedProps.dogName = dogName;
+                        meet.extendedProps.breed = breed;
+                        meet.extendedProps.time = bookingTime;
+                        meet.extendedProps.notes = `Meet & Greet scheduled at ${bookingTime}`;
+                    }
+                    return meet;
+                });
+                localStorage.setItem('temporaryMeetGreets', JSON.stringify(localMeets));
+                refreshCalendarData();
 
-            if (APPS_SCRIPT_WEBAPP_URL && APPS_SCRIPT_WEBAPP_URL !== 'YOUR_APPS_SCRIPT_WEBAPP_URL_HERE') {
-                const payload = {
-                    dogName: dogName.trim(),
-                    breed: breed.trim(),
-                    startDate: selectedClickDateStr,
-                    endDate: selectedClickDateStr,
-                    notes: `Meet & Greet scheduled at ${timePrefix}`
+                sendPayloadToAppsScript({
+                    action: "update",
+                    originalDogName: originalProps.dogName,
+                    originalStartDate: selectedClickDateStr,
+                    dogName: dogName,
+                    breed: breed,
+                    notes: `Meet & Greet scheduled at ${bookingTime}`
+                });
+
+            } else {
+                // ==========================================
+                // SUBMIT NEW CREATE PAYLOAD VIA FETCH
+                // ==========================================
+                const newMeet = {
+                    id: 'meet_' + Date.now(), title: displayTitle, start: selectedClickDateStr, end: selectedClickDateStr, allDay: true, backgroundColor: '#8e44ad', textColor: '#ffffff',
+                    extendedProps: { isMeetGreet: true, breed: breed, time: bookingTime, dogName: dogName, owner: "Temporary Booking", phone: "N/A", likes: "N/A", dislikes: "N/A", notes: `Meet & Greet scheduled at ${bookingTime}`, editLink: "" }
                 };
 
-                fetch(APPS_SCRIPT_WEBAPP_URL, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                })
-                .then(() => console.log("Database write verified."))
-                .catch(err => console.error("Database connection failure:", err));
+                localMeets.push(newMeet);
+                localStorage.setItem('temporaryMeetGreets', JSON.stringify(localMeets));
+                refreshCalendarData();
+
+                sendPayloadToAppsScript({
+                    action: "create",
+                    dogName: dogName,
+                    breed: breed,
+                    startDate: selectedClickDateStr,
+                    endDate: selectedClickDateStr,
+                    notes: `Meet & Greet scheduled at ${bookingTime}`
+                });
             }
         });
 
+        // DELETE BUTTON INTERCEPTOR
+        document.getElementById('deleteModalBtn').addEventListener('click', function() {
+            if (!activeEditingEvent) return;
+            
+            const originalProps = activeEditingEvent.extendedProps;
+            if (!confirm(`Are you sure you want to permanently delete the Meet & Greet for ${originalProps.dogName}?`)) return;
+
+            document.getElementById('customBookingModal').style.display = "none";
+
+            // Purge from local memory storage array
+            let localMeets = JSON.parse(localStorage.getItem('temporaryMeetGreets') || '[]');
+            localMeets = localMeets.filter(meet => !(meet.start === selectedClickDateStr && meet.extendedProps.dogName === originalProps.dogName));
+            localStorage.setItem('temporaryMeetGreets', JSON.stringify(localMeets));
+            refreshCalendarData();
+
+            // Send row destruction flag instructions back to server
+            sendPayloadToAppsScript({
+                action: "delete",
+                originalDogName: originalProps.dogName,
+                originalStartDate: selectedClickDateStr
+            });
+        });
+
+        // Helper endpoint communicator
+        function sendPayloadToAppsScript(payload) {
+            if (!APPS_SCRIPT_WEBAPP_URL || APPS_SCRIPT_WEBAPP_URL === 'YOUR_APPS_SCRIPT_WEBAPP_URL_HERE') {
+                console.log("No live WebApp deployment URL detected. Action saved locally only.");
+                return;
+            }
+            fetch(APPS_SCRIPT_WEBAPP_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(() => console.log(`Apps Script action sequence (${payload.action}) logged successfully.`))
+            .catch(err => console.error("Network communication failure:", err));
+        }
+
         const jumpMonthSelect = document.getElementById('jumpMonth');
         const jumpYearSelect = document.getElementById('jumpYear');
-
         const currentYear = new Date().getFullYear();
         for (let y = currentYear - 2; y <= currentYear + 3; y++) {
-            const opt = document.createElement('option');
-            opt.value = y;
-            opt.innerText = y;
+            const opt = document.createElement('option'); opt.value = y; opt.innerText = y;
             if (y === currentYear) opt.selected = true;
             jumpYearSelect.appendChild(opt);
         }
@@ -385,70 +437,36 @@
         jumpYearSelect.addEventListener('change', executeCalendarJump);
 
         document.getElementById('manualRefreshBtn').addEventListener('click', function() {
-            const btn = this;
-            btn.innerText = "⏳ Syncing...";
-            btn.style.background = "#7f8c8d";
-            btn.disabled = true;
-
+            const btn = this; btn.innerText = "⏳ Syncing..."; btn.style.background = "#7f8c8d"; btn.disabled = true;
             const backupCache = localStorage.getItem('boardingDataCache');
 
             fetch(SHEET_CSV_URL, { cache: "no-store" })
-                .then(response => {
-                    if (!response.ok) throw new Error("HTTP Error: " + response.status);
-                    return response.text();
-                })
+                .then(response => { if (!response.ok) throw new Error("HTTP Error: " + response.status); return response.text(); })
                 .then(csvText => {
-                    if (!csvText || csvText.trim().length < 20 || !csvText.includes(',')) {
-                        throw new Error("Returned payload content appears corrupted.");
-                    }
-
+                    if (!csvText || csvText.trim().length < 20 || !csvText.includes(',')) throw new Error("Corrupted payload.");
                     localStorage.setItem('boardingDataCache', csvText);
-                    localStorage.removeItem('temporaryMeetGreets');
+                    localStorage.removeItem('temporaryMeetGreets'); // Clears temp items once sheets sync
                     refreshCalendarData();
-                    
-                    btn.innerText = "✅ Synced!";
-                    btn.style.background = "#2ecc71";
-                    setTimeout(() => {
-                        btn.innerText = "🔄 Sync Spreadsheet";
-                        btn.style.background = "#3498db";
-                        btn.disabled = false;
-                    }, 2000);
+                    btn.innerText = "✅ Synced!"; btn.style.background = "#2ecc71";
+                    setTimeout(() => { btn.innerText = "🔄 Sync Spreadsheet"; btn.style.background = "#3498db"; btn.disabled = false; }, 2000);
                 })
                 .catch(error => {
-                    console.error("Sync pipeline hit an error:", error);
-                    if (backupCache) {
-                        localStorage.setItem('boardingDataCache', backupCache);
-                        refreshCalendarData();
-                    }
-                    alert("⚠️ SPREADSHEET SYNC FAILED\n\nReason: " + error.message);
-                    btn.innerText = "❌ Failed";
-                    btn.style.background = "#e74c3c";
-                    setTimeout(() => {
-                        btn.innerText = "🔄 Sync Spreadsheet";
-                        btn.style.background = "#3498db";
-                        btn.disabled = false;
-                    }, 3000);
+                    console.error(error);
+                    if (backupCache) { localStorage.setItem('boardingDataCache', backupCache); refreshCalendarData(); }
+                    alert("⚠️ SYNC FAILED\n\nReason: " + error.message);
+                    btn.innerText = "❌ Failed"; btn.style.background = "#e74c3c";
+                    setTimeout(() => { btn.innerText = "🔄 Sync Spreadsheet"; btn.style.background = "#3498db"; btn.disabled = false; }, 3000);
                 });
         });
 
-        document.getElementById('calendarSearch').addEventListener('input', function() {
-            applyCurrentSearchFilter();
-        });
+        document.getElementById('calendarSearch').addEventListener('input', applyCurrentSearchFilter);
 
         const themeToggleBtn = document.getElementById('themeToggle');
-        if (localStorage.getItem('theme') === 'dark') {
-            document.body.classList.add('dark-theme');
-            themeToggleBtn.innerText = '☀️';
-        }
+        if (localStorage.getItem('theme') === 'dark') { document.body.classList.add('dark-theme'); themeToggleBtn.innerText = '☀️'; }
         themeToggleBtn.addEventListener('click', function() {
             document.body.classList.toggle('dark-theme');
-            if (document.body.classList.contains('dark-theme')) {
-                themeToggleBtn.innerText = '☀️';
-                localStorage.setItem('theme', 'dark');
-            } else {
-                themeToggleBtn.innerText = '🌙';
-                localStorage.setItem('theme', 'light');
-            }
+            if (document.body.classList.contains('dark-theme')) { themeToggleBtn.innerText = '☀️'; localStorage.setItem('theme', 'dark'); }
+            else { themeToggleBtn.innerText = '🌙'; localStorage.setItem('theme', 'light'); }
         });
 
         refreshCalendarData();
@@ -456,7 +474,7 @@
 
     function routeToDatabaseCell(baseEditLink, targetColumnLetter, petName, attributeName = "Booking Details") {
         if (baseEditLink && baseEditLink.startsWith("http")) {
-            const confirmRedirect = confirm(`✏️ Edit ${attributeName} for ${petName}?\n\nWould you like to open your Google Sheet database right on this precise property field cell?`);
+            const confirmRedirect = confirm(`✏️ Edit ${attributeName} for ${petName}?\n\nOpen master database precisely on this field cell?`);
             if (confirmRedirect) {
                 let targetUrl = baseEditLink.replace(/range=\d+/, `range=${targetColumnLetter}\$&`).replace("range=", `range=${targetColumnLetter}`);
                 if (!targetUrl.includes('range=')) {
@@ -467,13 +485,12 @@
                 window.open(targetUrl, '_blank');
             }
         } else {
-            alert(`📝 ${petName} - ${attributeName}\n\nTo directly jump and persist inline changes back to your master database table, make sure column 11 (K) has your row link assignment formula working!`);
+            alert(`📝 ${petName} - ${attributeName}\n\nTo directly jump to your master spreadsheet row cell, ensure column 11 (K) has your row link formula working!`);
         }
     }
 
     function refreshCalendarData() {
         if (!globalCalendar) return;
-        
         globalCalendar.getEventSources().forEach(source => source.remove());
 
         const csvText = localStorage.getItem('boardingDataCache') || "";
@@ -482,55 +499,35 @@
         let spreadsheetEvents = parseCSVToEvents(csvText);
         let localMeets = JSON.parse(localStorage.getItem('temporaryMeetGreets') || '[]');
         
-        localMeets.forEach(meet => {
-            dailyCapacityCounts[meet.start] = (dailyCapacityCounts[meet.start] || 0) + 1;
-        });
-
-        const unifiedEvents = spreadsheetEvents.concat(localMeets);
-        globalCalendar.addEventSource(unifiedEvents);
+        localMeets.forEach(meet => { dailyCapacityCounts[meet.start] = (dailyCapacityCounts[meet.start] || 0) + 1; });
+        globalCalendar.addEventSource(spreadsheetEvents.concat(localMeets));
     }
 
     function applyCurrentSearchFilter() {
         if (!globalCalendar) return;
         const searchTerm = (document.getElementById('calendarSearch')?.value || "").toLowerCase().trim();
-        
         globalCalendar.getEvents().forEach(ev => {
-            if (searchTerm === "") {
-                ev.setProp('display', 'auto');
-            } else {
+            if (searchTerm === "") { ev.setProp('display', 'auto'); } 
+            else {
                 const title = ev.title.toLowerCase();
                 const breed = (ev.extendedProps.breed || '').toLowerCase();
-                if (title.includes(searchTerm) || breed.includes(searchTerm)) {
-                    ev.setProp('display', 'auto');
-                } else {
-                    ev.setProp('display', 'none');
-                }
+                ev.setProp('display', (title.includes(searchTerm) || breed.includes(searchTerm)) ? 'auto' : 'none');
             }
         });
 
-        const cards = document.querySelectorAll('.directory-card');
-        cards.forEach(card => {
-            if (searchTerm === "") {
-                card.style.display = 'flex';
-            } else {
-                const text = card.innerText.toLowerCase();
-                card.style.display = text.includes(searchTerm) ? 'flex' : 'none';
-            }
+        document.querySelectorAll('.directory-card').forEach(card => {
+            card.style.display = (searchTerm === "" || card.innerText.toLowerCase().includes(searchTerm)) ? 'flex' : 'none';
         });
     }
 
     function stringToColor(str) {
-        let hash = 0;
-        for (let i = 0; i < str.length; i++) {
-            hash = str.charCodeAt(i) + ((hash << 5) - hash);
-        }
+        let hash = 0; for (let i = 0; i < str.length; i++) { hash = str.charCodeAt(i) + ((hash << 5) - hash); }
         return 'hsl(' + (Math.abs(hash) % 360) + ', 70%, 40%)'; 
     }
 
     function triggerCheckoutFlow(stayId, dogName) {
-        const userConfirmation = confirm(`Has ${dogName} been picked up?`);
-        if (userConfirmation) {
-            const todayStr = new Date().toISOString().split('T')[0];
+        if (confirm(`Has ${dogName} been picked up?`)) {
+            const todayStr = getLocalTodayDateString();
             let currentlyPickedUp = JSON.parse(localStorage.getItem('pickedUpDogs_' + todayStr) || '[]');
             if (!currentlyPickedUp.includes(stayId)) {
                 currentlyPickedUp.push(stayId);
@@ -542,59 +539,42 @@
 
     function parseCSVToEvents(csvText) {
         if (!csvText) return [];
-        const lines = csvText.split(/\r?\n/);
-        const events = [];
-        
-        const today = new Date(); today.setHours(0,0,0,0);
-        const sevenDaysFromNow = new Date(); sevenDaysFromNow.setDate(today.getDate() + 7); sevenDaysFromNow.setHours(23,59,59,999);
+        const lines = csvText.split(/\r?\n/); const events = [];
+        const localTodayStr = getLocalTodayDateString(); const today = new Date(localTodayStr + 'T00:00:00');
+        const sevenDaysFromNow = new Date(today.getTime()); sevenDaysFromNow.setDate(today.getDate() + 7); sevenDaysFromNow.setHours(23,59,59,999);
 
-        const todayStr = today.toISOString().split('T')[0];
-        const pickedUpDogs = JSON.parse(localStorage.getItem('pickedUpDogs_' + todayStr) || '[]');
-
-        const atHomeDogs = []; const leavingDogs = []; const upcomingDogs = [];
-        const directoryCardsHTML = [];
+        const pickedUpDogs = JSON.parse(localStorage.getItem('pickedUpDogs_' + localTodayStr) || '[]');
+        const atHomeDogs = []; const leavingDogs = []; const upcomingDogs = []; const directoryCardsHTML = [];
 
         for (let i = 1; i < lines.length; i++) {
             if (!lines[i].trim()) continue;
-            
             const columns = lines[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/); 
             
             const dogName = columns[1] ? columns[1].replace(/^"|"$/g, '') : '';
             const breed = columns[2] ? columns[2].replace(/^"|"$/g, '') : '';
-            const startDate = columns[3];
-            const endDate = columns[4];
+            const startDate = columns[3]; const endDate = columns[4];
             const ownerName = columns[5] ? columns[5].replace(/^"|"$/g, '') : '';
             const phone = columns[6] ? columns[6].replace(/^"|"$/g, '') : '';
             const likes = columns[7] ? columns[7].replace(/^"|"$/g, '') : '';
             const dislikes = columns[8] ? columns[8].replace(/^"|"$/g, '') : '';
             const notes = columns[9] ? columns[9].replace(/^"|"$/g, '') : '';
             const editLink = columns[10] ? columns[10].replace(/^"|"$/g, '') : '';
-            
             const bookingType = columns[11] ? columns[11].replace(/^"|"$/g, '').trim() : '';
             const isMeetGreetType = (bookingType.toLowerCase() === 'meet & greet');
 
             if (dogName && startDate) {
                 let startParsed = "", endParsed = "";
-
                 if (startDate.includes('/')) {
-                    const sParts = startDate.trim().split('/');
-                    if (sParts[2]) startParsed = sParts[2] + '-' + sParts[1].padStart(2, '0') + '-' + sParts[0].padStart(2, '0');
-                } else if (startDate.includes('-')) {
-                    startParsed = startDate.trim().split('T')[0];
-                }
+                    const sParts = startDate.trim().split('/'); if (sParts[2]) startParsed = sParts[2] + '-' + sParts[1].padStart(2, '0') + '-' + sParts[0].padStart(2, '0');
+                } else if (startDate.includes('-')) { startParsed = startDate.trim().split('T')[0]; }
                 
                 if (endDate && endDate.includes('/')) {
-                    const eParts = endDate.trim().split('/');
-                    if (eParts[2]) endParsed = eParts[2] + '-' + eParts[1].padStart(2, '0') + '-' + eParts[0].padStart(2, '0');
-                } else if (endDate && endDate.includes('-')) {
-                    endParsed = endDate.trim().split('T')[0];
-                } else {
-                    endParsed = startParsed;
-                }
+                    const eParts = endDate.trim().split('/'); if (eParts[2]) endParsed = eParts[2] + '-' + eParts[1].padStart(2, '0') + '-' + eParts[0].padStart(2, '0');
+                } else if (endDate && endDate.includes('-')) { endParsed = endDate.trim().split('T')[0]; } 
+                else { endParsed = startParsed; }
 
                 if (startParsed && endParsed) {
-                    const checkStart = new Date(startParsed + 'T00:00:00');
-                    const checkEnd = new Date(endParsed + 'T00:00:00');
+                    const checkStart = new Date(startParsed + 'T00:00:00'); const checkEnd = new Date(endParsed + 'T00:00:00');
 
                     if (!isNaN(checkStart.getTime()) && !isNaN(checkEnd.getTime())) {
                         const breedTxt = breed ? breed.trim() : 'Unknown';
@@ -609,8 +589,7 @@
 
                         if (!isMeetGreetType) {
                             const listLabel = (dogName.includes('&') || dogName.toLowerCase().includes('and')) ? '👥 ' + dogName.trim() : '🐾 ' + dogName.trim();
-                            
-                            let isTodayTheEndDate = (checkEnd.getTime() === today.getTime());
+                            let isTodayTheEndDate = (endParsed === localTodayStr);
                             let isCurrentlyAtHome = (today >= checkStart && today <= checkEnd);
                             let isUpcoming = (checkStart > today && checkStart <= sevenDaysFromNow);
 
@@ -618,10 +597,7 @@
                             const hasBeenPickedUp = pickedUpDogs.includes(localizedStayId);
 
                             if (!hasBeenPickedUp) {
-                                if (isCurrentlyAtHome) {
-                                    atHomeDogs.push('<li><span>' + listLabel + ' (' + breedTxt + ')</span></li>');
-                                }
-
+                                if (isCurrentlyAtHome) atHomeDogs.push('<li><span>' + listLabel + ' (' + breedTxt + ')</span></li>');
                                 if (isTodayTheEndDate) {
                                     const cleanDogName = dogName.trim().replace(/'/g, "\\'");
                                     leavingDogs.push('<li><span>' + listLabel + ' (' + breedTxt + ')</span> <span class="date-badge today-badge" style="cursor: pointer;" onclick="triggerCheckoutFlow(\'' + localizedStayId + '\', \'' + cleanDogName + '\')">TODAY</span></li>');
@@ -630,24 +606,15 @@
                                 }
                             }
 
-                            if (isUpcoming) {
-                                const arrivalDate = checkStart.getDate() + '/' + (checkStart.getMonth() + 1);
-                                upcomingDogs.push('<li><span>⏳ ' + dogName.trim() + '</span> <span class="date-badge">' + arrivalDate + '</span></li>');
-                            }
+                            if (isUpcoming) upcomingDogs.push('<li><span>⏳ ' + dogName.trim() + '</span> <span class="date-badge">' + (checkStart.getDate() + '/' + (checkStart.getMonth() + 1)) + '</span></li>');
 
                             if (isCurrentlyAtHome || isUpcoming) {
-                                const statusTag = (isCurrentlyAtHome && !hasBeenPickedUp) ? 
-                                    '<span class="directory-status-tag tag-at-home">At Home</span>' : 
-                                    (hasBeenPickedUp ? '<span class="directory-status-tag" style="background:#e2e8f0; color:#64748b;">Checked Out</span>' : '<span class="directory-status-tag tag-upcoming">Upcoming</span>');
-
-                                const cleanName = dogName.trim().replace(/'/g, "\\'");
-                                const cleanLnk = editLink.trim();
+                                const statusTag = (isCurrentlyAtHome && !hasBeenPickedUp) ? '<span class="directory-status-tag tag-at-home">At Home</span>' : (hasBeenPickedUp ? '<span class="directory-status-tag" style="background:#e2e8f0; color:#64748b;">Checked Out</span>' : '<span class="directory-status-tag tag-upcoming">Upcoming</span>');
+                                const cleanName = dogName.trim().replace(/'/g, "\\'"); const cleanLnk = editLink.trim();
 
                                 directoryCardsHTML.push(`
                                     <div class="directory-card" style="${hasBeenPickedUp ? 'opacity: 0.6;' : ''}">
-                                        <h4 onclick="routeToDatabaseCell('${cleanLnk}', 'B', '${cleanName}', 'Dog Name')" title="Click to edit name" style="cursor:pointer;">
-                                            <span>🐾 ${dogName.trim()}</span> ${statusTag}
-                                        </h4>
+                                        <h4 onclick="routeToDatabaseCell('${cleanLnk}', 'B', '${cleanName}', 'Dog Name')" style="cursor:pointer;"><span>🐾 ${dogName.trim()}</span> ${statusTag}</h4>
                                         <span class="editable-row" onclick="routeToDatabaseCell('${cleanLnk}', 'C', '${cleanName}', 'Breed')"><strong>Breed:</strong> ${breedTxt}</span>
                                         <span class="editable-row" onclick="routeToDatabaseCell('${cleanLnk}', 'F', '${cleanName}', 'Owner')"><strong>Owner:</strong> ${ownerName ? ownerName.trim() : 'N/A'}</span>
                                         <span class="editable-row" onclick="routeToDatabaseCell('${cleanLnk}', 'G', '${cleanName}', 'Contact')"><strong>Contact:</strong> ${phone ? phone.trim() : 'N/A'}</span>
@@ -657,36 +624,24 @@
                                     </div>
                                 `);
                             }
+                        } else {
+                            // IF INDEED EXTRACTED FROM SYNCED SHEET DATABASE ROWS AS MEET & GREET
+                            const timeParts = notes.match(/(\d{1,2}:\d{2})/);
+                            const parsedTime = timeParts ? timeParts[1] : "10:00";
+                            
+                            events.push({
+                                title: `⏰ ${parsedTime} - Meet & Greet: ${dogName.trim()}`, start: startParsed, end: startParsed, allDay: true, backgroundColor: '#8e44ad', textColor: '#ffffff',
+                                extendedProps: { isMeetGreet: true, breed: breedTxt, time: parsedTime, dogName: dogName.trim(), owner: "Database Synced", phone: "N/A", likes: "N/A", dislikes: "N/A", notes: notes.trim(), editLink: "" }
+                            });
+                            continue;
                         }
 
-                        const parts = endParsed.split('-');
-                        const dateObject = new Date(parts[0], parts[1] - 1, parts[2]);
-                        dateObject.setDate(dateObject.getDate() + 1);
-                        
-                        const forcedDisplayEnd = dateObject.getFullYear() + '-' + 
-                            String(dateObject.getMonth() + 1).padStart(2, '0') + '-' + 
-                            String(dateObject.getDate()).padStart(2, '0');
-
-                        const finalTitle = isMeetGreetType ? `${notes.trim()} - ${dogName.trim()}` : dogName.trim();
-                        const finalColor = isMeetGreetType ? '#8e44ad' : stringToColor(dogName.trim());
+                        const parts = endParsed.split('-'); const dateObject = new Date(parts[0], parts[1] - 1, parts[2]); dateObject.setDate(dateObject.getDate() + 1);
+                        const forcedDisplayEnd = dateObject.getFullYear() + '-' + String(dateObject.getMonth() + 1).padStart(2, '0') + '-' + String(dateObject.getDate()).padStart(2, '0');
 
                         events.push({
-                            title: finalTitle,
-                            start: startParsed,
-                            end: forcedDisplayEnd, 
-                            allDay: true,
-                            backgroundColor: finalColor,
-                            textColor: '#ffffff',
-                            extendedProps: { 
-                                isMeetGreet: isMeetGreetType,
-                                breed: breedTxt, 
-                                owner: ownerName ? ownerName.trim() : "N/A", 
-                                phone: phone ? phone.trim() : "N/A",
-                                likes: likes ? likes.trim() : "None listed",
-                                dislikes: dislikes ? dislikes.trim() : "None listed",
-                                notes: notes ? notes.trim() : "None",
-                                editLink: editLink ? editLink.trim() : ""
-                            }
+                            title: dogName.trim(), start: startParsed, end: forcedDisplayEnd, allDay: true, backgroundColor: stringToColor(dogName.trim()), textColor: '#ffffff',
+                            extendedProps: { isMeetGreet: false, breed: breedTxt, owner: ownerName ? ownerName.trim() : "N/A", phone: phone ? phone.trim() : "N/A", likes: likes ? likes.trim() : "None listed", dislikes: dislikes ? dislikes.trim() : "None listed", notes: notes ? notes.trim() : "None", editLink: editLink.trim() }
                         });
                     }
                 }
@@ -696,9 +651,7 @@
         document.getElementById('at-home-list').innerHTML = atHomeDogs.length > 0 ? atHomeDogs.join('') : '<li class="no-dogs">No remaining guests at home right now</li>';
         document.getElementById('leaving-list').innerHTML = leavingDogs.length > 0 ? leavingDogs.join('') : '<li class="no-dogs">No checkouts scheduled this week</li>';
         document.getElementById('upcoming-list').innerHTML = upcomingDogs.length > 0 ? upcomingDogs.join('') : '<li class="no-dogs">No new arrivals scheduled this week</li>';
-
-        document.getElementById('directory-grid').innerHTML = directoryCardsHTML.length > 0 ? 
-            directoryCardsHTML.join('') : '<div class="no-dogs" style="grid-column: 1/-1; text-align: center; padding: 20px;">No current or upcoming guests meet this criteria this week.</div>';
+        document.getElementById('directory-grid').innerHTML = directoryCardsHTML.length > 0 ? directoryCardsHTML.join('') : '<div class="no-dogs" style="grid-column: 1/-1; text-align: center; padding: 20px;">No active guests to display.</div>';
 
         return events;
     }
