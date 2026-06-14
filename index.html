@@ -25,17 +25,19 @@
         .search-input:focus { border-color: #3498db; }
 
         /* --- Summary Dashboard Panels --- */
-        .summary-dashboard { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 25px; }
+        .summary-dashboard { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 25px; }
         .summary-card { background: #f1f5f9; padding: 15px; border-radius: 8px; border-top: 4px solid #2c3e50; box-shadow: 0 2px 4px rgba(0,0,0,0.02); transition: background-color 0.3s, color 0.3s; }
         .summary-card.active-now { border-top-color: #3498db; }
         .summary-card.leaving-now { border-top-color: #e74c3c; }
         .summary-card.upcoming-now { border-top-color: #f39c12; }
+        .summary-card.fully-booked { border-top-color: #ef4444; }
         .summary-card h3 { margin: 0 0 10px 0; font-size: 13px; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; }
         
-        .summary-list { list-style: none; padding: 0; margin: 0; font-size: 14px; color: #1e293b; }
+        .summary-list { list-style: none; padding: 0; margin: 0; font-size: 14px; color: #1e293b; max-height: 160px; overflow-y: auto; }
         .summary-list li { padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-weight: 500; display: flex; justify-content: space-between; align-items: center; transition: border-color 0.3s; }
         .summary-list li:last-child { border-bottom: none; }
         .no-dogs { color: #94a3b8; font-style: italic; font-size: 13px; padding: 5px 0; display: block !important; }
+        .success-clear { color: #10b981; font-weight: 600; font-size: 13px; padding: 5px 0; display: block; }
 
         /* --- Detailed Directory Layout --- */
         .directory-dashboard { background: #f8fafc; border: 1px solid #e2e8f0; padding: 20px; border-radius: 10px; margin-bottom: 25px; transition: background-color 0.3s, border-color 0.3s; }
@@ -56,6 +58,7 @@
         /* --- Badge UI Classes --- */
         .date-badge { font-size: 11px; background: #e2e8f0; padding: 2px 6px; border-radius: 4px; color: #475569; font-weight: bold; transition: background-color 0.3s, color 0.3s; }
         .date-badge.today-badge { background: #fde8e8; color: #c81e1e; }
+        .date-badge.alert-badge { background: #fee2e2; color: #ef4444; font-size: 11px; text-transform: uppercase; }
 
         /* --- Flexible, Standardized Header Layout Fix --- */
         .fc .fc-daygrid-day-top {
@@ -71,7 +74,7 @@
             font-size: 13px !important;
             padding: 0 !important;
             float: none !important;
-            order: 2 !important; /* Forces date to stay right */
+            order: 2 !important; 
         }
 
         /* --- Minimalist Indicator Symbols --- */
@@ -81,7 +84,7 @@
             display: inline-flex !important;
             align-items: center;
             justify-content: center;
-            order: 1 !important; /* Forces symbol to stay left */
+            order: 1 !important; 
             user-select: none;
             cursor: pointer;
         }
@@ -99,6 +102,7 @@
         body.dark-theme .summary-card h3 { color: #ffffff !important; font-weight: 700 !important; font-size: 14px !important; letter-spacing: 0.5px !important; }
         body.dark-theme .summary-list li { border-bottom-color: #475569; color: #e2e8f0; }
         body.dark-theme .date-badge { background: #475569; color: #cbd5e1; }
+        body.dark-theme .date-badge.alert-badge { background: #7f1d1d; color: #fca5a5; }
         body.dark-theme .search-container select { background-color: #334155 !important; border-color: #475569 !important; color: white !important; }
 
         body.dark-theme .directory-dashboard { background: #1e293b; border-color: #334155; }
@@ -125,6 +129,10 @@
         body.dark-theme .fc-daygrid-day:hover { background-color: #334155; }
         body.dark-theme .fc-button { background-color: #475569 !important; border-color: #64748b !important; color: white !important; }
         body.dark-theme .fc-button-active { background-color: #1e293b !important; border-color: #3498db !important; }
+
+        @media (max-width: 900px) {
+            .summary-dashboard { grid-template-columns: 1fr 1fr; gap: 10px; }
+        }
 
         @media (max-width: 768px) {
             body { margin: 5px; }
@@ -184,12 +192,16 @@
             <ul id="at-home-list" class="summary-list"><li class="no-dogs">No remaining guests at home right now</li></ul>
         </div>
         <div class="summary-card leaving-now">
-            <h3>👋 Leaving Today / Soon</h3>
+            <h3>👋 Leaving Soon</h3>
             <ul id="leaving-list" class="summary-list"><li class="no-dogs">No checkouts scheduled this week</li></ul>
         </div>
         <div class="summary-card upcoming-now">
             <h3>📅 Arriving Next 7 Days</h3>
             <ul id="upcoming-list" class="summary-list"><li class="no-dogs">No new arrivals scheduled this week</li></ul>
+        </div>
+        <div class="summary-card fully-booked">
+            <h3>🛑 Full Capacity Alerts</h3>
+            <ul id="full-dates-list" class="summary-list"><li class="success-clear">🟢 Open slots available</li></ul>
         </div>
     </div>
 
@@ -324,6 +336,7 @@
                     dailyCapacityCounts[meet.start] = (dailyCapacityCounts[meet.start] || 0) + dogCount;
                 });
                 
+                updateFullyBookedPanel();
                 successCallback(spreadsheetEvents.concat(localMeets));
             },
             
@@ -331,11 +344,9 @@
                 const dateStr = info.date.toISOString().split('T')[0];
                 const count = dailyCapacityCounts[dateStr] || 0;
                 
-                // Clear any existing indicators inside the cell view
                 const oldIndicator = info.el.querySelector('.capacity-indicator');
                 if (oldIndicator) oldIndicator.remove();
 
-                // Inject stable modern status symbols instead of text layout blocks
                 let topContainer = info.el.querySelector('.fc-daygrid-day-top');
                 if (topContainer) {
                     if (count === 3) {
@@ -502,7 +513,32 @@
             dailyCapacityCounts[meet.start] = (dailyCapacityCounts[meet.start] || 0) + dogCount; 
         });
 
+        updateFullyBookedPanel();
         globalCalendar.addEventSource(spreadsheetEvents.concat(localMeets));
+    }
+
+    function updateFullyBookedPanel() {
+        const fullDatesList = document.getElementById('full-dates-list');
+        if (!fullDatesList) return;
+
+        const sortedDates = Object.keys(dailyCapacityCounts)
+            .filter(dateStr => dailyCapacityCounts[dateStr] >= 4)
+            .sort((a, b) => new Date(a) - new Date(b));
+
+        if (sortedDates.length === 0) {
+            fullDatesList.innerHTML = '<li class="success-clear">🟢 Open slots available</li>';
+            return;
+        }
+
+        const listItems = sortedDates.map(dateStr => {
+            const dateObj = new Date(dateStr + 'T00:00:00');
+            const formattedDate = dateObj.toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
+            const dogCount = dailyCapacityCounts[dateStr];
+            
+            return `<li><span>📅 ${formattedDate}</span> <span class="date-badge alert-badge">${dogCount} DOGS</span></li>`;
+        });
+
+        fullDatesList.innerHTML = listItems.join('');
     }
 
     function applyCurrentSearchFilter() {
@@ -538,6 +574,13 @@
             const csvText = localStorage.getItem('boardingDataCache') || "";
             parseCSVToEvents(csvText);
             if (globalCalendar) globalCalendar.refetchEvents();
+        }
+    }
+
+    // Interactive routing lookup utility
+    function routeToCalendarDate(dateStr) {
+        if (globalCalendar && dateStr) {
+            globalCalendar.gotoDate(dateStr);
         }
     }
 
