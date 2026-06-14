@@ -141,7 +141,7 @@
                 <option value="01">February</option>
                 <option value="02">March</option>
                 <option value="03">April</option>
-                <option value="04">May</option>
+                <option value="04 May">May</option>
                 <option value="05">June</option>
                 <option value="06">July</option>
                 <option value="07">August</option>
@@ -212,7 +212,7 @@
 </style>
 
 <script>
-    const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT63UsPjcg3GB4lTB6cewLaTRS_yJP4kpOMSMsTTnvTw1Wbjn3CgtZc_c6li28ihjzkHnphFt0XcFTt/pub?gid=1639615540&single=true&output=csv';
+    const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT63UsPjcg3GB41TB6cewLaTRS_yJP4kpOMSmsTTnvTwlWbjn3CgtZc_c6li28ihjzhNnphFt0XCFtt/pub?gid=1639615540&single=true&output=csv';
     
     // ⚠️ PASTE YOUR DEPLOYED GOOGLE APPS SCRIPT WEB APP URL HERE
     const APPS_SCRIPT_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbx46l0-khjzzARaZA_D1UdhzrLuW8hDXb0qik2zKk_8FIUqcyw68-q1fy_dBF_6FyNjfg/exec';
@@ -527,6 +527,19 @@
         return 'hsl(' + (Math.abs(hash) % 360) + ', 70%, 40%)'; 
     }
 
+    function triggerCheckoutFlow(stayId, dogName) {
+        const userConfirmation = confirm(`Has ${dogName} been picked up?`);
+        if (userConfirmation) {
+            const todayStr = new Date().toISOString().split('T')[0];
+            let currentlyPickedUp = JSON.parse(localStorage.getItem('pickedUpDogs_' + todayStr) || '[]');
+            if (!currentlyPickedUp.includes(stayId)) {
+                currentlyPickedUp.push(stayId);
+                localStorage.setItem('pickedUpDogs_' + todayStr, JSON.stringify(currentlyPickedUp));
+            }
+            refreshCalendarData();
+        }
+    }
+
     function parseCSVToEvents(csvText) {
         if (!csvText) return [];
         const lines = csvText.split(/\r?\n/);
@@ -535,9 +548,8 @@
         const today = new Date(); today.setHours(0,0,0,0);
         const sevenDaysFromNow = new Date(); sevenDaysFromNow.setDate(today.getDate() + 7); sevenDaysFromNow.setHours(23,59,59,999);
 
-        // Fetch current Sydney timezone configurations
-        const sydneyHour = new Date().toLocaleString("en-AU", {timeZone: "Australia/Sydney", hour: 'numeric', hour12: false});
-        const isAfterSixPM = parseInt(sydneyHour) >= 18;
+        const todayStr = today.toISOString().split('T')[0];
+        const pickedUpDogs = JSON.parse(localStorage.getItem('pickedUpDogs_' + todayStr) || '[]');
 
         const atHomeDogs = []; const leavingDogs = []; const upcomingDogs = [];
         const directoryCardsHTML = [];
@@ -599,19 +611,23 @@
                             const listLabel = (dogName.includes('&') || dogName.toLowerCase().includes('and')) ? '👥 ' + dogName.trim() : '🐾 ' + dogName.trim();
                             
                             let isTodayTheEndDate = (checkEnd.getTime() === today.getTime());
-                            let isCurrentlyAtHome = (today >= checkStart && today < checkEnd) || (isTodayTheEndDate && !isAfterSixPM);
+                            let isCurrentlyAtHome = (today >= checkStart && today <= checkEnd);
                             let isUpcoming = (checkStart > today && checkStart <= sevenDaysFromNow);
 
-                            if (isCurrentlyAtHome) {
-                                atHomeDogs.push('<li><span>' + listLabel + ' (' + breedTxt + ')</span></li>');
-                            }
+                            const localizedStayId = dogName.trim() + '_' + startParsed + '_' + endParsed;
+                            const hasBeenPickedUp = pickedUpDogs.includes(localizedStayId);
 
-                            if (isTodayTheEndDate) {
-                                if (isAfterSixPM) {
-                                    leavingDogs.push('<li><span>' + listLabel + ' (' + breedTxt + ')</span> <span class="date-badge today-badge">TODAY</span></li>');
+                            if (!hasBeenPickedUp) {
+                                if (isCurrentlyAtHome) {
+                                    atHomeDogs.push('<li><span>' + listLabel + ' (' + breedTxt + ')</span></li>');
                                 }
-                            } else if (checkEnd > today && checkEnd <= sevenDaysFromNow) {
-                                leavingDogs.push('<li><span>' + listLabel + ' (' + breedTxt + ')</span> <span class="date-badge">' + displayDate + '</span></li>');
+
+                                if (isTodayTheEndDate) {
+                                    const cleanDogName = dogName.trim().replace(/'/g, "\\'");
+                                    leavingDogs.push('<li><span>' + listLabel + ' (' + breedTxt + ')</span> <span class="date-badge today-badge" style="cursor: pointer;" onclick="triggerCheckoutFlow(\'' + localizedStayId + '\', \'' + cleanDogName + '\')">TODAY</span></li>');
+                                } else if (checkEnd > today && checkEnd <= sevenDaysFromNow) {
+                                    leavingDogs.push('<li><span>' + listLabel + ' (' + breedTxt + ')</span> <span class="date-badge">' + displayDate + '</span></li>');
+                                }
                             }
 
                             if (isUpcoming) {
@@ -620,36 +636,24 @@
                             }
 
                             if (isCurrentlyAtHome || isUpcoming) {
-                                const statusTag = isCurrentlyAtHome ? 
+                                const statusTag = (isCurrentlyAtHome && !hasBeenPickedUp) ? 
                                     '<span class="directory-status-tag tag-at-home">At Home</span>' : 
-                                    '<span class="directory-status-tag tag-upcoming">Upcoming</span>';
+                                    (hasBeenPickedUp ? '<span class="directory-status-tag" style="background:#e2e8f0; color:#64748b;">Checked Out</span>' : '<span class="directory-status-tag tag-upcoming">Upcoming</span>');
 
                                 const cleanName = dogName.trim().replace(/'/g, "\\'");
                                 const cleanLnk = editLink.trim();
 
                                 directoryCardsHTML.push(`
-                                    <div class="directory-card">
-                                        <h4 onclick="routeToDatabaseCell('${cleanLnk}', 'B', '${cleanName}', 'Dog Name')" title="Click to edit name in spreadsheet" style="cursor:pointer;">
+                                    <div class="directory-card" style="${hasBeenPickedUp ? 'opacity: 0.6;' : ''}">
+                                        <h4 onclick="routeToDatabaseCell('${cleanLnk}', 'B', '${cleanName}', 'Dog Name')" title="Click to edit name" style="cursor:pointer;">
                                             <span>🐾 ${dogName.trim()}</span> ${statusTag}
                                         </h4>
-                                        <span class="editable-row" onclick="routeToDatabaseCell('${cleanLnk}', 'C', '${cleanName}', 'Breed')" title="Click to edit Breed">
-                                            <strong>Breed:</strong> ${breedTxt}
-                                        </span>
-                                        <span class="editable-row" onclick="routeToDatabaseCell('${cleanLnk}', 'F', '${cleanName}', 'Owner')" title="Click to edit Owner">
-                                            <strong>Owner:</strong> ${ownerName ? ownerName.trim() : 'N/A'}
-                                        </span>
-                                        <span class="editable-row" onclick="routeToDatabaseCell('${cleanLnk}', 'G', '${cleanName}', 'Contact')" title="Click to edit Contact">
-                                            <strong>Contact:</strong> ${phone ? phone.trim() : 'N/A'}
-                                        </span>
-                                        <span class="editable-row" onclick="routeToDatabaseCell('${cleanLnk}', 'H', '${cleanName}', 'Likes')" title="Click to edit Likes">
-                                            <strong>Likes:</strong> ${likes ? likes.trim() : 'None listed'}
-                                        </span>
-                                        <span class="editable-row" onclick="routeToDatabaseCell('${cleanLnk}', 'I', '${cleanName}', 'Dislikes')" title="Click to edit Dislikes">
-                                            <strong>Dislikes:</strong> ${dislikes ? dislikes.trim() : 'None listed'}
-                                        </span>
-                                        <span class="editable-row" onclick="routeToDatabaseCell('${cleanLnk}', 'J', '${cleanName}', 'Notes')" title="Click to edit Notes">
-                                            <strong>Notes:</strong> ${notes ? notes.trim() : 'None'}
-                                        </span>
+                                        <span class="editable-row" onclick="routeToDatabaseCell('${cleanLnk}', 'C', '${cleanName}', 'Breed')"><strong>Breed:</strong> ${breedTxt}</span>
+                                        <span class="editable-row" onclick="routeToDatabaseCell('${cleanLnk}', 'F', '${cleanName}', 'Owner')"><strong>Owner:</strong> ${ownerName ? ownerName.trim() : 'N/A'}</span>
+                                        <span class="editable-row" onclick="routeToDatabaseCell('${cleanLnk}', 'G', '${cleanName}', 'Contact')"><strong>Contact:</strong> ${phone ? phone.trim() : 'N/A'}</span>
+                                        <span class="editable-row" onclick="routeToDatabaseCell('${cleanLnk}', 'H', '${cleanName}', 'Likes')"><strong>Likes:</strong> ${likes ? likes.trim() : 'None listed'}</span>
+                                        <span class="editable-row" onclick="routeToDatabaseCell('${cleanLnk}', 'I', '${cleanName}', 'Dislikes')"><strong>Dislikes:</strong> ${dislikes ? dislikes.trim() : 'None listed'}</span>
+                                        <span class="editable-row" onclick="routeToDatabaseCell('${cleanLnk}', 'J', '${cleanName}', 'Notes')"><strong>Notes:</strong> ${notes ? notes.trim() : 'None'}</span>
                                     </div>
                                 `);
                             }
