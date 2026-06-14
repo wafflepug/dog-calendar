@@ -56,16 +56,14 @@
         /* --- Badge UI Classes --- */
         .date-badge { font-size: 11px; background: #e2e8f0; padding: 2px 6px; border-radius: 4px; color: #475569; font-weight: bold; transition: background-color 0.3s, color 0.3s; }
         .date-badge.today-badge { background: #fde8e8; color: #c81e1e; }
-        .capacity-badge { float: left; font-size: 9px; font-weight: bold; padding: 1px 4px; border-radius: 3px; margin-right: 4px; margin-top: 2px; }
-        .badge-warning { background-color: #fde68a; color: #78350f; }
-        .badge-full { background-color: #fca5a5; color: #991b1b; }
+        .capacity-badge { position: absolute; top: 2px; right: 2px; font-size: 10px; padding: 2px 4px; border-radius: 3px; font-weight: bold; z-index: 4; color: #fff; }
+        .busy-badge { background: #f59e0b; }
+        .full-badge { background: #ef4444; }
 
         /* --- FullCalendar Layout & Cell Tweaks --- */
         .fc-event { cursor: pointer; padding: 4px 6px; font-size: 13px; border: none !important; border-radius: 4px; font-weight: 600; margin-bottom: 2px; }
-        .fc-daygrid-day { cursor: pointer; }
+        .fc-daygrid-day { cursor: pointer; position: relative; }
         .fc-daygrid-day:hover { background-color: #f8fafc; }
-        .capacity-warning { background-color: #fffbeb !important; transition: background-color 0.3s; } 
-        .capacity-full { background-color: #fdf2f2 !important; transition: background-color 0.3s; }    
 
         /* --- Dark Mode Theme Overrides --- */
         body.dark-theme { background-color: #0f172a; color: #f8fafc; }
@@ -102,8 +100,6 @@
         body.dark-theme .fc-daygrid-day:hover { background-color: #334155; }
         body.dark-theme .fc-button { background-color: #475569 !important; border-color: #64748b !important; color: white !important; }
         body.dark-theme .fc-button-active { background-color: #1e293b !important; border-color: #3498db !important; }
-        body.dark-theme .capacity-warning { background-color: #2d2a15 !important; }
-        body.dark-theme .capacity-full { background-color: #3b1e1e !important; }
 
         @media (max-width: 768px) {
             body { margin: 5px; }
@@ -151,7 +147,7 @@
                 <option value="11">December</option>
             </select>
             <select id="jumpYear" style="padding: 12px; font-size: 14px; border: 2px solid #e2e8f0; border-radius: 8px; background: white; outline: none; cursor: pointer; font-weight: bold; transition: background-color 0.3s, border-color 0.3s, color 0.3s;">
-                </select>
+            </select>
         </div>
 
         <button id="manualRefreshBtn" style="background: #3498db; color: white; border: none; padding: 12px 18px; border-radius: 8px; font-weight: bold; font-size: 14px; cursor: pointer; white-space: nowrap; transition: background 0.2s;">🔄 Sync Spreadsheet</button>
@@ -174,8 +170,7 @@
 
     <div class="directory-dashboard">
         <h3>📋 Detailed Guest Directory (Current & Upcoming)</h3>
-        <div id="directory-grid" class="directory-grid">
-            </div>
+        <div id="directory-grid" class="directory-grid"></div>
     </div>
 
     <div id="calendar"></div>
@@ -213,34 +208,44 @@
 
 <script>
     const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT63UsPjcg3GB4lTB6cewLaTRS_yJP4kpOMSMsTTnvTw1Wbjn3CgtZc_c6li28ihjzkHnphFt0XcFTt/pub?gid=1639615540&single=true&output=csv';
-    
-    // ⚠️ PASTE YOUR DEPLOYED GOOGLE APPS SCRIPT WEB APP URL HERE
     const APPS_SCRIPT_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbx46l0-khjzzARaZA_D1UdhzrLuW8hDXb0qik2zKk_8FIUqcyw68-q1fy_dBF_6FyNjfg/exec';
 
-    let globalCalendar;
+    let globalCalendar = null;
     let dailyCapacityCounts = {}; 
     let isUpdatingDropdowns = false; 
     let selectedClickDateStr = ""; 
-    
-    // Tracking references for context editing actions
     let activeEditingEvent = null; 
 
     function getLocalTodayDateString() {
-        const d = new Date();
-        const year = d.getFullYear();
-        const month = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
+        const tzOffset = (new Date()).getTimezoneOffset() * 60000; 
+        return (new Date(Date.now() - tzOffset)).toISOString().split('T')[0];
     }
 
     document.addEventListener('DOMContentLoaded', function() {
+        // 1. Prime the capacity counts from cache BEFORE FullCalendar maps out its layout structures
+        const cachedData = localStorage.getItem('boardingDataCache');
+        if (cachedData) {
+            parseCSVToEvents(cachedData); 
+        }
+
+        // 2. Setup Year Dropdown List Values
+        const jumpYearSelect = document.getElementById('jumpYear');
+        const currentYear = new Date().getFullYear();
+        for (let y = currentYear - 2; y <= currentYear + 3; y++) {
+            const opt = document.createElement('option'); opt.value = y; opt.innerText = y;
+            if (y === currentYear) opt.selected = true;
+            jumpYearSelect.appendChild(opt);
+        }
+        document.getElementById('jumpMonth').value = String(new Date().getMonth()).padStart(2, '0');
+
+        // 3. Initialize FullCalendar Component
         const calendarEl = document.getElementById('calendar');
-        
         globalCalendar = new FullCalendar.Calendar(calendarEl, {
             initialView: 'dayGridMonth',
             displayEventTime: false, 
             height: 'auto',
-            headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek' },
+            headerToolbar: { left: 'prev,next today', center: 'title', right: '' },
+            allDaySlot: true,
             selectable: true,
             
             datesSet: function(info) {
@@ -253,7 +258,6 @@
             },
             
             dateClick: function(info) {
-                // Creation flow trigger
                 activeEditingEvent = null;
                 selectedClickDateStr = info.dateStr;
                 
@@ -269,7 +273,6 @@
             
             eventClick: function(info) {
                 if (info.event.extendedProps.isMeetGreet) {
-                    // Modification/Deletion flow interceptor
                     activeEditingEvent = info.event;
                     selectedClickDateStr = info.event.startStr;
                     
@@ -285,30 +288,99 @@
                 }
             },
             
+            events: function(info, successCallback, failureCallback) {
+                const csvText = localStorage.getItem('boardingDataCache') || "";
+                let spreadsheetEvents = parseCSVToEvents(csvText);
+                let localMeets = JSON.parse(localStorage.getItem('temporaryMeetGreets') || '[]');
+                
+                localMeets.forEach(meet => {
+                    let dogCount = 1;
+                    const name = meet.extendedProps.dogName || "";
+                    if (name.includes('&') || name.toLowerCase().includes(' and ')) {
+                        dogCount = name.split(/&|\s+and\s+/i).map(s => s.trim()).filter(Boolean).length || 1;
+                    }
+                    dailyCapacityCounts[meet.start] = (dailyCapacityCounts[meet.start] || 0) + dogCount;
+                });
+                
+                successCallback(spreadsheetEvents.concat(localMeets));
+            },
+            
             dayCellDidMount: function(info) {
                 const dateStr = info.date.toISOString().split('T')[0];
                 const count = dailyCapacityCounts[dateStr] || 0;
+                
                 const oldBadge = info.el.querySelector('.capacity-badge');
                 if (oldBadge) oldBadge.remove();
 
-                const numberFrame = info.el.querySelector('.fc-daygrid-day-top');
                 if (count === 3) {
-                    info.el.classList.add('capacity-warning');
-                    if (numberFrame) numberFrame.insertAdjacentHTML('afterbegin', '<span class="capacity-badge badge-warning">BUSY</span>');
+                    info.el.style.backgroundColor = 'rgba(245, 158, 11, 0.15)'; 
+                    info.el.insertAdjacentHTML('beforeend', '<span class="capacity-badge busy-badge">BUSY</span>');
                 } else if (count >= 4) {
-                    info.el.classList.add('capacity-full');
-                    if (numberFrame) numberFrame.insertAdjacentHTML('afterbegin', '<span class="capacity-badge badge-full">⚠️ FULL</span>');
+                    info.el.style.backgroundColor = 'rgba(239, 68, 68, 0.15)';  
+                    info.el.insertAdjacentHTML('beforeend', '<span class="capacity-badge full-badge">⚠️ FULL</span>');
                 }
             }
         });
 
         globalCalendar.render();
 
+        // 4. Force a quick layout evaluation update after rendering to make badges load instantly
+        setTimeout(function() {
+            if (globalCalendar) globalCalendar.refetchEvents();
+        }, 100);
+
+        // --- Event Listeners Hooks Setup ---
         document.getElementById('closeModalBtn').addEventListener('click', function() {
             document.getElementById('customBookingModal').style.display = "none";
         });
 
-        // SAVE BUTTON ROUTER (Handles both Create and Update execution logic)
+        document.getElementById('calendarSearch').addEventListener('input', applyCurrentSearchFilter);
+
+        const jumpMonthSelect = document.getElementById('jumpMonth');
+        function executeCalendarJump() {
+            if (!globalCalendar) return;
+            isUpdatingDropdowns = true; 
+            const targetDateStr = jumpYearSelect.value + '-' + String(Number(jumpMonthSelect.value) + 1).padStart(2, '0') + '-02';
+            globalCalendar.gotoDate(targetDateStr);
+            isUpdatingDropdowns = false;
+        }
+        jumpMonthSelect.addEventListener('change', executeCalendarJump);
+        jumpYearSelect.addEventListener('change', executeCalendarJump);
+
+        // Theme Switcher Interface Hook
+        const themeToggleBtn = document.getElementById('themeToggle');
+        if (localStorage.getItem('theme') === 'dark') { document.body.classList.add('dark-theme'); themeToggleBtn.innerText = '☀️'; }
+        themeToggleBtn.addEventListener('click', function() {
+            document.body.classList.toggle('dark-theme');
+            if (document.body.classList.contains('dark-theme')) { themeToggleBtn.innerText = '☀️'; localStorage.setItem('theme', 'dark'); }
+            else { themeToggleBtn.innerText = '🌙'; localStorage.setItem('theme', 'light'); }
+        });
+
+        // Manual Refresh / Fetch Spreadsheet Controller
+        document.getElementById('manualRefreshBtn').addEventListener('click', function() {
+            const btn = this; btn.innerText = "⏳ Syncing..."; btn.style.background = "#7f8c8d"; btn.disabled = true;
+            const backupCache = localStorage.getItem('boardingDataCache');
+
+            fetch(SHEET_CSV_URL, { cache: "no-store" })
+                .then(response => { if (!response.ok) throw new Error("HTTP Error: " + response.status); return response.text(); })
+                .then(csvText => {
+                    if (!csvText || csvText.trim().length < 20 || !csvText.includes(',')) throw new Error("Corrupted payload.");
+                    localStorage.setItem('boardingDataCache', csvText);
+                    localStorage.removeItem('temporaryMeetGreets'); 
+                    refreshCalendarData();
+                    btn.innerText = "✅ Synced!"; btn.style.background = "#2ecc71";
+                    setTimeout(() => { btn.innerText = "🔄 Sync Spreadsheet"; btn.style.background = "#3498db"; btn.disabled = false; }, 2000);
+                })
+                .catch(error => {
+                    console.error(error);
+                    if (backupCache) { localStorage.setItem('boardingDataCache', backupCache); refreshCalendarData(); }
+                    alert("⚠️ SYNC FAILED\n\nReason: " + error.message);
+                    btn.innerText = "❌ Failed"; btn.style.background = "#e74c3c";
+                    setTimeout(() => { btn.innerText = "🔄 Sync Spreadsheet"; btn.style.background = "#3498db"; btn.disabled = false; }, 3000);
+                });
+        });
+
+        // Modal Action Trigger Save
         document.getElementById('saveModalBtn').addEventListener('click', function() {
             const dogName = document.getElementById('modalDogName').value.trim();
             const bookingTime = document.getElementById('modalBookingTime').value.trim();
@@ -321,16 +393,10 @@
             
             document.getElementById('customBookingModal').style.display = "none";
             const displayTitle = `⏰ ${bookingTime} - Meet & Greet: ${dogName}`;
-
             let localMeets = JSON.parse(localStorage.getItem('temporaryMeetGreets') || '[]');
             
             if (activeEditingEvent) {
-                // ==========================================
-                // SUBMIT UPDATE PAYLOAD VIA FETCH
-                // ==========================================
                 const originalProps = activeEditingEvent.extendedProps;
-                
-                // Update interface local tracking copy
                 localMeets = localMeets.map(meet => {
                     if (meet.start === selectedClickDateStr && meet.extendedProps.dogName === originalProps.dogName) {
                         meet.title = displayTitle;
@@ -345,151 +411,58 @@
                 refreshCalendarData();
 
                 sendPayloadToAppsScript({
-                    action: "update",
-                    originalDogName: originalProps.dogName,
-                    originalStartDate: selectedClickDateStr,
-                    dogName: dogName,
-                    breed: breed,
-                    notes: `Meet & Greet scheduled at ${bookingTime}`
+                    action: "update", originalDogName: originalProps.dogName, originalStartDate: selectedClickDateStr,
+                    dogName: dogName, breed: breed, notes: `Meet & Greet scheduled at ${bookingTime}`
                 });
-
             } else {
-                // ==========================================
-                // SUBMIT NEW CREATE PAYLOAD VIA FETCH
-                // ==========================================
                 const newMeet = {
                     id: 'meet_' + Date.now(), title: displayTitle, start: selectedClickDateStr, end: selectedClickDateStr, allDay: true, backgroundColor: '#8e44ad', textColor: '#ffffff',
                     extendedProps: { isMeetGreet: true, breed: breed, time: bookingTime, dogName: dogName, owner: "Temporary Booking", phone: "N/A", likes: "N/A", dislikes: "N/A", notes: `Meet & Greet scheduled at ${bookingTime}`, editLink: "" }
                 };
-
                 localMeets.push(newMeet);
                 localStorage.setItem('temporaryMeetGreets', JSON.stringify(localMeets));
                 refreshCalendarData();
 
                 sendPayloadToAppsScript({
-                    action: "create",
-                    dogName: dogName,
-                    breed: breed,
-                    startDate: selectedClickDateStr,
-                    endDate: selectedClickDateStr,
-                    notes: `Meet & Greet scheduled at ${bookingTime}`
+                    action: "create", dogName: dogName, breed: breed, startDate: selectedClickDateStr, endDate: selectedClickDateStr, notes: `Meet & Greet scheduled at ${bookingTime}`
                 });
             }
         });
 
-        // DELETE BUTTON INTERCEPTOR
+        // Modal Action Trigger Delete
         document.getElementById('deleteModalBtn').addEventListener('click', function() {
             if (!activeEditingEvent) return;
-            
             const originalProps = activeEditingEvent.extendedProps;
             if (!confirm(`Are you sure you want to permanently delete the Meet & Greet for ${originalProps.dogName}?`)) return;
 
             document.getElementById('customBookingModal').style.display = "none";
-
-            // Purge from local memory storage array
             let localMeets = JSON.parse(localStorage.getItem('temporaryMeetGreets') || '[]');
             localMeets = localMeets.filter(meet => !(meet.start === selectedClickDateStr && meet.extendedProps.dogName === originalProps.dogName));
             localStorage.setItem('temporaryMeetGreets', JSON.stringify(localMeets));
             refreshCalendarData();
 
-            // Send row destruction flag instructions back to server
             sendPayloadToAppsScript({
-                action: "delete",
-                originalDogName: originalProps.dogName,
-                originalStartDate: selectedClickDateStr
+                action: "delete", originalDogName: originalProps.dogName, originalStartDate: selectedClickDateStr
             });
         });
-
-        // Helper endpoint communicator
-        function sendPayloadToAppsScript(payload) {
-            if (!APPS_SCRIPT_WEBAPP_URL || APPS_SCRIPT_WEBAPP_URL === 'YOUR_APPS_SCRIPT_WEBAPP_URL_HERE') {
-                console.log("No live WebApp deployment URL detected. Action saved locally only.");
-                return;
-            }
-            fetch(APPS_SCRIPT_WEBAPP_URL, {
-                method: 'POST',
-                mode: 'no-cors',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            })
-            .then(() => console.log(`Apps Script action sequence (${payload.action}) logged successfully.`))
-            .catch(err => console.error("Network communication failure:", err));
-        }
-
-        const jumpMonthSelect = document.getElementById('jumpMonth');
-        const jumpYearSelect = document.getElementById('jumpYear');
-        const currentYear = new Date().getFullYear();
-        for (let y = currentYear - 2; y <= currentYear + 3; y++) {
-            const opt = document.createElement('option'); opt.value = y; opt.innerText = y;
-            if (y === currentYear) opt.selected = true;
-            jumpYearSelect.appendChild(opt);
-        }
-        jumpMonthSelect.value = String(new Date().getMonth()).padStart(2, '0');
-
-        function executeCalendarJump() {
-            isUpdatingDropdowns = true; 
-            const targetDateStr = jumpYearSelect.value + '-' + String(Number(jumpMonthSelect.value) + 1).padStart(2, '0') + '-01';
-            globalCalendar.gotoDate(targetDateStr);
-            isUpdatingDropdowns = false;
-        }
-
-        jumpMonthSelect.addEventListener('change', executeCalendarJump);
-        jumpYearSelect.addEventListener('change', executeCalendarJump);
-
-        document.getElementById('manualRefreshBtn').addEventListener('click', function() {
-            const btn = this; btn.innerText = "⏳ Syncing..."; btn.style.background = "#7f8c8d"; btn.disabled = true;
-            const backupCache = localStorage.getItem('boardingDataCache');
-
-            fetch(SHEET_CSV_URL, { cache: "no-store" })
-                .then(response => { if (!response.ok) throw new Error("HTTP Error: " + response.status); return response.text(); })
-                .then(csvText => {
-                    if (!csvText || csvText.trim().length < 20 || !csvText.includes(',')) throw new Error("Corrupted payload.");
-                    localStorage.setItem('boardingDataCache', csvText);
-                    localStorage.removeItem('temporaryMeetGreets'); // Clears temp items once sheets sync
-                    refreshCalendarData();
-                    btn.innerText = "✅ Synced!"; btn.style.background = "#2ecc71";
-                    setTimeout(() => { btn.innerText = "🔄 Sync Spreadsheet"; btn.style.background = "#3498db"; btn.disabled = false; }, 2000);
-                })
-                .catch(error => {
-                    console.error(error);
-                    if (backupCache) { localStorage.setItem('boardingDataCache', backupCache); refreshCalendarData(); }
-                    alert("⚠️ SYNC FAILED\n\nReason: " + error.message);
-                    btn.innerText = "❌ Failed"; btn.style.background = "#e74c3c";
-                    setTimeout(() => { btn.innerText = "🔄 Sync Spreadsheet"; btn.style.background = "#3498db"; btn.disabled = false; }, 3000);
-                });
-        });
-
-        document.getElementById('calendarSearch').addEventListener('input', applyCurrentSearchFilter);
-
-        const themeToggleBtn = document.getElementById('themeToggle');
-        if (localStorage.getItem('theme') === 'dark') { document.body.classList.add('dark-theme'); themeToggleBtn.innerText = '☀️'; }
-        themeToggleBtn.addEventListener('click', function() {
-            document.body.classList.toggle('dark-theme');
-            if (document.body.classList.contains('dark-theme')) { themeToggleBtn.innerText = '☀️'; localStorage.setItem('theme', 'dark'); }
-            else { themeToggleBtn.innerText = '🌙'; localStorage.setItem('theme', 'light'); }
-        });
-
-        refreshCalendarData();
     });
 
-    function routeToDatabaseCell(baseEditLink, targetColumnLetter, petName, attributeName = "Booking Details") {
-        if (baseEditLink && baseEditLink.startsWith("http")) {
-            const confirmRedirect = confirm(`✏️ Edit ${attributeName} for ${petName}?\n\nOpen master database precisely on this field cell?`);
-            if (confirmRedirect) {
-                let targetUrl = baseEditLink.replace(/range=\d+/, `range=${targetColumnLetter}\$&`).replace("range=", `range=${targetColumnLetter}`);
-                if (!targetUrl.includes('range=')) {
-                    const rowMatch = baseEditLink.match(/range=(\d+)/) || baseEditLink.match(/=(\d+)$/);
-                    const rowNum = rowMatch ? rowMatch[1] : '';
-                    targetUrl = baseEditLink.split('&range=')[0] + `&range=${targetColumnLetter}${rowNum}`;
-                }
-                window.open(targetUrl, '_blank');
-            }
-        } else {
-            alert(`📝 ${petName} - ${attributeName}\n\nTo directly jump to your master spreadsheet row cell, ensure column 11 (K) has your row link formula working!`);
+    function sendPayloadToAppsScript(payload) {
+        if (!APPS_SCRIPT_WEBAPP_URL || APPS_SCRIPT_WEBAPP_URL.includes('YOUR_APPS_SCRIPT_WEBAPP_URL_HERE')) {
+            console.log("No live WebApp deployment URL configured.");
+            return;
         }
+        fetch(APPS_SCRIPT_WEBAPP_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
+        .then(() => console.log(`Apps Script action sequence (${payload.action}) logged successfully.`))
+        .catch(err => console.error("Network communication failure:", err));
     }
 
-        function refreshCalendarData() {
+    function refreshCalendarData() {
         if (!globalCalendar) return;
         globalCalendar.getEventSources().forEach(source => source.remove());
 
@@ -499,12 +472,10 @@
         let spreadsheetEvents = parseCSVToEvents(csvText);
         let localMeets = JSON.parse(localStorage.getItem('temporaryMeetGreets') || '[]');
         
-        // Count temporary Meet & Greets (usually 1 dog per meet)
         localMeets.forEach(meet => { 
             let dogCount = 1;
             const name = meet.extendedProps.dogName || "";
             if (name.includes('&') || name.toLowerCase().includes(' and ')) {
-                // Split by either separator and filter out empty strings
                 dogCount = name.split(/&|\s+and\s+/i).map(s => s.trim()).filter(Boolean).length || 1;
             }
             dailyCapacityCounts[meet.start] = (dailyCapacityCounts[meet.start] || 0) + dogCount; 
@@ -532,7 +503,7 @@
 
     function stringToColor(str) {
         let hash = 0; for (let i = 0; i < str.length; i++) { hash = str.charCodeAt(i) + ((hash << 5) - hash); }
-        return 'hsl(' + (Math.abs(hash) % 360) + ', 70%, 40%)'; 
+        return 'hsl(' + (Math.abs(hash) % 360) + ', 65%, 35%)'; 
     }
 
     function triggerCheckoutFlow(stayId, dogName) {
@@ -543,11 +514,30 @@
                 currentlyPickedUp.push(stayId);
                 localStorage.setItem('pickedUpDogs_' + todayStr, JSON.stringify(currentlyPickedUp));
             }
-            refreshCalendarData();
+            const csvText = localStorage.getItem('boardingDataCache') || "";
+            parseCSVToEvents(csvText);
+            if (globalCalendar) globalCalendar.refetchEvents();
         }
     }
 
-        function parseCSVToEvents(csvText) {
+    function routeToDatabaseCell(baseEditLink, targetColumnLetter, petName, attributeName = "Booking Details") {
+        if (baseEditLink && baseEditLink.startsWith("http")) {
+            const confirmRedirect = confirm(`✏️ Edit ${attributeName} for ${petName}?\n\nOpen master database precisely on this field cell?`);
+            if (confirmRedirect) {
+                let targetUrl = baseEditLink.replace(/range=\d+/, `range=${targetColumnLetter}\$&`).replace("range=", `range=${targetColumnLetter}`);
+                if (!targetUrl.includes('range=')) {
+                    const rowMatch = baseEditLink.match(/range=(\d+)/) || baseEditLink.match(/=(\d+)$/);
+                    const rowNum = rowMatch ? rowMatch[1] : '';
+                    targetUrl = baseEditLink.split('&range=')[0] + `&range=${targetColumnLetter}${rowNum}`;
+                }
+                window.open(targetUrl, '_blank');
+            }
+        } else {
+            alert(`📝 ${petName} - ${attributeName}\n\nTo directly jump to your master spreadsheet row cell, ensure column 11 (K) has your row link formula working!`);
+        }
+    }
+
+    function parseCSVToEvents(csvText) {
         if (!csvText) return [];
         const lines = csvText.split(/\r?\n/); const events = [];
         const localTodayStr = getLocalTodayDateString(); const today = new Date(localTodayStr + 'T00:00:00');
@@ -555,6 +545,8 @@
 
         const pickedUpDogs = JSON.parse(localStorage.getItem('pickedUpDogs_' + localTodayStr) || '[]');
         const atHomeDogs = []; const leavingDogs = []; const upcomingDogs = []; const directoryCardsHTML = [];
+
+        dailyCapacityCounts = {};
 
         for (let i = 1; i < lines.length; i++) {
             if (!lines[i].trim()) continue;
@@ -590,13 +582,11 @@
                         const breedTxt = breed ? breed.trim() : 'Unknown';
                         const displayDate = checkEnd.getDate() + '/' + (checkEnd.getMonth() + 1);
                         
-                        // NEW LOGIC: Calculate exact dog count for this row
                         let dogsInBooking = 1;
                         if (dogName.includes('&') || dogName.toLowerCase().includes(' and ')) {
                             dogsInBooking = dogName.split(/&|\s+and\s+/i).map(s => s.trim()).filter(Boolean).length || 1;
                         }
 
-                        // Apply the accurate dog count to each day of the stay
                         let tempLoopDate = new Date(checkStart.getTime());
                         while (tempLoopDate <= checkEnd) {
                             const tempStr = tempLoopDate.toISOString().split('T')[0];
