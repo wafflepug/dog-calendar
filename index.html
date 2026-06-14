@@ -489,7 +489,7 @@
         }
     }
 
-    function refreshCalendarData() {
+        function refreshCalendarData() {
         if (!globalCalendar) return;
         globalCalendar.getEventSources().forEach(source => source.remove());
 
@@ -499,7 +499,17 @@
         let spreadsheetEvents = parseCSVToEvents(csvText);
         let localMeets = JSON.parse(localStorage.getItem('temporaryMeetGreets') || '[]');
         
-        localMeets.forEach(meet => { dailyCapacityCounts[meet.start] = (dailyCapacityCounts[meet.start] || 0) + 1; });
+        // Count temporary Meet & Greets (usually 1 dog per meet)
+        localMeets.forEach(meet => { 
+            let dogCount = 1;
+            const name = meet.extendedProps.dogName || "";
+            if (name.includes('&') || name.toLowerCase().includes(' and ')) {
+                // Split by either separator and filter out empty strings
+                dogCount = name.split(/&|\s+and\s+/i).map(s => s.trim()).filter(Boolean).length || 1;
+            }
+            dailyCapacityCounts[meet.start] = (dailyCapacityCounts[meet.start] || 0) + dogCount; 
+        });
+
         globalCalendar.addEventSource(spreadsheetEvents.concat(localMeets));
     }
 
@@ -537,7 +547,7 @@
         }
     }
 
-    function parseCSVToEvents(csvText) {
+        function parseCSVToEvents(csvText) {
         if (!csvText) return [];
         const lines = csvText.split(/\r?\n/); const events = [];
         const localTodayStr = getLocalTodayDateString(); const today = new Date(localTodayStr + 'T00:00:00');
@@ -580,15 +590,22 @@
                         const breedTxt = breed ? breed.trim() : 'Unknown';
                         const displayDate = checkEnd.getDate() + '/' + (checkEnd.getMonth() + 1);
                         
+                        // NEW LOGIC: Calculate exact dog count for this row
+                        let dogsInBooking = 1;
+                        if (dogName.includes('&') || dogName.toLowerCase().includes(' and ')) {
+                            dogsInBooking = dogName.split(/&|\s+and\s+/i).map(s => s.trim()).filter(Boolean).length || 1;
+                        }
+
+                        // Apply the accurate dog count to each day of the stay
                         let tempLoopDate = new Date(checkStart.getTime());
                         while (tempLoopDate <= checkEnd) {
                             const tempStr = tempLoopDate.toISOString().split('T')[0];
-                            dailyCapacityCounts[tempStr] = (dailyCapacityCounts[tempStr] || 0) + 1;
+                            dailyCapacityCounts[tempStr] = (dailyCapacityCounts[tempStr] || 0) + dogsInBooking;
                             tempLoopDate.setDate(tempLoopDate.getDate() + 1);
                         }
 
                         if (!isMeetGreetType) {
-                            const listLabel = (dogName.includes('&') || dogName.toLowerCase().includes('and')) ? '👥 ' + dogName.trim() : '🐾 ' + dogName.trim();
+                            const listLabel = dogsInBooking > 1 ? '👥 ' + dogName.trim() : '🐾 ' + dogName.trim();
                             let isTodayTheEndDate = (endParsed === localTodayStr);
                             let isCurrentlyAtHome = (today >= checkStart && today <= checkEnd);
                             let isUpcoming = (checkStart > today && checkStart <= sevenDaysFromNow);
@@ -614,7 +631,7 @@
 
                                 directoryCardsHTML.push(`
                                     <div class="directory-card" style="${hasBeenPickedUp ? 'opacity: 0.6;' : ''}">
-                                        <h4 onclick="routeToDatabaseCell('${cleanLnk}', 'B', '${cleanName}', 'Dog Name')" style="cursor:pointer;"><span>🐾 ${dogName.trim()}</span> ${statusTag}</h4>
+                                        <h4 onclick="routeToDatabaseCell('${cleanLnk}', 'B', '${cleanName}', 'Dog Name')" style="cursor:pointer;"><span>${listLabel}</span> ${statusTag}</h4>
                                         <span class="editable-row" onclick="routeToDatabaseCell('${cleanLnk}', 'C', '${cleanName}', 'Breed')"><strong>Breed:</strong> ${breedTxt}</span>
                                         <span class="editable-row" onclick="routeToDatabaseCell('${cleanLnk}', 'F', '${cleanName}', 'Owner')"><strong>Owner:</strong> ${ownerName ? ownerName.trim() : 'N/A'}</span>
                                         <span class="editable-row" onclick="routeToDatabaseCell('${cleanLnk}', 'G', '${cleanName}', 'Contact')"><strong>Contact:</strong> ${phone ? phone.trim() : 'N/A'}</span>
@@ -625,7 +642,6 @@
                                 `);
                             }
                         } else {
-                            // IF INDEED EXTRACTED FROM SYNCED SHEET DATABASE ROWS AS MEET & GREET
                             const timeParts = notes.match(/(\d{1,2}:\d{2})/);
                             const parsedTime = timeParts ? timeParts[1] : "10:00";
                             
