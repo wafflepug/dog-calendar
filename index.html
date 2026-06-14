@@ -57,45 +57,38 @@
         .date-badge { font-size: 11px; background: #e2e8f0; padding: 2px 6px; border-radius: 4px; color: #475569; font-weight: bold; transition: background-color 0.3s, color 0.3s; }
         .date-badge.today-badge { background: #fde8e8; color: #c81e1e; }
 
-        /* --- Option 1 Alignment Refactoring Rules (Prevents Flag Interferences) --- */
+        /* --- Flexible, Standardized Header Layout Fix --- */
         .fc .fc-daygrid-day-top {
             display: flex !important;
             flex-direction: row !important;
             justify-content: space-between !important;
             align-items: center !important;
-            padding: 4px 6px !important;
-            position: relative !important;
+            padding: 4px 8px !important;
         }
+
         .fc .fc-daygrid-day-number {
-            order: 2 !important;
-            margin-left: auto !important;
-            padding: 0 !important;
             font-weight: 700 !important;
             font-size: 13px !important;
+            padding: 0 !important;
             float: none !important;
+            order: 2 !important; /* Forces date to stay right */
         }
-        .capacity-badge {
-            order: 1 !important;
-            position: static !important;
-            font-size: 10px !important;
-            padding: 2px 5px !important;
-            border-radius: 4px !important;
-            font-weight: 800 !important;
-            letter-spacing: 0.5px !important;
-            line-height: 1.2 !important;
-            white-space: nowrap !important;
-            display: inline-block !important;
-            float: none !important;
-            color: #ffffff !important;
-            z-index: 4;
+
+        /* --- Minimalist Indicator Symbols --- */
+        .capacity-indicator {
+            font-size: 14px !important;
+            line-height: 1 !important;
+            display: inline-flex !important;
+            align-items: center;
+            justify-content: center;
+            order: 1 !important; /* Forces symbol to stay left */
+            user-select: none;
+            cursor: pointer;
         }
-        .busy-badge { background-color: #f59e0b !important; }
-        .full-badge { background-color: #ef4444 !important; }
 
         /* --- FullCalendar Layout & Cell Tweaks --- */
         .fc-event { cursor: pointer; padding: 4px 6px; font-size: 13px; border: none !important; border-radius: 4px; font-weight: 600; margin-bottom: 2px; }
         .fc-daygrid-day { cursor: pointer; position: relative; }
-        .fc-daygrid-day:hover { background-color: #f8fafc; }
 
         /* --- Dark Mode Theme Overrides --- */
         body.dark-theme { background-color: #0f172a; color: #f8fafc; }
@@ -254,13 +247,11 @@
     }
 
     document.addEventListener('DOMContentLoaded', function() {
-        // 1. Prime capacity matrix array from data cache before drawing the layout framework
         const cachedData = localStorage.getItem('boardingDataCache');
         if (cachedData) {
             parseCSVToEvents(cachedData); 
         }
 
-        // 2. Setup Year Option Selections
         const jumpYearSelect = document.getElementById('jumpYear');
         const currentYear = new Date().getFullYear();
         for (let y = currentYear - 2; y <= currentYear + 3; y++) {
@@ -270,7 +261,6 @@
         }
         document.getElementById('jumpMonth').value = String(new Date().getMonth()).padStart(2, '0');
 
-        // 3. Initialize FullCalendar Instance
         const calendarEl = document.getElementById('calendar');
         globalCalendar = new FullCalendar.Calendar(calendarEl, {
             initialView: 'dayGridMonth',
@@ -341,27 +331,30 @@
                 const dateStr = info.date.toISOString().split('T')[0];
                 const count = dailyCapacityCounts[dateStr] || 0;
                 
-                const oldBadge = info.el.querySelector('.capacity-badge');
-                if (oldBadge) oldBadge.remove();
+                // Clear any existing indicators inside the cell view
+                const oldIndicator = info.el.querySelector('.capacity-indicator');
+                if (oldIndicator) oldIndicator.remove();
 
-                if (count === 3) {
-                    info.el.style.backgroundColor = 'rgba(245, 158, 11, 0.15)'; 
-                    info.el.insertAdjacentHTML('beforeend', '<span class="capacity-badge busy-badge">BUSY</span>');
-                } else if (count >= 4) {
-                    info.el.style.backgroundColor = 'rgba(239, 68, 68, 0.15)';  
-                    info.el.insertAdjacentHTML('beforeend', '<span class="capacity-badge full-badge">⚠️ FULL</span>');
+                // Inject stable modern status symbols instead of text layout blocks
+                let topContainer = info.el.querySelector('.fc-daygrid-day-top');
+                if (topContainer) {
+                    if (count === 3) {
+                        info.el.style.backgroundColor = 'rgba(245, 158, 11, 0.08)'; 
+                        topContainer.insertAdjacentHTML('afterbegin', '<span class="capacity-indicator" title="3 Dogs - Busy">🟡</span>');
+                    } else if (count >= 4) {
+                        info.el.style.backgroundColor = 'rgba(239, 68, 68, 0.08)';  
+                        topContainer.insertAdjacentHTML('afterbegin', '<span class="capacity-indicator" title="4+ Dogs - Full Capacity">🔴</span>');
+                    }
                 }
             }
         });
 
         globalCalendar.render();
 
-        // 4. Forces an instant background event layout redraw pass 100ms after load sequence starts
         setTimeout(function() {
             if (globalCalendar) globalCalendar.refetchEvents();
         }, 100);
 
-        // --- Interactive Controller Listeners ---
         document.getElementById('closeModalBtn').addEventListener('click', function() {
             document.getElementById('customBookingModal').style.display = "none";
         });
@@ -379,7 +372,6 @@
         jumpMonthSelect.addEventListener('change', executeCalendarJump);
         jumpYearSelect.addEventListener('change', executeCalendarJump);
 
-        // UI Color Preference Scheme Toggler
         const themeToggleBtn = document.getElementById('themeToggle');
         if (localStorage.getItem('theme') === 'dark') { document.body.classList.add('dark-theme'); themeToggleBtn.innerText = '☀️'; }
         themeToggleBtn.addEventListener('click', function() {
@@ -388,7 +380,6 @@
             else { themeToggleBtn.innerText = '🌙'; localStorage.setItem('theme', 'light'); }
         });
 
-        // Online Sync Event Processor
         document.getElementById('manualRefreshBtn').addEventListener('click', function() {
             const btn = this; btn.innerText = "⏳ Syncing..."; btn.style.background = "#7f8c8d"; btn.disabled = true;
             const backupCache = localStorage.getItem('boardingDataCache');
@@ -412,7 +403,6 @@
                 });
         });
 
-        // New/Edit Modal Registration Flow Submission
         document.getElementById('saveModalBtn').addEventListener('click', function() {
             const dogName = document.getElementById('modalDogName').value.trim();
             const bookingTime = document.getElementById('modalBookingTime').value.trim();
@@ -461,7 +451,6 @@
             }
         });
 
-        // Removal Handler Trigger Loop
         document.getElementById('deleteModalBtn').addEventListener('click', function() {
             if (!activeEditingEvent) return;
             const originalProps = activeEditingEvent.extendedProps;
