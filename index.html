@@ -16,9 +16,12 @@
         .calendar-header-branding h2 { color: #2c3e50; font-size: 24px; font-weight: 800; margin: 0; display: flex; align-items: center; justify-content: center; gap: 8px; }
         .calendar-brand-img { width: 20%; max-width: 160px; min-width: 100px; height: auto; border-radius: 12px; object-fit: cover; display: block; }
 
-        /* --- Buttons and Interactive Controls --- */
-        .btn-add { display: block; width: 100%; box-sizing: border-box; text-align: center; background: #27ae60; color: white; padding: 14px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        /* --- Action Button Group --- */
+        .action-button-group { display: flex; gap: 10px; margin-bottom: 15px; }
+        .btn-add { flex: 1; box-sizing: border-box; text-align: center; background: #27ae60; color: white; padding: 14px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border: none; cursor: pointer; transition: background 0.2s; }
         .btn-add:hover { background: #219653; }
+        .btn-potential { background: #e67e22; }
+        .btn-potential:hover { background: #d35400; }
         
         .search-container { margin-bottom: 20px; }
         .search-input { width: 100%; box-sizing: border-box; padding: 12px; font-size: 14px; border: 2px solid #e2e8f0; border-radius: 8px; outline: none; transition: border-color 0.2s, background-color 0.3s, border-color 0.3s, color 0.3s; }
@@ -46,7 +49,6 @@
         .directory-card { background: white; border: 1px solid #e2e8f0; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); display: flex; flex-direction: column; gap: 6px; transition: background-color 0.3s, border-color 0.3s; }
         .directory-card h4 { margin: 0 0 4px 0; font-size: 16px; color: #2c3e50; font-weight: 700; border-bottom: 1px dashed #e2e8f0; padding-bottom: 4px; display: flex; justify-content: space-between; align-items: center; }
         
-        /* Interactive Attribute Rows */
         .editable-row { padding: 4px; border-radius: 4px; cursor: pointer; display: block; font-size: 13px; color: #475569; transition: background 0.2s; }
         .editable-row:hover { background: #edf2f7; color: #2b6cb0; }
         .editable-row strong { color: #1e293b; }
@@ -60,7 +62,14 @@
         .date-badge.today-badge { background: #fde8e8; color: #c81e1e; }
         .date-badge.alert-badge { background: #fee2e2; color: #ef4444; font-size: 11px; text-transform: uppercase; }
 
-        /* --- Flexible, Standardized Header Layout Fix --- */
+        /* --- FullCalendar Event Styling for Potential Stays --- */
+        .fc-event-potential {
+            border: 2px dashed #d35400 !important;
+            background-color: rgba(230, 126, 34, 0.25) !important;
+            color: #d35400 !important;
+            font-weight: bold;
+        }
+
         .fc .fc-daygrid-day-top {
             display: flex !important;
             flex-direction: row !important;
@@ -77,7 +86,6 @@
             order: 2 !important; 
         }
 
-        /* --- Minimalist Indicator Symbols --- */
         .capacity-indicator {
             font-size: 14px !important;
             line-height: 1 !important;
@@ -89,11 +97,10 @@
             cursor: pointer;
         }
 
-        /* --- FullCalendar Layout & Cell Tweaks --- */
-        .fc-event { cursor: pointer; padding: 4px 6px; font-size: 13px; border: none !important; border-radius: 4px; font-weight: 600; margin-bottom: 2px; }
+        .fc-event { cursor: pointer; padding: 4px 6px; font-size: 13px; border-radius: 4px; font-weight: 600; margin-bottom: 2px; }
         .fc-daygrid-day { cursor: pointer; position: relative; }
 
-        /* --- Dark Mode Theme Overrides --- */
+        /* --- Dark Mode Overrides --- */
         body.dark-theme { background-color: #0f172a; color: #f8fafc; }
         body.dark-theme .container { background: #1e293b; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
         body.dark-theme .calendar-header-branding h2 { color: #f1f5f9; }
@@ -115,7 +122,6 @@
         body.dark-theme .tag-at-home { background: #0c4a6e; color: #7dd3fc; }
         body.dark-theme .tag-upcoming { background: #78350f; color: #fde68a; }
 
-        /* --- FullCalendar Specific Dark Mode Overrides --- */
         body.dark-theme .fc { color: #f1f5f9; }
         body.dark-theme .fc th.fc-col-header-cell,
         body.dark-theme .fc .fc-col-header-cell-cushion,
@@ -130,6 +136,12 @@
         body.dark-theme .fc-button { background-color: #475569 !important; border-color: #64748b !important; color: white !important; }
         body.dark-theme .fc-button-active { background-color: #1e293b !important; border-color: #3498db !important; }
 
+        body.dark-theme .fc-event-potential {
+            border: 2px dashed #f39c12 !important;
+            background-color: rgba(243, 156, 18, 0.3) !important;
+            color: #f1c40f !important;
+        }
+
         @media (max-width: 900px) {
             .summary-dashboard { grid-template-columns: 1fr 1fr; gap: 10px; }
         }
@@ -139,6 +151,7 @@
             .container { padding: 10px; border-radius: 6px; }
             .calendar-header-branding h2 { font-size: 20px; }
             .calendar-brand-img { width: 28%; max-width: 110px; min-width: 85px; }
+            .action-button-group { flex-direction: column; gap: 8px; }
             .search-container { flex-direction: column; align-items: stretch !important; gap: 8px; }
             .quick-navigate-container { display: grid !important; grid-template-columns: 1fr 1fr; gap: 5px; }
             .summary-dashboard { grid-template-columns: 1fr; gap: 10px; margin-bottom: 15px; }
@@ -159,7 +172,10 @@
         <h2>🐾 Waffle House Calendar</h2>
     </div>
     
-    <a href="https://docs.google.com/forms/d/e/1FAIpQLScszSqsaxw9THyebWt2g0khVTIzP9L8hPbor1mUB0fp_0KPAw/viewform?usp=dialog" target="_blank" class="btn-add">+ Add New Boarding Booking</a>
+    <div class="action-button-group">
+        <a href="https://docs.google.com/forms/d/e/1FAIpQLScszSqsaxw9THyebWt2g0khVTIzP9L8hPbor1mUB0fp_0KPAw/viewform?usp=dialog" target="_blank" class="btn-add">+ Add New Boarding Booking</a>
+        <button id="openPotentialBtn" class="btn-add btn-potential">❓ Add Potential Stay Request</button>
+    </div>
     
     <div class="search-container" style="display: flex; gap: 10px; align-items: center; margin-bottom: 20px; flex-wrap: wrap;">
         <input type="text" id="calendarSearch" class="search-input" style="flex: 1; min-width: 200px;" placeholder="🔍 Type dog name or breed to filter data..." autocomplete="off">
@@ -213,6 +229,7 @@
     <div id="calendar"></div>
 </div>
 
+<!-- Modal: Meet & Greet Booking -->
 <div id="customBookingModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 10000; align-items: center; justify-content: center;">
     <div style="background: white; padding: 25px; border-radius: 12px; max-width: 380px; width: 90%; box-shadow: 0 10px 25px rgba(0,0,0,0.2); font-family: inherit; box-sizing: border-box;" class="modal-content-panel">
         <h3 style="margin-top: 0; color: #2c3e50; font-size: 18px; display: flex; align-items: center; gap: 8px;" id="modalTitle">🤝 Meet & Greet Booking</h3>
@@ -230,6 +247,40 @@
             <button id="deleteModalBtn" style="background: #e74c3c; color: white; border: none; padding: 10px 14px; border-radius: 6px; cursor: pointer; font-weight: bold; margin-right: auto; display: none;">Delete</button>
             <button id="closeModalBtn" style="background: #94a3b8; color: white; border: none; padding: 10px 14px; border-radius: 6px; cursor: pointer; font-weight: bold;">Cancel</button>
             <button id="saveModalBtn" style="background: #27ae60; color: white; border: none; padding: 10px 14px; border-radius: 6px; cursor: pointer; font-weight: bold;">Save</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Add / Manage Potential Stay -->
+<div id="potentialStayModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 10001; align-items: center; justify-content: center;">
+    <div style="background: white; padding: 25px; border-radius: 12px; max-width: 420px; width: 90%; box-shadow: 0 10px 25px rgba(0,0,0,0.2); font-family: inherit; box-sizing: border-box;" class="modal-content-panel">
+        <h3 style="margin-top: 0; color: #d35400; font-size: 18px; display: flex; align-items: center; gap: 8px;" id="potentialModalTitle">❓ Potential Stay Request</h3>
+        
+        <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 5px; color: #475569;">🐾 Dog Name:</label>
+        <input type="text" id="potDogName" style="width: 100%; padding: 10px; margin-bottom: 12px; border: 2px solid #e2e8f0; border-radius: 6px; box-sizing: border-box;" placeholder="e.g. Rocky">
+        
+        <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 5px; color: #475569;">📋 Breed (Optional):</label>
+        <input type="text" id="potBreed" style="width: 100%; padding: 10px; margin-bottom: 12px; border: 2px solid #e2e8f0; border-radius: 6px; box-sizing: border-box;" placeholder="e.g. Golden Retriever">
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <div>
+                <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 5px; color: #475569;">📅 Check-In Date:</label>
+                <input type="date" id="potStartDate" style="width: 100%; padding: 10px; margin-bottom: 12px; border: 2px solid #e2e8f0; border-radius: 6px; box-sizing: border-box;">
+            </div>
+            <div>
+                <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 5px; color: #475569;">📅 Check-Out Date:</label>
+                <input type="date" id="potEndDate" style="width: 100%; padding: 10px; margin-bottom: 12px; border: 2px solid #e2e8f0; border-radius: 6px; box-sizing: border-box;">
+            </div>
+        </div>
+        
+        <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 5px; color: #475569;">📝 Notes / Status Details:</label>
+        <input type="text" id="potNotes" style="width: 100%; padding: 10px; margin-bottom: 20px; border: 2px solid #e2e8f0; border-radius: 6px; box-sizing: border-box;" placeholder="e.g. Awaiting owner confirmation">
+        
+        <div style="display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap;" id="potentialActionControls">
+            <button id="deletePotentialBtn" style="background: #e74c3c; color: white; border: none; padding: 10px 14px; border-radius: 6px; cursor: pointer; font-weight: bold; margin-right: auto; display: none;">🗑️ Delete Request</button>
+            <button id="confirmStayBtn" style="background: #27ae60; color: white; border: none; padding: 10px 14px; border-radius: 6px; cursor: pointer; font-weight: bold; display: none;">✅ Confirm Stay</button>
+            <button id="closePotentialModalBtn" style="background: #94a3b8; color: white; border: none; padding: 10px 14px; border-radius: 6px; cursor: pointer; font-weight: bold;">Cancel</button>
+            <button id="savePotentialBtn" style="background: #e67e22; color: white; border: none; padding: 10px 14px; border-radius: 6px; cursor: pointer; font-weight: bold;">Submit Potential</button>
         </div>
     </div>
 </div>
@@ -252,6 +303,7 @@
     let isUpdatingDropdowns = false; 
     let selectedClickDateStr = ""; 
     let activeEditingEvent = null; 
+    let activeEditingPotentialId = null;
 
     function getLocalTodayDateString() {
         const tzOffset = (new Date()).getTimezoneOffset() * 60000; 
@@ -306,7 +358,9 @@
             },
             
             eventClick: function(info) {
-                if (info.event.extendedProps.isMeetGreet) {
+                if (info.event.extendedProps.isPotential) {
+                    openEditPotentialModal(info.event);
+                } else if (info.event.extendedProps.isMeetGreet) {
                     activeEditingEvent = info.event;
                     selectedClickDateStr = info.event.startStr;
                     
@@ -326,6 +380,7 @@
                 const csvText = localStorage.getItem('boardingDataCache') || "";
                 let spreadsheetEvents = parseCSVToEvents(csvText);
                 let localMeets = JSON.parse(localStorage.getItem('temporaryMeetGreets') || '[]');
+                let localPotentials = JSON.parse(localStorage.getItem('temporaryPotentialStays') || '[]');
                 
                 localMeets.forEach(meet => {
                     let dogCount = 1;
@@ -337,7 +392,7 @@
                 });
                 
                 updateFullyBookedPanel();
-                successCallback(spreadsheetEvents.concat(localMeets));
+                successCallback(spreadsheetEvents.concat(localMeets).concat(localPotentials));
             },
             
             dayCellDidMount: function(info) {
@@ -366,8 +421,16 @@
             if (globalCalendar) globalCalendar.refetchEvents();
         }, 100);
 
+        // Modal Controls
         document.getElementById('closeModalBtn').addEventListener('click', function() {
             document.getElementById('customBookingModal').style.display = "none";
+        });
+        document.getElementById('closePotentialModalBtn').addEventListener('click', function() {
+            document.getElementById('potentialStayModal').style.display = "none";
+        });
+
+        document.getElementById('openPotentialBtn').addEventListener('click', function() {
+            openNewPotentialModal();
         });
 
         document.getElementById('calendarSearch').addEventListener('input', applyCurrentSearchFilter);
@@ -412,6 +475,112 @@
                     btn.innerText = "❌ Failed"; btn.style.background = "#e74c3c";
                     setTimeout(() => { btn.innerText = "🔄 Sync Spreadsheet"; btn.style.background = "#3498db"; btn.disabled = false; }, 3000);
                 });
+        });
+
+        // Potential Stay Event Handlers
+        document.getElementById('savePotentialBtn').addEventListener('click', function() {
+            const dogName = document.getElementById('potDogName').value.trim();
+            const breed = document.getElementById('potBreed').value.trim() || "N/A";
+            const startDate = document.getElementById('potStartDate').value;
+            const endDate = document.getElementById('potEndDate').value || startDate;
+            const notes = document.getElementById('potNotes').value.trim() || "Potential Booking";
+
+            if (!dogName || !startDate) {
+                alert("Please fill in at least the Dog Name and Check-In Date.");
+                return;
+            }
+
+            document.getElementById('potentialStayModal').style.display = "none";
+            const potId = activeEditingPotentialId || 'pot_' + Date.now();
+
+            // Calculate display end date (+1 day for FullCalendar all-day event rendering)
+            const parts = endDate.split('-');
+            const dateObj = new Date(parts[0], parts[1] - 1, parts[2]);
+            dateObj.setDate(dateObj.getDate() + 1);
+            const forcedDisplayEnd = dateObj.getFullYear() + '-' + String(dateObj.getMonth() + 1).padStart(2, '0') + '-' + String(dateObj.getDate()).padStart(2, '0');
+
+            const potentialEvent = {
+                id: potId,
+                title: `❓ Potential: ${dogName}`,
+                start: startDate,
+                end: forcedDisplayEnd,
+                allDay: true,
+                classNames: ['fc-event-potential'],
+                extendedProps: {
+                    isPotential: true,
+                    dogName: dogName,
+                    breed: breed,
+                    rawStartDate: startDate,
+                    rawEndDate: endDate,
+                    notes: notes,
+                    bookingType: "Potential Stay"
+                }
+            };
+
+            let localPotentials = JSON.parse(localStorage.getItem('temporaryPotentialStays') || '[]');
+            localPotentials = localPotentials.filter(p => p.id !== potId);
+            localPotentials.push(potentialEvent);
+            localStorage.setItem('temporaryPotentialStays', JSON.stringify(localPotentials));
+
+            refreshCalendarData();
+
+            sendPayloadToAppsScript({
+                action: "create_potential",
+                id: potId,
+                dogName: dogName,
+                breed: breed,
+                startDate: startDate,
+                endDate: endDate,
+                notes: notes,
+                bookingType: "Potential Stay"
+            });
+        });
+
+        document.getElementById('confirmStayBtn').addEventListener('click', function() {
+            if (!activeEditingPotentialId) return;
+            const dogName = document.getElementById('potDogName').value.trim();
+            if (!confirm(`Confirm stay for ${dogName}? This will upgrade it from a potential request to a confirmed booking.`)) return;
+
+            document.getElementById('potentialStayModal').style.display = "none";
+
+            let localPotentials = JSON.parse(localStorage.getItem('temporaryPotentialStays') || '[]');
+            const potItem = localPotentials.find(p => p.id === activeEditingPotentialId);
+            localPotentials = localPotentials.filter(p => p.id !== activeEditingPotentialId);
+            localStorage.setItem('temporaryPotentialStays', JSON.stringify(localPotentials));
+
+            refreshCalendarData();
+
+            if (potItem) {
+                sendPayloadToAppsScript({
+                    action: "confirm_potential",
+                    id: activeEditingPotentialId,
+                    dogName: potItem.extendedProps.dogName,
+                    breed: potItem.extendedProps.breed,
+                    startDate: potItem.extendedProps.rawStartDate,
+                    endDate: potItem.extendedProps.rawEndDate,
+                    notes: potItem.extendedProps.notes,
+                    bookingType: "Boarding"
+                });
+            }
+        });
+
+        document.getElementById('deletePotentialBtn').addEventListener('click', function() {
+            if (!activeEditingPotentialId) return;
+            const dogName = document.getElementById('potDogName').value.trim();
+            if (!confirm(`Delete potential booking request for ${dogName}?`)) return;
+
+            document.getElementById('potentialStayModal').style.display = "none";
+
+            let localPotentials = JSON.parse(localStorage.getItem('temporaryPotentialStays') || '[]');
+            localPotentials = localPotentials.filter(p => p.id !== activeEditingPotentialId);
+            localStorage.setItem('temporaryPotentialStays', JSON.stringify(localPotentials));
+
+            refreshCalendarData();
+
+            sendPayloadToAppsScript({
+                action: "delete_potential",
+                id: activeEditingPotentialId
+            });
         });
 
         document.getElementById('saveModalBtn').addEventListener('click', function() {
@@ -479,6 +648,41 @@
         });
     });
 
+    function openNewPotentialModal() {
+        activeEditingPotentialId = null;
+        document.getElementById('potentialModalTitle').innerText = "❓ Add Potential Stay Request";
+        document.getElementById('potDogName').value = "";
+        document.getElementById('potBreed').value = "";
+        document.getElementById('potStartDate').value = getLocalTodayDateString();
+        document.getElementById('potEndDate').value = getLocalTodayDateString();
+        document.getElementById('potNotes').value = "";
+        
+        document.getElementById('deletePotentialBtn').style.display = "none";
+        document.getElementById('confirmStayBtn').style.display = "none";
+        document.getElementById('savePotentialBtn').innerText = "Submit Potential";
+        
+        document.getElementById('potentialStayModal').style.display = "flex";
+        document.getElementById('potDogName').focus();
+    }
+
+    function openEditPotentialModal(event) {
+        activeEditingPotentialId = event.id;
+        const props = event.extendedProps;
+
+        document.getElementById('potentialModalTitle').innerText = "❓ Manage Potential Stay";
+        document.getElementById('potDogName').value = props.dogName || "";
+        document.getElementById('potBreed').value = props.breed === "N/A" ? "" : props.breed;
+        document.getElementById('potStartDate').value = props.rawStartDate || event.startStr;
+        document.getElementById('potEndDate').value = props.rawEndDate || event.startStr;
+        document.getElementById('potNotes').value = props.notes || "";
+
+        document.getElementById('deletePotentialBtn').style.display = "inline-block";
+        document.getElementById('confirmStayBtn').style.display = "inline-block";
+        document.getElementById('savePotentialBtn').innerText = "Update Details";
+
+        document.getElementById('potentialStayModal').style.display = "flex";
+    }
+
     function sendPayloadToAppsScript(payload) {
         if (!APPS_SCRIPT_WEBAPP_URL || APPS_SCRIPT_WEBAPP_URL.includes('YOUR_APPS_SCRIPT_WEBAPP_URL_HERE')) {
             console.log("No live WebApp deployment URL configured.");
@@ -503,6 +707,7 @@
         
         let spreadsheetEvents = parseCSVToEvents(csvText);
         let localMeets = JSON.parse(localStorage.getItem('temporaryMeetGreets') || '[]');
+        let localPotentials = JSON.parse(localStorage.getItem('temporaryPotentialStays') || '[]');
         
         localMeets.forEach(meet => { 
             let dogCount = 1;
@@ -514,7 +719,7 @@
         });
 
         updateFullyBookedPanel();
-        globalCalendar.addEventSource(spreadsheetEvents.concat(localMeets));
+        globalCalendar.addEventSource(spreadsheetEvents.concat(localMeets).concat(localPotentials));
     }
 
     function updateFullyBookedPanel() {
@@ -577,7 +782,6 @@
         }
     }
 
-    // Interactive routing lookup utility
     function routeToCalendarDate(dateStr) {
         if (globalCalendar && dateStr) {
             globalCalendar.gotoDate(dateStr);
@@ -626,7 +830,9 @@
             const notes = columns[9] ? columns[9].replace(/^"|"$/g, '') : '';
             const editLink = columns[10] ? columns[10].replace(/^"|"$/g, '') : '';
             const bookingType = columns[11] ? columns[11].replace(/^"|"$/g, '').trim() : '';
+            
             const isMeetGreetType = (bookingType.toLowerCase() === 'meet & greet');
+            const isPotentialType = (bookingType.toLowerCase() === 'potential stay');
 
             if (dogName && startDate) {
                 let startParsed = "", endParsed = "";
@@ -656,6 +862,22 @@
                             const tempStr = tempLoopDate.toISOString().split('T')[0];
                             dailyCapacityCounts[tempStr] = (dailyCapacityCounts[tempStr] || 0) + dogsInBooking;
                             tempLoopDate.setDate(tempLoopDate.getDate() + 1);
+                        }
+
+                        if (isPotentialType) {
+                            const parts = endParsed.split('-'); const dateObject = new Date(parts[0], parts[1] - 1, parts[2]); dateObject.setDate(dateObject.getDate() + 1);
+                            const forcedDisplayEnd = dateObject.getFullYear() + '-' + String(dateObject.getMonth() + 1).padStart(2, '0') + '-' + String(dateObject.getDate()).padStart(2, '0');
+
+                            events.push({
+                                id: 'sheet_pot_' + i,
+                                title: `❓ Potential: ${dogName.trim()}`, start: startParsed, end: forcedDisplayEnd, allDay: true,
+                                classNames: ['fc-event-potential'],
+                                extendedProps: {
+                                    isPotential: true, dogName: dogName.trim(), breed: breedTxt,
+                                    rawStartDate: startParsed, rawEndDate: endParsed, notes: notes.trim(), bookingType: "Potential Stay", editLink: editLink.trim()
+                                }
+                            });
+                            continue;
                         }
 
                         if (!isMeetGreetType) {
