@@ -17,11 +17,13 @@
         .calendar-brand-img { width: 20%; max-width: 160px; min-width: 100px; height: auto; border-radius: 12px; object-fit: cover; display: block; }
 
         /* --- Action Button Group --- */
-        .action-button-group { display: flex; gap: 10px; margin-bottom: 15px; }
-        .btn-add { flex: 1; box-sizing: border-box; text-align: center; background: #27ae60; color: white; padding: 14px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border: none; cursor: pointer; transition: background 0.2s; }
+        .action-button-group { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+        .btn-add { flex: 1; min-width: 180px; box-sizing: border-box; text-align: center; background: #27ae60; color: white; padding: 14px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border: none; cursor: pointer; transition: background 0.2s; }
         .btn-add:hover { background: #219653; }
         .btn-potential { background: #e67e22; }
         .btn-potential:hover { background: #d35400; }
+        .btn-intake { background: #8e44ad; }
+        .btn-intake:hover { background: #71368a; }
         
         .search-container { margin-bottom: 20px; }
         .search-input { width: 100%; box-sizing: border-box; padding: 12px; font-size: 14px; border: 2px solid #e2e8f0; border-radius: 8px; outline: none; transition: border-color 0.2s, background-color 0.3s, border-color 0.3s, color 0.3s; }
@@ -175,6 +177,7 @@
     <div class="action-button-group">
         <a href="https://docs.google.com/forms/d/e/1FAIpQLScszSqsaxw9THyebWt2g0khVTIzP9L8hPbor1mUB0fp_0KPAw/viewform?usp=dialog" target="_blank" class="btn-add">+ Add New Boarding Booking</a>
         <button id="openPotentialBtn" class="btn-add btn-potential">❓ Add Potential Stay Request</button>
+        <button onclick="document.getElementById('intakeModal').style.display='flex'" class="btn-add btn-intake">🤖 Upload & Parse Intake Form</button>
     </div>
     
     <div class="search-container" style="display: flex; gap: 10px; align-items: center; margin-bottom: 20px; flex-wrap: wrap;">
@@ -227,6 +230,71 @@
     </div>
 
     <div id="calendar"></div>
+</div>
+
+<!-- INTAKE FORM AI PARSER MODAL -->
+<div id="intakeModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:10002; align-items:center; justify-content:center;">
+  <div style="background:#fff; padding:24px; border-radius:12px; width:90%; max-width:550px; box-shadow:0 10px 25px rgba(0,0,0,0.2);" class="modal-content-panel">
+    <h3>📄 Upload & Parse Dog Intake Form</h3>
+    <p style="font-size: 14px; color: #666;">Select a text file or PDF to automatically populate dog details using AI.</p>
+    
+    <input type="file" id="intakeFileInput" accept=".txt, .pdf" style="margin-bottom: 12px; display: block; width: 100%;">
+    <div style="display: flex; gap: 8px;">
+      <button id="parseBtn" onclick="processIntakeForm()" style="background:#4A90E2; color:#fff; border:none; padding:8px 16px; border-radius:6px; cursor:pointer; font-weight: bold;">🤖 Parse with AI</button>
+      <button onclick="document.getElementById('intakeModal').style.display='none'" style="background:#94a3b8; color:#fff; border:none; padding:8px 16px; border-radius:6px; cursor:pointer; font-weight: bold;">Cancel</button>
+    </div>
+
+    <div id="aiSpinner" style="display:none; margin-top:15px; font-weight:bold; color:#4A90E2;">Parsing document details...</div>
+
+    <!-- AI Extracted Data Review Form -->
+    <form id="aiReviewForm" style="display:none; margin-top:20px; text-align:left; border-top: 1px solid #eee; padding-top: 15px;">
+      <h4 style="margin-bottom:10px;">Review Extracted Information</h4>
+      
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+        <div>
+          <label style="font-size:12px; font-weight:bold;">Dog Name</label>
+          <input type="text" id="aiDogName" style="width:100%; padding:6px; box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="font-size:12px; font-weight:bold;">Breed</label>
+          <input type="text" id="aiBreed" style="width:100%; padding:6px; box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="font-size:12px; font-weight:bold;">Start Date (YYYY-MM-DD)</label>
+          <input type="date" id="aiStartDate" style="width:100%; padding:6px; box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="font-size:12px; font-weight:bold;">End Date (YYYY-MM-DD)</label>
+          <input type="date" id="aiEndDate" style="width:100%; padding:6px; box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="font-size:12px; font-weight:bold;">Owner Name</label>
+          <input type="text" id="aiOwner" style="width:100%; padding:6px; box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="font-size:12px; font-weight:bold;">Phone</label>
+          <input type="text" id="aiPhone" style="width:100%; padding:6px; box-sizing:border-box;">
+        </div>
+      </div>
+
+      <div style="margin-top:10px;">
+        <label style="font-size:12px; font-weight:bold;">Likes</label>
+        <input type="text" id="aiLikes" style="width:100%; padding:6px; box-sizing:border-box;">
+      </div>
+      <div style="margin-top:10px;">
+        <label style="font-size:12px; font-weight:bold;">Dislikes</label>
+        <input type="text" id="aiDislikes" style="width:100%; padding:6px; box-sizing:border-box;">
+      </div>
+      <div style="margin-top:10px;">
+        <label style="font-size:12px; font-weight:bold;">Feeding Rules & Notes</label>
+        <textarea id="aiNotes" style="width:100%; height:60px; padding:6px; box-sizing:border-box;"></textarea>
+      </div>
+
+      <button type="button" onclick="saveIntakeToSheet()" style="margin-top:15px; background:#28a745; color:#fff; border:none; padding:10px 18px; border-radius:6px; cursor:pointer; width:100%; font-weight:bold;">
+        ✅ Confirm & Save to Boarding Sheet
+      </button>
+    </form>
+  </div>
 </div>
 
 <!-- Modal: Meet & Greet Booking -->
@@ -290,13 +358,16 @@
 <style>
     body.dark-theme .modal-content-panel { background: #1e293b !important; color: white; }
     body.dark-theme .modal-content-panel h3 { color: white !important; }
+    body.dark-theme .modal-content-panel p { color: #cbd5e1 !important; }
     body.dark-theme .modal-content-panel label { color: #cbd5e1 !important; }
-    body.dark-theme .modal-content-panel input { background: #334155; border-color: #475569; color: white; }
+    body.dark-theme .modal-content-panel input,
+    body.dark-theme .modal-content-panel textarea { background: #334155; border-color: #475569; color: white; }
 </style>
 
 <script>
     const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT63UsPjcg3GB4lTB6cewLaTRS_yJP4kpOMSMsTTnvTw1Wbjn3CgtZc_c6li28ihjzkHnphFt0XcFTt/pub?gid=1639615540&single=true&output=csv';
     const APPS_SCRIPT_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbx46l0-khjzzARaZA_D1UdhzrLuW8hDXb0qik2zKk_8FIUqcyw68-q1fy_dBF_6FyNjfg/exec';
+    const OPENAI_API_KEY = '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'; // Replace with your key
 
     let globalCalendar = null;
     let dailyCapacityCounts = {}; 
@@ -308,6 +379,97 @@
     function getLocalTodayDateString() {
         const tzOffset = (new Date()).getTimezoneOffset() * 60000; 
         return (new Date(Date.now() - tzOffset)).toISOString().split('T')[0];
+    }
+
+    /* --- Intake AI Parser Methods --- */
+    async function processIntakeForm() {
+      const fileInput = document.getElementById('intakeFileInput');
+      if (!fileInput.files.length) {
+        alert('Please select a file first.');
+        return;
+      }
+
+      const file = fileInput.files[0];
+      const fileText = await file.text();
+
+      document.getElementById('aiSpinner').style.display = 'block';
+
+      try {
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${OPENAI_API_KEY}`
+          },
+          body: JSON.stringify({
+            model: 'gpt-4o-mini',
+            messages: [
+              {
+                role: 'system',
+                content: `You are an intake assistant for a dog boarding business. Extract details from the document text into JSON format using the exact keys: dogName, breed, startDate, endDate, ownerName, phone, likes, dislikes, notes. Ensure dates follow YYYY-MM-DD format if detected.`
+              },
+              { role: 'user', content: fileText }
+            ],
+            response_format: { type: 'json_object' }
+          })
+        });
+
+        const result = await response.json();
+        const parsedData = JSON.parse(result.choices[0].message.content);
+
+        // Populate review form fields
+        document.getElementById('aiDogName').value = parsedData.dogName || '';
+        document.getElementById('aiBreed').value = parsedData.breed || '';
+        document.getElementById('aiStartDate').value = parsedData.startDate || '';
+        document.getElementById('aiEndDate').value = parsedData.endDate || '';
+        document.getElementById('aiOwner').value = parsedData.ownerName || '';
+        document.getElementById('aiPhone').value = parsedData.phone || '';
+        document.getElementById('aiLikes').value = parsedData.likes || '';
+        document.getElementById('aiDislikes').value = parsedData.dislikes || '';
+        document.getElementById('aiNotes').value = parsedData.notes || '';
+
+        document.getElementById('aiSpinner').style.display = 'none';
+        document.getElementById('aiReviewForm').style.display = 'block';
+
+      } catch (error) {
+        console.error(error);
+        alert('Error parsing file with AI: ' + error.message);
+        document.getElementById('aiSpinner').style.display = 'none';
+      }
+    }
+
+    async function saveIntakeToSheet() {
+      const payload = {
+        action: 'save_intake',
+        dogName: document.getElementById('aiDogName').value,
+        breed: document.getElementById('aiBreed').value,
+        startDate: document.getElementById('aiStartDate').value,
+        endDate: document.getElementById('aiEndDate').value,
+        ownerName: document.getElementById('aiOwner').value,
+        phone: document.getElementById('aiPhone').value,
+        likes: document.getElementById('aiLikes').value,
+        dislikes: document.getElementById('aiDislikes').value,
+        notes: document.getElementById('aiNotes').value
+      };
+
+      try {
+        const response = await fetch(APPS_SCRIPT_WEBAPP_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify(payload)
+        });
+        
+        const res = await response.json();
+        if (res.result === 'success') {
+          alert('Intake form successfully saved to your Google Sheet!');
+          document.getElementById('intakeModal').style.display = 'none';
+          location.reload(); // Refresh view
+        } else {
+          alert('Error saving data: ' + res.error);
+        }
+      } catch (err) {
+        alert('Failed to connect to backend.');
+      }
     }
 
     document.addEventListener('DOMContentLoaded', function() {
@@ -684,7 +846,7 @@
     }
 
     function sendPayloadToAppsScript(payload) {
-        if (!APPS_SCRIPT_WEBAPP_URL || APPS_SCRIPT_WEBAPP_URL.includes('https://script.google.com/macros/s/AKfycbx46l0-khjzzARaZA_D1UdhzrLuW8hDXb0qik2zKk_8FIUqcyw68-q1fy_dBF_6FyNjfg/exec')) {
+        if (!APPS_SCRIPT_WEBAPP_URL || APPS_SCRIPT_WEBAPP_URL.includes('YOUR_APPS_SCRIPT_WEBAPP_URL_HERE')) {
             console.log("No live WebApp deployment URL configured.");
             return;
         }
