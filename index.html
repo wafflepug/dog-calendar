@@ -367,7 +367,6 @@
 <script>
     const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT63UsPjcg3GB4lTB6cewLaTRS_yJP4kpOMSMsTTnvTw1Wbjn3CgtZc_c6li28ihjzkHnphFt0XcFTt/pub?gid=1639615540&single=true&output=csv';
     const APPS_SCRIPT_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbx46l0-khjzzARaZA_D1UdhzrLuW8hDXb0qik2zKk_8FIUqcyw68-q1fy_dBF_6FyNjfg/exec';
-    const OPENAI_API_KEY = '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'; // Replace with your key
 
     let globalCalendar = null;
     let dailyCapacityCounts = {}; 
@@ -395,45 +394,40 @@
       document.getElementById('aiSpinner').style.display = 'block';
 
       try {
-        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        const response = await fetch(APPS_SCRIPT_WEBAPP_URL, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${OPENAI_API_KEY}`
-          },
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
           body: JSON.stringify({
-            model: 'gpt-4o-mini',
-            messages: [
-              {
-                role: 'system',
-                content: `You are an intake assistant for a dog boarding business. Extract details from the document text into JSON format using the exact keys: dogName, breed, startDate, endDate, ownerName, phone, likes, dislikes, notes. Ensure dates follow YYYY-MM-DD format if detected.`
-              },
-              { role: 'user', content: fileText }
-            ],
-            response_format: { type: 'json_object' }
+            action: 'parse_intake',
+            fileText: fileText
           })
         });
 
-        const result = await response.json();
-        const parsedData = JSON.parse(result.choices[0].message.content);
+        const res = await response.json();
 
-        // Populate review form fields
-        document.getElementById('aiDogName').value = parsedData.dogName || '';
-        document.getElementById('aiBreed').value = parsedData.breed || '';
-        document.getElementById('aiStartDate').value = parsedData.startDate || '';
-        document.getElementById('aiEndDate').value = parsedData.endDate || '';
-        document.getElementById('aiOwner').value = parsedData.ownerName || '';
-        document.getElementById('aiPhone').value = parsedData.phone || '';
-        document.getElementById('aiLikes').value = parsedData.likes || '';
-        document.getElementById('aiDislikes').value = parsedData.dislikes || '';
-        document.getElementById('aiNotes').value = parsedData.notes || '';
+        if (res.result === 'success') {
+          const parsedData = res.data;
 
-        document.getElementById('aiSpinner').style.display = 'none';
-        document.getElementById('aiReviewForm').style.display = 'block';
+          // Populate review form fields
+          document.getElementById('aiDogName').value = parsedData.dogName || '';
+          document.getElementById('aiBreed').value = parsedData.breed || '';
+          document.getElementById('aiStartDate').value = parsedData.startDate || '';
+          document.getElementById('aiEndDate').value = parsedData.endDate || '';
+          document.getElementById('aiOwner').value = parsedData.ownerName || '';
+          document.getElementById('aiPhone').value = parsedData.phone || '';
+          document.getElementById('aiLikes').value = parsedData.likes || '';
+          document.getElementById('aiDislikes').value = parsedData.dislikes || '';
+          document.getElementById('aiNotes').value = parsedData.notes || '';
+
+          document.getElementById('aiSpinner').style.display = 'none';
+          document.getElementById('aiReviewForm').style.display = 'block';
+        } else {
+          throw new Error(res.error || 'Failed to parse intake document.');
+        }
 
       } catch (error) {
         console.error(error);
-        alert('Error parsing file with AI: ' + error.message);
+        alert('Error parsing file: ' + error.message);
         document.getElementById('aiSpinner').style.display = 'none';
       }
     }
