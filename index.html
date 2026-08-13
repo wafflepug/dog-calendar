@@ -304,6 +304,7 @@
     let selectedClickDateStr = ""; 
     let activeEditingEvent = null; 
     let activeEditingPotentialId = null;
+    let activeEditingPotential = null;
 
     function getLocalTodayDateString() {
         const tzOffset = (new Date()).getTimezoneOffset() * 60000; 
@@ -378,23 +379,19 @@
             
             events: function(info, successCallback, failureCallback) {
                 const csvText = localStorage.getItem('boardingDataCache') || "";
-                let spreadsheetEvents = parseCSVToEvents(csvText);
-                let localMeets = JSON.parse(localStorage.getItem('temporaryMeetGreets') || '[]');
-                let localPotentials = JSON.parse(localStorage.getItem('temporaryPotentialStays') || '[]');
-                
-                localMeets.forEach(meet => {
-                    let dogCount = 1;
-                    const name = meet.extendedProps.dogName || "";
-                    if (name.includes('&') || name.toLowerCase().includes(' and ')) {
-                        dogCount = name.split(/&|\s+and\s+/i).map(s => s.trim()).filter(Boolean).length || 1;
-                    }
-                    dailyCapacityCounts[meet.start] = (dailyCapacityCounts[meet.start] || 0) + dogCount;
-                });
-                
+                const spreadsheetEvents = parseCSVToEvents(csvText);
+                const localMeets = getLocalArray('temporaryMeetGreets');
+                const localPotentials = getLocalArray('temporaryPotentialStays');
+                const localConfirmed = getLocalArray('temporaryConfirmedStays');
+
+                localMeets.forEach(addLocalEventCapacity);
+                localPotentials.forEach(addLocalEventCapacity);
+                localConfirmed.forEach(addLocalEventCapacity);
+
                 updateFullyBookedPanel();
-                successCallback(spreadsheetEvents.concat(localMeets).concat(localPotentials));
+                successCallback(spreadsheetEvents.concat(localMeets, localPotentials, localConfirmed));
             },
-            
+
             dayCellDidMount: function(info) {
                 const dateStr = info.date.toISOString().split('T')[0];
                 const count = dailyCapacityCounts[dateStr] || 0;
@@ -420,6 +417,12 @@
         setTimeout(function() {
             if (globalCalendar) globalCalendar.refetchEvents();
         }, 100);
+
+        // Pull a fresh spreadsheet snapshot on page load. Any temporary
+        // optimistic events are reconciled rather than blindly discarded.
+        setTimeout(function() {
+            syncSpreadsheetData().catch(() => {});
+        }, 300);
 
         // Modal Controls
         document.getElementById('closeModalBtn').addEventListener('click', function() {
@@ -455,26 +458,7 @@
         });
 
         document.getElementById('manualRefreshBtn').addEventListener('click', function() {
-            const btn = this; btn.innerText = "⏳ Syncing..."; btn.style.background = "#7f8c8d"; btn.disabled = true;
-            const backupCache = localStorage.getItem('boardingDataCache');
-
-            fetch(SHEET_CSV_URL, { cache: "no-store" })
-                .then(response => { if (!response.ok) throw new Error("HTTP Error: " + response.status); return response.text(); })
-                .then(csvText => {
-                    if (!csvText || csvText.trim().length < 20 || !csvText.includes(',')) throw new Error("Corrupted payload.");
-                    localStorage.setItem('boardingDataCache', csvText);
-                    localStorage.removeItem('temporaryMeetGreets'); 
-                    refreshCalendarData();
-                    btn.innerText = "✅ Synced!"; btn.style.background = "#2ecc71";
-                    setTimeout(() => { btn.innerText = "🔄 Sync Spreadsheet"; btn.style.background = "#3498db"; btn.disabled = false; }, 2000);
-                })
-                .catch(error => {
-                    console.error(error);
-                    if (backupCache) { localStorage.setItem('boardingDataCache', backupCache); refreshCalendarData(); }
-                    alert("⚠️ SYNC FAILED\n\nReason: " + error.message);
-                    btn.innerText = "❌ Failed"; btn.style.background = "#e74c3c";
-                    setTimeout(() => { btn.innerText = "🔄 Sync Spreadsheet"; btn.style.background = "#3498db"; btn.disabled = false; }, 3000);
-                });
+            syncSpreadsheetData({ button: this }).catch(() => {});
         });
 
         // Potential Stay Event Handlers
@@ -490,97 +474,168 @@
                 return;
             }
 
+            if (endDate < startDate) {
+                alert("Check-Out Date cannot be earlier than Check-In Date.");
+                return;
+            }
+
             document.getElementById('potentialStayModal').style.display = "none";
-            const potId = activeEditingPotentialId || 'pot_' + Date.now();
 
-            // Calculate display end date (+1 day for FullCalendar all-day event rendering)
-            const parts = endDate.split('-');
-            const dateObj = new Date(parts[0], parts[1] - 1, parts[2]);
-            dateObj.setDate(dateObj.getDate() + 1);
-            const forcedDisplayEnd = dateObj.getFullYear() + '-' + String(dateObj.getMonth() + 1).padStart(2, '0') + '-' + String(dateObj.getDate()).padStart(2, '0');
+            const isEditing = !!activeEditingPotential;
+            const original = activeEditingPotential ? {
+                dogName: activeEditingPotential.dogName,
+                startDate: activeEditingPotential.rawStartDate,
+                endDate: activeEditingPotential.rawEndDate
+            } : null;
 
-            const potentialEvent = {
-                id: potId,
-                title: `❓ Potential: ${dogName}`,
-                start: startDate,
-                end: forcedDisplayEnd,
-                allDay: true,
-                classNames: ['fc-event-potential'],
-                extendedProps: {
-                    isPotential: true,
+            if (isEditing && original) {
+                addPendingPotentialRemoval(makePotentialKey(original.dogName, original.startDate, original.endDate));
+            }
+
+            let localPotentials = getLocalArray('temporaryPotentialStays');
+            if (activeEditingPotentialId) {
+                localPotentials = localPotentials.filter(p => p.id !== activeEditingPotentialId);
+            }
+
+            const potId = (activeEditingPotentialId && !String(activeEditingPotentialId).startsWith('sheet_pot_'))
+                ? activeEditingPotentialId
+                : 'pot_' + Date.now();
+
+            localPotentials.push(buildPotentialEvent(potId, dogName, breed, startDate, endDate, notes));
+            setLocalArray('temporaryPotentialStays', localPotentials);
+
+            refreshCalendarData();
+
+            if (isEditing && original) {
+                sendPayloadToAppsScript({
+                    action: "update_potential",
+                    originalDogName: original.dogName,
+                    originalStartDate: original.startDate,
+                    originalEndDate: original.endDate,
                     dogName: dogName,
                     breed: breed,
-                    rawStartDate: startDate,
-                    rawEndDate: endDate,
+                    startDate: startDate,
+                    endDate: endDate,
                     notes: notes,
                     bookingType: "Potential Stay"
-                }
+                });
+            } else {
+                sendPayloadToAppsScript({
+                    action: "create_potential",
+                    id: potId,
+                    dogName: dogName,
+                    breed: breed,
+                    startDate: startDate,
+                    endDate: endDate,
+                    notes: notes,
+                    bookingType: "Potential Stay"
+                });
+            }
+
+            activeEditingPotential = null;
+            activeEditingPotentialId = null;
+        });
+
+        document.getElementById('confirmStayBtn').addEventListener('click', function() {
+            if (!activeEditingPotential) return;
+
+            const dogName = document.getElementById('potDogName').value.trim();
+            const breed = document.getElementById('potBreed').value.trim() || "N/A";
+            const startDate = document.getElementById('potStartDate').value;
+            const endDate = document.getElementById('potEndDate').value || startDate;
+            const notes = document.getElementById('potNotes').value.trim() || "Potential Booking";
+
+            if (!dogName || !startDate) {
+                alert("Please fill in at least the Dog Name and Check-In Date.");
+                return;
+            }
+
+            if (endDate < startDate) {
+                alert("Check-Out Date cannot be earlier than Check-In Date.");
+                return;
+            }
+
+            if (!confirm(`Confirm stay for ${dogName}? This will upgrade it from a potential request to a confirmed booking.`)) return;
+
+            const original = {
+                dogName: activeEditingPotential.dogName,
+                startDate: activeEditingPotential.rawStartDate,
+                endDate: activeEditingPotential.rawEndDate
             };
 
-            let localPotentials = JSON.parse(localStorage.getItem('temporaryPotentialStays') || '[]');
-            localPotentials = localPotentials.filter(p => p.id !== potId);
-            localPotentials.push(potentialEvent);
-            localStorage.setItem('temporaryPotentialStays', JSON.stringify(localPotentials));
+            document.getElementById('potentialStayModal').style.display = "none";
+
+            addPendingPotentialRemoval(makePotentialKey(original.dogName, original.startDate, original.endDate));
+
+            let localPotentials = getLocalArray('temporaryPotentialStays');
+            localPotentials = localPotentials.filter(p => p.id !== activeEditingPotentialId);
+            setLocalArray('temporaryPotentialStays', localPotentials);
+
+            let localConfirmed = getLocalArray('temporaryConfirmedStays');
+            const confirmedKey = makePotentialKey(dogName, startDate, endDate);
+            localConfirmed = localConfirmed.filter(item => {
+                const props = item.extendedProps || {};
+                const itemKey = makePotentialKey(
+                    props.dogName || item.title || "",
+                    props.rawStartDate || item.start || "",
+                    props.rawEndDate || props.rawStartDate || item.start || ""
+                );
+                return itemKey !== confirmedKey;
+            });
+            localConfirmed.push(buildConfirmedEvent('confirmed_' + Date.now(), dogName, breed, startDate, endDate, notes));
+            setLocalArray('temporaryConfirmedStays', localConfirmed);
 
             refreshCalendarData();
 
             sendPayloadToAppsScript({
-                action: "create_potential",
-                id: potId,
+                action: "confirm_potential",
+                originalDogName: original.dogName,
+                originalStartDate: original.startDate,
+                originalEndDate: original.endDate,
                 dogName: dogName,
                 breed: breed,
                 startDate: startDate,
                 endDate: endDate,
                 notes: notes,
-                bookingType: "Potential Stay"
+                bookingType: "Boarding"
             });
-        });
 
-        document.getElementById('confirmStayBtn').addEventListener('click', function() {
-            if (!activeEditingPotentialId) return;
-            const dogName = document.getElementById('potDogName').value.trim();
-            if (!confirm(`Confirm stay for ${dogName}? This will upgrade it from a potential request to a confirmed booking.`)) return;
-
-            document.getElementById('potentialStayModal').style.display = "none";
-
-            let localPotentials = JSON.parse(localStorage.getItem('temporaryPotentialStays') || '[]');
-            const potItem = localPotentials.find(p => p.id === activeEditingPotentialId);
-            localPotentials = localPotentials.filter(p => p.id !== activeEditingPotentialId);
-            localStorage.setItem('temporaryPotentialStays', JSON.stringify(localPotentials));
-
-            refreshCalendarData();
-
-            if (potItem) {
-                sendPayloadToAppsScript({
-                    action: "confirm_potential",
-                    id: activeEditingPotentialId,
-                    dogName: potItem.extendedProps.dogName,
-                    breed: potItem.extendedProps.breed,
-                    startDate: potItem.extendedProps.rawStartDate,
-                    endDate: potItem.extendedProps.rawEndDate,
-                    notes: potItem.extendedProps.notes,
-                    bookingType: "Boarding"
-                });
-            }
+            activeEditingPotential = null;
+            activeEditingPotentialId = null;
         });
 
         document.getElementById('deletePotentialBtn').addEventListener('click', function() {
-            if (!activeEditingPotentialId) return;
-            const dogName = document.getElementById('potDogName').value.trim();
+            if (!activeEditingPotential) return;
+
+            const dogName = activeEditingPotential.dogName || document.getElementById('potDogName').value.trim();
             if (!confirm(`Delete potential booking request for ${dogName}?`)) return;
+
+            const original = {
+                dogName: activeEditingPotential.dogName,
+                startDate: activeEditingPotential.rawStartDate,
+                endDate: activeEditingPotential.rawEndDate
+            };
 
             document.getElementById('potentialStayModal').style.display = "none";
 
-            let localPotentials = JSON.parse(localStorage.getItem('temporaryPotentialStays') || '[]');
+            addPendingPotentialRemoval(makePotentialKey(original.dogName, original.startDate, original.endDate));
+
+            let localPotentials = getLocalArray('temporaryPotentialStays');
             localPotentials = localPotentials.filter(p => p.id !== activeEditingPotentialId);
-            localStorage.setItem('temporaryPotentialStays', JSON.stringify(localPotentials));
+            setLocalArray('temporaryPotentialStays', localPotentials);
 
             refreshCalendarData();
 
             sendPayloadToAppsScript({
                 action: "delete_potential",
-                id: activeEditingPotentialId
+                originalDogName: original.dogName,
+                originalStartDate: original.startDate,
+                originalEndDate: original.endDate,
+                dogName: original.dogName
             });
+
+            activeEditingPotential = null;
+            activeEditingPotentialId = null;
         });
 
         document.getElementById('saveModalBtn').addEventListener('click', function() {
@@ -650,17 +705,19 @@
 
     function openNewPotentialModal() {
         activeEditingPotentialId = null;
+        activeEditingPotential = null;
+
         document.getElementById('potentialModalTitle').innerText = "❓ Add Potential Stay Request";
         document.getElementById('potDogName').value = "";
         document.getElementById('potBreed').value = "";
         document.getElementById('potStartDate').value = getLocalTodayDateString();
         document.getElementById('potEndDate').value = getLocalTodayDateString();
         document.getElementById('potNotes').value = "";
-        
+
         document.getElementById('deletePotentialBtn').style.display = "none";
         document.getElementById('confirmStayBtn').style.display = "none";
         document.getElementById('savePotentialBtn').innerText = "Submit Potential";
-        
+
         document.getElementById('potentialStayModal').style.display = "flex";
         document.getElementById('potDogName').focus();
     }
@@ -669,12 +726,21 @@
         activeEditingPotentialId = event.id;
         const props = event.extendedProps;
 
+        activeEditingPotential = {
+            id: event.id,
+            dogName: props.dogName || "",
+            breed: props.breed || "N/A",
+            rawStartDate: props.rawStartDate || event.startStr,
+            rawEndDate: props.rawEndDate || props.rawStartDate || event.startStr,
+            notes: props.notes || ""
+        };
+
         document.getElementById('potentialModalTitle').innerText = "❓ Manage Potential Stay";
-        document.getElementById('potDogName').value = props.dogName || "";
-        document.getElementById('potBreed').value = props.breed === "N/A" ? "" : props.breed;
-        document.getElementById('potStartDate').value = props.rawStartDate || event.startStr;
-        document.getElementById('potEndDate').value = props.rawEndDate || event.startStr;
-        document.getElementById('potNotes').value = props.notes || "";
+        document.getElementById('potDogName').value = activeEditingPotential.dogName;
+        document.getElementById('potBreed').value = activeEditingPotential.breed === "N/A" ? "" : activeEditingPotential.breed;
+        document.getElementById('potStartDate').value = activeEditingPotential.rawStartDate;
+        document.getElementById('potEndDate').value = activeEditingPotential.rawEndDate;
+        document.getElementById('potNotes').value = activeEditingPotential.notes;
 
         document.getElementById('deletePotentialBtn').style.display = "inline-block";
         document.getElementById('confirmStayBtn').style.display = "inline-block";
@@ -683,43 +749,347 @@
         document.getElementById('potentialStayModal').style.display = "flex";
     }
 
+    function getLocalArray(key) {
+        try {
+            const value = JSON.parse(localStorage.getItem(key) || '[]');
+            return Array.isArray(value) ? value : [];
+        } catch (error) {
+            console.warn(`Unable to read ${key} from localStorage.`, error);
+            return [];
+        }
+    }
+
+    function setLocalArray(key, value) {
+        localStorage.setItem(key, JSON.stringify(Array.isArray(value) ? value : []));
+    }
+
+    function makePotentialKey(dogName, startDate, endDate) {
+        return [
+            String(dogName || "").trim().toLowerCase(),
+            String(startDate || "").trim(),
+            String(endDate || startDate || "").trim()
+        ].join('|');
+    }
+
+    function getPendingPotentialRemovals() {
+        return getLocalArray('pendingPotentialRemovals');
+    }
+
+    function addPendingPotentialRemoval(key) {
+        if (!key) return;
+        const pending = getPendingPotentialRemovals();
+        if (!pending.includes(key)) {
+            pending.push(key);
+            setLocalArray('pendingPotentialRemovals', pending);
+        }
+    }
+
+    function buildDisplayEndDate(endDate) {
+        const parts = String(endDate || "").split('-');
+        if (parts.length !== 3) return endDate;
+
+        const dateObj = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+        dateObj.setDate(dateObj.getDate() + 1);
+
+        return dateObj.getFullYear() + '-' +
+            String(dateObj.getMonth() + 1).padStart(2, '0') + '-' +
+            String(dateObj.getDate()).padStart(2, '0');
+    }
+
+    function buildPotentialEvent(id, dogName, breed, startDate, endDate, notes) {
+        return {
+            id: id,
+            title: `❓ Potential: ${dogName}`,
+            start: startDate,
+            end: buildDisplayEndDate(endDate),
+            allDay: true,
+            classNames: ['fc-event-potential'],
+            extendedProps: {
+                isPotential: true,
+                isMeetGreet: false,
+                dogName: dogName,
+                breed: breed,
+                rawStartDate: startDate,
+                rawEndDate: endDate,
+                notes: notes,
+                bookingType: "Potential Stay",
+                editLink: ""
+            }
+        };
+    }
+
+    function buildConfirmedEvent(id, dogName, breed, startDate, endDate, notes) {
+        return {
+            id: id,
+            title: dogName,
+            start: startDate,
+            end: buildDisplayEndDate(endDate),
+            allDay: true,
+            backgroundColor: stringToColor(dogName),
+            textColor: '#ffffff',
+            extendedProps: {
+                isPotential: false,
+                isMeetGreet: false,
+                dogName: dogName,
+                breed: breed,
+                owner: "Pending Spreadsheet Sync",
+                phone: "N/A",
+                likes: "None listed",
+                dislikes: "None listed",
+                notes: notes,
+                rawStartDate: startDate,
+                rawEndDate: endDate,
+                bookingType: "Boarding",
+                editLink: ""
+            }
+        };
+    }
+
+    function countDogsInName(name) {
+        const text = String(name || "");
+        if (text.includes('&') || text.toLowerCase().includes(' and ')) {
+            return text.split(/&|\s+and\s+/i).map(s => s.trim()).filter(Boolean).length || 1;
+        }
+        return 1;
+    }
+
+    function addLocalEventCapacity(event) {
+        if (!event) return;
+
+        const props = event.extendedProps || {};
+        const name = props.dogName || event.title || "";
+        const dogCount = countDogsInName(name);
+
+        const startDate = props.rawStartDate || event.start;
+        const endDate = props.rawEndDate || startDate;
+        if (!startDate) return;
+
+        const start = new Date(String(startDate).split('T')[0] + 'T00:00:00');
+        const end = new Date(String(endDate).split('T')[0] + 'T00:00:00');
+        if (isNaN(start.getTime()) || isNaN(end.getTime())) return;
+
+        const cursor = new Date(start.getTime());
+        while (cursor <= end) {
+            const dateStr = cursor.getFullYear() + '-' +
+                String(cursor.getMonth() + 1).padStart(2, '0') + '-' +
+                String(cursor.getDate()).padStart(2, '0');
+            dailyCapacityCounts[dateStr] = (dailyCapacityCounts[dateStr] || 0) + dogCount;
+            cursor.setDate(cursor.getDate() + 1);
+        }
+    }
+
+    function parseCsvDate(value) {
+        const text = String(value || "").replace(/^"|"$/g, '').trim();
+        if (!text) return "";
+
+        if (/^\d{4}-\d{2}-\d{2}/.test(text)) return text.slice(0, 10);
+
+        const slashParts = text.split('/');
+        if (slashParts.length === 3) {
+            return slashParts[2] + '-' + slashParts[1].padStart(2, '0') + '-' + slashParts[0].padStart(2, '0');
+        }
+
+        return text;
+    }
+
+    function getCsvBookingRecords(csvText) {
+        if (!csvText) return [];
+
+        const lines = csvText.split(/\r?\n/);
+        const records = [];
+
+        for (let i = 1; i < lines.length; i++) {
+            if (!lines[i].trim()) continue;
+
+            const columns = lines[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+            const dogName = columns[1] ? columns[1].replace(/^"|"$/g, '').trim() : '';
+            const startDate = parseCsvDate(columns[3]);
+            const endDate = parseCsvDate(columns[4]) || startDate;
+            const bookingType = columns[11] ? columns[11].replace(/^"|"$/g, '').trim() : '';
+
+            if (dogName && startDate) {
+                records.push({
+                    dogName,
+                    startDate,
+                    endDate,
+                    bookingType,
+                    key: makePotentialKey(dogName, startDate, endDate)
+                });
+            }
+        }
+
+        return records;
+    }
+
+    function reconcileTemporaryEvents(csvText) {
+        const records = getCsvBookingRecords(csvText);
+
+        const sheetPotentialKeys = new Set(
+            records
+                .filter(r => r.bookingType.toLowerCase() === 'potential stay')
+                .map(r => r.key)
+        );
+
+        const sheetBoardingKeys = new Set(
+            records
+                .filter(r => r.bookingType.toLowerCase() === 'boarding')
+                .map(r => r.key)
+        );
+
+        const meetKeys = new Set(
+            records
+                .filter(r => r.bookingType.toLowerCase() === 'meet & greet')
+                .map(r => r.dogName.trim().toLowerCase() + '|' + r.startDate)
+        );
+
+        const localPotentials = getLocalArray('temporaryPotentialStays').filter(event => {
+            const props = event.extendedProps || {};
+            const key = makePotentialKey(
+                props.dogName,
+                props.rawStartDate || event.start,
+                props.rawEndDate || props.rawStartDate || event.start
+            );
+            return !sheetPotentialKeys.has(key);
+        });
+        setLocalArray('temporaryPotentialStays', localPotentials);
+
+        const localConfirmed = getLocalArray('temporaryConfirmedStays').filter(event => {
+            const props = event.extendedProps || {};
+            const key = makePotentialKey(
+                props.dogName || event.title,
+                props.rawStartDate || event.start,
+                props.rawEndDate || props.rawStartDate || event.start
+            );
+            return !sheetBoardingKeys.has(key);
+        });
+        setLocalArray('temporaryConfirmedStays', localConfirmed);
+
+        const localMeets = getLocalArray('temporaryMeetGreets').filter(event => {
+            const props = event.extendedProps || {};
+            const key = String(props.dogName || "").trim().toLowerCase() + '|' + parseCsvDate(event.start);
+            return !meetKeys.has(key);
+        });
+        setLocalArray('temporaryMeetGreets', localMeets);
+
+        const stillPending = getPendingPotentialRemovals().filter(key => sheetPotentialKeys.has(key));
+        setLocalArray('pendingPotentialRemovals', stillPending);
+    }
+
+    function fetchSpreadsheetCsv() {
+        const separator = SHEET_CSV_URL.includes('?') ? '&' : '?';
+        const cacheBustedUrl = SHEET_CSV_URL + separator + '_ts=' + Date.now();
+
+        return fetch(cacheBustedUrl, { cache: "no-store" })
+            .then(response => {
+                if (!response.ok) throw new Error("HTTP Error: " + response.status);
+                return response.text();
+            })
+            .then(csvText => {
+                if (!csvText || csvText.trim().length < 20 || !csvText.includes(',')) {
+                    throw new Error("Corrupted spreadsheet payload.");
+                }
+                return csvText;
+            });
+    }
+
+    function syncSpreadsheetData(options = {}) {
+        const btn = options.button || null;
+        const backupCache = localStorage.getItem('boardingDataCache');
+
+        if (btn) {
+            btn.innerText = "⏳ Syncing...";
+            btn.style.background = "#7f8c8d";
+            btn.disabled = true;
+        }
+
+        return fetchSpreadsheetCsv()
+            .then(csvText => {
+                localStorage.setItem('boardingDataCache', csvText);
+                reconcileTemporaryEvents(csvText);
+                refreshCalendarData();
+
+                if (btn) {
+                    btn.innerText = "✅ Synced!";
+                    btn.style.background = "#2ecc71";
+                    setTimeout(() => {
+                        btn.innerText = "🔄 Sync Spreadsheet";
+                        btn.style.background = "#3498db";
+                        btn.disabled = false;
+                    }, 2000);
+                }
+
+                return csvText;
+            })
+            .catch(error => {
+                console.error(error);
+
+                if (backupCache) {
+                    localStorage.setItem('boardingDataCache', backupCache);
+                    refreshCalendarData();
+                }
+
+                if (btn) {
+                    alert("⚠️ SYNC FAILED\n\nReason: " + error.message);
+                    btn.innerText = "❌ Failed";
+                    btn.style.background = "#e74c3c";
+                    setTimeout(() => {
+                        btn.innerText = "🔄 Sync Spreadsheet";
+                        btn.style.background = "#3498db";
+                        btn.disabled = false;
+                    }, 3000);
+                }
+
+                throw error;
+            });
+    }
+
+    function scheduleSpreadsheetSync() {
+        [1500, 4000].forEach(delay => {
+            setTimeout(() => {
+                syncSpreadsheetData().catch(() => {});
+            }, delay);
+        });
+    }
+
     function sendPayloadToAppsScript(payload) {
         if (!APPS_SCRIPT_WEBAPP_URL || APPS_SCRIPT_WEBAPP_URL.includes('YOUR_APPS_SCRIPT_WEBAPP_URL_HERE')) {
             console.log("No live WebApp deployment URL configured.");
             return;
         }
+
         fetch(APPS_SCRIPT_WEBAPP_URL, {
             method: 'POST',
             mode: 'no-cors',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
             body: JSON.stringify(payload)
         })
-        .then(() => console.log(`Apps Script action sequence (${payload.action}) logged successfully.`))
+        .then(() => {
+            console.log(`Apps Script action sequence (${payload.action}) sent.`);
+            scheduleSpreadsheetSync();
+        })
         .catch(err => console.error("Network communication failure:", err));
     }
 
     function refreshCalendarData() {
         if (!globalCalendar) return;
+
         globalCalendar.getEventSources().forEach(source => source.remove());
 
         const csvText = localStorage.getItem('boardingDataCache') || "";
         dailyCapacityCounts = {}; 
-        
-        let spreadsheetEvents = parseCSVToEvents(csvText);
-        let localMeets = JSON.parse(localStorage.getItem('temporaryMeetGreets') || '[]');
-        let localPotentials = JSON.parse(localStorage.getItem('temporaryPotentialStays') || '[]');
-        
-        localMeets.forEach(meet => { 
-            let dogCount = 1;
-            const name = meet.extendedProps.dogName || "";
-            if (name.includes('&') || name.toLowerCase().includes(' and ')) {
-                dogCount = name.split(/&|\s+and\s+/i).map(s => s.trim()).filter(Boolean).length || 1;
-            }
-            dailyCapacityCounts[meet.start] = (dailyCapacityCounts[meet.start] || 0) + dogCount; 
-        });
+
+        const spreadsheetEvents = parseCSVToEvents(csvText);
+        const localMeets = getLocalArray('temporaryMeetGreets');
+        const localPotentials = getLocalArray('temporaryPotentialStays');
+        const localConfirmed = getLocalArray('temporaryConfirmedStays');
+
+        localMeets.forEach(addLocalEventCapacity);
+        localPotentials.forEach(addLocalEventCapacity);
+        localConfirmed.forEach(addLocalEventCapacity);
 
         updateFullyBookedPanel();
-        globalCalendar.addEventSource(spreadsheetEvents.concat(localMeets).concat(localPotentials));
+        globalCalendar.addEventSource(spreadsheetEvents.concat(localMeets, localPotentials, localConfirmed));
+        applyCurrentSearchFilter();
     }
 
     function updateFullyBookedPanel() {
@@ -852,6 +1222,11 @@
                         const breedTxt = breed ? breed.trim() : 'Unknown';
                         const displayDate = checkEnd.getDate() + '/' + (checkEnd.getMonth() + 1);
                         
+                        const potentialKey = makePotentialKey(dogName.trim(), startParsed, endParsed);
+                        if (isPotentialType && getPendingPotentialRemovals().includes(potentialKey)) {
+                            continue;
+                        }
+
                         let dogsInBooking = 1;
                         if (dogName.includes('&') || dogName.toLowerCase().includes(' and ')) {
                             dogsInBooking = dogName.split(/&|\s+and\s+/i).map(s => s.trim()).filter(Boolean).length || 1;
