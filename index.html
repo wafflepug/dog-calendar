@@ -256,26 +256,32 @@
     <div style="background: white; padding: 25px; border-radius: 12px; max-width: 420px; width: 90%; box-shadow: 0 10px 25px rgba(0,0,0,0.2); font-family: inherit; box-sizing: border-box;" class="modal-content-panel">
         <h3 style="margin-top: 0; color: #d35400; font-size: 18px; display: flex; align-items: center; gap: 8px;" id="potentialModalTitle">❓ Potential Stay Request</h3>
         
-        <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 5px; color: #475569;">🐾 Dog Name:</label>
-        <input type="text" id="potDogName" style="width: 100%; padding: 10px; margin-bottom: 12px; border: 2px solid #e2e8f0; border-radius: 6px; box-sizing: border-box;" placeholder="e.g. Rocky">
-        
-        <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 5px; color: #475569;">📋 Breed (Optional):</label>
-        <input type="text" id="potBreed" style="width: 100%; padding: 10px; margin-bottom: 12px; border: 2px solid #e2e8f0; border-radius: 6px; box-sizing: border-box;" placeholder="e.g. Golden Retriever">
+        <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 5px; color: #475569;">🐾 Dog Name *</label>
+        <input type="text" id="potDogName" style="width: 100%; padding: 10px; margin-bottom: 12px; border: 2px solid #e2e8f0; border-radius: 6px; box-sizing: border-box;" placeholder="e.g. Rocky" required>
+
+        <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 5px; color: #475569;">📋 Breed *</label>
+        <input type="text" id="potBreed" style="width: 100%; padding: 10px; margin-bottom: 12px; border: 2px solid #e2e8f0; border-radius: 6px; box-sizing: border-box;" placeholder="e.g. Golden Retriever" required>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
             <div>
-                <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 5px; color: #475569;">📅 Check-In Date:</label>
-                <input type="date" id="potStartDate" style="width: 100%; padding: 10px; margin-bottom: 12px; border: 2px solid #e2e8f0; border-radius: 6px; box-sizing: border-box;">
+                <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 5px; color: #475569;">📅 Check-In Date *</label>
+                <input type="date" id="potStartDate" style="width: 100%; padding: 10px; margin-bottom: 12px; border: 2px solid #e2e8f0; border-radius: 6px; box-sizing: border-box;" required>
             </div>
             <div>
-                <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 5px; color: #475569;">📅 Check-Out Date:</label>
-                <input type="date" id="potEndDate" style="width: 100%; padding: 10px; margin-bottom: 12px; border: 2px solid #e2e8f0; border-radius: 6px; box-sizing: border-box;">
+                <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 5px; color: #475569;">📅 Check-Out Date *</label>
+                <input type="date" id="potEndDate" style="width: 100%; padding: 10px; margin-bottom: 12px; border: 2px solid #e2e8f0; border-radius: 6px; box-sizing: border-box;" required>
             </div>
         </div>
-        
-        <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 5px; color: #475569;">📝 Notes / Status Details:</label>
+
+        <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 5px; color: #475569;">👤 Owner Name *</label>
+        <input type="text" id="potOwnerName" style="width: 100%; padding: 10px; margin-bottom: 12px; border: 2px solid #e2e8f0; border-radius: 6px; box-sizing: border-box;" placeholder="e.g. Sarah Smith" required>
+
+        <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 5px; color: #475569;">📞 Contact Number *</label>
+        <input type="tel" id="potPhone" style="width: 100%; padding: 10px; margin-bottom: 12px; border: 2px solid #e2e8f0; border-radius: 6px; box-sizing: border-box;" placeholder="e.g. 0412 345 678" required>
+
+        <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 5px; color: #475569;">📝 Notes / Status Details (Optional)</label>
         <input type="text" id="potNotes" style="width: 100%; padding: 10px; margin-bottom: 20px; border: 2px solid #e2e8f0; border-radius: 6px; box-sizing: border-box;" placeholder="e.g. Awaiting owner confirmation">
-        
+
         <div style="display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap;" id="potentialActionControls">
             <button id="deletePotentialBtn" style="background: #e74c3c; color: white; border: none; padding: 10px 14px; border-radius: 6px; cursor: pointer; font-weight: bold; margin-right: auto; display: none;">🗑️ Delete Request</button>
             <button id="confirmStayBtn" style="background: #27ae60; color: white; border: none; padding: 10px 14px; border-radius: 6px; cursor: pointer; font-weight: bold; display: none;">✅ Confirm Stay</button>
@@ -464,13 +470,15 @@
         // Potential Stay Event Handlers
         document.getElementById('savePotentialBtn').addEventListener('click', function() {
             const dogName = document.getElementById('potDogName').value.trim();
-            const breed = document.getElementById('potBreed').value.trim() || "N/A";
+            const breed = document.getElementById('potBreed').value.trim();
             const startDate = document.getElementById('potStartDate').value;
-            const endDate = document.getElementById('potEndDate').value || startDate;
-            const notes = document.getElementById('potNotes').value.trim() || "Potential Booking";
+            const endDate = document.getElementById('potEndDate').value;
+            const ownerName = document.getElementById('potOwnerName').value.trim();
+            const phone = document.getElementById('potPhone').value.trim();
+            const notes = document.getElementById('potNotes').value.trim();
 
-            if (!dogName || !startDate) {
-                alert("Please fill in at least the Dog Name and Check-In Date.");
+            if (!dogName || !breed || !startDate || !endDate || !ownerName || !phone) {
+                alert("Please complete all required fields: Dog Name, Breed, Check-In Date, Check-Out Date, Owner Name and Contact Number.");
                 return;
             }
 
@@ -501,7 +509,18 @@
                 ? activeEditingPotentialId
                 : 'pot_' + Date.now();
 
-            localPotentials.push(buildPotentialEvent(potId, dogName, breed, startDate, endDate, notes));
+            localPotentials.push(
+                buildPotentialEvent(
+                    potId,
+                    dogName,
+                    breed,
+                    startDate,
+                    endDate,
+                    ownerName,
+                    phone,
+                    notes
+                )
+            );
             setLocalArray('temporaryPotentialStays', localPotentials);
 
             refreshCalendarData();
@@ -516,6 +535,8 @@
                     breed: breed,
                     startDate: startDate,
                     endDate: endDate,
+                    ownerName: ownerName,
+                    phone: phone,
                     notes: notes,
                     bookingType: "Potential Stay"
                 });
@@ -527,6 +548,8 @@
                     breed: breed,
                     startDate: startDate,
                     endDate: endDate,
+                    ownerName: ownerName,
+                    phone: phone,
                     notes: notes,
                     bookingType: "Potential Stay"
                 });
@@ -540,13 +563,15 @@
             if (!activeEditingPotential) return;
 
             const dogName = document.getElementById('potDogName').value.trim();
-            const breed = document.getElementById('potBreed').value.trim() || "N/A";
+            const breed = document.getElementById('potBreed').value.trim();
             const startDate = document.getElementById('potStartDate').value;
-            const endDate = document.getElementById('potEndDate').value || startDate;
-            const notes = document.getElementById('potNotes').value.trim() || "Potential Booking";
+            const endDate = document.getElementById('potEndDate').value;
+            const ownerName = document.getElementById('potOwnerName').value.trim();
+            const phone = document.getElementById('potPhone').value.trim();
+            const notes = document.getElementById('potNotes').value.trim();
 
-            if (!dogName || !startDate) {
-                alert("Please fill in at least the Dog Name and Check-In Date.");
+            if (!dogName || !breed || !startDate || !endDate || !ownerName || !phone) {
+                alert("Please complete all required fields before confirming: Dog Name, Breed, Check-In Date, Check-Out Date, Owner Name and Contact Number.");
                 return;
             }
 
@@ -555,7 +580,7 @@
                 return;
             }
 
-            if (!confirm(`Confirm stay for ${dogName}? This will upgrade it from a potential request to a confirmed booking.`)) return;
+            if (!confirm(`Confirm stay for ${dogName}? The Google Sheet Booking Type will change from "Potential Stay" to "Confirmed Boarding".`)) return;
 
             const original = {
                 dogName: activeEditingPotential.dogName,
@@ -582,7 +607,19 @@
                 );
                 return itemKey !== confirmedKey;
             });
-            localConfirmed.push(buildConfirmedEvent('confirmed_' + Date.now(), dogName, breed, startDate, endDate, notes));
+
+            localConfirmed.push(
+                buildConfirmedEvent(
+                    'confirmed_' + Date.now(),
+                    dogName,
+                    breed,
+                    startDate,
+                    endDate,
+                    ownerName,
+                    phone,
+                    notes
+                )
+            );
             setLocalArray('temporaryConfirmedStays', localConfirmed);
 
             refreshCalendarData();
@@ -596,8 +633,10 @@
                 breed: breed,
                 startDate: startDate,
                 endDate: endDate,
+                ownerName: ownerName,
+                phone: phone,
                 notes: notes,
-                bookingType: "Boarding"
+                bookingType: "Confirmed Boarding"
             });
 
             activeEditingPotential = null;
@@ -712,6 +751,8 @@
         document.getElementById('potBreed').value = "";
         document.getElementById('potStartDate').value = getLocalTodayDateString();
         document.getElementById('potEndDate').value = getLocalTodayDateString();
+        document.getElementById('potOwnerName').value = "";
+        document.getElementById('potPhone').value = "";
         document.getElementById('potNotes').value = "";
 
         document.getElementById('deletePotentialBtn').style.display = "none";
@@ -732,6 +773,8 @@
             breed: props.breed || "N/A",
             rawStartDate: props.rawStartDate || event.startStr,
             rawEndDate: props.rawEndDate || props.rawStartDate || event.startStr,
+            ownerName: props.owner || props.ownerName || "",
+            phone: props.phone || "",
             notes: props.notes || ""
         };
 
@@ -740,6 +783,8 @@
         document.getElementById('potBreed').value = activeEditingPotential.breed === "N/A" ? "" : activeEditingPotential.breed;
         document.getElementById('potStartDate').value = activeEditingPotential.rawStartDate;
         document.getElementById('potEndDate').value = activeEditingPotential.rawEndDate;
+        document.getElementById('potOwnerName').value = activeEditingPotential.ownerName;
+        document.getElementById('potPhone').value = activeEditingPotential.phone;
         document.getElementById('potNotes').value = activeEditingPotential.notes;
 
         document.getElementById('deletePotentialBtn').style.display = "inline-block";
@@ -796,7 +841,7 @@
             String(dateObj.getDate()).padStart(2, '0');
     }
 
-    function buildPotentialEvent(id, dogName, breed, startDate, endDate, notes) {
+    function buildPotentialEvent(id, dogName, breed, startDate, endDate, ownerName, phone, notes) {
         return {
             id: id,
             title: `❓ Potential: ${dogName}`,
@@ -809,6 +854,9 @@
                 isMeetGreet: false,
                 dogName: dogName,
                 breed: breed,
+                owner: ownerName,
+                ownerName: ownerName,
+                phone: phone,
                 rawStartDate: startDate,
                 rawEndDate: endDate,
                 notes: notes,
@@ -818,7 +866,7 @@
         };
     }
 
-    function buildConfirmedEvent(id, dogName, breed, startDate, endDate, notes) {
+    function buildConfirmedEvent(id, dogName, breed, startDate, endDate, ownerName, phone, notes) {
         return {
             id: id,
             title: dogName,
@@ -832,14 +880,15 @@
                 isMeetGreet: false,
                 dogName: dogName,
                 breed: breed,
-                owner: "Pending Spreadsheet Sync",
-                phone: "N/A",
+                owner: ownerName,
+                ownerName: ownerName,
+                phone: phone,
                 likes: "None listed",
                 dislikes: "None listed",
-                notes: notes,
+                notes: notes || "Confirmed from Potential Stay",
                 rawStartDate: startDate,
                 rawEndDate: endDate,
-                bookingType: "Boarding",
+                bookingType: "Confirmed Boarding",
                 editLink: ""
             }
         };
@@ -932,7 +981,10 @@
 
         const sheetBoardingKeys = new Set(
             records
-                .filter(r => r.bookingType.toLowerCase() === 'boarding')
+                .filter(r => {
+                    const type = r.bookingType.toLowerCase();
+                    return type === 'boarding' || type === 'confirmed boarding';
+                })
                 .map(r => r.key)
         );
 
@@ -1249,6 +1301,8 @@
                                 classNames: ['fc-event-potential'],
                                 extendedProps: {
                                     isPotential: true, dogName: dogName.trim(), breed: breedTxt,
+                                    owner: ownerName ? ownerName.trim() : "", ownerName: ownerName ? ownerName.trim() : "",
+                                    phone: phone ? phone.trim() : "",
                                     rawStartDate: startParsed, rawEndDate: endParsed, notes: notes.trim(), bookingType: "Potential Stay", editLink: editLink.trim()
                                 }
                             });
@@ -1308,7 +1362,7 @@
 
                         events.push({
                             title: dogName.trim(), start: startParsed, end: forcedDisplayEnd, allDay: true, backgroundColor: stringToColor(dogName.trim()), textColor: '#ffffff',
-                            extendedProps: { isMeetGreet: false, breed: breedTxt, owner: ownerName ? ownerName.trim() : "N/A", phone: phone ? phone.trim() : "N/A", likes: likes ? likes.trim() : "None listed", dislikes: dislikes ? dislikes.trim() : "None listed", notes: notes ? notes.trim() : "None", editLink: editLink.trim() }
+                            extendedProps: { isMeetGreet: false, isPotential: false, breed: breedTxt, dogName: dogName.trim(), owner: ownerName ? ownerName.trim() : "N/A", ownerName: ownerName ? ownerName.trim() : "N/A", phone: phone ? phone.trim() : "N/A", likes: likes ? likes.trim() : "None listed", dislikes: dislikes ? dislikes.trim() : "None listed", notes: notes ? notes.trim() : "None", rawStartDate: startParsed, rawEndDate: endParsed, bookingType: bookingType || "Boarding", editLink: editLink.trim() }
                         });
                     }
                 }
