@@ -42,6 +42,88 @@
         .no-dogs { color: #94a3b8; font-style: italic; font-size: 13px; padding: 5px 0; display: block !important; }
         .success-clear { color: #10b981; font-weight: 600; font-size: 13px; padding: 5px 0; display: block; }
 
+        /* --- Today's Meet & Greet Dashboard --- */
+        .meet-greet-dashboard {
+            background: #faf5ff;
+            border: 1px solid #e9d5ff;
+            border-top: 4px solid #8e44ad;
+            padding: 16px 18px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+            transition: background-color 0.3s, border-color 0.3s, color 0.3s;
+        }
+
+        .meet-greet-dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+
+        .meet-greet-dashboard h3 {
+            margin: 0;
+            font-size: 15px;
+            color: #6b21a8;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .meet-greet-date-label {
+            font-size: 12px;
+            color: #7c3aed;
+            font-weight: 700;
+            background: #ede9fe;
+            padding: 5px 8px;
+            border-radius: 999px;
+            white-space: nowrap;
+        }
+
+        .meet-greet-list {
+            max-height: 220px;
+        }
+
+        .meet-greet-list li.meet-greet-item {
+            display: grid;
+            grid-template-columns: 78px minmax(0, 1fr);
+            gap: 12px;
+            align-items: center;
+            padding: 10px 0;
+        }
+
+        .meet-greet-time-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: #8e44ad;
+            color: #ffffff;
+            border-radius: 7px;
+            padding: 6px 8px;
+            font-size: 12px;
+            font-weight: 800;
+            white-space: nowrap;
+        }
+
+        .meet-greet-details {
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .meet-greet-dog-name {
+            color: #1e293b;
+            font-weight: 750;
+            font-size: 14px;
+        }
+
+        .meet-greet-breed {
+            color: #64748b;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
         /* --- Detailed Directory Layout --- */
         .directory-dashboard { background: #f8fafc; border: 1px solid #e2e8f0; padding: 20px; border-radius: 10px; margin-bottom: 25px; transition: background-color 0.3s, border-color 0.3s; }
         .directory-dashboard h3 { margin: 0 0 15px 0; font-size: 16px; color: #1e293b; display: flex; align-items: center; gap: 8px; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; }
@@ -108,6 +190,18 @@
         body.dark-theme .summary-card { background: #334155; color: #f1f5f9; }
         body.dark-theme .summary-card h3 { color: #ffffff !important; font-weight: 700 !important; font-size: 14px !important; letter-spacing: 0.5px !important; }
         body.dark-theme .summary-list li { border-bottom-color: #475569; color: #e2e8f0; }
+
+        body.dark-theme .meet-greet-dashboard {
+            background: #2e1065;
+            border-color: #6d28d9;
+            border-top-color: #c084fc;
+        }
+        body.dark-theme .meet-greet-dashboard h3 { color: #f3e8ff; }
+        body.dark-theme .meet-greet-date-label { background: #4c1d95; color: #e9d5ff; }
+        body.dark-theme .meet-greet-dog-name { color: #f8fafc; }
+        body.dark-theme .meet-greet-breed { color: #cbd5e1; }
+        body.dark-theme .meet-greet-time-badge { background: #7e22ce; color: #ffffff; }
+
         body.dark-theme .date-badge { background: #475569; color: #cbd5e1; }
         body.dark-theme .date-badge.alert-badge { background: #7f1d1d; color: #fca5a5; }
         body.dark-theme .search-container select { background-color: #334155 !important; border-color: #475569 !important; color: white !important; }
@@ -219,6 +313,16 @@
             <h3>🛑 Full Capacity Alerts</h3>
             <ul id="full-dates-list" class="summary-list"><li class="success-clear">🟢 Open slots available</li></ul>
         </div>
+    </div>
+
+    <div class="meet-greet-dashboard">
+        <div class="meet-greet-dashboard-header">
+            <h3>🤝 Today's Meet & Greets</h3>
+            <span id="meet-greet-today-date" class="meet-greet-date-label">Today</span>
+        </div>
+        <ul id="today-meet-greet-list" class="summary-list meet-greet-list">
+            <li class="no-dogs">No Meet & Greets scheduled today</li>
+        </ul>
     </div>
 
     <div class="directory-dashboard">
@@ -394,8 +498,11 @@
                 localPotentials.forEach(addLocalEventCapacity);
                 localConfirmed.forEach(addLocalEventCapacity);
 
+                const allCalendarEvents = spreadsheetEvents.concat(localMeets, localPotentials, localConfirmed);
+
                 updateFullyBookedPanel();
-                successCallback(spreadsheetEvents.concat(localMeets, localPotentials, localConfirmed));
+                updateTodayMeetGreetPanel(allCalendarEvents);
+                successCallback(allCalendarEvents);
             },
 
             dayCellDidMount: function(info) {
@@ -1246,6 +1353,111 @@
         });
     }
 
+    function escapeDashboardHtml(value) {
+        return String(value == null ? "" : value)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
+    function getCalendarEventDateString(event) {
+        if (!event) return "";
+
+        const props = event.extendedProps || {};
+        const rawValue = props.rawStartDate || event.start || event.startStr || "";
+
+        if (rawValue instanceof Date) {
+            return rawValue.getFullYear() + '-' +
+                String(rawValue.getMonth() + 1).padStart(2, '0') + '-' +
+                String(rawValue.getDate()).padStart(2, '0');
+        }
+
+        return parseCsvDate(rawValue).slice(0, 10);
+    }
+
+    function getMeetGreetTime(event) {
+        const props = (event && event.extendedProps) || {};
+
+        if (props.time && String(props.time).trim()) {
+            return String(props.time).trim();
+        }
+
+        const titleMatch = String((event && event.title) || "").match(/(\d{1,2}:\d{2})/);
+        if (titleMatch) return titleMatch[1];
+
+        const notesMatch = String(props.notes || "").match(/(\d{1,2}:\d{2})/);
+        return notesMatch ? notesMatch[1] : "10:00";
+    }
+
+    function meetGreetTimeToMinutes(timeValue) {
+        const match = String(timeValue || "").match(/(\d{1,2}):(\d{2})/);
+        if (!match) return 24 * 60;
+
+        const hours = Math.max(0, Math.min(23, Number(match[1])));
+        const minutes = Math.max(0, Math.min(59, Number(match[2])));
+        return (hours * 60) + minutes;
+    }
+
+    function updateTodayMeetGreetPanel(events) {
+        const list = document.getElementById('today-meet-greet-list');
+        const dateLabel = document.getElementById('meet-greet-today-date');
+        if (!list) return;
+
+        const todayStr = getLocalTodayDateString();
+        const todayDate = new Date(todayStr + 'T00:00:00');
+
+        if (dateLabel && !isNaN(todayDate.getTime())) {
+            dateLabel.textContent = todayDate.toLocaleDateString('en-AU', {
+                weekday: 'short',
+                day: 'numeric',
+                month: 'short'
+            });
+        }
+
+        const todayMeetGreets = (Array.isArray(events) ? events : [])
+            .filter(event => {
+                const props = (event && event.extendedProps) || {};
+                return props.isMeetGreet === true &&
+                    getCalendarEventDateString(event) === todayStr;
+            })
+            .map(event => {
+                const props = event.extendedProps || {};
+                return {
+                    time: getMeetGreetTime(event),
+                    dogName: props.dogName || String(event.title || "").replace(/^.*Meet & Greet:\s*/i, '').trim() || "Unnamed dog",
+                    breed: props.breed && props.breed !== "N/A" ? props.breed : ""
+                };
+            })
+            .sort((a, b) => {
+                const timeDiff = meetGreetTimeToMinutes(a.time) - meetGreetTimeToMinutes(b.time);
+                if (timeDiff !== 0) return timeDiff;
+                return a.dogName.localeCompare(b.dogName);
+            });
+
+        if (todayMeetGreets.length === 0) {
+            list.innerHTML = '<li class="no-dogs">No Meet & Greets scheduled today</li>';
+            return;
+        }
+
+        list.innerHTML = todayMeetGreets.map(item => {
+            const safeTime = escapeDashboardHtml(item.time);
+            const safeDogName = escapeDashboardHtml(item.dogName);
+            const safeBreed = escapeDashboardHtml(item.breed);
+
+            return `
+                <li class="meet-greet-item">
+                    <span class="meet-greet-time-badge">⏰ ${safeTime}</span>
+                    <span class="meet-greet-details">
+                        <span class="meet-greet-dog-name">🐾 ${safeDogName}</span>
+                        ${safeBreed ? `<span class="meet-greet-breed">${safeBreed}</span>` : ''}
+                    </span>
+                </li>
+            `;
+        }).join('');
+    }
+
     function refreshCalendarData() {
         if (!globalCalendar) return;
 
@@ -1263,8 +1475,11 @@
         localPotentials.forEach(addLocalEventCapacity);
         localConfirmed.forEach(addLocalEventCapacity);
 
+        const allCalendarEvents = spreadsheetEvents.concat(localMeets, localPotentials, localConfirmed);
+
         updateFullyBookedPanel();
-        globalCalendar.addEventSource(spreadsheetEvents.concat(localMeets, localPotentials, localConfirmed));
+        updateTodayMeetGreetPanel(allCalendarEvents);
+        globalCalendar.addEventSource(allCalendarEvents);
         applyCurrentSearchFilter();
     }
 
