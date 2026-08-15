@@ -505,7 +505,7 @@
 
 <script>
     const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT63UsPjcg3GB4lTB6cewLaTRS_yJP4kpOMSMsTTnvTw1Wbjn3CgtZc_c6li28ihjzkHnphFt0XcFTt/pub?gid=1639615540&single=true&output=csv';
-    const APPS_SCRIPT_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbwPeVxzdax98vtEPlxhx5MZ_8XhFl0JgSNo_Jiyt2ErzD-_RO85iMnMTNkcczCgDjjO0A/exec';
+    const APPS_SCRIPT_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbwn4HL49K9c3AZbXJRUjPw3UYWxJt8DmqXwMnTytyqdSstj3ZIJwWdDEC2IsBjetOf3pw/exec';
 
     let globalCalendar = null;
     let dailyCapacityCounts = {}; 
@@ -1990,7 +1990,7 @@
         captureButton.innerText = '⏳ Capturing...';
 
         try {
-            const maxDimension = 1100;
+            const maxDimension = 900;
             const scale = Math.min(1, maxDimension / Math.max(video.videoWidth, video.videoHeight));
             const width = Math.max(1, Math.round(video.videoWidth * scale));
             const height = Math.max(1, Math.round(video.videoHeight * scale));
@@ -2002,7 +2002,7 @@
             const context = canvas.getContext('2d', { alpha: false });
             context.drawImage(video, 0, 0, width, height);
 
-            const photoData = canvas.toDataURL('image/jpeg', 0.72);
+            const photoData = canvas.toDataURL('image/jpeg', 0.68);
 
             closeBelongingsCamera();
 
@@ -2065,7 +2065,7 @@
                 sourceHeight = image.naturalHeight || image.height;
             }
 
-            const maxDimension = 1100;
+            const maxDimension = 900;
             const scale = Math.min(1, maxDimension / Math.max(sourceWidth, sourceHeight));
             const width = Math.max(1, Math.round(sourceWidth * scale));
             const height = Math.max(1, Math.round(sourceHeight * scale));
@@ -2077,7 +2077,7 @@
             const context = canvas.getContext('2d', { alpha: false });
             context.drawImage(imageSource, 0, 0, width, height);
 
-            const compressed = canvas.toDataURL('image/jpeg', 0.72);
+            const compressed = canvas.toDataURL('image/jpeg', 0.68);
             if (compressed.length > 6.5 * 1024 * 1024) {
                 throw new Error('The photo is still too large after compression. Please choose a smaller photo.');
             }
@@ -2107,6 +2107,76 @@
             if (input) input.disabled = false;
         }
     }
+
+    function submitBelongingsPhotoViaForm(payload) {
+        return new Promise((resolve, reject) => {
+            if (
+                !APPS_SCRIPT_WEBAPP_URL ||
+                APPS_SCRIPT_WEBAPP_URL.includes('YOUR_APPS_SCRIPT_WEBAPP_URL_HERE')
+            ) {
+                reject(new Error('Apps Script Web App URL is not configured.'));
+                return;
+            }
+
+            // A normal cross-origin HTML form POST is intentionally used here
+            // instead of fetch(..., mode:"no-cors"). The response is sent into
+            // a hidden iframe, so the Waffle House page never navigates away.
+            // Apps Script reads the JSON from e.parameter.payload.
+            const token = String(
+                (payload && payload.uploadToken) ||
+                Date.now()
+            ).replace(/[^A-Za-z0-9_-]/g, '');
+
+            const frameName = 'wafflePhotoUploadFrame_' + token;
+            const iframe = document.createElement('iframe');
+            iframe.name = frameName;
+            iframe.id = frameName;
+            iframe.style.display = 'none';
+            iframe.setAttribute('aria-hidden', 'true');
+
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = APPS_SCRIPT_WEBAPP_URL;
+            form.target = frameName;
+            form.enctype = 'application/x-www-form-urlencoded';
+            form.acceptCharset = 'UTF-8';
+            form.style.display = 'none';
+
+            const field = document.createElement('textarea');
+            field.name = 'payload';
+            field.value = JSON.stringify(payload);
+            field.style.display = 'none';
+
+            form.appendChild(field);
+            document.body.appendChild(iframe);
+            document.body.appendChild(form);
+
+            try {
+                form.submit();
+
+                // form.submit() queues the navigation synchronously. Keep the
+                // iframe alive while Apps Script processes the upload.
+                setTimeout(() => {
+                    if (form.parentNode) form.parentNode.removeChild(form);
+                }, 1000);
+
+                setTimeout(() => {
+                    if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+                }, 120000);
+
+                resolve();
+            } catch (error) {
+                if (form.parentNode) form.parentNode.removeChild(form);
+                if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+
+                reject(new Error(
+                    'The browser could not submit the photo to Apps Script: ' +
+                    (error && error.message ? error.message : String(error))
+                ));
+            }
+        });
+    }
+
 
     function makeBelongingsPhotoUploadToken() {
         return 'photo_' + Date.now() + '_' +
@@ -2140,19 +2210,14 @@
             });
 
             const photoLabel = photoLabelInput?.value.trim() || 'Belongings photo';
-            if (status) status.textContent = '☁️ Uploading photo to Google Drive...';
+            if (status) status.textContent = '☁️ Sending photo securely to Apps Script...';
 
-            await fetch(APPS_SCRIPT_WEBAPP_URL, {
-                method: 'POST',
-                mode: 'no-cors',
-                headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
-                body: JSON.stringify({
-                    action: 'upload_belongings_photo',
-                    uploadToken,
-                    ...payloadBase,
-                    photoLabel,
-                    photoData
-                })
+            await submitBelongingsPhotoViaForm({
+                action: 'upload_belongings_photo',
+                uploadToken,
+                ...payloadBase,
+                photoLabel,
+                photoData
             });
 
             if (status) status.textContent = '🔎 Waiting for Google Drive confirmation...';
