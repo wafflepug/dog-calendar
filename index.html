@@ -1359,6 +1359,286 @@
             }
         }
 
+
+
+        /* ============================================================
+           CARE & SAFETY FLAGS
+           ============================================================ */
+        .care-risk-section {
+            margin: 0 0 14px;
+            padding: 12px;
+            border: 1px solid #dbe3ea;
+            border-radius: 10px;
+            background: #ffffff;
+        }
+
+        .care-risk-section-heading {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .care-risk-section-heading strong {
+            display: block;
+            color: #1f3a5f;
+            font-size: 13px;
+            font-weight: 800;
+        }
+
+        .care-risk-section-heading span {
+            display: block;
+            margin-top: 3px;
+            color: #64748b;
+            font-size: 11px;
+            line-height: 1.4;
+        }
+
+        .care-risk-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 7px;
+        }
+
+        .care-risk-option {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            min-height: 38px;
+            padding: 7px 9px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            background: #f8fafc;
+            color: #334155;
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: border-color .15s ease, background-color .15s ease, box-shadow .15s ease;
+        }
+
+        .care-risk-option:hover {
+            background: #ffffff;
+            border-color: #cbd5e1;
+        }
+
+        .care-risk-option:has(input:checked) {
+            background: #ffffff;
+            box-shadow: 0 0 0 2px rgba(15,23,42,.035);
+        }
+
+        .care-risk-option input {
+            width: 16px;
+            height: 16px;
+            margin: 0;
+            accent-color: #1f3a5f;
+            flex: 0 0 auto;
+        }
+
+        .care-risk-icon {
+            width: 20px;
+            text-align: center;
+            font-size: 16px;
+            line-height: 1;
+        }
+
+        .care-risk-label {
+            line-height: 1.2;
+        }
+
+        .care-risk-option.risk-escape:has(input:checked) { border-color: #f1a6a6; background: #fef2f2; color: #991b1b; }
+        .care-risk-option.risk-allergy:has(input:checked) { border-color: #f3c969; background: #fffbeb; color: #92400e; }
+        .care-risk-option.risk-medicated:has(input:checked) { border-color: #93c5fd; background: #eff6ff; color: #1e40af; }
+        .care-risk-option.risk-anxiety:has(input:checked) { border-color: #c4b5fd; background: #f5f3ff; color: #5b21b6; }
+        .care-risk-option.risk-weight:has(input:checked) { border-color: #bef264; background: #f7fee7; color: #3f6212; }
+
+        .care-alert-dashboard {
+            background: #ffffff;
+            border: 1px solid #e8edf2;
+            border-left: 4px solid #475569;
+            border-radius: 10px;
+            padding: 12px 13px;
+            margin-bottom: 18px;
+            box-shadow: 0 1px 2px rgba(15,23,42,.04);
+        }
+
+        .care-alert-dashboard-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+
+        .care-alert-dashboard h3 {
+            margin: 0;
+            color: #334155;
+            font-size: 12px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: .045em;
+        }
+
+        .care-alert-count {
+            padding: 3px 7px;
+            border-radius: 999px;
+            background: #f1f5f9;
+            color: #64748b;
+            border: 1px solid #e2e8f0;
+            font-size: 10px;
+            font-weight: 800;
+            white-space: nowrap;
+        }
+
+        .care-alert-count.has-alerts {
+            background: #fff7ed;
+            color: #9a3412;
+            border-color: #fed7aa;
+        }
+
+        .care-alert-list {
+            display: grid;
+            gap: 8px;
+            max-height: 190px;
+            overflow-y: auto;
+        }
+
+        .care-alert-row {
+            display: grid;
+            grid-template-columns: minmax(100px, .75fr) minmax(0, 1.6fr);
+            gap: 8px;
+            align-items: start;
+            padding: 8px 0;
+            border-top: 1px solid #eef2f6;
+        }
+
+        .care-alert-row:first-child {
+            border-top: 0;
+            padding-top: 2px;
+        }
+
+        .care-alert-pet {
+            min-width: 0;
+        }
+
+        .care-alert-pet strong {
+            display: block;
+            color: #1f2937;
+            font-size: 12px;
+            line-height: 1.25;
+        }
+
+        .care-alert-pet span {
+            display: block;
+            color: #64748b;
+            font-size: 10px;
+            margin-top: 2px;
+        }
+
+        .care-alert-badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            min-width: 0;
+        }
+
+        .care-alert-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 6px;
+            border-radius: 999px;
+            border: 1px solid #e2e8f0;
+            background: #f8fafc;
+            color: #475569;
+            font-size: 9.5px;
+            font-weight: 800;
+            line-height: 1;
+            white-space: nowrap;
+        }
+
+        .care-alert-badge.risk-escape { background: #fef2f2; border-color: #fecaca; color: #991b1b; }
+        .care-alert-badge.risk-allergy { background: #fffbeb; border-color: #fde68a; color: #92400e; }
+        .care-alert-badge.risk-medicated { background: #eff6ff; border-color: #bfdbfe; color: #1e40af; }
+        .care-alert-badge.risk-anxiety { background: #f5f3ff; border-color: #ddd6fe; color: #5b21b6; }
+        .care-alert-badge.risk-weight { background: #f7fee7; border-color: #d9f99d; color: #3f6212; }
+
+        .care-alert-clear {
+            padding: 5px 0;
+            color: #15803d;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .care-alert-load-error {
+            padding: 5px 0;
+            color: #b45309;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        @media (min-width: 1100px) {
+            .container {
+                grid-template-areas:
+                    "branding main"
+                    "actions  main"
+                    "tabs     main"
+                    "search   main"
+                    "summary  main"
+                    "care     main"
+                    "meet     main"
+                    "directory main" !important;
+            }
+
+            #calendarTabPanel .care-alert-dashboard {
+                grid-area: care;
+                margin: 0;
+                min-width: 0;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .care-risk-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .care-alert-row {
+                grid-template-columns: 1fr;
+                gap: 6px;
+            }
+
+            .care-alert-badges {
+                gap: 5px;
+            }
+        }
+
+        body.dark-theme .care-risk-section,
+        body.dark-theme .care-alert-dashboard {
+            background: #202c3e;
+            border-color: #34445b;
+        }
+
+        body.dark-theme .care-risk-section-heading strong,
+        body.dark-theme .care-alert-dashboard h3,
+        body.dark-theme .care-alert-pet strong {
+            color: #f1f5f9;
+        }
+
+        body.dark-theme .care-risk-section-heading span,
+        body.dark-theme .care-alert-pet span {
+            color: #a8b5c7;
+        }
+
+        body.dark-theme .care-risk-option {
+            background: #1b2739;
+            border-color: #34445b;
+            color: #d8e1ec;
+        }
+
+        body.dark-theme .care-alert-row {
+            border-top-color: #2f4057;
+        }
+
 </style>
 </head>
 <body>
@@ -1421,6 +1701,16 @@
         <div class="summary-card fully-booked">
             <h3>🛑 Full Capacity Alerts</h3>
             <ul id="full-dates-list" class="summary-list"><li class="success-clear">🟢 Open slots available</li></ul>
+        </div>
+    </div>
+
+    <div class="care-alert-dashboard">
+        <div class="care-alert-dashboard-header">
+            <h3>🛡️ Care &amp; Safety Alerts</h3>
+            <span id="care-alert-count" class="care-alert-count">0 alerts</span>
+        </div>
+        <div id="care-alert-list" class="care-alert-list">
+            <div class="care-alert-clear">✓ No care or safety alerts for current pets</div>
         </div>
     </div>
 
@@ -1592,6 +1882,17 @@
         { key: 'other', label: 'Other', placeholder: 'Anything else the owner supplied' }
     ];
 
+
+    const CARE_SAFETY_FLAGS = [
+        { key: 'escapeRisk', label: 'Escape Risk', icon: '🚪', className: 'risk-escape' },
+        { key: 'foodAllergy', label: 'Food Allergy', icon: '⚠️', className: 'risk-allergy' },
+        { key: 'medicated', label: 'Medicated', icon: '💊', className: 'risk-medicated' },
+        { key: 'separationAnxiety', label: 'Separation Anxiety', icon: '🫶', className: 'risk-anxiety' },
+        { key: 'weightManagement', label: 'Weight Management', icon: '⚖️', className: 'risk-weight' }
+    ];
+
+    let careRiskRecordsCache = {};
+
     function getLocalTodayDateString() {
         const tzOffset = (new Date()).getTimezoneOffset() * 60000; 
         return (new Date(Date.now() - tzOffset)).toISOString().split('T')[0];
@@ -1621,7 +1922,8 @@
     document.addEventListener('DOMContentLoaded', function() {
         const cachedData = localStorage.getItem('boardingDataCache');
         if (cachedData) {
-            parseCSVToEvents(cachedData); 
+            parseCSVToEvents(cachedData);
+            loadCareRiskDashboard(cachedData).catch(() => {});
         }
 
         const jumpYearSelect = document.getElementById('jumpYear');
@@ -2515,6 +2817,7 @@
                 localStorage.setItem('boardingDataCache', csvText);
                 reconcileTemporaryEvents(csvText);
                 refreshCalendarData();
+                loadCareRiskDashboard(csvText).catch(() => {});
 
                 if (btn) {
                     btn.innerText = "✅ Synced!";
@@ -2809,6 +3112,111 @@
         });
     }
 
+    function getActiveCareFlags(record) {
+        const riskFlags = (record && record.riskFlags) || {};
+
+        return CARE_SAFETY_FLAGS.filter(flag => riskFlags[flag.key] === true);
+    }
+
+    function renderCareRiskDashboard(stays) {
+        const list = document.getElementById('care-alert-list');
+        const count = document.getElementById('care-alert-count');
+
+        if (!list || !count) return;
+
+        const currentStays = Array.isArray(stays) ? stays : [];
+        const alertRows = [];
+
+        currentStays.forEach(stay => {
+            const record = careRiskRecordsCache[stay.stayKey] || {};
+            const activeFlags = getActiveCareFlags(record);
+
+            if (!activeFlags.length) return;
+
+            const badges = activeFlags.map(flag => `
+                <span class="care-alert-badge ${escapeDashboardHtml(flag.className)}"
+                    title="${escapeDashboardHtml(flag.label)}">
+                    <span aria-hidden="true">${escapeDashboardHtml(flag.icon)}</span>
+                    <span>${escapeDashboardHtml(flag.label)}</span>
+                </span>
+            `).join('');
+
+            alertRows.push(`
+                <div class="care-alert-row">
+                    <div class="care-alert-pet">
+                        <strong>🐾 ${escapeDashboardHtml(stay.dogName)}</strong>
+                        <span>${escapeDashboardHtml(stay.breed || '')}</span>
+                    </div>
+                    <div class="care-alert-badges">${badges}</div>
+                </div>
+            `);
+        });
+
+        const totalFlags = currentStays.reduce((total, stay) => {
+            return total + getActiveCareFlags(
+                careRiskRecordsCache[stay.stayKey] || {}
+            ).length;
+        }, 0);
+
+        if (!alertRows.length) {
+            list.innerHTML =
+                '<div class="care-alert-clear">✓ No care or safety alerts for current pets</div>';
+            count.textContent = '0 alerts';
+            count.classList.remove('has-alerts');
+            return;
+        }
+
+        list.innerHTML = alertRows.join('');
+        count.textContent =
+            totalFlags + (totalFlags === 1 ? ' alert' : ' alerts');
+        count.classList.add('has-alerts');
+    }
+
+    async function loadCareRiskDashboard(csvText) {
+        const csv = csvText || localStorage.getItem('boardingDataCache') || '';
+        const stays = getCurrentBoardingStays(csv);
+
+        if (!stays.length) {
+            careRiskRecordsCache = {};
+            renderCareRiskDashboard([]);
+            return;
+        }
+
+        try {
+            const response = await queryAppsScript({
+                action: 'get_belongings',
+                stayKeys: stays.map(stay => stay.stayKey)
+            }, {
+                maxAttempts: 2,
+                timeoutMs: 45000
+            });
+
+            careRiskRecordsCache = {};
+
+            (response.records || []).forEach(record => {
+                careRiskRecordsCache[record.stayKey] = record;
+            });
+
+            renderCareRiskDashboard(stays);
+        } catch (error) {
+            console.error('Care & Safety alert load failed:', error);
+
+            const list = document.getElementById('care-alert-list');
+            const count = document.getElementById('care-alert-count');
+
+            if (list) {
+                list.innerHTML =
+                    '<div class="care-alert-load-error">⚠️ Care & Safety alerts could not be refreshed.</div>';
+            }
+
+            if (count) {
+                count.textContent = 'Sync issue';
+                count.classList.remove('has-alerts');
+            }
+        }
+    }
+
+
     async function loadBelongingsDashboard(options = {}) {
         const container = document.getElementById('currentPetsBelongingsContainer');
         const button = options.button || null;
@@ -2847,11 +3255,15 @@
             });
 
             belongingsRecordsCache = {};
+            careRiskRecordsCache = {};
+
             (response.records || []).forEach(record => {
                 belongingsRecordsCache[record.stayKey] = record;
+                careRiskRecordsCache[record.stayKey] = record;
             });
 
             renderBelongingsDashboard(stays);
+            renderCareRiskDashboard(stays);
         } catch (error) {
             console.error('Belongings load failed:', error);
             renderBelongingsDashboard(stays, error.message);
@@ -2890,6 +3302,17 @@
                 `;
             }).join('');
 
+            const riskFlags = record.riskFlags || {};
+            const riskFlagsHtml = CARE_SAFETY_FLAGS.map(flag => `
+                <label class="care-risk-option ${escapeDashboardHtml(flag.className)}">
+                    <input type="checkbox"
+                        data-care-risk-flag="${escapeDashboardHtml(flag.key)}"
+                        ${riskFlags[flag.key] ? 'checked' : ''}>
+                    <span class="care-risk-icon" aria-hidden="true">${escapeDashboardHtml(flag.icon)}</span>
+                    <span class="care-risk-label">${escapeDashboardHtml(flag.label)}</span>
+                </label>
+            `).join('');
+
             const photos = Array.isArray(record.photos) ? record.photos : [];
             const photosHtml = photos.length ? photos.map(photo => `
                 <div class="belongings-photo-card">
@@ -2921,6 +3344,16 @@
 
                     ${loadError ? `<div class="belongings-photo-status" style="color:#b91c1c; margin-bottom:8px;">⚠️ Shared belongings could not be loaded: ${escapeDashboardHtml(loadError)}</div>` : ''}
 
+                    <div class="care-risk-section">
+                        <div class="care-risk-section-heading">
+                            <div>
+                                <strong>🛡️ Care &amp; Safety Alerts</strong>
+                                <span>Select anything staff should see immediately on the main dashboard.</span>
+                            </div>
+                        </div>
+                        <div class="care-risk-grid">${riskFlagsHtml}</div>
+                    </div>
+
                     <div class="belongings-item-list">${itemsHtml}</div>
 
                     <input type="text" class="belongings-description belongings-photo-note" data-belongings-photo-label
@@ -2950,13 +3383,25 @@
         return items;
     }
 
+    function collectCareSafetyFlags(card) {
+        const riskFlags = {};
+
+        CARE_SAFETY_FLAGS.forEach(flag => {
+            riskFlags[flag.key] =
+                card.querySelector(`[data-care-risk-flag="${flag.key}"]`)?.checked || false;
+        });
+
+        return riskFlags;
+    }
+
     function getBelongingsCardPayload(card) {
         return {
             stayKey: card.dataset.stayKey,
             dogName: card.dataset.dogName,
             startDate: card.dataset.startDate,
             endDate: card.dataset.endDate,
-            items: collectBelongingsItems(card)
+            items: collectBelongingsItems(card),
+            riskFlags: collectCareSafetyFlags(card)
         };
     }
 
@@ -2978,8 +3423,22 @@
                 startDate: payload.startDate,
                 endDate: payload.endDate,
                 items: payload.items,
+                riskFlags: payload.riskFlags,
                 photos: belongingsRecordsCache[payload.stayKey]?.photos || []
             };
+
+            careRiskRecordsCache[payload.stayKey] = {
+                ...(careRiskRecordsCache[payload.stayKey] || {}),
+                stayKey: payload.stayKey,
+                dogName: payload.dogName,
+                riskFlags: payload.riskFlags
+            };
+
+            renderCareRiskDashboard(
+                getCurrentBoardingStays(
+                    localStorage.getItem('boardingDataCache') || ''
+                )
+            );
 
             button.innerText = '✅ Saved';
             setTimeout(() => { button.innerText = originalText; }, 1800);
