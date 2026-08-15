@@ -60,6 +60,12 @@
         .belongings-camera-controls button { flex: 1; border: none; border-radius: 8px; padding: 12px; font-weight: 800; cursor: pointer; font-size: 14px; }
         .belongings-camera-cancel { background: #64748b; color: #fff; }
         .belongings-camera-capture { background: #8e44ad; color: #fff; }
+        .hosted-photo-uploader-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,.72); z-index:25000; align-items:center; justify-content:center; padding:12px; box-sizing:border-box; }
+        .hosted-photo-uploader-panel { width:min(620px,100%); height:min(720px,90vh); background:#111827; border-radius:14px; overflow:hidden; box-shadow:0 22px 60px rgba(0,0,0,.5); display:flex; flex-direction:column; }
+        .hosted-photo-uploader-header { display:flex; align-items:center; justify-content:space-between; padding:10px 12px; color:white; background:#1e293b; font-weight:900; }
+        .hosted-photo-uploader-close { border:0; background:#475569; color:white; width:38px; height:38px; border-radius:8px; cursor:pointer; font-size:18px; }
+        .hosted-photo-uploader-frame { border:0; width:100%; flex:1; background:#111827; }
+
         .belongings-photo-note { margin-top: 9px; }
         .belongings-photo-status { min-height: 18px; color: #64748b; font-size: 12px; margin-top: 7px; }
         .belongings-photo-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(105px, 1fr)); gap: 8px; margin-top: 10px; }
@@ -482,6 +488,23 @@
     </div>
 </div>
 
+<!-- Apps Script-hosted belongings photo uploader -->
+<div id="hostedBelongingsPhotoUploaderModal" class="hosted-photo-uploader-modal" aria-hidden="true">
+    <div class="hosted-photo-uploader-panel">
+        <div class="hosted-photo-uploader-header">
+            <span>📷 Pet Belongings Photo</span>
+            <button type="button" id="closeHostedBelongingsPhotoUploader" class="hosted-photo-uploader-close" aria-label="Close photo uploader">✕</button>
+        </div>
+        <iframe
+            id="hostedBelongingsPhotoUploaderFrame"
+            class="hosted-photo-uploader-frame"
+            title="Pet belongings photo uploader"
+            allow="camera"
+            referrerpolicy="strict-origin-when-cross-origin">
+        </iframe>
+    </div>
+</div>
+
 <!-- In-browser camera modal for belongings photos -->
 <div id="belongingsCameraModal" class="belongings-camera-modal" aria-hidden="true">
     <div class="belongings-camera-panel">
@@ -518,6 +541,7 @@
     let belongingsUploadInProgress = false;
     let belongingsCameraStream = null;
     let belongingsCameraCard = null;
+    let hostedBelongingsPhotoContext = null;
 
     const BELONGINGS_ITEMS = [
         { key: 'waterBowls', label: 'Water Bowls', placeholder: 'e.g. 2 stainless steel bowls, one marked BLUE' },
@@ -701,7 +725,7 @@
             if (takePhotoButton) {
                 event.preventDefault();
                 const card = takePhotoButton.closest('.belongings-pet-card');
-                if (card) await openBelongingsCamera(card);
+                if (card) await openHostedBelongingsPhotoUploader(card, 'camera');
                 return;
             }
 
@@ -709,8 +733,7 @@
             if (uploadPhotoButton) {
                 event.preventDefault();
                 const card = uploadPhotoButton.closest('.belongings-pet-card');
-                const input = card && card.querySelector('[data-belongings-photo-input]');
-                if (input) input.click();
+                if (card) await openHostedBelongingsPhotoUploader(card, 'upload');
                 return;
             }
 
@@ -747,6 +770,10 @@
 
         document.getElementById('belongingsCameraCancelBtn').addEventListener('click', function() {
             closeBelongingsCamera();
+        });
+
+        document.getElementById('closeHostedBelongingsPhotoUploader').addEventListener('click', function() {
+            closeHostedBelongingsPhotoUploader();
         });
 
         document.getElementById('belongingsCameraCaptureBtn').addEventListener('click', async function() {
@@ -1917,6 +1944,149 @@
             button.disabled = false;
         }
     }
+
+    function makeHostedPhotoRequestToken() {
+        return 'hosted_photo_' + Date.now() + '_' +
+            Math.random().toString(36).slice(2, 12);
+    }
+
+    function closeHostedBelongingsPhotoUploader() {
+        const modal = document.getElementById('hostedBelongingsPhotoUploaderModal');
+        const frame = document.getElementById('hostedBelongingsPhotoUploaderFrame');
+
+        if (modal) {
+            modal.style.display = 'none';
+            modal.setAttribute('aria-hidden', 'true');
+        }
+
+        if (frame) {
+            frame.src = 'about:blank';
+        }
+
+        hostedBelongingsPhotoContext = null;
+        belongingsUploadInProgress = false;
+    }
+
+    async function openHostedBelongingsPhotoUploader(card, mode) {
+        if (!card) return;
+
+        const status = card.querySelector('[data-belongings-photo-status]');
+        const photoLabelInput = card.querySelector('[data-belongings-photo-label]');
+        const payloadBase = getBelongingsCardPayload(card);
+        const requestToken = makeHostedPhotoRequestToken();
+
+        belongingsUploadInProgress = true;
+
+        try {
+            if (status) status.textContent = '💾 Saving belongings details...';
+
+            // Ensure an existing shared Pet_Belongings row is present. The
+            // Apps Script-hosted uploader only appends a photo to this record.
+            await sendPayloadToAppsScript({
+                action: 'save_belongings',
+                ...payloadBase
+            });
+
+            hostedBelongingsPhotoContext = {
+                card,
+                stayKey: payloadBase.stayKey,
+                requestToken
+            };
+
+            const params = new URLSearchParams({
+                action: 'photo_uploader',
+                mode: mode || 'camera',
+                stayKey: payloadBase.stayKey || '',
+                dogName: payloadBase.dogName || '',
+                startDate: payloadBase.startDate || '',
+                endDate: payloadBase.endDate || '',
+                photoLabel: photoLabelInput?.value.trim() || '',
+                requestToken,
+                _ts: String(Date.now())
+            });
+
+            const frame = document.getElementById('hostedBelongingsPhotoUploaderFrame');
+            const modal = document.getElementById('hostedBelongingsPhotoUploaderModal');
+
+            frame.src = APPS_SCRIPT_WEBAPP_URL + '?' + params.toString();
+            modal.style.display = 'flex';
+            modal.setAttribute('aria-hidden', 'false');
+
+            if (status) {
+                status.textContent = '📷 Photo uploader opened. Choose or take a photo.';
+            }
+
+        } catch (error) {
+            belongingsUploadInProgress = false;
+            hostedBelongingsPhotoContext = null;
+            if (status) status.textContent = '❌ ' + error.message;
+            alert('❌ PHOTO UPLOADER COULD NOT OPEN\n\n' + error.message);
+        }
+    }
+
+    window.addEventListener('message', async function(event) {
+        const data = event && event.data;
+        const context = hostedBelongingsPhotoContext;
+
+        if (!context || !data || typeof data !== 'object') return;
+        if (data.requestToken !== context.requestToken) return;
+        if (data.stayKey !== context.stayKey) return;
+
+        const card = context.card;
+        const status = card && card.querySelector('[data-belongings-photo-status]');
+
+        if (data.type === 'waffleBelongingsPhotoUploaderReady') {
+            if (status) status.textContent = '📷 Photo uploader ready.';
+            return;
+        }
+
+        if (data.type === 'waffleBelongingsPhotoError') {
+            belongingsUploadInProgress = false;
+            if (status) status.textContent = '❌ ' + (data.error || 'Photo upload failed.');
+            alert('❌ PHOTO WAS NOT SAVED\n\n' + (data.error || 'Photo upload failed.'));
+            return;
+        }
+
+        if (data.type === 'waffleBelongingsPhotoSaved') {
+            try {
+                if (status) status.textContent = '🔎 Refreshing shared photo record...';
+
+                const response = await queryAppsScript({
+                    action: 'get_belongings',
+                    stayKeys: [context.stayKey]
+                }, {
+                    maxAttempts: 2,
+                    timeoutMs: 45000
+                });
+
+                const record = (response.records || [])
+                    .find(item => item.stayKey === context.stayKey);
+
+                if (record) {
+                    belongingsRecordsCache[context.stayKey] = record;
+                }
+
+                if (status) status.textContent = '✅ Photo saved to Google Drive';
+
+                closeHostedBelongingsPhotoUploader();
+
+                renderBelongingsDashboard(
+                    getCurrentBoardingStays(
+                        localStorage.getItem('boardingDataCache') || ''
+                    )
+                );
+
+            } catch (error) {
+                belongingsUploadInProgress = false;
+                if (status) status.textContent = '⚠️ Photo saved, but the shared record could not be refreshed.';
+                alert(
+                    '✅ The photo was saved by Apps Script, but the web page could not reload the Pet_Belongings record.\n\n' +
+                    error.message
+                );
+            }
+        }
+    });
+
 
     function closeBelongingsCamera() {
         if (belongingsCameraStream) {
