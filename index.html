@@ -22,6 +22,43 @@
         .btn-add:hover { background: #219653; }
         .btn-potential { background: #e67e22; }
         .btn-potential:hover { background: #d35400; }
+
+        /* --- Main App Tabs --- */
+        .app-tabs { display: flex; gap: 8px; margin: 4px 0 20px; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; }
+        .app-tab-button { flex: 1; border: none; background: #e2e8f0; color: #475569; padding: 12px 14px; border-radius: 8px 8px 4px 4px; font-weight: 800; font-size: 14px; cursor: pointer; transition: background 0.2s, color 0.2s, transform 0.2s; }
+        .app-tab-button:hover { transform: translateY(-1px); }
+        .app-tab-button.active { background: #2c3e50; color: #ffffff; }
+        .app-tab-panel { display: none; }
+        .app-tab-panel.active { display: block; }
+
+        /* --- Current Pets & Belongings --- */
+        .belongings-dashboard-header { display: flex; justify-content: space-between; gap: 12px; align-items: center; margin-bottom: 15px; flex-wrap: wrap; }
+        .belongings-dashboard-header h3 { margin: 0; color: #1e293b; font-size: 18px; }
+        .belongings-dashboard-subtitle { margin: 4px 0 0; color: #64748b; font-size: 13px; }
+        .belongings-refresh-btn { background: #8e44ad; color: white; border: none; padding: 10px 14px; border-radius: 7px; cursor: pointer; font-weight: 800; }
+        .belongings-pets-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
+        .belongings-pet-card { border: 1px solid #e2e8f0; background: #f8fafc; border-radius: 12px; padding: 16px; box-shadow: 0 2px 5px rgba(0,0,0,0.04); }
+        .belongings-pet-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px; margin-bottom: 12px; }
+        .belongings-pet-heading h4 { margin: 0; color: #1e293b; font-size: 17px; }
+        .belongings-pet-meta { color: #64748b; font-size: 12px; margin-top: 4px; line-height: 1.45; }
+        .belongings-stay-badge { background: #dbeafe; color: #1d4ed8; padding: 5px 8px; border-radius: 999px; font-size: 11px; font-weight: 800; white-space: nowrap; }
+        .belongings-item-list { display: grid; gap: 9px; }
+        .belongings-item-row { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 9px; }
+        .belongings-item-label { display: flex; align-items: center; gap: 8px; font-weight: 750; color: #334155; font-size: 13px; margin-bottom: 7px; }
+        .belongings-item-label input[type=checkbox] { width: 18px; height: 18px; accent-color: #8e44ad; }
+        .belongings-description { width: 100%; box-sizing: border-box; border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px 9px; font-size: 12px; outline: none; background: #ffffff; color: #1e293b; }
+        .belongings-description:focus { border-color: #8e44ad; box-shadow: 0 0 0 2px rgba(142,68,173,0.08); }
+        .belongings-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; align-items: center; }
+        .belongings-save-btn { flex: 1; min-width: 150px; background: #27ae60; color: #fff; border: none; border-radius: 7px; padding: 11px 13px; font-weight: 800; cursor: pointer; }
+        .belongings-camera-btn { flex: 1; min-width: 150px; background: #8e44ad; color: #fff; border-radius: 7px; padding: 11px 13px; font-weight: 800; cursor: pointer; text-align: center; display: inline-flex; justify-content: center; align-items: center; gap: 6px; }
+        .belongings-photo-note { margin-top: 9px; }
+        .belongings-photo-status { min-height: 18px; color: #64748b; font-size: 12px; margin-top: 7px; }
+        .belongings-photo-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(105px, 1fr)); gap: 8px; margin-top: 10px; }
+        .belongings-photo-card { position: relative; background: white; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; }
+        .belongings-photo-card img { width: 100%; aspect-ratio: 1 / 1; object-fit: cover; display: block; background: #e2e8f0; }
+        .belongings-photo-caption { padding: 6px; color: #475569; font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .belongings-photo-delete { position: absolute; top: 5px; right: 5px; width: 25px; height: 25px; border: none; border-radius: 50%; background: rgba(185,28,28,0.9); color: white; cursor: pointer; font-weight: 900; }
+        .belongings-empty { padding: 35px 20px; border: 2px dashed #cbd5e1; border-radius: 12px; text-align: center; color: #64748b; background: #f8fafc; }
         
         .search-container { margin-bottom: 20px; }
         .search-input { width: 100%; box-sizing: border-box; padding: 12px; font-size: 14px; border: 2px solid #e2e8f0; border-radius: 8px; outline: none; transition: border-color 0.2s, background-color 0.3s, border-color 0.3s, color 0.3s; }
@@ -187,6 +224,22 @@
         body.dark-theme .container { background: #1e293b; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
         body.dark-theme .calendar-header-branding h2 { color: #f1f5f9; }
         body.dark-theme .search-input { background-color: #334155; border-color: #475569; color: white; }
+        body.dark-theme .app-tabs { border-bottom-color: #475569; }
+        body.dark-theme .app-tab-button { background: #334155; color: #cbd5e1; }
+        body.dark-theme .app-tab-button.active { background: #0f172a; color: #ffffff; border: 1px solid #64748b; }
+        body.dark-theme .belongings-dashboard-header h3 { color: #f8fafc; }
+        body.dark-theme .belongings-dashboard-subtitle { color: #cbd5e1; }
+        body.dark-theme .belongings-pet-card { background: #1e293b; border-color: #475569; }
+        body.dark-theme .belongings-pet-heading { border-bottom-color: #475569; }
+        body.dark-theme .belongings-pet-heading h4 { color: #ffffff; }
+        body.dark-theme .belongings-pet-meta { color: #cbd5e1; }
+        body.dark-theme .belongings-stay-badge { background: #1e3a8a; color: #bfdbfe; }
+        body.dark-theme .belongings-item-row { background: #334155; border-color: #475569; }
+        body.dark-theme .belongings-item-label { color: #f1f5f9; }
+        body.dark-theme .belongings-description { background: #0f172a; color: #f8fafc; border-color: #64748b; }
+        body.dark-theme .belongings-photo-card { background: #334155; border-color: #475569; }
+        body.dark-theme .belongings-photo-caption { color: #e2e8f0; }
+        body.dark-theme .belongings-empty { background: #1e293b; border-color: #64748b; color: #cbd5e1; }
         body.dark-theme .summary-card { background: #334155; color: #f1f5f9; }
         body.dark-theme .summary-card h3 { color: #ffffff !important; font-weight: 700 !important; font-size: 14px !important; letter-spacing: 0.5px !important; }
         body.dark-theme .summary-list li { border-bottom-color: #475569; color: #e2e8f0; }
@@ -246,6 +299,10 @@
             .calendar-header-branding h2 { font-size: 20px; }
             .calendar-brand-img { width: 28%; max-width: 110px; min-width: 85px; }
             .action-button-group { flex-direction: column; gap: 8px; }
+            .app-tabs { flex-direction: column; }
+            .belongings-pets-grid { grid-template-columns: 1fr; }
+            .belongings-actions { flex-direction: column; align-items: stretch; }
+            .belongings-save-btn, .belongings-camera-btn { width: 100%; }
             .search-container { flex-direction: column; align-items: stretch !important; gap: 8px; }
             .quick-navigate-container { display: grid !important; grid-template-columns: 1fr 1fr; gap: 5px; }
             .summary-dashboard { grid-template-columns: 1fr; gap: 10px; margin-bottom: 15px; }
@@ -270,7 +327,13 @@
         <a href="https://docs.google.com/forms/d/e/1FAIpQLScszSqsaxw9THyebWt2g0khVTIzP9L8hPbor1mUB0fp_0KPAw/viewform?usp=dialog" target="_blank" class="btn-add">+ Add New Boarding Booking</a>
         <button id="openPotentialBtn" class="btn-add btn-potential">❓ Add Potential Stay Request</button>
     </div>
-    
+
+    <div class="app-tabs" role="tablist" aria-label="Waffle House sections">
+        <button type="button" class="app-tab-button active" data-app-tab="calendar" role="tab" aria-selected="true">📅 Calendar & Dashboard</button>
+        <button type="button" class="app-tab-button" data-app-tab="belongings" role="tab" aria-selected="false">🧳 Current Pets & Belongings</button>
+    </div>
+
+    <div id="calendarTabPanel" class="app-tab-panel active" data-app-panel="calendar">
     <div class="search-container" style="display: flex; gap: 10px; align-items: center; margin-bottom: 20px; flex-wrap: wrap;">
         <input type="text" id="calendarSearch" class="search-input" style="flex: 1; min-width: 200px;" placeholder="🔍 Type dog name or breed to filter data..." autocomplete="off">
         
@@ -331,6 +394,21 @@
     </div>
 
     <div id="calendar"></div>
+    </div>
+
+    <div id="belongingsTabPanel" class="app-tab-panel" data-app-panel="belongings">
+        <div class="belongings-dashboard-header">
+            <div>
+                <h3>🧳 Current Pets & Their Belongings</h3>
+                <p class="belongings-dashboard-subtitle">Track what each owner brought for pets currently staying at Waffle House. Photos are stored in Google Drive and linked to the shared database.</p>
+            </div>
+            <button type="button" id="refreshBelongingsBtn" class="belongings-refresh-btn">🔄 Refresh Belongings</button>
+        </div>
+
+        <div id="currentPetsBelongingsContainer" class="belongings-pets-grid">
+            <div class="belongings-empty">Open this tab to load the current pets and their belongings.</div>
+        </div>
+    </div>
 </div>
 
 <!-- Modal: Meet & Greet Booking -->
@@ -415,6 +493,19 @@
     let activeEditingEvent = null; 
     let activeEditingPotentialId = null;
     let activeEditingPotential = null;
+    let belongingsRecordsCache = {};
+
+    const BELONGINGS_ITEMS = [
+        { key: 'waterBowls', label: 'Water Bowls', placeholder: 'e.g. 2 stainless steel bowls, one marked BLUE' },
+        { key: 'foodBowls', label: 'Food Bowls', placeholder: 'e.g. 1 slow-feeder bowl, grey silicone' },
+        { key: 'blankets', label: 'Blankets', placeholder: 'e.g. 2 fleece blankets, blue and white' },
+        { key: 'beds', label: 'Beds', placeholder: 'e.g. Large round bed with grey cover' },
+        { key: 'petCrates', label: 'Pet Crates', placeholder: 'e.g. Black folding crate, medium size' },
+        { key: 'toys', label: 'Toys', placeholder: 'e.g. Red Kong, rope toy and tennis ball' },
+        { key: 'leadsHarnesses', label: 'Leads / Harnesses', placeholder: 'e.g. Purple harness and black lead' },
+        { key: 'medication', label: 'Medication', placeholder: 'e.g. Labelled container in zip-lock bag' },
+        { key: 'other', label: 'Other', placeholder: 'Anything else the owner supplied' }
+    ];
 
     function getLocalTodayDateString() {
         const tzOffset = (new Date()).getTimezoneOffset() * 60000; 
@@ -553,6 +644,41 @@
 
         document.getElementById('openPotentialBtn').addEventListener('click', function() {
             openNewPotentialModal();
+        });
+
+        document.querySelectorAll('[data-app-tab]').forEach(button => {
+            button.addEventListener('click', function() {
+                switchAppTab(this.dataset.appTab);
+            });
+        });
+
+        document.getElementById('refreshBelongingsBtn').addEventListener('click', function() {
+            loadBelongingsDashboard({ button: this });
+        });
+
+        const belongingsContainer = document.getElementById('currentPetsBelongingsContainer');
+        belongingsContainer.addEventListener('click', async function(event) {
+            const saveButton = event.target.closest('[data-save-belongings]');
+            if (saveButton) {
+                await saveBelongingsCard(saveButton.closest('.belongings-pet-card'), saveButton);
+                return;
+            }
+
+            const deletePhotoButton = event.target.closest('[data-delete-belongings-photo]');
+            if (deletePhotoButton) {
+                await deleteBelongingsPhoto(deletePhotoButton.closest('.belongings-pet-card'), deletePhotoButton);
+            }
+        });
+
+        belongingsContainer.addEventListener('change', async function(event) {
+            if (event.target.matches('[data-belongings-photo-input]')) {
+                const card = event.target.closest('.belongings-pet-card');
+                const file = event.target.files && event.target.files[0];
+                if (card && file) {
+                    await uploadBelongingsPhoto(card, file, event.target);
+                }
+                event.target.value = '';
+            }
         });
 
         document.getElementById('calendarSearch').addEventListener('input', applyCurrentSearchFilter);
@@ -1239,6 +1365,10 @@
                 reconcileTemporaryEvents(csvText);
                 refreshCalendarData();
 
+                if (document.getElementById('belongingsTabPanel')?.classList.contains('active')) {
+                    loadBelongingsDashboard().catch(() => {});
+                }
+
                 if (btn) {
                     btn.innerText = "✅ Synced!";
                     btn.style.background = "#2ecc71";
@@ -1351,6 +1481,420 @@
 
             document.body.appendChild(script);
         });
+    }
+
+    function switchAppTab(tabName) {
+        document.querySelectorAll('[data-app-tab]').forEach(button => {
+            const active = button.dataset.appTab === tabName;
+            button.classList.toggle('active', active);
+            button.setAttribute('aria-selected', active ? 'true' : 'false');
+        });
+
+        document.querySelectorAll('[data-app-panel]').forEach(panel => {
+            panel.classList.toggle('active', panel.dataset.appPanel === tabName);
+        });
+
+        if (tabName === 'calendar' && globalCalendar) {
+            setTimeout(() => globalCalendar.updateSize(), 0);
+        }
+
+        if (tabName === 'belongings') {
+            loadBelongingsDashboard().catch(error => console.error(error));
+        }
+    }
+
+    function getCurrentBoardingStays(csvText) {
+        if (!csvText) return [];
+
+        const lines = csvText.split(/\r?\n/);
+        const todayStr = getLocalTodayDateString();
+        const today = new Date(todayStr + 'T00:00:00');
+        const pickedUpDogs = getLocalArray('pickedUpDogs_' + todayStr);
+        const stays = [];
+
+        for (let i = 1; i < lines.length; i++) {
+            if (!lines[i].trim()) continue;
+
+            const columns = lines[i].split(/,(?=(?:(?:[^\"]*\"){2})*[^\"]*$)/);
+            const dogName = columns[1] ? columns[1].replace(/^\"|\"$/g, '').trim() : '';
+            const breed = columns[2] ? columns[2].replace(/^\"|\"$/g, '').trim() : '';
+            const startDate = parseCsvDate(columns[3]);
+            const endDate = parseCsvDate(columns[4]) || startDate;
+            const ownerName = columns[5] ? columns[5].replace(/^\"|\"$/g, '').trim() : '';
+            const phone = columns[6] ? columns[6].replace(/^\"|\"$/g, '').trim() : '';
+            const bookingType = columns[11] ? columns[11].replace(/^\"|\"$/g, '').trim().toLowerCase() : '';
+
+            if (!dogName || !startDate || !endDate) continue;
+            if (bookingType === 'meet & greet' || bookingType === 'potential stay') continue;
+
+            const start = new Date(startDate + 'T00:00:00');
+            const end = new Date(endDate + 'T00:00:00');
+            if (isNaN(start.getTime()) || isNaN(end.getTime())) continue;
+            if (today < start || today > end) continue;
+
+            const pickupKey = dogName + '_' + startDate + '_' + endDate;
+            if (pickedUpDogs.includes(pickupKey)) continue;
+
+            stays.push({
+                stayKey: makePotentialKey(dogName, startDate, endDate),
+                dogName,
+                breed: breed || 'Unknown',
+                ownerName: ownerName || 'N/A',
+                phone: phone || 'N/A',
+                startDate,
+                endDate,
+                bookingType: bookingType || 'boarding'
+            });
+        }
+
+        return stays.sort((a, b) => a.dogName.localeCompare(b.dogName));
+    }
+
+    function queryAppsScript(payload) {
+        return new Promise((resolve, reject) => {
+            if (!APPS_SCRIPT_WEBAPP_URL || APPS_SCRIPT_WEBAPP_URL.includes('YOUR_APPS_SCRIPT_WEBAPP_URL_HERE')) {
+                reject(new Error('Apps Script Web App URL is not configured.'));
+                return;
+            }
+
+            const callbackName = '__waffleQuery_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+            const script = document.createElement('script');
+            let finished = false;
+
+            const cleanup = () => {
+                if (finished) return;
+                finished = true;
+                clearTimeout(timeoutId);
+                try { delete window[callbackName]; } catch (_) { window[callbackName] = undefined; }
+                if (script.parentNode) script.parentNode.removeChild(script);
+            };
+
+            const timeoutId = setTimeout(() => {
+                cleanup();
+                reject(new Error('Apps Script did not respond while loading belongings.'));
+            }, 15000);
+
+            window[callbackName] = response => {
+                cleanup();
+                if (response && response.result === 'success') resolve(response);
+                else reject(new Error(response?.error || 'Apps Script returned an unknown error.'));
+            };
+
+            script.onerror = () => {
+                cleanup();
+                reject(new Error('Could not reach the Apps Script Web App.'));
+            };
+
+            const separator = APPS_SCRIPT_WEBAPP_URL.includes('?') ? '&' : '?';
+            script.src = APPS_SCRIPT_WEBAPP_URL + separator +
+                'callback=' + encodeURIComponent(callbackName) +
+                '&payload=' + encodeURIComponent(JSON.stringify(payload)) +
+                '&_ts=' + Date.now();
+
+            document.body.appendChild(script);
+        });
+    }
+
+    async function loadBelongingsDashboard(options = {}) {
+        const container = document.getElementById('currentPetsBelongingsContainer');
+        const button = options.button || null;
+        if (!container) return;
+
+        if (button) {
+            button.disabled = true;
+            button.innerText = '⏳ Loading...';
+        }
+
+        const stays = getCurrentBoardingStays(localStorage.getItem('boardingDataCache') || '');
+
+        if (!stays.length) {
+            belongingsRecordsCache = {};
+            container.innerHTML = '<div class="belongings-empty">🏡 There are no current boarding guests to show today.</div>';
+            if (button) {
+                button.disabled = false;
+                button.innerText = '🔄 Refresh Belongings';
+            }
+            return;
+        }
+
+        container.innerHTML = '<div class="belongings-empty">⏳ Loading shared belongings records...</div>';
+
+        try {
+            const response = await queryAppsScript({
+                action: 'get_belongings',
+                stayKeys: stays.map(stay => stay.stayKey)
+            });
+
+            belongingsRecordsCache = {};
+            (response.records || []).forEach(record => {
+                belongingsRecordsCache[record.stayKey] = record;
+            });
+
+            renderBelongingsDashboard(stays);
+        } catch (error) {
+            console.error('Belongings load failed:', error);
+            renderBelongingsDashboard(stays, error.message);
+        } finally {
+            if (button) {
+                button.disabled = false;
+                button.innerText = '🔄 Refresh Belongings';
+            }
+        }
+    }
+
+    function formatStayDateShort(dateStr) {
+        const date = new Date(dateStr + 'T00:00:00');
+        if (isNaN(date.getTime())) return dateStr;
+        return date.toLocaleDateString('en-AU', { day: 'numeric', month: 'short' });
+    }
+
+    function renderBelongingsDashboard(stays, loadError = '') {
+        const container = document.getElementById('currentPetsBelongingsContainer');
+        if (!container) return;
+
+        container.innerHTML = stays.map(stay => {
+            const record = belongingsRecordsCache[stay.stayKey] || { items: {}, photos: [] };
+            const itemsHtml = BELONGINGS_ITEMS.map(item => {
+                const saved = record.items?.[item.key] || {};
+                return `
+                    <div class="belongings-item-row">
+                        <label class="belongings-item-label">
+                            <input type="checkbox" data-belongings-item-present="${item.key}" ${saved.present ? 'checked' : ''}>
+                            <span>${escapeDashboardHtml(item.label)}</span>
+                        </label>
+                        <input type="text" class="belongings-description" data-belongings-item-description="${item.key}"
+                            value="${escapeDashboardHtml(saved.description || '')}"
+                            placeholder="${escapeDashboardHtml(item.placeholder)}">
+                    </div>
+                `;
+            }).join('');
+
+            const photos = Array.isArray(record.photos) ? record.photos : [];
+            const photosHtml = photos.length ? photos.map(photo => `
+                <div class="belongings-photo-card">
+                    <button type="button" class="belongings-photo-delete" data-delete-belongings-photo="${escapeDashboardHtml(photo.id || '')}" title="Delete photo">×</button>
+                    <a href="${escapeDashboardHtml(photo.driveUrl || photo.previewUrl || '#')}" target="_blank" rel="noopener noreferrer">
+                        <img src="${escapeDashboardHtml(photo.previewUrl || '')}" alt="${escapeDashboardHtml(photo.label || 'Belongings photo')}" loading="lazy">
+                    </a>
+                    <div class="belongings-photo-caption">${escapeDashboardHtml(photo.label || 'Belongings photo')}</div>
+                </div>
+            `).join('') : '<div class="belongings-photo-status">No photos saved yet.</div>';
+
+            return `
+                <div class="belongings-pet-card"
+                    data-stay-key="${escapeDashboardHtml(stay.stayKey)}"
+                    data-dog-name="${escapeDashboardHtml(stay.dogName)}"
+                    data-start-date="${escapeDashboardHtml(stay.startDate)}"
+                    data-end-date="${escapeDashboardHtml(stay.endDate)}">
+
+                    <div class="belongings-pet-heading">
+                        <div>
+                            <h4>🐾 ${escapeDashboardHtml(stay.dogName)}</h4>
+                            <div class="belongings-pet-meta">
+                                ${escapeDashboardHtml(stay.breed)} · Owner: ${escapeDashboardHtml(stay.ownerName)}<br>
+                                Contact: ${escapeDashboardHtml(stay.phone)}
+                            </div>
+                        </div>
+                        <span class="belongings-stay-badge">${formatStayDateShort(stay.startDate)} – ${formatStayDateShort(stay.endDate)}</span>
+                    </div>
+
+                    ${loadError ? `<div class="belongings-photo-status" style="color:#b91c1c; margin-bottom:8px;">⚠️ Shared belongings could not be loaded: ${escapeDashboardHtml(loadError)}</div>` : ''}
+
+                    <div class="belongings-item-list">${itemsHtml}</div>
+
+                    <input type="text" class="belongings-description belongings-photo-note" data-belongings-photo-label
+                        placeholder="Photo note, e.g. bowls, blanket and blue bed">
+
+                    <div class="belongings-actions">
+                        <button type="button" class="belongings-save-btn" data-save-belongings>💾 Save Belongings</button>
+                        <label class="belongings-camera-btn">
+                            📷 Take / Add Photo
+                            <input type="file" accept="image/*" capture="environment" data-belongings-photo-input hidden>
+                        </label>
+                    </div>
+
+                    <div class="belongings-photo-status" data-belongings-photo-status></div>
+                    <div class="belongings-photo-gallery">${photosHtml}</div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    function collectBelongingsItems(card) {
+        const items = {};
+        BELONGINGS_ITEMS.forEach(item => {
+            const present = card.querySelector(`[data-belongings-item-present="${item.key}"]`)?.checked || false;
+            const description = card.querySelector(`[data-belongings-item-description="${item.key}"]`)?.value.trim() || '';
+            items[item.key] = { present, description };
+        });
+        return items;
+    }
+
+    function getBelongingsCardPayload(card) {
+        return {
+            stayKey: card.dataset.stayKey,
+            dogName: card.dataset.dogName,
+            startDate: card.dataset.startDate,
+            endDate: card.dataset.endDate,
+            items: collectBelongingsItems(card)
+        };
+    }
+
+    async function saveBelongingsCard(card, button) {
+        if (!card || !button) return;
+
+        const originalText = button.innerText;
+        button.disabled = true;
+        button.innerText = '⏳ Saving...';
+
+        try {
+            const payload = getBelongingsCardPayload(card);
+            await sendPayloadToAppsScript({ action: 'save_belongings', ...payload });
+
+            belongingsRecordsCache[payload.stayKey] = {
+                ...(belongingsRecordsCache[payload.stayKey] || {}),
+                stayKey: payload.stayKey,
+                dogName: payload.dogName,
+                startDate: payload.startDate,
+                endDate: payload.endDate,
+                items: payload.items,
+                photos: belongingsRecordsCache[payload.stayKey]?.photos || []
+            };
+
+            button.innerText = '✅ Saved';
+            setTimeout(() => { button.innerText = originalText; }, 1800);
+        } catch (error) {
+            console.error(error);
+            alert('❌ BELONGINGS WERE NOT SAVED\n\n' + error.message);
+            button.innerText = originalText;
+        } finally {
+            button.disabled = false;
+        }
+    }
+
+    function readFileAsDataUrl(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = () => reject(new Error('Unable to read the selected photo.'));
+            reader.readAsDataURL(file);
+        });
+    }
+
+    async function compressBelongingsPhoto(file) {
+        if (!file || !String(file.type || '').startsWith('image/')) {
+            throw new Error('Please choose an image file.');
+        }
+
+        const sourceDataUrl = await readFileAsDataUrl(file);
+        const image = new Image();
+
+        await new Promise((resolve, reject) => {
+            image.onload = resolve;
+            image.onerror = () => reject(new Error('This image format could not be opened. Try taking a JPG photo instead.'));
+            image.src = sourceDataUrl;
+        });
+
+        const maxDimension = 1400;
+        let width = image.naturalWidth || image.width;
+        let height = image.naturalHeight || image.height;
+        const scale = Math.min(1, maxDimension / Math.max(width, height));
+        width = Math.max(1, Math.round(width * scale));
+        height = Math.max(1, Math.round(height * scale));
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const context = canvas.getContext('2d');
+        context.drawImage(image, 0, 0, width, height);
+
+        const compressed = canvas.toDataURL('image/jpeg', 0.76);
+        if (compressed.length > 7 * 1024 * 1024) {
+            throw new Error('The photo is still too large after compression. Please choose a smaller photo.');
+        }
+        return compressed;
+    }
+
+    async function uploadBelongingsPhoto(card, file, input) {
+        if (!card || !file) return;
+
+        const status = card.querySelector('[data-belongings-photo-status]');
+        const photoLabelInput = card.querySelector('[data-belongings-photo-label]');
+        const payloadBase = getBelongingsCardPayload(card);
+        const previousCount = belongingsRecordsCache[payloadBase.stayKey]?.photos?.length || 0;
+
+        if (status) status.textContent = '⏳ Preparing photo...';
+        if (input) input.disabled = true;
+
+        try {
+            // Save the current checklist/descriptions first so the photo is always
+            // attached to a shared belongings record.
+            await sendPayloadToAppsScript({ action: 'save_belongings', ...payloadBase });
+
+            const photoData = await compressBelongingsPhoto(file);
+            const photoLabel = photoLabelInput?.value.trim() || 'Belongings photo';
+
+            if (status) status.textContent = '☁️ Uploading photo to Google Drive...';
+
+            await fetch(APPS_SCRIPT_WEBAPP_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+                body: JSON.stringify({
+                    action: 'upload_belongings_photo',
+                    ...payloadBase,
+                    photoLabel,
+                    photoData
+                })
+            });
+
+            const updatedRecord = await waitForBelongingsPhoto(payloadBase.stayKey, previousCount);
+            belongingsRecordsCache[payloadBase.stayKey] = updatedRecord;
+            renderBelongingsDashboard(getCurrentBoardingStays(localStorage.getItem('boardingDataCache') || ''));
+        } catch (error) {
+            console.error('Photo upload failed:', error);
+            if (status) status.textContent = '❌ ' + error.message;
+            alert('❌ PHOTO WAS NOT SAVED\n\n' + error.message);
+        } finally {
+            if (input) input.disabled = false;
+        }
+    }
+
+    async function waitForBelongingsPhoto(stayKey, previousCount) {
+        for (let attempt = 0; attempt < 12; attempt++) {
+            await new Promise(resolve => setTimeout(resolve, attempt === 0 ? 1200 : 1000));
+            const response = await queryAppsScript({ action: 'get_belongings', stayKeys: [stayKey] });
+            const record = (response.records || []).find(item => item.stayKey === stayKey);
+            if (record && Array.isArray(record.photos) && record.photos.length > previousCount) {
+                return record;
+            }
+        }
+
+        throw new Error('The upload request was sent, but the new photo was not confirmed in Google Sheets. Check the Apps Script execution log and Drive permissions.');
+    }
+
+    async function deleteBelongingsPhoto(card, button) {
+        if (!card || !button) return;
+        const photoId = button.dataset.deleteBelongingsPhoto;
+        if (!photoId) return;
+        if (!confirm('Delete this belongings photo from the shared record and Google Drive?')) return;
+
+        button.disabled = true;
+        try {
+            await sendPayloadToAppsScript({
+                action: 'delete_belongings_photo',
+                stayKey: card.dataset.stayKey,
+                photoId
+            });
+
+            const response = await queryAppsScript({ action: 'get_belongings', stayKeys: [card.dataset.stayKey] });
+            const record = (response.records || []).find(item => item.stayKey === card.dataset.stayKey);
+            if (record) belongingsRecordsCache[card.dataset.stayKey] = record;
+            await loadBelongingsDashboard();
+        } catch (error) {
+            alert('❌ PHOTO WAS NOT DELETED\n\n' + error.message);
+            button.disabled = false;
+        }
     }
 
     function escapeDashboardHtml(value) {
