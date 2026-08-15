@@ -2670,6 +2670,189 @@
             color: #94a3b8;
         }
 
+
+
+        /* ============================================================
+           MOBILE CALENDAR-FIRST LAYOUT + COLLAPSIBLE DASHBOARDS
+           ============================================================ */
+        .mobile-dashboard-toggle {
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            /*
+             * Mobile only:
+             * 1. Search / month / year / Sync Spreadsheet
+             * 2. Calendar
+             * 3. Calendar key
+             * 4. Dashboard show/hide control
+             * 5. Dashboard sections when expanded
+             */
+            #calendarTabPanel.app-tab-panel.active {
+                display: flex;
+                flex-direction: column;
+                min-width: 0;
+            }
+
+            #calendarTabPanel > .search-container {
+                order: 1;
+                width: 100%;
+                box-sizing: border-box;
+                margin-bottom: 10px !important;
+            }
+
+            #calendarTabPanel > #calendar {
+                order: 2;
+                width: 100%;
+                box-sizing: border-box;
+                margin: 0 0 9px;
+            }
+
+            #calendarTabPanel > #calendarEventLegend {
+                order: 3;
+                margin: 0 0 9px;
+            }
+
+            #calendarTabPanel > .mobile-dashboard-toggle {
+                order: 4;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                width: 100%;
+                box-sizing: border-box;
+                margin: 0 0 10px;
+                padding: 10px 12px;
+                border: 1px solid #dbe3ea;
+                border-radius: 9px;
+                background: #f8fafc;
+                color: #1f3a5f;
+                font: inherit;
+                font-size: 12px;
+                font-weight: 800;
+                cursor: pointer;
+                box-shadow: none;
+                -webkit-tap-highlight-color: transparent;
+            }
+
+            #calendarTabPanel > .mobile-dashboard-toggle:active {
+                background: #f1f5f9;
+            }
+
+            .mobile-dashboard-toggle-icon {
+                width: 22px;
+                height: 22px;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                border-radius: 999px;
+                background: #e8eef5;
+                color: #1f3a5f;
+                font-size: 15px;
+                line-height: 1;
+                flex: 0 0 22px;
+            }
+
+            #calendarTabPanel > .summary-dashboard {
+                order: 5;
+            }
+
+            #calendarTabPanel > .meet-greet-dashboard {
+                order: 6;
+            }
+
+            #calendarTabPanel > .directory-dashboard {
+                order: 7;
+            }
+
+            #calendarTabPanel.mobile-dashboards-collapsed
+                > .mobile-dashboard-section {
+                display: none !important;
+            }
+
+            /* Keep the mobile calendar comfortable without oversized padding. */
+            #calendar {
+                padding: 10px !important;
+                border-radius: 10px !important;
+            }
+
+            #calendar .fc-toolbar {
+                gap: 6px;
+                margin-bottom: 8px !important;
+            }
+
+            #calendar .fc-toolbar-chunk {
+                display: flex;
+                align-items: center;
+                gap: 3px;
+            }
+
+            #calendar .fc-toolbar-title {
+                font-size: 15px !important;
+            }
+
+            #calendar .fc-button {
+                min-height: 32px;
+                padding: 5px 7px !important;
+                font-size: 11px !important;
+            }
+
+            #calendarEventLegend {
+                width: 100%;
+                box-sizing: border-box;
+                justify-content: center;
+                flex-wrap: wrap;
+                gap: 6px 10px;
+                padding: 7px 8px;
+            }
+
+            .summary-dashboard,
+            .meet-greet-dashboard,
+            .directory-dashboard {
+                width: 100%;
+                box-sizing: border-box;
+            }
+        }
+
+        @media (max-width: 420px) {
+            #calendar {
+                padding: 7px !important;
+            }
+
+            #calendar .fc-toolbar {
+                flex-wrap: wrap;
+            }
+
+            #calendar .fc-toolbar-title {
+                font-size: 14px !important;
+            }
+
+            #calendar .fc-button {
+                min-height: 30px;
+                padding: 4px 6px !important;
+                font-size: 10.5px !important;
+            }
+
+            .mobile-dashboard-toggle {
+                padding: 9px 10px !important;
+                font-size: 11.5px !important;
+            }
+        }
+
+        body.dark-theme .mobile-dashboard-toggle {
+            background: #202c3e;
+            border-color: #34445b;
+            color: #f1f5f9;
+        }
+
+        body.dark-theme .mobile-dashboard-toggle:active {
+            background: #253248;
+        }
+
+        body.dark-theme .mobile-dashboard-toggle-icon {
+            background: #2b394d;
+            color: #dbeafe;
+        }
+
 </style>
 </head>
 <body>
@@ -2717,7 +2900,7 @@
         <button id="manualRefreshBtn" style="background: #3498db; color: white; border: none; padding: 12px 18px; border-radius: 8px; font-weight: bold; font-size: 14px; cursor: pointer; white-space: nowrap; transition: background 0.2s;">🔄 Sync Spreadsheet</button>
     </div>
 
-    <div class="summary-dashboard">
+    <div class="summary-dashboard mobile-dashboard-section" data-mobile-dashboard-section="summary">
         <div class="summary-card active-now">
             <h3>🏡 At Home Right Now</h3>
             <ul id="at-home-list" class="summary-list"><li class="no-dogs">No remaining guests at home right now</li></ul>
@@ -2736,7 +2919,7 @@
         </div>
     </div>
 
-    <div class="meet-greet-dashboard">
+    <div class="meet-greet-dashboard mobile-dashboard-section" data-mobile-dashboard-section="meet">
         <div class="meet-greet-dashboard-header">
             <h3>🤝 Today's Meet & Greets</h3>
             <span id="meet-greet-today-date" class="meet-greet-date-label">Today</span>
@@ -2746,7 +2929,7 @@
         </ul>
     </div>
 
-    <div class="directory-dashboard">
+    <div class="directory-dashboard mobile-dashboard-section" data-mobile-dashboard-section="directory">
         <div class="directory-dashboard-header">
             <div>
                 <h3>🐾 Guest Directory &amp; Care</h3>
@@ -2768,6 +2951,17 @@
         <span class="legend-item"><span class="legend-dot legend-potential"></span>Potential</span>
     </div>
     <div id="calendar"></div>
+
+    <button
+        type="button"
+        id="mobileDashboardToggle"
+        class="mobile-dashboard-toggle"
+        aria-expanded="false"
+        aria-controls="mobileDashboardSections">
+        <span class="mobile-dashboard-toggle-label">Show Dashboards</span>
+        <span class="mobile-dashboard-toggle-icon" aria-hidden="true">⌄</span>
+    </button>
+
     </div>
 
     <div id="belongingsTabPanel" class="app-tab-panel" data-app-panel="belongings">
@@ -2986,7 +3180,110 @@
         console.log('[Waffle House] browser page is unloading');
     });
 
+    const MOBILE_DASHBOARD_STORAGE_KEY = 'waffleMobileDashboardsExpanded';
+
+    function isMobileCalendarLayout() {
+        return window.matchMedia('(max-width: 768px)').matches;
+    }
+
+    function getMobileDashboardExpandedPreference() {
+        return localStorage.getItem(MOBILE_DASHBOARD_STORAGE_KEY) === 'true';
+    }
+
+    function applyMobileDashboardState(expanded, options = {}) {
+        const panel = document.getElementById('calendarTabPanel');
+        const button = document.getElementById('mobileDashboardToggle');
+        if (!panel || !button) return;
+
+        if (!isMobileCalendarLayout()) {
+            panel.classList.remove('mobile-dashboards-collapsed');
+            button.setAttribute('aria-expanded', 'true');
+            return;
+        }
+
+        const isExpanded = !!expanded;
+        panel.classList.toggle(
+            'mobile-dashboards-collapsed',
+            !isExpanded
+        );
+
+        button.setAttribute(
+            'aria-expanded',
+            isExpanded ? 'true' : 'false'
+        );
+
+        const label = button.querySelector(
+            '.mobile-dashboard-toggle-label'
+        );
+        const icon = button.querySelector(
+            '.mobile-dashboard-toggle-icon'
+        );
+
+        if (label) {
+            label.textContent =
+                isExpanded ? 'Hide Dashboards' : 'Show Dashboards';
+        }
+
+        if (icon) {
+            icon.textContent = isExpanded ? '⌃' : '⌄';
+        }
+
+        if (options.persist !== false) {
+            localStorage.setItem(
+                MOBILE_DASHBOARD_STORAGE_KEY,
+                isExpanded ? 'true' : 'false'
+            );
+        }
+
+        // FullCalendar needs to recalculate its width/height after the mobile
+        // content stack changes.
+        if (globalCalendar) {
+            requestAnimationFrame(() => {
+                globalCalendar.updateSize();
+                setTimeout(() => globalCalendar.updateSize(), 120);
+            });
+        }
+    }
+
+    function toggleMobileDashboards() {
+        if (!isMobileCalendarLayout()) return;
+
+        const panel = document.getElementById('calendarTabPanel');
+        if (!panel) return;
+
+        const currentlyCollapsed =
+            panel.classList.contains('mobile-dashboards-collapsed');
+
+        applyMobileDashboardState(currentlyCollapsed);
+    }
+
+    function initialiseMobileDashboardLayout() {
+        const button = document.getElementById('mobileDashboardToggle');
+        if (!button) return;
+
+        // Mobile defaults to collapsed on first use so the calendar is the
+        // first major item immediately after the Sync Spreadsheet controls.
+        const expanded = getMobileDashboardExpandedPreference();
+        applyMobileDashboardState(expanded, { persist: false });
+
+        button.addEventListener('click', toggleMobileDashboards);
+
+        let resizeTimer = null;
+        window.addEventListener('resize', function() {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(function() {
+                applyMobileDashboardState(
+                    getMobileDashboardExpandedPreference(),
+                    { persist: false }
+                );
+            }, 120);
+        });
+    }
+
+
     document.addEventListener('DOMContentLoaded', function() {
+        initialiseMobileDashboardLayout();
+
         const cachedData = localStorage.getItem('boardingDataCache');
         if (cachedData) {
             parseCSVToEvents(cachedData);
