@@ -2026,6 +2026,11 @@
         }
     }
 
+    function makeBelongingsPhotoUploadToken() {
+        return 'photo_' + Date.now() + '_' +
+            Math.random().toString(36).slice(2, 12);
+    }
+
     async function uploadBelongingsPhotoData(card, photoData, input) {
         if (!card || !photoData) return;
 
@@ -2033,43 +2038,66 @@
         const photoLabelInput = card.querySelector('[data-belongings-photo-label]');
         const payloadBase = getBelongingsCardPayload(card);
         const previousCount = belongingsRecordsCache[payloadBase.stayKey]?.photos?.length || 0;
+        const uploadToken = makeBelongingsPhotoUploadToken();
 
         if (input) input.disabled = true;
 
         try {
             if (status) status.textContent = '💾 Saving belongings details...';
 
-            // Save the current checklist/descriptions first so the photo has
-            // a shared record to attach to.
-            await sendPayloadToAppsScript({ action: 'save_belongings', ...payloadBase });
+            await sendPayloadToAppsScript({
+                action: 'save_belongings',
+                ...payloadBase
+            });
+
+            await queryAppsScript({
+                action: 'begin_belongings_photo_upload',
+                uploadToken
+            });
 
             const photoLabel = photoLabelInput?.value.trim() || 'Belongings photo';
             if (status) status.textContent = '☁️ Uploading photo to Google Drive...';
 
-            // The photo body is too large for JSONP/GET, so upload it with POST.
-            // We then verify the result by polling the shared belongings record.
             await fetch(APPS_SCRIPT_WEBAPP_URL, {
                 method: 'POST',
                 mode: 'no-cors',
                 headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
                 body: JSON.stringify({
                     action: 'upload_belongings_photo',
+                    uploadToken,
                     ...payloadBase,
                     photoLabel,
                     photoData
                 })
             });
 
-            if (status) status.textContent = '🔎 Verifying photo upload...';
+            if (status) status.textContent = '🔎 Waiting for Google Drive confirmation...';
 
-            const updatedRecord = await waitForBelongingsPhoto(payloadBase.stayKey, previousCount);
+            const uploadResult = await waitForBelongingsPhotoUploadStatus(uploadToken);
+
+            if (uploadResult.state !== 'success') {
+                throw new Error(
+                    uploadResult.error ||
+                    uploadResult.message ||
+                    'The photo upload failed.'
+                );
+            }
+
+            const updatedRecord = await waitForBelongingsPhotoRecord(
+                payloadBase.stayKey,
+                previousCount
+            );
+
             belongingsRecordsCache[payloadBase.stayKey] = updatedRecord;
 
             if (status) status.textContent = '✅ Photo saved to Google Drive';
 
             renderBelongingsDashboard(
-                getCurrentBoardingStays(localStorage.getItem('boardingDataCache') || '')
+                getCurrentBoardingStays(
+                    localStorage.getItem('boardingDataCache') || ''
+                )
             );
+
         } catch (error) {
             console.error('Photo upload failed:', error);
             if (status) status.textContent = '❌ ' + error.message;
@@ -2079,17 +2107,78 @@
         }
     }
 
-    async function waitForBelongingsPhoto(stayKey, previousCount) {
-        for (let attempt = 0; attempt < 12; attempt++) {
-            await new Promise(resolve => setTimeout(resolve, attempt === 0 ? 1200 : 1000));
-            const response = await queryAppsScript({ action: 'get_belongings', stayKeys: [stayKey] });
-            const record = (response.records || []).find(item => item.stayKey === stayKey);
-            if (record && Array.isArray(record.photos) && record.photos.length > previousCount) {
+    async function waitForBelongingsPhotoUploadStatus(uploadToken) {
+        let lastStatus = null;
+
+        for (let attempt = 0; attempt < 30; attempt++) {
+            await new Promise(resolve =>
+                setTimeout(resolve, attempt === 0 ? 800 : 1400)
+            );
+
+            const response = await queryAppsScript({
+                action: 'get_belongings_photo_upload_status',
+                uploadToken
+            });
+
+            lastStatus = response.uploadStatus || null;
+
+            if (!lastStatus) continue;
+
+            if (lastStatus.state === 'success') {
+                return lastStatus;
+            }
+
+            if (lastStatus.state === 'error') {
+                throw new Error(
+                    lastStatus.error ||
+                    'Apps Script reported an unknown photo upload error.'
+                );
+            }
+        }
+
+        if (lastStatus && lastStatus.state === 'pending') {
+            throw new Error(
+                'The browser prepared the upload, but the photo POST request did not reach Apps Script. Check the Web App URL and deployment access.'
+            );
+        }
+
+        if (lastStatus && lastStatus.state === 'processing') {
+            throw new Error(
+                'Apps Script received the photo but did not finish processing it within 45 seconds. Check Apps Script > Executions for the upload_belongings_photo run.'
+            );
+        }
+
+        throw new Error(
+            'No server-side photo upload status was returned. Check that the latest Code.gs version is deployed.'
+        );
+    }
+
+    async function waitForBelongingsPhotoRecord(stayKey, previousCount) {
+        for (let attempt = 0; attempt < 8; attempt++) {
+            if (attempt > 0) {
+                await new Promise(resolve => setTimeout(resolve, 700));
+            }
+
+            const response = await queryAppsScript({
+                action: 'get_belongings',
+                stayKeys: [stayKey]
+            });
+
+            const record = (response.records || [])
+                .find(item => item.stayKey === stayKey);
+
+            if (
+                record &&
+                Array.isArray(record.photos) &&
+                record.photos.length > previousCount
+            ) {
                 return record;
             }
         }
 
-        throw new Error('The upload request was sent, but the new photo was not confirmed in Google Sheets. Check the Apps Script execution log and Drive permissions.');
+        throw new Error(
+            'Google Drive reported success, but the new photo is not visible in the Pet_Belongings sheet yet.'
+        );
     }
 
     async function deleteBelongingsPhoto(card, button) {
