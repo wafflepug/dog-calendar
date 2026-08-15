@@ -507,7 +507,8 @@
             }
 
             body.dark-theme #calendar,
-            body.dark-theme #belongingsTabPanel.app-tab-panel.active {
+            body.dark-theme #belongingsTabPanel.app-tab-panel.active,
+            body.dark-theme #auditTabPanel.app-tab-panel.active {
                 background: #1e293b;
                 border-color: #475569;
                 box-shadow: 0 3px 12px rgba(0,0,0,0.25);
@@ -1177,7 +1178,8 @@
 
         body.dark-theme .container,
         body.dark-theme #calendar,
-        body.dark-theme #belongingsTabPanel.app-tab-panel.active {
+        body.dark-theme #belongingsTabPanel.app-tab-panel.active,
+            body.dark-theme #auditTabPanel.app-tab-panel.active {
             background: #182235 !important;
             border-color: #2b394d !important;
         }
@@ -1741,6 +1743,384 @@
             background: #253248;
         }
 
+
+
+        /* ============================================================
+           AUDIT LOG
+           ============================================================ */
+        .audit-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+            margin-bottom: 14px;
+        }
+
+        .audit-header h3 {
+            margin: 0;
+            color: #1f3a5f;
+            font-size: 18px;
+            font-weight: 800;
+        }
+
+        .audit-header p {
+            margin: 4px 0 0;
+            color: #64748b;
+            font-size: 12px;
+            line-height: 1.45;
+        }
+
+        .audit-refresh-btn {
+            border: 0;
+            border-radius: 7px;
+            background: #1f3a5f;
+            color: #ffffff;
+            padding: 9px 12px;
+            font-size: 12px;
+            font-weight: 800;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .audit-refresh-btn:hover {
+            background: #162b47;
+        }
+
+        .audit-refresh-btn:disabled {
+            opacity: .65;
+            cursor: wait;
+        }
+
+        .audit-toolbar {
+            display: grid;
+            grid-template-columns: minmax(220px, 1fr) 180px auto;
+            gap: 8px;
+            align-items: center;
+            margin-bottom: 14px;
+            padding: 10px;
+            border: 1px solid #e8edf2;
+            border-radius: 10px;
+            background: #f8fafc;
+        }
+
+        .audit-search,
+        .audit-filter {
+            min-width: 0;
+            box-sizing: border-box;
+            border: 1px solid #dbe3ea;
+            border-radius: 7px;
+            background: #ffffff;
+            color: #172033;
+            padding: 9px 10px;
+            font: inherit;
+            font-size: 12px;
+            outline: none;
+        }
+
+        .audit-search:focus,
+        .audit-filter:focus {
+            border-color: #93b4ef;
+            box-shadow: 0 0 0 3px rgba(37,99,235,.08);
+        }
+
+        .audit-result-count {
+            justify-self: end;
+            color: #64748b;
+            font-size: 11px;
+            font-weight: 800;
+            white-space: nowrap;
+        }
+
+        .audit-log-container {
+            display: grid;
+            gap: 8px;
+            max-height: calc(100vh - 220px);
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+
+        .audit-entry {
+            display: grid;
+            grid-template-columns: 38px minmax(0, 1fr);
+            gap: 10px;
+            padding: 11px 12px;
+            border: 1px solid #e8edf2;
+            border-radius: 10px;
+            background: #ffffff;
+            box-shadow: 0 1px 2px rgba(15,23,42,.03);
+        }
+
+        .audit-entry-icon {
+            width: 34px;
+            height: 34px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 9px;
+            background: #f1f5f9;
+            font-size: 17px;
+        }
+
+        .audit-entry-body {
+            min-width: 0;
+        }
+
+        .audit-entry-topline {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .audit-entry-title {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            min-width: 0;
+            flex-wrap: wrap;
+        }
+
+        .audit-entry-title strong {
+            color: #1f2937;
+            font-size: 12.5px;
+        }
+
+        .audit-entry-topline time {
+            color: #64748b;
+            font-size: 10px;
+            font-weight: 650;
+            white-space: nowrap;
+        }
+
+        .audit-category-chip {
+            display: inline-flex;
+            align-items: center;
+            padding: 3px 6px;
+            border-radius: 999px;
+            background: #eef2f6;
+            color: #526173;
+            border: 1px solid #dbe3ea;
+            font-size: 9px;
+            font-weight: 800;
+        }
+
+        .audit-category-meet-greet {
+            background: #f0fdfa;
+            color: #115e59;
+            border-color: #99f6e4;
+        }
+
+        .audit-category-potential-stay {
+            background: #fff7ed;
+            color: #9a3412;
+            border-color: #fed7aa;
+        }
+
+        .audit-category-photos {
+            background: #eff6ff;
+            color: #1e40af;
+            border-color: #bfdbfe;
+        }
+
+        .audit-category-belongings {
+            background: #f5f3ff;
+            color: #5b21b6;
+            border-color: #ddd6fe;
+        }
+
+        .audit-category-boarding {
+            background: #f1f5f9;
+            color: #334155;
+            border-color: #cbd5e1;
+        }
+
+        .audit-entry-summary {
+            margin-top: 5px;
+            color: #475569;
+            font-size: 11.5px;
+            line-height: 1.45;
+        }
+
+        .audit-entry-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px 12px;
+            margin-top: 7px;
+            color: #64748b;
+            font-size: 10px;
+        }
+
+        .audit-change-details {
+            margin-top: 8px;
+            border-top: 1px solid #eef2f6;
+            padding-top: 7px;
+        }
+
+        .audit-change-details summary {
+            color: #2563eb;
+            font-size: 10.5px;
+            font-weight: 750;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .audit-change-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .audit-change-grid > div {
+            min-width: 0;
+        }
+
+        .audit-change-label {
+            display: block;
+            margin-bottom: 4px;
+            color: #64748b;
+            font-size: 9px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: .04em;
+        }
+
+        .audit-change-grid pre {
+            margin: 0;
+            max-height: 220px;
+            overflow: auto;
+            white-space: pre-wrap;
+            word-break: break-word;
+            border: 1px solid #e8edf2;
+            border-radius: 7px;
+            background: #f8fafc;
+            padding: 8px;
+            color: #334155;
+            font-size: 9.5px;
+            line-height: 1.4;
+        }
+
+        .audit-empty,
+        .audit-error {
+            padding: 36px 18px;
+            border: 1px dashed #cbd5e1;
+            border-radius: 10px;
+            background: #f8fafc;
+            color: #64748b;
+            text-align: center;
+            font-size: 12px;
+        }
+
+        .audit-error {
+            color: #b45309;
+            background: #fff7ed;
+            border-color: #fed7aa;
+        }
+
+        @media (min-width: 1100px) {
+            #auditTabPanel.app-tab-panel.active {
+                display: block;
+                grid-area: main;
+                min-width: 0;
+                align-self: start;
+                box-sizing: border-box;
+                padding: 18px;
+                border: 1px solid #e2e8f0;
+                border-radius: 12px;
+                background: #ffffff;
+                box-shadow: 0 3px 10px rgba(15, 23, 42, 0.05);
+            }
+
+            body.dark-theme #auditTabPanel.app-tab-panel.active {
+                background: #182235;
+                border-color: #2b394d;
+                box-shadow: 0 3px 12px rgba(0,0,0,0.25);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .audit-header {
+                align-items: stretch;
+                flex-direction: column;
+            }
+
+            .audit-refresh-btn {
+                width: 100%;
+            }
+
+            .audit-toolbar {
+                grid-template-columns: 1fr;
+            }
+
+            .audit-result-count {
+                justify-self: start;
+            }
+
+            .audit-log-container {
+                max-height: none;
+            }
+
+            .audit-entry {
+                grid-template-columns: 32px minmax(0, 1fr);
+                padding: 10px;
+            }
+
+            .audit-entry-icon {
+                width: 30px;
+                height: 30px;
+                font-size: 15px;
+            }
+
+            .audit-entry-topline {
+                flex-direction: column;
+                gap: 4px;
+            }
+
+            .audit-change-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        body.dark-theme .audit-header h3,
+        body.dark-theme .audit-entry-title strong {
+            color: #f1f5f9;
+        }
+
+        body.dark-theme .audit-header p,
+        body.dark-theme .audit-result-count,
+        body.dark-theme .audit-entry-summary,
+        body.dark-theme .audit-entry-meta,
+        body.dark-theme .audit-entry-topline time {
+            color: #a8b5c7;
+        }
+
+        body.dark-theme .audit-toolbar,
+        body.dark-theme .audit-entry,
+        body.dark-theme .audit-change-grid pre,
+        body.dark-theme .audit-empty {
+            background: #202c3e;
+            border-color: #34445b;
+        }
+
+        body.dark-theme .audit-search,
+        body.dark-theme .audit-filter {
+            background: #182235;
+            color: #f8fafc;
+            border-color: #40516a;
+        }
+
+        body.dark-theme .audit-entry-icon {
+            background: #253248;
+        }
+
+        body.dark-theme .audit-change-details {
+            border-top-color: #34445b;
+        }
+
+        body.dark-theme .audit-change-grid pre {
+            color: #d8e1ec;
+        }
+
 </style>
 </head>
 <body>
@@ -1759,6 +2139,7 @@
     <div class="app-tabs" role="tablist" aria-label="Waffle House sections">
         <button type="button" class="app-tab-button active" data-app-tab="calendar" role="tab" aria-selected="true">📅 Calendar & Dashboard</button>
         <button type="button" class="app-tab-button" data-app-tab="belongings" role="tab" aria-selected="false">🧳 Current Pets & Belongings</button>
+        <button type="button" class="app-tab-button" data-app-tab="audit" role="tab" aria-selected="false">🧾 Audit Log</button>
     </div>
 
     <div id="calendarTabPanel" class="app-tab-panel active" data-app-panel="calendar">
@@ -1851,6 +2232,39 @@
 
         <div id="currentPetsBelongingsContainer" class="belongings-pets-grid">
             <div class="belongings-empty">Open this tab to load the current pets and their belongings.</div>
+        </div>
+    </div>
+
+    <div id="auditTabPanel" class="app-tab-panel" data-app-panel="audit">
+        <div class="audit-header">
+            <div>
+                <h3>🧾 Audit Log</h3>
+                <p>Operational history for bookings, Meet & Greets, Potential Stays, detail changes, belongings and photos.</p>
+            </div>
+            <button type="button" id="refreshAuditBtn" class="audit-refresh-btn">🔄 Refresh Log</button>
+        </div>
+
+        <div class="audit-toolbar">
+            <input
+                type="search"
+                id="auditSearch"
+                class="audit-search"
+                placeholder="🔍 Search dog, action, field or source..."
+                autocomplete="off">
+            <select id="auditCategoryFilter" class="audit-filter" aria-label="Filter audit category">
+                <option value="">All activity</option>
+                <option value="Boarding">Boarding</option>
+                <option value="Meet & Greet">Meet & Greet</option>
+                <option value="Potential Stay">Potential Stay</option>
+                <option value="Belongings">Belongings</option>
+                <option value="Photos">Photos</option>
+                <option value="System">System</option>
+            </select>
+            <span id="auditResultCount" class="audit-result-count">0 records</span>
+        </div>
+
+        <div id="auditLogContainer" class="audit-log-container">
+            <div class="audit-empty">Open this tab to load recent audit activity.</div>
         </div>
     </div>
 </div>
@@ -1960,7 +2374,8 @@
     const APPS_SCRIPT_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbwn4HL49K9c3AZbXJRUjPw3UYWxJt8DmqXwMnTytyqdSstj3ZIJwWdDEC2IsBjetOf3pw/exec';
 
     let globalCalendar = null;
-    let dailyCapacityCounts = {}; 
+    let dailyCapacityCounts = {};
+    let auditLogRecords = []; 
     let isUpdatingDropdowns = false; 
     let selectedClickDateStr = ""; 
     let activeEditingEvent = null; 
@@ -2170,6 +2585,13 @@
             loadBelongingsDashboard({ button: this });
         });
 
+        document.getElementById('refreshAuditBtn').addEventListener('click', function() {
+            loadAuditLog({ button: this }).catch(error => console.error(error));
+        });
+
+        document.getElementById('auditSearch').addEventListener('input', renderAuditLog);
+        document.getElementById('auditCategoryFilter').addEventListener('change', renderAuditLog);
+
         const belongingsContainer = document.getElementById('currentPetsBelongingsContainer');
         belongingsContainer.addEventListener('click', async function(event) {
             const dogPhotoButton = event.target.closest('[data-upload-dog-photo]');
@@ -2240,8 +2662,8 @@
         });
 
         const savedAppTab = localStorage.getItem('waffleActiveTab');
-        if (savedAppTab === 'belongings') {
-            switchAppTab('belongings');
+        if (savedAppTab === 'belongings' || savedAppTab === 'audit') {
+            switchAppTab(savedAppTab);
         }
 
         document.getElementById('calendarSearch').addEventListener('input', applyCurrentSearchFilter);
@@ -3057,7 +3479,7 @@
     }
 
     function switchAppTab(tabName) {
-        if (tabName === 'calendar' || tabName === 'belongings') {
+        if (tabName === 'calendar' || tabName === 'belongings' || tabName === 'audit') {
             localStorage.setItem('waffleActiveTab', tabName);
         }
 
@@ -3077,6 +3499,186 @@
 
         if (tabName === 'belongings' && !belongingsUploadInProgress) {
             loadBelongingsDashboard().catch(error => console.error(error));
+        }
+
+        if (tabName === 'audit') {
+            loadAuditLog().catch(error => console.error(error));
+        }
+    }
+
+    function auditCategoryIcon(category, action) {
+        const text = `${category || ''} ${action || ''}`.toLowerCase();
+
+        if (text.includes('photo')) return '📷';
+        if (text.includes('meet')) return '🤝';
+        if (text.includes('potential')) return '❓';
+        if (text.includes('belong')) return '🧳';
+        if (text.includes('detail')) return '✏️';
+        if (text.includes('system')) return '⚙️';
+        return '🐾';
+    }
+
+    function formatAuditTimestamp(value) {
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return String(value || '');
+
+        return date.toLocaleString('en-AU', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    }
+
+    function prettyAuditJson(value) {
+        const text = String(value || '').trim();
+        if (!text) return '';
+
+        try {
+            return JSON.stringify(JSON.parse(text), null, 2);
+        } catch (_) {
+            return text;
+        }
+    }
+
+    function renderAuditLog() {
+        const container = document.getElementById('auditLogContainer');
+        const countEl = document.getElementById('auditResultCount');
+        if (!container || !countEl) return;
+
+        const search = (document.getElementById('auditSearch')?.value || '')
+            .toLowerCase()
+            .trim();
+        const category = document.getElementById('auditCategoryFilter')?.value || '';
+
+        const filtered = auditLogRecords.filter(record => {
+            if (category && record.category !== category) return false;
+            if (!search) return true;
+
+            const haystack = [
+                record.category,
+                record.action,
+                record.dogName,
+                record.bookingType,
+                record.reference,
+                record.summary,
+                record.changedFields,
+                record.source,
+                record.actor
+            ].join(' ').toLowerCase();
+
+            return haystack.includes(search);
+        });
+
+        countEl.textContent =
+            `${filtered.length} ${filtered.length === 1 ? 'record' : 'records'}`;
+
+        if (!filtered.length) {
+            container.innerHTML =
+                '<div class="audit-empty">No audit activity matches this filter.</div>';
+            return;
+        }
+
+        container.innerHTML = filtered.map(record => {
+            const before = prettyAuditJson(record.beforeJson);
+            const after = prettyAuditJson(record.afterJson);
+            const hasDetails = !!(before || after);
+            const icon = auditCategoryIcon(record.category, record.action);
+            const actorText =
+                record.actor && record.actor !== 'Web App / Unavailable'
+                    ? ` · ${escapeDashboardHtml(record.actor)}`
+                    : '';
+
+            return `
+                <article class="audit-entry">
+                    <div class="audit-entry-icon" aria-hidden="true">${icon}</div>
+                    <div class="audit-entry-body">
+                        <div class="audit-entry-topline">
+                            <div class="audit-entry-title">
+                                <strong>${escapeDashboardHtml(record.action || 'Activity')}</strong>
+                                <span class="audit-category-chip audit-category-${String(record.category || '').toLowerCase().replace(/[^a-z0-9]+/g, '-')}">
+                                    ${escapeDashboardHtml(record.category || 'Activity')}
+                                </span>
+                            </div>
+                            <time>${escapeDashboardHtml(formatAuditTimestamp(record.timestamp))}</time>
+                        </div>
+
+                        <div class="audit-entry-summary">
+                            ${escapeDashboardHtml(record.summary || '')}
+                        </div>
+
+                        <div class="audit-entry-meta">
+                            ${record.dogName ? `<span>🐾 ${escapeDashboardHtml(record.dogName)}</span>` : ''}
+                            ${record.changedFields ? `<span>✏️ ${escapeDashboardHtml(record.changedFields)}</span>` : ''}
+                            ${record.source ? `<span>📍 ${escapeDashboardHtml(record.source)}${actorText}</span>` : ''}
+                        </div>
+
+                        ${hasDetails ? `
+                            <details class="audit-change-details">
+                                <summary>View recorded changes</summary>
+                                <div class="audit-change-grid">
+                                    ${before ? `
+                                        <div>
+                                            <span class="audit-change-label">Before</span>
+                                            <pre>${escapeDashboardHtml(before)}</pre>
+                                        </div>
+                                    ` : ''}
+                                    ${after ? `
+                                        <div>
+                                            <span class="audit-change-label">After</span>
+                                            <pre>${escapeDashboardHtml(after)}</pre>
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            </details>
+                        ` : ''}
+                    </div>
+                </article>
+            `;
+        }).join('');
+    }
+
+    async function loadAuditLog(options = {}) {
+        const button = options.button || null;
+        const container = document.getElementById('auditLogContainer');
+
+        if (button) {
+            button.disabled = true;
+            button.textContent = '⏳ Refreshing...';
+        }
+
+        if (container && !auditLogRecords.length) {
+            container.innerHTML =
+                '<div class="audit-empty">⏳ Loading recent audit activity...</div>';
+        }
+
+        try {
+            const response = await queryAppsScript({
+                action: 'get_audit_log',
+                limit: 500
+            }, {
+                maxAttempts: 2,
+                timeoutMs: 45000
+            });
+
+            auditLogRecords = Array.isArray(response.records)
+                ? response.records
+                : [];
+
+            renderAuditLog();
+        } catch (error) {
+            console.error('Audit log load failed:', error);
+
+            if (container) {
+                container.innerHTML =
+                    `<div class="audit-error">⚠️ Audit log could not be loaded.<br>${escapeDashboardHtml(error.message || String(error))}</div>`;
+            }
+        } finally {
+            if (button) {
+                button.disabled = false;
+                button.textContent = '🔄 Refresh Log';
+            }
         }
     }
 
