@@ -1639,6 +1639,108 @@
             border-top-color: #2f4057;
         }
 
+
+
+        /* ============================================================
+           CURRENT PET DOG PROFILE PHOTOS
+           ============================================================ */
+        .dog-profile-summary {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            min-width: 0;
+            flex: 1;
+        }
+
+        .dog-profile-photo-wrap {
+            width: 76px;
+            height: 76px;
+            flex: 0 0 76px;
+            border-radius: 14px;
+            overflow: hidden;
+            border: 1px solid #dbe3ea;
+            background: #eef2f6;
+            box-shadow: 0 1px 3px rgba(15,23,42,.06);
+        }
+
+        .dog-profile-photo {
+            width: 100%;
+            height: 100%;
+            display: block;
+            object-fit: cover;
+        }
+
+        .dog-profile-photo-placeholder {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 34px;
+            background: linear-gradient(145deg,#f8fafc,#e9eef4);
+            color: #64748b;
+        }
+
+        .dog-profile-details {
+            min-width: 0;
+            flex: 1;
+        }
+
+        .dog-profile-photo-btn {
+            margin-top: 8px;
+            border: 1px solid #cbd5e1;
+            background: #ffffff;
+            color: #1f3a5f;
+            padding: 6px 9px;
+            border-radius: 7px;
+            font-size: 10.5px;
+            font-weight: 800;
+            cursor: pointer;
+            transition: background-color .15s ease, border-color .15s ease;
+        }
+
+        .dog-profile-photo-btn:hover {
+            background: #f8fafc;
+            border-color: #9fb0c2;
+        }
+
+        @media (max-width: 520px) {
+            .belongings-pet-heading {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .dog-profile-photo-wrap {
+                width: 68px;
+                height: 68px;
+                flex-basis: 68px;
+            }
+
+            .belongings-stay-badge {
+                align-self: flex-start;
+            }
+        }
+
+        body.dark-theme .dog-profile-photo-wrap {
+            border-color: #40516a;
+            background: #202c3e;
+        }
+
+        body.dark-theme .dog-profile-photo-placeholder {
+            background: #202c3e;
+            color: #a8b5c7;
+        }
+
+        body.dark-theme .dog-profile-photo-btn {
+            background: #202c3e;
+            color: #dbeafe;
+            border-color: #40516a;
+        }
+
+        body.dark-theme .dog-profile-photo-btn:hover {
+            background: #253248;
+        }
+
 </style>
 </head>
 <body>
@@ -2070,6 +2172,14 @@
 
         const belongingsContainer = document.getElementById('currentPetsBelongingsContainer');
         belongingsContainer.addEventListener('click', async function(event) {
+            const dogPhotoButton = event.target.closest('[data-upload-dog-photo]');
+            if (dogPhotoButton) {
+                event.preventDefault();
+                const card = dogPhotoButton.closest('.belongings-pet-card');
+                if (card) await openHostedBelongingsPhotoUploader(card, 'upload', 'dogProfile');
+                return;
+            }
+
             const takePhotoButton = event.target.closest('[data-take-belongings-photo]');
             if (takePhotoButton) {
                 event.preventDefault();
@@ -3302,6 +3412,19 @@
                 `;
             }).join('');
 
+            const dogPhoto = record.dogPhoto || null;
+            const dogPhotoHtml = dogPhoto && dogPhoto.previewUrl
+                ? `<img src="${escapeDashboardHtml(dogPhoto.previewUrl)}"
+                        alt="${escapeDashboardHtml(stay.dogName)}"
+                        class="dog-profile-photo"
+                        loading="lazy">`
+                : `<div class="dog-profile-photo-placeholder" aria-label="No dog photo">🐶</div>`;
+
+            const dogPhotoButtonLabel =
+                dogPhoto && dogPhoto.previewUrl
+                    ? 'Change Dog Photo'
+                    : 'Add Dog Photo';
+
             const riskFlags = record.riskFlags || {};
             const riskFlagsHtml = CARE_SAFETY_FLAGS.map(flag => `
                 <label class="care-risk-option ${escapeDashboardHtml(flag.className)}">
@@ -3332,11 +3455,19 @@
                     data-end-date="${escapeDashboardHtml(stay.endDate)}">
 
                     <div class="belongings-pet-heading">
-                        <div>
-                            <h4>🐾 ${escapeDashboardHtml(stay.dogName)}</h4>
-                            <div class="belongings-pet-meta">
-                                ${escapeDashboardHtml(stay.breed)} · Owner: ${escapeDashboardHtml(stay.ownerName)}<br>
-                                Contact: ${escapeDashboardHtml(stay.phone)}
+                        <div class="dog-profile-summary">
+                            <div class="dog-profile-photo-wrap">${dogPhotoHtml}</div>
+                            <div class="dog-profile-details">
+                                <h4>🐾 ${escapeDashboardHtml(stay.dogName)}</h4>
+                                <div class="belongings-pet-meta">
+                                    ${escapeDashboardHtml(stay.breed)} · Owner: ${escapeDashboardHtml(stay.ownerName)}<br>
+                                    Contact: ${escapeDashboardHtml(stay.phone)}
+                                </div>
+                                <button type="button"
+                                    class="dog-profile-photo-btn"
+                                    data-upload-dog-photo>
+                                    📷 ${dogPhotoButtonLabel}
+                                </button>
                             </div>
                         </div>
                         <span class="belongings-stay-badge">${formatStayDateShort(stay.startDate)} – ${formatStayDateShort(stay.endDate)}</span>
@@ -3424,7 +3555,8 @@
                 endDate: payload.endDate,
                 items: payload.items,
                 riskFlags: payload.riskFlags,
-                photos: belongingsRecordsCache[payload.stayKey]?.photos || []
+                photos: belongingsRecordsCache[payload.stayKey]?.photos || [],
+                dogPhoto: belongingsRecordsCache[payload.stayKey]?.dogPhoto || null
             };
 
             careRiskRecordsCache[payload.stayKey] = {
@@ -3473,18 +3605,23 @@
         belongingsUploadInProgress = false;
     }
 
-    async function openHostedBelongingsPhotoUploader(card, mode) {
+    async function openHostedBelongingsPhotoUploader(card, mode, photoType = 'belongings') {
         if (!card) return;
 
         const status = card.querySelector('[data-belongings-photo-status]');
         const photoLabelInput = card.querySelector('[data-belongings-photo-label]');
         const payloadBase = getBelongingsCardPayload(card);
+        const isDogProfile = photoType === 'dogProfile';
         const requestToken = makeHostedPhotoRequestToken();
 
         belongingsUploadInProgress = true;
 
         try {
-            if (status) status.textContent = '💾 Saving belongings details...';
+            if (status) {
+                status.textContent = isDogProfile
+                    ? '💾 Preparing dog profile...'
+                    : '💾 Saving belongings details...';
+            }
 
             // Ensure an existing shared Pet_Belongings row is present. The
             // Apps Script-hosted uploader only appends a photo to this record.
@@ -3496,7 +3633,8 @@
             hostedBelongingsPhotoContext = {
                 card,
                 stayKey: payloadBase.stayKey,
-                requestToken
+                requestToken,
+                photoType
             };
 
             const params = new URLSearchParams({
@@ -3506,7 +3644,10 @@
                 dogName: payloadBase.dogName || '',
                 startDate: payloadBase.startDate || '',
                 endDate: payloadBase.endDate || '',
-                photoLabel: photoLabelInput?.value.trim() || '',
+                photoLabel: isDogProfile
+                    ? `${payloadBase.dogName || 'Dog'} profile photo`
+                    : (photoLabelInput?.value.trim() || ''),
+                photoType,
                 requestToken,
                 _ts: String(Date.now())
             });
@@ -3519,7 +3660,9 @@
             modal.setAttribute('aria-hidden', 'false');
 
             if (status) {
-                status.textContent = '📷 Photo uploader opened. Choose or take a photo.';
+                status.textContent = isDogProfile
+                    ? '🐶 Dog photo uploader opened.'
+                    : '📷 Photo uploader opened. Choose or take a photo.';
             }
 
         } catch (error) {
@@ -3537,12 +3680,18 @@
         if (!context || !data || typeof data !== 'object') return;
         if (data.requestToken !== context.requestToken) return;
         if (data.stayKey !== context.stayKey) return;
+        if ((data.photoType || 'belongings') !== (context.photoType || 'belongings')) return;
 
         const card = context.card;
         const status = card && card.querySelector('[data-belongings-photo-status]');
 
         if (data.type === 'waffleBelongingsPhotoUploaderReady') {
-            if (status) status.textContent = '📷 Photo uploader ready.';
+            if (status) {
+                status.textContent =
+                    context.photoType === 'dogProfile'
+                        ? '🐶 Dog photo uploader ready.'
+                        : '📷 Photo uploader ready.';
+            }
             return;
         }
 
@@ -3572,7 +3721,12 @@
                     belongingsRecordsCache[context.stayKey] = record;
                 }
 
-                if (status) status.textContent = '✅ Photo saved to Google Drive';
+                if (status) {
+                    status.textContent =
+                        context.photoType === 'dogProfile'
+                            ? '✅ Dog photo saved'
+                            : '✅ Photo saved to Google Drive';
+                }
 
                 closeHostedBelongingsPhotoUploader();
 
