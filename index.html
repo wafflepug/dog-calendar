@@ -1887,7 +1887,7 @@
         { key: 'escapeRisk', label: 'Escape Risk', icon: '🚪', className: 'risk-escape' },
         { key: 'foodAllergy', label: 'Food Allergy', icon: '⚠️', className: 'risk-allergy' },
         { key: 'medicated', label: 'Medicated', icon: '💊', className: 'risk-medicated' },
-        { key: 'separationAnxiety', label: 'Separation Anxiety', icon: '🫶', className: 'risk-anxiety' },
+        { key: 'separationAnxiety', label: 'Separation Anxiety', icon: '😟', className: 'risk-anxiety' },
         { key: 'weightManagement', label: 'Weight Management', icon: '⚖️', className: 'risk-weight' }
     ];
 
@@ -4211,9 +4211,16 @@
         const fullDatesList = document.getElementById('full-dates-list');
         if (!fullDatesList) return;
 
+        // Capacity alerts are operationally useful only from today onward.
+        // Dates are stored as YYYY-MM-DD, so string comparison is safe here.
+        const todayStr = getLocalTodayDateString();
+
         const sortedDates = Object.keys(dailyCapacityCounts)
-            .filter(dateStr => dailyCapacityCounts[dateStr] >= 4)
-            .sort((a, b) => new Date(a) - new Date(b));
+            .filter(dateStr =>
+                dateStr >= todayStr &&
+                dailyCapacityCounts[dateStr] >= 4
+            )
+            .sort((a, b) => new Date(a + 'T00:00:00') - new Date(b + 'T00:00:00'));
 
         if (sortedDates.length === 0) {
             fullDatesList.innerHTML = '<li class="success-clear">🟢 Open slots available</li>';
