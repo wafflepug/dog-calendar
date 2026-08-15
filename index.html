@@ -50,7 +50,16 @@
         .belongings-description:focus { border-color: #8e44ad; box-shadow: 0 0 0 2px rgba(142,68,173,0.08); }
         .belongings-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; align-items: center; }
         .belongings-save-btn { flex: 1; min-width: 150px; background: #27ae60; color: #fff; border: none; border-radius: 7px; padding: 11px 13px; font-weight: 800; cursor: pointer; }
-        .belongings-camera-btn { flex: 1; min-width: 150px; background: #8e44ad; color: #fff; border-radius: 7px; padding: 11px 13px; font-weight: 800; cursor: pointer; text-align: center; display: inline-flex; justify-content: center; align-items: center; gap: 6px; }
+        .belongings-camera-btn { flex: 1; min-width: 150px; background: #8e44ad; color: #fff; border: none; border-radius: 7px; padding: 11px 13px; font-weight: 800; cursor: pointer; text-align: center; display: inline-flex; justify-content: center; align-items: center; gap: 6px; }
+        .belongings-upload-btn { flex: 1; min-width: 150px; background: #475569; color: #fff; border: none; border-radius: 7px; padding: 11px 13px; font-weight: 800; cursor: pointer; text-align: center; display: inline-flex; justify-content: center; align-items: center; gap: 6px; }
+        .belongings-camera-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.86); z-index: 20000; align-items: center; justify-content: center; padding: 16px; box-sizing: border-box; }
+        .belongings-camera-panel { width: min(720px, 100%); background: #111827; border-radius: 14px; padding: 14px; box-shadow: 0 18px 50px rgba(0,0,0,0.45); }
+        .belongings-camera-panel h3 { color: #fff; margin: 0 0 10px 0; font-size: 17px; }
+        .belongings-camera-video { width: 100%; max-height: 65vh; object-fit: contain; background: #000; border-radius: 10px; display: block; }
+        .belongings-camera-controls { display: flex; gap: 10px; margin-top: 12px; }
+        .belongings-camera-controls button { flex: 1; border: none; border-radius: 8px; padding: 12px; font-weight: 800; cursor: pointer; font-size: 14px; }
+        .belongings-camera-cancel { background: #64748b; color: #fff; }
+        .belongings-camera-capture { background: #8e44ad; color: #fff; }
         .belongings-photo-note { margin-top: 9px; }
         .belongings-photo-status { min-height: 18px; color: #64748b; font-size: 12px; margin-top: 7px; }
         .belongings-photo-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(105px, 1fr)); gap: 8px; margin-top: 10px; }
@@ -302,7 +311,7 @@
             .app-tabs { flex-direction: column; }
             .belongings-pets-grid { grid-template-columns: 1fr; }
             .belongings-actions { flex-direction: column; align-items: stretch; }
-            .belongings-save-btn, .belongings-camera-btn { width: 100%; }
+            .belongings-save-btn, .belongings-camera-btn, .belongings-upload-btn { width: 100%; }
             .search-container { flex-direction: column; align-items: stretch !important; gap: 8px; }
             .quick-navigate-container { display: grid !important; grid-template-columns: 1fr 1fr; gap: 5px; }
             .summary-dashboard { grid-template-columns: 1fr; gap: 10px; margin-bottom: 15px; }
@@ -473,6 +482,18 @@
     </div>
 </div>
 
+<!-- In-browser camera modal for belongings photos -->
+<div id="belongingsCameraModal" class="belongings-camera-modal" aria-hidden="true">
+    <div class="belongings-camera-panel">
+        <h3>📷 Take Belongings Photo</h3>
+        <video id="belongingsCameraVideo" class="belongings-camera-video" autoplay playsinline muted></video>
+        <div class="belongings-camera-controls">
+            <button type="button" id="belongingsCameraCancelBtn" class="belongings-camera-cancel">Cancel</button>
+            <button type="button" id="belongingsCameraCaptureBtn" class="belongings-camera-capture">📸 Capture Photo</button>
+        </div>
+    </div>
+</div>
+
 <button id="themeToggle" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; background: #2c3e50; color: white; border: none; border-radius: 50%; width: 50px; height: 50px; font-size: 22px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.2); display: flex; align-items: center; justify-content: center;">🌙</button>
 
 <style>
@@ -494,6 +515,8 @@
     let activeEditingPotentialId = null;
     let activeEditingPotential = null;
     let belongingsRecordsCache = {};
+    let belongingsCameraStream = null;
+    let belongingsCameraCard = null;
 
     const BELONGINGS_ITEMS = [
         { key: 'waterBowls', label: 'Water Bowls', placeholder: 'e.g. 2 stainless steel bowls, one marked BLUE' },
@@ -658,6 +681,23 @@
 
         const belongingsContainer = document.getElementById('currentPetsBelongingsContainer');
         belongingsContainer.addEventListener('click', async function(event) {
+            const takePhotoButton = event.target.closest('[data-take-belongings-photo]');
+            if (takePhotoButton) {
+                event.preventDefault();
+                const card = takePhotoButton.closest('.belongings-pet-card');
+                if (card) await openBelongingsCamera(card);
+                return;
+            }
+
+            const uploadPhotoButton = event.target.closest('[data-upload-belongings-photo]');
+            if (uploadPhotoButton) {
+                event.preventDefault();
+                const card = uploadPhotoButton.closest('.belongings-pet-card');
+                const input = card && card.querySelector('[data-belongings-photo-input]');
+                if (input) input.click();
+                return;
+            }
+
             const saveButton = event.target.closest('[data-save-belongings]');
             if (saveButton) {
                 await saveBelongingsCard(saveButton.closest('.belongings-pet-card'), saveButton);
@@ -672,14 +712,35 @@
 
         belongingsContainer.addEventListener('change', async function(event) {
             if (event.target.matches('[data-belongings-photo-input]')) {
-                const card = event.target.closest('.belongings-pet-card');
-                const file = event.target.files && event.target.files[0];
-                if (card && file) {
-                    await uploadBelongingsPhoto(card, file, event.target);
+                event.preventDefault();
+                event.stopPropagation();
+
+                const input = event.target;
+                const card = input.closest('.belongings-pet-card');
+                const file = input.files && input.files[0];
+
+                try {
+                    if (card && file) {
+                        await uploadBelongingsPhoto(card, file, input);
+                    }
+                } finally {
+                    input.value = '';
                 }
-                event.target.value = '';
             }
         });
+
+        document.getElementById('belongingsCameraCancelBtn').addEventListener('click', function() {
+            closeBelongingsCamera();
+        });
+
+        document.getElementById('belongingsCameraCaptureBtn').addEventListener('click', async function() {
+            await captureBelongingsCameraPhoto();
+        });
+
+        const savedAppTab = localStorage.getItem('waffleActiveTab');
+        if (savedAppTab === 'belongings') {
+            switchAppTab('belongings');
+        }
 
         document.getElementById('calendarSearch').addEventListener('input', applyCurrentSearchFilter);
 
@@ -1484,6 +1545,10 @@
     }
 
     function switchAppTab(tabName) {
+        if (tabName === 'calendar' || tabName === 'belongings') {
+            localStorage.setItem('waffleActiveTab', tabName);
+        }
+
         document.querySelectorAll('[data-app-tab]').forEach(button => {
             const active = button.dataset.appTab === tabName;
             button.classList.toggle('active', active);
@@ -1707,10 +1772,9 @@
 
                     <div class="belongings-actions">
                         <button type="button" class="belongings-save-btn" data-save-belongings>💾 Save Belongings</button>
-                        <label class="belongings-camera-btn">
-                            📷 Take / Add Photo
-                            <input type="file" accept="image/*" capture="environment" data-belongings-photo-input hidden>
-                        </label>
+                        <button type="button" class="belongings-camera-btn" data-take-belongings-photo>📷 Take Photo</button>
+                        <button type="button" class="belongings-upload-btn" data-upload-belongings-photo>🖼️ Upload Photo</button>
+                        <input type="file" accept="image/*" data-belongings-photo-input hidden>
                     </div>
 
                     <div class="belongings-photo-status" data-belongings-photo-status></div>
@@ -1772,6 +1836,104 @@
         }
     }
 
+    function closeBelongingsCamera() {
+        if (belongingsCameraStream) {
+            belongingsCameraStream.getTracks().forEach(track => {
+                try { track.stop(); } catch (_) {}
+            });
+        }
+        belongingsCameraStream = null;
+
+        const video = document.getElementById('belongingsCameraVideo');
+        if (video) video.srcObject = null;
+
+        const modal = document.getElementById('belongingsCameraModal');
+        if (modal) {
+            modal.style.display = 'none';
+            modal.setAttribute('aria-hidden', 'true');
+        }
+    }
+
+    async function openBelongingsCamera(card) {
+        belongingsCameraCard = card;
+        localStorage.setItem('waffleActiveTab', 'belongings');
+
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            const input = card && card.querySelector('[data-belongings-photo-input]');
+            alert('This browser cannot open the in-page camera. Please use "Upload Photo" instead.');
+            if (input) input.click();
+            return;
+        }
+
+        closeBelongingsCamera();
+
+        const modal = document.getElementById('belongingsCameraModal');
+        const video = document.getElementById('belongingsCameraVideo');
+
+        try {
+            modal.style.display = 'flex';
+            modal.setAttribute('aria-hidden', 'false');
+
+            belongingsCameraStream = await navigator.mediaDevices.getUserMedia({
+                audio: false,
+                video: {
+                    facingMode: { ideal: 'environment' },
+                    width: { ideal: 1280 },
+                    height: { ideal: 960 }
+                }
+            });
+
+            video.srcObject = belongingsCameraStream;
+            await video.play();
+        } catch (error) {
+            closeBelongingsCamera();
+            console.error('Camera could not be opened:', error);
+            alert(
+                'Camera access could not be opened.\n\n' +
+                'Please allow camera permission for this site, or use "Upload Photo" instead.'
+            );
+        }
+    }
+
+    async function captureBelongingsCameraPhoto() {
+        const card = belongingsCameraCard;
+        const video = document.getElementById('belongingsCameraVideo');
+        if (!card || !video || !video.videoWidth || !video.videoHeight) {
+            alert('The camera is not ready yet. Please wait a moment and try again.');
+            return;
+        }
+
+        const captureButton = document.getElementById('belongingsCameraCaptureBtn');
+        captureButton.disabled = true;
+        captureButton.innerText = '⏳ Capturing...';
+
+        try {
+            const maxDimension = 1100;
+            const scale = Math.min(1, maxDimension / Math.max(video.videoWidth, video.videoHeight));
+            const width = Math.max(1, Math.round(video.videoWidth * scale));
+            const height = Math.max(1, Math.round(video.videoHeight * scale));
+
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+
+            const context = canvas.getContext('2d', { alpha: false });
+            context.drawImage(video, 0, 0, width, height);
+
+            const photoData = canvas.toDataURL('image/jpeg', 0.72);
+
+            closeBelongingsCamera();
+
+            await uploadBelongingsPhotoData(card, photoData, null);
+        } catch (error) {
+            console.error('Camera capture failed:', error);
+            alert('❌ PHOTO WAS NOT SAVED\n\n' + error.message);
+        } finally {
+            captureButton.disabled = false;
+            captureButton.innerText = '📸 Capture Photo';
+        }
+    }
+
     function readFileAsDataUrl(file) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
@@ -1786,56 +1948,106 @@
             throw new Error('Please choose an image file.');
         }
 
-        const sourceDataUrl = await readFileAsDataUrl(file);
-        const image = new Image();
+        let imageSource = null;
+        let sourceWidth = 0;
+        let sourceHeight = 0;
+        let objectToClose = null;
 
-        await new Promise((resolve, reject) => {
-            image.onload = resolve;
-            image.onerror = () => reject(new Error('This image format could not be opened. Try taking a JPG photo instead.'));
-            image.src = sourceDataUrl;
-        });
+        try {
+            if ('createImageBitmap' in window) {
+                try {
+                    const bitmap = await createImageBitmap(file);
+                    imageSource = bitmap;
+                    objectToClose = bitmap;
+                    sourceWidth = bitmap.width;
+                    sourceHeight = bitmap.height;
+                } catch (_) {
+                    // Fall back to FileReader/Image below.
+                }
+            }
 
-        const maxDimension = 1400;
-        let width = image.naturalWidth || image.width;
-        let height = image.naturalHeight || image.height;
-        const scale = Math.min(1, maxDimension / Math.max(width, height));
-        width = Math.max(1, Math.round(width * scale));
-        height = Math.max(1, Math.round(height * scale));
+            if (!imageSource) {
+                const sourceDataUrl = await readFileAsDataUrl(file);
+                const image = new Image();
 
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        const context = canvas.getContext('2d');
-        context.drawImage(image, 0, 0, width, height);
+                await new Promise((resolve, reject) => {
+                    image.onload = resolve;
+                    image.onerror = () => reject(new Error(
+                        'This image format could not be opened. Try taking or uploading a JPG/PNG photo instead.'
+                    ));
+                    image.src = sourceDataUrl;
+                });
 
-        const compressed = canvas.toDataURL('image/jpeg', 0.76);
-        if (compressed.length > 7 * 1024 * 1024) {
-            throw new Error('The photo is still too large after compression. Please choose a smaller photo.');
+                imageSource = image;
+                sourceWidth = image.naturalWidth || image.width;
+                sourceHeight = image.naturalHeight || image.height;
+            }
+
+            const maxDimension = 1100;
+            const scale = Math.min(1, maxDimension / Math.max(sourceWidth, sourceHeight));
+            const width = Math.max(1, Math.round(sourceWidth * scale));
+            const height = Math.max(1, Math.round(sourceHeight * scale));
+
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+
+            const context = canvas.getContext('2d', { alpha: false });
+            context.drawImage(imageSource, 0, 0, width, height);
+
+            const compressed = canvas.toDataURL('image/jpeg', 0.72);
+            if (compressed.length > 6.5 * 1024 * 1024) {
+                throw new Error('The photo is still too large after compression. Please choose a smaller photo.');
+            }
+
+            return compressed;
+        } finally {
+            if (objectToClose && typeof objectToClose.close === 'function') {
+                try { objectToClose.close(); } catch (_) {}
+            }
         }
-        return compressed;
     }
 
     async function uploadBelongingsPhoto(card, file, input) {
         if (!card || !file) return;
 
         const status = card.querySelector('[data-belongings-photo-status]');
-        const photoLabelInput = card.querySelector('[data-belongings-photo-label]');
-        const payloadBase = getBelongingsCardPayload(card);
-        const previousCount = belongingsRecordsCache[payloadBase.stayKey]?.photos?.length || 0;
-
         if (status) status.textContent = '⏳ Preparing photo...';
         if (input) input.disabled = true;
 
         try {
-            // Save the current checklist/descriptions first so the photo is always
-            // attached to a shared belongings record.
+            const photoData = await compressBelongingsPhoto(file);
+            await uploadBelongingsPhotoData(card, photoData, input);
+        } catch (error) {
+            console.error('Photo upload failed:', error);
+            if (status) status.textContent = '❌ ' + error.message;
+            alert('❌ PHOTO WAS NOT SAVED\n\n' + error.message);
+            if (input) input.disabled = false;
+        }
+    }
+
+    async function uploadBelongingsPhotoData(card, photoData, input) {
+        if (!card || !photoData) return;
+
+        const status = card.querySelector('[data-belongings-photo-status]');
+        const photoLabelInput = card.querySelector('[data-belongings-photo-label]');
+        const payloadBase = getBelongingsCardPayload(card);
+        const previousCount = belongingsRecordsCache[payloadBase.stayKey]?.photos?.length || 0;
+
+        if (input) input.disabled = true;
+
+        try {
+            if (status) status.textContent = '💾 Saving belongings details...';
+
+            // Save the current checklist/descriptions first so the photo has
+            // a shared record to attach to.
             await sendPayloadToAppsScript({ action: 'save_belongings', ...payloadBase });
 
-            const photoData = await compressBelongingsPhoto(file);
             const photoLabel = photoLabelInput?.value.trim() || 'Belongings photo';
-
             if (status) status.textContent = '☁️ Uploading photo to Google Drive...';
 
+            // The photo body is too large for JSONP/GET, so upload it with POST.
+            // We then verify the result by polling the shared belongings record.
             await fetch(APPS_SCRIPT_WEBAPP_URL, {
                 method: 'POST',
                 mode: 'no-cors',
@@ -1848,13 +2060,20 @@
                 })
             });
 
+            if (status) status.textContent = '🔎 Verifying photo upload...';
+
             const updatedRecord = await waitForBelongingsPhoto(payloadBase.stayKey, previousCount);
             belongingsRecordsCache[payloadBase.stayKey] = updatedRecord;
-            renderBelongingsDashboard(getCurrentBoardingStays(localStorage.getItem('boardingDataCache') || ''));
+
+            if (status) status.textContent = '✅ Photo saved to Google Drive';
+
+            renderBelongingsDashboard(
+                getCurrentBoardingStays(localStorage.getItem('boardingDataCache') || '')
+            );
         } catch (error) {
             console.error('Photo upload failed:', error);
             if (status) status.textContent = '❌ ' + error.message;
-            alert('❌ PHOTO WAS NOT SAVED\n\n' + error.message);
+            throw error;
         } finally {
             if (input) input.disabled = false;
         }
