@@ -2121,6 +2121,331 @@
             color: #d8e1ec;
         }
 
+
+
+        /* ============================================================
+           DETAILED GUEST DIRECTORY — PROFILE PHOTO + COMPACT GRID
+           ============================================================ */
+        .directory-grid {
+            grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+            gap: 10px;
+        }
+
+        .directory-card {
+            padding: 12px;
+            gap: 11px;
+            overflow: hidden;
+        }
+
+        .directory-card-header {
+            display: grid;
+            grid-template-columns: 64px minmax(0, 1fr);
+            gap: 11px;
+            align-items: center;
+            min-width: 0;
+        }
+
+        .directory-photo-shell {
+            width: 64px;
+            height: 64px;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid #dbe3ea;
+            background: #eef2f6;
+            box-shadow: 0 1px 3px rgba(15,23,42,.05);
+        }
+
+        .directory-dog-photo {
+            width: 100%;
+            height: 100%;
+            display: block;
+            object-fit: cover;
+        }
+
+        .directory-photo-placeholder {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(145deg,#f8fafc,#e9eef4);
+            color: #64748b;
+            font-size: 28px;
+        }
+
+        .directory-card-identity {
+            min-width: 0;
+        }
+
+        .directory-name-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            min-width: 0;
+        }
+
+        .directory-dog-name-btn {
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            border: 0;
+            padding: 0;
+            background: transparent;
+            color: #1f3a5f;
+            font: inherit;
+            font-size: 14px;
+            font-weight: 800;
+            text-align: left;
+            cursor: pointer;
+        }
+
+        .directory-dog-name-btn:hover {
+            color: #2563eb;
+        }
+
+        .directory-primary-breed {
+            margin-top: 3px;
+            color: #526173;
+            font-size: 11px;
+            font-weight: 650;
+            cursor: pointer;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .directory-primary-breed:hover {
+            color: #2563eb;
+        }
+
+        .directory-stay-dates {
+            margin-top: 5px;
+            color: #64748b;
+            font-size: 10px;
+            font-weight: 650;
+        }
+
+        .directory-attributes-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 7px;
+        }
+
+        .directory-attribute {
+            min-width: 0;
+            min-height: 48px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            justify-content: flex-start;
+            gap: 3px;
+            border: 1px solid #e8edf2;
+            border-radius: 8px;
+            background: #f8fafc;
+            padding: 7px 8px;
+            text-align: left;
+            font: inherit;
+            cursor: pointer;
+            transition: background-color .15s ease, border-color .15s ease;
+        }
+
+        .directory-attribute:hover {
+            background: #ffffff;
+            border-color: #cbd6e2;
+        }
+
+        .directory-attribute-wide {
+            grid-column: 1 / -1;
+            min-height: 44px;
+        }
+
+        .directory-field-label {
+            color: #64748b;
+            font-size: 9px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: .04em;
+        }
+
+        .directory-field-value {
+            width: 100%;
+            color: #334155;
+            font-size: 11px;
+            font-weight: 650;
+            line-height: 1.35;
+            overflow-wrap: anywhere;
+        }
+
+        .directory-attribute:not(.directory-attribute-wide) .directory-field-value {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .directory-attribute-wide .directory-field-value {
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        @media (min-width: 1100px) {
+            #calendarTabPanel .directory-grid {
+                grid-template-columns: 1fr;
+                max-height: 360px;
+                gap: 9px;
+            }
+
+            #calendarTabPanel .directory-card {
+                padding: 10px;
+            }
+
+            #calendarTabPanel .directory-card-header {
+                grid-template-columns: 58px minmax(0, 1fr);
+                gap: 9px;
+            }
+
+            #calendarTabPanel .directory-photo-shell {
+                width: 58px;
+                height: 58px;
+                border-radius: 10px;
+            }
+
+            #calendarTabPanel .directory-photo-placeholder {
+                font-size: 25px;
+            }
+
+            #calendarTabPanel .directory-attribute {
+                min-height: 44px;
+                padding: 6px 7px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .directory-grid {
+                grid-template-columns: 1fr;
+                max-height: none;
+                overflow-y: visible;
+                padding-right: 0;
+            }
+
+            .directory-card {
+                padding: 11px;
+            }
+
+            .directory-card-header {
+                grid-template-columns: 60px minmax(0, 1fr);
+                gap: 10px;
+            }
+
+            .directory-photo-shell {
+                width: 60px;
+                height: 60px;
+            }
+
+            .directory-attributes-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 520px) {
+            .directory-card {
+                padding: 10px;
+                gap: 9px;
+            }
+
+            .directory-card-header {
+                grid-template-columns: 54px minmax(0, 1fr);
+                gap: 9px;
+            }
+
+            .directory-photo-shell {
+                width: 54px;
+                height: 54px;
+                border-radius: 10px;
+            }
+
+            .directory-photo-placeholder {
+                font-size: 23px;
+            }
+
+            .directory-dog-name-btn {
+                font-size: 13px;
+            }
+
+            .directory-status-tag {
+                padding: 2px 5px;
+                font-size: 8px;
+            }
+
+            .directory-primary-breed {
+                font-size: 10.5px;
+            }
+
+            .directory-stay-dates {
+                font-size: 9.5px;
+            }
+
+            .directory-attributes-grid {
+                grid-template-columns: 1fr;
+                gap: 6px;
+            }
+
+            .directory-attribute,
+            .directory-attribute-wide {
+                grid-column: auto;
+                min-height: 0;
+                padding: 7px 8px;
+            }
+
+            .directory-attribute .directory-field-value,
+            .directory-attribute-wide .directory-field-value {
+                display: block;
+                -webkit-line-clamp: unset;
+                overflow: visible;
+            }
+        }
+
+        body.dark-theme .directory-photo-shell {
+            border-color: #40516a;
+            background: #202c3e;
+        }
+
+        body.dark-theme .directory-photo-placeholder {
+            background: #202c3e;
+            color: #a8b5c7;
+        }
+
+        body.dark-theme .directory-dog-name-btn {
+            color: #f1f5f9;
+        }
+
+        body.dark-theme .directory-primary-breed,
+        body.dark-theme .directory-stay-dates {
+            color: #a8b5c7;
+        }
+
+        body.dark-theme .directory-attribute {
+            background: #202c3e;
+            border-color: #34445b;
+        }
+
+        body.dark-theme .directory-attribute:hover {
+            background: #253248;
+            border-color: #40516a;
+        }
+
+        body.dark-theme .directory-field-label {
+            color: #94a3b8;
+        }
+
+        body.dark-theme .directory-field-value {
+            color: #d8e1ec;
+        }
+
 </style>
 </head>
 <body>
@@ -2375,7 +2700,8 @@
 
     let globalCalendar = null;
     let dailyCapacityCounts = {};
-    let auditLogRecords = []; 
+    let auditLogRecords = [];
+    let directoryPhotoRecordsCache = {}; 
     let isUpdatingDropdowns = false; 
     let selectedClickDateStr = ""; 
     let activeEditingEvent = null; 
@@ -3348,6 +3674,7 @@
             .then(csvText => {
                 localStorage.setItem('boardingDataCache', csvText);
                 reconcileTemporaryEvents(csvText);
+                directoryPhotoRecordsCache = {};
                 refreshCalendarData();
                 loadCareRiskDashboard(csvText).catch(() => {});
 
@@ -3495,6 +3822,10 @@
 
         if (tabName === 'calendar' && globalCalendar) {
             setTimeout(() => globalCalendar.updateSize(), 0);
+            setTimeout(() => {
+                hydrateDirectoryDogPhotos()
+                    .catch(error => console.error(error));
+            }, 0);
         }
 
         if (tabName === 'belongings' && !belongingsUploadInProgress) {
@@ -4321,6 +4652,9 @@
 
                 if (record) {
                     belongingsRecordsCache[context.stayKey] = record;
+                    careRiskRecordsCache[context.stayKey] = record;
+                    directoryPhotoRecordsCache[context.stayKey] = record;
+                    setDirectoryDogPhoto(context.stayKey, record);
                 }
 
                 if (status) {
@@ -5070,6 +5404,129 @@
         }
     }
 
+    function setDirectoryDogPhoto(stayKey, record) {
+        const shell = Array.from(
+            document.querySelectorAll('[data-directory-photo]')
+        ).find(element =>
+            String(element.dataset.directoryPhoto || '') === String(stayKey || '')
+        );
+
+        if (!shell) return;
+
+        const dogPhoto = record && record.dogPhoto ? record.dogPhoto : null;
+        const imageUrl = dogPhoto && dogPhoto.previewUrl
+            ? String(dogPhoto.previewUrl)
+            : '';
+
+        if (!imageUrl) {
+            shell.innerHTML =
+                '<div class="directory-photo-placeholder" aria-label="No dog profile photo">🐶</div>';
+            return;
+        }
+
+        const dogName =
+            shell.closest('.directory-card')?.dataset.directoryDogName ||
+            'Dog';
+
+        shell.innerHTML = `
+            <img
+                src="${escapeDashboardHtml(imageUrl)}"
+                alt="${escapeDashboardHtml(dogName)}"
+                class="directory-dog-photo"
+                loading="lazy">
+        `;
+    }
+
+    async function hydrateDirectoryDogPhotos(options = {}) {
+        const force = options.force === true;
+        const cards = Array.from(
+            document.querySelectorAll('.directory-card[data-directory-stay-key]')
+        );
+
+        if (!cards.length) return;
+
+        const keys = Array.from(new Set(
+            cards
+                .map(card => String(card.dataset.directoryStayKey || '').trim())
+                .filter(Boolean)
+        ));
+
+        const queryKeys = [];
+
+        keys.forEach(stayKey => {
+            let record = null;
+            let hasKnownValue = false;
+
+            if (
+                Object.prototype.hasOwnProperty.call(
+                    directoryPhotoRecordsCache,
+                    stayKey
+                )
+            ) {
+                record = directoryPhotoRecordsCache[stayKey];
+                hasKnownValue = true;
+            } else if (belongingsRecordsCache[stayKey]) {
+                record = belongingsRecordsCache[stayKey];
+                directoryPhotoRecordsCache[stayKey] = record;
+                hasKnownValue = true;
+            } else if (careRiskRecordsCache[stayKey]) {
+                record = careRiskRecordsCache[stayKey];
+                directoryPhotoRecordsCache[stayKey] = record;
+                hasKnownValue = true;
+            }
+
+            if (hasKnownValue && !force) {
+                setDirectoryDogPhoto(stayKey, record);
+            } else {
+                queryKeys.push(stayKey);
+            }
+        });
+
+        if (!queryKeys.length && !force) return;
+
+        const keysToFetch = force ? keys : queryKeys;
+
+        try {
+            const response = await queryAppsScript({
+                action: 'get_belongings',
+                stayKeys: keysToFetch
+            }, {
+                maxAttempts: 2,
+                timeoutMs: 45000
+            });
+
+            // A null cache entry means we checked this stay and no shared
+            // belongings/profile record exists yet.
+            keysToFetch.forEach(key => {
+                directoryPhotoRecordsCache[key] = null;
+            });
+
+            (response.records || []).forEach(record => {
+                if (!record || !record.stayKey) return;
+
+                directoryPhotoRecordsCache[record.stayKey] = record;
+                careRiskRecordsCache[record.stayKey] = record;
+
+                if (belongingsRecordsCache[record.stayKey]) {
+                    belongingsRecordsCache[record.stayKey] = record;
+                }
+            });
+
+            keysToFetch.forEach(key => {
+                setDirectoryDogPhoto(
+                    key,
+                    directoryPhotoRecordsCache[key]
+                );
+            });
+        } catch (error) {
+            console.error(
+                'Directory dog profile photos could not be loaded:',
+                error
+            );
+        }
+    }
+
+
     function parseCSVToEvents(csvText) {
         if (!csvText) return [];
         const lines = csvText.split(/\r?\n/); const events = [];
@@ -5177,15 +5634,90 @@
                                 const statusTag = (isCurrentlyAtHome && !hasBeenPickedUp) ? '<span class="directory-status-tag tag-at-home">At Home</span>' : (hasBeenPickedUp ? '<span class="directory-status-tag" style="background:#e2e8f0; color:#64748b;">Checked Out</span>' : '<span class="directory-status-tag tag-upcoming">Upcoming</span>');
                                 const cleanName = dogName.trim().replace(/'/g, "\\'"); const cleanLnk = editLink.trim();
 
+                                const directoryStayKey = potentialKey;
+                                const stayDateLabel =
+                                    `${formatStayDateShort(startParsed)} – ${formatStayDateShort(endParsed)}`;
+
                                 directoryCardsHTML.push(`
-                                    <div class="directory-card" style="${hasBeenPickedUp ? 'opacity: 0.6;' : ''}">
-                                        <h4 onclick="routeToDatabaseCell('${cleanLnk}', 'B', '${cleanName}', 'Dog Name')" style="cursor:pointer;"><span>${listLabel}</span> ${statusTag}</h4>
-                                        <span class="editable-row" onclick="routeToDatabaseCell('${cleanLnk}', 'C', '${cleanName}', 'Breed')"><strong>Breed:</strong> ${breedTxt}</span>
-                                        <span class="editable-row" onclick="routeToDatabaseCell('${cleanLnk}', 'F', '${cleanName}', 'Owner')"><strong>Owner:</strong> ${ownerName ? ownerName.trim() : 'N/A'}</span>
-                                        <span class="editable-row" onclick="routeToDatabaseCell('${cleanLnk}', 'G', '${cleanName}', 'Contact')"><strong>Contact:</strong> ${phone ? phone.trim() : 'N/A'}</span>
-                                        <span class="editable-row" onclick="routeToDatabaseCell('${cleanLnk}', 'H', '${cleanName}', 'Likes')"><strong>Likes:</strong> ${likes ? likes.trim() : 'None listed'}</span>
-                                        <span class="editable-row" onclick="routeToDatabaseCell('${cleanLnk}', 'I', '${cleanName}', 'Dislikes')"><strong>Dislikes:</strong> ${dislikes ? dislikes.trim() : 'None listed'}</span>
-                                        <span class="editable-row" onclick="routeToDatabaseCell('${cleanLnk}', 'J', '${cleanName}', 'Notes')"><strong>Notes:</strong> ${notes ? notes.trim() : 'None'}</span>
+                                    <div
+                                        class="directory-card"
+                                        data-directory-stay-key="${escapeDashboardHtml(directoryStayKey)}"
+                                        data-directory-dog-name="${escapeDashboardHtml(dogName.trim())}"
+                                        style="${hasBeenPickedUp ? 'opacity: 0.6;' : ''}">
+
+                                        <div class="directory-card-header">
+                                            <div
+                                                class="directory-photo-shell"
+                                                data-directory-photo="${escapeDashboardHtml(directoryStayKey)}">
+                                                <div
+                                                    class="directory-photo-placeholder"
+                                                    aria-label="No dog profile photo">🐶</div>
+                                            </div>
+
+                                            <div class="directory-card-identity">
+                                                <div class="directory-name-row">
+                                                    <button
+                                                        type="button"
+                                                        class="directory-dog-name-btn"
+                                                        onclick="routeToDatabaseCell('${cleanLnk}', 'B', '${cleanName}', 'Dog Name')">
+                                                        ${escapeDashboardHtml(dogName.trim())}
+                                                    </button>
+                                                    ${statusTag}
+                                                </div>
+
+                                                <div
+                                                    class="directory-primary-breed"
+                                                    onclick="routeToDatabaseCell('${cleanLnk}', 'C', '${cleanName}', 'Breed')">
+                                                    ${escapeDashboardHtml(breedTxt)}
+                                                </div>
+
+                                                <div class="directory-stay-dates">
+                                                    📅 ${escapeDashboardHtml(stayDateLabel)}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="directory-attributes-grid">
+                                            <button
+                                                type="button"
+                                                class="directory-attribute"
+                                                onclick="routeToDatabaseCell('${cleanLnk}', 'F', '${cleanName}', 'Owner')">
+                                                <span class="directory-field-label">Owner</span>
+                                                <span class="directory-field-value">${escapeDashboardHtml(ownerName ? ownerName.trim() : 'N/A')}</span>
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                class="directory-attribute"
+                                                onclick="routeToDatabaseCell('${cleanLnk}', 'G', '${cleanName}', 'Contact')">
+                                                <span class="directory-field-label">Contact</span>
+                                                <span class="directory-field-value">${escapeDashboardHtml(phone ? phone.trim() : 'N/A')}</span>
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                class="directory-attribute"
+                                                onclick="routeToDatabaseCell('${cleanLnk}', 'H', '${cleanName}', 'Likes')">
+                                                <span class="directory-field-label">Likes</span>
+                                                <span class="directory-field-value">${escapeDashboardHtml(likes ? likes.trim() : 'None listed')}</span>
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                class="directory-attribute"
+                                                onclick="routeToDatabaseCell('${cleanLnk}', 'I', '${cleanName}', 'Dislikes')">
+                                                <span class="directory-field-label">Dislikes</span>
+                                                <span class="directory-field-value">${escapeDashboardHtml(dislikes ? dislikes.trim() : 'None listed')}</span>
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                class="directory-attribute directory-attribute-wide"
+                                                onclick="routeToDatabaseCell('${cleanLnk}', 'J', '${cleanName}', 'Notes')">
+                                                <span class="directory-field-label">Notes</span>
+                                                <span class="directory-field-value">${escapeDashboardHtml(notes ? notes.trim() : 'None')}</span>
+                                            </button>
+                                        </div>
                                     </div>
                                 `);
                             }
@@ -5216,6 +5748,13 @@
         document.getElementById('leaving-list').innerHTML = leavingDogs.length > 0 ? leavingDogs.join('') : '<li class="no-dogs">No checkouts scheduled this week</li>';
         document.getElementById('upcoming-list').innerHTML = upcomingDogs.length > 0 ? upcomingDogs.join('') : '<li class="no-dogs">No new arrivals scheduled this week</li>';
         document.getElementById('directory-grid').innerHTML = directoryCardsHTML.length > 0 ? directoryCardsHTML.join('') : '<div class="no-dogs" style="grid-column: 1/-1; text-align: center; padding: 20px;">No active guests to display.</div>';
+
+        if (directoryCardsHTML.length > 0) {
+            setTimeout(() => {
+                hydrateDirectoryDogPhotos()
+                    .catch(error => console.error(error));
+            }, 0);
+        }
 
         return events;
     }
