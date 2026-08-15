@@ -515,6 +515,7 @@
     let activeEditingPotentialId = null;
     let activeEditingPotential = null;
     let belongingsRecordsCache = {};
+    let belongingsUploadInProgress = false;
     let belongingsCameraStream = null;
     let belongingsCameraCard = null;
 
@@ -534,6 +535,17 @@
         const tzOffset = (new Date()).getTimezoneOffset() * 60000; 
         return (new Date(Date.now() - tzOffset)).toISOString().split('T')[0];
     }
+
+    window.addEventListener('pageshow', function(event) {
+        console.log(
+            '[Waffle House] pageshow',
+            { persisted: !!event.persisted, time: new Date().toISOString() }
+        );
+    });
+
+    window.addEventListener('beforeunload', function() {
+        console.log('[Waffle House] browser page is unloading');
+    });
 
     document.addEventListener('DOMContentLoaded', function() {
         const cachedData = localStorage.getItem('boardingDataCache');
@@ -676,6 +688,10 @@
         });
 
         document.getElementById('refreshBelongingsBtn').addEventListener('click', function() {
+            if (belongingsUploadInProgress) {
+                alert('A photo upload is currently in progress. Please wait for it to finish before refreshing.');
+                return;
+            }
             loadBelongingsDashboard({ button: this });
         });
 
@@ -1426,10 +1442,6 @@
                 reconcileTemporaryEvents(csvText);
                 refreshCalendarData();
 
-                if (document.getElementById('belongingsTabPanel')?.classList.contains('active')) {
-                    loadBelongingsDashboard().catch(() => {});
-                }
-
                 if (btn) {
                     btn.innerText = "✅ Synced!";
                     btn.style.background = "#2ecc71";
@@ -1514,7 +1526,20 @@
 
                 if (response && response.result === 'success') {
                     console.log(`Apps Script action (${payload.action}) saved successfully.`, response);
-                    scheduleSpreadsheetSync();
+
+                    // Boarding/calendar actions still need the published CSV to refresh.
+                    // Belongings actions use their own shared Pet_Belongings sheet and
+                    // should NOT trigger delayed calendar syncs, because those syncs
+                    // rebuild the belongings DOM while a photo upload is still running.
+                    const belongingsOnlyActions = new Set([
+                        'save_belongings',
+                        'delete_belongings_photo'
+                    ]);
+
+                    if (!belongingsOnlyActions.has(String(payload.action || ''))) {
+                        scheduleSpreadsheetSync();
+                    }
+
                     resolve(response);
                 } else {
                     reject(new Error(
@@ -1563,7 +1588,7 @@
             setTimeout(() => globalCalendar.updateSize(), 0);
         }
 
-        if (tabName === 'belongings') {
+        if (tabName === 'belongings' && !belongingsUploadInProgress) {
             loadBelongingsDashboard().catch(error => console.error(error));
         }
     }
@@ -1714,6 +1739,13 @@
         const container = document.getElementById('currentPetsBelongingsContainer');
         const button = options.button || null;
         if (!container) return;
+
+        // Never rebuild the pet cards while a photo is being compressed,
+        // uploaded, or verified. Replacing the DOM mid-upload made the UI look
+        // like it refreshed/reloaded several times.
+        if (belongingsUploadInProgress && !options.force) {
+            return;
+        }
 
         if (button) {
             button.disabled = true;
@@ -2084,6 +2116,8 @@
     async function uploadBelongingsPhotoData(card, photoData, input) {
         if (!card || !photoData) return;
 
+        belongingsUploadInProgress = true;
+
         const status = card.querySelector('[data-belongings-photo-status]');
         const photoLabelInput = card.querySelector('[data-belongings-photo-label]');
         const payloadBase = getBelongingsCardPayload(card);
@@ -2153,6 +2187,7 @@
             if (status) status.textContent = '❌ ' + error.message;
             throw error;
         } finally {
+            belongingsUploadInProgress = false;
             if (input) input.disabled = false;
         }
     }
