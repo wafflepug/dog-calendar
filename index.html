@@ -1587,7 +1587,6 @@
                     "tabs     main"
                     "search   main"
                     "summary  main"
-                    "care     main"
                     "meet     main"
                     "directory main" !important;
             }
@@ -2446,6 +2445,231 @@
             color: #d8e1ec;
         }
 
+
+
+        /* ============================================================
+           FUSED GUEST DIRECTORY + CARE & SAFETY
+           ============================================================ */
+        .directory-dashboard-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+            padding-bottom: 10px;
+            margin-bottom: 11px;
+            border-bottom: 1px solid #dbe3ea;
+        }
+
+        .directory-dashboard-header h3 {
+            margin: 0 !important;
+            padding: 0 !important;
+            border: 0 !important;
+        }
+
+        .directory-dashboard-subtitle {
+            margin: 4px 0 0;
+            color: #64748b;
+            font-size: 10.5px;
+            line-height: 1.4;
+        }
+
+        .directory-care-summary {
+            flex: 0 0 auto;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 26px;
+            padding: 4px 8px;
+            border: 1px solid #bbf7d0;
+            border-radius: 999px;
+            background: #f0fdf4;
+            color: #166534;
+            font-size: 9.5px;
+            font-weight: 800;
+            white-space: nowrap;
+        }
+
+        .directory-care-summary.has-alerts {
+            border-color: #fed7aa;
+            background: #fff7ed;
+            color: #9a3412;
+        }
+
+        .directory-care-strip {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 5px;
+            min-height: 25px;
+            padding: 6px 7px;
+            border: 1px solid #e8edf2;
+            border-radius: 8px;
+            background: #f8fafc;
+        }
+
+        .directory-care-strip.has-alerts {
+            border-color: #fed7aa;
+            background: #fffdfa;
+        }
+
+        .directory-care-strip.care-clear {
+            border-color: #dcfce7;
+            background: #f8fff9;
+        }
+
+        .directory-care-strip.care-unset {
+            background: #f8fafc;
+            border-style: dashed;
+        }
+
+        .directory-care-clear,
+        .directory-care-unset {
+            font-size: 9.5px;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+
+        .directory-care-clear {
+            color: #15803d;
+        }
+
+        .directory-care-unset {
+            color: #94a3b8;
+        }
+
+        .directory-care-badge {
+            margin: 0;
+            padding: 4px 6px;
+            font-size: 9px;
+            line-height: 1;
+        }
+
+        .directory-care-icon {
+            font-size: 11px;
+            line-height: 1;
+        }
+
+        /* The original standalone alert block has been fused into the
+           directory; keep any legacy selectors out of the layout. */
+        #calendarTabPanel .care-alert-dashboard {
+            display: none !important;
+        }
+
+        @media (min-width: 1100px) {
+            #calendarTabPanel .directory-dashboard {
+                padding: 12px;
+            }
+
+            #calendarTabPanel .directory-dashboard-header {
+                margin-bottom: 9px;
+                padding-bottom: 9px;
+            }
+
+            #calendarTabPanel .directory-dashboard-subtitle {
+                font-size: 9.5px;
+            }
+
+            #calendarTabPanel .directory-care-strip {
+                padding: 5px 6px;
+                min-height: 23px;
+            }
+
+            #calendarTabPanel .directory-care-badge {
+                font-size: 8.5px;
+                padding: 3px 5px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .directory-dashboard-header {
+                align-items: stretch;
+            }
+
+            .directory-care-summary {
+                align-self: flex-start;
+            }
+
+            .directory-care-strip {
+                gap: 5px;
+            }
+        }
+
+        @media (max-width: 520px) {
+            .directory-dashboard-header {
+                flex-direction: column;
+                gap: 7px;
+            }
+
+            .directory-care-summary {
+                align-self: flex-start;
+                min-height: 24px;
+                font-size: 9px;
+            }
+
+            .directory-dashboard-subtitle {
+                font-size: 10px;
+            }
+
+            .directory-care-strip {
+                padding: 6px;
+                min-height: 0;
+            }
+
+            .directory-care-badge {
+                max-width: 100%;
+                font-size: 8.8px;
+                padding: 4px 6px;
+            }
+
+            .directory-care-clear,
+            .directory-care-unset {
+                font-size: 9px;
+            }
+        }
+
+        body.dark-theme .directory-dashboard-header {
+            border-bottom-color: #34445b;
+        }
+
+        body.dark-theme .directory-dashboard-subtitle {
+            color: #a8b5c7;
+        }
+
+        body.dark-theme .directory-care-summary {
+            background: #143322;
+            border-color: #276749;
+            color: #bbf7d0;
+        }
+
+        body.dark-theme .directory-care-summary.has-alerts {
+            background: #3b2918;
+            border-color: #9a5b22;
+            color: #fed7aa;
+        }
+
+        body.dark-theme .directory-care-strip {
+            background: #1b2739;
+            border-color: #34445b;
+        }
+
+        body.dark-theme .directory-care-strip.has-alerts {
+            background: #30271e;
+            border-color: #6f4b2c;
+        }
+
+        body.dark-theme .directory-care-strip.care-clear {
+            background: #173126;
+            border-color: #285540;
+        }
+
+        body.dark-theme .directory-care-clear {
+            color: #86efac;
+        }
+
+        body.dark-theme .directory-care-unset {
+            color: #94a3b8;
+        }
+
 </style>
 </head>
 <body>
@@ -2512,16 +2736,6 @@
         </div>
     </div>
 
-    <div class="care-alert-dashboard">
-        <div class="care-alert-dashboard-header">
-            <h3>🛡️ Care &amp; Safety Alerts</h3>
-            <span id="care-alert-count" class="care-alert-count">0 alerts</span>
-        </div>
-        <div id="care-alert-list" class="care-alert-list">
-            <div class="care-alert-clear">✓ No care or safety alerts for current pets</div>
-        </div>
-    </div>
-
     <div class="meet-greet-dashboard">
         <div class="meet-greet-dashboard-header">
             <h3>🤝 Today's Meet & Greets</h3>
@@ -2533,7 +2747,17 @@
     </div>
 
     <div class="directory-dashboard">
-        <h3>📋 Detailed Guest Directory (Current & Upcoming)</h3>
+        <div class="directory-dashboard-header">
+            <div>
+                <h3>🐾 Guest Directory &amp; Care</h3>
+                <p class="directory-dashboard-subtitle">
+                    Current and upcoming guests with profile, stay details and care &amp; safety alerts.
+                </p>
+            </div>
+            <span id="directory-care-summary" class="directory-care-summary">
+                No active care alerts
+            </span>
+        </div>
         <div id="directory-grid" class="directory-grid"></div>
     </div>
 
@@ -4161,58 +4385,95 @@
         return CARE_SAFETY_FLAGS.filter(flag => riskFlags[flag.key] === true);
     }
 
-    function renderCareRiskDashboard(stays) {
-        const list = document.getElementById('care-alert-list');
-        const count = document.getElementById('care-alert-count');
+    function findDirectoryCareElement(stayKey) {
+        return Array.from(
+            document.querySelectorAll('[data-directory-care]')
+        ).find(element =>
+            String(element.dataset.directoryCare || '') === String(stayKey || '')
+        ) || null;
+    }
 
-        if (!list || !count) return;
+    function setDirectoryCareFlags(stayKey, record) {
+        const container = findDirectoryCareElement(stayKey);
+        if (!container) return;
 
-        const currentStays = Array.isArray(stays) ? stays : [];
-        const alertRows = [];
-
-        currentStays.forEach(stay => {
-            const record = careRiskRecordsCache[stay.stayKey] || {};
-            const activeFlags = getActiveCareFlags(record);
-
-            if (!activeFlags.length) return;
-
-            const badges = activeFlags.map(flag => `
-                <span class="care-alert-badge ${escapeDashboardHtml(flag.className)}"
-                    title="${escapeDashboardHtml(flag.label)}">
-                    <span aria-hidden="true">${escapeDashboardHtml(flag.icon)}</span>
-                    <span>${escapeDashboardHtml(flag.label)}</span>
-                </span>
-            `).join('');
-
-            alertRows.push(`
-                <div class="care-alert-row">
-                    <div class="care-alert-pet">
-                        <strong>🐾 ${escapeDashboardHtml(stay.dogName)}</strong>
-                        <span>${escapeDashboardHtml(stay.breed || '')}</span>
-                    </div>
-                    <div class="care-alert-badges">${badges}</div>
-                </div>
-            `);
-        });
-
-        const totalFlags = currentStays.reduce((total, stay) => {
-            return total + getActiveCareFlags(
-                careRiskRecordsCache[stay.stayKey] || {}
-            ).length;
-        }, 0);
-
-        if (!alertRows.length) {
-            list.innerHTML =
-                '<div class="care-alert-clear">✓ No care or safety alerts for current pets</div>';
-            count.textContent = '0 alerts';
-            count.classList.remove('has-alerts');
+        if (!record) {
+            container.classList.remove('has-alerts', 'care-clear');
+            container.classList.add('care-unset');
+            container.innerHTML =
+                '<span class="directory-care-unset">🛡️ Care profile not set</span>';
+            refreshDirectoryCareSummary();
             return;
         }
 
-        list.innerHTML = alertRows.join('');
-        count.textContent =
-            totalFlags + (totalFlags === 1 ? ' alert' : ' alerts');
-        count.classList.add('has-alerts');
+        const activeFlags = getActiveCareFlags(record);
+
+        if (!activeFlags.length) {
+            container.classList.remove('has-alerts', 'care-unset');
+            container.classList.add('care-clear');
+            container.innerHTML =
+                '<span class="directory-care-clear">✓ No active care alerts</span>';
+            refreshDirectoryCareSummary();
+            return;
+        }
+
+        container.classList.remove('care-clear', 'care-unset');
+        container.classList.add('has-alerts');
+
+        container.innerHTML = activeFlags.map(flag => `
+            <span
+                class="care-alert-badge directory-care-badge ${escapeDashboardHtml(flag.className)}"
+                data-directory-care-alert
+                title="${escapeDashboardHtml(flag.label)}">
+                <span class="directory-care-icon" aria-hidden="true">
+                    ${escapeDashboardHtml(flag.icon)}
+                </span>
+                <span>${escapeDashboardHtml(flag.label)}</span>
+            </span>
+        `).join('');
+
+        refreshDirectoryCareSummary();
+    }
+
+    function refreshDirectoryCareSummary() {
+        const summary = document.getElementById('directory-care-summary');
+        if (!summary) return;
+
+        const flaggedCards = Array.from(
+            document.querySelectorAll(
+                '.directory-care-strip.has-alerts'
+            )
+        );
+
+        const totalAlerts = flaggedCards.reduce((total, container) => {
+            return total +
+                container.querySelectorAll('[data-directory-care-alert]').length;
+        }, 0);
+
+        if (!totalAlerts) {
+            summary.textContent = 'No active care alerts';
+            summary.classList.remove('has-alerts');
+            return;
+        }
+
+        summary.textContent =
+            `${totalAlerts} ${totalAlerts === 1 ? 'alert' : 'alerts'} · ` +
+            `${flaggedCards.length} ${flaggedCards.length === 1 ? 'dog' : 'dogs'}`;
+
+        summary.classList.add('has-alerts');
+    }
+
+    function renderCareRiskDashboard(stays) {
+        const currentStays = Array.isArray(stays) ? stays : [];
+
+        currentStays.forEach(stay => {
+            setDirectoryCareFlags(
+                stay.stayKey,
+                careRiskRecordsCache[stay.stayKey] || null
+            );
+        });
+
+        refreshDirectoryCareSummary();
     }
 
     async function loadCareRiskDashboard(csvText) {
@@ -4655,6 +4916,7 @@
                     careRiskRecordsCache[context.stayKey] = record;
                     directoryPhotoRecordsCache[context.stayKey] = record;
                     setDirectoryDogPhoto(context.stayKey, record);
+                    setDirectoryCareFlags(context.stayKey, record);
                 }
 
                 if (status) {
@@ -5477,12 +5739,16 @@
 
             if (hasKnownValue && !force) {
                 setDirectoryDogPhoto(stayKey, record);
+                setDirectoryCareFlags(stayKey, record);
             } else {
                 queryKeys.push(stayKey);
             }
         });
 
-        if (!queryKeys.length && !force) return;
+        if (!queryKeys.length && !force) {
+            refreshDirectoryCareSummary();
+            return;
+        }
 
         const keysToFetch = force ? keys : queryKeys;
 
@@ -5513,11 +5779,12 @@
             });
 
             keysToFetch.forEach(key => {
-                setDirectoryDogPhoto(
-                    key,
-                    directoryPhotoRecordsCache[key]
-                );
+                const record = directoryPhotoRecordsCache[key];
+                setDirectoryDogPhoto(key, record);
+                setDirectoryCareFlags(key, record);
             });
+
+            refreshDirectoryCareSummary();
         } catch (error) {
             console.error(
                 'Directory dog profile photos could not be loaded:',
@@ -5675,6 +5942,14 @@
                                                     📅 ${escapeDashboardHtml(stayDateLabel)}
                                                 </div>
                                             </div>
+                                        </div>
+
+                                        <div
+                                            class="directory-care-strip"
+                                            data-directory-care="${escapeDashboardHtml(directoryStayKey)}">
+                                            <span class="directory-care-unset">
+                                                🛡️ Care profile not set
+                                            </span>
                                         </div>
 
                                         <div class="directory-attributes-grid">
