@@ -2118,16 +2118,12 @@
                 return;
             }
 
-            // A normal cross-origin HTML form POST is intentionally used here
-            // instead of fetch(..., mode:"no-cors"). The response is sent into
-            // a hidden iframe, so the Waffle House page never navigates away.
-            // Apps Script reads the JSON from e.parameter.payload.
-            const token = String(
-                (payload && payload.uploadToken) ||
-                Date.now()
+            const uploadToken = String(
+                (payload && payload.uploadToken) || Date.now()
             ).replace(/[^A-Za-z0-9_-]/g, '');
 
-            const frameName = 'wafflePhotoUploadFrame_' + token;
+            const frameName = 'wafflePhotoUploadFrame_' + uploadToken;
+
             const iframe = document.createElement('iframe');
             iframe.name = frameName;
             iframe.id = frameName;
@@ -2136,42 +2132,84 @@
 
             const form = document.createElement('form');
             form.method = 'POST';
-            form.action = APPS_SCRIPT_WEBAPP_URL;
+
+            // Also place action/token in the URL. If the body is rejected or
+            // truncated, Apps Script can still mark the exact upload as failed.
+            const urlSeparator = APPS_SCRIPT_WEBAPP_URL.includes('?') ? '&' : '?';
+            form.action =
+                APPS_SCRIPT_WEBAPP_URL +
+                urlSeparator +
+                'action=upload_belongings_photo' +
+                '&uploadToken=' + encodeURIComponent(uploadToken);
+
             form.target = frameName;
             form.enctype = 'application/x-www-form-urlencoded';
             form.acceptCharset = 'UTF-8';
             form.style.display = 'none';
 
-            const field = document.createElement('textarea');
-            field.name = 'payload';
-            field.value = JSON.stringify(payload);
-            field.style.display = 'none';
+            const addField = (name, value, useTextarea = false) => {
+                const field = useTextarea
+                    ? document.createElement('textarea')
+                    : document.createElement('input');
 
-            form.appendChild(field);
+                field.name = name;
+
+                if (!useTextarea) {
+                    field.type = 'hidden';
+                }
+
+                field.value = value == null ? '' : String(value);
+                form.appendChild(field);
+            };
+
+            // Send separate form fields rather than one very large JSON field.
+            addField('action', 'upload_belongings_photo');
+            addField('uploadToken', uploadToken);
+            addField('stayKey', payload.stayKey || '');
+            addField('dogName', payload.dogName || '');
+            addField('startDate', payload.startDate || '');
+            addField('endDate', payload.endDate || '');
+            addField('photoLabel', payload.photoLabel || '');
+            addField('itemsJson', JSON.stringify(payload.items || {}), true);
+            addField('photoData', payload.photoData || '', true);
+
             document.body.appendChild(iframe);
             document.body.appendChild(form);
 
+            let submitted = false;
+
+            iframe.addEventListener('load', function() {
+                if (!submitted) return;
+                console.log(
+                    '[Waffle House] hidden photo upload iframe completed a navigation'
+                );
+            });
+
             try {
+                submitted = true;
                 form.submit();
 
-                // form.submit() queues the navigation synchronously. Keep the
-                // iframe alive while Apps Script processes the upload.
+                // Keep BOTH the form and iframe alive while Google follows its
+                // Apps Script redirect chain. Removing either too quickly can
+                // cancel a large POST on mobile browsers.
                 setTimeout(() => {
                     if (form.parentNode) form.parentNode.removeChild(form);
-                }, 1000);
-
-                setTimeout(() => {
                     if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
                 }, 120000);
 
+                // We cannot read the cross-origin iframe response, so the
+                // separate upload-status endpoint remains the source of truth.
                 resolve();
+
             } catch (error) {
                 if (form.parentNode) form.parentNode.removeChild(form);
                 if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
 
                 reject(new Error(
                     'The browser could not submit the photo to Apps Script: ' +
-                    (error && error.message ? error.message : String(error))
+                    (error && error.message
+                        ? error.message
+                        : String(error))
                 ));
             }
         });
@@ -2289,15 +2327,17 @@
             }
         }
 
-        if (lastStatus && lastStatus.state === 'pending') {
+        if (lastStatus && (lastStatus.state === 'pending' || lastStatus.state === 'missing')) {
             throw new Error(
                 'The browser prepared the upload, but the photo POST request did not reach Apps Script. Check the Web App URL and deployment access.'
             );
         }
 
-        if (lastStatus && lastStatus.state === 'processing') {
+        if (lastStatus && (lastStatus.state === 'received' || lastStatus.state === 'processing')) {
             throw new Error(
-                'Apps Script received the photo but did not finish processing it within 45 seconds. Check Apps Script > Executions for the upload_belongings_photo run.'
+                lastStatus.state === 'received'
+                    ? 'The photo POST reached Apps Script, but Apps Script did not finish decoding the form body. Check Apps Script > Executions for the exact doPost error.'
+                    : 'Apps Script decoded the photo but did not finish saving it within 45 seconds. Check Apps Script > Executions for the exact Drive/Sheets error.'
             );
         }
 
