@@ -7142,16 +7142,19 @@
     }
 
     function getExternalIntakeBaseUrl() {
-        return new URL('intake.html', window.location.href)
-            .href
+        return String(APPS_SCRIPT_WEBAPP_URL || '')
             .replace(/[?#].*$/, '');
     }
 
     function buildExternalIntakeLink(token) {
         if (!token) return '';
+
+        const baseUrl = getExternalIntakeBaseUrl();
+        if (!baseUrl) return '';
+
         return (
-            getExternalIntakeBaseUrl() +
-            '?token=' +
+            baseUrl +
+            '?action=intake&token=' +
             encodeURIComponent(token)
         );
     }
