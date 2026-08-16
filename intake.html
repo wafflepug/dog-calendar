@@ -789,7 +789,13 @@ async function submitIntake(event) {
          */
         const postForm = document.createElement('form');
         postForm.method = 'POST';
-        postForm.action = APPS_SCRIPT_WEBAPP_URL;
+        const actionSeparator =
+            APPS_SCRIPT_WEBAPP_URL.includes('?') ? '&' : '?';
+
+        postForm.action =
+            APPS_SCRIPT_WEBAPP_URL +
+            actionSeparator +
+            'action=submit_intake';
         postForm.acceptCharset = 'UTF-8';
         postForm.style.display = 'none';
 
