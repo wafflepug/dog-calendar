@@ -542,7 +542,6 @@ input:focus,select:focus,textarea:focus {
         </div>
     </form>
 
-    <iframe name="intakeSubmitFrame" id="intakeSubmitFrame" style="display:none"></iframe>
 </div>
 
 <script>
@@ -747,43 +746,6 @@ function showMessage(text, type) {
     el.scrollIntoView({behavior:'smooth',block:'center'});
 }
 
-function makeSubmissionToken() {
-    return (
-        'intake_' +
-        Date.now() +
-        '_' +
-        Math.random().toString(36).slice(2) +
-        Math.random().toString(36).slice(2)
-    );
-}
-
-async function pollSubmission(submissionToken) {
-    const started = Date.now();
-
-    while (Date.now() - started < 90000) {
-        await new Promise(resolve => setTimeout(resolve, 1200));
-
-        const response = await queryAppsScript({
-            action:'get_intake_submission_status',
-            submissionToken
-        });
-
-        const status = response.submissionStatus || {};
-
-        if (status.state === 'success') {
-            return status.result || {};
-        }
-
-        if (status.state === 'error') {
-            throw new Error(status.error || 'The intake could not be saved.');
-        }
-    }
-
-    throw new Error(
-        'The intake is still processing. Please wait a moment and do not submit again. Contact Waffle Boarding House if confirmation does not appear.'
-    );
-}
-
 async function submitIntake(event) {
     event.preventDefault();
 
@@ -795,66 +757,77 @@ async function submitIntake(event) {
 
     const submitBtn = document.getElementById('submitBtn');
     submitBtn.disabled = true;
-    submitBtn.textContent = '⏳ Submitting...';
+    submitBtn.textContent = '⏳ Saving Intake...';
 
     try {
         const answers = getAnswers();
-        const signatureData = document.getElementById('signatureCanvas').toDataURL('image/png');
-        const submissionToken = makeSubmissionToken();
+        const signatureData =
+            document.getElementById('signatureCanvas')
+                .toDataURL('image/png');
 
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.target = 'intakeSubmitFrame';
-        form.style.display = 'none';
+        if (
+            !APPS_SCRIPT_WEBAPP_URL ||
+            APPS_SCRIPT_WEBAPP_URL.includes(
+                'YOUR_APPS_SCRIPT_WEBAPP_URL_HERE'
+            )
+        ) {
+            throw new Error(
+                'The Waffle Boarding House intake service is not configured.'
+            );
+        }
 
-        const sep = APPS_SCRIPT_WEBAPP_URL.includes('?') ? '&' : '?';
-        form.action =
-            APPS_SCRIPT_WEBAPP_URL +
-            sep +
-            'action=submit_intake' +
-            '&submissionToken=' +
-            encodeURIComponent(submissionToken);
+        /*
+         * Submit as a NORMAL top-level browser POST.
+         *
+         * The previous version targeted a hidden cross-origin iframe and
+         * then polled Apps Script. Some browsers/Google Web App responses
+         * block that iframe navigation, so the POST never reached doPost().
+         *
+         * A top-level form POST is substantially more reliable. Apps Script
+         * processes the intake and then displays the branded success/error
+         * confirmation page directly.
+         */
+        const postForm = document.createElement('form');
+        postForm.method = 'POST';
+        postForm.action = APPS_SCRIPT_WEBAPP_URL;
+        postForm.acceptCharset = 'UTF-8';
+        postForm.style.display = 'none';
 
         const fields = {
-            action:'submit_intake',
-            submissionToken,
+            action: 'submit_intake',
             token,
-            payloadJson:JSON.stringify(answers),
+            payloadJson: JSON.stringify(answers),
             signatureData
         };
 
-        Object.entries(fields).forEach(([name,value]) => {
+        Object.entries(fields).forEach(([name, value]) => {
             const input = document.createElement('input');
             input.type = 'hidden';
             input.name = name;
             input.value = value;
-            form.appendChild(input);
+            postForm.appendChild(input);
         });
 
-        document.body.appendChild(form);
-        form.submit();
-        form.remove();
+        document.body.appendChild(postForm);
 
         showMessage(
-            'Saving your intake and generating the signed PDF. Please keep this page open...',
+            'Submitting your intake and creating the signed PDF. Please keep this page open...',
             'success'
         );
 
-        await pollSubmission(submissionToken);
-
-        showMessage(
-            '✅ Thank you. Your dog intake has been submitted successfully to Waffle Boarding House.',
-            'success'
-        );
-
-        submitBtn.textContent = '✅ Intake Submitted';
+        // Small delay allows the status message to paint before navigation.
+        setTimeout(() => {
+            postForm.submit();
+        }, 100);
 
     } catch (error) {
         console.error(error);
+
         showMessage(
             '❌ ' + String(error.message || error),
             'error'
         );
+
         submitBtn.disabled = false;
         submitBtn.textContent = 'Submit Intake Form';
     }
