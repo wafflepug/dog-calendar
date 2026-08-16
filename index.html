@@ -3254,6 +3254,128 @@
             color: #a8b5c7;
         }
 
+
+
+        /* ============================================================
+           DIGITAL INTAKE — GUEST DIRECTORY STATUS
+           ============================================================ */
+        .directory-intake-strip {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            min-height: 34px;
+            padding: 6px 7px;
+            border: 1px solid #e1e8ee;
+            border-radius: 8px;
+            background: #fbfcfd;
+        }
+
+        .directory-intake-state {
+            min-width: 0;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: #526173;
+            font-size: 9.5px;
+            font-weight: 750;
+            line-height: 1.25;
+        }
+
+        .directory-intake-dot {
+            width: 8px;
+            height: 8px;
+            flex: 0 0 8px;
+            border-radius: 999px;
+            background: #94a3b8;
+        }
+
+        .directory-intake-dot.is-awaiting {
+            background: #f59e0b;
+        }
+
+        .directory-intake-dot.is-complete {
+            background: #16a34a;
+        }
+
+        .directory-intake-actions {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            flex: 0 0 auto;
+        }
+
+        .directory-intake-action {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 26px;
+            box-sizing: border-box;
+            padding: 4px 7px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            background: #ffffff;
+            color: #1f3a5f;
+            font: inherit;
+            font-size: 9px;
+            font-weight: 800;
+            text-decoration: none;
+            white-space: nowrap;
+            cursor: pointer;
+        }
+
+        .directory-intake-action:hover {
+            background: #f1f5f9;
+            border-color: #9fb0c2;
+        }
+
+        .directory-intake-action.is-pdf {
+            color: #15803d;
+            border-color: #bbdfc5;
+            background: #f4fbf6;
+        }
+
+        @media (max-width: 520px) {
+            .directory-intake-strip {
+                align-items: stretch;
+                flex-direction: column;
+                gap: 6px;
+            }
+
+            .directory-intake-action {
+                min-height: 34px;
+            }
+
+            .directory-intake-actions {
+                width: 100%;
+            }
+
+            .directory-intake-actions .directory-intake-action {
+                flex: 1;
+            }
+        }
+
+        body.dark-theme .directory-intake-strip {
+            background: #1b2739;
+            border-color: #34445b;
+        }
+
+        body.dark-theme .directory-intake-state {
+            color: #c7d2df;
+        }
+
+        body.dark-theme .directory-intake-action {
+            background: #202c3e;
+            border-color: #40516a;
+            color: #dbeafe;
+        }
+
+        body.dark-theme .directory-intake-action.is-pdf {
+            background: #173126;
+            border-color: #285540;
+            color: #86efac;
+        }
+
 </style>
 </head>
 <body>
@@ -3408,6 +3530,7 @@
                 <option value="Potential Stay">Potential Stay</option>
                 <option value="Belongings">Belongings</option>
                 <option value="Photos">Photos</option>
+                <option value="Intake">Intake</option>
                 <option value="System">System</option>
             </select>
             <span id="auditResultCount" class="audit-result-count">0 records</span>
@@ -3531,6 +3654,7 @@
         <div style="display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap;" id="potentialActionControls">
             <button id="deletePotentialBtn" style="background: #e74c3c; color: white; border: none; padding: 10px 14px; border-radius: 6px; cursor: pointer; font-weight: bold; margin-right: auto; display: none;">🗑️ Delete Request</button>
             <button id="confirmStayBtn" style="background: #27ae60; color: white; border: none; padding: 10px 14px; border-radius: 6px; cursor: pointer; font-weight: bold; display: none;">✅ Confirm Stay</button>
+            <button id="potentialIntakeLinkBtn" style="background: #1f3a5f; color: white; border: none; padding: 10px 14px; border-radius: 6px; cursor: pointer; font-weight: bold; display: none;">📝 Copy Intake Link</button>
             <button id="closePotentialModalBtn" style="background: #94a3b8; color: white; border: none; padding: 10px 14px; border-radius: 6px; cursor: pointer; font-weight: bold;">Cancel</button>
             <button id="savePotentialBtn" style="background: #e67e22; color: white; border: none; padding: 10px 14px; border-radius: 6px; cursor: pointer; font-weight: bold;">Submit Potential</button>
         </div>
@@ -3583,6 +3707,7 @@
     let dailyCapacityCounts = {};
     let auditLogRecords = [];
     let directoryPhotoRecordsCache = {};
+    let directoryIntakeStatusCache = {};
     let activeDirectoryEditContext = null; 
     let isUpdatingDropdowns = false; 
     let selectedClickDateStr = ""; 
@@ -3906,6 +4031,30 @@
         const directoryGrid = document.getElementById('directory-grid');
 
         directoryGrid.addEventListener('click', function(event) {
+            const intakeTrigger = event.target.closest(
+                '[data-create-intake-link]'
+            );
+
+            if (intakeTrigger) {
+                event.preventDefault();
+                event.stopPropagation();
+
+                const card = intakeTrigger.closest(
+                    '.directory-card'
+                );
+
+                createOrCopyDirectoryIntakeLink(card)
+                    .catch(error => {
+                        console.error(error);
+                        alert(
+                            '❌ INTAKE LINK COULD NOT BE CREATED\n\n' +
+                            error.message
+                        );
+                    });
+
+                return;
+            }
+
             const editTrigger = event.target.closest(
                 '[data-directory-edit-field]'
             );
@@ -4062,6 +4211,18 @@
         });
 
         // Potential Stay Event Handlers
+        document.getElementById('potentialIntakeLinkBtn')
+            .addEventListener('click', function() {
+                createOrCopyPotentialIntakeLink()
+                    .catch(error => {
+                        console.error(error);
+                        alert(
+                            '❌ INTAKE LINK COULD NOT BE CREATED\n\n' +
+                            error.message
+                        );
+                    });
+            });
+
         document.getElementById('savePotentialBtn').addEventListener('click', async function() {
             const button = this;
             const dogName = document.getElementById('potDogName').value.trim();
@@ -4417,6 +4578,7 @@
 
         document.getElementById('deletePotentialBtn').style.display = "none";
         document.getElementById('confirmStayBtn').style.display = "none";
+        document.getElementById('potentialIntakeLinkBtn').style.display = "none";
         document.getElementById('savePotentialBtn').innerText = "Submit Potential";
 
         document.getElementById('potentialStayModal').style.display = "flex";
@@ -4449,6 +4611,7 @@
 
         document.getElementById('deletePotentialBtn').style.display = "inline-block";
         document.getElementById('confirmStayBtn').style.display = "inline-block";
+        document.getElementById('potentialIntakeLinkBtn').style.display = "inline-block";
         document.getElementById('savePotentialBtn').innerText = "Update Details";
 
         document.getElementById('potentialStayModal').style.display = "flex";
@@ -4719,6 +4882,7 @@
                 localStorage.setItem('boardingDataCache', csvText);
                 reconcileTemporaryEvents(csvText);
                 directoryPhotoRecordsCache = {};
+                directoryIntakeStatusCache = {};
                 refreshCalendarData();
                 loadCareRiskDashboard(csvText).catch(() => {});
 
@@ -4869,6 +5033,8 @@
             setTimeout(() => {
                 hydrateDirectoryDogPhotos()
                     .catch(error => console.error(error));
+                hydrateDirectoryIntakeStatuses()
+                    .catch(error => console.error(error));
             }, 0);
         }
 
@@ -4885,6 +5051,7 @@
         const text = `${category || ''} ${action || ''}`.toLowerCase();
 
         if (text.includes('photo')) return '📷';
+        if (text.includes('intake')) return '📝';
         if (text.includes('meet')) return '🤝';
         if (text.includes('potential')) return '❓';
         if (text.includes('belong')) return '🧳';
@@ -6974,6 +7141,288 @@
         }
     }
 
+    function getExternalIntakeBaseUrl() {
+        return new URL('intake.html', window.location.href)
+            .href
+            .replace(/[?#].*$/, '');
+    }
+
+    function buildExternalIntakeLink(token) {
+        if (!token) return '';
+        return (
+            getExternalIntakeBaseUrl() +
+            '?token=' +
+            encodeURIComponent(token)
+        );
+    }
+
+    async function copyIntakeLinkToClipboard(link) {
+        if (!link) return false;
+
+        try {
+            if (navigator.clipboard && window.isSecureContext) {
+                await navigator.clipboard.writeText(link);
+                return true;
+            }
+        } catch (_) {}
+
+        window.prompt(
+            'Copy this Waffle Boarding House intake link:',
+            link
+        );
+        return false;
+    }
+
+    function setDirectoryIntakeStatus(stayKey, record) {
+        const strip = Array.from(
+            document.querySelectorAll('[data-directory-intake]')
+        ).find(element =>
+            String(element.dataset.directoryIntake || '') ===
+            String(stayKey || '')
+        );
+
+        if (!strip) return;
+
+        if (!record) {
+            strip.innerHTML = `
+                <div class="directory-intake-state">
+                    <span class="directory-intake-dot is-not-sent"></span>
+                    <span>Intake not sent</span>
+                </div>
+                <button
+                    type="button"
+                    class="directory-intake-action"
+                    data-create-intake-link>
+                    📝 Create Link
+                </button>
+            `;
+            return;
+        }
+
+        const status = String(record.status || 'Awaiting Owner');
+        const submitted = record.submittedAt
+            ? formatAuditTimestamp(record.submittedAt)
+            : '';
+
+        if (status === 'Complete') {
+            strip.innerHTML = `
+                <div class="directory-intake-state">
+                    <span class="directory-intake-dot is-complete"></span>
+                    <span>
+                        Intake complete${submitted ? ` · ${escapeDashboardHtml(submitted)}` : ''}
+                    </span>
+                </div>
+                <div class="directory-intake-actions">
+                    ${record.pdfUrl ? `
+                        <a
+                            href="${escapeDashboardHtml(record.pdfUrl)}"
+                            target="_blank"
+                            rel="noopener"
+                            class="directory-intake-action is-pdf">
+                            📄 PDF
+                        </a>
+                    ` : ''}
+                    <button
+                        type="button"
+                        class="directory-intake-action"
+                        data-create-intake-link>
+                        🔗 Copy Link
+                    </button>
+                </div>
+            `;
+            return;
+        }
+
+        strip.innerHTML = `
+            <div class="directory-intake-state">
+                <span class="directory-intake-dot is-awaiting"></span>
+                <span>Awaiting owner</span>
+            </div>
+            <button
+                type="button"
+                class="directory-intake-action"
+                data-create-intake-link>
+                🔗 Copy Link
+            </button>
+        `;
+    }
+
+    async function hydrateDirectoryIntakeStatuses(options = {}) {
+        const force = options.force === true;
+
+        const cards = Array.from(
+            document.querySelectorAll(
+                '.directory-card[data-directory-stay-key]'
+            )
+        );
+
+        if (!cards.length) return;
+
+        const keys = Array.from(new Set(
+            cards
+                .map(card =>
+                    String(
+                        card.dataset.directoryStayKey || ''
+                    ).trim()
+                )
+                .filter(Boolean)
+        ));
+
+        const keysToFetch = force
+            ? keys
+            : keys.filter(key =>
+                !Object.prototype.hasOwnProperty.call(
+                    directoryIntakeStatusCache,
+                    key
+                )
+            );
+
+        keys.forEach(key => {
+            if (
+                Object.prototype.hasOwnProperty.call(
+                    directoryIntakeStatusCache,
+                    key
+                )
+            ) {
+                setDirectoryIntakeStatus(
+                    key,
+                    directoryIntakeStatusCache[key]
+                );
+            }
+        });
+
+        if (!keysToFetch.length) return;
+
+        try {
+            const response = await queryAppsScript({
+                action: 'get_intake_statuses',
+                stayKeys: keysToFetch
+            }, {
+                maxAttempts: 2,
+                timeoutMs: 45000
+            });
+
+            keysToFetch.forEach(key => {
+                directoryIntakeStatusCache[key] = null;
+            });
+
+            (response.records || []).forEach(record => {
+                if (!record || !record.stayKey) return;
+                directoryIntakeStatusCache[record.stayKey] = record;
+            });
+
+            keysToFetch.forEach(key => {
+                setDirectoryIntakeStatus(
+                    key,
+                    directoryIntakeStatusCache[key]
+                );
+            });
+
+        } catch (error) {
+            console.error(
+                'Digital intake status could not be loaded:',
+                error
+            );
+        }
+    }
+
+    async function createOrCopyDirectoryIntakeLink(card) {
+        if (!card) return;
+
+        const dogName = String(
+            card.dataset.directoryDogName || ''
+        ).trim();
+
+        const startDate = String(
+            card.dataset.directoryStartDate || ''
+        ).trim();
+
+        const endDate = String(
+            card.dataset.directoryEndDate || ''
+        ).trim();
+
+        const stayKey = String(
+            card.dataset.directoryStayKey || ''
+        ).trim();
+
+        const existing =
+            directoryIntakeStatusCache[stayKey] || null;
+
+        if (existing && existing.token) {
+            const existingLink =
+                buildExternalIntakeLink(existing.token);
+
+            await copyIntakeLinkToClipboard(existingLink);
+
+            alert(
+                existing.status === 'Complete'
+                    ? `✅ Intake link copied for ${dogName}. The latest signed PDF remains available from this card.`
+                    : `✅ Intake link copied for ${dogName}.`
+            );
+
+            return;
+        }
+
+        const response = await sendPayloadToAppsScript({
+            action: 'create_intake_link',
+            dogName,
+            startDate,
+            endDate,
+            intakeBaseUrl: getExternalIntakeBaseUrl()
+        });
+
+        const intake = response.intake;
+
+        if (!intake || !intake.token) {
+            throw new Error(
+                'The intake link was not returned by Apps Script.'
+            );
+        }
+
+        directoryIntakeStatusCache[stayKey] = intake;
+        setDirectoryIntakeStatus(stayKey, intake);
+
+        await copyIntakeLinkToClipboard(intake.link);
+
+        alert(
+            `✅ Digital intake link ready for ${dogName}.\n\n` +
+            `Send the copied link to the owner.`
+        );
+    }
+
+    async function createOrCopyPotentialIntakeLink() {
+        if (!activeEditingPotential) {
+            alert(
+                'Save the Potential Stay first, then reopen it to create an intake link.'
+            );
+            return;
+        }
+
+        const response = await sendPayloadToAppsScript({
+            action: 'create_intake_link',
+            dogName: activeEditingPotential.dogName,
+            startDate: activeEditingPotential.rawStartDate,
+            endDate: activeEditingPotential.rawEndDate,
+            intakeBaseUrl: getExternalIntakeBaseUrl()
+        });
+
+        const intake = response.intake;
+
+        if (!intake || !intake.link) {
+            throw new Error(
+                'The intake link was not returned by Apps Script.'
+            );
+        }
+
+        await copyIntakeLinkToClipboard(intake.link);
+
+        alert(
+            `✅ Digital intake link ready for ${activeEditingPotential.dogName}.\n\n` +
+            `Send the copied link to the owner.`
+        );
+    }
+
+
     function setDirectoryDogPhoto(stayKey, record) {
         const shell = Array.from(
             document.querySelectorAll('[data-directory-photo]')
@@ -7267,6 +7716,21 @@
                                             </span>
                                         </div>
 
+                                        <div
+                                            class="directory-intake-strip"
+                                            data-directory-intake="${escapeDashboardHtml(directoryStayKey)}">
+                                            <div class="directory-intake-state">
+                                                <span class="directory-intake-dot is-not-sent"></span>
+                                                <span>Intake not sent</span>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                class="directory-intake-action"
+                                                data-create-intake-link>
+                                                📝 Create Link
+                                            </button>
+                                        </div>
+
                                         <div class="directory-attributes-grid">
                                             <button
                                                 type="button"
@@ -7352,6 +7816,8 @@
         if (directoryCardsHTML.length > 0) {
             setTimeout(() => {
                 hydrateDirectoryDogPhotos()
+                    .catch(error => console.error(error));
+                hydrateDirectoryIntakeStatuses()
                     .catch(error => console.error(error));
             }, 0);
         }
