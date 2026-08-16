@@ -2853,6 +2853,278 @@
             color: #dbeafe;
         }
 
+
+
+        /* ============================================================
+           GUEST DIRECTORY — IN-WEB-APP DETAIL EDITING
+           ============================================================ */
+        .directory-dashboard-subtitle {
+            max-width: 560px;
+        }
+
+        .directory-dog-name-btn,
+        .directory-primary-breed,
+        .directory-attribute {
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .directory-primary-breed {
+            width: 100%;
+            display: block;
+            border: 0;
+            padding: 0;
+            background: transparent;
+            text-align: left;
+            font-family: inherit;
+        }
+
+        .directory-field-label::after {
+            content: "  ✎";
+            opacity: .48;
+            font-size: .9em;
+        }
+
+        .directory-dog-name-btn::after,
+        .directory-primary-breed::after {
+            content: " ✎";
+            opacity: .38;
+            font-size: .8em;
+        }
+
+        .guest-detail-edit-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 12000;
+            align-items: center;
+            justify-content: center;
+            padding: 18px;
+            box-sizing: border-box;
+            background: rgba(15, 23, 42, .58);
+            backdrop-filter: blur(3px);
+        }
+
+        .guest-detail-edit-modal.open {
+            display: flex;
+        }
+
+        .guest-detail-edit-panel {
+            width: min(460px, 100%);
+            max-height: calc(100vh - 36px);
+            overflow-y: auto;
+            box-sizing: border-box;
+            padding: 18px;
+            border: 1px solid #dbe3ea;
+            border-radius: 14px;
+            background: #ffffff;
+            box-shadow: 0 22px 55px rgba(15,23,42,.22);
+        }
+
+        .guest-detail-edit-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .guest-detail-edit-eyebrow {
+            display: block;
+            margin-bottom: 4px;
+            color: #64748b;
+            font-size: 9px;
+            font-weight: 850;
+            letter-spacing: .06em;
+            text-transform: uppercase;
+        }
+
+        .guest-detail-edit-header h3 {
+            margin: 0;
+            color: #1f3a5f;
+            font-size: 17px;
+            font-weight: 800;
+        }
+
+        .guest-detail-edit-dog {
+            margin: 4px 0 0;
+            color: #64748b;
+            font-size: 11px;
+        }
+
+        .guest-detail-edit-close {
+            width: 32px;
+            height: 32px;
+            flex: 0 0 32px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #dbe3ea;
+            border-radius: 8px;
+            background: #f8fafc;
+            color: #64748b;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .guest-detail-edit-label {
+            display: block;
+            margin-bottom: 6px;
+            color: #334155;
+            font-size: 11px;
+            font-weight: 800;
+        }
+
+        .guest-detail-edit-control {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 11px 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 9px;
+            background: #ffffff;
+            color: #172033;
+            font: inherit;
+            font-size: 14px;
+            outline: none;
+            resize: vertical;
+        }
+
+        .guest-detail-edit-control:focus {
+            border-color: #6d9eeb;
+            box-shadow: 0 0 0 3px rgba(37,99,235,.10);
+        }
+
+        .guest-detail-edit-textarea {
+            min-height: 118px;
+            line-height: 1.45;
+        }
+
+        .guest-detail-edit-status {
+            min-height: 18px;
+            margin-top: 8px;
+            color: #64748b;
+            font-size: 10.5px;
+            line-height: 1.4;
+        }
+
+        .guest-detail-edit-status.is-saving {
+            color: #2563eb;
+        }
+
+        .guest-detail-edit-status.is-success {
+            color: #15803d;
+            font-weight: 750;
+        }
+
+        .guest-detail-edit-status.is-error {
+            color: #b91c1c;
+            font-weight: 750;
+        }
+
+        .guest-detail-edit-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-top: 14px;
+        }
+
+        .guest-detail-edit-cancel,
+        .guest-detail-edit-save {
+            min-height: 38px;
+            border-radius: 8px;
+            padding: 9px 13px;
+            font: inherit;
+            font-size: 11.5px;
+            font-weight: 800;
+            cursor: pointer;
+        }
+
+        .guest-detail-edit-cancel {
+            border: 1px solid #cbd5e1;
+            background: #ffffff;
+            color: #475569;
+        }
+
+        .guest-detail-edit-save {
+            border: 1px solid #1d4ed8;
+            background: #2563eb;
+            color: #ffffff;
+        }
+
+        .guest-detail-edit-save:hover {
+            background: #1d4ed8;
+        }
+
+        .guest-detail-edit-cancel:disabled,
+        .guest-detail-edit-save:disabled,
+        .guest-detail-edit-close:disabled {
+            opacity: .6;
+            cursor: wait;
+        }
+
+        @media (max-width: 520px) {
+            .guest-detail-edit-modal {
+                align-items: flex-end;
+                padding: 10px;
+            }
+
+            .guest-detail-edit-panel {
+                width: 100%;
+                max-height: min(78vh, 620px);
+                padding: 16px;
+                border-radius: 16px 16px 10px 10px;
+            }
+
+            .guest-detail-edit-control {
+                font-size: 16px;
+                /* 16px prevents automatic zoom on iOS form controls. */
+            }
+
+            .guest-detail-edit-actions {
+                display: grid;
+                grid-template-columns: 1fr 1.25fr;
+            }
+
+            .guest-detail-edit-cancel,
+            .guest-detail-edit-save {
+                width: 100%;
+                min-height: 44px;
+                font-size: 12px;
+            }
+
+            .directory-field-label::after {
+                content: " ✎";
+            }
+        }
+
+        body.dark-theme .guest-detail-edit-panel {
+            background: #182235;
+            border-color: #34445b;
+        }
+
+        body.dark-theme .guest-detail-edit-header h3,
+        body.dark-theme .guest-detail-edit-label {
+            color: #f1f5f9;
+        }
+
+        body.dark-theme .guest-detail-edit-eyebrow,
+        body.dark-theme .guest-detail-edit-dog,
+        body.dark-theme .guest-detail-edit-status {
+            color: #a8b5c7;
+        }
+
+        body.dark-theme .guest-detail-edit-control {
+            background: #202c3e;
+            border-color: #40516a;
+            color: #f8fafc;
+        }
+
+        body.dark-theme .guest-detail-edit-close,
+        body.dark-theme .guest-detail-edit-cancel {
+            background: #202c3e;
+            border-color: #40516a;
+            color: #d8e1ec;
+        }
+
 </style>
 </head>
 <body>
@@ -2934,7 +3206,7 @@
             <div>
                 <h3>🐾 Guest Directory &amp; Care</h3>
                 <p class="directory-dashboard-subtitle">
-                    Current and upcoming guests with profile, stay details and care &amp; safety alerts.
+                    Current and upcoming guests with profile, stay details and care &amp; safety alerts. Tap a detail to edit it here.
                 </p>
             </div>
             <span id="directory-care-summary" class="directory-care-summary">
@@ -3008,6 +3280,62 @@
 
         <div id="auditLogContainer" class="audit-log-container">
             <div class="audit-empty">Open this tab to load recent audit activity.</div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Edit Guest Directory Detail -->
+<div
+    id="guestDetailEditModal"
+    class="guest-detail-edit-modal"
+    aria-hidden="true">
+    <div
+        class="guest-detail-edit-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="guestDetailEditTitle">
+        <div class="guest-detail-edit-header">
+            <div>
+                <span class="guest-detail-edit-eyebrow">Guest Directory &amp; Care</span>
+                <h3 id="guestDetailEditTitle">✏️ Edit Guest Detail</h3>
+                <p id="guestDetailEditDog" class="guest-detail-edit-dog"></p>
+            </div>
+            <button
+                type="button"
+                id="closeGuestDetailEditModal"
+                class="guest-detail-edit-close"
+                aria-label="Close guest detail editor">✕</button>
+        </div>
+
+        <label
+            id="guestDetailEditLabel"
+            class="guest-detail-edit-label"
+            for="guestDetailEditInput">Detail</label>
+
+        <input
+            type="text"
+            id="guestDetailEditInput"
+            class="guest-detail-edit-control"
+            autocomplete="off">
+
+        <textarea
+            id="guestDetailEditTextarea"
+            class="guest-detail-edit-control guest-detail-edit-textarea"
+            rows="5"
+            maxlength="2000"
+            style="display:none;"></textarea>
+
+        <div id="guestDetailEditStatus" class="guest-detail-edit-status"></div>
+
+        <div class="guest-detail-edit-actions">
+            <button
+                type="button"
+                id="cancelGuestDetailEdit"
+                class="guest-detail-edit-cancel">Cancel</button>
+            <button
+                type="button"
+                id="saveGuestDetailEdit"
+                class="guest-detail-edit-save">💾 Save Changes</button>
         </div>
     </div>
 </div>
@@ -3119,7 +3447,8 @@
     let globalCalendar = null;
     let dailyCapacityCounts = {};
     let auditLogRecords = [];
-    let directoryPhotoRecordsCache = {}; 
+    let directoryPhotoRecordsCache = {};
+    let activeDirectoryEditContext = null; 
     let isUpdatingDropdowns = false; 
     let selectedClickDateStr = ""; 
     let activeEditingEvent = null; 
@@ -3438,6 +3767,65 @@
 
         document.getElementById('auditSearch').addEventListener('input', renderAuditLog);
         document.getElementById('auditCategoryFilter').addEventListener('change', renderAuditLog);
+
+        const directoryGrid = document.getElementById('directory-grid');
+
+        directoryGrid.addEventListener('click', function(event) {
+            const editTrigger = event.target.closest(
+                '[data-directory-edit-field]'
+            );
+
+            if (!editTrigger) return;
+
+            event.preventDefault();
+            event.stopPropagation();
+            openGuestDetailEditor(editTrigger);
+        });
+
+        document.getElementById('closeGuestDetailEditModal')
+            .addEventListener('click', closeGuestDetailEditor);
+
+        document.getElementById('cancelGuestDetailEdit')
+            .addEventListener('click', closeGuestDetailEditor);
+
+        document.getElementById('saveGuestDetailEdit')
+            .addEventListener('click', function() {
+                saveGuestDetailFromEditor()
+                    .catch(error => console.error(error));
+            });
+
+        document.getElementById('guestDetailEditModal')
+            .addEventListener('click', function(event) {
+                if (event.target === this) {
+                    closeGuestDetailEditor();
+                }
+            });
+
+        document.addEventListener('keydown', function(event) {
+            const modal = document.getElementById('guestDetailEditModal');
+
+            if (
+                event.key === 'Escape' &&
+                modal &&
+                modal.classList.contains('open')
+            ) {
+                closeGuestDetailEditor();
+            }
+
+            if (
+                event.key === 'Enter' &&
+                modal &&
+                modal.classList.contains('open') &&
+                activeDirectoryEditContext &&
+                !DIRECTORY_EDIT_FIELD_CONFIG[
+                    activeDirectoryEditContext.fieldKey
+                ]?.multiline
+            ) {
+                event.preventDefault();
+                saveGuestDetailFromEditor()
+                    .catch(error => console.error(error));
+            }
+        });
 
         const belongingsContainer = document.getElementById('currentPetsBelongingsContainer');
         belongingsContainer.addEventListener('click', async function(event) {
@@ -5869,19 +6257,94 @@
                 dateStr >= todayStr &&
                 dailyCapacityCounts[dateStr] >= 4
             )
-            .sort((a, b) => new Date(a + 'T00:00:00') - new Date(b + 'T00:00:00'));
+            .sort((a, b) =>
+                new Date(a + 'T00:00:00') -
+                new Date(b + 'T00:00:00')
+            );
 
         if (sortedDates.length === 0) {
-            fullDatesList.innerHTML = '<li class="success-clear">🟢 Open slots available</li>';
+            fullDatesList.innerHTML =
+                '<li class="success-clear">🟢 Open slots available</li>';
             return;
         }
 
-        const listItems = sortedDates.map(dateStr => {
+        // Group consecutive full-capacity dates into one operational range.
+        // Example: 28 Dec 2026 – 1 Jan 2027 instead of five separate rows.
+        const ranges = [];
+        let currentRange = null;
+
+        sortedDates.forEach(dateStr => {
+            const dogCount = Number(dailyCapacityCounts[dateStr] || 0);
+
+            if (!currentRange) {
+                currentRange = {
+                    start: dateStr,
+                    end: dateStr,
+                    counts: [dogCount]
+                };
+                return;
+            }
+
+            const nextExpected = new Date(
+                currentRange.end + 'T00:00:00'
+            );
+            nextExpected.setDate(nextExpected.getDate() + 1);
+
+            const nextExpectedStr =
+                nextExpected.getFullYear() + '-' +
+                String(nextExpected.getMonth() + 1).padStart(2, '0') + '-' +
+                String(nextExpected.getDate()).padStart(2, '0');
+
+            if (dateStr === nextExpectedStr) {
+                currentRange.end = dateStr;
+                currentRange.counts.push(dogCount);
+            } else {
+                ranges.push(currentRange);
+                currentRange = {
+                    start: dateStr,
+                    end: dateStr,
+                    counts: [dogCount]
+                };
+            }
+        });
+
+        if (currentRange) {
+            ranges.push(currentRange);
+        }
+
+        const formatCapacityDate = dateStr => {
             const dateObj = new Date(dateStr + 'T00:00:00');
-            const formattedDate = dateObj.toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
-            const dogCount = dailyCapacityCounts[dateStr];
-            
-            return `<li><span>📅 ${formattedDate}</span> <span class="date-badge alert-badge">${dogCount} DOGS</span></li>`;
+
+            return dateObj.toLocaleDateString('en-AU', {
+                day: 'numeric',
+                month: 'short',
+                year: 'numeric'
+            });
+        };
+
+        const listItems = ranges.map(range => {
+            const startLabel = formatCapacityDate(range.start);
+            const endLabel = formatCapacityDate(range.end);
+
+            const dateLabel =
+                range.start === range.end
+                    ? startLabel
+                    : `${startLabel} – ${endLabel}`;
+
+            const minDogs = Math.min(...range.counts);
+            const maxDogs = Math.max(...range.counts);
+
+            const dogLabel =
+                minDogs === maxDogs
+                    ? `${minDogs} DOGS`
+                    : `${minDogs}–${maxDogs} DOGS`;
+
+            return `
+                <li>
+                    <span>📅 ${dateLabel}</span>
+                    <span class="date-badge alert-badge">${dogLabel}</span>
+                </li>
+            `;
         });
 
         fullDatesList.innerHTML = listItems.join('');
@@ -5946,20 +6409,433 @@
         }
     }
 
-    function routeToDatabaseCell(baseEditLink, targetColumnLetter, petName, attributeName = "Booking Details") {
-        if (baseEditLink && baseEditLink.startsWith("http")) {
-            const confirmRedirect = confirm(`✏️ Edit ${attributeName} for ${petName}?\n\nOpen master database precisely on this field cell?`);
+    const DIRECTORY_EDIT_FIELD_CONFIG = {
+        dogName: {
+            label: 'Dog Name',
+            placeholder: 'e.g. Waffle',
+            multiline: false
+        },
+        breed: {
+            label: 'Breed',
+            placeholder: 'e.g. Pug',
+            multiline: false
+        },
+        ownerName: {
+            label: 'Owner',
+            placeholder: 'Owner name',
+            multiline: false
+        },
+        phone: {
+            label: 'Contact Number',
+            placeholder: 'e.g. 0412 345 678',
+            multiline: false
+        },
+        likes: {
+            label: 'Likes',
+            placeholder: 'Food, toys, routines or activities they enjoy',
+            multiline: true
+        },
+        dislikes: {
+            label: 'Dislikes',
+            placeholder: 'Triggers, dislikes or things to avoid',
+            multiline: true
+        },
+        notes: {
+            label: 'Notes',
+            placeholder: 'General guest notes',
+            multiline: true
+        }
+    };
+
+    function closeGuestDetailEditor() {
+        const modal = document.getElementById('guestDetailEditModal');
+        if (!modal) return;
+
+        modal.classList.remove('open');
+        modal.setAttribute('aria-hidden', 'true');
+        activeDirectoryEditContext = null;
+
+        const status = document.getElementById('guestDetailEditStatus');
+        if (status) {
+            status.textContent = '';
+            status.className = 'guest-detail-edit-status';
+        }
+    }
+
+    function openGuestDetailEditor(trigger) {
+        if (!trigger) return;
+
+        const card = trigger.closest('.directory-card');
+        const fieldKey = String(
+            trigger.dataset.directoryEditField || ''
+        ).trim();
+
+        const config = DIRECTORY_EDIT_FIELD_CONFIG[fieldKey];
+
+        if (!card || !config) return;
+
+        const dogName = String(
+            card.dataset.directoryDogName || ''
+        ).trim();
+
+        const startDate = String(
+            card.dataset.directoryStartDate || ''
+        ).trim();
+
+        const endDate = String(
+            card.dataset.directoryEndDate || ''
+        ).trim();
+
+        const currentValue = String(
+            trigger.dataset.directoryCurrentValue || ''
+        );
+
+        activeDirectoryEditContext = {
+            card,
+            trigger,
+            fieldKey,
+            originalDogName: dogName,
+            startDate,
+            endDate,
+            oldStayKey: String(
+                card.dataset.directoryStayKey || ''
+            ).trim()
+        };
+
+        const modal = document.getElementById('guestDetailEditModal');
+        const title = document.getElementById('guestDetailEditTitle');
+        const dogLine = document.getElementById('guestDetailEditDog');
+        const label = document.getElementById('guestDetailEditLabel');
+        const input = document.getElementById('guestDetailEditInput');
+        const textarea = document.getElementById('guestDetailEditTextarea');
+        const status = document.getElementById('guestDetailEditStatus');
+
+        title.textContent = `✏️ Edit ${config.label}`;
+        dogLine.textContent =
+            `${dogName} · ${formatStayDateShort(startDate)} – ${formatStayDateShort(endDate)}`;
+        label.textContent = config.label;
+
+        input.style.display = config.multiline ? 'none' : 'block';
+        textarea.style.display = config.multiline ? 'block' : 'none';
+
+        if (config.multiline) {
+            textarea.value = currentValue;
+            textarea.placeholder = config.placeholder;
+        } else {
+            input.value = currentValue;
+            input.placeholder = config.placeholder;
+            input.type = fieldKey === 'phone' ? 'tel' : 'text';
+        }
+
+        status.textContent =
+            'Changes are saved directly to the shared Google Sheet.';
+        status.className = 'guest-detail-edit-status';
+
+        modal.classList.add('open');
+        modal.setAttribute('aria-hidden', 'false');
+
+        setTimeout(() => {
+            const control = config.multiline ? textarea : input;
+            control.focus();
+            if (!config.multiline) control.select();
+        }, 30);
+    }
+
+    function decodeDirectoryCsvCell(value) {
+        let text = String(value ?? '');
+
+        if (text.startsWith('"') && text.endsWith('"')) {
+            text = text.slice(1, -1).replace(/""/g, '"');
+        }
+
+        return text;
+    }
+
+    function encodeDirectoryCsvCell(value) {
+        const text = String(value ?? '');
+
+        if (/[",\r\n]/.test(text)) {
+            return '"' + text.replace(/"/g, '""') + '"';
+        }
+
+        return text;
+    }
+
+    function patchGuestRecordInCachedCsv(original, record) {
+        const csv = localStorage.getItem('boardingDataCache') || '';
+        if (!csv || !record) return false;
+
+        const lines = csv.split(/\r?\n/);
+        const targetDog = String(
+            original.originalDogName || ''
+        ).trim().toLowerCase();
+
+        const targetStart = String(original.startDate || '').trim();
+        const targetEnd = String(
+            original.endDate || original.startDate || ''
+        ).trim();
+
+        for (let i = 1; i < lines.length; i++) {
+            if (!lines[i].trim()) continue;
+
+            const rawCells = lines[i].split(
+                /,(?=(?:(?:[^\"]*\"){2})*[^\"]*$)/
+            );
+
+            const cells = rawCells.map(decodeDirectoryCsvCell);
+
+            while (cells.length < 12) cells.push('');
+
+            const rowDog = String(cells[1] || '').trim().toLowerCase();
+            const rowStart = parseCsvDate(cells[3]);
+            const rowEnd = parseCsvDate(cells[4]) || rowStart;
+            const rowType = String(cells[11] || '').trim().toLowerCase();
+
+            if (
+                rowType === 'meet & greet' ||
+                rowType === 'potential stay'
+            ) {
+                continue;
+            }
+
+            if (rowDog !== targetDog) continue;
+            if (rowStart !== targetStart) continue;
+            if (rowEnd !== targetEnd) continue;
+
+            cells[1] = record.dogName || '';
+            cells[2] = record.breed || '';
+            cells[3] = record.startDate || targetStart;
+            cells[4] = record.endDate || targetEnd;
+            cells[5] = record.ownerName || '';
+            cells[6] = record.phone || '';
+            cells[7] = record.likes || '';
+            cells[8] = record.dislikes || '';
+            cells[9] = record.notes || '';
+            cells[10] = record.editLink || cells[10] || '';
+            cells[11] = record.bookingType || cells[11] || 'Boarding';
+
+            lines[i] = cells
+                .map(encodeDirectoryCsvCell)
+                .join(',');
+
+            localStorage.setItem(
+                'boardingDataCache',
+                lines.join('\n')
+            );
+
+            return true;
+        }
+
+        return false;
+    }
+
+    function migrateDirectoryClientStayKey(
+        oldStayKey,
+        newStayKey,
+        newDogName,
+        startDate,
+        endDate
+    ) {
+        if (!oldStayKey || !newStayKey || oldStayKey === newStayKey) {
+            return;
+        }
+
+        [
+            belongingsRecordsCache,
+            careRiskRecordsCache,
+            directoryPhotoRecordsCache
+        ].forEach(cache => {
+            if (
+                !cache ||
+                !Object.prototype.hasOwnProperty.call(cache, oldStayKey)
+            ) {
+                return;
+            }
+
+            const oldRecord = cache[oldStayKey];
+            delete cache[oldStayKey];
+
+            if (oldRecord && typeof oldRecord === 'object') {
+                cache[newStayKey] = {
+                    ...oldRecord,
+                    stayKey: newStayKey,
+                    dogName: newDogName
+                };
+            } else {
+                cache[newStayKey] = oldRecord;
+            }
+        });
+
+        const todayKey =
+            'pickedUpDogs_' + getLocalTodayDateString();
+
+        const pickedUp = getLocalArray(todayKey);
+        const oldPickupKey =
+            `${activeDirectoryEditContext?.originalDogName || ''}_${startDate}_${endDate}`;
+        const newPickupKey =
+            `${newDogName}_${startDate}_${endDate}`;
+
+        const oldIndex = pickedUp.indexOf(oldPickupKey);
+
+        if (oldIndex !== -1) {
+            pickedUp[oldIndex] = newPickupKey;
+            setLocalArray(todayKey, Array.from(new Set(pickedUp)));
+        }
+    }
+
+    async function saveGuestDetailFromEditor() {
+        const context = activeDirectoryEditContext;
+        if (!context) return;
+
+        const config = DIRECTORY_EDIT_FIELD_CONFIG[context.fieldKey];
+        if (!config) return;
+
+        const input = document.getElementById('guestDetailEditInput');
+        const textarea = document.getElementById('guestDetailEditTextarea');
+        const saveButton = document.getElementById('saveGuestDetailEdit');
+        const cancelButton = document.getElementById('cancelGuestDetailEdit');
+        const closeButton = document.getElementById('closeGuestDetailEditModal');
+        const status = document.getElementById('guestDetailEditStatus');
+
+        const value = String(
+            config.multiline ? textarea.value : input.value
+        ).trim();
+
+        if (context.fieldKey === 'dogName' && !value) {
+            status.textContent = '⚠️ Dog Name cannot be blank.';
+            status.className =
+                'guest-detail-edit-status is-error';
+            return;
+        }
+
+        saveButton.disabled = true;
+        cancelButton.disabled = true;
+        closeButton.disabled = true;
+        saveButton.textContent = '⏳ Saving...';
+
+        status.textContent =
+            'Saving to the shared Google Sheet...';
+        status.className = 'guest-detail-edit-status is-saving';
+
+        try {
+            const response = await sendPayloadToAppsScript({
+                action: 'update_guest_detail',
+                fieldKey: context.fieldKey,
+                value,
+                originalDogName: context.originalDogName,
+                startDate: context.startDate,
+                endDate: context.endDate
+            });
+
+            const record = response.record || null;
+
+            if (!record) {
+                throw new Error(
+                    'The server saved the change but did not return the updated guest record.'
+                );
+            }
+
+            patchGuestRecordInCachedCsv(context, record);
+
+            const oldStayKey =
+                response.oldStayKey ||
+                context.oldStayKey ||
+                makePotentialKey(
+                    context.originalDogName,
+                    context.startDate,
+                    context.endDate
+                );
+
+            const newStayKey =
+                response.newStayKey ||
+                makePotentialKey(
+                    record.dogName,
+                    record.startDate,
+                    record.endDate
+                );
+
+            migrateDirectoryClientStayKey(
+                oldStayKey,
+                newStayKey,
+                record.dogName,
+                record.startDate,
+                record.endDate
+            );
+
+            status.textContent =
+                `✅ ${response.fieldLabel || config.label} saved and synced.`;
+            status.className =
+                'guest-detail-edit-status is-success';
+
+            // Re-render all dashboard and calendar references immediately
+            // from the locally patched copy while the published CSV catches up.
+            refreshCalendarData();
+
+            const cachedCsv =
+                localStorage.getItem('boardingDataCache') || '';
+
+            loadCareRiskDashboard(cachedCsv)
+                .catch(() => {});
+
+            setTimeout(() => {
+                closeGuestDetailEditor();
+            }, 500);
+
+        } catch (error) {
+            console.error('Guest detail update failed:', error);
+
+            status.textContent =
+                '❌ ' + (error.message || String(error));
+
+            status.className =
+                'guest-detail-edit-status is-error';
+
+        } finally {
+            saveButton.disabled = false;
+            cancelButton.disabled = false;
+            closeButton.disabled = false;
+            saveButton.textContent = '💾 Save Changes';
+        }
+    }
+
+    function routeToDatabaseCell(
+        baseEditLink,
+        targetColumnLetter,
+        petName,
+        attributeName = 'Booking Details'
+    ) {
+        // Kept only for calendar-event compatibility. Guest Directory
+        // attributes now edit directly in the web app.
+        if (baseEditLink && baseEditLink.startsWith('http')) {
+            const confirmRedirect = confirm(
+                `✏️ Open ${attributeName} for ${petName} in the master Google Sheet?`
+            );
+
             if (confirmRedirect) {
-                let targetUrl = baseEditLink.replace(/range=\d+/, `range=${targetColumnLetter}\$&`).replace("range=", `range=${targetColumnLetter}`);
+                let targetUrl = baseEditLink
+                    .replace(
+                        /range=\d+/,
+                        `range=${targetColumnLetter}\$&`
+                    )
+                    .replace(
+                        'range=',
+                        `range=${targetColumnLetter}`
+                    );
+
                 if (!targetUrl.includes('range=')) {
-                    const rowMatch = baseEditLink.match(/range=(\d+)/) || baseEditLink.match(/=(\d+)$/);
+                    const rowMatch =
+                        baseEditLink.match(/range=(\d+)/) ||
+                        baseEditLink.match(/=(\d+)$/);
+
                     const rowNum = rowMatch ? rowMatch[1] : '';
-                    targetUrl = baseEditLink.split('&range=')[0] + `&range=${targetColumnLetter}${rowNum}`;
+
+                    targetUrl =
+                        baseEditLink.split('&range=')[0] +
+                        `&range=${targetColumnLetter}${rowNum}`;
                 }
+
                 window.open(targetUrl, '_blank');
             }
-        } else {
-            alert(`📝 ${petName} - ${attributeName}\n\nTo directly jump to your master spreadsheet row cell, ensure column 11 (K) has your row link formula working!`);
         }
     }
 
@@ -6207,6 +7083,8 @@
                                         class="directory-card"
                                         data-directory-stay-key="${escapeDashboardHtml(directoryStayKey)}"
                                         data-directory-dog-name="${escapeDashboardHtml(dogName.trim())}"
+                                        data-directory-start-date="${escapeDashboardHtml(startParsed)}"
+                                        data-directory-end-date="${escapeDashboardHtml(endParsed)}"
                                         style="${hasBeenPickedUp ? 'opacity: 0.6;' : ''}">
 
                                         <div class="directory-card-header">
@@ -6223,17 +7101,22 @@
                                                     <button
                                                         type="button"
                                                         class="directory-dog-name-btn"
-                                                        onclick="routeToDatabaseCell('${cleanLnk}', 'B', '${cleanName}', 'Dog Name')">
+                                                        data-directory-edit-field="dogName"
+                                                        data-directory-current-value="${escapeDashboardHtml(dogName.trim())}"
+                                                        title="Tap to edit Dog Name">
                                                         ${escapeDashboardHtml(dogName.trim())}
                                                     </button>
                                                     ${statusTag}
                                                 </div>
 
-                                                <div
+                                                <button
+                                                    type="button"
                                                     class="directory-primary-breed"
-                                                    onclick="routeToDatabaseCell('${cleanLnk}', 'C', '${cleanName}', 'Breed')">
+                                                    data-directory-edit-field="breed"
+                                                    data-directory-current-value="${escapeDashboardHtml(breed ? breed.trim() : '')}"
+                                                    title="Tap to edit Breed">
                                                     ${escapeDashboardHtml(breedTxt)}
-                                                </div>
+                                                </button>
 
                                                 <div class="directory-stay-dates">
                                                     📅 ${escapeDashboardHtml(stayDateLabel)}
@@ -6253,7 +7136,9 @@
                                             <button
                                                 type="button"
                                                 class="directory-attribute"
-                                                onclick="routeToDatabaseCell('${cleanLnk}', 'F', '${cleanName}', 'Owner')">
+                                                data-directory-edit-field="ownerName"
+                                                data-directory-current-value="${escapeDashboardHtml(ownerName ? ownerName.trim() : '')}"
+                                                title="Tap to edit Owner">
                                                 <span class="directory-field-label">Owner</span>
                                                 <span class="directory-field-value">${escapeDashboardHtml(ownerName ? ownerName.trim() : 'N/A')}</span>
                                             </button>
@@ -6261,7 +7146,9 @@
                                             <button
                                                 type="button"
                                                 class="directory-attribute"
-                                                onclick="routeToDatabaseCell('${cleanLnk}', 'G', '${cleanName}', 'Contact')">
+                                                data-directory-edit-field="phone"
+                                                data-directory-current-value="${escapeDashboardHtml(phone ? phone.trim() : '')}"
+                                                title="Tap to edit Contact">
                                                 <span class="directory-field-label">Contact</span>
                                                 <span class="directory-field-value">${escapeDashboardHtml(phone ? phone.trim() : 'N/A')}</span>
                                             </button>
@@ -6269,7 +7156,9 @@
                                             <button
                                                 type="button"
                                                 class="directory-attribute"
-                                                onclick="routeToDatabaseCell('${cleanLnk}', 'H', '${cleanName}', 'Likes')">
+                                                data-directory-edit-field="likes"
+                                                data-directory-current-value="${escapeDashboardHtml(likes ? likes.trim() : '')}"
+                                                title="Tap to edit Likes">
                                                 <span class="directory-field-label">Likes</span>
                                                 <span class="directory-field-value">${escapeDashboardHtml(likes ? likes.trim() : 'None listed')}</span>
                                             </button>
@@ -6277,7 +7166,9 @@
                                             <button
                                                 type="button"
                                                 class="directory-attribute"
-                                                onclick="routeToDatabaseCell('${cleanLnk}', 'I', '${cleanName}', 'Dislikes')">
+                                                data-directory-edit-field="dislikes"
+                                                data-directory-current-value="${escapeDashboardHtml(dislikes ? dislikes.trim() : '')}"
+                                                title="Tap to edit Dislikes">
                                                 <span class="directory-field-label">Dislikes</span>
                                                 <span class="directory-field-value">${escapeDashboardHtml(dislikes ? dislikes.trim() : 'None listed')}</span>
                                             </button>
@@ -6285,7 +7176,9 @@
                                             <button
                                                 type="button"
                                                 class="directory-attribute directory-attribute-wide"
-                                                onclick="routeToDatabaseCell('${cleanLnk}', 'J', '${cleanName}', 'Notes')">
+                                                data-directory-edit-field="notes"
+                                                data-directory-current-value="${escapeDashboardHtml(notes ? notes.trim() : '')}"
+                                                title="Tap to edit Notes">
                                                 <span class="directory-field-label">Notes</span>
                                                 <span class="directory-field-value">${escapeDashboardHtml(notes ? notes.trim() : 'None')}</span>
                                             </button>
