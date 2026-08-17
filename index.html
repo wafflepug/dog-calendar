@@ -3510,6 +3510,14 @@
             color: #ddd6fe;
         }
 
+
+
+        /* One completed intake method becomes the card's source of record. */
+        .directory-intake-strip[hidden],
+        .directory-legacy-strip[hidden] {
+            display: none !important;
+        }
+
 </style>
 </head>
 <body>
@@ -5265,8 +5273,6 @@
                 hydrateDirectoryDogPhotos()
                     .catch(error => console.error(error));
                 hydrateDirectoryIntakeStatuses()
-                    .catch(error => console.error(error));
-                hydrateDirectoryLegacyIntakes()
                     .catch(error => console.error(error));
                 hydrateDirectoryLegacyIntakes()
                     .catch(error => console.error(error));
@@ -7413,6 +7419,142 @@
         return false;
     }
 
+    function getIntakeCompletionTimestamp(record, fallback = Infinity) {
+        if (!record) return fallback;
+
+        const raw =
+            record.submittedAt ||
+            record.uploadedAt ||
+            record.updatedAt ||
+            '';
+
+        const parsed =
+            Date.parse(String(raw || ''));
+
+        return Number.isFinite(parsed)
+            ? parsed
+            : fallback;
+    }
+
+    function applyDirectoryIntakeMethodVisibility(stayKey) {
+        const digitalStrip = Array.from(
+            document.querySelectorAll(
+                '[data-directory-intake]'
+            )
+        ).find(element =>
+            String(
+                element.dataset.directoryIntake ||
+                ''
+            ) ===
+            String(stayKey || '')
+        );
+
+        const legacyStrip = Array.from(
+            document.querySelectorAll(
+                '[data-directory-legacy]'
+            )
+        ).find(element =>
+            String(
+                element.dataset.directoryLegacy ||
+                ''
+            ) ===
+            String(stayKey || '')
+        );
+
+        if (
+            !digitalStrip ||
+            !legacyStrip
+        ) {
+            return;
+        }
+
+        const digitalRecord =
+            directoryIntakeStatusCache[
+                stayKey
+            ] || null;
+
+        const legacyGroup =
+            directoryLegacyIntakeCache[
+                stayKey
+            ] || null;
+
+        const digitalComplete =
+            !!digitalRecord &&
+            String(
+                digitalRecord.status || ''
+            ).toLowerCase() ===
+                'complete';
+
+        const legacyComplete =
+            !!legacyGroup &&
+            !!legacyGroup.latest;
+
+        let showDigital = true;
+        let showLegacy = true;
+
+        if (
+            digitalComplete &&
+            legacyComplete
+        ) {
+            /*
+             * Historical edge case: both document types already exist.
+             * Preserve the method that was completed first so the card
+             * still presents one clear source-of-record intake method.
+             */
+            const digitalTime =
+                getIntakeCompletionTimestamp(
+                    digitalRecord
+                );
+
+            const legacyTime =
+                getIntakeCompletionTimestamp(
+                    legacyGroup.latest
+                );
+
+            if (
+                legacyTime <
+                digitalTime
+            ) {
+                showDigital = false;
+                showLegacy = true;
+            } else {
+                showDigital = true;
+                showLegacy = false;
+            }
+
+        } else if (digitalComplete) {
+            showDigital = true;
+            showLegacy = false;
+
+        } else if (legacyComplete) {
+            showDigital = false;
+            showLegacy = true;
+        }
+
+        digitalStrip.hidden =
+            !showDigital;
+
+        legacyStrip.hidden =
+            !showLegacy;
+
+        const card =
+            digitalStrip.closest(
+                '.directory-card'
+            );
+
+        if (card) {
+            card.dataset.intakeMethod =
+                digitalComplete &&
+                showDigital
+                    ? 'digital'
+                    : legacyComplete &&
+                      showLegacy
+                        ? 'legacy'
+                        : 'none';
+        }
+    }
+
+
     function setDirectoryIntakeStatus(stayKey, record) {
         const strip = Array.from(
             document.querySelectorAll('[data-directory-intake]')
@@ -7436,6 +7578,10 @@
                     📝 Create Link
                 </button>
             `;
+
+            applyDirectoryIntakeMethodVisibility(
+                stayKey
+            );
             return;
         }
 
@@ -7470,6 +7616,10 @@
                     </button>
                 </div>
             `;
+
+            applyDirectoryIntakeMethodVisibility(
+                stayKey
+            );
             return;
         }
 
@@ -7485,6 +7635,10 @@
                 🔗 Copy Link
             </button>
         `;
+
+        applyDirectoryIntakeMethodVisibility(
+            stayKey
+        );
     }
 
     async function hydrateDirectoryIntakeStatuses(options = {}) {
@@ -7752,6 +7906,9 @@
                 </button>
             `;
 
+            applyDirectoryIntakeMethodVisibility(
+                stayKey
+            );
             return;
         }
 
@@ -7801,6 +7958,10 @@
                 </button>
             </div>
         `;
+
+        applyDirectoryIntakeMethodVisibility(
+            stayKey
+        );
     }
 
     async function hydrateDirectoryLegacyIntakes(
