@@ -3587,6 +3587,59 @@
         body.dark-theme .audit-readable-change strong {
             color: #e2e8f0;
         }
+
+
+        #upcoming-list li.upcoming-meet-greet {
+            border-left: 3px solid var(--wh-meet);
+            padding-left: 8px;
+        }
+
+        .upcoming-meet-greet-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            min-width: 0;
+            color: var(--wh-meet-hover);
+            font-weight: 800;
+        }
+
+        .upcoming-meet-greet-meta {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            flex: 0 0 auto;
+        }
+
+        .upcoming-meet-time {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 3px 7px;
+            border-radius: 999px;
+            background: var(--wh-meet);
+            color: #ffffff;
+            font-size: 10px;
+            font-weight: 850;
+            white-space: nowrap;
+        }
+
+        body.dark-theme .upcoming-meet-greet-label {
+            color: #99f6e4;
+        }
+
+        @media (max-width: 520px) {
+            #upcoming-list li.upcoming-meet-greet {
+                align-items: flex-start;
+                gap: 7px;
+            }
+
+            .upcoming-meet-greet-meta {
+                flex-direction: column;
+                align-items: flex-end;
+                gap: 4px;
+            }
+        }
+
 </style>
 </head>
 <body>
@@ -4166,7 +4219,6 @@
                 const localPotentials = getLocalArray('temporaryPotentialStays');
                 const localConfirmed = getLocalArray('temporaryConfirmedStays');
 
-                localMeets.forEach(addLocalEventCapacity);
                 localPotentials.forEach(addLocalEventCapacity);
                 localConfirmed.forEach(addLocalEventCapacity);
 
@@ -4174,6 +4226,7 @@
 
                 updateFullyBookedPanel();
                 updateTodayMeetGreetPanel(allCalendarEvents);
+                updateUpcomingSevenDaysPanel(allCalendarEvents);
                 successCallback(allCalendarEvents);
             },
 
@@ -7210,6 +7263,294 @@
         }).join('');
     }
 
+    function updateUpcomingSevenDaysPanel(events) {
+        const list =
+            document.getElementById(
+                'upcoming-list'
+            );
+
+        if (!list) return;
+
+        const todayStr =
+            getLocalTodayDateString();
+
+        const today =
+            new Date(
+                todayStr +
+                'T00:00:00'
+            );
+
+        const sevenDaysFromNow =
+            new Date(
+                today.getTime()
+            );
+
+        sevenDaysFromNow.setDate(
+            sevenDaysFromNow.getDate() +
+            7
+        );
+
+        const endStr =
+            sevenDaysFromNow
+                .getFullYear() +
+            '-' +
+            String(
+                sevenDaysFromNow
+                    .getMonth() + 1
+            ).padStart(2, '0') +
+            '-' +
+            String(
+                sevenDaysFromNow
+                    .getDate()
+            ).padStart(2, '0');
+
+        const items = [];
+        const seen = new Set();
+
+        (Array.isArray(events)
+            ? events
+            : []
+        ).forEach(event => {
+            const props =
+                (event &&
+                 event.extendedProps) ||
+                {};
+
+            const dateStr =
+                getCalendarEventDateString(
+                    event
+                );
+
+            /*
+             * Keep the same behaviour as the existing arrivals panel:
+             * tomorrow through seven days from today. Today's Meet & Greets
+             * remain in the separate "Meet & Greets Today" panel.
+             */
+            if (
+                !dateStr ||
+                dateStr <= todayStr ||
+                dateStr > endStr
+            ) {
+                return;
+            }
+
+            if (
+                props.isPotential === true
+            ) {
+                return;
+            }
+
+            const dogName =
+                String(
+                    props.dogName ||
+                    event.title ||
+                    'Unnamed dog'
+                )
+                    .replace(
+                        /^.*Meet & Greet:\s*/i,
+                        ''
+                    )
+                    .replace(
+                        /^⏰\s*\d{1,2}:\d{2}\s*-\s*/i,
+                        ''
+                    )
+                    .trim() ||
+                'Unnamed dog';
+
+            if (
+                props.isMeetGreet === true
+            ) {
+                const time =
+                    getMeetGreetTime(
+                        event
+                    );
+
+                const key =
+                    [
+                        'meet',
+                        dogName.toLowerCase(),
+                        dateStr,
+                        time
+                    ].join('|');
+
+                if (seen.has(key)) {
+                    return;
+                }
+
+                seen.add(key);
+
+                items.push({
+                    type: 'meet',
+                    dateStr,
+                    time,
+                    sortTime:
+                        meetGreetTimeToMinutes(
+                            time
+                        ),
+                    dogName
+                });
+
+                return;
+            }
+
+            /*
+             * Normal/confirmed boarding event:
+             * the event start is the arrival date.
+             */
+            const bookingType =
+                String(
+                    props.bookingType ||
+                    ''
+                ).toLowerCase();
+
+            if (
+                bookingType ===
+                    'meet & greet' ||
+                bookingType ===
+                    'potential stay'
+            ) {
+                return;
+            }
+
+            const key =
+                [
+                    'arrival',
+                    dogName.toLowerCase(),
+                    dateStr
+                ].join('|');
+
+            if (seen.has(key)) {
+                return;
+            }
+
+            seen.add(key);
+
+            items.push({
+                type: 'arrival',
+                dateStr,
+                time: '',
+                sortTime: -1,
+                dogName
+            });
+        });
+
+        items.sort((a, b) => {
+            const dateCompare =
+                a.dateStr.localeCompare(
+                    b.dateStr
+                );
+
+            if (dateCompare !== 0) {
+                return dateCompare;
+            }
+
+            /*
+             * Boarding arrivals appear first on a shared date,
+             * followed by Meet & Greets in expected-time order.
+             */
+            if (a.type !== b.type) {
+                return a.type ===
+                    'arrival'
+                    ? -1
+                    : 1;
+            }
+
+            if (
+                a.type === 'meet'
+            ) {
+                const timeCompare =
+                    a.sortTime -
+                    b.sortTime;
+
+                if (timeCompare !== 0) {
+                    return timeCompare;
+                }
+            }
+
+            return a.dogName
+                .localeCompare(
+                    b.dogName
+                );
+        });
+
+        if (!items.length) {
+            list.innerHTML =
+                '<li class="no-dogs">No arrivals or Meet & Greets scheduled in the next 7 days</li>';
+            return;
+        }
+
+        list.innerHTML =
+            items.map(item => {
+                const date =
+                    new Date(
+                        item.dateStr +
+                        'T00:00:00'
+                    );
+
+                const dateLabel =
+                    Number.isNaN(
+                        date.getTime()
+                    )
+                        ? item.dateStr
+                        : (
+                            date.getDate() +
+                            '/' +
+                            (
+                                date.getMonth() +
+                                1
+                            )
+                        );
+
+                const safeDog =
+                    escapeDashboardHtml(
+                        item.dogName
+                    );
+
+                const safeDate =
+                    escapeDashboardHtml(
+                        dateLabel
+                    );
+
+                if (
+                    item.type ===
+                    'meet'
+                ) {
+                    const safeTime =
+                        escapeDashboardHtml(
+                            item.time
+                        );
+
+                    return `
+                        <li class="upcoming-meet-greet">
+                            <span class="upcoming-meet-greet-label">
+                                🤝 Meet &amp; Greet: ${safeDog}
+                            </span>
+                            <span class="upcoming-meet-greet-meta">
+                                <span class="upcoming-meet-time">
+                                    ⏰ ${safeTime}
+                                </span>
+                                <span class="date-badge">
+                                    ${safeDate}
+                                </span>
+                            </span>
+                        </li>
+                    `;
+                }
+
+                return `
+                    <li>
+                        <span>
+                            ⏳ ${safeDog}
+                        </span>
+                        <span class="date-badge">
+                            ${safeDate}
+                        </span>
+                    </li>
+                `;
+            }).join('');
+    }
+
+
     function refreshCalendarData() {
         if (!globalCalendar) return;
 
@@ -7223,7 +7564,6 @@
         const localPotentials = getLocalArray('temporaryPotentialStays');
         const localConfirmed = getLocalArray('temporaryConfirmedStays');
 
-        localMeets.forEach(addLocalEventCapacity);
         localPotentials.forEach(addLocalEventCapacity);
         localConfirmed.forEach(addLocalEventCapacity);
 
@@ -7231,6 +7571,7 @@
 
         updateFullyBookedPanel();
         updateTodayMeetGreetPanel(allCalendarEvents);
+        updateUpcomingSevenDaysPanel(allCalendarEvents);
         globalCalendar.addEventSource(allCalendarEvents);
         applyCurrentSearchFilter();
     }
@@ -8764,11 +9105,23 @@
                             dogsInBooking = dogName.split(/&|\s+and\s+/i).map(s => s.trim()).filter(Boolean).length || 1;
                         }
 
-                        let tempLoopDate = new Date(checkStart.getTime());
-                        while (tempLoopDate <= checkEnd) {
-                            const tempStr = tempLoopDate.toISOString().split('T')[0];
-                            dailyCapacityCounts[tempStr] = (dailyCapacityCounts[tempStr] || 0) + dogsInBooking;
-                            tempLoopDate.setDate(tempLoopDate.getDate() + 1);
+                        if (!isMeetGreetType) {
+                            let tempLoopDate = new Date(checkStart.getTime());
+
+                            while (tempLoopDate <= checkEnd) {
+                                const tempStr =
+                                    tempLoopDate
+                                        .toISOString()
+                                        .split('T')[0];
+
+                                dailyCapacityCounts[tempStr] =
+                                    (dailyCapacityCounts[tempStr] || 0) +
+                                    dogsInBooking;
+
+                                tempLoopDate.setDate(
+                                    tempLoopDate.getDate() + 1
+                                );
+                            }
                         }
 
                         if (isPotentialType) {
