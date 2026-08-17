@@ -3518,6 +3518,75 @@
             display: none !important;
         }
 
+
+        .date-badge.capacity-green {
+            background: #dcfce7;
+            color: #166534;
+            border: 1px solid #bbf7d0;
+            font-size: 11px;
+            text-transform: uppercase;
+        }
+        .date-badge.capacity-amber {
+            background: #fef3c7;
+            color: #92400e;
+            border: 1px solid #fde68a;
+            font-size: 11px;
+            text-transform: uppercase;
+        }
+        .date-badge.capacity-red {
+            background: #fee2e2;
+            color: #b91c1c;
+            border: 1px solid #fecaca;
+            font-size: 11px;
+            text-transform: uppercase;
+        }
+        .capacity-range-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            min-width: 0;
+        }
+        body.dark-theme .date-badge.capacity-green {
+            background: #14532d;
+            color: #dcfce7;
+            border-color: #166534;
+        }
+        body.dark-theme .date-badge.capacity-amber {
+            background: #78350f;
+            color: #fef3c7;
+            border-color: #92400e;
+        }
+        body.dark-theme .date-badge.capacity-red {
+            background: #7f1d1d;
+            color: #fee2e2;
+            border-color: #991b1b;
+        }
+
+        .audit-readable-changes {
+            display: grid;
+            gap: 4px;
+            margin-top: 8px;
+            padding: 8px 10px;
+            border-left: 3px solid #cbd5e1;
+            border-radius: 0 7px 7px 0;
+            background: #f8fafc;
+        }
+        .audit-readable-change {
+            color: #475569;
+            font-size: 10.5px;
+            line-height: 1.45;
+        }
+        .audit-readable-change strong {
+            color: #334155;
+        }
+        body.dark-theme .audit-readable-changes {
+            background: #273449;
+            border-left-color: #64748b;
+        }
+        body.dark-theme .audit-readable-change,
+        body.dark-theme .audit-readable-change strong {
+            color: #e2e8f0;
+        }
 </style>
 </head>
 <body>
@@ -3585,8 +3654,8 @@
             <ul id="upcoming-list" class="summary-list"><li class="no-dogs">No new arrivals scheduled this week</li></ul>
         </div>
         <div class="summary-card fully-booked">
-            <h3>🛑 Full Capacity Alerts</h3>
-            <ul id="full-dates-list" class="summary-list"><li class="success-clear">🟢 Open slots available</li></ul>
+            <h3>🐾 Capacity</h3>
+            <ul id="full-dates-list" class="summary-list"><li class="success-clear">🟢 0 dogs today</li></ul>
         </div>
     </div>
 
@@ -3613,7 +3682,7 @@
                     type="button"
                     id="openLegacyIntakeUploadBtn"
                     class="directory-legacy-global-btn">
-                    📚 Upload / OCR Legacy PDF
+                    📚 Upload PDF
                 </button>
                 <span id="directory-care-summary" class="directory-care-summary">
                     No active care alerts
@@ -5314,15 +5383,394 @@
         });
     }
 
-    function prettyAuditJson(value) {
-        const text = String(value || '').trim();
-        if (!text) return '';
+    function parseAuditObject(value) {
+        const text =
+            String(value || '').trim();
+
+        if (!text) return null;
 
         try {
-            return JSON.stringify(JSON.parse(text), null, 2);
+            const parsed = JSON.parse(text);
+
+            return (
+                parsed &&
+                typeof parsed === 'object'
+            )
+                ? parsed
+                : null;
+
         } catch (_) {
-            return text;
+            return null;
         }
+    }
+
+    function auditDisplayLabel(key) {
+        const labels = {
+            dogName: 'Dog Name',
+            breed: 'Breed',
+            startDate: 'Start Date',
+            endDate: 'End Date',
+            ownerName: 'Owner',
+            phone: 'Contact Number',
+            likes: 'Likes',
+            dislikes: 'Dislikes',
+            notes: 'Notes',
+            editLink: 'Edit Link',
+            bookingType: 'Booking Type',
+            stayKey: 'Stay',
+            escapeRisk: 'Escape Risk',
+            foodAllergy: 'Food Allergy',
+            medicated: 'Medicated',
+            separationAnxiety: 'Separation Anxiety',
+            weightManagement: 'Weight Management',
+            present: 'Present',
+            description: 'Description',
+            photoCount: 'Photo Count',
+            dogPhoto: 'Dog Photo'
+        };
+
+        if (labels[key]) return labels[key];
+
+        return String(key || '')
+            .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+            .replace(/[_-]+/g, ' ')
+            .replace(/\b\w/g, letter =>
+                letter.toUpperCase()
+            );
+    }
+
+    function formatAuditValue(value) {
+        if (value === true) return 'Yes';
+        if (value === false) return 'No';
+
+        if (
+            value === null ||
+            value === undefined ||
+            value === ''
+        ) {
+            return 'blank';
+        }
+
+        if (Array.isArray(value)) {
+            return value.length
+                ? value
+                    .map(item =>
+                        formatAuditValue(item)
+                    )
+                    .join(', ')
+                : 'none';
+        }
+
+        if (
+            typeof value === 'object'
+        ) {
+            const summary =
+                Object.entries(value)
+                    .filter(([, nested]) =>
+                        nested !== null &&
+                        nested !== undefined &&
+                        nested !== ''
+                    )
+                    .slice(0, 5)
+                    .map(([key, nested]) =>
+                        auditDisplayLabel(key) +
+                        ': ' +
+                        formatAuditValue(nested)
+                    );
+
+            return summary.length
+                ? summary.join('; ')
+                : 'none';
+        }
+
+        const text = String(value).trim();
+
+        if (
+            /^\d{4}-\d{2}-\d{2}$/.test(text)
+        ) {
+            const date =
+                new Date(text + 'T00:00:00');
+
+            if (
+                !Number.isNaN(
+                    date.getTime()
+                )
+            ) {
+                return date.toLocaleDateString(
+                    'en-AU',
+                    {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric'
+                    }
+                );
+            }
+        }
+
+        return text;
+    }
+
+    function flattenAuditObject(
+        object,
+        prefix = '',
+        output = {}
+    ) {
+        if (
+            !object ||
+            typeof object !== 'object'
+        ) {
+            return output;
+        }
+
+        Object.entries(object)
+            .forEach(([key, value]) => {
+                const path =
+                    prefix
+                        ? `${prefix}.${key}`
+                        : key;
+
+                if (
+                    value &&
+                    typeof value === 'object' &&
+                    !Array.isArray(value)
+                ) {
+                    flattenAuditObject(
+                        value,
+                        path,
+                        output
+                    );
+                    return;
+                }
+
+                output[path] = value;
+            });
+
+        return output;
+    }
+
+    function auditPathLabel(path) {
+        const parts =
+            String(path || '').split('.');
+
+        if (
+            parts[0] === 'items' &&
+            parts.length >= 3
+        ) {
+            const itemLabels = {
+                waterBowls: 'Water Bowls',
+                foodBowls: 'Food Bowls',
+                blankets: 'Blankets',
+                beds: 'Beds',
+                petCrates: 'Pet Crates',
+                toys: 'Toys',
+                leadsHarnesses: 'Leads / Harnesses',
+                medication: 'Medication',
+                other: 'Other Belongings'
+            };
+
+            const item =
+                itemLabels[parts[1]] ||
+                auditDisplayLabel(parts[1]);
+
+            return parts[2] === 'present'
+                ? item
+                : (
+                    item +
+                    ' ' +
+                    auditDisplayLabel(parts[2])
+                );
+        }
+
+        if (
+            ['riskFlags', 'booking', 'directory', 'care']
+                .includes(parts[0]) &&
+            parts[1]
+        ) {
+            return auditDisplayLabel(parts[1]);
+        }
+
+        return auditDisplayLabel(
+            parts[parts.length - 1]
+        );
+    }
+
+    function buildReadableAuditChanges(record) {
+        const before =
+            parseAuditObject(record.beforeJson) || {};
+
+        const after =
+            parseAuditObject(record.afterJson) || {};
+
+        const beforeFlat =
+            flattenAuditObject(before);
+
+        const afterFlat =
+            flattenAuditObject(after);
+
+        const keys =
+            Array.from(
+                new Set([
+                    ...Object.keys(beforeFlat),
+                    ...Object.keys(afterFlat)
+                ])
+            );
+
+        const lines = [];
+
+        keys.forEach(path => {
+            if (
+                /(^|\.)(stayKey|photoIds|pdfFileId|documentId|editLink)$/i
+                    .test(path)
+            ) {
+                return;
+            }
+
+            const oldValue = beforeFlat[path];
+            const newValue = afterFlat[path];
+
+            if (
+                JSON.stringify(oldValue ?? '') ===
+                JSON.stringify(newValue ?? '')
+            ) {
+                return;
+            }
+
+            const label =
+                auditPathLabel(path);
+
+            if (oldValue === undefined) {
+                lines.push(
+                    `<strong>${escapeDashboardHtml(label)}</strong> set to ${escapeDashboardHtml(formatAuditValue(newValue))}.`
+                );
+                return;
+            }
+
+            if (newValue === undefined) {
+                lines.push(
+                    `<strong>${escapeDashboardHtml(label)}</strong> removed (was ${escapeDashboardHtml(formatAuditValue(oldValue))}).`
+                );
+                return;
+            }
+
+            lines.push(
+                `<strong>${escapeDashboardHtml(label)}</strong> changed from ${escapeDashboardHtml(formatAuditValue(oldValue))} to ${escapeDashboardHtml(formatAuditValue(newValue))}.`
+            );
+        });
+
+        if (
+            !lines.length &&
+            Object.keys(afterFlat).length
+        ) {
+            Object.entries(afterFlat)
+                .filter(([path, value]) =>
+                    value !== '' &&
+                    value !== null &&
+                    value !== undefined &&
+                    !/(^|\.)(stayKey|photoIds|editLink)$/i
+                        .test(path)
+                )
+                .slice(0, 8)
+                .forEach(([path, value]) => {
+                    lines.push(
+                        `<strong>${escapeDashboardHtml(auditPathLabel(path))}</strong>: ${escapeDashboardHtml(formatAuditValue(value))}.`
+                    );
+                });
+        }
+
+        if (
+            !lines.length &&
+            Object.keys(beforeFlat).length
+        ) {
+            Object.entries(beforeFlat)
+                .filter(([path, value]) =>
+                    value !== '' &&
+                    value !== null &&
+                    value !== undefined &&
+                    !/(^|\.)(stayKey|photoIds|editLink)$/i
+                        .test(path)
+                )
+                .slice(0, 8)
+                .forEach(([path, value]) => {
+                    lines.push(
+                        `<strong>${escapeDashboardHtml(auditPathLabel(path))}</strong> was ${escapeDashboardHtml(formatAuditValue(value))}.`
+                    );
+                });
+        }
+
+        return lines.slice(0, 12);
+    }
+
+    function getAuditMeetGreetSchedule(record) {
+        if (
+            String(record.category || '')
+                .toLowerCase() !==
+                'meet & greet'
+        ) {
+            return '';
+        }
+
+        const before =
+            parseAuditObject(record.beforeJson);
+
+        const after =
+            parseAuditObject(record.afterJson);
+
+        const snapshot =
+            after || before || {};
+
+        const dateValue =
+            snapshot.startDate || '';
+
+        const notes =
+            String(snapshot.notes || '');
+
+        const timeMatch =
+            notes.match(/(\d{1,2}:\d{2})/);
+
+        const dateText =
+            dateValue
+                ? formatAuditValue(dateValue)
+                : '';
+
+        const timeText =
+            timeMatch
+                ? timeMatch[1]
+                : '';
+
+        if (
+            dateText &&
+            timeText
+        ) {
+            return `${dateText} at ${timeText}`;
+        }
+
+        return dateText || timeText;
+    }
+
+    function getReadableAuditSummary(record) {
+        const base =
+            String(record.summary || '').trim();
+
+        const schedule =
+            getAuditMeetGreetSchedule(record);
+
+        if (!schedule) return base;
+
+        if (
+            base.toLowerCase()
+                .includes(
+                    schedule.toLowerCase()
+                )
+        ) {
+            return base;
+        }
+
+        return (
+            base.replace(/\.$/, '') +
+            ' — ' +
+            schedule +
+            '.'
+        );
     }
 
     function renderAuditLog() {
@@ -5364,14 +5812,24 @@
         }
 
         container.innerHTML = filtered.map(record => {
-            const before = prettyAuditJson(record.beforeJson);
-            const after = prettyAuditJson(record.afterJson);
-            const hasDetails = !!(before || after);
-            const icon = auditCategoryIcon(record.category, record.action);
+            const readableChanges =
+                buildReadableAuditChanges(record);
+
+            const icon =
+                auditCategoryIcon(
+                    record.category,
+                    record.action
+                );
+
             const actorText =
-                record.actor && record.actor !== 'Web App / Unavailable'
+                record.actor &&
+                record.actor !==
+                    'Web App / Unavailable'
                     ? ` · ${escapeDashboardHtml(record.actor)}`
                     : '';
+
+            const readableSummary =
+                getReadableAuditSummary(record);
 
             return `
                 <article class="audit-entry">
@@ -5388,7 +5846,7 @@
                         </div>
 
                         <div class="audit-entry-summary">
-                            ${escapeDashboardHtml(record.summary || '')}
+                            ${escapeDashboardHtml(readableSummary)}
                         </div>
 
                         <div class="audit-entry-meta">
@@ -5397,24 +5855,14 @@
                             ${record.source ? `<span>📍 ${escapeDashboardHtml(record.source)}${actorText}</span>` : ''}
                         </div>
 
-                        ${hasDetails ? `
-                            <details class="audit-change-details">
-                                <summary>View recorded changes</summary>
-                                <div class="audit-change-grid">
-                                    ${before ? `
-                                        <div>
-                                            <span class="audit-change-label">Before</span>
-                                            <pre>${escapeDashboardHtml(before)}</pre>
-                                        </div>
-                                    ` : ''}
-                                    ${after ? `
-                                        <div>
-                                            <span class="audit-change-label">After</span>
-                                            <pre>${escapeDashboardHtml(after)}</pre>
-                                        </div>
-                                    ` : ''}
-                                </div>
-                            </details>
+                        ${readableChanges.length ? `
+                            <div class="audit-readable-changes">
+                                ${readableChanges
+                                    .map(change =>
+                                        `<div class="audit-readable-change">${change}</div>`
+                                    )
+                                    .join('')}
+                            </div>
                         ` : ''}
                     </div>
                 </article>
@@ -6788,109 +7236,176 @@
     }
 
     function updateFullyBookedPanel() {
-        const fullDatesList = document.getElementById('full-dates-list');
-        if (!fullDatesList) return;
+        const capacityList =
+            document.getElementById('full-dates-list');
 
-        // Capacity alerts are operationally useful only from today onward.
-        // Dates are stored as YYYY-MM-DD, so string comparison is safe here.
-        const todayStr = getLocalTodayDateString();
+        if (!capacityList) return;
 
-        const sortedDates = Object.keys(dailyCapacityCounts)
-            .filter(dateStr =>
-                dateStr >= todayStr &&
-                dailyCapacityCounts[dateStr] >= 4
-            )
-            .sort((a, b) =>
-                new Date(a + 'T00:00:00') -
-                new Date(b + 'T00:00:00')
+        const todayStr =
+            getLocalTodayDateString();
+
+        const addDays = (dateStr, days) => {
+            const date =
+                new Date(dateStr + 'T00:00:00');
+
+            date.setDate(
+                date.getDate() + days
             );
 
-        if (sortedDates.length === 0) {
-            fullDatesList.innerHTML =
-                '<li class="success-clear">🟢 Open slots available</li>';
-            return;
+            return (
+                date.getFullYear() +
+                '-' +
+                String(date.getMonth() + 1).padStart(2, '0') +
+                '-' +
+                String(date.getDate()).padStart(2, '0')
+            );
+        };
+
+        // Always show at least a 14-day capacity outlook.
+        const minimumHorizonEnd =
+            addDays(todayStr, 13);
+
+        const futureScheduledDates =
+            Object.keys(dailyCapacityCounts)
+                .filter(dateStr =>
+                    dateStr >= todayStr
+                )
+                .sort();
+
+        const latestScheduledDate =
+            futureScheduledDates.length
+                ? futureScheduledDates[
+                    futureScheduledDates.length - 1
+                  ]
+                : todayStr;
+
+        const horizonEnd =
+            latestScheduledDate > minimumHorizonEnd
+                ? latestScheduledDate
+                : minimumHorizonEnd;
+
+        const capacityBand = count => {
+            if (count >= 4) {
+                return {
+                    key: 'red',
+                    label: 'Full',
+                    dot: '🔴',
+                    badgeClass: 'capacity-red'
+                };
+            }
+
+            if (count === 3) {
+                return {
+                    key: 'amber',
+                    label: 'Busy',
+                    dot: '🟠',
+                    badgeClass: 'capacity-amber'
+                };
+            }
+
+            return {
+                key: 'green',
+                label: 'Available',
+                dot: '🟢',
+                badgeClass: 'capacity-green'
+            };
+        };
+
+        const dates = [];
+        let cursor = todayStr;
+
+        while (cursor <= horizonEnd) {
+            const count =
+                Number(
+                    dailyCapacityCounts[cursor] || 0
+                );
+
+            dates.push({
+                date: cursor,
+                count,
+                band: capacityBand(count)
+            });
+
+            cursor = addDays(cursor, 1);
         }
 
-        // Group consecutive full-capacity dates into one operational range.
-        // Example: 28 Dec 2026 – 1 Jan 2027 instead of five separate rows.
+        // Group consecutive dates by colour/status.
         const ranges = [];
-        let currentRange = null;
 
-        sortedDates.forEach(dateStr => {
-            const dogCount = Number(dailyCapacityCounts[dateStr] || 0);
+        dates.forEach(item => {
+            const current =
+                ranges[ranges.length - 1];
 
-            if (!currentRange) {
-                currentRange = {
-                    start: dateStr,
-                    end: dateStr,
-                    counts: [dogCount]
-                };
+            if (
+                current &&
+                current.band.key === item.band.key &&
+                addDays(current.end, 1) === item.date
+            ) {
+                current.end = item.date;
+                current.counts.push(item.count);
                 return;
             }
 
-            const nextExpected = new Date(
-                currentRange.end + 'T00:00:00'
-            );
-            nextExpected.setDate(nextExpected.getDate() + 1);
-
-            const nextExpectedStr =
-                nextExpected.getFullYear() + '-' +
-                String(nextExpected.getMonth() + 1).padStart(2, '0') + '-' +
-                String(nextExpected.getDate()).padStart(2, '0');
-
-            if (dateStr === nextExpectedStr) {
-                currentRange.end = dateStr;
-                currentRange.counts.push(dogCount);
-            } else {
-                ranges.push(currentRange);
-                currentRange = {
-                    start: dateStr,
-                    end: dateStr,
-                    counts: [dogCount]
-                };
-            }
+            ranges.push({
+                start: item.date,
+                end: item.date,
+                counts: [item.count],
+                band: item.band
+            });
         });
-
-        if (currentRange) {
-            ranges.push(currentRange);
-        }
 
         const formatCapacityDate = dateStr => {
-            const dateObj = new Date(dateStr + 'T00:00:00');
+            const dateObj =
+                new Date(dateStr + 'T00:00:00');
 
-            return dateObj.toLocaleDateString('en-AU', {
-                day: 'numeric',
-                month: 'short',
-                year: 'numeric'
-            });
+            return dateObj.toLocaleDateString(
+                'en-AU',
+                {
+                    day: 'numeric',
+                    month: 'short',
+                    year: 'numeric'
+                }
+            );
         };
 
-        const listItems = ranges.map(range => {
-            const startLabel = formatCapacityDate(range.start);
-            const endLabel = formatCapacityDate(range.end);
+        capacityList.innerHTML =
+            ranges.map(range => {
+                const startLabel =
+                    formatCapacityDate(range.start);
 
-            const dateLabel =
-                range.start === range.end
-                    ? startLabel
-                    : `${startLabel} – ${endLabel}`;
+                const endLabel =
+                    formatCapacityDate(range.end);
 
-            const minDogs = Math.min(...range.counts);
-            const maxDogs = Math.max(...range.counts);
+                const dateLabel =
+                    range.start === range.end
+                        ? startLabel
+                        : `${startLabel} – ${endLabel}`;
 
-            const dogLabel =
-                minDogs === maxDogs
-                    ? `${minDogs} DOGS`
-                    : `${minDogs}–${maxDogs} DOGS`;
+                const minDogs =
+                    Math.min(...range.counts);
 
-            return `
-                <li>
-                    <span>📅 ${dateLabel}</span>
-                    <span class="date-badge alert-badge">${dogLabel}</span>
-                </li>
-            `;
-        });
+                const maxDogs =
+                    Math.max(...range.counts);
 
-        fullDatesList.innerHTML = listItems.join('');
+                const dogLabel =
+                    minDogs === maxDogs
+                        ? `${minDogs} ${minDogs === 1 ? 'DOG' : 'DOGS'}`
+                        : `${minDogs}–${maxDogs} DOGS`;
+
+                return `
+                    <li>
+                        <span class="capacity-range-label">
+                            ${range.band.dot}
+                            📅 ${dateLabel}
+                        </span>
+                        <span
+                            class="date-badge ${range.band.badgeClass}"
+                            title="${range.band.label}">
+                            ${dogLabel}
+                        </span>
+                    </li>
+                `;
+            }).join('');
     }
 
     function applyCurrentSearchFilter() {
