@@ -3376,6 +3376,140 @@
             color: #86efac;
         }
 
+
+
+        /* ============================================================
+           LEGACY INTAKE PDF LIBRARY
+           ============================================================ */
+        .directory-header-actions {
+            flex: 0 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .directory-legacy-global-btn {
+            min-height: 28px;
+            padding: 5px 9px;
+            border: 1px solid #cbd5e1;
+            border-radius: 7px;
+            background: #ffffff;
+            color: #1f3a5f;
+            font: inherit;
+            font-size: 9.5px;
+            font-weight: 850;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .directory-legacy-global-btn:hover {
+            background: #f8fafc;
+            border-color: #9fb0c2;
+        }
+
+        .directory-legacy-strip {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            min-height: 34px;
+            padding: 6px 7px;
+            border: 1px dashed #cbd5e1;
+            border-radius: 8px;
+            background: #fbfcfd;
+        }
+
+        .directory-legacy-strip.has-document {
+            border-style: solid;
+            border-color: #d8d0ec;
+            background: #faf8ff;
+        }
+
+        .directory-legacy-state {
+            min-width: 0;
+            color: #64748b;
+            font-size: 9.5px;
+            font-weight: 750;
+            line-height: 1.25;
+        }
+
+        .directory-legacy-strip.has-document
+        .directory-legacy-state {
+            color: #5b4b82;
+        }
+
+        .directory-legacy-actions {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            flex: 0 0 auto;
+        }
+
+        .directory-legacy-view {
+            color: #5b4b82 !important;
+            border-color: #d8d0ec !important;
+            background: #faf8ff !important;
+        }
+
+        @media (max-width: 620px) {
+            .directory-dashboard-header {
+                flex-direction: column;
+            }
+
+            .directory-header-actions {
+                width: 100%;
+                justify-content: space-between;
+            }
+
+            .directory-legacy-global-btn {
+                min-height: 32px;
+            }
+        }
+
+        @media (max-width: 520px) {
+            .directory-legacy-strip {
+                align-items: stretch;
+                flex-direction: column;
+            }
+
+            .directory-legacy-actions {
+                width: 100%;
+            }
+
+            .directory-legacy-actions
+            .directory-intake-action {
+                flex: 1;
+                min-height: 34px;
+            }
+        }
+
+        body.dark-theme .directory-legacy-global-btn {
+            background: #202c3e;
+            border-color: #40516a;
+            color: #dbeafe;
+        }
+
+        body.dark-theme .directory-legacy-strip {
+            background: #1b2739;
+            border-color: #475569;
+        }
+
+        body.dark-theme .directory-legacy-strip.has-document {
+            background: #262139;
+            border-color: #594b75;
+        }
+
+        body.dark-theme .directory-legacy-state {
+            color: #c7d2df;
+        }
+
+        body.dark-theme .directory-legacy-strip.has-document
+        .directory-legacy-state {
+            color: #ddd6fe;
+        }
+
 </style>
 </head>
 <body>
@@ -3466,9 +3600,17 @@
                     Current and upcoming guests with profile, stay details and care &amp; safety alerts. Tap a detail to edit it here.
                 </p>
             </div>
-            <span id="directory-care-summary" class="directory-care-summary">
-                No active care alerts
-            </span>
+            <div class="directory-header-actions">
+                <button
+                    type="button"
+                    id="openLegacyIntakeUploadBtn"
+                    class="directory-legacy-global-btn">
+                    📚 Upload Legacy PDF
+                </button>
+                <span id="directory-care-summary" class="directory-care-summary">
+                    No active care alerts
+                </span>
+            </div>
         </div>
         <div id="directory-grid" class="directory-grid"></div>
     </div>
@@ -3708,6 +3850,7 @@
     let auditLogRecords = [];
     let directoryPhotoRecordsCache = {};
     let directoryIntakeStatusCache = {};
+    let directoryLegacyIntakeCache = {};
     let activeDirectoryEditContext = null; 
     let isUpdatingDropdowns = false; 
     let selectedClickDateStr = ""; 
@@ -4025,12 +4168,99 @@
             loadAuditLog({ button: this }).catch(error => console.error(error));
         });
 
+        document
+            .getElementById('openLegacyIntakeUploadBtn')
+            .addEventListener('click', function() {
+                openLegacyIntakeUploader();
+            });
+
+        window.addEventListener('message', function(event) {
+            const data =
+                event && event.data
+                    ? event.data
+                    : null;
+
+            if (
+                !data ||
+                data.type !==
+                    'waffle-legacy-intake-updated'
+            ) {
+                return;
+            }
+
+            directoryLegacyIntakeCache = {};
+
+            hydrateDirectoryLegacyIntakes({
+                force: true
+            }).catch(error =>
+                console.error(error)
+            );
+
+            loadAuditLog()
+                .catch(() => {});
+        });
+
         document.getElementById('auditSearch').addEventListener('input', renderAuditLog);
         document.getElementById('auditCategoryFilter').addEventListener('change', renderAuditLog);
 
         const directoryGrid = document.getElementById('directory-grid');
 
         directoryGrid.addEventListener('click', function(event) {
+            const legacyReassignTrigger =
+                event.target.closest(
+                    '[data-reassign-legacy-intake]'
+                );
+
+            if (legacyReassignTrigger) {
+                event.preventDefault();
+                event.stopPropagation();
+
+                const card =
+                    legacyReassignTrigger.closest(
+                        '.directory-card'
+                    );
+
+                openLegacyIntakeUploader(
+                    String(
+                        card?.dataset
+                            .directoryStayKey ||
+                        ''
+                    ),
+                    String(
+                        legacyReassignTrigger.dataset
+                            .legacyDocumentId ||
+                        ''
+                    )
+                );
+
+                return;
+            }
+
+            const legacyUploadTrigger =
+                event.target.closest(
+                    '[data-upload-legacy-intake]'
+                );
+
+            if (legacyUploadTrigger) {
+                event.preventDefault();
+                event.stopPropagation();
+
+                const card =
+                    legacyUploadTrigger.closest(
+                        '.directory-card'
+                    );
+
+                openLegacyIntakeUploader(
+                    String(
+                        card?.dataset
+                            .directoryStayKey ||
+                        ''
+                    )
+                );
+
+                return;
+            }
+
             const intakeTrigger = event.target.closest(
                 '[data-create-intake-link]'
             );
@@ -4883,6 +5113,7 @@
                 reconcileTemporaryEvents(csvText);
                 directoryPhotoRecordsCache = {};
                 directoryIntakeStatusCache = {};
+                directoryLegacyIntakeCache = {};
                 refreshCalendarData();
                 loadCareRiskDashboard(csvText).catch(() => {});
 
@@ -5034,6 +5265,10 @@
                 hydrateDirectoryDogPhotos()
                     .catch(error => console.error(error));
                 hydrateDirectoryIntakeStatuses()
+                    .catch(error => console.error(error));
+                hydrateDirectoryLegacyIntakes()
+                    .catch(error => console.error(error));
+                hydrateDirectoryLegacyIntakes()
                     .catch(error => console.error(error));
             }, 0);
         }
@@ -6945,7 +7180,9 @@
         [
             belongingsRecordsCache,
             careRiskRecordsCache,
-            directoryPhotoRecordsCache
+            directoryPhotoRecordsCache,
+            directoryIntakeStatusCache,
+            directoryLegacyIntakeCache
         ].forEach(cache => {
             if (
                 !cache ||
@@ -7426,6 +7663,246 @@
     }
 
 
+    function buildLegacyIntakeUrl(
+        stayKey = '',
+        documentId = ''
+    ) {
+        const baseUrl =
+            String(APPS_SCRIPT_WEBAPP_URL || '')
+                .replace(/[?#].*$/, '');
+
+        if (!baseUrl) return '';
+
+        const params = new URLSearchParams({
+            action: 'legacy_intake'
+        });
+
+        if (stayKey) {
+            params.set('stayKey', stayKey);
+        }
+
+        if (documentId) {
+            params.set('documentId', documentId);
+        }
+
+        return baseUrl + '?' + params.toString();
+    }
+
+    function openLegacyIntakeUploader(
+        stayKey = '',
+        documentId = ''
+    ) {
+        const url = buildLegacyIntakeUrl(
+            stayKey,
+            documentId
+        );
+
+        if (!url) {
+            alert(
+                'The Apps Script Web App URL is not configured.'
+            );
+            return;
+        }
+
+        const popup = window.open(
+            url,
+            'waffleLegacyIntake',
+            'width=860,height=860,resizable=yes,scrollbars=yes'
+        );
+
+        if (!popup) {
+            window.open(url, '_blank');
+        }
+    }
+
+    function setDirectoryLegacyIntakeStatus(
+        stayKey,
+        group
+    ) {
+        const strip = Array.from(
+            document.querySelectorAll(
+                '[data-directory-legacy]'
+            )
+        ).find(element =>
+            String(
+                element.dataset.directoryLegacy || ''
+            ) ===
+            String(stayKey || '')
+        );
+
+        if (!strip) return;
+
+        if (
+            !group ||
+            !group.latest
+        ) {
+            strip.classList.remove(
+                'has-document'
+            );
+
+            strip.innerHTML = `
+                <div class="directory-legacy-state">
+                    <span>📚 Legacy intake not uploaded</span>
+                </div>
+                <button
+                    type="button"
+                    class="directory-intake-action"
+                    data-upload-legacy-intake>
+                    ＋ PDF
+                </button>
+            `;
+
+            return;
+        }
+
+        const latest = group.latest;
+        const count =
+            Number(group.count || 1);
+
+        const uploaded =
+            latest.uploadedAt
+                ? formatAuditTimestamp(
+                    latest.uploadedAt
+                )
+                : '';
+
+        strip.classList.add(
+            'has-document'
+        );
+
+        strip.innerHTML = `
+            <div class="directory-legacy-state">
+                📚 Legacy intake ·
+                ${count} ${count === 1 ? 'file' : 'files'}
+                ${uploaded ? ` · ${escapeDashboardHtml(uploaded)}` : ''}
+            </div>
+            <div class="directory-legacy-actions">
+                ${latest.pdfUrl ? `
+                    <a
+                        href="${escapeDashboardHtml(latest.pdfUrl)}"
+                        target="_blank"
+                        rel="noopener"
+                        class="directory-intake-action directory-legacy-view">
+                        📄 View
+                    </a>
+                ` : ''}
+                <button
+                    type="button"
+                    class="directory-intake-action"
+                    data-upload-legacy-intake>
+                    ＋ PDF
+                </button>
+                <button
+                    type="button"
+                    class="directory-intake-action"
+                    data-reassign-legacy-intake
+                    data-legacy-document-id="${escapeDashboardHtml(latest.documentId || '')}">
+                    ↻ Reassign
+                </button>
+            </div>
+        `;
+    }
+
+    async function hydrateDirectoryLegacyIntakes(
+        options = {}
+    ) {
+        const force =
+            options.force === true;
+
+        const cards = Array.from(
+            document.querySelectorAll(
+                '.directory-card[data-directory-stay-key]'
+            )
+        );
+
+        if (!cards.length) return;
+
+        const keys = Array.from(
+            new Set(
+                cards
+                    .map(card =>
+                        String(
+                            card.dataset
+                                .directoryStayKey ||
+                            ''
+                        ).trim()
+                    )
+                    .filter(Boolean)
+            )
+        );
+
+        const keysToFetch = force
+            ? keys
+            : keys.filter(key =>
+                !Object.prototype.hasOwnProperty.call(
+                    directoryLegacyIntakeCache,
+                    key
+                )
+            );
+
+        keys.forEach(key => {
+            if (
+                Object.prototype.hasOwnProperty.call(
+                    directoryLegacyIntakeCache,
+                    key
+                )
+            ) {
+                setDirectoryLegacyIntakeStatus(
+                    key,
+                    directoryLegacyIntakeCache[key]
+                );
+            }
+        });
+
+        if (!keysToFetch.length) return;
+
+        try {
+            const response =
+                await queryAppsScript({
+                    action:
+                        'get_legacy_intake_statuses',
+                    stayKeys:
+                        keysToFetch
+                }, {
+                    maxAttempts: 2,
+                    timeoutMs: 45000
+                });
+
+            keysToFetch.forEach(key => {
+                directoryLegacyIntakeCache[key] =
+                    null;
+            });
+
+            (response.records || [])
+                .forEach(group => {
+                    if (
+                        !group ||
+                        !group.stayKey
+                    ) {
+                        return;
+                    }
+
+                    directoryLegacyIntakeCache[
+                        group.stayKey
+                    ] = group;
+                });
+
+            keysToFetch.forEach(key => {
+                setDirectoryLegacyIntakeStatus(
+                    key,
+                    directoryLegacyIntakeCache[key]
+                );
+            });
+
+        } catch (error) {
+            console.error(
+                'Legacy intake status could not be loaded:',
+                error
+            );
+        }
+    }
+
+
     function setDirectoryDogPhoto(stayKey, record) {
         const shell = Array.from(
             document.querySelectorAll('[data-directory-photo]')
@@ -7731,6 +8208,20 @@
                                                 class="directory-intake-action"
                                                 data-create-intake-link>
                                                 📝 Create Link
+                                            </button>
+                                        </div>
+
+                                        <div
+                                            class="directory-legacy-strip"
+                                            data-directory-legacy="${escapeDashboardHtml(directoryStayKey)}">
+                                            <div class="directory-legacy-state">
+                                                <span>📚 Legacy intake not uploaded</span>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                class="directory-intake-action"
+                                                data-upload-legacy-intake>
+                                                ＋ PDF
                                             </button>
                                         </div>
 
