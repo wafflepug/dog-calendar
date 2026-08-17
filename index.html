@@ -1053,12 +1053,66 @@
             background: var(--wh-danger) !important;
         }
 
-        #themeToggle {
-            background: var(--wh-primary) !important;
-            width: 44px !important;
-            height: 44px !important;
-            font-size: 19px !important;
-            box-shadow: 0 6px 18px rgba(15,23,42,.16) !important;
+        #themeToggle.theme-toggle-header {
+            margin-left: auto;
+            flex: 0 0 auto;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            min-height: 38px;
+            padding: 7px 10px;
+            border: 1px solid var(--wh-border-soft);
+            border-radius: 999px;
+            background: var(--wh-primary);
+            color: #ffffff;
+            font: inherit;
+            font-size: 11px;
+            font-weight: 850;
+            cursor: pointer;
+            box-shadow: 0 3px 10px rgba(15,23,42,.12);
+            transition: transform .16s ease, background .16s ease;
+            white-space: nowrap;
+        }
+
+        #themeToggle.theme-toggle-header:hover {
+            background: var(--wh-primary-hover);
+            transform: translateY(-1px);
+        }
+
+        .theme-toggle-icon {
+            font-size: 15px;
+            line-height: 1;
+        }
+
+        .theme-toggle-label {
+            line-height: 1;
+        }
+
+        body.dark-theme #themeToggle.theme-toggle-header {
+            background: #475569;
+            border-color: #64748b;
+            color: #ffffff;
+        }
+
+        @media (max-width: 768px) {
+            #themeToggle.theme-toggle-header {
+                min-width: 40px;
+                min-height: 40px;
+                width: 40px;
+                height: 40px;
+                padding: 0;
+                margin-left: auto;
+                border-radius: 10px;
+            }
+
+            #themeToggle .theme-toggle-label {
+                display: none;
+            }
+
+            #themeToggle .theme-toggle-icon {
+                font-size: 18px;
+            }
         }
 
         /* Desktop sidebar refinements */
@@ -4214,6 +4268,16 @@
             <h2>Waffle House Calendar</h2>
             <span class="calendar-brand-subtitle">Premium Dog Boarding</span>
         </div>
+
+        <button
+            id="themeToggle"
+            type="button"
+            class="theme-toggle-header"
+            aria-label="Switch to dark mode"
+            title="Switch light / dark theme">
+            <span class="theme-toggle-icon" aria-hidden="true">🌙</span>
+            <span class="theme-toggle-label">Theme</span>
+        </button>
     </div>
     
     <div class="action-button-group">
@@ -4594,8 +4658,6 @@
         </div>
     </div>
 </div>
-
-<button id="themeToggle" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; background: #2c3e50; color: white; border: none; border-radius: 50%; width: 50px; height: 50px; font-size: 22px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.2); display: flex; align-items: center; justify-content: center;">🌙</button>
 
 <style>
     body.dark-theme .modal-content-panel { background: #1e293b !important; color: white; }
@@ -5240,11 +5302,40 @@
         jumpYearSelect.addEventListener('change', executeCalendarJump);
 
         const themeToggleBtn = document.getElementById('themeToggle');
-        if (localStorage.getItem('theme') === 'dark') { document.body.classList.add('dark-theme'); themeToggleBtn.innerText = '☀️'; }
+        const themeToggleIcon = themeToggleBtn.querySelector('.theme-toggle-icon');
+
+        function syncThemeToggleUi() {
+            const isDark = document.body.classList.contains('dark-theme');
+            themeToggleIcon.textContent = isDark ? '☀️' : '🌙';
+            themeToggleBtn.setAttribute(
+                'aria-label',
+                isDark
+                    ? 'Switch to light mode'
+                    : 'Switch to dark mode'
+            );
+            themeToggleBtn.title =
+                isDark
+                    ? 'Switch to light mode'
+                    : 'Switch to dark mode';
+        }
+
+        if (localStorage.getItem('theme') === 'dark') {
+            document.body.classList.add('dark-theme');
+        }
+
+        syncThemeToggleUi();
+
         themeToggleBtn.addEventListener('click', function() {
             document.body.classList.toggle('dark-theme');
-            if (document.body.classList.contains('dark-theme')) { themeToggleBtn.innerText = '☀️'; localStorage.setItem('theme', 'dark'); }
-            else { themeToggleBtn.innerText = '🌙'; localStorage.setItem('theme', 'light'); }
+
+            localStorage.setItem(
+                'theme',
+                document.body.classList.contains('dark-theme')
+                    ? 'dark'
+                    : 'light'
+            );
+
+            syncThemeToggleUi();
         });
 
         document.getElementById('manualRefreshBtn').addEventListener('click', function() {
