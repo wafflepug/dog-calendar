@@ -4254,6 +4254,47 @@
             }
         }
 
+
+
+        .directory-legacy-ai-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            margin-left: 4px;
+            padding: 2px 5px;
+            border-radius: 999px;
+            background: #dbeafe;
+            color: #1d4ed8;
+            font-size: 8px;
+            font-weight: 850;
+            white-space: nowrap;
+        }
+
+        .directory-legacy-ai-status.review {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .directory-legacy-ai-status.failed {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        body.dark-theme .directory-legacy-ai-status {
+            background: #1e3a8a;
+            color: #dbeafe;
+        }
+
+        body.dark-theme .directory-legacy-ai-status.review {
+            background: #78350f;
+            color: #fef3c7;
+        }
+
+        body.dark-theme .directory-legacy-ai-status.failed {
+            background: #7f1d1d;
+            color: #fee2e2;
+        }
+
 </style>
 </head>
 <body>
@@ -10354,6 +10395,41 @@
                 )
                 : '';
 
+        const aiStatus =
+            String(
+                latest.aiStatus || ''
+            ).trim();
+
+        const conflictCount =
+            Number(
+                latest.conflictCount || 0
+            );
+
+        let aiStatusHtml = '';
+
+        if (
+            aiStatus ===
+            'Review Required'
+        ) {
+            aiStatusHtml =
+                `<span class="directory-legacy-ai-status review">⚠️ ${conflictCount || ''} review</span>`;
+        } else if (
+            aiStatus ===
+            'AI Failed'
+        ) {
+            aiStatusHtml =
+                '<span class="directory-legacy-ai-status failed">⚠️ AI retry</span>';
+        } else if (
+            aiStatus ===
+            'Complete'
+        ) {
+            aiStatusHtml =
+                '<span class="directory-legacy-ai-status">✨ AI read</span>';
+        } else {
+            aiStatusHtml =
+                '<span class="directory-legacy-ai-status">✨ Read available</span>';
+        }
+
         strip.classList.add(
             'has-document'
         );
@@ -10363,6 +10439,7 @@
                 📚 Legacy intake ·
                 ${count} ${count === 1 ? 'file' : 'files'}
                 ${uploaded ? ` · ${escapeDashboardHtml(uploaded)}` : ''}
+                ${aiStatusHtml}
             </div>
             <div class="directory-legacy-actions">
                 ${latest.pdfUrl ? `
@@ -10385,7 +10462,7 @@
                     class="directory-intake-action"
                     data-reassign-legacy-intake
                     data-legacy-document-id="${escapeDashboardHtml(latest.documentId || '')}">
-                    ↻ Reassign
+                    ✨ Review / Reassign
                 </button>
             </div>
         `;
