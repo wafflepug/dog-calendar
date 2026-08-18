@@ -4295,6 +4295,320 @@
             color: #fee2e2;
         }
 
+
+
+        /* ============================================================
+           GUEST DIRECTORY & CARE — FUSED PROFILE / INTAKE / BELONGINGS
+           ============================================================ */
+        #directoryTabPanel.app-tab-panel.active {
+            display: block;
+            padding: 14px;
+            border: 1px solid #dbe3ea;
+            border-radius: 12px;
+            background: #ffffff;
+            box-shadow: 0 3px 12px rgba(15,23,42,.06);
+        }
+
+        .directory-dashboard-fused {
+            margin: 0;
+            padding: 0;
+            border: 0;
+            background: transparent;
+            box-shadow: none;
+        }
+
+        .directory-header-actions-fused {
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+
+        .guest-directory-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 12px 0;
+            padding: 9px 10px;
+            border: 1px solid #e2e8f0;
+            border-radius: 9px;
+            background: #f8fafc;
+        }
+
+        .guest-directory-search {
+            flex: 1;
+            min-width: 220px;
+            margin: 0 !important;
+        }
+
+        .guest-directory-toolbar-note {
+            color: #64748b;
+            font-size: 9.5px;
+            font-weight: 700;
+            line-height: 1.4;
+            text-align: right;
+            max-width: 390px;
+        }
+
+        .directory-grid-fused {
+            grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+            max-height: none;
+            overflow: visible;
+            padding-right: 0;
+            gap: 14px;
+        }
+
+        .directory-card.directory-card-fused {
+            gap: 8px;
+            padding: 14px;
+        }
+
+        .directory-core-attributes {
+            grid-template-columns: repeat(2, minmax(0,1fr));
+        }
+
+        .directory-fused-details {
+            border: 1px solid #dbe3ea;
+            border-radius: 9px;
+            background: #f8fafc;
+            overflow: hidden;
+        }
+
+        .directory-fused-details + .directory-fused-details {
+            margin-top: 2px;
+        }
+
+        .directory-fused-details > summary {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            padding: 9px 10px;
+            cursor: pointer;
+            color: #334155;
+            font-size: 10.5px;
+            font-weight: 900;
+            list-style: none;
+            user-select: none;
+        }
+
+        .directory-fused-details > summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .directory-fused-details > summary::after {
+            content: "⌄";
+            color: #64748b;
+            font-size: 13px;
+            transition: transform .15s ease;
+        }
+
+        .directory-fused-details[open] > summary::after {
+            transform: rotate(180deg);
+        }
+
+        .directory-fused-details-body {
+            padding: 10px;
+            border-top: 1px solid #e2e8f0;
+            background: #ffffff;
+        }
+
+        .intake-profile-source {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 6px;
+            border-radius: 999px;
+            background: #dbeafe;
+            color: #1d4ed8;
+            font-size: 8px;
+            font-weight: 850;
+            white-space: nowrap;
+        }
+
+        .intake-profile-empty {
+            padding: 10px;
+            border: 1px dashed #cbd5e1;
+            border-radius: 8px;
+            color: #64748b;
+            background: #f8fafc;
+            font-size: 10px;
+            line-height: 1.45;
+        }
+
+        .intake-profile-group + .intake-profile-group {
+            margin-top: 12px;
+            padding-top: 10px;
+            border-top: 1px solid #edf1f4;
+        }
+
+        .intake-profile-group-title {
+            margin-bottom: 7px;
+            color: #0f3550;
+            font-size: 9px;
+            font-weight: 900;
+            letter-spacing: .05em;
+            text-transform: uppercase;
+        }
+
+        .intake-profile-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0,1fr));
+            gap: 7px;
+        }
+
+        .intake-profile-field {
+            min-width: 0;
+        }
+
+        .intake-profile-field.is-wide {
+            grid-column: 1 / -1;
+        }
+
+        .intake-profile-field label {
+            display: block;
+            margin: 0 0 4px;
+            color: #64748b;
+            font-size: 8.5px;
+            font-weight: 850;
+            text-transform: uppercase;
+            letter-spacing: .025em;
+        }
+
+        .intake-profile-control {
+            width: 100%;
+            min-height: 35px;
+            box-sizing: border-box;
+            border: 1px solid #cbd5e1;
+            border-radius: 7px;
+            background: #ffffff;
+            color: #172033;
+            padding: 7px 8px;
+            font: inherit;
+            font-size: 10.5px;
+            outline: none;
+        }
+
+        textarea.intake-profile-control {
+            min-height: 66px;
+            resize: vertical;
+            line-height: 1.45;
+        }
+
+        .intake-profile-control:focus {
+            border-color: #3498db;
+            box-shadow: 0 0 0 3px rgba(52,152,219,.09);
+        }
+
+        .directory-belongings-section .care-risk-section {
+            margin-top: 0;
+        }
+
+        .directory-belongings-section .belongings-item-list {
+            margin-top: 10px;
+        }
+
+        .directory-belongings-section .belongings-actions {
+            margin-top: 9px;
+        }
+
+        .directory-belongings-section .belongings-photo-gallery {
+            margin-top: 9px;
+        }
+
+        .guest-profile-save-note {
+            margin-top: 7px;
+            color: #64748b;
+            font-size: 8.5px;
+            line-height: 1.4;
+        }
+
+        body.dark-theme #directoryTabPanel.app-tab-panel.active {
+            background: #1e293b;
+            border-color: #475569;
+            box-shadow: 0 3px 12px rgba(0,0,0,.25);
+        }
+
+        body.dark-theme .guest-directory-toolbar,
+        body.dark-theme .directory-fused-details {
+            background: #202c3e;
+            border-color: #475569;
+        }
+
+        body.dark-theme .guest-directory-toolbar-note,
+        body.dark-theme .directory-fused-details > summary,
+        body.dark-theme .intake-profile-field label,
+        body.dark-theme .guest-profile-save-note {
+            color: #cbd5e1;
+        }
+
+        body.dark-theme .directory-fused-details-body {
+            background: #273449;
+            border-top-color: #475569;
+        }
+
+        body.dark-theme .intake-profile-group + .intake-profile-group {
+            border-top-color: #475569;
+        }
+
+        body.dark-theme .intake-profile-group-title {
+            color: #e2e8f0;
+        }
+
+        body.dark-theme .intake-profile-control {
+            background: #1e293b;
+            border-color: #52617a;
+            color: #f8fafc;
+        }
+
+        body.dark-theme .intake-profile-empty {
+            background: #202c3e;
+            border-color: #52617a;
+            color: #cbd5e1;
+        }
+
+        @media (max-width: 768px) {
+            #directoryTabPanel.app-tab-panel.active {
+                padding: 10px;
+            }
+
+            .directory-grid-fused {
+                grid-template-columns: 1fr;
+            }
+
+            .guest-directory-toolbar {
+                align-items: stretch;
+                flex-direction: column;
+            }
+
+            .guest-directory-toolbar-note {
+                max-width: none;
+                text-align: left;
+            }
+
+            .guest-directory-search {
+                width: 100%;
+                min-width: 0;
+                font-size: 16px !important;
+            }
+
+            .directory-core-attributes,
+            .intake-profile-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .intake-profile-field.is-wide {
+                grid-column: auto;
+            }
+
+            .intake-profile-control {
+                min-height: 46px;
+                font-size: 16px;
+            }
+
+            textarea.intake-profile-control {
+                min-height: 86px;
+            }
+        }
+
 </style>
 </head>
 <body>
@@ -4328,7 +4642,7 @@
 
     <div class="app-tabs" role="tablist" aria-label="Waffle House sections">
         <button type="button" class="app-tab-button active" data-app-tab="calendar" role="tab" aria-selected="true">📅 Calendar & Dashboard</button>
-        <button type="button" class="app-tab-button" data-app-tab="belongings" role="tab" aria-selected="false">🧳 Current Pets & Belongings</button>
+        <button type="button" class="app-tab-button" data-app-tab="directory" role="tab" aria-selected="false">🐾 Guest Directory &amp; Care</button>
         <button type="button" class="app-tab-button" data-app-tab="reminders" role="tab" aria-selected="false">📌 Reminders &amp; Notes</button>
         <button type="button" class="app-tab-button" data-app-tab="audit" role="tab" aria-selected="false">🧾 Audit Log</button>
     </div>
@@ -4388,29 +4702,6 @@
         </ul>
     </div>
 
-    <div class="directory-dashboard mobile-dashboard-section" data-mobile-dashboard-section="directory">
-        <div class="directory-dashboard-header">
-            <div>
-                <h3>🐾 Guest Directory &amp; Care</h3>
-                <p class="directory-dashboard-subtitle">
-                    Current and upcoming guests with profile, stay details and care &amp; safety alerts. Tap a detail to edit it here.
-                </p>
-            </div>
-            <div class="directory-header-actions">
-                <button
-                    type="button"
-                    id="openLegacyIntakeUploadBtn"
-                    class="directory-legacy-global-btn">
-                    📚 Upload PDF
-                </button>
-                <span id="directory-care-summary" class="directory-care-summary">
-                    No active care alerts
-                </span>
-            </div>
-        </div>
-        <div id="directory-grid" class="directory-grid"></div>
-    </div>
-
     <div id="calendarEventLegend" class="calendar-event-legend" aria-label="Calendar event colour legend">
         <span class="legend-label">Calendar key</span>
         <span class="legend-item"><span class="legend-dot legend-boarding"></span>Boarding</span>
@@ -4431,17 +4722,55 @@
 
     </div>
 
-    <div id="belongingsTabPanel" class="app-tab-panel" data-app-panel="belongings">
-        <div class="belongings-dashboard-header">
-            <div>
-                <h3>🧳 Current Pets & Their Belongings</h3>
-                <p class="belongings-dashboard-subtitle">Track what each owner brought for pets currently staying at Waffle House. Photos are stored in Google Drive and linked to the shared database.</p>
-            </div>
-            <button type="button" id="refreshBelongingsBtn" class="belongings-refresh-btn">🔄 Refresh Belongings</button>
-        </div>
+    <div id="directoryTabPanel" class="app-tab-panel" data-app-panel="directory">
+        <div class="directory-dashboard directory-dashboard-fused">
+            <div class="directory-dashboard-header">
+                <div>
+                    <h3>🐾 Guest Directory &amp; Care</h3>
+                    <p class="directory-dashboard-subtitle">
+                        Current and upcoming boarding guests with their full intake profile, care &amp; safety information, belongings and photos in one place.
+                    </p>
+                </div>
 
-        <div id="currentPetsBelongingsContainer" class="belongings-pets-grid">
-            <div class="belongings-empty">Open this tab to load the current pets and their belongings.</div>
+                <div class="directory-header-actions directory-header-actions-fused">
+                    <button
+                        type="button"
+                        id="openLegacyIntakeUploadBtn"
+                        class="directory-legacy-global-btn">
+                        📚 Upload PDF
+                    </button>
+
+                    <button
+                        type="button"
+                        id="refreshGuestDirectoryBtn"
+                        class="belongings-refresh-btn">
+                        🔄 Refresh
+                    </button>
+
+                    <span id="directory-care-summary" class="directory-care-summary">
+                        No active care alerts
+                    </span>
+                </div>
+            </div>
+
+            <div class="guest-directory-toolbar">
+                <input
+                    type="search"
+                    id="guestDirectorySearch"
+                    class="search-input guest-directory-search"
+                    placeholder="🔍 Search dog, breed, owner, care, intake or belongings..."
+                    autocomplete="off">
+
+                <span class="guest-directory-toolbar-note">
+                    Intake attributes are stored with each guest profile. Likes and Dislikes are no longer used.
+                </span>
+            </div>
+
+            <div id="directory-grid" class="directory-grid directory-grid-fused">
+                <div class="no-dogs" style="grid-column:1/-1;text-align:center;padding:20px;">
+                    Sync the spreadsheet to load current and upcoming guests.
+                </div>
+            </div>
         </div>
     </div>
 
@@ -4719,6 +5048,7 @@
     let directoryPhotoRecordsCache = {};
     let directoryIntakeStatusCache = {};
     let directoryLegacyIntakeCache = {};
+    let directoryLegacyIntakeCacheLastFetch = 0;
     let activeDirectoryEditContext = null; 
     let isUpdatingDropdowns = false; 
     let selectedClickDateStr = ""; 
@@ -4751,6 +5081,83 @@
         { key: 'separationAnxiety', label: 'Separation Anxiety', icon: '😟', className: 'risk-anxiety' },
         { key: 'weightManagement', label: 'Weight Management', icon: '⚖️', className: 'risk-weight' }
     ];
+
+
+    const INTAKE_ATTRIBUTE_UI_GROUPS = [
+        {
+            title: 'Owner & Emergency',
+            fields: [
+                { key: 'emergencyContact', label: 'Emergency Contact' },
+                { key: 'emergencyPhone', label: 'Emergency Phone' }
+            ]
+        },
+        {
+            title: 'Dog Information',
+            fields: [
+                { key: 'age', label: 'Age' },
+                { key: 'weight', label: 'Weight' },
+                { key: 'sex', label: 'Sex', type: 'sex' },
+                { key: 'desexed', label: 'Desexed', type: 'yesno' },
+                { key: 'vaccinated', label: 'Vaccinated', type: 'yesno' },
+                { key: 'microchipped', label: 'Microchipped', type: 'yesno' },
+                { key: 'weightManagement', label: 'Weight Management', type: 'yesno' }
+            ]
+        },
+        {
+            title: 'Behaviour & Personality',
+            fields: [
+                { key: 'friendlyDogs', label: 'Friendly with Dogs', type: 'yesno' },
+                { key: 'friendlyCats', label: 'Friendly with Cats', type: 'yesno' },
+                { key: 'friendlyChildren', label: 'Friendly with Children', type: 'yesno' },
+                { key: 'friendlyStrangers', label: 'Friendly with Strangers', type: 'yesno' },
+                { key: 'separationAnxiety', label: 'Separation Anxiety', type: 'yesno' },
+                { key: 'aggression', label: 'Aggression', type: 'yesno' },
+                { key: 'foodAggression', label: 'Food Aggression', type: 'yesno' },
+                { key: 'escapeAttempts', label: 'Escape Attempts', type: 'yesno' },
+                { key: 'indoorAccidents', label: 'Indoor Accidents', type: 'yesno' },
+                { key: 'chewingFurniture', label: 'Chewing Furniture', type: 'yesno' },
+                { key: 'triggersFears', label: 'Triggers or Fears', type: 'textarea', wide: true }
+            ]
+        },
+        {
+            title: 'Feeding',
+            fields: [
+                { key: 'foodBrandType', label: 'Food Brand / Type' },
+                { key: 'feedingTimes', label: 'Feeding Times' },
+                { key: 'foodAmount', label: 'Food Amount' },
+                { key: 'allowedTreats', label: 'Allowed Treats', type: 'yesno' },
+                { key: 'foodAllergies', label: 'Food Allergies', type: 'textarea', wide: true }
+            ]
+        },
+        {
+            title: 'Walking',
+            fields: [
+                { key: 'walksPerDay', label: 'Walks per Day' },
+                { key: 'walkDuration', label: 'Walk Duration' },
+                { key: 'offLeashAllowed', label: 'Off-Leash Allowed', type: 'yesno' },
+                { key: 'pullsOnLeash', label: 'Pulls on Leash', type: 'yesno' }
+            ]
+        },
+        {
+            title: 'Medical',
+            fields: [
+                { key: 'medicalConditions', label: 'Medical Conditions', type: 'textarea', wide: true },
+                { key: 'medicationInstructions', label: 'Medication Instructions', type: 'textarea', wide: true },
+                { key: 'regularVetClinic', label: 'Regular Vet Clinic' },
+                { key: 'vetPhone', label: 'Vet Phone' }
+            ]
+        },
+        {
+            title: 'Sleeping & Home Routine',
+            fields: [
+                { key: 'sleepLocation', label: 'Where Dog Sleeps', type: 'textarea', wide: true },
+                { key: 'crateTrained', label: 'Crate Trained', type: 'yesno' },
+                { key: 'canBeLeftAlone', label: 'Can Be Left Alone', type: 'yesno' },
+                { key: 'aloneDuration', label: 'If Yes, How Long?', wide: true }
+            ]
+        }
+    ];
+
 
     let careRiskRecordsCache = {};
 
@@ -5024,12 +5431,32 @@
             });
         });
 
-        document.getElementById('refreshBelongingsBtn').addEventListener('click', function() {
+        document.getElementById('refreshGuestDirectoryBtn').addEventListener('click', async function() {
             if (belongingsUploadInProgress) {
                 alert('A photo upload is currently in progress. Please wait for it to finish before refreshing.');
                 return;
             }
-            loadBelongingsDashboard({ button: this });
+
+            const button = this;
+            const originalText = button.textContent;
+            button.disabled = true;
+            button.textContent = '⏳ Refreshing...';
+
+            try {
+                directoryPhotoRecordsCache = {};
+                belongingsRecordsCache = {};
+                careRiskRecordsCache = {};
+                directoryIntakeStatusCache = {};
+                directoryLegacyIntakeCache = {};
+                directoryLegacyIntakeCacheLastFetch = 0;
+
+                await hydrateDirectoryDogPhotos({ force: true });
+                await hydrateDirectoryIntakeStatuses({ force: true });
+                await hydrateDirectoryLegacyIntakes({ force: true });
+            } finally {
+                button.disabled = false;
+                button.textContent = originalText;
+            }
         });
 
         document.getElementById('refreshAuditBtn').addEventListener('click', function() {
@@ -5103,6 +5530,7 @@
             }
 
             directoryLegacyIntakeCache = {};
+            directoryLegacyIntakeCacheLastFetch = 0;
 
             hydrateDirectoryLegacyIntakes({
                 force: true
@@ -5114,12 +5542,168 @@
                 .catch(() => {});
         });
 
+
+        let legacyDirectoryFocusRefreshTimer = null;
+
+        function refreshLegacyDirectoryAfterReturn() {
+            clearTimeout(
+                legacyDirectoryFocusRefreshTimer
+            );
+
+            legacyDirectoryFocusRefreshTimer =
+                setTimeout(() => {
+                    if (
+                        document.visibilityState ===
+                        'hidden'
+                    ) {
+                        return;
+                    }
+
+                    directoryLegacyIntakeCache = {};
+                    directoryLegacyIntakeCacheLastFetch = 0;
+
+                    hydrateDirectoryLegacyIntakes({
+                        force: true
+                    }).catch(error =>
+                        console.error(error)
+                    );
+                }, 250);
+        }
+
+        window.addEventListener(
+            'focus',
+            refreshLegacyDirectoryAfterReturn
+        );
+
+        document.addEventListener(
+            'visibilitychange',
+            function() {
+                if (
+                    document.visibilityState ===
+                    'visible'
+                ) {
+                    refreshLegacyDirectoryAfterReturn();
+                }
+            }
+        );
+
         document.getElementById('auditSearch').addEventListener('input', renderAuditLog);
         document.getElementById('auditCategoryFilter').addEventListener('change', renderAuditLog);
 
         const directoryGrid = document.getElementById('directory-grid');
 
-        directoryGrid.addEventListener('click', function(event) {
+        directoryGrid.addEventListener('click', async function(event) {
+            const dogPhotoButton =
+                event.target.closest(
+                    '[data-upload-dog-photo]'
+                );
+
+            if (dogPhotoButton) {
+                event.preventDefault();
+                event.stopPropagation();
+
+                const card =
+                    dogPhotoButton.closest(
+                        '.belongings-pet-card'
+                    );
+
+                if (card) {
+                    await openHostedBelongingsPhotoUploader(
+                        card,
+                        'upload',
+                        'dogProfile'
+                    );
+                }
+
+                return;
+            }
+
+            const takePhotoButton =
+                event.target.closest(
+                    '[data-take-belongings-photo]'
+                );
+
+            if (takePhotoButton) {
+                event.preventDefault();
+                event.stopPropagation();
+
+                const card =
+                    takePhotoButton.closest(
+                        '.belongings-pet-card'
+                    );
+
+                if (card) {
+                    await openHostedBelongingsPhotoUploader(
+                        card,
+                        'camera'
+                    );
+                }
+
+                return;
+            }
+
+            const uploadPhotoButton =
+                event.target.closest(
+                    '[data-upload-belongings-photo]'
+                );
+
+            if (uploadPhotoButton) {
+                event.preventDefault();
+                event.stopPropagation();
+
+                const card =
+                    uploadPhotoButton.closest(
+                        '.belongings-pet-card'
+                    );
+
+                if (card) {
+                    await openHostedBelongingsPhotoUploader(
+                        card,
+                        'upload'
+                    );
+                }
+
+                return;
+            }
+
+            const saveBelongingsButton =
+                event.target.closest(
+                    '[data-save-belongings]'
+                );
+
+            if (saveBelongingsButton) {
+                event.preventDefault();
+                event.stopPropagation();
+
+                await saveBelongingsCard(
+                    saveBelongingsButton.closest(
+                        '.belongings-pet-card'
+                    ),
+                    saveBelongingsButton
+                );
+
+                return;
+            }
+
+            const deletePhotoButton =
+                event.target.closest(
+                    '[data-delete-belongings-photo]'
+                );
+
+            if (deletePhotoButton) {
+                event.preventDefault();
+                event.stopPropagation();
+
+                await deleteBelongingsPhoto(
+                    deletePhotoButton.closest(
+                        '.belongings-pet-card'
+                    ),
+                    deletePhotoButton
+                );
+
+                return;
+            }
+
             const legacyReassignTrigger =
                 event.target.closest(
                     '[data-reassign-legacy-intake]'
@@ -5255,57 +5839,31 @@
             }
         });
 
-        const belongingsContainer = document.getElementById('currentPetsBelongingsContainer');
-        belongingsContainer.addEventListener('click', async function(event) {
-            const dogPhotoButton = event.target.closest('[data-upload-dog-photo]');
-            if (dogPhotoButton) {
-                event.preventDefault();
-                const card = dogPhotoButton.closest('.belongings-pet-card');
-                if (card) await openHostedBelongingsPhotoUploader(card, 'upload', 'dogProfile');
-                return;
-            }
-
-            const takePhotoButton = event.target.closest('[data-take-belongings-photo]');
-            if (takePhotoButton) {
-                event.preventDefault();
-                const card = takePhotoButton.closest('.belongings-pet-card');
-                if (card) await openHostedBelongingsPhotoUploader(card, 'camera');
-                return;
-            }
-
-            const uploadPhotoButton = event.target.closest('[data-upload-belongings-photo]');
-            if (uploadPhotoButton) {
-                event.preventDefault();
-                const card = uploadPhotoButton.closest('.belongings-pet-card');
-                if (card) await openHostedBelongingsPhotoUploader(card, 'upload');
-                return;
-            }
-
-            const saveButton = event.target.closest('[data-save-belongings]');
-            if (saveButton) {
-                await saveBelongingsCard(saveButton.closest('.belongings-pet-card'), saveButton);
-                return;
-            }
-
-            const deletePhotoButton = event.target.closest('[data-delete-belongings-photo]');
-            if (deletePhotoButton) {
-                await deleteBelongingsPhoto(deletePhotoButton.closest('.belongings-pet-card'), deletePhotoButton);
-            }
-        });
-
-        belongingsContainer.addEventListener('change', async function(event) {
+        directoryGrid.addEventListener('change', async function(event) {
             if (event.target.matches('[data-belongings-photo-input]')) {
                 event.preventDefault();
                 event.stopPropagation();
 
                 const input = event.target;
-                const card = input.closest('.belongings-pet-card');
-                const file = input.files && input.files[0];
+                const card =
+                    input.closest(
+                        '.belongings-pet-card'
+                    );
+
+                const file =
+                    input.files &&
+                    input.files[0];
+
+                if (!card || !file) {
+                    input.value = '';
+                    return;
+                }
 
                 try {
-                    if (card && file) {
-                        await uploadBelongingsPhoto(card, file, input);
-                    }
+                    await uploadBelongingsPhoto(
+                        card,
+                        file
+                    );
                 } finally {
                     input.value = '';
                 }
@@ -5325,11 +5883,12 @@
         });
 
         const savedAppTab = localStorage.getItem('waffleActiveTab');
-        if (savedAppTab === 'belongings' || savedAppTab === 'reminders' || savedAppTab === 'audit') {
+        if (savedAppTab === 'directory' || savedAppTab === 'reminders' || savedAppTab === 'audit') {
             switchAppTab(savedAppTab);
         }
 
         document.getElementById('calendarSearch').addEventListener('input', applyCurrentSearchFilter);
+        document.getElementById('guestDirectorySearch').addEventListener('input', filterGuestDirectoryCards);
 
         const jumpMonthSelect = document.getElementById('jumpMonth');
         function executeCalendarJump() {
@@ -5707,7 +6266,7 @@
             } else {
                 const newMeet = {
                     id: 'meet_' + Date.now(), title: displayTitle, start: selectedClickDateStr, end: selectedClickDateStr, allDay: true, backgroundColor: '#0f766e', textColor: '#ffffff',
-                    extendedProps: { isMeetGreet: true, breed: breed, time: bookingTime, dogName: dogName, owner: "Temporary Booking", phone: "N/A", likes: "N/A", dislikes: "N/A", notes: `Meet & Greet scheduled at ${bookingTime}`, editLink: "" }
+                    extendedProps: { isMeetGreet: true, breed: breed, time: bookingTime, dogName: dogName, owner: "Temporary Booking", phone: "N/A", notes: `Meet & Greet scheduled at ${bookingTime}`, editLink: "" }
                 };
                 localMeets.push(newMeet);
                 localStorage.setItem('temporaryMeetGreets', JSON.stringify(localMeets));
@@ -5879,8 +6438,6 @@
                 owner: ownerName,
                 ownerName: ownerName,
                 phone: phone,
-                likes: "None listed",
-                dislikes: "None listed",
                 notes: notes || "Confirmed from Potential Stay",
                 rawStartDate: startDate,
                 rawEndDate: endDate,
@@ -6979,7 +7536,7 @@
 
 
     function switchAppTab(tabName) {
-        if (tabName === 'calendar' || tabName === 'belongings' || tabName === 'reminders' || tabName === 'audit') {
+        if (tabName === 'calendar' || tabName === 'directory' || tabName === 'reminders' || tabName === 'audit') {
             localStorage.setItem('waffleActiveTab', tabName);
         }
 
@@ -6995,6 +7552,9 @@
 
         if (tabName === 'calendar' && globalCalendar) {
             setTimeout(() => globalCalendar.updateSize(), 0);
+        }
+
+        if (tabName === 'directory' && !belongingsUploadInProgress) {
             setTimeout(() => {
                 hydrateDirectoryDogPhotos()
                     .catch(error => console.error(error));
@@ -7002,11 +7562,9 @@
                     .catch(error => console.error(error));
                 hydrateDirectoryLegacyIntakes()
                     .catch(error => console.error(error));
+                hydrateDirectoryLegacyIntakes()
+                    .catch(error => console.error(error));
             }, 0);
-        }
-
-        if (tabName === 'belongings' && !belongingsUploadInProgress) {
-            loadBelongingsDashboard().catch(error => console.error(error));
         }
 
         if (tabName === 'reminders') {
@@ -7866,62 +8424,516 @@
     }
 
 
+
+    function filterGuestDirectoryCards() {
+        const search =
+            String(
+                document.getElementById(
+                    'guestDirectorySearch'
+                )?.value ||
+                ''
+            )
+                .toLowerCase()
+                .trim();
+
+        document
+            .querySelectorAll(
+                '.directory-card'
+            )
+            .forEach(card => {
+                card.style.display =
+                    !search ||
+                    card.innerText
+                        .toLowerCase()
+                        .includes(search)
+                        ? 'flex'
+                        : 'none';
+            });
+    }
+
+    function intakeAttributeControlHtml(field, value) {
+        const safeKey =
+            escapeDashboardHtml(
+                field.key
+            );
+
+        const safeLabel =
+            escapeDashboardHtml(
+                field.label
+            );
+
+        const safeValue =
+            escapeDashboardHtml(
+                value || ''
+            );
+
+        const wideClass =
+            field.wide
+                ? ' is-wide'
+                : '';
+
+        if (field.type === 'yesno') {
+            return `
+                <div class="intake-profile-field${wideClass}">
+                    <label for="">${safeLabel}</label>
+                    <select
+                        class="intake-profile-control"
+                        data-intake-attribute="${safeKey}">
+                        <option value="" ${!value ? 'selected' : ''}>Not provided</option>
+                        <option value="Yes" ${String(value).toLowerCase() === 'yes' ? 'selected' : ''}>Yes</option>
+                        <option value="No" ${String(value).toLowerCase() === 'no' ? 'selected' : ''}>No</option>
+                    </select>
+                </div>
+            `;
+        }
+
+        if (field.type === 'sex') {
+            return `
+                <div class="intake-profile-field${wideClass}">
+                    <label>${safeLabel}</label>
+                    <select
+                        class="intake-profile-control"
+                        data-intake-attribute="${safeKey}">
+                        <option value="" ${!value ? 'selected' : ''}>Not provided</option>
+                        <option value="Male" ${String(value).toLowerCase() === 'male' ? 'selected' : ''}>Male</option>
+                        <option value="Female" ${String(value).toLowerCase() === 'female' ? 'selected' : ''}>Female</option>
+                        <option value="Other" ${String(value).toLowerCase() === 'other' ? 'selected' : ''}>Other</option>
+                    </select>
+                </div>
+            `;
+        }
+
+        if (field.type === 'textarea') {
+            return `
+                <div class="intake-profile-field${wideClass}">
+                    <label>${safeLabel}</label>
+                    <textarea
+                        class="intake-profile-control"
+                        data-intake-attribute="${safeKey}"
+                        placeholder="Not provided">${safeValue}</textarea>
+                </div>
+            `;
+        }
+
+        return `
+            <div class="intake-profile-field${wideClass}">
+                <label>${safeLabel}</label>
+                <input
+                    type="text"
+                    class="intake-profile-control"
+                    data-intake-attribute="${safeKey}"
+                    value="${safeValue}"
+                    placeholder="Not provided">
+            </div>
+        `;
+    }
+
+    function renderDirectoryIntakeAttributes(card, record) {
+        const host =
+            card.querySelector(
+                '[data-directory-intake-attributes]'
+            );
+
+        if (!host) return;
+
+        const attributes =
+            record &&
+            record.intakeAttributes &&
+            typeof record.intakeAttributes ===
+                'object'
+                ? record.intakeAttributes
+                : {};
+
+        const populatedCount =
+            Object.values(attributes)
+                .filter(value =>
+                    String(
+                        value ?? ''
+                    ).trim()
+                ).length;
+
+        const source =
+            String(
+                record?.intakeAttributesSource ||
+                ''
+            ).trim();
+
+        const sourceLabel =
+            source
+                ? escapeDashboardHtml(source)
+                : (
+                    populatedCount
+                        ? 'Stored profile'
+                        : 'No intake saved yet'
+                );
+
+        const summaryChip =
+            card.querySelector(
+                '[data-intake-profile-summary]'
+            );
+
+        if (summaryChip) {
+            summaryChip.textContent =
+                populatedCount
+                    ? `${populatedCount} fields · ${sourceLabel}`
+                    : sourceLabel;
+        }
+
+        host.innerHTML =
+            `
+                <div class="intake-profile-source">
+                    📋 ${sourceLabel}
+                </div>
+            ` +
+            INTAKE_ATTRIBUTE_UI_GROUPS
+                .map(group => {
+                    const fieldsHtml =
+                        group.fields
+                            .map(field =>
+                                intakeAttributeControlHtml(
+                                    field,
+                                    attributes[field.key]
+                                )
+                            )
+                            .join('');
+
+                    return `
+                        <section class="intake-profile-group">
+                            <div class="intake-profile-group-title">
+                                ${escapeDashboardHtml(group.title)}
+                            </div>
+                            <div class="intake-profile-grid">
+                                ${fieldsHtml}
+                            </div>
+                        </section>
+                    `;
+                })
+                .join('') +
+            `
+                <div class="guest-profile-save-note">
+                    These fields are stored with this guest profile in the shared Waffle House database.
+                    Use “Save Profile, Care &amp; Belongings” below after making changes.
+                </div>
+            `;
+    }
+
+    function renderDirectoryBelongings(card, record) {
+        const host =
+            card.querySelector(
+                '[data-directory-belongings]'
+            );
+
+        if (!host) return;
+
+        record =
+            record || {
+                items: {},
+                photos: [],
+                riskFlags: {},
+                dogPhoto: null,
+                intakeAttributes: {}
+            };
+
+        const itemsHtml =
+            BELONGINGS_ITEMS
+                .map(item => {
+                    const saved =
+                        record.items?.[item.key] ||
+                        {};
+
+                    return `
+                        <div class="belongings-item-row">
+                            <label class="belongings-item-label">
+                                <input
+                                    type="checkbox"
+                                    data-belongings-item-present="${escapeDashboardHtml(item.key)}"
+                                    ${saved.present ? 'checked' : ''}>
+                                <span>${escapeDashboardHtml(item.label)}</span>
+                            </label>
+                            <input
+                                type="text"
+                                class="belongings-description"
+                                data-belongings-item-description="${escapeDashboardHtml(item.key)}"
+                                value="${escapeDashboardHtml(saved.description || '')}"
+                                placeholder="${escapeDashboardHtml(item.placeholder)}">
+                        </div>
+                    `;
+                })
+                .join('');
+
+        const riskFlags =
+            record.riskFlags || {};
+
+        const riskFlagsHtml =
+            CARE_SAFETY_FLAGS
+                .map(flag => `
+                    <label class="care-risk-option ${escapeDashboardHtml(flag.className)}">
+                        <input
+                            type="checkbox"
+                            data-care-risk-flag="${escapeDashboardHtml(flag.key)}"
+                            ${riskFlags[flag.key] ? 'checked' : ''}>
+                        <span class="care-risk-icon" aria-hidden="true">${escapeDashboardHtml(flag.icon)}</span>
+                        <span class="care-risk-label">${escapeDashboardHtml(flag.label)}</span>
+                    </label>
+                `)
+                .join('');
+
+        const photos =
+            Array.isArray(
+                record.photos
+            )
+                ? record.photos
+                : [];
+
+        const photosHtml =
+            photos.length
+                ? photos.map(photo => `
+                    <div class="belongings-photo-card">
+                        <button
+                            type="button"
+                            class="belongings-photo-delete"
+                            data-delete-belongings-photo="${escapeDashboardHtml(photo.id || '')}"
+                            title="Delete photo">×</button>
+                        <a
+                            href="${escapeDashboardHtml(photo.driveUrl || photo.previewUrl || '#')}"
+                            target="_blank"
+                            rel="noopener noreferrer">
+                            <img
+                                src="${escapeDashboardHtml(photo.previewUrl || '')}"
+                                alt="${escapeDashboardHtml(photo.label || 'Belongings photo')}"
+                                loading="lazy">
+                        </a>
+                        <div class="belongings-photo-caption">
+                            ${escapeDashboardHtml(photo.label || 'Belongings photo')}
+                        </div>
+                    </div>
+                `).join('')
+                : '<div class="belongings-photo-status">No belongings photos saved yet.</div>';
+
+        const dogPhotoExists =
+            !!(
+                record.dogPhoto &&
+                record.dogPhoto.previewUrl
+            );
+
+        host.innerHTML = `
+            <div class="directory-belongings-section">
+                <div class="care-risk-section">
+                    <div class="care-risk-section-heading">
+                        <div>
+                            <strong>🛡️ Care &amp; Safety Alerts</strong>
+                            <span>Operational alerts shown immediately on the guest card.</span>
+                        </div>
+                    </div>
+                    <div class="care-risk-grid">${riskFlagsHtml}</div>
+                </div>
+
+                <div class="belongings-item-list">
+                    ${itemsHtml}
+                </div>
+
+                <input
+                    type="text"
+                    class="belongings-description belongings-photo-note"
+                    data-belongings-photo-label
+                    placeholder="Photo note, e.g. bowls, blanket and blue bed">
+
+                <div class="belongings-actions">
+                    <button
+                        type="button"
+                        class="belongings-save-btn"
+                        data-save-belongings>
+                        💾 Save Profile, Care &amp; Belongings
+                    </button>
+
+                    <button
+                        type="button"
+                        class="dog-profile-photo-btn"
+                        data-upload-dog-photo>
+                        📷 ${dogPhotoExists ? 'Change Dog Photo' : 'Add Dog Photo'}
+                    </button>
+
+                    <button
+                        type="button"
+                        class="belongings-camera-btn"
+                        data-take-belongings-photo>
+                        📷 Take Belongings Photo
+                    </button>
+
+                    <button
+                        type="button"
+                        class="belongings-upload-btn"
+                        data-upload-belongings-photo>
+                        🖼️ Upload Belongings Photo
+                    </button>
+
+                    <input
+                        type="file"
+                        accept="image/*"
+                        data-belongings-photo-input
+                        hidden>
+                </div>
+
+                <div
+                    class="belongings-photo-status"
+                    data-belongings-photo-status></div>
+
+                <div class="belongings-photo-gallery">
+                    ${photosHtml}
+                </div>
+            </div>
+        `;
+    }
+
+    function renderDirectoryOperationalSections(
+        stayKey,
+        record
+    ) {
+        const card =
+            Array.from(
+                document.querySelectorAll(
+                    '.directory-card[data-directory-stay-key]'
+                )
+            )
+            .find(item =>
+                String(
+                    item.dataset
+                        .directoryStayKey ||
+                    ''
+                ) ===
+                String(
+                    stayKey || ''
+                )
+            );
+
+        if (!card) return;
+
+        const normalized =
+            record || {
+                stayKey,
+                items: {},
+                photos: [],
+                riskFlags: {},
+                dogPhoto: null,
+                intakeAttributes: {}
+            };
+
+        renderDirectoryIntakeAttributes(
+            card,
+            normalized
+        );
+
+        renderDirectoryBelongings(
+            card,
+            normalized
+        );
+    }
+
+    function collectIntakeAttributes(card) {
+        const attributes = {};
+
+        card
+            .querySelectorAll(
+                '[data-intake-attribute]'
+            )
+            .forEach(control => {
+                const key =
+                    String(
+                        control.dataset
+                            .intakeAttribute ||
+                        ''
+                    ).trim();
+
+                if (!key) return;
+
+                attributes[key] =
+                    String(
+                        control.value || ''
+                    ).trim();
+            });
+
+        return attributes;
+    }
+
+    function hasMeaningfulProfileText(value) {
+        const text =
+            String(
+                value || ''
+            )
+                .trim()
+                .toLowerCase();
+
+        return !!text &&
+            ![
+                'no',
+                'none',
+                'nil',
+                'n/a',
+                'na',
+                'not applicable',
+                'none known'
+            ].includes(text);
+    }
+
+    function syncPositiveCareFlagsFromIntake(
+        card,
+        attributes
+    ) {
+        const shouldEnable = {
+            escapeRisk:
+                String(
+                    attributes.escapeAttempts ||
+                    ''
+                ).toLowerCase() ===
+                    'yes',
+            foodAllergy:
+                hasMeaningfulProfileText(
+                    attributes.foodAllergies
+                ),
+            medicated:
+                hasMeaningfulProfileText(
+                    attributes.medicationInstructions
+                ),
+            separationAnxiety:
+                String(
+                    attributes.separationAnxiety ||
+                    ''
+                ).toLowerCase() ===
+                    'yes',
+            weightManagement:
+                String(
+                    attributes.weightManagement ||
+                    ''
+                ).toLowerCase() ===
+                    'yes'
+        };
+
+        Object.entries(
+            shouldEnable
+        ).forEach(([key, enabled]) => {
+            if (!enabled) return;
+
+            const checkbox =
+                card.querySelector(
+                    `[data-care-risk-flag="${key}"]`
+                );
+
+            if (checkbox) {
+                checkbox.checked = true;
+            }
+        });
+    }
+
+
     async function loadBelongingsDashboard(options = {}) {
-        const container = document.getElementById('currentPetsBelongingsContainer');
-        const button = options.button || null;
-        if (!container) return;
-
-        // Never rebuild the pet cards while a photo is being compressed,
-        // uploaded, or verified. Replacing the DOM mid-upload made the UI look
-        // like it refreshed/reloaded several times.
-        if (belongingsUploadInProgress && !options.force) {
-            return;
-        }
-
-        if (button) {
-            button.disabled = true;
-            button.innerText = '⏳ Loading...';
-        }
-
-        const stays = getCurrentBoardingStays(localStorage.getItem('boardingDataCache') || '');
-
-        if (!stays.length) {
-            belongingsRecordsCache = {};
-            container.innerHTML = '<div class="belongings-empty">🏡 There are no current boarding guests to show today.</div>';
-            if (button) {
-                button.disabled = false;
-                button.innerText = '🔄 Refresh Belongings';
-            }
-            return;
-        }
-
-        container.innerHTML = '<div class="belongings-empty">⏳ Loading shared belongings records...</div>';
-
-        try {
-            const response = await queryAppsScript({
-                action: 'get_belongings',
-                stayKeys: stays.map(stay => stay.stayKey)
-            });
-
-            belongingsRecordsCache = {};
-            careRiskRecordsCache = {};
-
-            (response.records || []).forEach(record => {
-                belongingsRecordsCache[record.stayKey] = record;
-                careRiskRecordsCache[record.stayKey] = record;
-            });
-
-            renderBelongingsDashboard(stays);
-            renderCareRiskDashboard(stays);
-        } catch (error) {
-            console.error('Belongings load failed:', error);
-            renderBelongingsDashboard(stays, error.message);
-        } finally {
-            if (button) {
-                button.disabled = false;
-                button.innerText = '🔄 Refresh Belongings';
-            }
-        }
+        /*
+         * Backwards-compatible alias retained for older callbacks.
+         * Belongings are now rendered inside Guest Directory & Care.
+         */
+        await hydrateDirectoryDogPhotos({
+            force:
+                options.force === true
+        });
     }
 
     function formatStayDateShort(dateStr) {
@@ -7931,116 +8943,23 @@
     }
 
     function renderBelongingsDashboard(stays, loadError = '') {
-        const container = document.getElementById('currentPetsBelongingsContainer');
-        if (!container) return;
+        // Legacy compatibility alias. Belongings now render inside Guest Directory & Care.
+        document
+            .querySelectorAll(
+                '.directory-card[data-directory-stay-key]'
+            )
+            .forEach(card => {
+                const stayKey =
+                    card.dataset
+                        .directoryStayKey;
 
-        container.innerHTML = stays.map(stay => {
-            const record = belongingsRecordsCache[stay.stayKey] || { items: {}, photos: [] };
-            const itemsHtml = BELONGINGS_ITEMS.map(item => {
-                const saved = record.items?.[item.key] || {};
-                return `
-                    <div class="belongings-item-row">
-                        <label class="belongings-item-label">
-                            <input type="checkbox" data-belongings-item-present="${item.key}" ${saved.present ? 'checked' : ''}>
-                            <span>${escapeDashboardHtml(item.label)}</span>
-                        </label>
-                        <input type="text" class="belongings-description" data-belongings-item-description="${item.key}"
-                            value="${escapeDashboardHtml(saved.description || '')}"
-                            placeholder="${escapeDashboardHtml(item.placeholder)}">
-                    </div>
-                `;
-            }).join('');
-
-            const dogPhoto = record.dogPhoto || null;
-            const dogPhotoHtml = dogPhoto && dogPhoto.previewUrl
-                ? `<img src="${escapeDashboardHtml(dogPhoto.previewUrl)}"
-                        alt="${escapeDashboardHtml(stay.dogName)}"
-                        class="dog-profile-photo"
-                        loading="lazy">`
-                : `<div class="dog-profile-photo-placeholder" aria-label="No dog photo">🐶</div>`;
-
-            const dogPhotoButtonLabel =
-                dogPhoto && dogPhoto.previewUrl
-                    ? 'Change Dog Photo'
-                    : 'Add Dog Photo';
-
-            const riskFlags = record.riskFlags || {};
-            const riskFlagsHtml = CARE_SAFETY_FLAGS.map(flag => `
-                <label class="care-risk-option ${escapeDashboardHtml(flag.className)}">
-                    <input type="checkbox"
-                        data-care-risk-flag="${escapeDashboardHtml(flag.key)}"
-                        ${riskFlags[flag.key] ? 'checked' : ''}>
-                    <span class="care-risk-icon" aria-hidden="true">${escapeDashboardHtml(flag.icon)}</span>
-                    <span class="care-risk-label">${escapeDashboardHtml(flag.label)}</span>
-                </label>
-            `).join('');
-
-            const photos = Array.isArray(record.photos) ? record.photos : [];
-            const photosHtml = photos.length ? photos.map(photo => `
-                <div class="belongings-photo-card">
-                    <button type="button" class="belongings-photo-delete" data-delete-belongings-photo="${escapeDashboardHtml(photo.id || '')}" title="Delete photo">×</button>
-                    <a href="${escapeDashboardHtml(photo.driveUrl || photo.previewUrl || '#')}" target="_blank" rel="noopener noreferrer">
-                        <img src="${escapeDashboardHtml(photo.previewUrl || '')}" alt="${escapeDashboardHtml(photo.label || 'Belongings photo')}" loading="lazy">
-                    </a>
-                    <div class="belongings-photo-caption">${escapeDashboardHtml(photo.label || 'Belongings photo')}</div>
-                </div>
-            `).join('') : '<div class="belongings-photo-status">No photos saved yet.</div>';
-
-            return `
-                <div class="belongings-pet-card"
-                    data-stay-key="${escapeDashboardHtml(stay.stayKey)}"
-                    data-dog-name="${escapeDashboardHtml(stay.dogName)}"
-                    data-start-date="${escapeDashboardHtml(stay.startDate)}"
-                    data-end-date="${escapeDashboardHtml(stay.endDate)}">
-
-                    <div class="belongings-pet-heading">
-                        <div class="dog-profile-summary">
-                            <div class="dog-profile-photo-wrap">${dogPhotoHtml}</div>
-                            <div class="dog-profile-details">
-                                <h4>🐾 ${escapeDashboardHtml(stay.dogName)}</h4>
-                                <div class="belongings-pet-meta">
-                                    ${escapeDashboardHtml(stay.breed)} · Owner: ${escapeDashboardHtml(stay.ownerName)}<br>
-                                    Contact: ${escapeDashboardHtml(stay.phone)}
-                                </div>
-                                <button type="button"
-                                    class="dog-profile-photo-btn"
-                                    data-upload-dog-photo>
-                                    📷 ${dogPhotoButtonLabel}
-                                </button>
-                            </div>
-                        </div>
-                        <span class="belongings-stay-badge">${formatStayDateShort(stay.startDate)} – ${formatStayDateShort(stay.endDate)}</span>
-                    </div>
-
-                    ${loadError ? `<div class="belongings-photo-status" style="color:#b91c1c; margin-bottom:8px;">⚠️ Shared belongings could not be loaded: ${escapeDashboardHtml(loadError)}</div>` : ''}
-
-                    <div class="care-risk-section">
-                        <div class="care-risk-section-heading">
-                            <div>
-                                <strong>🛡️ Care &amp; Safety Alerts</strong>
-                                <span>Select anything staff should see immediately on the main dashboard.</span>
-                            </div>
-                        </div>
-                        <div class="care-risk-grid">${riskFlagsHtml}</div>
-                    </div>
-
-                    <div class="belongings-item-list">${itemsHtml}</div>
-
-                    <input type="text" class="belongings-description belongings-photo-note" data-belongings-photo-label
-                        placeholder="Photo note, e.g. bowls, blanket and blue bed">
-
-                    <div class="belongings-actions">
-                        <button type="button" class="belongings-save-btn" data-save-belongings>💾 Save Belongings</button>
-                        <button type="button" class="belongings-camera-btn" data-take-belongings-photo>📷 Take Photo</button>
-                        <button type="button" class="belongings-upload-btn" data-upload-belongings-photo>🖼️ Upload Photo</button>
-                        <input type="file" accept="image/*" data-belongings-photo-input hidden>
-                    </div>
-
-                    <div class="belongings-photo-status" data-belongings-photo-status></div>
-                    <div class="belongings-photo-gallery">${photosHtml}</div>
-                </div>
-            `;
-        }).join('');
+                renderDirectoryOperationalSections(
+                    stayKey,
+                    belongingsRecordsCache[
+                        stayKey
+                    ] || null
+                );
+            });
     }
 
     function collectBelongingsItems(card) {
@@ -8065,13 +8984,24 @@
     }
 
     function getBelongingsCardPayload(card) {
+        const intakeAttributes =
+            collectIntakeAttributes(
+                card
+            );
+
+        syncPositiveCareFlagsFromIntake(
+            card,
+            intakeAttributes
+        );
+
         return {
             stayKey: card.dataset.stayKey,
             dogName: card.dataset.dogName,
             startDate: card.dataset.startDate,
             endDate: card.dataset.endDate,
             items: collectBelongingsItems(card),
-            riskFlags: collectCareSafetyFlags(card)
+            riskFlags: collectCareSafetyFlags(card),
+            intakeAttributes
         };
     }
 
@@ -8094,6 +9024,8 @@
                 endDate: payload.endDate,
                 items: payload.items,
                 riskFlags: payload.riskFlags,
+                intakeAttributes: payload.intakeAttributes,
+                intakeAttributesSource: 'Web App',
                 photos: belongingsRecordsCache[payload.stayKey]?.photos || [],
                 dogPhoto: belongingsRecordsCache[payload.stayKey]?.dogPhoto || null
             };
@@ -8273,11 +9205,12 @@
 
                 closeHostedBelongingsPhotoUploader();
 
-                renderBelongingsDashboard(
-                    getCurrentBoardingStays(
-                        localStorage.getItem('boardingDataCache') || ''
-                    )
-                );
+                if (record) {
+                    renderDirectoryOperationalSections(
+                        context.stayKey,
+                        record
+                    );
+                }
 
             } catch (error) {
                 belongingsUploadInProgress = false;
@@ -8652,10 +9585,27 @@
 
             if (status) status.textContent = '✅ Photo saved to Google Drive';
 
-            renderBelongingsDashboard(
-                getCurrentBoardingStays(
-                    localStorage.getItem('boardingDataCache') || ''
-                )
+            directoryPhotoRecordsCache[
+                payloadBase.stayKey
+            ] = updatedRecord;
+
+            careRiskRecordsCache[
+                payloadBase.stayKey
+            ] = updatedRecord;
+
+            setDirectoryDogPhoto(
+                payloadBase.stayKey,
+                updatedRecord
+            );
+
+            setDirectoryCareFlags(
+                payloadBase.stayKey,
+                updatedRecord
+            );
+
+            renderDirectoryOperationalSections(
+                payloadBase.stayKey,
+                updatedRecord
             );
 
         } catch (error) {
@@ -8764,10 +9714,46 @@
                 photoId
             });
 
-            const response = await queryAppsScript({ action: 'get_belongings', stayKeys: [card.dataset.stayKey] });
-            const record = (response.records || []).find(item => item.stayKey === card.dataset.stayKey);
-            if (record) belongingsRecordsCache[card.dataset.stayKey] = record;
-            await loadBelongingsDashboard();
+            const response = await queryAppsScript({
+                action: 'get_belongings',
+                stayKeys: [card.dataset.stayKey]
+            });
+
+            const record =
+                (response.records || [])
+                    .find(item =>
+                        item.stayKey ===
+                        card.dataset.stayKey
+                    );
+
+            if (record) {
+                belongingsRecordsCache[
+                    card.dataset.stayKey
+                ] = record;
+
+                careRiskRecordsCache[
+                    card.dataset.stayKey
+                ] = record;
+
+                directoryPhotoRecordsCache[
+                    card.dataset.stayKey
+                ] = record;
+
+                setDirectoryDogPhoto(
+                    card.dataset.stayKey,
+                    record
+                );
+
+                setDirectoryCareFlags(
+                    card.dataset.stayKey,
+                    record
+                );
+
+                renderDirectoryOperationalSections(
+                    card.dataset.stayKey,
+                    record
+                );
+            }
         } catch (error) {
             alert('❌ PHOTO WAS NOT DELETED\n\n' + error.message);
             button.disabled = false;
@@ -9377,9 +10363,6 @@
             }
         });
 
-        document.querySelectorAll('.directory-card').forEach(card => {
-            card.style.display = (searchTerm === "" || card.innerText.toLowerCase().includes(searchTerm)) ? 'flex' : 'none';
-        });
     }
 
     const BOARDING_EVENT_PALETTE = [
@@ -9444,16 +10427,6 @@
             label: 'Contact Number',
             placeholder: 'e.g. 0412 345 678',
             multiline: false
-        },
-        likes: {
-            label: 'Likes',
-            placeholder: 'Food, toys, routines or activities they enjoy',
-            multiline: true
-        },
-        dislikes: {
-            label: 'Dislikes',
-            placeholder: 'Triggers, dislikes or things to avoid',
-            multiline: true
         },
         notes: {
             label: 'Notes',
@@ -9623,8 +10596,7 @@
             cells[4] = record.endDate || targetEnd;
             cells[5] = record.ownerName || '';
             cells[6] = record.phone || '';
-            cells[7] = record.likes || '';
-            cells[8] = record.dislikes || '';
+            // Likes / Dislikes columns are legacy and no longer managed by the Web App.
             cells[9] = record.notes || '';
             cells[10] = record.editLink || cells[10] || '';
             cells[11] = record.bookingType || cells[11] || 'Boarding';
@@ -10330,14 +11302,51 @@
             return;
         }
 
-        const popup = window.open(
+        let popup = window.open(
             url,
             'waffleLegacyIntake',
             'width=860,height=860,resizable=yes,scrollbars=yes'
         );
 
         if (!popup) {
-            window.open(url, '_blank');
+            popup =
+                window.open(
+                    url,
+                    '_blank'
+                );
+        }
+
+        /*
+         * The Apps Script intake page and GitHub dashboard are on
+         * different origins. postMessage normally refreshes this card,
+         * but some mobile/PWA navigation paths do not keep window.opener.
+         * Polling for the child window to close gives us a second,
+         * browser-independent refresh path.
+         */
+        if (popup) {
+            const closeWatch =
+                setInterval(() => {
+                    try {
+                        if (!popup.closed) {
+                            return;
+                        }
+                    } catch (_) {
+                        return;
+                    }
+
+                    clearInterval(
+                        closeWatch
+                    );
+
+                    directoryLegacyIntakeCache = {};
+                    directoryLegacyIntakeCacheLastFetch = 0;
+
+                    hydrateDirectoryLegacyIntakes({
+                        force: true
+                    }).catch(error =>
+                        console.error(error)
+                    );
+                }, 700);
         }
     }
 
@@ -10500,14 +11509,28 @@
             )
         );
 
-        const keysToFetch = force
-            ? keys
-            : keys.filter(key =>
-                !Object.prototype.hasOwnProperty.call(
-                    directoryLegacyIntakeCache,
-                    key
-                )
+        const cacheAge =
+            Date.now() -
+            Number(
+                directoryLegacyIntakeCacheLastFetch ||
+                0
             );
+
+        const cacheFresh =
+            !force &&
+            directoryLegacyIntakeCacheLastFetch > 0 &&
+            cacheAge < 15000;
+
+        const keysToFetch =
+            force
+                ? keys
+                : keys.filter(key =>
+                    !Object.prototype.hasOwnProperty.call(
+                        directoryLegacyIntakeCache,
+                        key
+                    ) ||
+                    !cacheFresh
+                );
 
         keys.forEach(key => {
             if (
@@ -10541,6 +11564,9 @@
                 directoryLegacyIntakeCache[key] =
                     null;
             });
+
+            directoryLegacyIntakeCacheLastFetch =
+                Date.now();
 
             (response.records || [])
                 .forEach(group => {
@@ -10646,6 +11672,10 @@
             if (hasKnownValue && !force) {
                 setDirectoryDogPhoto(stayKey, record);
                 setDirectoryCareFlags(stayKey, record);
+                renderDirectoryOperationalSections(
+                    stayKey,
+                    record
+                );
             } else {
                 queryKeys.push(stayKey);
             }
@@ -10688,6 +11718,10 @@
                 const record = directoryPhotoRecordsCache[key];
                 setDirectoryDogPhoto(key, record);
                 setDirectoryCareFlags(key, record);
+                renderDirectoryOperationalSections(
+                    key,
+                    record
+                );
             });
 
             refreshDirectoryCareSummary();
@@ -10720,8 +11754,8 @@
             const startDate = columns[3]; const endDate = columns[4];
             const ownerName = columns[5] ? columns[5].replace(/^"|"$/g, '') : '';
             const phone = columns[6] ? columns[6].replace(/^"|"$/g, '') : '';
-            const likes = columns[7] ? columns[7].replace(/^"|"$/g, '') : '';
-            const dislikes = columns[8] ? columns[8].replace(/^"|"$/g, '') : '';
+            // Columns 8 and 9 (Likes / Dislikes) are retained only for historical sheet compatibility.
+            // The Web App no longer reads or writes them.
             const notes = columns[9] ? columns[9].replace(/^"|"$/g, '') : '';
             const editLink = columns[10] ? columns[10].replace(/^"|"$/g, '') : '';
             const bookingType = columns[11] ? columns[11].replace(/^"|"$/g, '').trim() : '';
@@ -10825,11 +11859,15 @@
 
                                 directoryCardsHTML.push(`
                                     <div
-                                        class="directory-card"
+                                        class="directory-card directory-card-fused belongings-pet-card"
                                         data-directory-stay-key="${escapeDashboardHtml(directoryStayKey)}"
                                         data-directory-dog-name="${escapeDashboardHtml(dogName.trim())}"
                                         data-directory-start-date="${escapeDashboardHtml(startParsed)}"
                                         data-directory-end-date="${escapeDashboardHtml(endParsed)}"
+                                        data-stay-key="${escapeDashboardHtml(directoryStayKey)}"
+                                        data-dog-name="${escapeDashboardHtml(dogName.trim())}"
+                                        data-start-date="${escapeDashboardHtml(startParsed)}"
+                                        data-end-date="${escapeDashboardHtml(endParsed)}"
                                         style="${hasBeenPickedUp ? 'opacity: 0.6;' : ''}">
 
                                         <div class="directory-card-header">
@@ -10906,7 +11944,7 @@
                                             </button>
                                         </div>
 
-                                        <div class="directory-attributes-grid">
+                                        <div class="directory-attributes-grid directory-core-attributes">
                                             <button
                                                 type="button"
                                                 class="directory-attribute"
@@ -10929,26 +11967,6 @@
 
                                             <button
                                                 type="button"
-                                                class="directory-attribute"
-                                                data-directory-edit-field="likes"
-                                                data-directory-current-value="${escapeDashboardHtml(likes ? likes.trim() : '')}"
-                                                title="Tap to edit Likes">
-                                                <span class="directory-field-label">Likes</span>
-                                                <span class="directory-field-value">${escapeDashboardHtml(likes ? likes.trim() : 'None listed')}</span>
-                                            </button>
-
-                                            <button
-                                                type="button"
-                                                class="directory-attribute"
-                                                data-directory-edit-field="dislikes"
-                                                data-directory-current-value="${escapeDashboardHtml(dislikes ? dislikes.trim() : '')}"
-                                                title="Tap to edit Dislikes">
-                                                <span class="directory-field-label">Dislikes</span>
-                                                <span class="directory-field-value">${escapeDashboardHtml(dislikes ? dislikes.trim() : 'None listed')}</span>
-                                            </button>
-
-                                            <button
-                                                type="button"
                                                 class="directory-attribute directory-attribute-wide"
                                                 data-directory-edit-field="notes"
                                                 data-directory-current-value="${escapeDashboardHtml(notes ? notes.trim() : '')}"
@@ -10957,6 +11975,37 @@
                                                 <span class="directory-field-value">${escapeDashboardHtml(notes ? notes.trim() : 'None')}</span>
                                             </button>
                                         </div>
+
+                                        <details class="directory-fused-details">
+                                            <summary>
+                                                <span>📋 Intake &amp; Profile Attributes</span>
+                                                <span
+                                                    class="intake-profile-source"
+                                                    data-intake-profile-summary>
+                                                    Loading profile…
+                                                </span>
+                                            </summary>
+                                            <div
+                                                class="directory-fused-details-body"
+                                                data-directory-intake-attributes>
+                                                <div class="intake-profile-empty">
+                                                    Loading stored intake attributes…
+                                                </div>
+                                            </div>
+                                        </details>
+
+                                        <details class="directory-fused-details">
+                                            <summary>
+                                                <span>🧳 Belongings, Care &amp; Photos</span>
+                                            </summary>
+                                            <div
+                                                class="directory-fused-details-body"
+                                                data-directory-belongings>
+                                                <div class="intake-profile-empty">
+                                                    Loading belongings and care details…
+                                                </div>
+                                            </div>
+                                        </details>
                                     </div>
                                 `);
                             }
@@ -10966,7 +12015,7 @@
                             
                             events.push({
                                 title: `⏰ ${parsedTime} - Meet & Greet: ${dogName.trim()}`, start: startParsed, end: startParsed, allDay: true, backgroundColor: '#0f766e', textColor: '#ffffff',
-                                extendedProps: { isMeetGreet: true, breed: breedTxt, time: parsedTime, dogName: dogName.trim(), owner: "Database Synced", phone: "N/A", likes: "N/A", dislikes: "N/A", notes: notes.trim(), editLink: "" }
+                                extendedProps: { isMeetGreet: true, breed: breedTxt, time: parsedTime, dogName: dogName.trim(), owner: "Database Synced", phone: "N/A", notes: notes.trim(), editLink: "" }
                             });
                             continue;
                         }
@@ -10976,7 +12025,7 @@
 
                         events.push({
                             title: dogName.trim(), start: startParsed, end: forcedDisplayEnd, allDay: true, backgroundColor: stringToColor(dogName.trim()), textColor: '#ffffff',
-                            extendedProps: { isMeetGreet: false, isPotential: false, breed: breedTxt, dogName: dogName.trim(), owner: ownerName ? ownerName.trim() : "N/A", ownerName: ownerName ? ownerName.trim() : "N/A", phone: phone ? phone.trim() : "N/A", likes: likes ? likes.trim() : "None listed", dislikes: dislikes ? dislikes.trim() : "None listed", notes: notes ? notes.trim() : "None", rawStartDate: startParsed, rawEndDate: endParsed, bookingType: bookingType || "Boarding", editLink: editLink.trim() }
+                            extendedProps: { isMeetGreet: false, isPotential: false, breed: breedTxt, dogName: dogName.trim(), owner: ownerName ? ownerName.trim() : "N/A", ownerName: ownerName ? ownerName.trim() : "N/A", phone: phone ? phone.trim() : "N/A", notes: notes ? notes.trim() : "None", rawStartDate: startParsed, rawEndDate: endParsed, bookingType: bookingType || "Boarding", editLink: editLink.trim() }
                         });
                     }
                 }
@@ -10993,6 +12042,8 @@
                 hydrateDirectoryDogPhotos()
                     .catch(error => console.error(error));
                 hydrateDirectoryIntakeStatuses()
+                    .catch(error => console.error(error));
+                hydrateDirectoryLegacyIntakes()
                     .catch(error => console.error(error));
             }, 0);
         }
