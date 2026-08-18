@@ -5047,6 +5047,7 @@
     let activeReminderNoteId = null;
     let directoryPhotoRecordsCache = {};
     let directoryIntakeStatusCache = {};
+    let directoryIntakeStatusCacheLastFetch = 0;
     let directoryLegacyIntakeCache = {};
     let directoryLegacyIntakeCacheLastFetch = 0;
     let activeDirectoryEditContext = null; 
@@ -5447,6 +5448,7 @@
                 belongingsRecordsCache = {};
                 careRiskRecordsCache = {};
                 directoryIntakeStatusCache = {};
+                directoryIntakeStatusCacheLastFetch = 0;
                 directoryLegacyIntakeCache = {};
                 directoryLegacyIntakeCacheLastFetch = 0;
 
@@ -5543,14 +5545,14 @@
         });
 
 
-        let legacyDirectoryFocusRefreshTimer = null;
+        let directoryIntakeFocusRefreshTimer = null;
 
-        function refreshLegacyDirectoryAfterReturn() {
+        function refreshDirectoryIntakesAfterReturn() {
             clearTimeout(
-                legacyDirectoryFocusRefreshTimer
+                directoryIntakeFocusRefreshTimer
             );
 
-            legacyDirectoryFocusRefreshTimer =
+            directoryIntakeFocusRefreshTimer =
                 setTimeout(() => {
                     if (
                         document.visibilityState ===
@@ -5559,8 +5561,16 @@
                         return;
                     }
 
+                    directoryIntakeStatusCache = {};
+                    directoryIntakeStatusCacheLastFetch = 0;
                     directoryLegacyIntakeCache = {};
                     directoryLegacyIntakeCacheLastFetch = 0;
+
+                    hydrateDirectoryIntakeStatuses({
+                        force: true
+                    }).catch(error =>
+                        console.error(error)
+                    );
 
                     hydrateDirectoryLegacyIntakes({
                         force: true
@@ -5572,7 +5582,7 @@
 
         window.addEventListener(
             'focus',
-            refreshLegacyDirectoryAfterReturn
+            refreshDirectoryIntakesAfterReturn
         );
 
         document.addEventListener(
@@ -5582,10 +5592,34 @@
                     document.visibilityState ===
                     'visible'
                 ) {
-                    refreshLegacyDirectoryAfterReturn();
+                    refreshDirectoryIntakesAfterReturn();
                 }
             }
         );
+
+
+        setInterval(() => {
+            if (
+                document.visibilityState !== 'visible'
+            ) {
+                return;
+            }
+
+            const directoryTab =
+                document.querySelector(
+                    '[data-app-tab="directory"].active'
+                );
+
+            if (!directoryTab) return;
+
+            directoryIntakeStatusCacheLastFetch = 0;
+
+            hydrateDirectoryIntakeStatuses({
+                force: true
+            }).catch(error =>
+                console.error(error)
+            );
+        }, 60000);
 
         document.getElementById('auditSearch').addEventListener('input', renderAuditLog);
         document.getElementById('auditCategoryFilter').addEventListener('change', renderAuditLog);
@@ -10880,6 +10914,132 @@
             : fallback;
     }
 
+    function getStoredDigitalProfileIntakeStatus(stayKey) {
+        const record =
+            directoryPhotoRecordsCache[stayKey] ||
+            belongingsRecordsCache[stayKey] ||
+            careRiskRecordsCache[stayKey] ||
+            null;
+
+        if (!record) return null;
+
+        const source =
+            String(record.intakeAttributesSource || '')
+                .trim()
+                .toLowerCase();
+
+        const attributes =
+            record.intakeAttributes &&
+            typeof record.intakeAttributes === 'object'
+                ? record.intakeAttributes
+                : {};
+
+        const hasAttributes =
+            Object.values(attributes)
+                .some(value =>
+                    String(value ?? '').trim()
+                );
+
+        if (
+            !hasAttributes ||
+            !source.startsWith('digital intake')
+        ) {
+            return null;
+        }
+
+        return {
+            stayKey,
+            status: 'Complete',
+            token: '',
+            dogName: record.dogName || '',
+            submittedAt: record.updatedAt || '',
+            pdfUrl: '',
+            storedProfileFallback: true
+        };
+    }
+
+    function getEffectiveDirectoryDigitalIntakeRecord(stayKey) {
+        const cached =
+            directoryIntakeStatusCache[stayKey] || null;
+
+        if (
+            cached &&
+            String(cached.status || '')
+                .toLowerCase() === 'complete'
+        ) {
+            return cached;
+        }
+
+        return (
+            getStoredDigitalProfileIntakeStatus(stayKey) ||
+            cached
+        );
+    }
+
+    function reconcileDirectoryDigitalIntakeFromProfile(
+        stayKey,
+        profileRecord
+    ) {
+        if (!profileRecord) return;
+
+        const source =
+            String(profileRecord.intakeAttributesSource || '')
+                .trim()
+                .toLowerCase();
+
+        const attributes =
+            profileRecord.intakeAttributes &&
+            typeof profileRecord.intakeAttributes === 'object'
+                ? profileRecord.intakeAttributes
+                : {};
+
+        const hasAttributes =
+            Object.values(attributes)
+                .some(value =>
+                    String(value ?? '').trim()
+                );
+
+        if (
+            !hasAttributes ||
+            !source.startsWith('digital intake')
+        ) {
+            return;
+        }
+
+        const existing =
+            directoryIntakeStatusCache[stayKey] || null;
+
+        if (
+            existing &&
+            String(existing.status || '')
+                .toLowerCase() === 'complete'
+        ) {
+            return;
+        }
+
+        directoryIntakeStatusCache[stayKey] = {
+            stayKey,
+            status: 'Complete',
+            token: existing?.token || '',
+            dogName:
+                profileRecord.dogName ||
+                existing?.dogName ||
+                '',
+            submittedAt:
+                existing?.submittedAt ||
+                profileRecord.updatedAt ||
+                '',
+            pdfUrl: existing?.pdfUrl || '',
+            storedProfileFallback: true
+        };
+
+        setDirectoryIntakeStatus(
+            stayKey,
+            directoryIntakeStatusCache[stayKey]
+        );
+    }
+
+
     function applyDirectoryIntakeMethodVisibility(stayKey) {
         const digitalStrip = Array.from(
             document.querySelectorAll(
@@ -10913,9 +11073,9 @@
         }
 
         const digitalRecord =
-            directoryIntakeStatusCache[
+            getEffectiveDirectoryDigitalIntakeRecord(
                 stayKey
-            ] || null;
+            );
 
         const legacyGroup =
             directoryLegacyIntakeCache[
@@ -11000,6 +11160,8 @@
 
 
     function setDirectoryIntakeStatus(stayKey, record) {
+        record = record || getStoredDigitalProfileIntakeStatus(stayKey);
+
         const strip = Array.from(
             document.querySelectorAll('[data-directory-intake]')
         ).find(element =>
@@ -11039,7 +11201,7 @@
                 <div class="directory-intake-state">
                     <span class="directory-intake-dot is-complete"></span>
                     <span>
-                        Intake complete${submitted ? ` · ${escapeDashboardHtml(submitted)}` : ''}
+                        Intake complete${record.storedProfileFallback ? ' · Stored profile' : ''}${submitted ? ` · ${escapeDashboardHtml(submitted)}` : ''}
                     </span>
                 </div>
                 <div class="directory-intake-actions">
@@ -11052,12 +11214,18 @@
                             📄 PDF
                         </a>
                     ` : ''}
-                    <button
-                        type="button"
-                        class="directory-intake-action"
-                        data-create-intake-link>
-                        🔗 Copy Link
-                    </button>
+                    ${record.token ? `
+                        <button
+                            type="button"
+                            class="directory-intake-action"
+                            data-create-intake-link>
+                            🔗 Copy Link
+                        </button>
+                    ` : `
+                        <span class="directory-intake-action is-pdf">
+                            ✓ Saved
+                        </span>
+                    `}
                 </div>
             `;
 
@@ -11106,14 +11274,27 @@
                 .filter(Boolean)
         ));
 
-        const keysToFetch = force
-            ? keys
-            : keys.filter(key =>
-                !Object.prototype.hasOwnProperty.call(
-                    directoryIntakeStatusCache,
-                    key
-                )
+        const cacheAge =
+            Date.now() -
+            Number(
+                directoryIntakeStatusCacheLastFetch || 0
             );
+
+        const cacheFresh =
+            !force &&
+            directoryIntakeStatusCacheLastFetch > 0 &&
+            cacheAge < 15000;
+
+        const keysToFetch =
+            force
+                ? keys
+                : keys.filter(key =>
+                    !Object.prototype.hasOwnProperty.call(
+                        directoryIntakeStatusCache,
+                        key
+                    ) ||
+                    !cacheFresh
+                );
 
         keys.forEach(key => {
             if (
@@ -11139,6 +11320,9 @@
                 maxAttempts: 2,
                 timeoutMs: 45000
             });
+
+            directoryIntakeStatusCacheLastFetch =
+                Date.now();
 
             keysToFetch.forEach(key => {
                 directoryIntakeStatusCache[key] = null;
@@ -11218,6 +11402,9 @@
         }
 
         directoryIntakeStatusCache[stayKey] = intake;
+        directoryIntakeStatusCacheLastFetch =
+            Date.now();
+
         setDirectoryIntakeStatus(stayKey, intake);
 
         await copyIntakeLinkToClipboard(intake.link);
@@ -11676,6 +11863,11 @@
                     stayKey,
                     record
                 );
+
+                reconcileDirectoryDigitalIntakeFromProfile(
+                    stayKey,
+                    record
+                );
             } else {
                 queryKeys.push(stayKey);
             }
@@ -11719,6 +11911,11 @@
                 setDirectoryDogPhoto(key, record);
                 setDirectoryCareFlags(key, record);
                 renderDirectoryOperationalSections(
+                    key,
+                    record
+                );
+
+                reconcileDirectoryDigitalIntakeFromProfile(
                     key,
                     record
                 );
