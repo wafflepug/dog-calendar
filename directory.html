@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Waffle House — Guest Directory & Care</title>
-    <link rel="stylesheet" href="waffle-app.css">
+    <link rel="stylesheet" href="waffle-app.css?v=8.3.1">
 
 </head>
 <body data-waffle-page="directory">
@@ -113,7 +113,7 @@
                 <div>
                     <h3>🐾 Guest Directory &amp; Care</h3>
                     <p class="directory-dashboard-subtitle">
-                        Current and upcoming boarding guests with their full intake profile, care &amp; safety information, belongings and photos in one place.
+                        Select a guest to open their complete care profile, intake details, belongings and photos.
                     </p>
                 </div>
 
@@ -147,8 +147,25 @@
                     autocomplete="off">
 
                 <span class="guest-directory-toolbar-note">
-                    Intake attributes are stored with each guest profile. Likes and Dislikes are no longer used.
+                    Tap a guest tile to open their full profile.
                 </span>
+            </div>
+
+            <div
+                id="directoryProfileBackBar"
+                class="directory-profile-back-bar"
+                hidden>
+                <button
+                    type="button"
+                    id="directoryBackToGuestsBtn"
+                    class="directory-profile-back-btn">
+                    ← All Guests
+                </button>
+
+                <div class="directory-profile-breadcrumb">
+                    <span class="directory-profile-breadcrumb-label">Care Profile</span>
+                    <strong id="directoryProfileBreadcrumbName">Guest</strong>
+                </div>
             </div>
 
             <div id="directory-grid" class="directory-grid directory-grid-fused">
@@ -421,6 +438,6 @@
     body.dark-theme .modal-content-panel input { background: #334155; border-color: #475569; color: white; }
 </style>
 
-<script src="waffle-app.js"></script>
+<script src="waffle-app.js?v=8.3.1"></script>
 
 </html>

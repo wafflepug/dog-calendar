@@ -6,9 +6,506 @@ const WAFFLE_PAGE =
 let directoryConsolidatedLoadInProgress = false;
 let directoryConsolidatedLastFetch = 0;
 let directoryBookingStateSignature = '';
+let directorySelectedProfileStayKey = '';
 let directorySummaryRecordsCache = {};
 let directoryProfileDetailCache = {};
 let directoryBelongingsDetailCache = {};
+
+
+
+/* ============================================================
+   V8.3 CLIENT CACHE + REQUEST MANAGER
+   ============================================================ */
+
+const WAFFLE_CACHE_DB_NAME =
+    'waffle-house-v83';
+
+const WAFFLE_CACHE_DB_VERSION =
+    1;
+
+const WAFFLE_CACHE_STORE =
+    'responses';
+
+const WAFFLE_CACHE_MAX_STALE_MS =
+    6 * 60 * 60 * 1000;
+
+const waffleInFlightRequests =
+    new Map();
+
+let waffleCacheDbPromise =
+    null;
+
+
+function openWaffleCacheDb() {
+    if (!('indexedDB' in window)) {
+        return Promise.resolve(null);
+    }
+
+    if (waffleCacheDbPromise) {
+        return waffleCacheDbPromise;
+    }
+
+    waffleCacheDbPromise =
+        new Promise((resolve, reject) => {
+            const request =
+                indexedDB.open(
+                    WAFFLE_CACHE_DB_NAME,
+                    WAFFLE_CACHE_DB_VERSION
+                );
+
+            request.onupgradeneeded =
+                event => {
+                    const db =
+                        event.target.result;
+
+                    if (
+                        !db.objectStoreNames
+                            .contains(
+                                WAFFLE_CACHE_STORE
+                            )
+                    ) {
+                        db.createObjectStore(
+                            WAFFLE_CACHE_STORE,
+                            {
+                                keyPath:
+                                    'key'
+                            }
+                        );
+                    }
+                };
+
+            request.onsuccess =
+                () =>
+                    resolve(
+                        request.result
+                    );
+
+            request.onerror =
+                () =>
+                    reject(
+                        request.error
+                    );
+        })
+        .catch(error => {
+            console.warn(
+                'IndexedDB cache unavailable:',
+                error
+            );
+
+            return null;
+        });
+
+    return waffleCacheDbPromise;
+}
+
+
+async function getWaffleCachedResponse(
+    key,
+    maxStaleMs =
+        WAFFLE_CACHE_MAX_STALE_MS
+) {
+    const db =
+        await openWaffleCacheDb();
+
+    if (!db) return null;
+
+    return new Promise(resolve => {
+        try {
+            const transaction =
+                db.transaction(
+                    WAFFLE_CACHE_STORE,
+                    'readwrite'
+                );
+
+            const store =
+                transaction.objectStore(
+                    WAFFLE_CACHE_STORE
+                );
+
+            const request =
+                store.get(key);
+
+            request.onsuccess =
+                () => {
+                    const entry =
+                        request.result ||
+                        null;
+
+                    if (!entry) {
+                        resolve(null);
+                        return;
+                    }
+
+                    const age =
+                        Date.now() -
+                        Number(
+                            entry.savedAt ||
+                            0
+                        );
+
+                    if (
+                        !entry.savedAt ||
+                        age > maxStaleMs
+                    ) {
+                        try {
+                            store.delete(key);
+                        } catch (_) {}
+
+                        resolve(null);
+                        return;
+                    }
+
+                    resolve(entry);
+                };
+
+            request.onerror =
+                () =>
+                    resolve(null);
+
+        } catch (_) {
+            resolve(null);
+        }
+    });
+}
+
+
+async function putWaffleCachedResponse(
+    key,
+    payload
+) {
+    if (
+        !payload ||
+        typeof payload !==
+            'object'
+    ) {
+        return;
+    }
+
+    const db =
+        await openWaffleCacheDb();
+
+    if (!db) return;
+
+    const entry = {
+        key,
+        savedAt:
+            Date.now(),
+        version:
+            String(
+                payload.version ||
+                ''
+            ),
+        variant:
+            String(
+                payload.variant ||
+                ''
+            ),
+        payload
+    };
+
+    return new Promise(resolve => {
+        try {
+            const transaction =
+                db.transaction(
+                    WAFFLE_CACHE_STORE,
+                    'readwrite'
+                );
+
+            const store =
+                transaction.objectStore(
+                    WAFFLE_CACHE_STORE
+                );
+
+            const request =
+                store.put(entry);
+
+            request.onsuccess =
+                () =>
+                    resolve(true);
+
+            request.onerror =
+                () =>
+                    resolve(false);
+
+        } catch (_) {
+            resolve(false);
+        }
+    });
+}
+
+
+async function removeWaffleCachedResponse(key) {
+    const db =
+        await openWaffleCacheDb();
+
+    if (!db) return;
+
+    return new Promise(resolve => {
+        try {
+            const transaction =
+                db.transaction(
+                    WAFFLE_CACHE_STORE,
+                    'readwrite'
+                );
+
+            const store =
+                transaction.objectStore(
+                    WAFFLE_CACHE_STORE
+                );
+
+            const request =
+                store.delete(key);
+
+            request.onsuccess =
+                () =>
+                    resolve(true);
+
+            request.onerror =
+                () =>
+                    resolve(false);
+
+        } catch (_) {
+            resolve(false);
+        }
+    });
+}
+
+
+function waffleReadRequestKey(payload) {
+    const action =
+        String(
+            payload?.action ||
+            ''
+        );
+
+    const readActions =
+        new Set([
+            'get_data_versions',
+            'get_audit_log',
+            'get_guest_directory',
+            'get_guest_profile',
+            'get_guest_belongings',
+            'get_reminders_notes',
+            'get_intake_statuses',
+            'get_legacy_intake_statuses',
+            'get_intake_prefill',
+            'get_belongings'
+        ]);
+
+    if (!readActions.has(action)) {
+        return '';
+    }
+
+    const normalized = {
+        action,
+        stayKey:
+            String(
+                payload?.stayKey ||
+                ''
+            ),
+        stayKeys:
+            Array.isArray(
+                payload?.stayKeys
+            )
+                ? [...payload.stayKeys]
+                    .map(String)
+                    .sort()
+                : [],
+        limit:
+            Number(
+                payload?.limit ||
+                0
+            ),
+        knownVersion:
+            String(
+                payload?.knownVersion ||
+                ''
+            ),
+        knownVariant:
+            String(
+                payload?.knownVariant ||
+                ''
+            )
+    };
+
+    return JSON.stringify(normalized);
+}
+
+
+async function queryAppsScriptSWR(
+    payload,
+    options = {}
+) {
+    const cacheKey =
+        String(
+            options.cacheKey ||
+            ''
+        );
+
+    const maxStaleMs =
+        Number(
+            options.maxStaleMs ||
+            WAFFLE_CACHE_MAX_STALE_MS
+        );
+
+    const cached =
+        cacheKey
+            ? await getWaffleCachedResponse(
+                cacheKey,
+                maxStaleMs
+            )
+            : null;
+
+    let cacheApplied = false;
+
+    if (
+        cached?.payload &&
+        typeof options.onCached ===
+            'function'
+    ) {
+        try {
+            await options.onCached(
+                cached.payload,
+                cached
+            );
+
+            cacheApplied = true;
+
+        } catch (error) {
+            console.warn(
+                'Cached render skipped:',
+                error
+            );
+        }
+    }
+
+    const requestPayload = {
+        ...payload
+    };
+
+    if (
+        cached?.version &&
+        cached?.variant
+    ) {
+        requestPayload.knownVersion =
+            cached.version;
+
+        requestPayload.knownVariant =
+            cached.variant;
+    }
+
+    try {
+        const response =
+            await queryAppsScript(
+                requestPayload,
+                options
+            );
+
+        if (
+            response?.unchanged &&
+            cached?.payload
+        ) {
+            await putWaffleCachedResponse(
+                cacheKey,
+                cached.payload
+            );
+
+            return {
+                data:
+                    cached.payload,
+                cacheApplied,
+                unchanged:
+                    true,
+                offlineFallback:
+                    false
+            };
+        }
+
+        if (
+            cacheKey &&
+            response &&
+            response.result ===
+                'success'
+        ) {
+            await putWaffleCachedResponse(
+                cacheKey,
+                response
+            );
+        }
+
+        return {
+            data:
+                response,
+            cacheApplied,
+            unchanged:
+                false,
+            offlineFallback:
+                false
+        };
+
+    } catch (error) {
+        if (cached?.payload) {
+            console.warn(
+                'Network refresh failed; using cached Waffle data:',
+                error
+            );
+
+            return {
+                data:
+                    cached.payload,
+                cacheApplied,
+                unchanged:
+                    true,
+                offlineFallback:
+                    true,
+                error
+            };
+        }
+
+        throw error;
+    }
+}
+
+
+async function invalidateWaffleClientCaches(scopes) {
+    const wanted =
+        new Set(
+            Array.isArray(scopes)
+                ? scopes
+                : [scopes]
+        );
+
+    const keys = [];
+
+    if (wanted.has('directory')) {
+        keys.push(
+            'directory:summary'
+        );
+
+        directoryConsolidatedLastFetch =
+            0;
+    }
+
+    if (wanted.has('reminders')) {
+        keys.push(
+            'reminders:all'
+        );
+    }
+
+    if (wanted.has('audit')) {
+        keys.push(
+            'audit:latest-500'
+        );
+    }
+
+    await Promise.all(
+        keys.map(
+            key =>
+                removeWaffleCachedResponse(key)
+        )
+    );
+}
+
 
     const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT63UsPjcg3GB4lTB6cewLaTRS_yJP4kpOMSMsTTnvTw1Wbjn3CgtZc_c6li28ihjzkHnphFt0XcFTt/pub?gid=1639615540&single=true&output=csv';
     const APPS_SCRIPT_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbwn4HL49K9c3AZbXJRUjPw3UYWxJt8DmqXwMnTytyqdSstj3ZIJwWdDEC2IsBjetOf3pw/exec';
@@ -478,7 +975,39 @@ let directoryBelongingsDetailCache = {};
 
         const directoryGrid = document.getElementById('directory-grid');
 
+        document
+            .getElementById(
+                'directoryBackToGuestsBtn'
+            )
+            ?.addEventListener(
+                'click',
+                function() {
+                    closeDirectoryGuestProfile();
+                }
+            );
+
         directoryGrid.addEventListener('click', async function(event) {
+            const openProfileButton =
+                event.target.closest(
+                    '[data-open-directory-profile]'
+                );
+
+            if (openProfileButton) {
+                event.preventDefault();
+                event.stopPropagation();
+
+                const card =
+                    openProfileButton.closest(
+                        '.directory-card'
+                    );
+
+                await openDirectoryGuestProfile(
+                    card
+                );
+
+                return;
+            }
+
             const retryDetailButton =
                 event.target.closest(
                     '[data-retry-directory-detail]'
@@ -504,35 +1033,6 @@ let directoryBelongingsDetailCache = {};
                         }
                     );
                 }
-
-                return;
-            }
-
-            const detailSummary =
-                event.target.closest(
-                    '.directory-fused-details > summary'
-                );
-
-            if (detailSummary) {
-                const details =
-                    detailSummary.parentElement;
-
-                /*
-                 * Native <details> toggles after the click event.
-                 * Wait one tick, then fetch only if it has just opened.
-                 */
-                setTimeout(() => {
-                    if (
-                        details &&
-                        details.open
-                    ) {
-                        ensureDirectoryDetailLoaded(
-                            details
-                        ).catch(error =>
-                            console.error(error)
-                        );
-                    }
-                }, 0);
 
                 return;
             }
@@ -2159,28 +2659,53 @@ let directoryBelongingsDetailCache = {};
                 '<div class="reminders-empty">⏳ Loading shared reminders and notes...</div>';
         }
 
+        const applyResponse =
+            response => {
+                remindersNotesRecords =
+                    Array.isArray(
+                        response.records
+                    )
+                        ? response.records
+                        : [];
+
+                renderRemindersNotes();
+            };
+
         try {
-            const response =
-                await queryAppsScript(
+            let cachedRendered = false;
+
+            const swr =
+                await queryAppsScriptSWR(
                     {
                         action:
                             'get_reminders_notes',
                         limit: 500
                     },
                     {
+                        cacheKey:
+                            'reminders:all',
                         maxAttempts: 2,
-                        timeoutMs: 45000
+                        timeoutMs: 45000,
+                        maxStaleMs:
+                            6 * 60 * 60 * 1000,
+                        onCached:
+                            cachedResponse => {
+                                cachedRendered =
+                                    true;
+
+                                applyResponse(
+                                    cachedResponse
+                                );
+                            }
                     }
                 );
 
-            remindersNotesRecords =
-                Array.isArray(
-                    response.records
-                )
-                    ? response.records
-                    : [];
-
-            renderRemindersNotes();
+            if (
+                !swr.unchanged ||
+                !cachedRendered
+            ) {
+                applyResponse(swr.data);
+            }
 
         } catch (error) {
             console.error(
@@ -2188,15 +2713,15 @@ let directoryBelongingsDetailCache = {};
                 error
             );
 
-            if (grid) {
+            if (
+                grid &&
+                !remindersNotesRecords.length
+            ) {
                 grid.innerHTML =
                     `<div class="reminders-error">⚠️ Reminders &amp; Notes could not be loaded.<br>${escapeDashboardHtml(error.message || String(error))}</div>`;
             }
 
         } finally {
-            directoryConsolidatedLoadInProgress =
-                false;
-
             if (button) {
                 button.disabled = false;
                 button.textContent =
@@ -2204,6 +2729,7 @@ let directoryBelongingsDetailCache = {};
             }
         }
     }
+
 
     function openReminderComposer(record = null) {
         const composer =
@@ -2441,6 +2967,7 @@ let directoryBelongingsDetailCache = {};
 
             closeReminderComposer();
 
+            await invalidateWaffleClientCaches(['reminders', 'audit']);
             await loadRemindersNotes();
 
         } catch (error) {
@@ -2484,6 +3011,7 @@ let directoryBelongingsDetailCache = {};
                 }
             );
 
+            await invalidateWaffleClientCaches(['reminders', 'audit']);
             await loadRemindersNotes();
 
         } catch (error) {
@@ -2524,6 +3052,7 @@ let directoryBelongingsDetailCache = {};
                 }
             );
 
+            await invalidateWaffleClientCaches(['reminders', 'audit']);
             await loadRemindersNotes();
 
         } catch (error) {
@@ -3107,47 +3636,100 @@ let directoryBelongingsDetailCache = {};
     }
 
     async function loadAuditLog(options = {}) {
-        const button = options.button || null;
-        const container = document.getElementById('auditLogContainer');
+        const button =
+            options.button ||
+            null;
+
+        const container =
+            document.getElementById(
+                'auditLogContainer'
+            );
 
         if (button) {
             button.disabled = true;
-            button.textContent = '⏳ Refreshing...';
+            button.textContent =
+                '⏳ Refreshing...';
         }
 
-        if (container && !auditLogRecords.length) {
+        if (
+            container &&
+            !auditLogRecords.length
+        ) {
             container.innerHTML =
                 '<div class="audit-empty">⏳ Loading recent audit activity...</div>';
         }
 
+        const applyResponse =
+            response => {
+                auditLogRecords =
+                    Array.isArray(
+                        response.records
+                    )
+                        ? response.records
+                        : [];
+
+                renderAuditLog();
+            };
+
         try {
-            const response = await queryAppsScript({
-                action: 'get_audit_log',
-                limit: 500
-            }, {
-                maxAttempts: 2,
-                timeoutMs: 45000
-            });
+            let cachedRendered = false;
 
-            auditLogRecords = Array.isArray(response.records)
-                ? response.records
-                : [];
+            const swr =
+                await queryAppsScriptSWR(
+                    {
+                        action:
+                            'get_audit_log',
+                        limit: 500
+                    },
+                    {
+                        cacheKey:
+                            'audit:latest-500',
+                        maxAttempts: 2,
+                        timeoutMs: 45000,
+                        maxStaleMs:
+                            4 * 60 * 60 * 1000,
+                        onCached:
+                            cachedResponse => {
+                                cachedRendered =
+                                    true;
 
-            renderAuditLog();
+                                applyResponse(
+                                    cachedResponse
+                                );
+                            }
+                    }
+                );
+
+            if (
+                !swr.unchanged ||
+                !cachedRendered
+            ) {
+                applyResponse(swr.data);
+            }
+
         } catch (error) {
-            console.error('Audit log load failed:', error);
+            console.error(
+                'Audit log load failed:',
+                error
+            );
 
-            if (container) {
+            if (
+                container &&
+                !auditLogRecords.length
+            ) {
                 container.innerHTML =
                     `<div class="audit-error">⚠️ Audit log could not be loaded.<br>${escapeDashboardHtml(error.message || String(error))}</div>`;
             }
+
         } finally {
             if (button) {
                 button.disabled = false;
-                button.textContent = '🔄 Refresh Log';
+                button.textContent =
+                    '🔄 Refresh Log';
             }
         }
     }
+
 
     function getCurrentBoardingStays(csvText) {
         if (!csvText) return [];
@@ -3196,7 +3778,7 @@ let directoryBelongingsDetailCache = {};
         return stays.sort((a, b) => a.dogName.localeCompare(b.dogName));
     }
 
-    function queryAppsScript(payload, options = {}) {
+    function queryAppsScriptRaw(payload, options = {}) {
         const maxAttempts = Number(options.maxAttempts || 2);
         const timeoutMs = Number(options.timeoutMs || 45000);
 
@@ -3290,6 +3872,65 @@ let directoryBelongingsDetailCache = {};
             runAttempt();
         });
     }
+
+    function queryAppsScript(
+        payload,
+        options = {}
+    ) {
+        const key =
+            options.dedupe === false
+                ? ''
+                : waffleReadRequestKey(
+                    payload
+                );
+
+        if (
+            key &&
+            waffleInFlightRequests.has(
+                key
+            )
+        ) {
+            return waffleInFlightRequests.get(
+                key
+            );
+        }
+
+        const request =
+            queryAppsScriptRaw(
+                payload,
+                options
+            );
+
+        if (!key) {
+            return request;
+        }
+
+        waffleInFlightRequests.set(
+            key,
+            request
+        );
+
+        const clearRequest = () => {
+            if (
+                waffleInFlightRequests.get(
+                    key
+                ) ===
+                request
+            ) {
+                waffleInFlightRequests.delete(
+                    key
+                );
+            }
+        };
+
+        request.then(
+            clearRequest,
+            clearRequest
+        );
+
+        return request;
+    }
+
 
     function getActiveCareFlags(record) {
         const riskFlags = (record && record.riskFlags) || {};
@@ -3796,43 +4437,74 @@ let directoryBelongingsDetailCache = {};
             'profile'
         );
 
+        const applyRecord =
+            record => {
+                directoryProfileDetailCache[
+                    stayKey
+                ] = record;
+
+                renderDirectoryIntakeAttributes(
+                    card,
+                    record
+                );
+
+                details.dataset.detailLoaded =
+                    'true';
+
+                reconcileDirectoryDigitalIntakeFromProfile(
+                    stayKey,
+                    record
+                );
+            };
+
         try {
-            const response =
-                await queryAppsScript(
+            let cachedRendered = false;
+
+            const swr =
+                await queryAppsScriptSWR(
                     {
                         action:
                             'get_guest_profile',
                         stayKey
                     },
                     {
+                        cacheKey:
+                            'directory:profile:' +
+                            stayKey,
                         maxAttempts: 2,
-                        timeoutMs: 30000
+                        timeoutMs: 30000,
+                        maxStaleMs:
+                            6 * 60 * 60 * 1000,
+                        onCached:
+                            cachedResponse => {
+                                cachedRendered =
+                                    true;
+
+                                applyRecord(
+                                    cachedResponse.record ||
+                                    {
+                                        stayKey,
+                                        intakeAttributes: {},
+                                        intakeAttributesSource: ''
+                                    }
+                                );
+                            }
                     }
                 );
 
-            const record =
-                response.record || {
-                    stayKey,
-                    intakeAttributes: {},
-                    intakeAttributesSource: ''
-                };
-
-            directoryProfileDetailCache[
-                stayKey
-            ] = record;
-
-            renderDirectoryIntakeAttributes(
-                card,
-                record
-            );
-
-            details.dataset.detailLoaded =
-                'true';
-
-            reconcileDirectoryDigitalIntakeFromProfile(
-                stayKey,
-                record
-            );
+            if (
+                !swr.unchanged ||
+                !cachedRendered
+            ) {
+                applyRecord(
+                    swr.data.record ||
+                    {
+                        stayKey,
+                        intakeAttributes: {},
+                        intakeAttributesSource: ''
+                    }
+                );
+            }
 
         } catch (error) {
             console.error(
@@ -3851,6 +4523,7 @@ let directoryBelongingsDetailCache = {};
                 'false';
         }
     }
+
 
     async function loadDirectoryBelongingsDetail(
         card,
@@ -3900,83 +4573,119 @@ let directoryBelongingsDetailCache = {};
             'belongings'
         );
 
+        const applyRecord =
+            record => {
+                directoryBelongingsDetailCache[
+                    stayKey
+                ] = record;
+
+                belongingsRecordsCache[
+                    stayKey
+                ] = {
+                    ...(
+                        belongingsRecordsCache[
+                            stayKey
+                        ] ||
+                        {}
+                    ),
+                    ...record
+                };
+
+                directoryPhotoRecordsCache[
+                    stayKey
+                ] = {
+                    ...(
+                        directoryPhotoRecordsCache[
+                            stayKey
+                        ] ||
+                        {}
+                    ),
+                    ...record
+                };
+
+                careRiskRecordsCache[
+                    stayKey
+                ] = {
+                    ...(
+                        careRiskRecordsCache[
+                            stayKey
+                        ] ||
+                        {}
+                    ),
+                    ...record
+                };
+
+                setDirectoryDogPhoto(
+                    stayKey,
+                    record
+                );
+
+                setDirectoryCareFlags(
+                    stayKey,
+                    record
+                );
+
+                renderDirectoryBelongings(
+                    card,
+                    record
+                );
+
+                details.dataset.detailLoaded =
+                    'true';
+            };
+
         try {
-            const response =
-                await queryAppsScript(
+            let cachedRendered = false;
+
+            const swr =
+                await queryAppsScriptSWR(
                     {
                         action:
                             'get_guest_belongings',
                         stayKey
                     },
                     {
+                        cacheKey:
+                            'directory:belongings:' +
+                            stayKey,
                         maxAttempts: 2,
-                        timeoutMs: 30000
+                        timeoutMs: 30000,
+                        maxStaleMs:
+                            6 * 60 * 60 * 1000,
+                        onCached:
+                            cachedResponse => {
+                                cachedRendered =
+                                    true;
+
+                                applyRecord(
+                                    cachedResponse.record ||
+                                    {
+                                        stayKey,
+                                        items: {},
+                                        photos: [],
+                                        riskFlags: {},
+                                        dogPhoto: null
+                                    }
+                                );
+                            }
                     }
                 );
 
-            const record =
-                response.record || {
-                    stayKey,
-                    items: {},
-                    photos: [],
-                    riskFlags: {},
-                    dogPhoto: null
-                };
-
-            directoryBelongingsDetailCache[
-                stayKey
-            ] = record;
-
-            belongingsRecordsCache[
-                stayKey
-            ] = {
-                ...(
-                    belongingsRecordsCache[
-                        stayKey
-                    ] || {}
-                ),
-                ...record
-            };
-
-            directoryPhotoRecordsCache[
-                stayKey
-            ] = {
-                ...(
-                    directoryPhotoRecordsCache[
-                        stayKey
-                    ] || {}
-                ),
-                ...record
-            };
-
-            careRiskRecordsCache[
-                stayKey
-            ] = {
-                ...(
-                    careRiskRecordsCache[
-                        stayKey
-                    ] || {}
-                ),
-                ...record
-            };
-
-            setDirectoryDogPhoto(
-                stayKey,
-                record
-            );
-
-            setDirectoryCareFlags(
-                stayKey,
-                record
-            );
-
-            renderDirectoryBelongings(
-                card,
-                record
-            );
-
-            details.dataset.detailLoaded =
-                'true';
+            if (
+                !swr.unchanged ||
+                !cachedRendered
+            ) {
+                applyRecord(
+                    swr.data.record ||
+                    {
+                        stayKey,
+                        items: {},
+                        photos: [],
+                        riskFlags: {},
+                        dogPhoto: null
+                    }
+                );
+            }
 
         } catch (error) {
             console.error(
@@ -3996,14 +4705,12 @@ let directoryBelongingsDetailCache = {};
         }
     }
 
+
     async function ensureDirectoryDetailLoaded(
         details,
         options = {}
     ) {
-        if (
-            !details ||
-            !details.open
-        ) {
+        if (!details) {
             return;
         }
 
@@ -4040,13 +4747,157 @@ let directoryBelongingsDetailCache = {};
     }
 
 
+    function applyGuestDirectoryResponse(
+        response,
+        options = {}
+    ) {
+        const bookings =
+            response.bookings ||
+            [];
+
+        const nextSignature =
+            getDirectoryBookingSignature(
+                bookings
+            );
+
+        const existingCards =
+            document.querySelector(
+                '.directory-card[data-directory-stay-key]'
+            );
+
+        const shouldRebuildCards =
+            !options.quiet ||
+            !existingCards ||
+            !directoryBookingStateSignature ||
+            directoryBookingStateSignature !==
+                nextSignature;
+
+        directorySummaryRecordsCache = {};
+        directoryPhotoRecordsCache = {};
+        careRiskRecordsCache = {};
+        directoryIntakeStatusCache = {};
+        directoryLegacyIntakeCache = {};
+
+        if (options.force) {
+            directoryProfileDetailCache = {};
+            directoryBelongingsDetailCache = {};
+            belongingsRecordsCache = {};
+        }
+
+        (response.summaries || [])
+            .forEach(summary => {
+                if (!summary.stayKey) return;
+
+                directorySummaryRecordsCache[
+                    summary.stayKey
+                ] = summary;
+
+                directoryPhotoRecordsCache[
+                    summary.stayKey
+                ] = summary;
+
+                careRiskRecordsCache[
+                    summary.stayKey
+                ] = summary;
+            });
+
+        (response.digitalIntakes || [])
+            .forEach(record => {
+                if (record.stayKey) {
+                    directoryIntakeStatusCache[
+                        record.stayKey
+                    ] = record;
+                }
+            });
+
+        (response.legacyIntakes || [])
+            .forEach(group => {
+                if (group.stayKey) {
+                    directoryLegacyIntakeCache[
+                        group.stayKey
+                    ] = group;
+                }
+            });
+
+        directoryIntakeStatusCacheLastFetch =
+            Date.now();
+
+        directoryLegacyIntakeCacheLastFetch =
+            Date.now();
+
+        directoryConsolidatedLastFetch =
+            Date.now();
+
+        if (shouldRebuildCards) {
+            const csv =
+                guestDirectoryBookingsToCsv(
+                    bookings
+                );
+
+            parseCSVToEvents(csv);
+
+            directoryBookingStateSignature =
+                nextSignature;
+        }
+
+        Object.entries(
+            directorySummaryRecordsCache
+        ).forEach(
+            ([stayKey, summary]) => {
+                setDirectoryDogPhoto(
+                    stayKey,
+                    summary
+                );
+
+                setDirectoryCareFlags(
+                    stayKey,
+                    summary
+                );
+
+                renderDirectoryLazySummary(
+                    stayKey,
+                    summary
+                );
+
+                reconcileDirectoryDigitalIntakeFromProfile(
+                    stayKey,
+                    summary
+                );
+            }
+        );
+
+        Object.entries(
+            directoryIntakeStatusCache
+        ).forEach(
+            ([stayKey, record]) => {
+                setDirectoryIntakeStatus(
+                    stayKey,
+                    record
+                );
+            }
+        );
+
+        Object.entries(
+            directoryLegacyIntakeCache
+        ).forEach(
+            ([stayKey, group]) => {
+                setDirectoryLegacyIntakeStatus(
+                    stayKey,
+                    group
+                );
+            }
+        );
+
+        refreshDirectoryCareSummary();
+        filterGuestDirectoryCards();
+        restoreSelectedDirectoryProfile();
+    }
+
+
     async function loadGuestDirectoryConsolidated(
         options = {}
     ) {
-        if (
-            WAFFLE_PAGE !==
-            'directory'
-        ) {
+        if (WAFFLE_PAGE !== 'directory') {
             return;
         }
 
@@ -4070,7 +4921,8 @@ let directoryBelongingsDetailCache = {};
             true;
 
         const button =
-            options.button || null;
+            options.button ||
+            null;
 
         const grid =
             document.getElementById(
@@ -4090,171 +4942,67 @@ let directoryBelongingsDetailCache = {};
 
         if (
             grid &&
-            !options.quiet
+            !options.quiet &&
+            !grid.querySelector(
+                '.directory-card'
+            )
         ) {
             grid.innerHTML =
-                '<div class="directory-page-loading">⏳ Loading Guest Directory summary…<br><small>Detailed intake fields, belongings and photo galleries load only when opened.</small></div>';
+                '<div class="directory-page-loading">⏳ Loading Guest Directory…</div>';
         }
 
         try {
-            const response =
-                await queryAppsScript(
+            let cachedRendered = false;
+
+            const swr =
+                await queryAppsScriptSWR(
                     {
                         action:
                             'get_guest_directory'
                     },
                     {
+                        cacheKey:
+                            'directory:summary',
                         maxAttempts: 2,
-                        timeoutMs: 45000
+                        timeoutMs: 45000,
+                        maxStaleMs:
+                            6 * 60 * 60 * 1000,
+                        onCached:
+                            cachedResponse => {
+                                cachedRendered =
+                                    true;
+
+                                applyGuestDirectoryResponse(
+                                    cachedResponse,
+                                    {
+                                        ...options,
+                                        quiet: false,
+                                        force: false,
+                                        fromCache: true
+                                    }
+                                );
+                            }
                     }
                 );
 
-            const bookings =
-                response.bookings || [];
-
-            const nextSignature =
-                getDirectoryBookingSignature(
-                    bookings
+            if (
+                !swr.unchanged ||
+                !cachedRendered
+            ) {
+                applyGuestDirectoryResponse(
+                    swr.data,
+                    {
+                        ...options,
+                        quiet:
+                            cachedRendered
+                                ? true
+                                : options.quiet,
+                        force:
+                            options.force &&
+                            !cachedRendered
+                    }
                 );
-
-            const existingCards =
-                document.querySelector(
-                    '.directory-card[data-directory-stay-key]'
-                );
-
-            const shouldRebuildCards =
-                !options.quiet ||
-                !existingCards ||
-                !directoryBookingStateSignature ||
-                directoryBookingStateSignature !==
-                    nextSignature;
-
-            directorySummaryRecordsCache = {};
-            directoryPhotoRecordsCache = {};
-            careRiskRecordsCache = {};
-            directoryIntakeStatusCache = {};
-            directoryLegacyIntakeCache = {};
-
-            /*
-             * A manual Refresh intentionally drops lazy detail caches.
-             * Background summary refreshes preserve details already opened.
-             */
-            if (options.force) {
-                directoryProfileDetailCache = {};
-                directoryBelongingsDetailCache = {};
-                belongingsRecordsCache = {};
             }
-
-            (response.summaries || [])
-                .forEach(summary => {
-                    if (!summary.stayKey) {
-                        return;
-                    }
-
-                    directorySummaryRecordsCache[
-                        summary.stayKey
-                    ] = summary;
-
-                    directoryPhotoRecordsCache[
-                        summary.stayKey
-                    ] = summary;
-
-                    careRiskRecordsCache[
-                        summary.stayKey
-                    ] = summary;
-                });
-
-            (response.digitalIntakes || [])
-                .forEach(record => {
-                    if (record.stayKey) {
-                        directoryIntakeStatusCache[
-                            record.stayKey
-                        ] = record;
-                    }
-                });
-
-            (response.legacyIntakes || [])
-                .forEach(group => {
-                    if (group.stayKey) {
-                        directoryLegacyIntakeCache[
-                            group.stayKey
-                        ] = group;
-                    }
-                });
-
-            directoryIntakeStatusCacheLastFetch =
-                Date.now();
-
-            directoryLegacyIntakeCacheLastFetch =
-                Date.now();
-
-            directoryConsolidatedLastFetch =
-                Date.now();
-
-            if (shouldRebuildCards) {
-                const csv =
-                    guestDirectoryBookingsToCsv(
-                        bookings
-                    );
-
-                parseCSVToEvents(
-                    csv
-                );
-
-                directoryBookingStateSignature =
-                    nextSignature;
-            }
-
-            Object.entries(
-                directorySummaryRecordsCache
-            ).forEach(
-                ([stayKey, summary]) => {
-                    setDirectoryDogPhoto(
-                        stayKey,
-                        summary
-                    );
-
-                    setDirectoryCareFlags(
-                        stayKey,
-                        summary
-                    );
-
-                    renderDirectoryLazySummary(
-                        stayKey,
-                        summary
-                    );
-
-                    reconcileDirectoryDigitalIntakeFromProfile(
-                        stayKey,
-                        summary
-                    );
-                }
-            );
-
-            Object.entries(
-                directoryIntakeStatusCache
-            ).forEach(
-                ([stayKey, record]) => {
-                    setDirectoryIntakeStatus(
-                        stayKey,
-                        record
-                    );
-                }
-            );
-
-            Object.entries(
-                directoryLegacyIntakeCache
-            ).forEach(
-                ([stayKey, group]) => {
-                    setDirectoryLegacyIntakeStatus(
-                        stayKey,
-                        group
-                    );
-                }
-            );
-
-            refreshDirectoryCareSummary();
-            filterGuestDirectoryCards();
 
         } catch (error) {
             console.error(
@@ -4288,6 +5036,248 @@ let directoryBelongingsDetailCache = {};
     }
 
 
+
+    function getDirectoryProfileCard(stayKey) {
+        return Array.from(
+            document.querySelectorAll(
+                '.directory-card[data-directory-stay-key]'
+            )
+        ).find(card =>
+            String(
+                card.dataset
+                    .directoryStayKey ||
+                ''
+            ) ===
+            String(
+                stayKey || ''
+            )
+        ) || null;
+    }
+
+
+    async function openDirectoryGuestProfile(
+        card,
+        options = {}
+    ) {
+        if (!card) return;
+
+        const stayKey =
+            String(
+                card.dataset
+                    .directoryStayKey ||
+                ''
+            ).trim();
+
+        if (!stayKey) return;
+
+        directorySelectedProfileStayKey =
+            stayKey;
+
+        const dashboard =
+            document.querySelector(
+                '.directory-dashboard-fused'
+            );
+
+        const backBar =
+            document.getElementById(
+                'directoryProfileBackBar'
+            );
+
+        const breadcrumb =
+            document.getElementById(
+                'directoryProfileBreadcrumbName'
+            );
+
+        const dogName =
+            String(
+                card.dataset
+                    .directoryDogName ||
+                card.dataset
+                    .dogName ||
+                'Guest'
+            );
+
+        document
+            .querySelectorAll(
+                '.directory-card.is-profile-active'
+            )
+            .forEach(otherCard => {
+                if (otherCard !== card) {
+                    otherCard.classList.remove(
+                        'is-profile-active'
+                    );
+                }
+            });
+
+        card.classList.add(
+            'is-profile-active'
+        );
+
+        dashboard?.classList.add(
+            'is-profile-mode'
+        );
+
+        if (backBar) {
+            backBar.hidden = false;
+        }
+
+        if (breadcrumb) {
+            breadcrumb.textContent =
+                dogName;
+        }
+
+        /*
+         * The profile is now isolated, so both detail areas are useful
+         * immediately. Fetch only this dog's full records.
+         */
+        const profileSection =
+            card.querySelector(
+                '[data-directory-detail="profile"]'
+            );
+
+        const belongingsSection =
+            card.querySelector(
+                '[data-directory-detail="belongings"]'
+            );
+
+        const loadTasks = [];
+
+        if (profileSection) {
+            loadTasks.push(
+                loadDirectoryProfileDetail(
+                    card,
+                    profileSection,
+                    {
+                        force:
+                            options.force === true
+                    }
+                )
+            );
+        }
+
+        if (belongingsSection) {
+            loadTasks.push(
+                loadDirectoryBelongingsDetail(
+                    card,
+                    belongingsSection,
+                    {
+                        force:
+                            options.force === true
+                    }
+                )
+            );
+        }
+
+        Promise
+            .allSettled(
+                loadTasks
+            )
+            .catch(() => {});
+
+        if (!options.preserveScroll) {
+            document
+                .querySelector(
+                    '.directory-dashboard-fused'
+                )
+                ?.scrollIntoView({
+                    behavior:
+                        options.instant
+                            ? 'auto'
+                            : 'smooth',
+                    block:
+                        'start'
+                });
+        }
+    }
+
+
+    function closeDirectoryGuestProfile(
+        options = {}
+    ) {
+        directorySelectedProfileStayKey =
+            '';
+
+        const dashboard =
+            document.querySelector(
+                '.directory-dashboard-fused'
+            );
+
+        const backBar =
+            document.getElementById(
+                'directoryProfileBackBar'
+            );
+
+        dashboard?.classList.remove(
+            'is-profile-mode'
+        );
+
+        document
+            .querySelectorAll(
+                '.directory-card.is-profile-active'
+            )
+            .forEach(card =>
+                card.classList.remove(
+                    'is-profile-active'
+                )
+            );
+
+        if (backBar) {
+            backBar.hidden = true;
+        }
+
+        filterGuestDirectoryCards();
+
+        if (!options.preserveScroll) {
+            document
+                .querySelector(
+                    '.directory-dashboard-fused'
+                )
+                ?.scrollIntoView({
+                    behavior:
+                        options.instant
+                            ? 'auto'
+                            : 'smooth',
+                    block:
+                        'start'
+                });
+        }
+    }
+
+
+    function restoreSelectedDirectoryProfile() {
+        if (
+            !directorySelectedProfileStayKey
+        ) {
+            return;
+        }
+
+        const card =
+            getDirectoryProfileCard(
+                directorySelectedProfileStayKey
+            );
+
+        if (!card) {
+            closeDirectoryGuestProfile({
+                preserveScroll:
+                    true
+            });
+            return;
+        }
+
+        openDirectoryGuestProfile(
+            card,
+            {
+                preserveScroll:
+                    true,
+                instant:
+                    true
+            }
+        ).catch(error =>
+            console.error(error)
+        );
+    }
+
+
     function filterGuestDirectoryCards() {
         const search =
             String(
@@ -4299,17 +5289,38 @@ let directoryBelongingsDetailCache = {};
                 .toLowerCase()
                 .trim();
 
+        const profileMode =
+            document
+                .querySelector(
+                    '.directory-dashboard-fused'
+                )
+                ?.classList
+                .contains(
+                    'is-profile-mode'
+                ) ||
+            false;
+
         document
             .querySelectorAll(
                 '.directory-card'
             )
             .forEach(card => {
+                if (profileMode) {
+                    card.style.display =
+                        card.classList.contains(
+                            'is-profile-active'
+                        )
+                            ? 'block'
+                            : 'none';
+                    return;
+                }
+
                 card.style.display =
                     !search ||
                     card.innerText
                         .toLowerCase()
                         .includes(search)
-                        ? 'flex'
+                        ? 'block'
                         : 'none';
             });
     }
@@ -4946,10 +5957,57 @@ let directoryBelongingsDetailCache = {};
                 riskFlags: payload.riskFlags
             };
 
+            directoryBelongingsDetailCache[
+                payload.stayKey
+            ] = {
+                ...(directoryBelongingsDetailCache[
+                    payload.stayKey
+                ] || {}),
+                stayKey: payload.stayKey,
+                dogName: payload.dogName,
+                startDate: payload.startDate,
+                endDate: payload.endDate,
+                items: payload.items,
+                riskFlags: payload.riskFlags,
+                photos:
+                    belongingsRecordsCache[
+                        payload.stayKey
+                    ]?.photos ||
+                    [],
+                dogPhoto:
+                    belongingsRecordsCache[
+                        payload.stayKey
+                    ]?.dogPhoto ||
+                    null
+            };
+
+            if (payload.intakeAttributes) {
+                directoryProfileDetailCache[
+                    payload.stayKey
+                ] = {
+                    ...(directoryProfileDetailCache[
+                        payload.stayKey
+                    ] || {}),
+                    stayKey: payload.stayKey,
+                    dogName: payload.dogName,
+                    intakeAttributes:
+                        payload.intakeAttributes,
+                    intakeAttributesSource:
+                        'Web App'
+                };
+            }
+
             renderCareRiskDashboard(
                 getCurrentBoardingStays(
                     localStorage.getItem('boardingDataCache') || ''
                 )
+            );
+
+            await invalidateWaffleClientCaches(
+                [
+                    'directory',
+                    'audit'
+                ]
             );
 
             button.innerText = '✅ Saved';
@@ -7665,36 +8723,82 @@ let directoryBelongingsDetailCache = {};
 
 
     function setDirectoryDogPhoto(stayKey, record) {
-        const shell = Array.from(
-            document.querySelectorAll('[data-directory-photo]')
-        ).find(element =>
-            String(element.dataset.directoryPhoto || '') === String(stayKey || '')
-        );
+        const card =
+            getDirectoryProfileCard(
+                stayKey
+            );
 
-        if (!shell) return;
+        if (!card) return;
 
-        const dogPhoto = record && record.dogPhoto ? record.dogPhoto : null;
-        const imageUrl = dogPhoto && dogPhoto.previewUrl
-            ? String(dogPhoto.previewUrl)
-            : '';
+        const shell =
+            card.querySelector(
+                '[data-directory-photo]'
+            );
+
+        const tileShell =
+            card.querySelector(
+                '[data-directory-tile-photo]'
+            );
+
+        const dogPhoto =
+            record &&
+            record.dogPhoto
+                ? record.dogPhoto
+                : null;
+
+        const imageUrl =
+            dogPhoto &&
+            dogPhoto.previewUrl
+                ? String(
+                    dogPhoto.previewUrl
+                )
+                : '';
+
+        const dogName =
+            card.dataset
+                .directoryDogName ||
+            'Dog';
 
         if (!imageUrl) {
-            shell.innerHTML =
-                '<div class="directory-photo-placeholder" aria-label="No dog profile photo">🐶</div>';
+            card.classList.remove(
+                'has-profile-photo'
+            );
+
+            if (shell) {
+                shell.innerHTML =
+                    '<div class="directory-photo-placeholder" aria-label="No dog profile photo">🐶</div>';
+            }
+
+            if (tileShell) {
+                tileShell.innerHTML = '';
+            }
+
             return;
         }
 
-        const dogName =
-            shell.closest('.directory-card')?.dataset.directoryDogName ||
-            'Dog';
+        card.classList.add(
+            'has-profile-photo'
+        );
 
-        shell.innerHTML = `
-            <img
-                src="${escapeDashboardHtml(imageUrl)}"
-                alt="${escapeDashboardHtml(dogName)}"
-                class="directory-dog-photo"
-                loading="lazy">
-        `;
+        if (shell) {
+            shell.innerHTML = `
+                <img
+                    src="${escapeDashboardHtml(imageUrl)}"
+                    alt="${escapeDashboardHtml(dogName)}"
+                    class="directory-dog-photo"
+                    loading="lazy">
+            `;
+        }
+
+        if (tileShell) {
+            tileShell.innerHTML = `
+                <img
+                    src="${escapeDashboardHtml(imageUrl)}"
+                    alt=""
+                    class="directory-guest-tile-image"
+                    loading="lazy">
+            `;
+        }
     }
 
     async function hydrateDirectoryDogPhotos(options = {}) {
@@ -7946,6 +9050,21 @@ let directoryBelongingsDetailCache = {};
                                         data-end-date="${escapeDashboardHtml(endParsed)}"
                                         style="${hasBeenPickedUp ? 'opacity: 0.6;' : ''}">
 
+                                        <button
+                                            type="button"
+                                            class="directory-guest-tile-open"
+                                            data-open-directory-profile
+                                            aria-label="Open ${escapeDashboardHtml(dogName.trim())} care profile">
+                                            <span
+                                                class="directory-guest-tile-photo"
+                                                data-directory-tile-photo="${escapeDashboardHtml(directoryStayKey)}"
+                                                aria-hidden="true"></span>
+                                            <span class="directory-guest-tile-name">
+                                                ${escapeDashboardHtml(dogName.trim())}
+                                            </span>
+                                        </button>
+
+                                        <div class="directory-profile-content">
                                         <div class="directory-card-header">
                                             <div
                                                 class="directory-photo-shell"
@@ -8052,42 +9171,49 @@ let directoryBelongingsDetailCache = {};
                                             </button>
                                         </div>
 
-                                        <details
-                                            class="directory-fused-details"
+                                        <section
+                                            class="directory-profile-section"
                                             data-directory-detail="profile"
                                             data-detail-loaded="false">
-                                            <summary>
-                                                <span>📋 Intake &amp; Profile Attributes</span>
+                                            <div class="directory-profile-section-heading">
+                                                <div>
+                                                    <span class="directory-profile-section-kicker">Profile</span>
+                                                    <h4>📋 Intake &amp; Profile Attributes</h4>
+                                                </div>
                                                 <span
                                                     class="intake-profile-source"
                                                     data-intake-profile-summary>
                                                     Loading profile…
                                                 </span>
-                                            </summary>
+                                            </div>
                                             <div
                                                 class="directory-fused-details-body"
                                                 data-directory-intake-attributes>
                                                 <div class="intake-profile-empty">
-                                                    Open this section to load intake attributes…
+                                                    Loading intake attributes…
                                                 </div>
                                             </div>
-                                        </details>
+                                        </section>
 
-                                        <details
-                                            class="directory-fused-details"
+                                        <section
+                                            class="directory-profile-section"
                                             data-directory-detail="belongings"
                                             data-detail-loaded="false">
-                                            <summary>
-                                                <span>🧳 Belongings, Care &amp; Photos</span>
-                                            </summary>
+                                            <div class="directory-profile-section-heading">
+                                                <div>
+                                                    <span class="directory-profile-section-kicker">Care &amp; belongings</span>
+                                                    <h4>🧳 Belongings, Care &amp; Photos</h4>
+                                                </div>
+                                            </div>
                                             <div
                                                 class="directory-fused-details-body"
                                                 data-directory-belongings>
                                                 <div class="intake-profile-empty">
-                                                    Open this section to load belongings and photos…
+                                                    Loading belongings and photos…
                                                 </div>
                                             </div>
-                                        </details>
+                                        </section>
+                                        </div>
                                     </div>
                                 `);
                             }

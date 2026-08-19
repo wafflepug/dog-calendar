@@ -4970,3 +4970,406 @@ body.dark-theme .directory-lazy-placeholder.is-error {
     }
 }
 
+
+/* ============================================================
+   V8.3.1 CARE PAGE — DIRECTORY TILES -> ISOLATED PROFILE
+   ============================================================ */
+
+/*
+ * The old desktop split workspace was designed for the single-page
+ * Calendar-era layout. On separate pages it left a large empty left column
+ * and could push navigation to the bottom. Non-calendar pages now use the
+ * full desktop workspace.
+ */
+@media (min-width: 1100px) {
+    body[data-waffle-page="directory"] .container,
+    body[data-waffle-page="reminders"] .container,
+    body[data-waffle-page="audit"] .container {
+        display: block !important;
+        max-width: 1220px !important;
+        padding: 22px !important;
+    }
+
+    body[data-waffle-page="directory"] .calendar-header-branding,
+    body[data-waffle-page="reminders"] .calendar-header-branding,
+    body[data-waffle-page="audit"] .calendar-header-branding {
+        display: flex !important;
+        flex-direction: row !important;
+        justify-content: flex-start !important;
+        align-items: center !important;
+        width: 100% !important;
+        margin: 0 0 14px !important;
+    }
+
+    body[data-waffle-page="directory"] .app-tabs,
+    body[data-waffle-page="reminders"] .app-tabs,
+    body[data-waffle-page="audit"] .app-tabs {
+        width: 100% !important;
+        margin: 0 0 18px !important;
+    }
+
+    body[data-waffle-page="directory"] #directoryTabPanel.app-tab-panel.active,
+    body[data-waffle-page="reminders"] #remindersTabPanel.app-tab-panel.active,
+    body[data-waffle-page="audit"] #auditTabPanel.app-tab-panel.active {
+        width: 100% !important;
+        grid-area: auto !important;
+    }
+}
+
+/* Browse mode: simple, visual guest tiles only. */
+.directory-grid-fused {
+    grid-template-columns:
+        repeat(auto-fill, minmax(180px, 1fr));
+    gap: 16px;
+}
+
+.directory-card.directory-card-fused {
+    display: block;
+    min-width: 0;
+    padding: 0;
+    overflow: hidden;
+    border: 0;
+    border-radius: 14px;
+    background: transparent;
+    box-shadow: none;
+}
+
+.directory-guest-tile-open {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    aspect-ratio: 1 / .82;
+    min-height: 170px;
+    padding: 0;
+    overflow: hidden;
+    border: 1px solid var(--wh-border, #dbe3ea);
+    border-radius: 14px;
+    background:
+        linear-gradient(
+            145deg,
+            var(--wh-surface, #ffffff),
+            var(--wh-surface-muted, #f1f5f9)
+        );
+    color: var(--wh-text, #172033);
+    cursor: pointer;
+    box-shadow: 0 3px 10px rgba(15, 23, 42, .06);
+    transition:
+        transform .16s ease,
+        box-shadow .16s ease,
+        border-color .16s ease;
+}
+
+.directory-guest-tile-open:hover {
+    transform: translateY(-2px);
+    border-color: #93b4ef;
+    box-shadow: 0 8px 22px rgba(15, 23, 42, .11);
+}
+
+.directory-guest-tile-open:focus-visible {
+    outline: 3px solid rgba(37, 99, 235, .2);
+    outline-offset: 3px;
+}
+
+.directory-guest-tile-photo {
+    display: none;
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+}
+
+.directory-card.has-profile-photo
+.directory-guest-tile-photo {
+    display: block;
+}
+
+.directory-guest-tile-image {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.directory-guest-tile-name {
+    position: relative;
+    z-index: 2;
+    display: block;
+    max-width: calc(100% - 28px);
+    color: var(--wh-text, #172033);
+    font-size: 22px;
+    line-height: 1.12;
+    font-weight: 900;
+    text-align: center;
+    overflow-wrap: anywhere;
+}
+
+.directory-card.has-profile-photo
+.directory-guest-tile-open::after {
+    content: "";
+    position: absolute;
+    inset: 45% 0 0;
+    z-index: 1;
+    background:
+        linear-gradient(
+            to bottom,
+            rgba(0,0,0,0),
+            rgba(0,0,0,.72)
+        );
+    pointer-events: none;
+}
+
+.directory-card.has-profile-photo
+.directory-guest-tile-name {
+    position: absolute;
+    right: 14px;
+    bottom: 13px;
+    left: 14px;
+    max-width: none;
+    color: #ffffff;
+    font-size: 19px;
+    text-align: left;
+    text-shadow: 0 1px 5px rgba(0,0,0,.55);
+}
+
+.directory-profile-content {
+    display: none;
+}
+
+/* Profile mode: one dog, full width, no accordion/show-hide interaction. */
+.directory-dashboard-fused.is-profile-mode
+.guest-directory-toolbar {
+    display: none !important;
+}
+
+.directory-dashboard-fused.is-profile-mode
+.directory-grid-fused {
+    display: block;
+}
+
+.directory-dashboard-fused.is-profile-mode
+.directory-card {
+    display: none !important;
+}
+
+.directory-dashboard-fused.is-profile-mode
+.directory-card.is-profile-active {
+    display: block !important;
+    width: 100%;
+    max-width: 980px;
+    margin: 0 auto;
+    border: 1px solid var(--wh-border, #dbe3ea);
+    border-radius: 14px;
+    background: var(--wh-surface, #ffffff);
+    box-shadow: 0 5px 18px rgba(15,23,42,.07);
+}
+
+.directory-card.is-profile-active
+.directory-guest-tile-open {
+    display: none;
+}
+
+.directory-card.is-profile-active
+.directory-profile-content {
+    display: block;
+    padding: 18px;
+}
+
+.directory-profile-back-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    margin: 12px 0 16px;
+    padding: 10px 12px;
+    border: 1px solid var(--wh-border, #dbe3ea);
+    border-radius: 10px;
+    background: var(--wh-surface-muted, #f8fafc);
+}
+
+.directory-profile-back-bar[hidden] {
+    display: none !important;
+}
+
+.directory-profile-back-btn {
+    min-height: 40px;
+    padding: 9px 13px;
+    border: 1px solid var(--wh-border, #cbd5e1);
+    border-radius: 8px;
+    background: var(--wh-surface, #ffffff);
+    color: var(--wh-primary, #0f3550);
+    font: inherit;
+    font-size: 12px;
+    font-weight: 850;
+    cursor: pointer;
+}
+
+.directory-profile-back-btn:hover {
+    border-color: #93b4ef;
+    background: #eff6ff;
+}
+
+.directory-profile-breadcrumb {
+    min-width: 0;
+    text-align: right;
+}
+
+.directory-profile-breadcrumb-label {
+    display: block;
+    margin-bottom: 2px;
+    color: var(--wh-text-muted, #64748b);
+    font-size: 9px;
+    font-weight: 850;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+}
+
+.directory-profile-breadcrumb strong {
+    display: block;
+    color: var(--wh-text, #172033);
+    font-size: 14px;
+}
+
+.directory-profile-section {
+    margin-top: 14px;
+    overflow: hidden;
+    border: 1px solid var(--wh-border, #dbe3ea);
+    border-radius: 11px;
+    background: var(--wh-surface, #ffffff);
+}
+
+.directory-profile-section-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 12px 13px;
+    border-bottom: 1px solid var(--wh-border-soft, #e2e8f0);
+    background: var(--wh-surface-muted, #f8fafc);
+}
+
+.directory-profile-section-heading h4 {
+    margin: 2px 0 0;
+    color: var(--wh-text, #172033);
+    font-size: 13px;
+    font-weight: 900;
+}
+
+.directory-profile-section-kicker {
+    color: var(--wh-text-muted, #64748b);
+    font-size: 8.5px;
+    font-weight: 850;
+    letter-spacing: .055em;
+    text-transform: uppercase;
+}
+
+.directory-profile-section
+.directory-fused-details-body {
+    border-top: 0;
+}
+
+/* Dark theme tiles and isolated profile. */
+body.dark-theme
+.directory-guest-tile-open {
+    background:
+        linear-gradient(
+            145deg,
+            #202c3e,
+            #182235
+        );
+    border-color: #34445b;
+}
+
+body.dark-theme
+.directory-guest-tile-name {
+    color: #f8fafc;
+}
+
+body.dark-theme
+.directory-profile-back-btn:hover {
+    background: #253248;
+}
+
+body.dark-theme
+.directory-profile-section {
+    background: #182235;
+    border-color: #34445b;
+}
+
+body.dark-theme
+.directory-profile-section-heading {
+    background: #202c3e;
+    border-bottom-color: #34445b;
+}
+
+/* Phone: two clean tiles per row, then a single full-width profile. */
+@media (max-width: 768px) {
+    .directory-grid-fused {
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr)) !important;
+        gap: 10px !important;
+    }
+
+    .directory-guest-tile-open {
+        min-height: 138px;
+        border-radius: 12px;
+    }
+
+    .directory-guest-tile-name {
+        max-width: calc(100% - 18px);
+        font-size: 18px;
+    }
+
+    .directory-card.has-profile-photo
+    .directory-guest-tile-name {
+        right: 10px;
+        bottom: 10px;
+        left: 10px;
+        font-size: 16px;
+    }
+
+    .directory-card.is-profile-active
+    .directory-profile-content {
+        padding: 12px;
+    }
+
+    .directory-dashboard-fused.is-profile-mode
+    .directory-grid-fused {
+        display: block !important;
+    }
+
+    .directory-profile-back-bar {
+        position: sticky;
+        top: 8px;
+        z-index: 70;
+        padding: 8px;
+    }
+
+    .directory-profile-back-btn {
+        min-height: 44px;
+        font-size: 13px;
+    }
+
+    .directory-profile-section-heading {
+        align-items: flex-start;
+        padding: 11px;
+    }
+
+    .directory-profile-section-heading h4 {
+        font-size: 14px;
+    }
+}
+
+@media (max-width: 390px) {
+    .directory-grid-fused {
+        gap: 8px !important;
+    }
+
+    .directory-guest-tile-open {
+        min-height: 124px;
+    }
+
+    .directory-guest-tile-name {
+        font-size: 17px;
+    }
+}
