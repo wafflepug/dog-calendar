@@ -4691,3 +4691,97 @@ body.dark-theme .directory-page-loading {
     border-color: #52617a;
     color: #cbd5e1;
 }
+
+
+/* ============================================================
+   V8.1.1 MOBILE BOTTOM NAVIGATION
+   Desktop navigation remains unchanged.
+   ============================================================ */
+
+@media (max-width: 768px) {
+    .app-tabs {
+        position: fixed !important;
+        top: auto !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        z-index: 1000 !important;
+
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: stretch !important;
+
+        width: 100% !important;
+        max-width: none !important;
+        min-height: 64px !important;
+
+        margin: 0 !important;
+        padding:
+            6px
+            max(6px, env(safe-area-inset-right))
+            calc(6px + env(safe-area-inset-bottom))
+            max(6px, env(safe-area-inset-left)) !important;
+
+        gap: 4px !important;
+        overflow: visible !important;
+        scrollbar-width: none !important;
+
+        border: 0 !important;
+        border-top: 1px solid var(--wh-border, #dbe3ea) !important;
+        border-radius: 0 !important;
+
+        background: var(--wh-surface, #ffffff) !important;
+        box-shadow: 0 -5px 18px rgba(15, 23, 42, .13) !important;
+    }
+
+    .app-tabs::-webkit-scrollbar {
+        display: none !important;
+    }
+
+    .app-tab-button {
+        flex: 1 1 25% !important;
+        width: 25% !important;
+        min-width: 0 !important;
+        min-height: 52px !important;
+
+        margin: 0 !important;
+        padding: 7px 4px !important;
+
+        border: 1px solid transparent !important;
+        border-radius: 8px !important;
+
+        font-size: 10.5px !important;
+        font-weight: 800 !important;
+        line-height: 1.2 !important;
+        text-align: center !important;
+        white-space: normal !important;
+        word-break: normal !important;
+    }
+
+    .app-tab-button.active {
+        border-color: var(--wh-border-soft, #e2e8f0) !important;
+        background: var(--wh-surface-muted, #f1f5f9) !important;
+        box-shadow: none !important;
+    }
+
+    body {
+        padding-bottom:
+            calc(82px + env(safe-area-inset-bottom)) !important;
+    }
+
+    .container {
+        margin-bottom: 0 !important;
+    }
+
+    body.dark-theme .app-tabs {
+        background: var(--wh-surface, #182235) !important;
+        border-top-color: var(--wh-border, #34445b) !important;
+        box-shadow: 0 -5px 18px rgba(0, 0, 0, .28) !important;
+    }
+
+    body.dark-theme .app-tab-button.active {
+        background: #2b394d !important;
+        border-color: #40516a !important;
+        color: #ffffff !important;
+    }
+}
