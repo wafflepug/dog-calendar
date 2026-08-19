@@ -282,6 +282,7 @@ function waffleReadRequestKey(payload) {
         new Set([
             'get_data_versions',
             'get_push_device',
+            'get_notification_centre',
             'get_audit_log',
             'get_guest_directory',
             'get_guest_profile',
@@ -527,6 +528,16 @@ async function invalidateWaffleClientCaches(scopes) {
         );
     }
 
+    if (
+        wanted.has('directory') ||
+        wanted.has('reminders') ||
+        wanted.has('audit')
+    ) {
+        keys.push(
+            'notifications:centre'
+        );
+    }
+
     await Promise.all(
         keys.map(
             key =>
@@ -538,6 +549,1696 @@ async function invalidateWaffleClientCaches(scopes) {
 
 
 
+
+
+
+
+
+
+/* ============================================================
+   V10.1 NOTIFICATION CENTRE + POLISH
+   ============================================================ */
+
+const WAFFLE_NOTIFICATION_SEEN_IDS_KEY =
+    'waffleNotificationCentreSeenIds';
+
+let waffleNotificationCentreItems =
+    [];
+
+let waffleNotificationCentreActiveTab =
+    'inbox';
+
+
+function getWaffleSeenNotificationIds() {
+    try {
+        const parsed =
+            JSON.parse(
+                localStorage.getItem(
+                    WAFFLE_NOTIFICATION_SEEN_IDS_KEY
+                ) ||
+                '[]'
+            );
+
+        return new Set(
+            Array.isArray(parsed)
+                ? parsed
+                : []
+        );
+    } catch (_) {
+        return new Set();
+    }
+}
+
+
+function saveWaffleSeenNotificationIds(
+    values
+) {
+    const ids =
+        Array.from(
+            values instanceof Set
+                ? values
+                : new Set(values || [])
+        )
+            .filter(Boolean)
+            .slice(-240);
+
+    localStorage.setItem(
+        WAFFLE_NOTIFICATION_SEEN_IDS_KEY,
+        JSON.stringify(ids)
+    );
+}
+
+
+function getWaffleNotificationUnreadCount() {
+    const seen =
+        getWaffleSeenNotificationIds();
+
+    return waffleNotificationCentreItems
+        .filter(item =>
+            item &&
+            item.id &&
+            !seen.has(item.id)
+        )
+        .length;
+}
+
+
+function updateWaffleNotificationUnreadBadge() {
+    const badge =
+        document.querySelector(
+            '[data-notification-unread-badge]'
+        );
+
+    if (!badge) return;
+
+    const count =
+        getWaffleNotificationUnreadCount();
+
+    badge.hidden =
+        count < 1;
+
+    badge.textContent =
+        count > 9
+            ? '9+'
+            : String(count);
+
+    badge.setAttribute(
+        'aria-label',
+        count
+            ? `${count} unread notification${count === 1 ? '' : 's'}`
+            : 'No unread notifications'
+    );
+}
+
+
+function v101SkeletonHtml(
+    type,
+    count = 4
+) {
+    const rows =
+        Array.from(
+            {
+                length:
+                    Math.max(
+                        1,
+                        Number(count || 1)
+                    )
+            },
+            (_, index) => {
+                if (
+                    type ===
+                    'directory'
+                ) {
+                    return `
+                        <div class="v101-skeleton-tile" aria-hidden="true">
+                            <div class="v101-skeleton-block"></div>
+                            <div class="v101-skeleton-line ${index % 2 ? 'short' : 'medium'}"></div>
+                        </div>
+                    `;
+                }
+
+                if (
+                    type ===
+                    'audit'
+                ) {
+                    return `
+                        <div class="v101-skeleton-activity" aria-hidden="true">
+                            <div class="v101-skeleton-circle"></div>
+                            <div>
+                                <div class="v101-skeleton-line medium"></div>
+                                <div class="v101-skeleton-line wide"></div>
+                                <div class="v101-skeleton-line short"></div>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                return `
+                    <div class="v101-skeleton-note" aria-hidden="true">
+                        <div class="v101-skeleton-line medium"></div>
+                        <div class="v101-skeleton-line wide"></div>
+                        <div class="v101-skeleton-line short"></div>
+                    </div>
+                `;
+            }
+        )
+        .join('');
+
+    return `
+        <div class="v101-skeleton-list v101-skeleton-${escapeDashboardHtml(type)}" aria-label="Loading">
+            ${rows}
+        </div>
+    `;
+}
+
+
+function formatNotificationCentreTime(
+    timestamp
+) {
+    if (!timestamp) return '';
+
+    const date =
+        new Date(timestamp);
+
+    if (
+        Number.isNaN(
+            date.getTime()
+        )
+    ) {
+        return '';
+    }
+
+    const now =
+        new Date();
+
+    const sameDay =
+        date.toDateString() ===
+        now.toDateString();
+
+    if (sameDay) {
+        return date.toLocaleTimeString(
+            'en-AU',
+            {
+                hour:
+                    'numeric',
+                minute:
+                    '2-digit'
+            }
+        );
+    }
+
+    return date.toLocaleDateString(
+        'en-AU',
+        {
+            day:
+                'numeric',
+            month:
+                'short'
+        }
+    );
+}
+
+
+function renderWaffleNotificationCentre() {
+    const host =
+        document.querySelector(
+            '[data-notification-feed]'
+        );
+
+    const count =
+        document.querySelector(
+            '[data-notification-centre-count]'
+        );
+
+    if (!host) return;
+
+    const seen =
+        getWaffleSeenNotificationIds();
+
+    const attention =
+        waffleNotificationCentreItems
+            .filter(item =>
+                item.kind ===
+                'attention'
+            );
+
+    const activity =
+        waffleNotificationCentreItems
+            .filter(item =>
+                item.kind !==
+                'attention'
+            )
+            .slice(
+                0,
+                40
+            );
+
+    if (count) {
+        const unread =
+            getWaffleNotificationUnreadCount();
+
+        count.textContent =
+            unread
+                ? `${unread} unread`
+                : 'Up to date';
+
+        count.dataset.mode =
+            unread
+                ? 'unread'
+                : 'clear';
+    }
+
+    const itemHtml =
+        item => {
+            const unread =
+                item.id &&
+                !seen.has(
+                    item.id
+                );
+
+            return `
+                <button
+                    type="button"
+                    class="v101-notification-item ${unread ? 'is-unread' : ''} ${item.priority === 'urgent' ? 'is-urgent' : ''}"
+                    data-notification-item-id="${escapeDashboardHtml(item.id || '')}"
+                    data-notification-item-link="${escapeDashboardHtml(item.link || '')}">
+                    <span class="v101-notification-icon" aria-hidden="true">
+                        ${escapeDashboardHtml(item.icon || '🔔')}
+                    </span>
+                    <span class="v101-notification-copy">
+                        <span class="v101-notification-title-row">
+                            <strong>${escapeDashboardHtml(item.title || 'Waffle House update')}</strong>
+                            ${unread ? '<i class="v101-unread-dot" aria-label="Unread"></i>' : ''}
+                        </span>
+                        <span>${escapeDashboardHtml(item.body || '')}</span>
+                        <small>
+                            ${escapeDashboardHtml(item.category || 'Activity')}
+                            ${item.timestamp ? ` · ${escapeDashboardHtml(formatNotificationCentreTime(item.timestamp))}` : ''}
+                        </small>
+                    </span>
+                </button>
+            `;
+        };
+
+    let html = '';
+
+    if (attention.length) {
+        html += `
+            <section class="v101-notification-section">
+                <div class="v101-notification-section-heading">
+                    <strong>Needs attention</strong>
+                    <span>${attention.length}</span>
+                </div>
+                <div class="v101-notification-list">
+                    ${attention.map(itemHtml).join('')}
+                </div>
+            </section>
+        `;
+    }
+
+    if (activity.length) {
+        html += `
+            <section class="v101-notification-section">
+                <div class="v101-notification-section-heading">
+                    <strong>Recent activity</strong>
+                    <span>${activity.length}</span>
+                </div>
+                <div class="v101-notification-list">
+                    ${activity.map(itemHtml).join('')}
+                </div>
+            </section>
+        `;
+    }
+
+    if (!html) {
+        html = `
+            <div class="v101-notification-empty">
+                <span>✓</span>
+                <strong>Nothing needs your attention</strong>
+                <small>Recent Waffle House activity will appear here.</small>
+            </div>
+        `;
+    }
+
+    host.innerHTML =
+        html;
+
+    updateWaffleNotificationUnreadBadge();
+}
+
+
+function switchWaffleNotificationCentreTab(
+    tabName
+) {
+    tabName =
+        tabName ===
+        'settings'
+            ? 'settings'
+            : 'inbox';
+
+    waffleNotificationCentreActiveTab =
+        tabName;
+
+    const modal =
+        ensureWaffleNotificationModal();
+
+    modal
+        .querySelectorAll(
+            '[data-notification-centre-tab]'
+        )
+        .forEach(button => {
+            const active =
+                button.dataset
+                    .notificationCentreTab ===
+                tabName;
+
+            button.classList.toggle(
+                'is-active',
+                active
+            );
+
+            button.setAttribute(
+                'aria-selected',
+                active
+                    ? 'true'
+                    : 'false'
+            );
+        });
+
+    modal
+        .querySelectorAll(
+            '[data-notification-centre-panel]'
+        )
+        .forEach(panel => {
+            const active =
+                panel.dataset
+                    .notificationCentrePanel ===
+                tabName;
+
+            panel.hidden =
+                !active;
+        });
+
+    if (
+        tabName ===
+        'inbox'
+    ) {
+        loadWaffleNotificationCentre()
+            .catch(error =>
+                console.warn(
+                    'Notification Centre refresh failed:',
+                    error
+                )
+            );
+    }
+}
+
+
+async function loadWaffleNotificationCentre(
+    options = {}
+) {
+    const host =
+        document.querySelector(
+            '[data-notification-feed]'
+        );
+
+    if (
+        host &&
+        !waffleNotificationCentreItems.length &&
+        !options.quiet
+    ) {
+        host.innerHTML =
+            v101SkeletonHtml(
+                'audit',
+                5
+            );
+    }
+
+    const applyResponse =
+        response => {
+            waffleNotificationCentreItems =
+                Array.isArray(
+                    response.items
+                )
+                    ? response.items
+                    : [];
+
+            renderWaffleNotificationCentre();
+        };
+
+    try {
+        let cachedRendered =
+            false;
+
+        const swr =
+            await queryAppsScriptSWR(
+                {
+                    action:
+                        'get_notification_centre'
+                },
+                {
+                    cacheKey:
+                        'notifications:centre',
+                    maxAttempts:
+                        options.quiet
+                            ? 1
+                            : 2,
+                    timeoutMs:
+                        30000,
+                    maxStaleMs:
+                        2 * 60 * 60 * 1000,
+                    onCached:
+                        cachedResponse => {
+                            cachedRendered =
+                                true;
+
+                            applyResponse(
+                                cachedResponse
+                            );
+                        }
+                }
+            );
+
+        if (
+            !swr.unchanged ||
+            !cachedRendered
+        ) {
+            applyResponse(
+                swr.data
+            );
+        }
+
+    } catch (error) {
+        if (
+            host &&
+            !waffleNotificationCentreItems.length
+        ) {
+            host.innerHTML = `
+                <div class="v101-notification-empty is-error">
+                    <span>⚠️</span>
+                    <strong>Activity could not be refreshed</strong>
+                    <small>${escapeDashboardHtml(error.message || String(error))}</small>
+                </div>
+            `;
+        }
+
+        throw error;
+    }
+}
+
+
+function markWaffleNotificationCentreRead() {
+    const seen =
+        getWaffleSeenNotificationIds();
+
+    waffleNotificationCentreItems
+        .forEach(item => {
+            if (item?.id) {
+                seen.add(
+                    item.id
+                );
+            }
+        });
+
+    saveWaffleSeenNotificationIds(
+        seen
+    );
+
+    renderWaffleNotificationCentre();
+}
+
+
+function openWaffleNotificationCentre(
+    tabName = 'inbox'
+) {
+    const modal =
+        ensureWaffleNotificationModal();
+
+    modal.hidden =
+        false;
+
+    switchWaffleNotificationCentreTab(
+        tabName
+    );
+
+    if (
+        tabName ===
+        'settings'
+    ) {
+        hydrateWaffleNotificationSettings()
+            .catch(error =>
+                console.warn(error)
+            );
+    }
+}
+
+
+function refreshWaffleNotificationCentreBadge() {
+    loadWaffleNotificationCentre({
+        quiet: true
+    }).catch(() => {});
+}
+
+
+function auditDateGroupKey(
+    timestamp
+) {
+    const date =
+        new Date(timestamp);
+
+    if (
+        Number.isNaN(
+            date.getTime()
+        )
+    ) {
+        return 'Unknown date';
+    }
+
+    const today =
+        new Date();
+
+    const yesterday =
+        new Date();
+
+    yesterday.setDate(
+        yesterday.getDate() - 1
+    );
+
+    if (
+        date.toDateString() ===
+        today.toDateString()
+    ) {
+        return 'Today';
+    }
+
+    if (
+        date.toDateString() ===
+        yesterday.toDateString()
+    ) {
+        return 'Yesterday';
+    }
+
+    return date.toLocaleDateString(
+        'en-AU',
+        {
+            weekday:
+                'short',
+            day:
+                'numeric',
+            month:
+                'short',
+            year:
+                date.getFullYear() ===
+                today.getFullYear()
+                    ? undefined
+                    : 'numeric'
+        }
+    );
+}
+
+
+function updateV101AuditChipCounts() {
+    const totals = {
+        '': auditLogRecords.length
+    };
+
+    auditLogRecords.forEach(
+        record => {
+            const category =
+                String(
+                    record.category ||
+                    ''
+                );
+
+            totals[
+                category
+            ] =
+                (
+                    totals[
+                        category
+                    ] ||
+                    0
+                ) +
+                1;
+        }
+    );
+
+    document
+        .querySelectorAll(
+            '[data-audit-chip-count]'
+        )
+        .forEach(element => {
+            const category =
+                String(
+                    element.dataset
+                        .auditChipCount ||
+                    ''
+                );
+
+            element.textContent =
+                String(
+                    totals[
+                        category
+                    ] ||
+                    0
+                );
+        });
+}
+
+
+function initialiseV101AuditFilterChips() {
+    document
+        .querySelectorAll(
+            '[data-audit-category-chip]'
+        )
+        .forEach(button => {
+            button.addEventListener(
+                'click',
+                () => {
+                    const category =
+                        String(
+                            button.dataset
+                                .auditCategoryChip ||
+                            ''
+                        );
+
+                    const select =
+                        document.getElementById(
+                            'auditCategoryFilter'
+                        );
+
+                    if (select) {
+                        select.value =
+                            category;
+
+                        select.dispatchEvent(
+                            new Event(
+                                'change',
+                                {
+                                    bubbles:
+                                        true
+                                }
+                            )
+                        );
+                    }
+
+                    document
+                        .querySelectorAll(
+                            '[data-audit-category-chip]'
+                        )
+                        .forEach(other =>
+                            other.classList.toggle(
+                                'is-active',
+                                other ===
+                                    button
+                            )
+                        );
+                }
+            );
+        });
+}
+
+
+function initialiseV101Polish() {
+    initialiseV101AuditFilterChips();
+
+    setTimeout(
+        refreshWaffleNotificationCentreBadge,
+        1400
+    );
+}
+
+
+
+/* ============================================================
+   V10 UI COMMAND CENTRE
+   Read-first, action-first UI on top of the existing V9 data layer.
+   ============================================================ */
+
+const V10_BOARDING_FORM_URL =
+    'https://docs.google.com/forms/d/e/1FAIpQLScszSqsaxw9THyebWt2g0khVTIzP9L8hPbor1mUB0fp_0KPAw/viewform?usp=dialog';
+
+
+function v10FormatDateLabel(dateString) {
+    const date = new Date(
+        String(dateString || '') +
+        'T00:00:00'
+    );
+
+    if (Number.isNaN(date.getTime())) {
+        return String(dateString || '');
+    }
+
+    return date.toLocaleDateString(
+        'en-AU',
+        {
+            weekday: 'short',
+            day: 'numeric',
+            month: 'short'
+        }
+    );
+}
+
+
+function v10EventRawDates(event) {
+    const props =
+        event?.extendedProps ||
+        {};
+
+    const start =
+        String(
+            props.rawStartDate ||
+            event?.startStr ||
+            ''
+        ).slice(0, 10);
+
+    let end =
+        String(
+            props.rawEndDate ||
+            ''
+        ).slice(0, 10);
+
+    if (!end && event?.end) {
+        const endDate =
+            new Date(event.end);
+
+        endDate.setDate(
+            endDate.getDate() - 1
+        );
+
+        end =
+            endDate.getFullYear() +
+            '-' +
+            String(endDate.getMonth() + 1).padStart(2, '0') +
+            '-' +
+            String(endDate.getDate()).padStart(2, '0');
+    }
+
+    if (!end) end = start;
+
+    return { start, end };
+}
+
+
+function renderV10OperationsHome(events) {
+    if (WAFFLE_PAGE !== 'calendar') {
+        return;
+    }
+
+    events =
+        Array.isArray(events)
+            ? events
+            : [];
+
+    const today =
+        getLocalTodayDateString();
+
+    const dateLabel =
+        document.getElementById(
+            'v10TodayDateLabel'
+        );
+
+    if (dateLabel) {
+        dateLabel.textContent =
+            new Date(
+                today +
+                'T12:00:00'
+            ).toLocaleDateString(
+                'en-AU',
+                {
+                    weekday: 'long',
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric'
+                }
+            );
+    }
+
+    let atHome = 0;
+    let arrivals = 0;
+    let departures = 0;
+    let meets = 0;
+
+    const agenda = [];
+    const nextUp = [];
+
+    const nextSeven =
+        new Date(
+            today +
+            'T12:00:00'
+        );
+
+    nextSeven.setDate(
+        nextSeven.getDate() + 7
+    );
+
+    const nextSevenString =
+        nextSeven.getFullYear() +
+        '-' +
+        String(nextSeven.getMonth() + 1).padStart(2, '0') +
+        '-' +
+        String(nextSeven.getDate()).padStart(2, '0');
+
+    events.forEach(event => {
+        const props =
+            event?.extendedProps ||
+            {};
+
+        if (props.isPotential === true) {
+            return;
+        }
+
+        const dates =
+            v10EventRawDates(event);
+
+        const dogName =
+            String(
+                props.dogName ||
+                event?.title ||
+                'Guest'
+            )
+                .replace(/^.*Meet & Greet:\s*/i, '')
+                .replace(/^⏰\s*\d{1,2}:\d{2}\s*-\s*/i, '')
+                .trim();
+
+        if (props.isMeetGreet === true) {
+            if (dates.start === today) {
+                meets++;
+
+                agenda.push({
+                    type: 'meet',
+                    icon: '🤝',
+                    title: dogName,
+                    meta:
+                        String(
+                            props.time ||
+                            ''
+                        ) ||
+                        'Meet & Greet',
+                    sort:
+                        300 +
+                        meetGreetTimeToMinutes(
+                            props.time ||
+                            ''
+                        )
+                });
+            }
+
+            if (
+                dates.start > today &&
+                dates.start <= nextSevenString
+            ) {
+                nextUp.push({
+                    date: dates.start,
+                    icon: '🤝',
+                    title: dogName,
+                    meta:
+                        props.time
+                            ? `Meet & Greet · ${props.time}`
+                            : 'Meet & Greet'
+                });
+            }
+
+            return;
+        }
+
+        const bookingType =
+            String(
+                props.bookingType ||
+                ''
+            ).toLowerCase();
+
+        if (bookingType === 'potential stay') {
+            return;
+        }
+
+        if (
+            dates.start <= today &&
+            dates.end >= today
+        ) {
+            atHome++;
+        }
+
+        if (dates.start === today) {
+            arrivals++;
+            agenda.push({
+                type: 'arrival',
+                icon: '🛬',
+                title: dogName,
+                meta: 'Arriving today',
+                sort: 100
+            });
+        }
+
+        if (dates.end === today) {
+            departures++;
+            agenda.push({
+                type: 'departure',
+                icon: '👋',
+                title: dogName,
+                meta: 'Leaving today',
+                sort: 200
+            });
+        }
+
+        if (
+            dates.start > today &&
+            dates.start <= nextSevenString
+        ) {
+            nextUp.push({
+                date: dates.start,
+                icon: '🏡',
+                title: dogName,
+                meta: 'Boarding arrival'
+            });
+        }
+    });
+
+    const values = {
+        v10AtHomeCount: atHome,
+        v10ArrivalCount: arrivals,
+        v10DepartureCount: departures,
+        v10MeetCount: meets
+    };
+
+    Object.entries(values)
+        .forEach(([id, value]) => {
+            const element =
+                document.getElementById(id);
+
+            if (element) {
+                element.textContent =
+                    String(value);
+            }
+        });
+
+    const todayStatus =
+        document.getElementById(
+            'v10TodayStatus'
+        );
+
+    if (todayStatus) {
+        const attentionCount =
+            arrivals +
+            departures +
+            meets;
+
+        todayStatus.textContent =
+            attentionCount
+                ? `${attentionCount} item${attentionCount === 1 ? '' : 's'} today`
+                : 'All clear';
+
+        todayStatus.dataset.mode =
+            attentionCount
+                ? 'active'
+                : 'clear';
+    }
+
+    const agendaHost =
+        document.getElementById(
+            'v10TodayAgenda'
+        );
+
+    if (agendaHost) {
+        agenda.sort((a, b) =>
+            a.sort - b.sort
+        );
+
+        agendaHost.innerHTML =
+            agenda.length
+                ? agenda
+                    .map(item => `
+                        <div class="v10-agenda-item type-${escapeDashboardHtml(item.type)}">
+                            <span class="v10-agenda-icon">${item.icon}</span>
+                            <div>
+                                <strong>${escapeDashboardHtml(item.title)}</strong>
+                                <span>${escapeDashboardHtml(item.meta)}</span>
+                            </div>
+                        </div>
+                    `)
+                    .join('')
+                : `
+                    <div class="v10-empty v10-all-clear">
+                        <span>✓</span>
+                        <div>
+                            <strong>No arrivals, departures or Meet & Greets today</strong>
+                            <small>Use the calendar below for the full schedule.</small>
+                        </div>
+                    </div>
+                  `;
+    }
+
+    const nextHost =
+        document.getElementById(
+            'v10NextUp'
+        );
+
+    if (nextHost) {
+        nextUp.sort((a, b) =>
+            a.date.localeCompare(b.date) ||
+            a.title.localeCompare(b.title)
+        );
+
+        nextHost.innerHTML =
+            nextUp.length
+                ? nextUp
+                    .slice(0, 6)
+                    .map(item => `
+                        <div class="v10-next-item">
+                            <span class="v10-next-date">${escapeDashboardHtml(v10FormatDateLabel(item.date))}</span>
+                            <span class="v10-next-icon">${item.icon}</span>
+                            <div>
+                                <strong>${escapeDashboardHtml(item.title)}</strong>
+                                <span>${escapeDashboardHtml(item.meta)}</span>
+                            </div>
+                        </div>
+                    `)
+                    .join('')
+                : '<div class="v10-empty">Nothing scheduled in the next 7 days.</div>';
+    }
+
+    renderV10CapacityStrip();
+    renderV10PotentialPipeline(events);
+}
+
+
+function renderV10CapacityStrip() {
+    const host =
+        document.getElementById(
+            'v10CapacityStrip'
+        );
+
+    if (!host) return;
+
+    const today =
+        getLocalTodayDateString();
+
+    const cells = [];
+
+    for (let offset = 0; offset < 7; offset++) {
+        const date =
+            new Date(
+                today +
+                'T12:00:00'
+            );
+
+        date.setDate(
+            date.getDate() + offset
+        );
+
+        const dateString =
+            date.getFullYear() +
+            '-' +
+            String(date.getMonth() + 1).padStart(2, '0') +
+            '-' +
+            String(date.getDate()).padStart(2, '0');
+
+        const count =
+            Number(
+                dailyCapacityCounts[
+                    dateString
+                ] ||
+                0
+            );
+
+        const band =
+            count >= 4
+                ? 'red'
+                : (
+                    count === 3
+                        ? 'amber'
+                        : 'green'
+                  );
+
+        const dot =
+            band === 'red'
+                ? '🔴'
+                : (
+                    band === 'amber'
+                        ? '🟠'
+                        : '🟢'
+                  );
+
+        cells.push(`
+            <div class="v10-capacity-day is-${band}">
+                <span>${escapeDashboardHtml(
+                    date.toLocaleDateString('en-AU',{weekday:'short'})
+                )}</span>
+                <strong>${dot} ${count}</strong>
+                <small>${date.getDate()}/${date.getMonth()+1}</small>
+            </div>
+        `);
+    }
+
+    host.innerHTML =
+        cells.join('');
+}
+
+
+function v10PotentialKeyFromEvent(event) {
+    const props =
+        event?.extendedProps ||
+        {};
+
+    const dates =
+        v10EventRawDates(event);
+
+    return makePotentialKey(
+        props.dogName ||
+        event?.title ||
+        '',
+        dates.start,
+        dates.end
+    );
+}
+
+
+function renderV10PotentialPipeline(events) {
+    const host =
+        document.getElementById(
+            'v10PotentialCards'
+        );
+
+    if (!host) return;
+
+    const unique =
+        new Map();
+
+    (Array.isArray(events) ? events : [])
+        .filter(event =>
+            event?.extendedProps?.isPotential === true
+        )
+        .forEach(event => {
+            const key =
+                v10PotentialKeyFromEvent(event);
+
+            if (!key) return;
+
+            unique.set(
+                key,
+                event
+            );
+        });
+
+    const potentials =
+        Array.from(
+            unique.values()
+        )
+            .sort((a, b) => {
+                const ad =
+                    v10EventRawDates(a);
+                const bd =
+                    v10EventRawDates(b);
+
+                return ad.start.localeCompare(
+                    bd.start
+                );
+            });
+
+    if (!potentials.length) {
+        host.innerHTML = `
+            <div class="v10-empty v10-all-clear">
+                <span>✓</span>
+                <div>
+                    <strong>No Potential Stays waiting</strong>
+                    <small>New requests will appear here on every device after they sync.</small>
+                </div>
+            </div>
+        `;
+        return;
+    }
+
+    host.innerHTML =
+        potentials
+            .map(event => {
+                const props =
+                    event.extendedProps ||
+                    {};
+
+                const dates =
+                    v10EventRawDates(event);
+
+                const key =
+                    v10PotentialKeyFromEvent(event);
+
+                return `
+                    <article class="v10-potential-item" data-v10-potential-key="${escapeDashboardHtml(key)}">
+                        <div class="v10-potential-main">
+                            <span class="v10-potential-icon">❓</span>
+                            <div>
+                                <strong>${escapeDashboardHtml(props.dogName || 'Potential guest')}</strong>
+                                <span>${escapeDashboardHtml(v10FormatDateLabel(dates.start))} → ${escapeDashboardHtml(v10FormatDateLabel(dates.end))}</span>
+                                ${props.owner ? `<small>${escapeDashboardHtml(props.owner)}</small>` : ''}
+                            </div>
+                        </div>
+                        <div class="v10-potential-actions">
+                            <button type="button" data-v10-potential-action="edit">Edit</button>
+                            <button type="button" class="is-primary" data-v10-potential-action="confirm">Review / Confirm</button>
+                        </div>
+                    </article>
+                `;
+            })
+            .join('');
+}
+
+
+function findV10PotentialEvent(key) {
+    if (!globalCalendar) {
+        return null;
+    }
+
+    return globalCalendar
+        .getEvents()
+        .find(event =>
+            event.extendedProps?.isPotential === true &&
+            v10PotentialKeyFromEvent(event) === key
+        ) ||
+        null;
+}
+
+
+function openV10MeetGreetModal(dateString = '') {
+    activeEditingEvent = null;
+    selectedClickDateStr =
+        dateString ||
+        getLocalTodayDateString();
+
+    document.getElementById(
+        'modalTitle'
+    ).innerText =
+        '🤝 New Meet & Greet';
+
+    document.getElementById(
+        'modalDogName'
+    ).value = '';
+
+    document.getElementById(
+        'modalBreed'
+    ).value = '';
+
+    document.getElementById(
+        'modalBookingTime'
+    ).value = '10:00';
+
+    const dateInput =
+        document.getElementById(
+            'modalBookingDate'
+        );
+
+    if (dateInput) {
+        dateInput.value =
+            selectedClickDateStr;
+        dateInput.disabled =
+            false;
+    }
+
+    document.getElementById(
+        'deleteModalBtn'
+    ).style.display =
+        'none';
+
+    document.getElementById(
+        'customBookingModal'
+    ).style.display =
+        'flex';
+
+    document.getElementById(
+        'modalDogName'
+    ).focus();
+}
+
+
+function ensureV10QuickAdd() {
+    if (
+        document.getElementById(
+            'v10QuickAddButton'
+        )
+    ) {
+        return;
+    }
+
+    const button =
+        document.createElement(
+            'button'
+        );
+
+    button.id =
+        'v10QuickAddButton';
+
+    button.type =
+        'button';
+
+    button.className =
+        'v10-quick-add-button';
+
+    button.setAttribute(
+        'aria-label',
+        'Add booking, Potential Stay, Meet & Greet or Reminder'
+    );
+
+    button.innerHTML =
+        '<span aria-hidden="true">＋</span>';
+
+    const sheet =
+        document.createElement(
+            'div'
+        );
+
+    sheet.id =
+        'v10QuickAddSheet';
+
+    sheet.className =
+        'v10-quick-add-sheet';
+
+    sheet.hidden = true;
+
+    sheet.innerHTML = `
+        <div class="v10-quick-add-backdrop" data-v10-quick-close></div>
+        <div class="v10-quick-add-panel" role="dialog" aria-modal="true" aria-labelledby="v10QuickAddTitle">
+            <div class="v10-quick-add-handle"></div>
+            <div class="v10-quick-add-heading">
+                <div>
+                    <span class="v10-eyebrow">Quick action</span>
+                    <h3 id="v10QuickAddTitle">What would you like to add?</h3>
+                </div>
+                <button type="button" data-v10-quick-close aria-label="Close">×</button>
+            </div>
+            <div class="v10-quick-actions">
+                <button type="button" data-v10-quick-action="boarding"><span>🏡</span><strong>Boarding</strong><small>Confirmed booking form</small></button>
+                <button type="button" data-v10-quick-action="potential"><span>❓</span><strong>Potential</strong><small>Pending stay request</small></button>
+                <button type="button" data-v10-quick-action="meet"><span>🤝</span><strong>Meet & Greet</strong><small>Schedule a visit</small></button>
+                <button type="button" data-v10-quick-action="reminder"><span>📌</span><strong>Reminder</strong><small>Shared team note</small></button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(
+        button
+    );
+
+    document.body.appendChild(
+        sheet
+    );
+
+    const close = () => {
+        sheet.hidden = true;
+        document.body.classList.remove(
+            'v10-quick-add-open'
+        );
+    };
+
+    button.addEventListener(
+        'click',
+        () => {
+            sheet.hidden = false;
+            document.body.classList.add(
+                'v10-quick-add-open'
+            );
+        }
+    );
+
+    sheet.addEventListener(
+        'click',
+        event => {
+            if (
+                event.target.closest(
+                    '[data-v10-quick-close]'
+                )
+            ) {
+                close();
+                return;
+            }
+
+            const actionButton =
+                event.target.closest(
+                    '[data-v10-quick-action]'
+                );
+
+            if (!actionButton) return;
+
+            const action =
+                actionButton.dataset
+                    .v10QuickAction;
+
+            close();
+
+            if (action === 'boarding') {
+                window.open(
+                    V10_BOARDING_FORM_URL,
+                    '_blank',
+                    'noopener'
+                );
+                return;
+            }
+
+            if (action === 'potential') {
+                if (WAFFLE_PAGE === 'calendar') {
+                    openNewPotentialModal();
+                } else {
+                    window.location.href =
+                        'index.html?action=potential';
+                }
+                return;
+            }
+
+            if (action === 'meet') {
+                if (WAFFLE_PAGE === 'calendar') {
+                    openV10MeetGreetModal();
+                } else {
+                    window.location.href =
+                        'index.html?action=meet';
+                }
+                return;
+            }
+
+            if (action === 'reminder') {
+                if (WAFFLE_PAGE === 'reminders') {
+                    openReminderComposer();
+                } else {
+                    window.location.href =
+                        'reminders.html?compose=1';
+                }
+            }
+        }
+    );
+}
+
+
+function handleV10ActionDeepLink() {
+    const params =
+        new URLSearchParams(
+            window.location.search
+        );
+
+    const action =
+        String(
+            params.get('action') ||
+            ''
+        );
+
+    const compose =
+        params.get('compose') ===
+        '1';
+
+    let handled = false;
+
+    if (
+        WAFFLE_PAGE === 'calendar' &&
+        action === 'potential'
+    ) {
+        openNewPotentialModal();
+        handled = true;
+    }
+
+    if (
+        WAFFLE_PAGE === 'calendar' &&
+        action === 'meet'
+    ) {
+        openV10MeetGreetModal();
+        handled = true;
+    }
+
+    if (
+        WAFFLE_PAGE === 'reminders' &&
+        compose
+    ) {
+        openReminderComposer();
+        handled = true;
+    }
+
+    if (handled && window.history?.replaceState) {
+        window.history.replaceState(
+            {},
+            document.title,
+            window.location.pathname
+        );
+    }
+}
+
+
+function updateV10ReminderFilterCounts() {
+    const counts = {
+        open: 0,
+        overdue: 0,
+        today: 0,
+        upcoming: 0,
+        done: 0
+    };
+
+    remindersNotesRecords
+        .forEach(record => {
+            const state =
+                getReminderState(record);
+
+            if (state.key === 'done') {
+                counts.done++;
+                return;
+            }
+
+            counts.open++;
+
+            if (
+                counts[state.key] !==
+                undefined
+            ) {
+                counts[state.key]++;
+            }
+        });
+
+    Object.entries(counts)
+        .forEach(([key, value]) => {
+            const element =
+                document.querySelector(
+                    `[data-reminder-filter-count="${key}"]`
+                );
+
+            if (element) {
+                element.textContent =
+                    String(value);
+            }
+        });
+
+    const active =
+        document.getElementById(
+            'remindersStatusFilter'
+        )?.value ||
+        'open';
+
+    document
+        .querySelectorAll(
+            '[data-reminder-filter]'
+        )
+        .forEach(button => {
+            button.classList.toggle(
+                'is-active',
+                button.dataset
+                    .reminderFilter ===
+                    active
+            );
+        });
+}
+
+
+function applyDirectoryProfileEditMode(card) {
+    if (!card) return;
+
+    const editing =
+        card.classList.contains(
+            'is-profile-editing'
+        );
+
+    card
+        .querySelectorAll(
+            '[data-directory-main-panel="profile"] [data-intake-attribute], [data-directory-main-panel="profile"] [data-care-risk-flag]'
+        )
+        .forEach(control => {
+            control.disabled =
+                !editing;
+        });
+
+    const editButton =
+        card.querySelector(
+            '[data-toggle-profile-edit]'
+        );
+
+    const cancelButton =
+        card.querySelector(
+            '[data-cancel-profile-edit]'
+        );
+
+    if (editButton) {
+        editButton.hidden =
+            editing;
+    }
+
+    if (cancelButton) {
+        cancelButton.hidden =
+            !editing;
+    }
+}
+
+
+function setDirectoryProfileEditMode(
+    card,
+    editing
+) {
+    if (!card) return;
+
+    card.classList.toggle(
+        'is-profile-editing',
+        !!editing
+    );
+
+    card.dataset.profileEditing =
+        editing
+            ? 'true'
+            : 'false';
+
+    applyDirectoryProfileEditMode(
+        card
+    );
+}
+
+
+function cancelDirectoryProfileEdit(card) {
+    if (!card) return;
+
+    const stayKey =
+        String(
+            card.dataset.stayKey ||
+            ''
+        );
+
+    const record =
+        directoryProfileDetailCache[
+            stayKey
+        ];
+
+    if (record) {
+        renderDirectoryIntakeAttributes(
+            card,
+            record
+        );
+    }
+
+    renderDirectoryCareProfile(
+        card,
+        careRiskRecordsCache[
+            stayKey
+        ] ||
+        belongingsRecordsCache[
+            stayKey
+        ] ||
+        {
+            riskFlags: {}
+        }
+    );
+
+    setDirectoryProfileEditMode(
+        card,
+        false
+    );
+}
 
 
 /* ============================================================
@@ -685,11 +2386,15 @@ function ensureWaffleNotificationButton() {
         <span
             class="waffle-notification-button-dot"
             aria-hidden="true"></span>
+        <span
+            class="v101-notification-unread-badge"
+            data-notification-unread-badge
+            hidden>0</span>
     `;
 
     button.addEventListener(
         'click',
-        openWaffleNotificationSettings
+        openWaffleNotificationCentre
     );
 
     const header =
@@ -790,7 +2495,7 @@ function ensureWaffleNotificationModal() {
 
     modal.innerHTML = `
         <div
-            class="waffle-notification-card"
+            class="waffle-notification-card v101-notification-centre"
             role="dialog"
             aria-modal="true"
             aria-labelledby="waffleNotificationTitle">
@@ -798,13 +2503,13 @@ function ensureWaffleNotificationModal() {
             <div class="waffle-notification-heading">
                 <div>
                     <span class="waffle-notification-kicker">
-                        V9 Push Notifications
+                        Waffle House Centre
                     </span>
                     <h3 id="waffleNotificationTitle">
                         🔔 Notifications
                     </h3>
                     <p>
-                        Choose what this device should receive.
+                        Operational attention and device notification settings.
                     </p>
                 </div>
 
@@ -816,124 +2521,148 @@ function ensureWaffleNotificationModal() {
                 </button>
             </div>
 
-            <div
-                class="waffle-notification-message"
-                data-push-message></div>
-
-            <div class="waffle-notification-device">
-                <label>
-                    Device name
-                    <input
-                        type="text"
-                        data-push-device-label
-                        maxlength="80"
-                        placeholder="e.g. My iPhone">
-                </label>
-
-                <label
-                    class="waffle-enrollment-code-field"
-                    data-push-enrollment-wrap>
-                    Setup code
-                    <input
-                        type="password"
-                        data-push-enrollment-code
-                        autocomplete="one-time-code"
-                        placeholder="Private setup code">
-                </label>
-            </div>
-
-            <div class="waffle-notification-options">
-                <label>
-                    <input
-                        type="checkbox"
-                        data-push-pref="arrivals"
-                        checked>
-                    <span>🏡 Arrivals</span>
-                    <small>Morning boarding arrivals</small>
-                </label>
-
-                <label>
-                    <input
-                        type="checkbox"
-                        data-push-pref="departures"
-                        checked>
-                    <span>👋 Departures</span>
-                    <small>Morning departures / offboarding</small>
-                </label>
-
-                <label>
-                    <input
-                        type="checkbox"
-                        data-push-pref="meetGreets"
-                        checked>
-                    <span>🤝 Meet & Greets</span>
-                    <small>Approximately 30–40 minutes before</small>
-                </label>
-
-                <label>
-                    <input
-                        type="checkbox"
-                        data-push-pref="reminders"
-                        checked>
-                    <span>📌 Reminders</span>
-                    <small>Shared reminder due notifications</small>
-                </label>
-
-                <label>
-                    <input
-                        type="checkbox"
-                        data-push-pref="intakeCompleted"
-                        checked>
-                    <span>✅ Intake Complete</span>
-                    <small>Digital Intake submitted by an owner</small>
-                </label>
-
-                <label>
-                    <input
-                        type="checkbox"
-                        data-push-pref="capacity"
-                        checked>
-                    <span>🔴 Capacity</span>
-                    <small>Future dates reaching 4+ dogs</small>
-                </label>
-            </div>
-
-            <div class="waffle-notification-actions">
+            <nav
+                class="v101-notification-tabs"
+                role="tablist"
+                aria-label="Notification Centre">
                 <button
                     type="button"
-                    class="waffle-push-primary"
-                    data-push-enable>
-                    🔔 Enable This Device
+                    class="v101-notification-tab is-active"
+                    role="tab"
+                    aria-selected="true"
+                    data-notification-centre-tab="inbox">
+                    Inbox
+                    <span data-notification-centre-count>Up to date</span>
                 </button>
-
                 <button
                     type="button"
-                    data-push-save
-                    hidden>
-                    💾 Save Preferences
+                    class="v101-notification-tab"
+                    role="tab"
+                    aria-selected="false"
+                    data-notification-centre-tab="settings">
+                    Settings
                 </button>
+            </nav>
 
-                <button
-                    type="button"
-                    data-push-test
-                    hidden>
-                    🧪 Send Test
-                </button>
+            <section
+                class="v101-notification-panel"
+                data-notification-centre-panel="inbox">
+                <div class="v101-notification-panel-actions">
+                    <span>Recent operations and activity</span>
+                    <button
+                        type="button"
+                        data-notification-mark-read>
+                        Mark all read
+                    </button>
+                </div>
 
-                <button
-                    type="button"
-                    class="waffle-push-danger"
-                    data-push-disable
-                    hidden>
-                    Disable
-                </button>
-            </div>
+                <div
+                    class="v101-notification-feed"
+                    data-notification-feed>
+                    ${v101SkeletonHtml('audit', 5)}
+                </div>
+            </section>
 
-            <div class="waffle-notification-footnote">
-                Notification permission is controlled by this browser/device.
-            </div>
+            <section
+                class="v101-notification-panel"
+                data-notification-centre-panel="settings"
+                hidden>
+
+                <div
+                    class="waffle-notification-message"
+                    data-push-message></div>
+
+                <div class="waffle-notification-device">
+                    <label>
+                        Device name
+                        <input
+                            type="text"
+                            data-push-device-label
+                            maxlength="80"
+                            placeholder="e.g. My iPhone">
+                    </label>
+
+                    <label
+                        class="waffle-enrollment-code-field"
+                        data-push-enrollment-wrap>
+                        Setup code
+                        <input
+                            type="password"
+                            data-push-enrollment-code
+                            autocomplete="one-time-code"
+                            placeholder="Private setup code">
+                    </label>
+                </div>
+
+                <div class="waffle-notification-options">
+                    <label>
+                        <input type="checkbox" data-push-pref="arrivals" checked>
+                        <span>🏡 Arrivals</span>
+                        <small>Morning boarding arrivals</small>
+                    </label>
+
+                    <label>
+                        <input type="checkbox" data-push-pref="departures" checked>
+                        <span>👋 Departures</span>
+                        <small>Morning departures / offboarding</small>
+                    </label>
+
+                    <label>
+                        <input type="checkbox" data-push-pref="meetGreets" checked>
+                        <span>🤝 Meet & Greets</span>
+                        <small>Approximately 30–40 minutes before</small>
+                    </label>
+
+                    <label>
+                        <input type="checkbox" data-push-pref="reminders" checked>
+                        <span>📌 Reminders</span>
+                        <small>Shared reminder due notifications</small>
+                    </label>
+
+                    <label>
+                        <input type="checkbox" data-push-pref="intakeCompleted" checked>
+                        <span>✅ Intake Complete</span>
+                        <small>Digital Intake submitted by an owner</small>
+                    </label>
+
+                    <label>
+                        <input type="checkbox" data-push-pref="capacity" checked>
+                        <span>🔴 Capacity</span>
+                        <small>Future dates reaching 4+ dogs</small>
+                    </label>
+                </div>
+
+                <div class="waffle-notification-actions">
+                    <button
+                        type="button"
+                        class="waffle-push-primary"
+                        data-push-enable>
+                        🔔 Enable This Device
+                    </button>
+
+                    <button type="button" data-push-save hidden>
+                        💾 Save Preferences
+                    </button>
+
+                    <button type="button" data-push-test hidden>
+                        🧪 Send Test
+                    </button>
+
+                    <button
+                        type="button"
+                        class="waffle-push-danger"
+                        data-push-disable
+                        hidden>
+                        Disable
+                    </button>
+                </div>
+
+                <div class="waffle-notification-footnote">
+                    Notification permission is controlled by this browser/device.
+                </div>
+            </section>
         </div>
-    `;
+    `
 
     document.body.appendChild(
         modal
@@ -963,6 +2692,92 @@ function ensureWaffleNotificationModal() {
             }
         }
     );
+
+    modal
+        .querySelectorAll(
+            '[data-notification-centre-tab]'
+        )
+        .forEach(button => {
+            button.addEventListener(
+                'click',
+                () => {
+                    switchWaffleNotificationCentreTab(
+                        button.dataset
+                            .notificationCentreTab
+                    );
+
+                    if (
+                        button.dataset
+                            .notificationCentreTab ===
+                        'settings'
+                    ) {
+                        hydrateWaffleNotificationSettings()
+                            .catch(error =>
+                                console.warn(error)
+                            );
+                    }
+                }
+            );
+        });
+
+    modal
+        .querySelector(
+            '[data-notification-mark-read]'
+        )
+        ?.addEventListener(
+            'click',
+            markWaffleNotificationCentreRead
+        );
+
+    modal
+        .querySelector(
+            '[data-notification-feed]'
+        )
+        ?.addEventListener(
+            'click',
+            event => {
+                const item =
+                    event.target.closest(
+                        '[data-notification-item-id]'
+                    );
+
+                if (!item) return;
+
+                const id =
+                    String(
+                        item.dataset
+                            .notificationItemId ||
+                        ''
+                    );
+
+                if (id) {
+                    const seen =
+                        getWaffleSeenNotificationIds();
+
+                    seen.add(
+                        id
+                    );
+
+                    saveWaffleSeenNotificationIds(
+                        seen
+                    );
+
+                    updateWaffleNotificationUnreadBadge();
+                }
+
+                const link =
+                    String(
+                        item.dataset
+                            .notificationItemLink ||
+                        ''
+                    );
+
+                if (link) {
+                    window.location.href =
+                        link;
+                }
+            }
+        );
 
     modal
         .querySelector(
@@ -1141,12 +2956,9 @@ async function loadWafflePushDeviceState() {
 }
 
 
-async function openWaffleNotificationSettings() {
+async function hydrateWaffleNotificationSettings() {
     const modal =
         ensureWaffleNotificationModal();
-
-    modal.hidden =
-        false;
 
     const labelInput =
         modal.querySelector(
@@ -1266,6 +3078,16 @@ async function openWaffleNotificationSettings() {
     refreshWaffleNotificationButton(
         state
     );
+}
+
+
+
+async function openWaffleNotificationSettings() {
+    openWaffleNotificationCentre(
+        'settings'
+    );
+
+    return hydrateWaffleNotificationSettings();
 }
 
 
@@ -1443,6 +3265,11 @@ function showWaffleForegroundPush(data) {
             toast.classList.add(
                 'is-visible'
             )
+    );
+
+    setTimeout(
+        refreshWaffleNotificationCentreBadge,
+        600
     );
 
     setTimeout(
@@ -1693,7 +3520,7 @@ async function enableWafflePushNotifications() {
             'success'
         );
 
-        await openWaffleNotificationSettings();
+        await hydrateWaffleNotificationSettings();
 
     } catch (error) {
         console.error(
@@ -1861,7 +3688,7 @@ async function disableWafflePushNotifications() {
             'success'
         );
 
-        await openWaffleNotificationSettings();
+        await hydrateWaffleNotificationSettings();
 
     } catch (error) {
         setWafflePushMessage(
@@ -2367,7 +4194,7 @@ function registerWaffleServiceWorker() {
             navigator
                 .serviceWorker
                 .register(
-                    './service-worker.js?v=9.0',
+                    './service-worker.js?v=10.1',
                     {
                         scope: './'
                     }
@@ -2689,8 +4516,15 @@ registerWaffleServiceWorker();
     document.addEventListener('DOMContentLoaded', function() {
         initialiseWafflePwaUi();
         initialiseWafflePushUi();
+        initialiseV101Polish();
         maybeOpenDirectoryPushDeepLink();
         initialiseMobileDashboardLayout();
+        ensureV10QuickAdd();
+
+        setTimeout(
+            handleV10ActionDeepLink,
+            120
+        );
 
         const cachedData = localStorage.getItem('boardingDataCache');
 
@@ -2738,6 +4572,11 @@ registerWaffleServiceWorker();
                 document.getElementById('modalDogName').value = "";
                 document.getElementById('modalBreed').value = "";
                 document.getElementById('modalBookingTime').value = "10:00";
+                const modalDateInput = document.getElementById('modalBookingDate');
+                if (modalDateInput) {
+                    modalDateInput.value = info.dateStr;
+                    modalDateInput.disabled = false;
+                }
                 document.getElementById('deleteModalBtn').style.display = "none";
                 
                 document.getElementById('customBookingModal').style.display = "flex";
@@ -2755,6 +4594,11 @@ registerWaffleServiceWorker();
                     document.getElementById('modalDogName').value = info.event.extendedProps.dogName || "";
                     document.getElementById('modalBreed').value = info.event.extendedProps.breed === "N/A" ? "" : info.event.extendedProps.breed;
                     document.getElementById('modalBookingTime').value = info.event.extendedProps.time || "10:00";
+                    const modalDateInput = document.getElementById('modalBookingDate');
+                    if (modalDateInput) {
+                        modalDateInput.value = info.event.startStr;
+                        modalDateInput.disabled = true;
+                    }
                     document.getElementById('deleteModalBtn').style.display = "inline-block";
                     
                     document.getElementById('customBookingModal').style.display = "flex";
@@ -2778,6 +4622,7 @@ registerWaffleServiceWorker();
                 updateFullyBookedPanel();
                 updateTodayMeetGreetPanel(allCalendarEvents);
                 updateUpcomingSevenDaysPanel(allCalendarEvents);
+                renderV10OperationsHome(allCalendarEvents);
                 successCallback(allCalendarEvents);
             },
 
@@ -2832,6 +4677,37 @@ registerWaffleServiceWorker();
             openNewPotentialModal();
         });
 
+        document.getElementById('v10AddPotentialBtn')
+            ?.addEventListener('click', openNewPotentialModal);
+
+        document.getElementById('v10PotentialCards')
+            ?.addEventListener('click', function(event) {
+                const button = event.target.closest('[data-v10-potential-action]');
+                if (!button) return;
+
+                const card = button.closest('[data-v10-potential-key]');
+                const key = String(card?.dataset.v10PotentialKey || '');
+                const potentialEvent = findV10PotentialEvent(key);
+                if (!potentialEvent) return;
+
+                openEditPotentialModal(potentialEvent);
+
+                if (button.dataset.v10PotentialAction === 'confirm') {
+                    setTimeout(() => {
+                        const confirmButton = document.getElementById('confirmStayBtn');
+                        confirmButton?.classList.add('v10-confirm-highlight');
+                        confirmButton?.focus();
+                        setTimeout(() => confirmButton?.classList.remove('v10-confirm-highlight'), 1600);
+                    }, 50);
+                }
+            });
+
+        document.querySelector('.v10-stat-grid')
+            ?.addEventListener('click', function() {
+                document.getElementById('calendar')
+                    ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
+
         // V8 uses four real HTML pages. Navigation is handled by
         // normal links, so there is no in-page tab switching here.
 
@@ -2863,6 +4739,18 @@ registerWaffleServiceWorker();
         document.getElementById('cancelReminderBtn').addEventListener('click', closeReminderComposer);
         document.getElementById('saveReminderBtn').addEventListener('click', saveReminderNote);
         document.getElementById('remindersStatusFilter').addEventListener('change', renderRemindersNotes);
+
+        document.querySelector('.v10-reminder-filters')
+            ?.addEventListener('click', function(event) {
+                const button = event.target.closest('[data-reminder-filter]');
+                if (!button) return;
+
+                const select = document.getElementById('remindersStatusFilter');
+                if (!select) return;
+
+                select.value = button.dataset.reminderFilter;
+                renderRemindersNotes();
+            });
 
         document.getElementById('remindersNotesGrid').addEventListener('click', function(event) {
             const button = event.target.closest('[data-reminder-action]');
@@ -3004,6 +4892,28 @@ registerWaffleServiceWorker();
             );
 
         directoryGrid.addEventListener('click', async function(event) {
+            const editProfileButton =
+                event.target.closest('[data-toggle-profile-edit]');
+
+            if (editProfileButton) {
+                event.preventDefault();
+                event.stopPropagation();
+                const card = editProfileButton.closest('.directory-card');
+                setDirectoryProfileEditMode(card, true);
+                return;
+            }
+
+            const cancelProfileButton =
+                event.target.closest('[data-cancel-profile-edit]');
+
+            if (cancelProfileButton) {
+                event.preventDefault();
+                event.stopPropagation();
+                const card = cancelProfileButton.closest('.directory-card');
+                cancelDirectoryProfileEdit(card);
+                return;
+            }
+
             const mainProfileTab =
                 event.target.closest(
                     '[data-directory-main-tab]'
@@ -3784,6 +5694,15 @@ registerWaffleServiceWorker();
         });
 
         document.getElementById('saveModalBtn').addEventListener('click', function() {
+            if (!activeEditingEvent) {
+                const requestedDate = document.getElementById('modalBookingDate')?.value || selectedClickDateStr;
+                if (!requestedDate) {
+                    alert('Please choose a Meet & Greet date.');
+                    return;
+                }
+                selectedClickDateStr = requestedDate;
+            }
+
             const dogName = document.getElementById('modalDogName').value.trim();
             const bookingTime = document.getElementById('modalBookingTime').value.trim();
             const breed = document.getElementById('modalBreed').value.trim() || "N/A";
@@ -4557,22 +6476,29 @@ registerWaffleServiceWorker();
                         ).toLowerCase() ===
                             'done';
 
-                    if (
-                        filter ===
-                        'open'
-                    ) {
+                    const state =
+                        getReminderState(record);
+
+                    if (filter === 'open') {
                         return !isDone;
                     }
 
-                    if (
-                        filter ===
-                        'done'
-                    ) {
+                    if (filter === 'done') {
                         return isDone;
+                    }
+
+                    if (
+                        filter === 'overdue' ||
+                        filter === 'today' ||
+                        filter === 'upcoming'
+                    ) {
+                        return state.key === filter;
                     }
 
                     return true;
                 });
+
+        updateV10ReminderFilterCounts();
 
         countEl.textContent =
             `${filtered.length} ${
@@ -4725,7 +6651,10 @@ registerWaffleServiceWorker();
             !remindersNotesRecords.length
         ) {
             grid.innerHTML =
-                '<div class="reminders-empty">⏳ Loading shared reminders and notes...</div>';
+                v101SkeletonHtml(
+                    'reminders',
+                    4
+                );
         }
 
         const applyResponse =
@@ -4893,6 +6822,7 @@ registerWaffleServiceWorker();
                 : '📌 Save Sticky Note';
 
         composer.hidden = false;
+        document.body.classList.add('v10-reminder-composer-open');
 
         setTimeout(() => {
             document.getElementById(
@@ -4912,6 +6842,8 @@ registerWaffleServiceWorker();
         document.getElementById(
             'reminderComposer'
         ).hidden = true;
+
+        document.body.classList.remove('v10-reminder-composer-open');
 
         document.getElementById(
             'reminderComposerStatus'
@@ -5608,101 +7540,248 @@ registerWaffleServiceWorker();
     }
 
     function renderAuditLog() {
-        const container = document.getElementById('auditLogContainer');
-        const countEl = document.getElementById('auditResultCount');
-        if (!container || !countEl) return;
+        const container =
+            document.getElementById(
+                'auditLogContainer'
+            );
 
-        const search = (document.getElementById('auditSearch')?.value || '')
-            .toLowerCase()
-            .trim();
-        const category = document.getElementById('auditCategoryFilter')?.value || '';
+        const countEl =
+            document.getElementById(
+                'auditResultCount'
+            );
 
-        const filtered = auditLogRecords.filter(record => {
-            if (category && record.category !== category) return false;
-            if (!search) return true;
-
-            const haystack = [
-                record.category,
-                record.action,
-                record.dogName,
-                record.bookingType,
-                record.reference,
-                record.summary,
-                record.changedFields,
-                record.source,
-                record.actor
-            ].join(' ').toLowerCase();
-
-            return haystack.includes(search);
-        });
-
-        countEl.textContent =
-            `${filtered.length} ${filtered.length === 1 ? 'record' : 'records'}`;
-
-        if (!filtered.length) {
-            container.innerHTML =
-                '<div class="audit-empty">No audit activity matches this filter.</div>';
+        if (
+            !container ||
+            !countEl
+        ) {
             return;
         }
 
-        container.innerHTML = filtered.map(record => {
-            const readableChanges =
-                buildReadableAuditChanges(record);
+        const search =
+            (
+                document
+                    .getElementById(
+                        'auditSearch'
+                    )
+                    ?.value ||
+                ''
+            )
+                .toLowerCase()
+                .trim();
 
-            const icon =
-                auditCategoryIcon(
-                    record.category,
-                    record.action
+        const category =
+            document
+                .getElementById(
+                    'auditCategoryFilter'
+                )
+                ?.value ||
+            '';
+
+        const filtered =
+            auditLogRecords.filter(
+                record => {
+                    if (
+                        category &&
+                        record.category !==
+                            category
+                    ) {
+                        return false;
+                    }
+
+                    if (!search) {
+                        return true;
+                    }
+
+                    const haystack = [
+                        record.category,
+                        record.action,
+                        record.dogName,
+                        record.bookingType,
+                        record.reference,
+                        record.summary,
+                        record.changedFields,
+                        record.source,
+                        record.actor
+                    ]
+                        .join(' ')
+                        .toLowerCase();
+
+                    return haystack.includes(
+                        search
+                    );
+                }
+            );
+
+        countEl.textContent =
+            `${filtered.length} ${filtered.length === 1 ? 'activity' : 'activities'}`;
+
+        updateV101AuditChipCounts();
+
+        document
+            .querySelectorAll(
+                '[data-audit-category-chip]'
+            )
+            .forEach(button => {
+                button.classList.toggle(
+                    'is-active',
+                    String(
+                        button.dataset
+                            .auditCategoryChip ||
+                        ''
+                    ) ===
+                    String(
+                        category ||
+                        ''
+                    )
                 );
+            });
 
-            const actorText =
-                record.actor &&
-                record.actor !==
-                    'Web App / Unavailable'
-                    ? ` · ${escapeDashboardHtml(record.actor)}`
-                    : '';
+        if (!filtered.length) {
+            container.innerHTML = `
+                <div class="audit-empty v101-audit-empty">
+                    <span>🔎</span>
+                    <strong>No matching activity</strong>
+                    <small>Try another dog name, action or category.</small>
+                </div>
+            `;
 
-            const readableSummary =
-                getReadableAuditSummary(record);
+            return;
+        }
 
-            return `
-                <article class="audit-entry">
-                    <div class="audit-entry-icon" aria-hidden="true">${icon}</div>
-                    <div class="audit-entry-body">
-                        <div class="audit-entry-topline">
-                            <div class="audit-entry-title">
-                                <strong>${escapeDashboardHtml(record.action || 'Activity')}</strong>
-                                <span class="audit-category-chip audit-category-${String(record.category || '').toLowerCase().replace(/[^a-z0-9]+/g, '-')}">
-                                    ${escapeDashboardHtml(record.category || 'Activity')}
-                                </span>
+        const groups =
+            new Map();
+
+        filtered.forEach(
+            record => {
+                const key =
+                    auditDateGroupKey(
+                        record.timestamp
+                    );
+
+                if (
+                    !groups.has(
+                        key
+                    )
+                ) {
+                    groups.set(
+                        key,
+                        []
+                    );
+                }
+
+                groups
+                    .get(
+                        key
+                    )
+                    .push(
+                        record
+                    );
+            }
+        );
+
+        const renderEntry =
+            record => {
+                const readableChanges =
+                    buildReadableAuditChanges(
+                        record
+                    );
+
+                const icon =
+                    auditCategoryIcon(
+                        record.category,
+                        record.action
+                    );
+
+                const actorText =
+                    record.actor &&
+                    record.actor !==
+                        'Web App / Unavailable'
+                        ? ` · ${escapeDashboardHtml(record.actor)}`
+                        : '';
+
+                const readableSummary =
+                    getReadableAuditSummary(
+                        record
+                    );
+
+                const dogLabel =
+                    record.dogName
+                        ? `
+                            <span class="v101-audit-dog-chip">
+                                🐾 ${escapeDashboardHtml(record.dogName)}
+                            </span>
+                          `
+                        : '';
+
+                return `
+                    <article class="audit-entry v101-audit-entry">
+                        <div class="audit-entry-icon" aria-hidden="true">${icon}</div>
+
+                        <div class="audit-entry-body">
+                            <div class="audit-entry-topline">
+                                <div class="audit-entry-title">
+                                    <strong>${escapeDashboardHtml(record.action || 'Activity')}</strong>
+                                    <span class="audit-category-chip audit-category-${String(record.category || '').toLowerCase().replace(/[^a-z0-9]+/g, '-')}">
+                                        ${escapeDashboardHtml(record.category || 'Activity')}
+                                    </span>
+                                </div>
+
+                                <time>
+                                    ${escapeDashboardHtml(formatAuditTimestamp(record.timestamp))}
+                                </time>
                             </div>
-                            <time>${escapeDashboardHtml(formatAuditTimestamp(record.timestamp))}</time>
-                        </div>
 
-                        <div class="audit-entry-summary">
-                            ${escapeDashboardHtml(readableSummary)}
-                        </div>
+                            <div class="audit-entry-summary">
+                                ${escapeDashboardHtml(readableSummary)}
+                            </div>
 
-                        <div class="audit-entry-meta">
-                            ${record.dogName ? `<span>🐾 ${escapeDashboardHtml(record.dogName)}</span>` : ''}
-                            ${record.changedFields ? `<span>✏️ ${escapeDashboardHtml(record.changedFields)}</span>` : ''}
-                            ${record.source ? `<span>📍 ${escapeDashboardHtml(record.source)}${actorText}</span>` : ''}
-                        </div>
+                            <div class="audit-entry-meta v101-audit-meta">
+                                ${dogLabel}
+                                ${record.source ? `<span>📍 ${escapeDashboardHtml(record.source)}${actorText}</span>` : ''}
+                            </div>
 
-                        ${readableChanges.length ? `
-                            <div class="audit-readable-changes">
-                                ${readableChanges
-                                    .map(change =>
-                                        `<div class="audit-readable-change">${change}</div>`
-                                    )
+                            ${readableChanges.length ? `
+                                <details class="v10-audit-details">
+                                    <summary>
+                                        View ${readableChanges.length} change${readableChanges.length === 1 ? '' : 's'}
+                                    </summary>
+                                    <div class="audit-readable-changes">
+                                        ${readableChanges
+                                            .map(change =>
+                                                `<div class="audit-readable-change">${change}</div>`
+                                            )
+                                            .join('')}
+                                    </div>
+                                </details>
+                            ` : ''}
+                        </div>
+                    </article>
+                `;
+            };
+
+        container.innerHTML =
+            Array.from(
+                groups.entries()
+            )
+                .map(
+                    ([label, records]) => `
+                        <section class="v101-audit-day-group">
+                            <div class="v101-audit-day-heading">
+                                <strong>${escapeDashboardHtml(label)}</strong>
+                                <span>${records.length}</span>
+                            </div>
+
+                            <div class="v101-audit-timeline">
+                                ${records
+                                    .map(renderEntry)
                                     .join('')}
                             </div>
-                        ` : ''}
-                    </div>
-                </article>
-            `;
-        }).join('');
+                        </section>
+                    `
+                )
+                .join('');
     }
+
 
     async function loadAuditLog(options = {}) {
         const button =
@@ -5725,7 +7804,10 @@ registerWaffleServiceWorker();
             !auditLogRecords.length
         ) {
             container.innerHTML =
-                '<div class="audit-empty">⏳ Loading recent audit activity...</div>';
+                v101SkeletonHtml(
+                    'audit',
+                    5
+                );
         }
 
         const applyResponse =
@@ -7037,7 +9119,10 @@ registerWaffleServiceWorker();
             )
         ) {
             grid.innerHTML =
-                '<div class="directory-page-loading">⏳ Loading Guest Directory…</div>';
+                v101SkeletonHtml(
+                    'directory',
+                    6
+                );
         }
 
         try {
@@ -7345,6 +9430,11 @@ registerWaffleServiceWorker();
          * V8.4.1 opens directly into Profile.
          * Belongings remains lazy until selected.
          */
+        setDirectoryProfileEditMode(
+            card,
+            false
+        );
+
         switchDirectoryProfileMainTab(
             card,
             'profile'
@@ -7788,6 +9878,8 @@ registerWaffleServiceWorker();
                 riskFlags: {}
             }
         );
+
+        applyDirectoryProfileEditMode(card);
     }
 
 
@@ -7836,6 +9928,8 @@ registerWaffleServiceWorker();
                 </div>
             </div>
         `;
+
+        applyDirectoryProfileEditMode(card);
     }
 
 
@@ -8361,6 +10455,16 @@ registerWaffleServiceWorker();
             );
 
             button.innerText = '✅ Saved';
+
+            if (
+                button.closest('[data-directory-main-panel="profile"]')
+            ) {
+                setDirectoryProfileEditMode(
+                    card,
+                    false
+                );
+            }
+
             setTimeout(() => { button.innerText = originalText; }, 1800);
         } catch (error) {
             console.error(error);
@@ -9515,6 +11619,7 @@ registerWaffleServiceWorker();
         updateFullyBookedPanel();
         updateTodayMeetGreetPanel(allCalendarEvents);
         updateUpcomingSevenDaysPanel(allCalendarEvents);
+        renderV10OperationsHome(allCalendarEvents);
         globalCalendar.addEventSource(allCalendarEvents);
         applyCurrentSearchFilter();
     }
@@ -11604,11 +13709,26 @@ registerWaffleServiceWorker();
                                                     <span class="directory-profile-section-kicker">Guest profile</span>
                                                     <h4>📋 Profile &amp; Care</h4>
                                                 </div>
-                                                <span
-                                                    class="intake-profile-source"
-                                                    data-intake-profile-summary>
-                                                    Loading profile…
-                                                </span>
+                                                <div class="directory-profile-section-tools">
+                                                    <span
+                                                        class="intake-profile-source"
+                                                        data-intake-profile-summary>
+                                                        Loading profile…
+                                                    </span>
+                                                    <button
+                                                        type="button"
+                                                        class="directory-profile-edit-toggle"
+                                                        data-toggle-profile-edit>
+                                                        ✏️ Edit
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        class="directory-profile-edit-cancel"
+                                                        data-cancel-profile-edit
+                                                        hidden>
+                                                        Cancel
+                                                    </button>
+                                                </div>
                                             </div>
                                             <div
                                                 class="directory-fused-details-body"

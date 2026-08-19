@@ -1,6 +1,6 @@
 /* Waffle House Boarding — V8.4 Service Worker */
 
-const WAFFLE_SW_VERSION = 'v9.0';
+const WAFFLE_SW_VERSION = 'v10.1';
 const WAFFLE_CACHE_PREFIX = 'waffle-house-';
 const APP_SHELL_CACHE = `${WAFFLE_CACHE_PREFIX}shell-${WAFFLE_SW_VERSION}`;
 const RUNTIME_CACHE = `${WAFFLE_CACHE_PREFIX}runtime-${WAFFLE_SW_VERSION}`;
@@ -11,15 +11,15 @@ const APP_SHELL = [
   './directory.html',
   './reminders.html',
   './audit.html',
-  './waffle-app.css?v=9.0',
-  './waffle-app.js?v=9.0',
+  './waffle-app.css?v=10.1',
+  './waffle-app.js?v=10.1',
   './waffle-logo.png',
-  './manifest.webmanifest?v=9.0',
+  './manifest.webmanifest?v=10.1',
   './pwa-icon-192.png',
   './pwa-icon-512.png',
   './pwa-maskable-512.png',
   './pwa-apple-touch-icon.png',
-  './waffle-firebase-config.js?v=9.0'
+  './waffle-firebase-config.js?v=10.1'
 ];
 
 const OPTIONAL_EXTERNAL_ASSETS = [
@@ -58,7 +58,7 @@ function waffleFirebaseConfigReady(config) {
 }
 
 try {
-  importScripts('./waffle-firebase-config.js?v=9.0');
+  importScripts('./waffle-firebase-config.js?v=10.1');
 
   const config =
     self.WAFFLE_FIREBASE_CONFIG ||

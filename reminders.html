@@ -8,11 +8,11 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Waffle House">
-    <link rel="manifest" href="manifest.webmanifest?v=9.0">
+    <link rel="manifest" href="manifest.webmanifest?v=10.1">
     <link rel="icon" type="image/png" sizes="192x192" href="pwa-icon-192.png">
     <link rel="apple-touch-icon" sizes="180x180" href="pwa-apple-touch-icon.png">
     <title>Waffle House — Reminders & Notes</title>
-    <link rel="stylesheet" href="waffle-app.css?v=9.0">
+    <link rel="stylesheet" href="waffle-app.css?v=10.1">
 
 </head>
 <body data-waffle-page="reminders">
@@ -39,7 +39,7 @@
         </button>
     </div>
     
-    <div class="action-button-group">
+    <div class="action-button-group v10-legacy-action-buttons">
         <a href="https://docs.google.com/forms/d/e/1FAIpQLScszSqsaxw9THyebWt2g0khVTIzP9L8hPbor1mUB0fp_0KPAw/viewform?usp=dialog" target="_blank" class="btn-add">+ Add New Boarding Booking</a>
         <button id="openPotentialBtn" class="btn-add btn-potential">❓ Add Potential Stay Request</button>
     </div>
@@ -52,6 +52,91 @@
     </nav>
 
     <div id="calendarTabPanel" class="app-tab-panel" data-app-panel="calendar">
+
+    <section class="v10-operations-home" aria-labelledby="v10OperationsTitle">
+        <div class="v10-ops-heading">
+            <div>
+                <span class="v10-eyebrow">Operations Home</span>
+                <h1 id="v10OperationsTitle">Today at Waffle House</h1>
+                <p id="v10TodayDateLabel">Loading today…</p>
+            </div>
+            <span class="v10-today-status" id="v10TodayStatus">All clear</span>
+        </div>
+
+        <div class="v10-stat-grid" aria-label="Today's operations summary">
+            <button type="button" class="v10-stat-card" data-v10-jump="home">
+                <span class="v10-stat-icon">🏡</span>
+                <strong id="v10AtHomeCount">0</strong>
+                <span>At Home</span>
+            </button>
+            <button type="button" class="v10-stat-card" data-v10-jump="arrivals">
+                <span class="v10-stat-icon">🛬</span>
+                <strong id="v10ArrivalCount">0</strong>
+                <span>Arriving</span>
+            </button>
+            <button type="button" class="v10-stat-card" data-v10-jump="departures">
+                <span class="v10-stat-icon">👋</span>
+                <strong id="v10DepartureCount">0</strong>
+                <span>Leaving</span>
+            </button>
+            <button type="button" class="v10-stat-card" data-v10-jump="meet">
+                <span class="v10-stat-icon">🤝</span>
+                <strong id="v10MeetCount">0</strong>
+                <span>Meet &amp; Greets</span>
+            </button>
+        </div>
+
+        <div class="v10-ops-grid">
+            <article class="v10-ops-card v10-agenda-card">
+                <div class="v10-card-heading">
+                    <div>
+                        <span class="v10-card-kicker">Today</span>
+                        <h2>What needs attention</h2>
+                    </div>
+                </div>
+                <div id="v10TodayAgenda" class="v10-agenda-list">
+                    <div class="v10-empty">Loading today's schedule…</div>
+                </div>
+            </article>
+
+            <article class="v10-ops-card v10-next-card">
+                <div class="v10-card-heading">
+                    <div>
+                        <span class="v10-card-kicker">Next 7 days</span>
+                        <h2>Coming up</h2>
+                    </div>
+                </div>
+                <div id="v10NextUp" class="v10-next-list">
+                    <div class="v10-empty">Loading upcoming activity…</div>
+                </div>
+            </article>
+        </div>
+
+        <article class="v10-ops-card v10-capacity-card">
+            <div class="v10-card-heading v10-capacity-heading">
+                <div>
+                    <span class="v10-card-kicker">Capacity</span>
+                    <h2>7-day outlook</h2>
+                </div>
+                <span class="v10-capacity-note">🟢 available · 🟠 busy · 🔴 4+</span>
+            </div>
+            <div id="v10CapacityStrip" class="v10-capacity-strip"></div>
+        </article>
+
+        <article class="v10-ops-card v10-potential-card">
+            <div class="v10-card-heading">
+                <div>
+                    <span class="v10-card-kicker">Pending decisions</span>
+                    <h2>❓ Potential Stays</h2>
+                </div>
+                <button type="button" class="v10-text-action" id="v10AddPotentialBtn">＋ New Potential</button>
+            </div>
+            <div id="v10PotentialCards" class="v10-potential-list">
+                <div class="v10-empty">Loading Potential Stays…</div>
+            </div>
+        </article>
+    </section>
+
     <div class="search-container" style="display: flex; gap: 10px; align-items: center; margin-bottom: 20px; flex-wrap: wrap;">
         <input type="text" id="calendarSearch" class="search-input" style="flex: 1; min-width: 200px;" placeholder="🔍 Type dog name or breed to filter data..." autocomplete="off">
         
@@ -224,9 +309,19 @@
             </div>
         </div>
 
-        <div class="reminders-toolbar">
-            <select id="remindersStatusFilter" class="reminders-filter" aria-label="Filter reminders">
+        <div class="reminders-toolbar v10-reminders-toolbar">
+            <div class="v10-reminder-filters" role="tablist" aria-label="Reminder filters">
+                <button type="button" class="v10-reminder-filter is-active" data-reminder-filter="open">Open <span data-reminder-filter-count="open">0</span></button>
+                <button type="button" class="v10-reminder-filter" data-reminder-filter="overdue">Overdue <span data-reminder-filter-count="overdue">0</span></button>
+                <button type="button" class="v10-reminder-filter" data-reminder-filter="today">Today <span data-reminder-filter-count="today">0</span></button>
+                <button type="button" class="v10-reminder-filter" data-reminder-filter="upcoming">Upcoming <span data-reminder-filter-count="upcoming">0</span></button>
+                <button type="button" class="v10-reminder-filter" data-reminder-filter="done">Done <span data-reminder-filter-count="done">0</span></button>
+            </div>
+            <select id="remindersStatusFilter" class="reminders-filter v10-reminders-select-fallback" aria-label="Filter reminders">
                 <option value="open">Open reminders &amp; notes</option>
+                <option value="overdue">Overdue</option>
+                <option value="today">Today</option>
+                <option value="upcoming">Upcoming</option>
                 <option value="all">All notes</option>
                 <option value="done">Completed</option>
             </select>
@@ -254,6 +349,19 @@
                 class="audit-search"
                 placeholder="🔍 Search dog, action, field or source..."
                 autocomplete="off">
+            <div
+                class="v101-audit-filter-chips"
+                role="tablist"
+                aria-label="Activity categories">
+                <button type="button" class="v101-audit-filter-chip is-active" data-audit-category-chip="">All <span data-audit-chip-count="">0</span></button>
+                <button type="button" class="v101-audit-filter-chip" data-audit-category-chip="Boarding">Boarding <span data-audit-chip-count="Boarding">0</span></button>
+                <button type="button" class="v101-audit-filter-chip" data-audit-category-chip="Potential Stay">Potential <span data-audit-chip-count="Potential Stay">0</span></button>
+                <button type="button" class="v101-audit-filter-chip" data-audit-category-chip="Meet & Greet">Meet <span data-audit-chip-count="Meet & Greet">0</span></button>
+                <button type="button" class="v101-audit-filter-chip" data-audit-category-chip="Intake">Intake <span data-audit-chip-count="Intake">0</span></button>
+                <button type="button" class="v101-audit-filter-chip" data-audit-category-chip="Belongings">Care <span data-audit-chip-count="Belongings">0</span></button>
+                <button type="button" class="v101-audit-filter-chip" data-audit-category-chip="Reminders & Notes">Reminder <span data-audit-chip-count="Reminders & Notes">0</span></button>
+            </div>
+
             <select id="auditCategoryFilter" class="audit-filter" aria-label="Filter audit category">
                 <option value="">All activity</option>
                 <option value="Boarding">Boarding</option>
@@ -338,6 +446,10 @@
         <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 5px; color: #475569;">🐾 Dog Name:</label>
         <input type="text" id="modalDogName" style="width: 100%; padding: 10px; margin-bottom: 15px; border: 2px solid #e2e8f0; border-radius: 6px; box-sizing: border-box;" placeholder="e.g. Buster">
         
+        <label class="v10-modal-label" for="modalBookingDate">📅 Date:</label>
+        <input type="date" id="modalBookingDate" class="v10-modal-input">
+        
+
         <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 5px; color: #475569;">⏰ Booking Time:</label>
         <input type="text" id="modalBookingTime" style="width: 100%; padding: 10px; margin-bottom: 15px; border: 2px solid #e2e8f0; border-radius: 6px; box-sizing: border-box;" value="10:00">
         
@@ -429,7 +541,7 @@
     body.dark-theme .modal-content-panel input { background: #334155; border-color: #475569; color: white; }
 </style>
 
-<script src="waffle-firebase-config.js?v=9.0"></script>
-    <script src="waffle-app.js?v=9.0"></script>
+<script src="waffle-firebase-config.js?v=10.1"></script>
+    <script src="waffle-app.js?v=10.1"></script>
 
 </html>

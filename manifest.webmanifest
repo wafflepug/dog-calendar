@@ -1,7 +1,7 @@
 {
   "name": "Waffle House Boarding",
   "short_name": "Waffle House",
-  "description": "Dog boarding calendar, care profiles, reminders, logs and push notifications.",
+  "description": "Dog boarding command centre with care profiles, reminders, activity centre, logs and push notifications.",
   "id": "./index.html",
   "start_url": "./index.html",
   "scope": "./",
