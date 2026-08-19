@@ -8,11 +8,12 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Waffle House">
-    <link rel="manifest" href="manifest.webmanifest?v=10.1">
+    <link rel="manifest" href="manifest.webmanifest?v=10.8">
     <link rel="icon" type="image/png" sizes="192x192" href="pwa-icon-192.png">
     <link rel="apple-touch-icon" sizes="180x180" href="pwa-apple-touch-icon.png">
     <title>Waffle House — Reminders & Notes</title>
-    <link rel="stylesheet" href="waffle-app.css?v=10.1">
+    <link rel="stylesheet" href="waffle-app.css?v=10.8">
+    <link rel="stylesheet" href="waffle-v10.8.css?v=10.8">
 
 </head>
 <body data-waffle-page="reminders">
@@ -45,10 +46,10 @@
     </div>
 
     <nav class="app-tabs" aria-label="Waffle House sections">
-        <a href="index.html" class="app-tab-button " data-page-link="calendar" aria-current="false"><span class="nav-icon" aria-hidden="true">📅</span><span class="nav-label nav-label-desktop">Calendar &amp; Dashboard</span><span class="nav-label nav-label-mobile">Calendar</span></a>
-        <a href="directory.html" class="app-tab-button " data-page-link="directory" aria-current="false"><span class="nav-icon" aria-hidden="true">🐾</span><span class="nav-label nav-label-desktop">Guest Directory &amp; Care</span><span class="nav-label nav-label-mobile">Care</span></a>
-        <a href="reminders.html" class="app-tab-button active" data-page-link="reminders" aria-current="page"><span class="nav-icon" aria-hidden="true">📌</span><span class="nav-label nav-label-desktop">Reminders &amp; Notes</span><span class="nav-label nav-label-mobile">Reminder</span></a>
-        <a href="audit.html" class="app-tab-button " data-page-link="audit" aria-current="false"><span class="nav-icon" aria-hidden="true">🧾</span><span class="nav-label nav-label-desktop">Audit Log</span><span class="nav-label nav-label-mobile">Logs</span></a>
+        <a href="index.html" class="app-tab-button " data-page-link="calendar" aria-current="false"><span class="nav-icon" aria-hidden="true">📅</span><span class="nav-label nav-label-desktop">Calendar</span><span class="nav-label nav-label-mobile">Calendar</span></a>
+        <a href="directory.html" class="app-tab-button " data-page-link="directory" aria-current="false"><span class="nav-icon" aria-hidden="true">🐾</span><span class="nav-label nav-label-desktop">Care</span><span class="nav-label nav-label-mobile">Care</span></a>
+        <a href="reminders.html" class="app-tab-button active" data-page-link="reminders" aria-current="page"><span class="nav-icon" aria-hidden="true">📌</span><span class="nav-label nav-label-desktop">Reminder</span><span class="nav-label nav-label-mobile">Reminder</span></a>
+        <a href="audit.html" class="app-tab-button " data-page-link="audit" aria-current="false"><span class="nav-icon" aria-hidden="true">🧾</span><span class="nav-label nav-label-desktop">Logs</span><span class="nav-label nav-label-mobile">Logs</span></a>
     </nav>
 
     <div id="calendarTabPanel" class="app-tab-panel" data-app-panel="calendar">
@@ -541,7 +542,8 @@
     body.dark-theme .modal-content-panel input { background: #334155; border-color: #475569; color: white; }
 </style>
 
-<script src="waffle-firebase-config.js?v=10.1"></script>
-    <script src="waffle-app.js?v=10.1"></script>
+<script src="waffle-firebase-config.js?v=10.8"></script>
+    <script src="waffle-app.js?v=10.8"></script>
+    <script src="waffle-v10.8.js?v=10.8"></script>
 
 </html>
