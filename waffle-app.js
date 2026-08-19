@@ -912,7 +912,7 @@ function registerWaffleServiceWorker() {
             navigator
                 .serviceWorker
                 .register(
-                    './service-worker.js?v=8.4.1',
+                    './service-worker.js?v=8.4.1.1',
                     {
                         scope: './'
                     }
@@ -9652,6 +9652,12 @@ registerWaffleServiceWorker();
                 '[data-directory-photo]'
             );
 
+        const media =
+            shell?.querySelector(
+                '.directory-photo-media'
+            ) ||
+            null;
+
         const tileShell =
             card.querySelector(
                 '[data-directory-tile-photo]'
@@ -9676,13 +9682,18 @@ registerWaffleServiceWorker();
                 .directoryDogName ||
             'Dog';
 
+        /*
+         * IMPORTANT:
+         * Only replace the media inside the photo shell.
+         * The edit button is a sibling and must remain mounted.
+         */
         if (!imageUrl) {
             card.classList.remove(
                 'has-profile-photo'
             );
 
-            if (shell) {
-                shell.innerHTML =
+            if (media) {
+                media.innerHTML =
                     '<div class="directory-photo-placeholder" aria-label="No dog profile photo">🐶</div>';
             }
 
@@ -9697,8 +9708,8 @@ registerWaffleServiceWorker();
             'has-profile-photo'
         );
 
-        if (shell) {
-            shell.innerHTML = `
+        if (media) {
+            media.innerHTML = `
                 <img
                     src="${escapeDashboardHtml(imageUrl)}"
                     alt="${escapeDashboardHtml(dogName)}"
@@ -9986,9 +9997,11 @@ registerWaffleServiceWorker();
                                             <div
                                                 class="directory-photo-shell"
                                                 data-directory-photo="${escapeDashboardHtml(directoryStayKey)}">
-                                                <div
-                                                    class="directory-photo-placeholder"
-                                                    aria-label="No dog profile photo">🐶</div>
+                                                <div class="directory-photo-media">
+                                                    <div
+                                                        class="directory-photo-placeholder"
+                                                        aria-label="No dog profile photo">🐶</div>
+                                                </div>
                                                 <button
                                                     type="button"
                                                     class="directory-photo-edit-button"

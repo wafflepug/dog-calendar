@@ -1,6 +1,6 @@
 /* Waffle House Boarding — V8.4 Service Worker */
 
-const WAFFLE_SW_VERSION = 'v8.4.1';
+const WAFFLE_SW_VERSION = 'v8.4.1.1';
 const WAFFLE_CACHE_PREFIX = 'waffle-house-';
 const APP_SHELL_CACHE = `${WAFFLE_CACHE_PREFIX}shell-${WAFFLE_SW_VERSION}`;
 const RUNTIME_CACHE = `${WAFFLE_CACHE_PREFIX}runtime-${WAFFLE_SW_VERSION}`;
@@ -11,10 +11,10 @@ const APP_SHELL = [
   './directory.html',
   './reminders.html',
   './audit.html',
-  './waffle-app.css?v=8.4.1',
-  './waffle-app.js?v=8.4.1',
+  './waffle-app.css?v=8.4.1.1',
+  './waffle-app.js?v=8.4.1.1',
   './waffle-logo.png',
-  './manifest.webmanifest?v=8.4.1',
+  './manifest.webmanifest?v=8.4.1.1',
   './pwa-icon-192.png',
   './pwa-icon-512.png',
   './pwa-maskable-512.png',
