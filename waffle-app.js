@@ -4,6 +4,7 @@ const WAFFLE_PAGE =
     'calendar';
 
 let directoryConsolidatedLoadInProgress = false;
+let directoryConsolidatedLastFetch = 0;
 
     const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT63UsPjcg3GB4lTB6cewLaTRS_yJP4kpOMSMsTTnvTw1Wbjn3CgtZc_c6li28ihjzkHnphFt0XcFTt/pub?gid=1639615540&single=true&output=csv';
     const APPS_SCRIPT_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbwn4HL49K9c3AZbXJRUjPw3UYWxJt8DmqXwMnTytyqdSstj3ZIJwWdDEC2IsBjetOf3pw/exec';
@@ -428,11 +429,10 @@ let directoryConsolidatedLoadInProgress = false;
                         return;
                     }
 
-                    loadGuestDirectoryConsolidated({
-                        force: true
-                    }).catch(error =>
-                        console.error(error)
-                    );
+                    loadGuestDirectoryConsolidated()
+                        .catch(error =>
+                            console.error(error)
+                        );
                 }, 250);
         }
 
@@ -463,7 +463,6 @@ let directoryConsolidatedLoadInProgress = false;
             }
 
             loadGuestDirectoryConsolidated({
-                force: true,
                 quiet: true
             }).catch(error =>
                 console.error(error)
@@ -2133,6 +2132,9 @@ let directoryConsolidatedLoadInProgress = false;
             }
 
         } finally {
+            directoryConsolidatedLoadInProgress =
+                false;
+
             if (button) {
                 button.disabled = false;
                 button.textContent =
@@ -3456,6 +3458,30 @@ let directoryConsolidatedLoadInProgress = false;
             return;
         }
 
+        /*
+         * DOMContentLoaded, focus and visibilitychange can all fire during
+         * first paint. Never allow those events to start overlapping
+         * directory requests.
+         */
+        if (
+            directoryConsolidatedLoadInProgress
+        ) {
+            return;
+        }
+
+        if (
+            !options.force &&
+            directoryConsolidatedLastFetch &&
+            Date.now() -
+                directoryConsolidatedLastFetch <
+                15000
+        ) {
+            return;
+        }
+
+        directoryConsolidatedLoadInProgress =
+            true;
+
         const button =
             options.button || null;
 
@@ -3545,8 +3571,8 @@ let directoryConsolidatedLoadInProgress = false;
             directoryLegacyIntakeCacheLastFetch =
                 Date.now();
 
-            directoryConsolidatedLoadInProgress =
-                true;
+            directoryConsolidatedLastFetch =
+                Date.now();
 
             const csv =
                 guestDirectoryBookingsToCsv(
