@@ -3,12 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Waffle House — Calendar & Dashboard</title>
-    <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css" rel="stylesheet">
+    <title>Waffle House — Guest Directory & Care</title>
     <link rel="stylesheet" href="waffle-app.css">
 
 </head>
-<body data-waffle-page="calendar">
+<body data-waffle-page="directory">
 
 <div class="container">
     <div class="calendar-header-branding">
@@ -38,13 +37,13 @@
     </div>
 
     <nav class="app-tabs" aria-label="Waffle House sections">
-        <a href="index.html" class="app-tab-button active" data-page-link="calendar" aria-current="page">📅 Calendar &amp; Dashboard</a>
-        <a href="directory.html" class="app-tab-button " data-page-link="directory" aria-current="false">🐾 Guest Directory &amp; Care</a>
+        <a href="index.html" class="app-tab-button " data-page-link="calendar" aria-current="false">📅 Calendar &amp; Dashboard</a>
+        <a href="directory.html" class="app-tab-button active" data-page-link="directory" aria-current="page">🐾 Guest Directory &amp; Care</a>
         <a href="reminders.html" class="app-tab-button " data-page-link="reminders" aria-current="false">📌 Reminders &amp; Notes</a>
         <a href="audit.html" class="app-tab-button " data-page-link="audit" aria-current="false">🧾 Audit Log</a>
     </nav>
 
-    <div id="calendarTabPanel" class="app-tab-panel active" data-app-panel="calendar">
+    <div id="calendarTabPanel" class="app-tab-panel" data-app-panel="calendar">
     <div class="search-container" style="display: flex; gap: 10px; align-items: center; margin-bottom: 20px; flex-wrap: wrap;">
         <input type="text" id="calendarSearch" class="search-input" style="flex: 1; min-width: 200px;" placeholder="🔍 Type dog name or breed to filter data..." autocomplete="off">
         
@@ -108,7 +107,7 @@
     <div id="calendar"></div>
     </div>
 
-    <div id="directoryTabPanel" class="app-tab-panel" data-app-panel="directory">
+    <div id="directoryTabPanel" class="app-tab-panel active" data-app-panel="directory">
         <div class="directory-dashboard directory-dashboard-fused">
             <div class="directory-dashboard-header">
                 <div>
@@ -422,7 +421,6 @@
     body.dark-theme .modal-content-panel input { background: #334155; border-color: #475569; color: white; }
 </style>
 
-<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
-    <script src="waffle-app.js"></script>
+<script src="waffle-app.js"></script>
 
 </html>
