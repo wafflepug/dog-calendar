@@ -6,7 +6,7 @@ const WAFFLE_PAGE =
 let directoryConsolidatedLoadInProgress = false;
 
     const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT63UsPjcg3GB4lTB6cewLaTRS_yJP4kpOMSMsTTnvTw1Wbjn3CgtZc_c6li28ihjzkHnphFt0XcFTt/pub?gid=1639615540&single=true&output=csv';
-    const APPS_SCRIPT_WEBAPP_URL = 'YOUR_APPS_SCRIPT_WEBAPP_URL_HERE';
+    const APPS_SCRIPT_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbwn4HL49K9c3AZbXJRUjPw3UYWxJt8DmqXwMnTytyqdSstj3ZIJwWdDEC2IsBjetOf3pw/exec';
 
     let globalCalendar = null;
     let dailyCapacityCounts = {};
