@@ -1,0 +1,86 @@
+{
+  "name": "Waffle House Boarding",
+  "short_name": "Waffle House",
+  "description": "Dog boarding calendar, care profiles, reminders and operational logs.",
+  "id": "./index.html",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#172033",
+  "theme_color": "#172033",
+  "orientation": "any",
+  "categories": [
+    "business",
+    "productivity"
+  ],
+  "icons": [
+    {
+      "src": "pwa-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "pwa-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "pwa-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Calendar",
+      "short_name": "Calendar",
+      "url": "./index.html",
+      "icons": [
+        {
+          "src": "pwa-icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Care",
+      "short_name": "Care",
+      "url": "./directory.html",
+      "icons": [
+        {
+          "src": "pwa-icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Reminders",
+      "short_name": "Reminder",
+      "url": "./reminders.html",
+      "icons": [
+        {
+          "src": "pwa-icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Logs",
+      "short_name": "Logs",
+      "url": "./audit.html",
+      "icons": [
+        {
+          "src": "pwa-icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
+  ]
+}

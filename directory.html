@@ -3,8 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#172033">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Waffle House">
+    <link rel="manifest" href="manifest.webmanifest?v=8.4.1">
+    <link rel="icon" type="image/png" sizes="192x192" href="pwa-icon-192.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="pwa-apple-touch-icon.png">
     <title>Waffle House — Guest Directory & Care</title>
-    <link rel="stylesheet" href="waffle-app.css?v=8.3.1">
+    <link rel="stylesheet" href="waffle-app.css?v=8.4.1">
 
 </head>
 <body data-waffle-page="directory">
@@ -406,7 +414,7 @@
 <div id="hostedBelongingsPhotoUploaderModal" class="hosted-photo-uploader-modal" aria-hidden="true">
     <div class="hosted-photo-uploader-panel">
         <div class="hosted-photo-uploader-header">
-            <span>📷 Pet Belongings Photo</span>
+            <span id="hostedBelongingsPhotoUploaderTitle">📷 Photo Manager</span>
             <button type="button" id="closeHostedBelongingsPhotoUploader" class="hosted-photo-uploader-close" aria-label="Close photo uploader">✕</button>
         </div>
         <iframe
@@ -438,6 +446,6 @@
     body.dark-theme .modal-content-panel input { background: #334155; border-color: #475569; color: white; }
 </style>
 
-<script src="waffle-app.js?v=8.3.1"></script>
+<script src="waffle-app.js?v=8.4.1"></script>
 
 </html>

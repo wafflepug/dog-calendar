@@ -379,6 +379,34 @@ async function queryAppsScriptSWR(
         }
     }
 
+    if (
+        navigator.onLine === false &&
+        cached?.payload
+    ) {
+        setWaffleConnectionStatus(
+            'offline'
+        );
+
+        return {
+            data:
+                cached.payload,
+            cacheApplied,
+            unchanged:
+                true,
+            offlineFallback:
+                true
+        };
+    }
+
+    if (
+        navigator.onLine === false &&
+        !cached?.payload
+    ) {
+        throw new Error(
+            'Offline and no saved data is available yet.'
+        );
+    }
+
     const requestPayload = {
         ...payload
     };
@@ -507,6 +535,502 @@ async function invalidateWaffleClientCaches(scopes) {
 }
 
 
+
+
+/* ============================================================
+   V8.4 PWA / OFFLINE APP SHELL
+   ============================================================ */
+
+let waffleDeferredInstallPrompt = null;
+let waffleActiveNetworkRequests = 0;
+
+function isWaffleStandalone() {
+    return (
+        window.matchMedia &&
+        window
+            .matchMedia(
+                '(display-mode: standalone)'
+            )
+            .matches
+    ) ||
+    window.navigator.standalone === true;
+}
+
+
+function isWaffleIosDevice() {
+    const ua =
+        navigator.userAgent ||
+        '';
+
+    return (
+        /iphone|ipad|ipod/i.test(ua) ||
+        (
+            navigator.platform ===
+                'MacIntel' &&
+            navigator.maxTouchPoints > 1
+        )
+    );
+}
+
+
+function ensureWaffleConnectionStatus() {
+    let status =
+        document.getElementById(
+            'waffleConnectionStatus'
+        );
+
+    if (status) return status;
+
+    status =
+        document.createElement(
+            'div'
+        );
+
+    status.id =
+        'waffleConnectionStatus';
+
+    status.className =
+        'waffle-connection-status';
+
+    status.setAttribute(
+        'role',
+        'status'
+    );
+
+    status.setAttribute(
+        'aria-live',
+        'polite'
+    );
+
+    const header =
+        document.querySelector(
+            '.calendar-header-branding'
+        );
+
+    if (header) {
+        header.appendChild(status);
+    } else {
+        document.body.appendChild(status);
+    }
+
+    return status;
+}
+
+
+function setWaffleConnectionStatus(
+    mode,
+    label
+) {
+    const status =
+        ensureWaffleConnectionStatus();
+
+    status.dataset.mode =
+        mode || 'live';
+
+    if (label) {
+        status.textContent =
+            label;
+        return;
+    }
+
+    if (mode === 'offline') {
+        status.textContent =
+            '● Offline · saved data';
+        return;
+    }
+
+    if (mode === 'updating') {
+        status.textContent =
+            '↻ Updating';
+        return;
+    }
+
+    status.textContent =
+        '● Live';
+}
+
+
+function beginWaffleNetworkActivity() {
+    waffleActiveNetworkRequests++;
+
+    if (navigator.onLine !== false) {
+        setWaffleConnectionStatus(
+            'updating'
+        );
+    }
+}
+
+
+function endWaffleNetworkActivity() {
+    waffleActiveNetworkRequests =
+        Math.max(
+            0,
+            waffleActiveNetworkRequests - 1
+        );
+
+    if (
+        waffleActiveNetworkRequests === 0
+    ) {
+        setWaffleConnectionStatus(
+            navigator.onLine === false
+                ? 'offline'
+                : 'live'
+        );
+    }
+}
+
+
+function ensureWaffleInstallButton() {
+    if (isWaffleStandalone()) {
+        return null;
+    }
+
+    let button =
+        document.getElementById(
+            'waffleInstallButton'
+        );
+
+    if (button) return button;
+
+    button =
+        document.createElement(
+            'button'
+        );
+
+    button.id =
+        'waffleInstallButton';
+
+    button.type =
+        'button';
+
+    button.className =
+        'waffle-install-button';
+
+    button.innerHTML =
+        '<span aria-hidden="true">⬇️</span><span>Install</span>';
+
+    button.hidden =
+        true;
+
+    const header =
+        document.querySelector(
+            '.calendar-header-branding'
+        );
+
+    if (header) {
+        const theme =
+            document.getElementById(
+                'themeToggle'
+            );
+
+        if (
+            theme &&
+            theme.parentNode === header
+        ) {
+            header.insertBefore(
+                button,
+                theme
+            );
+        } else {
+            header.appendChild(button);
+        }
+    }
+
+    return button;
+}
+
+
+function showWaffleIosInstallGuide() {
+    let modal =
+        document.getElementById(
+            'waffleInstallGuide'
+        );
+
+    if (!modal) {
+        modal =
+            document.createElement(
+                'div'
+            );
+
+        modal.id =
+            'waffleInstallGuide';
+
+        modal.className =
+            'waffle-install-guide';
+
+        modal.innerHTML = `
+            <div
+                class="waffle-install-guide-card"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="waffleInstallGuideTitle">
+                <button
+                    type="button"
+                    class="waffle-install-guide-close"
+                    aria-label="Close install instructions">
+                    ×
+                </button>
+
+                <div class="waffle-install-guide-icon">🐾</div>
+
+                <h3 id="waffleInstallGuideTitle">
+                    Add Waffle House to your Home Screen
+                </h3>
+
+                <ol>
+                    <li>Tap the browser <strong>Share</strong> button.</li>
+                    <li>Choose <strong>Add to Home Screen</strong>.</li>
+                    <li>Tap <strong>Add</strong>.</li>
+                </ol>
+
+                <p>
+                    It will open as a standalone Waffle House app after installation.
+                </p>
+            </div>
+        `;
+
+        document.body.appendChild(
+            modal
+        );
+
+        modal
+            .querySelector(
+                '.waffle-install-guide-close'
+            )
+            ?.addEventListener(
+                'click',
+                () => {
+                    modal.hidden =
+                        true;
+                }
+            );
+
+        modal.addEventListener(
+            'click',
+            event => {
+                if (
+                    event.target ===
+                    modal
+                ) {
+                    modal.hidden =
+                        true;
+                }
+            }
+        );
+    }
+
+    modal.hidden = false;
+}
+
+
+async function handleWaffleInstallClick() {
+    if (waffleDeferredInstallPrompt) {
+        try {
+            waffleDeferredInstallPrompt.prompt();
+
+            await waffleDeferredInstallPrompt
+                .userChoice;
+
+        } catch (error) {
+            console.warn(
+                'Install prompt failed:',
+                error
+            );
+        }
+
+        waffleDeferredInstallPrompt =
+            null;
+
+        const button =
+            document.getElementById(
+                'waffleInstallButton'
+            );
+
+        if (button) {
+            button.hidden =
+                true;
+        }
+
+        return;
+    }
+
+    if (isWaffleIosDevice()) {
+        showWaffleIosInstallGuide();
+    }
+}
+
+
+function initialiseWafflePwaUi() {
+    document.documentElement
+        .classList
+        .toggle(
+            'waffle-standalone',
+            isWaffleStandalone()
+        );
+
+    const installButton =
+        ensureWaffleInstallButton();
+
+    installButton
+        ?.addEventListener(
+            'click',
+            handleWaffleInstallClick
+        );
+
+    /*
+     * iOS Safari does not expose beforeinstallprompt.
+     * Keep the install button available there so the user can
+     * open the Add to Home Screen instructions.
+     */
+    if (
+        installButton &&
+        isWaffleIosDevice() &&
+        !isWaffleStandalone()
+    ) {
+        installButton.hidden =
+            false;
+    }
+
+    setWaffleConnectionStatus(
+        navigator.onLine === false
+            ? 'offline'
+            : 'live'
+    );
+}
+
+
+function registerWaffleServiceWorker() {
+    if (
+        !('serviceWorker' in navigator)
+    ) {
+        return;
+    }
+
+    window.addEventListener(
+        'load',
+        () => {
+            navigator
+                .serviceWorker
+                .register(
+                    './service-worker.js?v=8.4.1',
+                    {
+                        scope: './'
+                    }
+                )
+                .then(registration => {
+                    registration
+                        .update()
+                        .catch(() => {});
+                })
+                .catch(error => {
+                    console.warn(
+                        'Waffle service worker registration failed:',
+                        error
+                    );
+                });
+        }
+    );
+}
+
+
+window.addEventListener(
+    'beforeinstallprompt',
+    event => {
+        event.preventDefault();
+
+        waffleDeferredInstallPrompt =
+            event;
+
+        const button =
+            ensureWaffleInstallButton();
+
+        if (button) {
+            button.hidden =
+                false;
+        }
+    }
+);
+
+
+window.addEventListener(
+    'appinstalled',
+    () => {
+        waffleDeferredInstallPrompt =
+            null;
+
+        const button =
+            document.getElementById(
+                'waffleInstallButton'
+            );
+
+        if (button) {
+            button.hidden =
+                true;
+        }
+
+        document.documentElement
+            .classList
+            .add(
+                'waffle-standalone'
+            );
+    }
+);
+
+
+window.addEventListener(
+    'online',
+    () => {
+        setWaffleConnectionStatus(
+            'live'
+        );
+
+        /*
+         * Revalidate the active operational page after connectivity
+         * returns. Existing per-page freshness/dedupe guards remain.
+         */
+        if (WAFFLE_PAGE === 'directory') {
+            directoryConsolidatedLastFetch =
+                0;
+
+            loadGuestDirectoryConsolidated({
+                quiet: true
+            }).catch(() => {});
+        } else if (
+            WAFFLE_PAGE ===
+            'reminders'
+        ) {
+            loadRemindersNotes()
+                .catch(() => {});
+        } else if (
+            WAFFLE_PAGE ===
+            'audit'
+        ) {
+            loadAuditLog()
+                .catch(() => {});
+        } else if (
+            WAFFLE_PAGE ===
+            'calendar'
+        ) {
+            syncSpreadsheetData()
+                .catch(() => {});
+        }
+    }
+);
+
+
+window.addEventListener(
+    'offline',
+    () => {
+        setWaffleConnectionStatus(
+            'offline'
+        );
+    }
+);
+
+
+registerWaffleServiceWorker();
+
+
     const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT63UsPjcg3GB4lTB6cewLaTRS_yJP4kpOMSMsTTnvTw1Wbjn3CgtZc_c6li28ihjzkHnphFt0XcFTt/pub?gid=1639615540&single=true&output=csv';
     const APPS_SCRIPT_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbwn4HL49K9c3AZbXJRUjPw3UYWxJt8DmqXwMnTytyqdSstj3ZIJwWdDEC2IsBjetOf3pw/exec';
 
@@ -630,6 +1154,41 @@ async function invalidateWaffleClientCaches(scopes) {
     ];
 
 
+
+
+    const DIRECTORY_PROFILE_SECONDARY_TABS = [
+        {
+            key: 'overview',
+            label: 'Overview',
+            icon: '🐶',
+            groups: ['Owner & Emergency', 'Dog Information']
+        },
+        {
+            key: 'behaviour',
+            label: 'Behaviour',
+            icon: '🧠',
+            groups: ['Behaviour & Personality']
+        },
+        {
+            key: 'foodWalks',
+            label: 'Food & Walks',
+            icon: '🥣',
+            groups: ['Feeding', 'Walking']
+        },
+        {
+            key: 'healthHome',
+            label: 'Health & Home',
+            icon: '🩺',
+            groups: ['Medical', 'Sleeping & Home Routine']
+        },
+        {
+            key: 'care',
+            label: 'Care',
+            icon: '🛡️',
+            groups: []
+        }
+    ];
+
     let careRiskRecordsCache = {};
 
     function getLocalTodayDateString() {
@@ -673,6 +1232,7 @@ async function invalidateWaffleClientCaches(scopes) {
 
 
     document.addEventListener('DOMContentLoaded', function() {
+        initialiseWafflePwaUi();
         initialiseMobileDashboardLayout();
 
         const cachedData = localStorage.getItem('boardingDataCache');
@@ -987,6 +1547,50 @@ async function invalidateWaffleClientCaches(scopes) {
             );
 
         directoryGrid.addEventListener('click', async function(event) {
+            const mainProfileTab =
+                event.target.closest(
+                    '[data-directory-main-tab]'
+                );
+
+            if (mainProfileTab) {
+                event.preventDefault();
+                event.stopPropagation();
+
+                const card =
+                    mainProfileTab.closest(
+                        '.directory-card'
+                    );
+
+                switchDirectoryProfileMainTab(
+                    card,
+                    mainProfileTab.dataset.directoryMainTab
+                );
+
+                return;
+            }
+
+            const profileSubTab =
+                event.target.closest(
+                    '[data-profile-subtab]'
+                );
+
+            if (profileSubTab) {
+                event.preventDefault();
+                event.stopPropagation();
+
+                const card =
+                    profileSubTab.closest(
+                        '.directory-card'
+                    );
+
+                switchDirectoryProfileSubTab(
+                    card,
+                    profileSubTab.dataset.profileSubtab
+                );
+
+                return;
+            }
+
             const openProfileButton =
                 event.target.closest(
                     '[data-open-directory-profile]'
@@ -1294,20 +1898,28 @@ async function invalidateWaffleClientCaches(scopes) {
                         '.belongings-pet-card'
                     );
 
-                const file =
-                    input.files &&
-                    input.files[0];
+                const files =
+                    Array.from(
+                        input.files ||
+                        []
+                    );
 
-                if (!card || !file) {
+                if (!card || !files.length) {
                     input.value = '';
                     return;
                 }
 
                 try {
-                    await uploadBelongingsPhoto(
-                        card,
-                        file
-                    );
+                    for (
+                        let index = 0;
+                        index < files.length;
+                        index++
+                    ) {
+                        await uploadBelongingsPhoto(
+                            card,
+                            files[index]
+                        );
+                    }
                 } finally {
                     input.value = '';
                 }
@@ -3895,11 +4507,17 @@ async function invalidateWaffleClientCaches(scopes) {
             );
         }
 
+        beginWaffleNetworkActivity();
+
         const request =
             queryAppsScriptRaw(
                 payload,
                 options
             );
+
+        request.finally(
+            endWaffleNetworkActivity
+        );
 
         if (!key) {
             return request;
@@ -3947,6 +4565,20 @@ async function invalidateWaffleClientCaches(scopes) {
     }
 
     function setDirectoryCareFlags(stayKey, record) {
+        const profileCard =
+            getDirectoryProfileCard(
+                stayKey
+            );
+
+        if (profileCard) {
+            renderDirectoryCareProfile(
+                profileCard,
+                record || {
+                    riskFlags: {}
+                }
+            );
+        }
+
         const container = findDirectoryCareElement(stayKey);
         if (!container) return;
 
@@ -5055,6 +5687,132 @@ async function invalidateWaffleClientCaches(scopes) {
     }
 
 
+
+    function switchDirectoryProfileMainTab(card, tabName) {
+        if (!card) return;
+
+        tabName =
+            tabName === 'belongings'
+                ? 'belongings'
+                : 'profile';
+
+        card.dataset.mainProfileTab =
+            tabName;
+
+        card
+            .querySelectorAll(
+                '[data-directory-main-tab]'
+            )
+            .forEach(button => {
+                const active =
+                    button.dataset.directoryMainTab ===
+                    tabName;
+
+                button.classList.toggle(
+                    'is-active',
+                    active
+                );
+
+                button.setAttribute(
+                    'aria-selected',
+                    active ? 'true' : 'false'
+                );
+            });
+
+        card
+            .querySelectorAll(
+                '[data-directory-main-panel]'
+            )
+            .forEach(panel => {
+                const active =
+                    panel.dataset.directoryMainPanel ===
+                    tabName;
+
+                panel.classList.toggle(
+                    'is-active',
+                    active
+                );
+
+                panel.hidden =
+                    !active;
+            });
+
+        if (tabName === 'belongings') {
+            const details =
+                card.querySelector(
+                    '[data-directory-detail="belongings"]'
+                );
+
+            if (details) {
+                loadDirectoryBelongingsDetail(
+                    card,
+                    details
+                ).catch(error =>
+                    console.error(error)
+                );
+            }
+        }
+    }
+
+
+    function switchDirectoryProfileSubTab(card, tabName) {
+        if (!card) return;
+
+        const valid =
+            DIRECTORY_PROFILE_SECONDARY_TABS
+                .some(tab =>
+                    tab.key ===
+                    tabName
+                );
+
+        tabName =
+            valid
+                ? tabName
+                : 'overview';
+
+        card.dataset.profileSubTab =
+            tabName;
+
+        card
+            .querySelectorAll(
+                '[data-profile-subtab]'
+            )
+            .forEach(button => {
+                const active =
+                    button.dataset.profileSubtab ===
+                    tabName;
+
+                button.classList.toggle(
+                    'is-active',
+                    active
+                );
+
+                button.setAttribute(
+                    'aria-selected',
+                    active ? 'true' : 'false'
+                );
+            });
+
+        card
+            .querySelectorAll(
+                '[data-profile-subpanel]'
+            )
+            .forEach(panel => {
+                const active =
+                    panel.dataset.profileSubpanel ===
+                    tabName;
+
+                panel.classList.toggle(
+                    'is-active',
+                    active
+                );
+
+                panel.hidden =
+                    !active;
+            });
+    }
+
+
     async function openDirectoryGuestProfile(
         card,
         options = {}
@@ -5127,52 +5885,37 @@ async function invalidateWaffleClientCaches(scopes) {
         }
 
         /*
-         * The profile is now isolated, so both detail areas are useful
-         * immediately. Fetch only this dog's full records.
+         * V8.4.1 opens directly into Profile.
+         * Belongings remains lazy until selected.
          */
+        switchDirectoryProfileMainTab(
+            card,
+            'profile'
+        );
+
+        switchDirectoryProfileSubTab(
+            card,
+            card.dataset.profileSubTab ||
+            'overview'
+        );
+
         const profileSection =
             card.querySelector(
                 '[data-directory-detail="profile"]'
             );
 
-        const belongingsSection =
-            card.querySelector(
-                '[data-directory-detail="belongings"]'
-            );
-
-        const loadTasks = [];
-
         if (profileSection) {
-            loadTasks.push(
-                loadDirectoryProfileDetail(
-                    card,
-                    profileSection,
-                    {
-                        force:
-                            options.force === true
-                    }
-                )
+            loadDirectoryProfileDetail(
+                card,
+                profileSection,
+                {
+                    force:
+                        options.force === true
+                }
+            ).catch(error =>
+                console.error(error)
             );
         }
-
-        if (belongingsSection) {
-            loadTasks.push(
-                loadDirectoryBelongingsDetail(
-                    card,
-                    belongingsSection,
-                    {
-                        force:
-                            options.force === true
-                    }
-                )
-            );
-        }
-
-        Promise
-            .allSettled(
-                loadTasks
-            )
-            .catch(() => {});
 
         if (!options.preserveScroll) {
             document
@@ -5423,17 +6166,14 @@ async function invalidateWaffleClientCaches(scopes) {
         const attributes =
             record &&
             record.intakeAttributes &&
-            typeof record.intakeAttributes ===
-                'object'
+            typeof record.intakeAttributes === 'object'
                 ? record.intakeAttributes
                 : {};
 
         const populatedCount =
             Object.values(attributes)
                 .filter(value =>
-                    String(
-                        value ?? ''
-                    ).trim()
+                    String(value ?? '').trim()
                 ).length;
 
         const source =
@@ -5463,43 +6203,184 @@ async function invalidateWaffleClientCaches(scopes) {
                     : sourceLabel;
         }
 
-        host.innerHTML =
-            `
-                <div class="intake-profile-source">
-                    📋 ${sourceLabel}
-                </div>
-            ` +
-            INTAKE_ATTRIBUTE_UI_GROUPS
-                .map(group => {
-                    const fieldsHtml =
-                        group.fields
-                            .map(field =>
-                                intakeAttributeControlHtml(
-                                    field,
-                                    attributes[field.key]
-                                )
-                            )
+        const selectedSubTab =
+            String(
+                card.dataset.profileSubTab ||
+                'overview'
+            );
+
+        const tabButtons =
+            DIRECTORY_PROFILE_SECONDARY_TABS
+                .map(tab => {
+                    const active =
+                        tab.key === selectedSubTab;
+
+                    return `
+                        <button
+                            type="button"
+                            class="directory-profile-subtab ${active ? 'is-active' : ''}"
+                            role="tab"
+                            aria-selected="${active ? 'true' : 'false'}"
+                            data-profile-subtab="${escapeDashboardHtml(tab.key)}">
+                            <span aria-hidden="true">${escapeDashboardHtml(tab.icon)}</span>
+                            <span>${escapeDashboardHtml(tab.label)}</span>
+                        </button>
+                    `;
+                })
+                .join('');
+
+        const panels =
+            DIRECTORY_PROFILE_SECONDARY_TABS
+                .map(tab => {
+                    const active =
+                        tab.key === selectedSubTab;
+
+                    if (tab.key === 'care') {
+                        return `
+                            <section
+                                class="directory-profile-subpanel ${active ? 'is-active' : ''}"
+                                role="tabpanel"
+                                data-profile-subpanel="care"
+                                ${active ? '' : 'hidden'}>
+                                <div
+                                    class="directory-profile-care-host"
+                                    data-directory-profile-care>
+                                    <div class="intake-profile-empty">
+                                        Loading care settings…
+                                    </div>
+                                </div>
+                            </section>
+                        `;
+                    }
+
+                    const groupsHtml =
+                        tab.groups
+                            .map(groupTitle => {
+                                const group =
+                                    INTAKE_ATTRIBUTE_UI_GROUPS
+                                        .find(item =>
+                                            item.title === groupTitle
+                                        );
+
+                                if (!group) return '';
+
+                                const fieldsHtml =
+                                    group.fields
+                                        .map(field =>
+                                            intakeAttributeControlHtml(
+                                                field,
+                                                attributes[field.key]
+                                            )
+                                        )
+                                        .join('');
+
+                                return `
+                                    <section class="intake-profile-group">
+                                        <div class="intake-profile-group-title">
+                                            ${escapeDashboardHtml(group.title)}
+                                        </div>
+                                        <div class="intake-profile-grid">
+                                            ${fieldsHtml}
+                                        </div>
+                                    </section>
+                                `;
+                            })
                             .join('');
 
                     return `
-                        <section class="intake-profile-group">
-                            <div class="intake-profile-group-title">
-                                ${escapeDashboardHtml(group.title)}
-                            </div>
-                            <div class="intake-profile-grid">
-                                ${fieldsHtml}
-                            </div>
+                        <section
+                            class="directory-profile-subpanel ${active ? 'is-active' : ''}"
+                            role="tabpanel"
+                            data-profile-subpanel="${escapeDashboardHtml(tab.key)}"
+                            ${active ? '' : 'hidden'}>
+                            ${groupsHtml}
                         </section>
                     `;
                 })
-                .join('') +
-            `
-                <div class="guest-profile-save-note">
-                    These fields are stored with this guest profile in the shared Waffle House database.
-                    Use “Save Profile, Care &amp; Belongings” below after making changes.
-                </div>
-            `;
+                .join('');
+
+        host.innerHTML = `
+            <div class="intake-profile-source directory-profile-source-line">
+                📋 ${sourceLabel}
+            </div>
+
+            <div
+                class="directory-profile-subtabs"
+                role="tablist"
+                aria-label="Profile details">
+                ${tabButtons}
+            </div>
+
+            <div class="directory-profile-subpanels">
+                ${panels}
+            </div>
+        `;
+
+        renderDirectoryCareProfile(
+            card,
+            careRiskRecordsCache[
+                card.dataset.stayKey
+            ] ||
+            directorySummaryRecordsCache[
+                card.dataset.stayKey
+            ] ||
+            belongingsRecordsCache[
+                card.dataset.stayKey
+            ] ||
+            {
+                riskFlags: {}
+            }
+        );
     }
+
+
+    function renderDirectoryCareProfile(card, record) {
+        const host =
+            card.querySelector(
+                '[data-directory-profile-care]'
+            );
+
+        if (!host) return;
+
+        const riskFlags =
+            record &&
+            record.riskFlags &&
+            typeof record.riskFlags === 'object'
+                ? record.riskFlags
+                : {};
+
+        const riskFlagsHtml =
+            CARE_SAFETY_FLAGS
+                .map(flag => `
+                    <label class="care-risk-option ${escapeDashboardHtml(flag.className)}">
+                        <input
+                            type="checkbox"
+                            data-care-risk-flag="${escapeDashboardHtml(flag.key)}"
+                            ${riskFlags[flag.key] ? 'checked' : ''}>
+                        <span class="care-risk-icon" aria-hidden="true">${escapeDashboardHtml(flag.icon)}</span>
+                        <span class="care-risk-label">${escapeDashboardHtml(flag.label)}</span>
+                    </label>
+                `)
+                .join('');
+
+        host.innerHTML = `
+            <div class="care-profile-compact">
+                <div class="care-risk-section-heading">
+                    <div>
+                        <strong>🛡️ Care &amp; Safety</strong>
+                        <span>
+                            Operational alerts stored with this guest profile.
+                        </span>
+                    </div>
+                </div>
+
+                <div class="care-risk-grid">
+                    ${riskFlagsHtml}
+                </div>
+            </div>
+        `;
+    }
+
 
     function renderDirectoryBelongings(card, record) {
         const host =
@@ -5524,9 +6405,13 @@ async function invalidateWaffleClientCaches(scopes) {
                 items: {},
                 photos: [],
                 riskFlags: {},
-                dogPhoto: null,
-                intakeAttributes: {}
+                dogPhoto: null
             };
+
+        renderDirectoryCareProfile(
+            card,
+            record
+        );
 
         const itemsHtml =
             BELONGINGS_ITEMS
@@ -5555,129 +6440,115 @@ async function invalidateWaffleClientCaches(scopes) {
                 })
                 .join('');
 
-        const riskFlags =
-            record.riskFlags || {};
-
-        const riskFlagsHtml =
-            CARE_SAFETY_FLAGS
-                .map(flag => `
-                    <label class="care-risk-option ${escapeDashboardHtml(flag.className)}">
-                        <input
-                            type="checkbox"
-                            data-care-risk-flag="${escapeDashboardHtml(flag.key)}"
-                            ${riskFlags[flag.key] ? 'checked' : ''}>
-                        <span class="care-risk-icon" aria-hidden="true">${escapeDashboardHtml(flag.icon)}</span>
-                        <span class="care-risk-label">${escapeDashboardHtml(flag.label)}</span>
-                    </label>
-                `)
-                .join('');
-
         const photos =
-            Array.isArray(
-                record.photos
-            )
+            Array.isArray(record.photos)
                 ? record.photos
                 : [];
 
         const photosHtml =
             photos.length
-                ? photos.map(photo => `
-                    <div class="belongings-photo-card">
-                        <button
-                            type="button"
-                            class="belongings-photo-delete"
-                            data-delete-belongings-photo="${escapeDashboardHtml(photo.id || '')}"
-                            title="Delete photo">×</button>
-                        <a
-                            href="${escapeDashboardHtml(photo.driveUrl || photo.previewUrl || '#')}"
-                            target="_blank"
-                            rel="noopener noreferrer">
-                            <img
-                                src="${escapeDashboardHtml(photo.previewUrl || '')}"
-                                alt="${escapeDashboardHtml(photo.label || 'Belongings photo')}"
-                                loading="lazy">
-                        </a>
-                        <div class="belongings-photo-caption">
-                            ${escapeDashboardHtml(photo.label || 'Belongings photo')}
+                ? photos
+                    .map(photo => `
+                        <div class="belongings-photo-card">
+                            <button
+                                type="button"
+                                class="belongings-photo-delete"
+                                data-delete-belongings-photo="${escapeDashboardHtml(photo.id || '')}"
+                                title="Delete photo">×</button>
+                            <a
+                                href="${escapeDashboardHtml(photo.driveUrl || photo.previewUrl || '#')}"
+                                target="_blank"
+                                rel="noopener noreferrer">
+                                <img
+                                    src="${escapeDashboardHtml(photo.previewUrl || '')}"
+                                    alt="${escapeDashboardHtml(photo.label || 'Belongings photo')}"
+                                    loading="lazy">
+                            </a>
+                            <div class="belongings-photo-caption">
+                                ${escapeDashboardHtml(photo.label || 'Belongings photo')}
+                            </div>
                         </div>
+                    `)
+                    .join('')
+                : `
+                    <div class="belongings-photo-status belongings-photo-empty">
+                        No belongings photos saved yet.
                     </div>
-                `).join('')
-                : '<div class="belongings-photo-status">No belongings photos saved yet.</div>';
-
-        const dogPhotoExists =
-            !!(
-                record.dogPhoto &&
-                record.dogPhoto.previewUrl
-            );
+                `;
 
         host.innerHTML = `
             <div class="directory-belongings-section">
-                <div class="care-risk-section">
-                    <div class="care-risk-section-heading">
-                        <div>
-                            <strong>🛡️ Care &amp; Safety Alerts</strong>
-                            <span>Operational alerts shown immediately on the guest card.</span>
-                        </div>
+                <div class="belongings-item-section-heading">
+                    <div>
+                        <strong>🧳 Belongings Checklist</strong>
+                        <span>
+                            Tick what arrived and add a short note only where needed.
+                        </span>
                     </div>
-                    <div class="care-risk-grid">${riskFlagsHtml}</div>
                 </div>
 
                 <div class="belongings-item-list">
                     ${itemsHtml}
                 </div>
 
-                <input
-                    type="text"
-                    class="belongings-description belongings-photo-note"
-                    data-belongings-photo-label
-                    placeholder="Photo note, e.g. bowls, blanket and blue bed">
-
-                <div class="belongings-actions">
-                    <button
-                        type="button"
-                        class="belongings-save-btn"
-                        data-save-belongings>
-                        💾 Save Profile, Care &amp; Belongings
-                    </button>
-
-                    <button
-                        type="button"
-                        class="dog-profile-photo-btn"
-                        data-upload-dog-photo>
-                        📷 ${dogPhotoExists ? 'Change Dog Photo' : 'Add Dog Photo'}
-                    </button>
-
-                    <button
-                        type="button"
-                        class="belongings-camera-btn"
-                        data-take-belongings-photo>
-                        📷 Take Belongings Photo
-                    </button>
-
-                    <button
-                        type="button"
-                        class="belongings-upload-btn"
-                        data-upload-belongings-photo>
-                        🖼️ Upload Belongings Photo
-                    </button>
+                <div class="belongings-photo-upload-card">
+                    <div class="belongings-photo-upload-copy">
+                        <strong>📷 Belongings Photos</strong>
+                        <span>
+                            Add several photos from your library in one selection, or use the camera.
+                        </span>
+                    </div>
 
                     <input
-                        type="file"
-                        accept="image/*"
-                        data-belongings-photo-input
-                        hidden>
-                </div>
+                        type="text"
+                        class="belongings-description belongings-photo-note"
+                        data-belongings-photo-label
+                        placeholder="Optional note for this group of photos">
 
-                <div
-                    class="belongings-photo-status"
-                    data-belongings-photo-status></div>
+                    <div class="belongings-actions belongings-actions-compact">
+                        <button
+                            type="button"
+                            class="belongings-camera-btn"
+                            data-take-belongings-photo>
+                            📷 Take Photo
+                        </button>
+
+                        <button
+                            type="button"
+                            class="belongings-upload-btn"
+                            data-upload-belongings-photo>
+                            🖼️ Add Photos
+                        </button>
+
+                        <input
+                            type="file"
+                            accept="image/*"
+                            data-belongings-photo-input
+                            multiple
+                            hidden>
+                    </div>
+
+                    <div
+                        class="belongings-photo-status"
+                        data-belongings-photo-status></div>
+                </div>
 
                 <div class="belongings-photo-gallery">
                     ${photosHtml}
                 </div>
+
+                <div class="directory-profile-save-bar directory-belongings-save-bar">
+                    <button
+                        type="button"
+                        class="belongings-save-btn"
+                        data-save-belongings>
+                        💾 Save Belongings
+                    </button>
+                </div>
             </div>
         `;
     }
+
 
     function renderDirectoryOperationalSections(
         stayKey,
@@ -5883,16 +6754,22 @@ async function invalidateWaffleClientCaches(scopes) {
                 '[data-directory-detail="profile"]'
             );
 
+        const belongingsDetails =
+            card.querySelector(
+                '[data-directory-detail="belongings"]'
+            );
+
         const profileLoaded =
-            profileDetails?.dataset
-                .detailLoaded ===
+            profileDetails?.dataset.detailLoaded ===
+                'true';
+
+        const belongingsLoaded =
+            belongingsDetails?.dataset.detailLoaded ===
                 'true';
 
         const intakeAttributes =
             profileLoaded
-                ? collectIntakeAttributes(
-                    card
-                )
+                ? collectIntakeAttributes(card)
                 : undefined;
 
         if (profileLoaded) {
@@ -5907,9 +6784,14 @@ async function invalidateWaffleClientCaches(scopes) {
             dogName: card.dataset.dogName,
             startDate: card.dataset.startDate,
             endDate: card.dataset.endDate,
-            items: collectBelongingsItems(card),
-            riskFlags: collectCareSafetyFlags(card)
+            riskFlags:
+                collectCareSafetyFlags(card)
         };
+
+        if (belongingsLoaded) {
+            payload.items =
+                collectBelongingsItems(card);
+        }
 
         if (profileLoaded) {
             payload.intakeAttributes =
@@ -5918,6 +6800,7 @@ async function invalidateWaffleClientCaches(scopes) {
 
         return payload;
     }
+
 
     async function saveBelongingsCard(card, button) {
         if (!card || !button) return;
@@ -5936,7 +6819,12 @@ async function invalidateWaffleClientCaches(scopes) {
                 dogName: payload.dogName,
                 startDate: payload.startDate,
                 endDate: payload.endDate,
-                items: payload.items,
+                ...(payload.items
+                    ? {
+                        items:
+                            payload.items
+                      }
+                    : {}),
                 riskFlags: payload.riskFlags,
                 ...(payload.intakeAttributes
                     ? {
@@ -5967,7 +6855,12 @@ async function invalidateWaffleClientCaches(scopes) {
                 dogName: payload.dogName,
                 startDate: payload.startDate,
                 endDate: payload.endDate,
-                items: payload.items,
+                ...(payload.items
+                    ? {
+                        items:
+                            payload.items
+                      }
+                    : {}),
                 riskFlags: payload.riskFlags,
                 photos:
                     belongingsRecordsCache[
@@ -6092,6 +6985,17 @@ async function invalidateWaffleClientCaches(scopes) {
 
             const frame = document.getElementById('hostedBelongingsPhotoUploaderFrame');
             const modal = document.getElementById('hostedBelongingsPhotoUploaderModal');
+            const modalTitle =
+                document.getElementById(
+                    'hostedBelongingsPhotoUploaderTitle'
+                );
+
+            if (modalTitle) {
+                modalTitle.textContent =
+                    isDogProfile
+                        ? '🐶 Position Dog Photo'
+                        : '📷 Add Belongings Photos';
+            }
 
             frame.src = APPS_SCRIPT_WEBAPP_URL + '?' + params.toString();
             modal.style.display = 'flex';
@@ -6164,10 +7068,23 @@ async function invalidateWaffleClientCaches(scopes) {
                 }
 
                 if (status) {
+                    const savedCount =
+                        Math.max(
+                            1,
+                            Number(
+                                data.count ||
+                                1
+                            )
+                        );
+
                     status.textContent =
                         context.photoType === 'dogProfile'
-                            ? '✅ Dog photo saved'
-                            : '✅ Photo saved to Google Drive';
+                            ? '✅ Dog photo positioned and saved'
+                            : (
+                                savedCount === 1
+                                    ? '✅ Photo saved to Google Drive'
+                                    : `✅ ${savedCount} photos saved to Google Drive`
+                            );
                 }
 
                 closeHostedBelongingsPhotoUploader();
@@ -9072,6 +9989,14 @@ async function invalidateWaffleClientCaches(scopes) {
                                                 <div
                                                     class="directory-photo-placeholder"
                                                     aria-label="No dog profile photo">🐶</div>
+                                                <button
+                                                    type="button"
+                                                    class="directory-photo-edit-button"
+                                                    data-upload-dog-photo
+                                                    title="Change and position dog profile photo"
+                                                    aria-label="Change and position ${escapeDashboardHtml(dogName.trim())} profile photo">
+                                                    ✎
+                                                </button>
                                             </div>
 
                                             <div class="directory-card-identity">
@@ -9101,6 +10026,35 @@ async function invalidateWaffleClientCaches(scopes) {
                                                 </div>
                                             </div>
                                         </div>
+
+                                        <nav
+                                            class="directory-main-profile-tabs"
+                                            role="tablist"
+                                            aria-label="${escapeDashboardHtml(dogName.trim())} profile sections">
+                                            <button
+                                                type="button"
+                                                class="directory-main-profile-tab is-active"
+                                                role="tab"
+                                                aria-selected="true"
+                                                data-directory-main-tab="profile">
+                                                <span aria-hidden="true">🐶</span>
+                                                <span>Profile</span>
+                                            </button>
+                                            <button
+                                                type="button"
+                                                class="directory-main-profile-tab"
+                                                role="tab"
+                                                aria-selected="false"
+                                                data-directory-main-tab="belongings">
+                                                <span aria-hidden="true">🧳</span>
+                                                <span>Belongings</span>
+                                            </button>
+                                        </nav>
+
+                                        <section
+                                            class="directory-main-profile-panel is-active"
+                                            role="tabpanel"
+                                            data-directory-main-panel="profile">
 
                                         <div
                                             class="directory-care-strip"
@@ -9172,13 +10126,13 @@ async function invalidateWaffleClientCaches(scopes) {
                                         </div>
 
                                         <section
-                                            class="directory-profile-section"
+                                            class="directory-profile-section directory-profile-intake-section"
                                             data-directory-detail="profile"
                                             data-detail-loaded="false">
                                             <div class="directory-profile-section-heading">
                                                 <div>
-                                                    <span class="directory-profile-section-kicker">Profile</span>
-                                                    <h4>📋 Intake &amp; Profile Attributes</h4>
+                                                    <span class="directory-profile-section-kicker">Guest profile</span>
+                                                    <h4>📋 Profile &amp; Care</h4>
                                                 </div>
                                                 <span
                                                     class="intake-profile-source"
@@ -9190,28 +10144,44 @@ async function invalidateWaffleClientCaches(scopes) {
                                                 class="directory-fused-details-body"
                                                 data-directory-intake-attributes>
                                                 <div class="intake-profile-empty">
-                                                    Loading intake attributes…
+                                                    Loading profile…
                                                 </div>
                                             </div>
                                         </section>
 
+                                        <div class="directory-profile-save-bar">
+                                            <button
+                                                type="button"
+                                                class="belongings-save-btn"
+                                                data-save-belongings>
+                                                💾 Save Profile &amp; Care
+                                            </button>
+                                        </div>
+                                        </section>
+
                                         <section
-                                            class="directory-profile-section"
-                                            data-directory-detail="belongings"
-                                            data-detail-loaded="false">
-                                            <div class="directory-profile-section-heading">
-                                                <div>
-                                                    <span class="directory-profile-section-kicker">Care &amp; belongings</span>
-                                                    <h4>🧳 Belongings, Care &amp; Photos</h4>
+                                            class="directory-main-profile-panel"
+                                            role="tabpanel"
+                                            data-directory-main-panel="belongings"
+                                            hidden>
+                                            <section
+                                                class="directory-profile-section directory-belongings-only-section"
+                                                data-directory-detail="belongings"
+                                                data-detail-loaded="false">
+                                                <div class="directory-profile-section-heading">
+                                                    <div>
+                                                        <span class="directory-profile-section-kicker">Belongings</span>
+                                                        <h4>🧳 Items &amp; Photos</h4>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                            <div
-                                                class="directory-fused-details-body"
-                                                data-directory-belongings>
-                                                <div class="intake-profile-empty">
-                                                    Loading belongings and photos…
+                                                <div
+                                                    class="directory-fused-details-body"
+                                                    data-directory-belongings>
+                                                    <div class="intake-profile-empty">
+                                                        Open Belongings to load items and photos.
+                                                    </div>
                                                 </div>
-                                            </div>
+                                            </section>
                                         </section>
                                         </div>
                                     </div>
