@@ -1,6 +1,6 @@
 /* Waffle House Boarding — V8.4 Service Worker */
 
-const WAFFLE_SW_VERSION = 'v8.4.1.1';
+const WAFFLE_SW_VERSION = 'v9.0';
 const WAFFLE_CACHE_PREFIX = 'waffle-house-';
 const APP_SHELL_CACHE = `${WAFFLE_CACHE_PREFIX}shell-${WAFFLE_SW_VERSION}`;
 const RUNTIME_CACHE = `${WAFFLE_CACHE_PREFIX}runtime-${WAFFLE_SW_VERSION}`;
@@ -11,20 +11,185 @@ const APP_SHELL = [
   './directory.html',
   './reminders.html',
   './audit.html',
-  './waffle-app.css?v=8.4.1.1',
-  './waffle-app.js?v=8.4.1.1',
+  './waffle-app.css?v=9.0',
+  './waffle-app.js?v=9.0',
   './waffle-logo.png',
-  './manifest.webmanifest?v=8.4.1.1',
+  './manifest.webmanifest?v=9.0',
   './pwa-icon-192.png',
   './pwa-icon-512.png',
   './pwa-maskable-512.png',
-  './pwa-apple-touch-icon.png'
+  './pwa-apple-touch-icon.png',
+  './waffle-firebase-config.js?v=9.0'
 ];
 
 const OPTIONAL_EXTERNAL_ASSETS = [
   'https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css',
   'https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js'
 ];
+
+
+
+/* ============================================================
+   V9 FIREBASE CLOUD MESSAGING
+   Uses the same app-shell service worker registration.
+   ============================================================ */
+
+let waffleMessaging = null;
+
+function waffleFirebaseConfigReady(config) {
+  if (!config || typeof config !== 'object') return false;
+
+  const required = [
+    config.apiKey,
+    config.projectId,
+    config.messagingSenderId,
+    config.appId,
+    config.vapidKey
+  ];
+
+  return required.every(value => {
+    const text = String(value || '').trim();
+
+    return (
+      text &&
+      !text.startsWith('PASTE_')
+    );
+  });
+}
+
+try {
+  importScripts('./waffle-firebase-config.js?v=9.0');
+
+  const config =
+    self.WAFFLE_FIREBASE_CONFIG ||
+    null;
+
+  if (waffleFirebaseConfigReady(config)) {
+    importScripts(
+      'https://www.gstatic.com/firebasejs/12.17.1/firebase-app-compat.js'
+    );
+
+    importScripts(
+      'https://www.gstatic.com/firebasejs/12.17.1/firebase-messaging-compat.js'
+    );
+
+    firebase.initializeApp({
+      apiKey: config.apiKey,
+      authDomain: config.authDomain,
+      projectId: config.projectId,
+      messagingSenderId: config.messagingSenderId,
+      appId: config.appId
+    });
+
+    waffleMessaging =
+      firebase.messaging();
+
+    waffleMessaging.onBackgroundMessage(payload => {
+      const data =
+        payload && payload.data
+          ? payload.data
+          : {};
+
+      const title =
+        data.title ||
+        '🐾 Waffle House';
+
+      const body =
+        data.body ||
+        'Waffle House has an update.';
+
+      const link =
+        data.link ||
+        'index.html';
+
+      const tag =
+        data.tag ||
+        data.category ||
+        'waffle-update';
+
+      self.registration.showNotification(
+        title,
+        {
+          body,
+          icon:
+            './pwa-icon-192.png',
+          badge:
+            './pwa-icon-192.png',
+          tag,
+          renotify: true,
+          data: {
+            link
+          }
+        }
+      );
+    });
+  }
+} catch (error) {
+  console.warn(
+    'Waffle push messaging is not configured yet:',
+    error
+  );
+}
+
+
+self.addEventListener(
+  'notificationclick',
+  event => {
+    const rawLink =
+      event.notification &&
+      event.notification.data
+        ? event.notification.data.link
+        : '';
+
+    if (!rawLink) return;
+
+    event.notification.close();
+
+    const targetUrl =
+      new URL(
+        rawLink,
+        self.registration.scope
+      ).href;
+
+    event.waitUntil(
+      clients
+        .matchAll({
+          type: 'window',
+          includeUncontrolled: true
+        })
+        .then(windowClients => {
+          const exact =
+            windowClients.find(client =>
+              client.url === targetUrl
+            );
+
+          if (exact) {
+            return exact.focus();
+          }
+
+          const sameScope =
+            windowClients.find(client =>
+              client.url.startsWith(
+                self.registration.scope
+              )
+            );
+
+          if (sameScope) {
+            return sameScope
+              .navigate(targetUrl)
+              .then(() =>
+                sameScope.focus()
+              );
+          }
+
+          return clients.openWindow(
+            targetUrl
+          );
+        })
+    );
+  }
+);
+
 
 self.addEventListener('install', event => {
   event.waitUntil(

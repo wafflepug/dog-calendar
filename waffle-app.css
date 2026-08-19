@@ -5955,3 +5955,369 @@ body.dark-theme .directory-photo-edit-button {
         font-size: 15px !important;
     }
 }
+
+
+/* ============================================================
+   V9 PUSH NOTIFICATIONS
+   ============================================================ */
+
+.waffle-notification-button {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    min-height: 36px;
+    padding: 7px 10px;
+    border: 1px solid var(--wh-border, #cbd5e1);
+    border-radius: 999px;
+    background: var(--wh-surface, #ffffff);
+    color: var(--wh-text, #172033);
+    font: inherit;
+    font-size: 10px;
+    font-weight: 850;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.waffle-notification-button-dot {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 7px;
+    height: 7px;
+    border: 2px solid var(--wh-surface, #ffffff);
+    border-radius: 50%;
+    background: #94a3b8;
+}
+
+.waffle-notification-button.is-enabled
+.waffle-notification-button-dot {
+    background: #22c55e;
+}
+
+.waffle-notification-button.is-setup-required
+.waffle-notification-button-dot {
+    background: #f59e0b;
+}
+
+.waffle-notification-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 2700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    background: rgba(15, 23, 42, .67);
+    backdrop-filter: blur(5px);
+}
+
+.waffle-notification-modal[hidden] {
+    display: none !important;
+}
+
+.waffle-notification-card {
+    width: min(100%, 620px);
+    max-height: min(820px, 94vh);
+    overflow-y: auto;
+    padding: 18px;
+    border: 1px solid var(--wh-border, #dbe3ea);
+    border-radius: 16px;
+    background: var(--wh-surface, #ffffff);
+    color: var(--wh-text, #172033);
+    box-shadow: 0 24px 70px rgba(15,23,42,.28);
+}
+
+.waffle-notification-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+}
+
+.waffle-notification-heading h3 {
+    margin: 3px 0 3px;
+    font-size: 21px;
+}
+
+.waffle-notification-heading p {
+    margin: 0;
+    color: var(--wh-text-muted, #64748b);
+    font-size: 12px;
+}
+
+.waffle-notification-kicker {
+    color: #2563eb;
+    font-size: 9px;
+    font-weight: 900;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+}
+
+.waffle-notification-close {
+    flex: 0 0 auto;
+    width: 38px;
+    height: 38px;
+    border: 0;
+    border-radius: 50%;
+    background: var(--wh-surface-muted, #f1f5f9);
+    color: inherit;
+    font-size: 25px;
+    cursor: pointer;
+}
+
+.waffle-notification-message {
+    margin: 14px 0;
+    padding: 10px 11px;
+    border: 1px solid var(--wh-border, #dbe3ea);
+    border-radius: 9px;
+    background: var(--wh-surface-muted, #f8fafc);
+    color: var(--wh-text-muted, #64748b);
+    font-size: 11px;
+    line-height: 1.45;
+}
+
+.waffle-notification-message[data-mode="success"] {
+    border-color: #bbf7d0;
+    background: #f0fdf4;
+    color: #166534;
+}
+
+.waffle-notification-message[data-mode="warning"] {
+    border-color: #fde68a;
+    background: #fffbeb;
+    color: #92400e;
+}
+
+.waffle-notification-message[data-mode="error"] {
+    border-color: #fecaca;
+    background: #fef2f2;
+    color: #991b1b;
+}
+
+.waffle-notification-device {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 9px;
+    margin-bottom: 13px;
+}
+
+.waffle-notification-device label {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    color: var(--wh-text-muted, #64748b);
+    font-size: 10px;
+    font-weight: 800;
+}
+
+.waffle-notification-device input {
+    min-height: 40px;
+    padding: 8px 9px;
+    border: 1px solid var(--wh-border, #cbd5e1);
+    border-radius: 8px;
+    background: var(--wh-surface, #ffffff);
+    color: var(--wh-text, #172033);
+    font: inherit;
+    font-size: 12px;
+}
+
+.waffle-notification-options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.waffle-notification-options label {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    column-gap: 8px;
+    row-gap: 2px;
+    align-items: center;
+    min-height: 58px;
+    padding: 9px 10px;
+    border: 1px solid var(--wh-border, #dbe3ea);
+    border-radius: 9px;
+    background: var(--wh-surface-muted, #f8fafc);
+    cursor: pointer;
+}
+
+.waffle-notification-options input {
+    grid-row: 1 / 3;
+    width: 18px;
+    height: 18px;
+}
+
+.waffle-notification-options span {
+    font-size: 11px;
+    font-weight: 900;
+}
+
+.waffle-notification-options small {
+    color: var(--wh-text-muted, #64748b);
+    font-size: 9px;
+    line-height: 1.3;
+}
+
+.waffle-notification-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin-top: 14px;
+}
+
+.waffle-notification-actions button {
+    min-height: 40px;
+    padding: 8px 11px;
+    border: 1px solid var(--wh-border, #cbd5e1);
+    border-radius: 8px;
+    background: var(--wh-surface, #ffffff);
+    color: var(--wh-text, #172033);
+    font: inherit;
+    font-size: 10px;
+    font-weight: 850;
+    cursor: pointer;
+}
+
+.waffle-notification-actions button[hidden] {
+    display: none !important;
+}
+
+.waffle-notification-actions .waffle-push-primary {
+    border-color: #2563eb;
+    background: #2563eb;
+    color: #ffffff;
+}
+
+.waffle-notification-actions .waffle-push-danger {
+    border-color: #fecaca;
+    color: #b91c1c;
+}
+
+.waffle-notification-footnote {
+    margin-top: 10px;
+    color: var(--wh-text-muted, #64748b);
+    font-size: 9px;
+    line-height: 1.4;
+}
+
+.waffle-push-toast {
+    position: fixed;
+    right: 16px;
+    bottom: 18px;
+    z-index: 2800;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    width: min(360px, calc(100vw - 32px));
+    padding: 12px 13px;
+    border: 1px solid #93c5fd;
+    border-radius: 11px;
+    background: var(--wh-surface, #ffffff);
+    color: var(--wh-text, #172033);
+    text-align: left;
+    cursor: pointer;
+    box-shadow: 0 12px 35px rgba(15,23,42,.22);
+    opacity: 0;
+    transform: translateY(12px);
+    transition: .2s ease;
+}
+
+.waffle-push-toast.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.waffle-push-toast strong {
+    font-size: 12px;
+}
+
+.waffle-push-toast span {
+    color: var(--wh-text-muted, #64748b);
+    font-size: 10px;
+    line-height: 1.4;
+}
+
+body.dark-theme .waffle-notification-button,
+body.dark-theme .waffle-notification-device input,
+body.dark-theme .waffle-notification-actions button,
+body.dark-theme .waffle-push-toast {
+    background: #182235;
+    color: #f8fafc;
+    border-color: #40516a;
+}
+
+body.dark-theme .waffle-notification-card {
+    background: #182235;
+    border-color: #34445b;
+}
+
+body.dark-theme .waffle-notification-options label,
+body.dark-theme .waffle-notification-message {
+    background: #202c3e;
+    border-color: #40516a;
+}
+
+@media (max-width: 768px) {
+    .waffle-notification-button {
+        width: 40px;
+        min-width: 40px;
+        height: 40px;
+        padding: 0;
+        border-radius: 10px;
+        font-size: 0;
+    }
+
+    .waffle-notification-button-icon {
+        font-size: 18px;
+    }
+
+    .waffle-notification-button-dot {
+        top: 4px;
+        right: 4px;
+    }
+
+    .waffle-notification-card {
+        max-height: 92vh;
+        padding: 14px;
+    }
+
+    .waffle-notification-device,
+    .waffle-notification-options {
+        grid-template-columns: 1fr;
+    }
+
+    .waffle-notification-device input {
+        min-height: 46px;
+        font-size: 15px;
+    }
+
+    .waffle-notification-options label {
+        min-height: 62px;
+    }
+
+    .waffle-notification-options span {
+        font-size: 13px;
+    }
+
+    .waffle-notification-options small {
+        font-size: 11px;
+    }
+
+    .waffle-notification-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .waffle-notification-actions button {
+        min-height: 46px;
+        font-size: 12px;
+    }
+
+    .waffle-push-toast {
+        right: 10px;
+        bottom: calc(94px + env(safe-area-inset-bottom));
+        width: calc(100vw - 20px);
+    }
+}

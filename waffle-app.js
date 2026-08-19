@@ -281,6 +281,7 @@ function waffleReadRequestKey(payload) {
     const readActions =
         new Set([
             'get_data_versions',
+            'get_push_device',
             'get_audit_log',
             'get_guest_directory',
             'get_guest_profile',
@@ -534,6 +535,1460 @@ async function invalidateWaffleClientCaches(scopes) {
     );
 }
 
+
+
+
+
+
+/* ============================================================
+   V9 PUSH NOTIFICATIONS — FIREBASE INSTALLATION ID
+   ============================================================ */
+
+const WAFFLE_FIREBASE_SDK_VERSION =
+    '12.17.1';
+
+const WAFFLE_PUSH_SUBSCRIPTION_KEY =
+    'wafflePushSubscriptionId';
+
+let waffleFirebaseMessaging =
+    null;
+
+let waffleFirebaseMessagingApi =
+    null;
+
+let waffleFirebaseApp =
+    null;
+
+let wafflePushRegistrationPromise =
+    null;
+
+
+function getWaffleFirebaseConfig() {
+    return (
+        window.WAFFLE_FIREBASE_CONFIG ||
+        null
+    );
+}
+
+
+function isWaffleFirebaseConfigReady() {
+    const config =
+        getWaffleFirebaseConfig();
+
+    if (
+        !config ||
+        typeof config !==
+            'object'
+    ) {
+        return false;
+    }
+
+    return [
+        config.apiKey,
+        config.projectId,
+        config.messagingSenderId,
+        config.appId,
+        config.vapidKey
+    ].every(value => {
+        const text =
+            String(
+                value ||
+                ''
+            ).trim();
+
+        return (
+            text &&
+            !text.startsWith(
+                'PASTE_'
+            )
+        );
+    });
+}
+
+
+function getWafflePushSubscriptionId() {
+    return String(
+        localStorage.getItem(
+            WAFFLE_PUSH_SUBSCRIPTION_KEY
+        ) ||
+        ''
+    ).trim();
+}
+
+
+function setWafflePushSubscriptionId(
+    value
+) {
+    value =
+        String(
+            value ||
+            ''
+        ).trim();
+
+    if (value) {
+        localStorage.setItem(
+            WAFFLE_PUSH_SUBSCRIPTION_KEY,
+            value
+        );
+    } else {
+        localStorage.removeItem(
+            WAFFLE_PUSH_SUBSCRIPTION_KEY
+        );
+    }
+}
+
+
+function defaultWafflePushPreferences() {
+    return {
+        arrivals: true,
+        departures: true,
+        meetGreets: true,
+        reminders: true,
+        intakeCompleted: true,
+        capacity: true
+    };
+}
+
+
+function ensureWaffleNotificationButton() {
+    let button =
+        document.getElementById(
+            'waffleNotificationButton'
+        );
+
+    if (button) {
+        return button;
+    }
+
+    button =
+        document.createElement(
+            'button'
+        );
+
+    button.id =
+        'waffleNotificationButton';
+
+    button.type =
+        'button';
+
+    button.className =
+        'waffle-notification-button';
+
+    button.innerHTML = `
+        <span
+            class="waffle-notification-button-icon"
+            aria-hidden="true">🔔</span>
+        <span
+            class="waffle-notification-button-label">
+            Notifications
+        </span>
+        <span
+            class="waffle-notification-button-dot"
+            aria-hidden="true"></span>
+    `;
+
+    button.addEventListener(
+        'click',
+        openWaffleNotificationSettings
+    );
+
+    const header =
+        document.querySelector(
+            '.calendar-header-branding'
+        );
+
+    if (header) {
+        const theme =
+            document.getElementById(
+                'themeToggle'
+            );
+
+        if (
+            theme &&
+            theme.parentNode ===
+                header
+        ) {
+            header.insertBefore(
+                button,
+                theme
+            );
+        } else {
+            header.appendChild(
+                button
+            );
+        }
+    }
+
+    refreshWaffleNotificationButton();
+
+    return button;
+}
+
+
+function refreshWaffleNotificationButton(
+    state = null
+) {
+    const button =
+        document.getElementById(
+            'waffleNotificationButton'
+        );
+
+    if (!button) return;
+
+    const registered =
+        state
+            ? (
+                state.registered &&
+                state.enabled
+              )
+            : !!getWafflePushSubscriptionId();
+
+    button.classList.toggle(
+        'is-enabled',
+        registered
+    );
+
+    button.classList.toggle(
+        'is-setup-required',
+        !isWaffleFirebaseConfigReady()
+    );
+
+    button.title =
+        !isWaffleFirebaseConfigReady()
+            ? 'Firebase push setup is required'
+            : (
+                registered
+                    ? 'Notifications enabled on this device'
+                    : 'Set up notifications on this device'
+              );
+}
+
+
+function ensureWaffleNotificationModal() {
+    let modal =
+        document.getElementById(
+            'waffleNotificationModal'
+        );
+
+    if (modal) {
+        return modal;
+    }
+
+    modal =
+        document.createElement(
+            'div'
+        );
+
+    modal.id =
+        'waffleNotificationModal';
+
+    modal.className =
+        'waffle-notification-modal';
+
+    modal.hidden =
+        true;
+
+    modal.innerHTML = `
+        <div
+            class="waffle-notification-card"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="waffleNotificationTitle">
+
+            <div class="waffle-notification-heading">
+                <div>
+                    <span class="waffle-notification-kicker">
+                        V9 Push Notifications
+                    </span>
+                    <h3 id="waffleNotificationTitle">
+                        🔔 Notifications
+                    </h3>
+                    <p>
+                        Choose what this device should receive.
+                    </p>
+                </div>
+
+                <button
+                    type="button"
+                    class="waffle-notification-close"
+                    aria-label="Close notifications">
+                    ×
+                </button>
+            </div>
+
+            <div
+                class="waffle-notification-message"
+                data-push-message></div>
+
+            <div class="waffle-notification-device">
+                <label>
+                    Device name
+                    <input
+                        type="text"
+                        data-push-device-label
+                        maxlength="80"
+                        placeholder="e.g. My iPhone">
+                </label>
+
+                <label
+                    class="waffle-enrollment-code-field"
+                    data-push-enrollment-wrap>
+                    Setup code
+                    <input
+                        type="password"
+                        data-push-enrollment-code
+                        autocomplete="one-time-code"
+                        placeholder="Private setup code">
+                </label>
+            </div>
+
+            <div class="waffle-notification-options">
+                <label>
+                    <input
+                        type="checkbox"
+                        data-push-pref="arrivals"
+                        checked>
+                    <span>🏡 Arrivals</span>
+                    <small>Morning boarding arrivals</small>
+                </label>
+
+                <label>
+                    <input
+                        type="checkbox"
+                        data-push-pref="departures"
+                        checked>
+                    <span>👋 Departures</span>
+                    <small>Morning departures / offboarding</small>
+                </label>
+
+                <label>
+                    <input
+                        type="checkbox"
+                        data-push-pref="meetGreets"
+                        checked>
+                    <span>🤝 Meet & Greets</span>
+                    <small>Approximately 30–40 minutes before</small>
+                </label>
+
+                <label>
+                    <input
+                        type="checkbox"
+                        data-push-pref="reminders"
+                        checked>
+                    <span>📌 Reminders</span>
+                    <small>Shared reminder due notifications</small>
+                </label>
+
+                <label>
+                    <input
+                        type="checkbox"
+                        data-push-pref="intakeCompleted"
+                        checked>
+                    <span>✅ Intake Complete</span>
+                    <small>Digital Intake submitted by an owner</small>
+                </label>
+
+                <label>
+                    <input
+                        type="checkbox"
+                        data-push-pref="capacity"
+                        checked>
+                    <span>🔴 Capacity</span>
+                    <small>Future dates reaching 4+ dogs</small>
+                </label>
+            </div>
+
+            <div class="waffle-notification-actions">
+                <button
+                    type="button"
+                    class="waffle-push-primary"
+                    data-push-enable>
+                    🔔 Enable This Device
+                </button>
+
+                <button
+                    type="button"
+                    data-push-save
+                    hidden>
+                    💾 Save Preferences
+                </button>
+
+                <button
+                    type="button"
+                    data-push-test
+                    hidden>
+                    🧪 Send Test
+                </button>
+
+                <button
+                    type="button"
+                    class="waffle-push-danger"
+                    data-push-disable
+                    hidden>
+                    Disable
+                </button>
+            </div>
+
+            <div class="waffle-notification-footnote">
+                Notification permission is controlled by this browser/device.
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(
+        modal
+    );
+
+    modal
+        .querySelector(
+            '.waffle-notification-close'
+        )
+        ?.addEventListener(
+            'click',
+            () => {
+                modal.hidden =
+                    true;
+            }
+        );
+
+    modal.addEventListener(
+        'click',
+        event => {
+            if (
+                event.target ===
+                modal
+            ) {
+                modal.hidden =
+                    true;
+            }
+        }
+    );
+
+    modal
+        .querySelector(
+            '[data-push-enable]'
+        )
+        ?.addEventListener(
+            'click',
+            enableWafflePushNotifications
+        );
+
+    modal
+        .querySelector(
+            '[data-push-save]'
+        )
+        ?.addEventListener(
+            'click',
+            saveWafflePushPreferences
+        );
+
+    modal
+        .querySelector(
+            '[data-push-test]'
+        )
+        ?.addEventListener(
+            'click',
+            sendWafflePushTest
+        );
+
+    modal
+        .querySelector(
+            '[data-push-disable]'
+        )
+        ?.addEventListener(
+            'click',
+            disableWafflePushNotifications
+        );
+
+    return modal;
+}
+
+
+function setWafflePushMessage(
+    text,
+    mode = ''
+) {
+    const modal =
+        ensureWaffleNotificationModal();
+
+    const message =
+        modal.querySelector(
+            '[data-push-message]'
+        );
+
+    if (!message) return;
+
+    message.textContent =
+        text || '';
+
+    message.dataset.mode =
+        mode;
+}
+
+
+function getPushPreferencesFromModal() {
+    const modal =
+        ensureWaffleNotificationModal();
+
+    const preferences =
+        {};
+
+    modal
+        .querySelectorAll(
+            '[data-push-pref]'
+        )
+        .forEach(input => {
+            preferences[
+                input.dataset.pushPref
+            ] =
+                input.checked;
+        });
+
+    return preferences;
+}
+
+
+function applyPushPreferencesToModal(
+    preferences
+) {
+    const modal =
+        ensureWaffleNotificationModal();
+
+    preferences = {
+        ...defaultWafflePushPreferences(),
+        ...(
+            preferences ||
+            {}
+        )
+    };
+
+    modal
+        .querySelectorAll(
+            '[data-push-pref]'
+        )
+        .forEach(input => {
+            input.checked =
+                preferences[
+                    input.dataset.pushPref
+                ] !== false;
+        });
+}
+
+
+function getDefaultPushDeviceLabel() {
+    if (
+        isWaffleIosDevice()
+    ) {
+        return 'My iPhone / iPad';
+    }
+
+    if (
+        /Android/i.test(
+            navigator.userAgent ||
+            ''
+        )
+    ) {
+        return 'My Android';
+    }
+
+    return 'My browser';
+}
+
+
+async function loadWafflePushDeviceState() {
+    const subscriptionId =
+        getWafflePushSubscriptionId();
+
+    if (!subscriptionId) {
+        return {
+            registered: false
+        };
+    }
+
+    try {
+        const response =
+            await queryAppsScript(
+                {
+                    action:
+                        'get_push_device',
+                    subscriptionId
+                },
+                {
+                    maxAttempts: 1,
+                    timeoutMs: 20000
+                }
+            );
+
+        return (
+            response.device ||
+            {
+                registered: false
+            }
+        );
+
+    } catch (error) {
+        console.warn(
+            'Push device state could not be loaded:',
+            error
+        );
+
+        return {
+            registered: true,
+            enabled: true,
+            subscriptionId
+        };
+    }
+}
+
+
+async function openWaffleNotificationSettings() {
+    const modal =
+        ensureWaffleNotificationModal();
+
+    modal.hidden =
+        false;
+
+    const labelInput =
+        modal.querySelector(
+            '[data-push-device-label]'
+        );
+
+    if (
+        labelInput &&
+        !labelInput.value
+    ) {
+        labelInput.value =
+            getDefaultPushDeviceLabel();
+    }
+
+    if (
+        !isWaffleFirebaseConfigReady()
+    ) {
+        setWafflePushMessage(
+            'Firebase public configuration has not been added to waffle-firebase-config.js yet.',
+            'warning'
+        );
+    } else if (
+        isWaffleIosDevice() &&
+        !isWaffleStandalone()
+    ) {
+        setWafflePushMessage(
+            'On iPhone/iPad, install Waffle House to the Home Screen first, then open the installed app to enable notifications.',
+            'warning'
+        );
+    } else if (
+        !('Notification' in window)
+    ) {
+        setWafflePushMessage(
+            'This browser does not support web notifications.',
+            'error'
+        );
+    } else {
+        setWafflePushMessage(
+            Notification.permission ===
+                'granted'
+                ? 'Notification permission is already granted on this device.'
+                : 'Enable notifications when you are ready.',
+            'info'
+        );
+    }
+
+    const state =
+        await loadWafflePushDeviceState();
+
+    const registered =
+        state.registered &&
+        state.enabled;
+
+    const enrollmentWrap =
+        modal.querySelector(
+            '[data-push-enrollment-wrap]'
+        );
+
+    const enableButton =
+        modal.querySelector(
+            '[data-push-enable]'
+        );
+
+    const saveButton =
+        modal.querySelector(
+            '[data-push-save]'
+        );
+
+    const testButton =
+        modal.querySelector(
+            '[data-push-test]'
+        );
+
+    const disableButton =
+        modal.querySelector(
+            '[data-push-disable]'
+        );
+
+    if (enrollmentWrap) {
+        enrollmentWrap.hidden =
+            registered;
+    }
+
+    if (enableButton) {
+        enableButton.hidden =
+            registered;
+    }
+
+    if (saveButton) {
+        saveButton.hidden =
+            !registered;
+    }
+
+    if (testButton) {
+        testButton.hidden =
+            !registered;
+    }
+
+    if (disableButton) {
+        disableButton.hidden =
+            !registered;
+    }
+
+    if (
+        registered &&
+        labelInput &&
+        state.deviceLabel
+    ) {
+        labelInput.value =
+            state.deviceLabel;
+    }
+
+    applyPushPreferencesToModal(
+        state.preferences
+    );
+
+    refreshWaffleNotificationButton(
+        state
+    );
+}
+
+
+async function loadWaffleFirebaseMessaging() {
+    if (waffleFirebaseMessaging) {
+        return {
+            messaging:
+                waffleFirebaseMessaging,
+            api:
+                waffleFirebaseMessagingApi
+        };
+    }
+
+    if (!isWaffleFirebaseConfigReady()) {
+        throw new Error(
+            'Firebase public configuration is not complete.'
+        );
+    }
+
+    const appModule =
+        await import(
+            `https://www.gstatic.com/firebasejs/${WAFFLE_FIREBASE_SDK_VERSION}/firebase-app.js`
+        );
+
+    const messagingModule =
+        await import(
+            `https://www.gstatic.com/firebasejs/${WAFFLE_FIREBASE_SDK_VERSION}/firebase-messaging.js`
+        );
+
+    const supported =
+        await messagingModule
+            .isSupported();
+
+    if (!supported) {
+        throw new Error(
+            'Firebase web push is not supported in this browser.'
+        );
+    }
+
+    const config =
+        getWaffleFirebaseConfig();
+
+    const firebaseConfig = {
+        apiKey:
+            config.apiKey,
+        authDomain:
+            config.authDomain,
+        projectId:
+            config.projectId,
+        messagingSenderId:
+            config.messagingSenderId,
+        appId:
+            config.appId
+    };
+
+    waffleFirebaseApp =
+        appModule.getApps()
+            .length
+            ? appModule.getApp()
+            : appModule.initializeApp(
+                firebaseConfig
+            );
+
+    waffleFirebaseMessaging =
+        messagingModule.getMessaging(
+            waffleFirebaseApp
+        );
+
+    waffleFirebaseMessagingApi =
+        messagingModule;
+
+    messagingModule.onMessage(
+        waffleFirebaseMessaging,
+        payload => {
+            const data =
+                payload &&
+                payload.data
+                    ? payload.data
+                    : {};
+
+            showWaffleForegroundPush(
+                data
+            );
+        }
+    );
+
+    messagingModule.onUnregistered(
+        waffleFirebaseMessaging,
+        () => {
+            const subscriptionId =
+                getWafflePushSubscriptionId();
+
+            if (subscriptionId) {
+                queryAppsScript(
+                    {
+                        action:
+                            'disable_push_device',
+                        subscriptionId
+                    },
+                    {
+                        maxAttempts: 1,
+                        timeoutMs: 15000,
+                        dedupe: false
+                    }
+                ).catch(() => {});
+            }
+
+            setWafflePushSubscriptionId(
+                ''
+            );
+
+            refreshWaffleNotificationButton();
+        }
+    );
+
+    return {
+        messaging:
+            waffleFirebaseMessaging,
+        api:
+            messagingModule
+    };
+}
+
+
+function showWaffleForegroundPush(data) {
+    data =
+        data &&
+        typeof data ===
+            'object'
+            ? data
+            : {};
+
+    const toast =
+        document.createElement(
+            'button'
+        );
+
+    toast.type =
+        'button';
+
+    toast.className =
+        'waffle-push-toast';
+
+    toast.innerHTML = `
+        <strong>
+            ${escapeDashboardHtml(data.title || '🐾 Waffle House')}
+        </strong>
+        <span>
+            ${escapeDashboardHtml(data.body || 'Waffle House has an update.')}
+        </span>
+    `;
+
+    const link =
+        String(
+            data.link ||
+            ''
+        );
+
+    if (link) {
+        toast.addEventListener(
+            'click',
+            () => {
+                window.location.href =
+                    link;
+            }
+        );
+    }
+
+    document.body.appendChild(
+        toast
+    );
+
+    requestAnimationFrame(
+        () =>
+            toast.classList.add(
+                'is-visible'
+            )
+    );
+
+    setTimeout(
+        () => {
+            toast.classList.remove(
+                'is-visible'
+            );
+
+            setTimeout(
+                () =>
+                    toast.remove(),
+                250
+            );
+        },
+        6500
+    );
+}
+
+
+async function requestWaffleFirebaseFid() {
+    if (
+        wafflePushRegistrationPromise
+    ) {
+        return wafflePushRegistrationPromise;
+    }
+
+    wafflePushRegistrationPromise =
+        (async () => {
+            const {
+                messaging,
+                api
+            } =
+                await loadWaffleFirebaseMessaging();
+
+            const permission =
+                await Notification
+                    .requestPermission();
+
+            if (
+                permission !==
+                'granted'
+            ) {
+                throw new Error(
+                    'Notification permission was not granted.'
+                );
+            }
+
+            const registration =
+                await navigator
+                    .serviceWorker
+                    .ready;
+
+            return new Promise(
+                (resolve, reject) => {
+                    let settled =
+                        false;
+
+                    const timeout =
+                        setTimeout(
+                            () => {
+                                if (settled) {
+                                    return;
+                                }
+
+                                settled =
+                                    true;
+
+                                unsubscribe();
+
+                                reject(
+                                    new Error(
+                                        'Firebase registration did not return an installation ID in time.'
+                                    )
+                                );
+                            },
+                            20000
+                        );
+
+                    const unsubscribe =
+                        api.onRegistered(
+                            messaging,
+                            fid => {
+                                if (settled) {
+                                    return;
+                                }
+
+                                settled =
+                                    true;
+
+                                clearTimeout(
+                                    timeout
+                                );
+
+                                unsubscribe();
+
+                                resolve(
+                                    fid
+                                );
+                            }
+                        );
+
+                    api.register(
+                        messaging,
+                        {
+                            vapidKey:
+                                getWaffleFirebaseConfig()
+                                    .vapidKey,
+                            serviceWorkerRegistration:
+                                registration
+                        }
+                    ).catch(error => {
+                        if (settled) {
+                            return;
+                        }
+
+                        settled =
+                            true;
+
+                        clearTimeout(
+                            timeout
+                        );
+
+                        unsubscribe();
+
+                        reject(
+                            error
+                        );
+                    });
+                }
+            );
+        })();
+
+    try {
+        return await wafflePushRegistrationPromise;
+    } finally {
+        wafflePushRegistrationPromise =
+            null;
+    }
+}
+
+
+async function enableWafflePushNotifications() {
+    const modal =
+        ensureWaffleNotificationModal();
+
+    const button =
+        modal.querySelector(
+            '[data-push-enable]'
+        );
+
+    if (
+        !isWaffleFirebaseConfigReady()
+    ) {
+        setWafflePushMessage(
+            'Complete waffle-firebase-config.js before enabling notifications.',
+            'error'
+        );
+        return;
+    }
+
+    if (
+        isWaffleIosDevice() &&
+        !isWaffleStandalone()
+    ) {
+        setWafflePushMessage(
+            'Install Waffle House to the iPhone/iPad Home Screen first, then enable notifications from the installed app.',
+            'warning'
+        );
+        return;
+    }
+
+    const enrollmentCode =
+        String(
+            modal
+                .querySelector(
+                    '[data-push-enrollment-code]'
+                )
+                ?.value ||
+            ''
+        ).trim();
+
+    const existingId =
+        getWafflePushSubscriptionId();
+
+    if (
+        !existingId &&
+        !enrollmentCode
+    ) {
+        setWafflePushMessage(
+            'Enter the private notification setup code.',
+            'error'
+        );
+        return;
+    }
+
+    if (button) {
+        button.disabled =
+            true;
+
+        button.textContent =
+            '⏳ Enabling…';
+    }
+
+    try {
+        const fid =
+            await requestWaffleFirebaseFid();
+
+        const response =
+            await queryAppsScript(
+                {
+                    action:
+                        'register_push_device',
+                    subscriptionId:
+                        existingId,
+                    fid,
+                    enrollmentCode,
+                    deviceLabel:
+                        String(
+                            modal
+                                .querySelector(
+                                    '[data-push-device-label]'
+                                )
+                                ?.value ||
+                            getDefaultPushDeviceLabel()
+                        ).trim(),
+                    platform:
+                        navigator.platform ||
+                        '',
+                    userAgent:
+                        navigator.userAgent ||
+                        '',
+                    preferences:
+                        getPushPreferencesFromModal()
+                },
+                {
+                    maxAttempts: 2,
+                    timeoutMs: 30000,
+                    dedupe: false
+                }
+            );
+
+        setWafflePushSubscriptionId(
+            response.subscriptionId
+        );
+
+        setWafflePushMessage(
+            'Notifications are enabled on this device.',
+            'success'
+        );
+
+        await openWaffleNotificationSettings();
+
+    } catch (error) {
+        console.error(
+            'Push enable failed:',
+            error
+        );
+
+        setWafflePushMessage(
+            error.message ||
+            String(error),
+            'error'
+        );
+
+    } finally {
+        if (button) {
+            button.disabled =
+                false;
+
+            button.textContent =
+                '🔔 Enable This Device';
+        }
+    }
+}
+
+
+async function saveWafflePushPreferences() {
+    const modal =
+        ensureWaffleNotificationModal();
+
+    const subscriptionId =
+        getWafflePushSubscriptionId();
+
+    if (!subscriptionId) {
+        setWafflePushMessage(
+            'Enable notifications on this device first.',
+            'error'
+        );
+        return;
+    }
+
+    try {
+        await queryAppsScript(
+            {
+                action:
+                    'update_push_preferences',
+                subscriptionId,
+                deviceLabel:
+                    String(
+                        modal
+                            .querySelector(
+                                '[data-push-device-label]'
+                            )
+                            ?.value ||
+                        getDefaultPushDeviceLabel()
+                    ).trim(),
+                preferences:
+                    getPushPreferencesFromModal()
+            },
+            {
+                maxAttempts: 2,
+                timeoutMs: 25000,
+                dedupe: false
+            }
+        );
+
+        setWafflePushMessage(
+            'Notification preferences saved.',
+            'success'
+        );
+
+    } catch (error) {
+        setWafflePushMessage(
+            error.message ||
+            String(error),
+            'error'
+        );
+    }
+}
+
+
+async function sendWafflePushTest() {
+    const subscriptionId =
+        getWafflePushSubscriptionId();
+
+    if (!subscriptionId) {
+        setWafflePushMessage(
+            'Enable notifications first.',
+            'error'
+        );
+        return;
+    }
+
+    setWafflePushMessage(
+        'Sending a test notification…',
+        'info'
+    );
+
+    try {
+        await queryAppsScript(
+            {
+                action:
+                    'send_test_push',
+                subscriptionId
+            },
+            {
+                maxAttempts: 1,
+                timeoutMs: 30000,
+                dedupe: false
+            }
+        );
+
+        setWafflePushMessage(
+            'Test sent. Background the app to confirm system notification delivery.',
+            'success'
+        );
+
+    } catch (error) {
+        setWafflePushMessage(
+            error.message ||
+            String(error),
+            'error'
+        );
+    }
+}
+
+
+async function disableWafflePushNotifications() {
+    const subscriptionId =
+        getWafflePushSubscriptionId();
+
+    if (!subscriptionId) {
+        return;
+    }
+
+    try {
+        await queryAppsScript(
+            {
+                action:
+                    'disable_push_device',
+                subscriptionId
+            },
+            {
+                maxAttempts: 1,
+                timeoutMs: 20000,
+                dedupe: false
+            }
+        );
+
+        try {
+            const loaded =
+                await loadWaffleFirebaseMessaging();
+
+            await loaded.api
+                .unregister(
+                    loaded.messaging
+                );
+        } catch (_) {}
+
+        setWafflePushSubscriptionId(
+            ''
+        );
+
+        setWafflePushMessage(
+            'Notifications are disabled on this device.',
+            'success'
+        );
+
+        await openWaffleNotificationSettings();
+
+    } catch (error) {
+        setWafflePushMessage(
+            error.message ||
+            String(error),
+            'error'
+        );
+    }
+}
+
+
+function initialiseWafflePushUi() {
+    ensureWaffleNotificationButton();
+
+    if (
+        getWafflePushSubscriptionId() &&
+        isWaffleFirebaseConfigReady() &&
+        Notification.permission ===
+            'granted'
+    ) {
+        /*
+         * Refresh FID registration on startup. FCM can rotate the FID;
+         * register() + onRegistered() keeps our Apps Script record fresh.
+         */
+        requestWaffleFirebaseFid()
+            .then(fid =>
+                queryAppsScript(
+                    {
+                        action:
+                            'register_push_device',
+                        subscriptionId:
+                            getWafflePushSubscriptionId(),
+                        fid,
+                        deviceLabel:
+                            getDefaultPushDeviceLabel(),
+                        platform:
+                            navigator.platform ||
+                            '',
+                        userAgent:
+                            navigator.userAgent ||
+                            '',
+                        preferences:
+                            undefined
+                    },
+                    {
+                        maxAttempts: 1,
+                        timeoutMs: 20000,
+                        dedupe: false
+                    }
+                )
+            )
+            .catch(error =>
+                console.warn(
+                    'Push registration refresh skipped:',
+                    error
+                )
+            );
+    }
+}
+
+
+function maybeOpenDirectoryPushDeepLink() {
+    if (
+        WAFFLE_PAGE !==
+        'directory'
+    ) {
+        return;
+    }
+
+    const stayKey =
+        String(
+            new URLSearchParams(
+                window.location.search
+            ).get(
+                'stayKey'
+            ) ||
+            ''
+        ).trim();
+
+    if (!stayKey) return;
+
+    const attemptOpen =
+        () => {
+            const card =
+                getDirectoryProfileCard(
+                    stayKey
+                );
+
+            if (!card) {
+                return false;
+            }
+
+            openDirectoryGuestProfile(
+                card,
+                {
+                    instant: true
+                }
+            ).catch(error =>
+                console.error(error)
+            );
+
+            return true;
+        };
+
+    if (attemptOpen()) {
+        return;
+    }
+
+    let attempts = 0;
+
+    const timer =
+        setInterval(
+            () => {
+                attempts++;
+
+                if (
+                    attemptOpen() ||
+                    attempts >= 20
+                ) {
+                    clearInterval(
+                        timer
+                    );
+                }
+            },
+            500
+        );
+}
 
 
 
@@ -912,7 +2367,7 @@ function registerWaffleServiceWorker() {
             navigator
                 .serviceWorker
                 .register(
-                    './service-worker.js?v=8.4.1.1',
+                    './service-worker.js?v=9.0',
                     {
                         scope: './'
                     }
@@ -1233,6 +2688,8 @@ registerWaffleServiceWorker();
 
     document.addEventListener('DOMContentLoaded', function() {
         initialiseWafflePwaUi();
+        initialiseWafflePushUi();
+        maybeOpenDirectoryPushDeepLink();
         initialiseMobileDashboardLayout();
 
         const cachedData = localStorage.getItem('boardingDataCache');
