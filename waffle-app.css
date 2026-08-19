@@ -4785,3 +4785,188 @@ body.dark-theme .directory-page-loading {
         color: #ffffff !important;
     }
 }
+
+
+/* ============================================================
+   V8.2 LAZY GUEST DIRECTORY DETAILS
+   ============================================================ */
+
+.directory-lazy-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 58px;
+    padding: 10px 11px;
+    border: 1px dashed #cbd5e1;
+    border-radius: 8px;
+    background: #f8fafc;
+    color: #475569;
+    font-size: 10px;
+    line-height: 1.45;
+}
+
+.directory-lazy-placeholder > div {
+    min-width: 0;
+}
+
+.directory-lazy-placeholder strong {
+    display: block;
+    margin-bottom: 3px;
+    color: #0f3550;
+    font-size: 10.5px;
+}
+
+.directory-lazy-placeholder span {
+    display: block;
+    color: #64748b;
+}
+
+.directory-lazy-hint {
+    flex: 0 0 auto;
+    max-width: 180px;
+    text-align: right;
+    font-size: 9px !important;
+    font-weight: 750;
+}
+
+.directory-lazy-placeholder.is-loading {
+    border-style: solid;
+    border-color: #bae6fd;
+    background: #f0f9ff;
+}
+
+.directory-lazy-placeholder.is-error {
+    border-style: solid;
+    border-color: #fecaca;
+    background: #fef2f2;
+}
+
+body.dark-theme .directory-lazy-placeholder {
+    border-color: #52617a;
+    background: #202c3e;
+    color: #cbd5e1;
+}
+
+body.dark-theme .directory-lazy-placeholder strong {
+    color: #f8fafc;
+}
+
+body.dark-theme .directory-lazy-placeholder span {
+    color: #cbd5e1;
+}
+
+body.dark-theme .directory-lazy-placeholder.is-loading {
+    background: #0c4a6e;
+    border-color: #0369a1;
+}
+
+body.dark-theme .directory-lazy-placeholder.is-error {
+    background: #7f1d1d;
+    border-color: #991b1b;
+}
+
+@media (max-width: 768px) {
+    .directory-lazy-placeholder {
+        align-items: flex-start;
+        flex-direction: column;
+        min-height: 72px;
+        padding: 12px;
+        font-size: 13px;
+    }
+
+    .directory-lazy-placeholder strong {
+        font-size: 14px;
+    }
+
+    .directory-lazy-placeholder span {
+        font-size: 12px;
+    }
+
+    .directory-lazy-hint {
+        max-width: none;
+        text-align: left;
+        font-size: 11px !important;
+    }
+}
+
+
+/* ============================================================
+   V8.2.1 MOBILE ICON NAV
+   Desktop keeps full labels.
+   Mobile uses large icon + one-word label.
+   ============================================================ */
+
+.nav-icon {
+    display: inline;
+}
+
+.nav-label-mobile {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .app-tabs {
+        min-height: 74px !important;
+        padding:
+            6px
+            max(6px, env(safe-area-inset-right))
+            calc(7px + env(safe-area-inset-bottom))
+            max(6px, env(safe-area-inset-left)) !important;
+    }
+
+    .app-tab-button {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 3px !important;
+
+        min-height: 60px !important;
+        padding: 5px 3px !important;
+
+        font-size: inherit !important;
+        line-height: 1 !important;
+    }
+
+    .app-tab-button .nav-icon {
+        display: block !important;
+        font-size: 27px !important;
+        line-height: 1 !important;
+        transform: translateY(-1px);
+    }
+
+    .app-tab-button .nav-label {
+        display: block;
+        width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        text-align: center;
+    }
+
+    .app-tab-button .nav-label-desktop {
+        display: none !important;
+    }
+
+    .app-tab-button .nav-label-mobile {
+        display: block !important;
+        font-size: 11px !important;
+        line-height: 1.15 !important;
+        font-weight: 850 !important;
+        letter-spacing: .01em;
+    }
+
+    .app-tab-button.active .nav-icon {
+        transform: translateY(-1px) scale(1.06);
+    }
+
+    /*
+     * Slightly more page clearance because the new nav is taller.
+     */
+    body {
+        padding-bottom:
+            calc(92px + env(safe-area-inset-bottom)) !important;
+    }
+}
+

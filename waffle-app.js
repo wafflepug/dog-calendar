@@ -5,6 +5,10 @@ const WAFFLE_PAGE =
 
 let directoryConsolidatedLoadInProgress = false;
 let directoryConsolidatedLastFetch = 0;
+let directoryBookingStateSignature = '';
+let directorySummaryRecordsCache = {};
+let directoryProfileDetailCache = {};
+let directoryBelongingsDetailCache = {};
 
     const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT63UsPjcg3GB4lTB6cewLaTRS_yJP4kpOMSMsTTnvTw1Wbjn3CgtZc_c6li28ihjzkHnphFt0XcFTt/pub?gid=1639615540&single=true&output=csv';
     const APPS_SCRIPT_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbwn4HL49K9c3AZbXJRUjPw3UYWxJt8DmqXwMnTytyqdSstj3ZIJwWdDEC2IsBjetOf3pw/exec';
@@ -475,6 +479,64 @@ let directoryConsolidatedLastFetch = 0;
         const directoryGrid = document.getElementById('directory-grid');
 
         directoryGrid.addEventListener('click', async function(event) {
+            const retryDetailButton =
+                event.target.closest(
+                    '[data-retry-directory-detail]'
+                );
+
+            if (retryDetailButton) {
+                event.preventDefault();
+                event.stopPropagation();
+
+                const details =
+                    retryDetailButton.closest(
+                        '[data-directory-detail]'
+                    );
+
+                if (details) {
+                    details.dataset.detailLoaded =
+                        'false';
+
+                    await ensureDirectoryDetailLoaded(
+                        details,
+                        {
+                            force: true
+                        }
+                    );
+                }
+
+                return;
+            }
+
+            const detailSummary =
+                event.target.closest(
+                    '.directory-fused-details > summary'
+                );
+
+            if (detailSummary) {
+                const details =
+                    detailSummary.parentElement;
+
+                /*
+                 * Native <details> toggles after the click event.
+                 * Wait one tick, then fetch only if it has just opened.
+                 */
+                setTimeout(() => {
+                    if (
+                        details &&
+                        details.open
+                    ) {
+                        ensureDirectoryDetailLoaded(
+                            details
+                        ).catch(error =>
+                            console.error(error)
+                        );
+                    }
+                }, 0);
+
+                return;
+            }
+
             const dogPhotoButton =
                 event.target.closest(
                     '[data-upload-dog-photo]'
@@ -3448,6 +3510,536 @@ let directoryConsolidatedLastFetch = 0;
             .join('\n');
     }
 
+
+    function getDirectoryBookingSignature(
+        bookings
+    ) {
+        return (
+            Array.isArray(bookings)
+                ? bookings
+                : []
+        )
+            .map(booking => [
+                booking.stayKey || '',
+                booking.dogName || '',
+                booking.breed || '',
+                booking.startDate || '',
+                booking.endDate || '',
+                booking.ownerName || '',
+                booking.phone || '',
+                booking.notes || ''
+            ].join('|'))
+            .sort()
+            .join('||');
+    }
+
+    function findDirectoryCardByStayKey(
+        stayKey
+    ) {
+        return Array.from(
+            document.querySelectorAll(
+                '.directory-card[data-directory-stay-key]'
+            )
+        ).find(card =>
+            String(
+                card.dataset
+                    .directoryStayKey ||
+                ''
+            ) ===
+            String(
+                stayKey || ''
+            )
+        ) || null;
+    }
+
+    function renderDirectoryLazySummary(
+        stayKey,
+        summary
+    ) {
+        const card =
+            findDirectoryCardByStayKey(
+                stayKey
+            );
+
+        if (!card) return;
+
+        summary =
+            summary || {
+                stayKey,
+                riskFlags: {},
+                dogPhoto: null,
+                intakeFieldCount: 0,
+                intakeAttributesSource: '',
+                belongingsItemCount: 0,
+                belongingsPhotoCount: 0,
+                hasBelongingsRecord: false
+            };
+
+        const fieldCount =
+            Number(
+                summary.intakeFieldCount ||
+                0
+            );
+
+        const source =
+            String(
+                summary.intakeAttributesSource ||
+                ''
+            ).trim();
+
+        const profileChip =
+            card.querySelector(
+                '[data-intake-profile-summary]'
+            );
+
+        if (profileChip) {
+            profileChip.textContent =
+                fieldCount
+                    ? `${fieldCount} fields · ${source || 'Stored profile'}`
+                    : (
+                        source ||
+                        'No intake saved yet'
+                    );
+        }
+
+        const profileDetails =
+            card.querySelector(
+                '[data-directory-detail="profile"]'
+            );
+
+        const profileHost =
+            card.querySelector(
+                '[data-directory-intake-attributes]'
+            );
+
+        if (
+            profileDetails &&
+            profileDetails.dataset
+                .detailLoaded !==
+                'true' &&
+            profileHost
+        ) {
+            profileHost.innerHTML =
+                fieldCount
+                    ? `
+                        <div class="directory-lazy-placeholder">
+                            <div>
+                                <strong>📋 ${fieldCount} intake fields available</strong>
+                                <span>${escapeDashboardHtml(source || 'Stored profile')}</span>
+                            </div>
+                            <span class="directory-lazy-hint">Open this section to load the full profile.</span>
+                        </div>
+                      `
+                    : `
+                        <div class="directory-lazy-placeholder">
+                            <div>
+                                <strong>📋 No stored intake profile yet</strong>
+                                <span>Digital or Legacy Intake details will appear here when available.</span>
+                            </div>
+                        </div>
+                      `;
+        }
+
+        const belongingsDetails =
+            card.querySelector(
+                '[data-directory-detail="belongings"]'
+            );
+
+        const belongingsHost =
+            card.querySelector(
+                '[data-directory-belongings]'
+            );
+
+        if (
+            belongingsDetails &&
+            belongingsDetails.dataset
+                .detailLoaded !==
+                'true' &&
+            belongingsHost
+        ) {
+            const itemCount =
+                Number(
+                    summary.belongingsItemCount ||
+                    0
+                );
+
+            const photoCount =
+                Number(
+                    summary.belongingsPhotoCount ||
+                    0
+                );
+
+            const bits = [];
+
+            if (itemCount) {
+                bits.push(
+                    `${itemCount} item${itemCount === 1 ? '' : 's'}`
+                );
+            }
+
+            if (photoCount) {
+                bits.push(
+                    `${photoCount} photo${photoCount === 1 ? '' : 's'}`
+                );
+            }
+
+            belongingsHost.innerHTML = `
+                <div class="directory-lazy-placeholder">
+                    <div>
+                        <strong>🧳 ${bits.length ? bits.join(' · ') : 'Belongings & care'}</strong>
+                        <span>Care alerts stay visible on the card without loading the full belongings record.</span>
+                    </div>
+                    <span class="directory-lazy-hint">Open this section to load details and photos.</span>
+                </div>
+            `;
+        }
+    }
+
+    function setDirectoryDetailLoading(
+        details,
+        type
+    ) {
+        const host =
+            details.querySelector(
+                type === 'profile'
+                    ? '[data-directory-intake-attributes]'
+                    : '[data-directory-belongings]'
+            );
+
+        if (!host) return;
+
+        host.innerHTML = `
+            <div class="directory-lazy-placeholder is-loading">
+                <div>
+                    <strong>⏳ Loading ${type === 'profile' ? 'intake profile' : 'belongings & photos'}…</strong>
+                    <span>Only this dog's details are being requested.</span>
+                </div>
+            </div>
+        `;
+    }
+
+    function setDirectoryDetailError(
+        details,
+        type,
+        error
+    ) {
+        const host =
+            details.querySelector(
+                type === 'profile'
+                    ? '[data-directory-intake-attributes]'
+                    : '[data-directory-belongings]'
+            );
+
+        if (!host) return;
+
+        host.innerHTML = `
+            <div class="directory-lazy-placeholder is-error">
+                <div>
+                    <strong>⚠️ Could not load this section</strong>
+                    <span>${escapeDashboardHtml(error?.message || String(error || 'Unknown error'))}</span>
+                </div>
+                <button
+                    type="button"
+                    class="directory-intake-action"
+                    data-retry-directory-detail="${escapeDashboardHtml(type)}">
+                    ↻ Retry
+                </button>
+            </div>
+        `;
+    }
+
+    async function loadDirectoryProfileDetail(
+        card,
+        details,
+        options = {}
+    ) {
+        const stayKey =
+            String(
+                card?.dataset?.stayKey ||
+                card?.dataset?.directoryStayKey ||
+                ''
+            ).trim();
+
+        if (!stayKey) return;
+
+        if (
+            !options.force &&
+            directoryProfileDetailCache[
+                stayKey
+            ]
+        ) {
+            renderDirectoryIntakeAttributes(
+                card,
+                directoryProfileDetailCache[
+                    stayKey
+                ]
+            );
+
+            details.dataset.detailLoaded =
+                'true';
+
+            return;
+        }
+
+        if (
+            details.dataset.detailLoading ===
+            'true'
+        ) {
+            return;
+        }
+
+        details.dataset.detailLoading =
+            'true';
+
+        setDirectoryDetailLoading(
+            details,
+            'profile'
+        );
+
+        try {
+            const response =
+                await queryAppsScript(
+                    {
+                        action:
+                            'get_guest_profile',
+                        stayKey
+                    },
+                    {
+                        maxAttempts: 2,
+                        timeoutMs: 30000
+                    }
+                );
+
+            const record =
+                response.record || {
+                    stayKey,
+                    intakeAttributes: {},
+                    intakeAttributesSource: ''
+                };
+
+            directoryProfileDetailCache[
+                stayKey
+            ] = record;
+
+            renderDirectoryIntakeAttributes(
+                card,
+                record
+            );
+
+            details.dataset.detailLoaded =
+                'true';
+
+            reconcileDirectoryDigitalIntakeFromProfile(
+                stayKey,
+                record
+            );
+
+        } catch (error) {
+            console.error(
+                'Guest profile lazy load failed:',
+                error
+            );
+
+            setDirectoryDetailError(
+                details,
+                'profile',
+                error
+            );
+
+        } finally {
+            details.dataset.detailLoading =
+                'false';
+        }
+    }
+
+    async function loadDirectoryBelongingsDetail(
+        card,
+        details,
+        options = {}
+    ) {
+        const stayKey =
+            String(
+                card?.dataset?.stayKey ||
+                card?.dataset?.directoryStayKey ||
+                ''
+            ).trim();
+
+        if (!stayKey) return;
+
+        if (
+            !options.force &&
+            directoryBelongingsDetailCache[
+                stayKey
+            ]
+        ) {
+            renderDirectoryBelongings(
+                card,
+                directoryBelongingsDetailCache[
+                    stayKey
+                ]
+            );
+
+            details.dataset.detailLoaded =
+                'true';
+
+            return;
+        }
+
+        if (
+            details.dataset.detailLoading ===
+            'true'
+        ) {
+            return;
+        }
+
+        details.dataset.detailLoading =
+            'true';
+
+        setDirectoryDetailLoading(
+            details,
+            'belongings'
+        );
+
+        try {
+            const response =
+                await queryAppsScript(
+                    {
+                        action:
+                            'get_guest_belongings',
+                        stayKey
+                    },
+                    {
+                        maxAttempts: 2,
+                        timeoutMs: 30000
+                    }
+                );
+
+            const record =
+                response.record || {
+                    stayKey,
+                    items: {},
+                    photos: [],
+                    riskFlags: {},
+                    dogPhoto: null
+                };
+
+            directoryBelongingsDetailCache[
+                stayKey
+            ] = record;
+
+            belongingsRecordsCache[
+                stayKey
+            ] = {
+                ...(
+                    belongingsRecordsCache[
+                        stayKey
+                    ] || {}
+                ),
+                ...record
+            };
+
+            directoryPhotoRecordsCache[
+                stayKey
+            ] = {
+                ...(
+                    directoryPhotoRecordsCache[
+                        stayKey
+                    ] || {}
+                ),
+                ...record
+            };
+
+            careRiskRecordsCache[
+                stayKey
+            ] = {
+                ...(
+                    careRiskRecordsCache[
+                        stayKey
+                    ] || {}
+                ),
+                ...record
+            };
+
+            setDirectoryDogPhoto(
+                stayKey,
+                record
+            );
+
+            setDirectoryCareFlags(
+                stayKey,
+                record
+            );
+
+            renderDirectoryBelongings(
+                card,
+                record
+            );
+
+            details.dataset.detailLoaded =
+                'true';
+
+        } catch (error) {
+            console.error(
+                'Guest belongings lazy load failed:',
+                error
+            );
+
+            setDirectoryDetailError(
+                details,
+                'belongings',
+                error
+            );
+
+        } finally {
+            details.dataset.detailLoading =
+                'false';
+        }
+    }
+
+    async function ensureDirectoryDetailLoaded(
+        details,
+        options = {}
+    ) {
+        if (
+            !details ||
+            !details.open
+        ) {
+            return;
+        }
+
+        const card =
+            details.closest(
+                '.directory-card'
+            );
+
+        if (!card) return;
+
+        const type =
+            String(
+                details.dataset
+                    .directoryDetail ||
+                ''
+            );
+
+        if (type === 'profile') {
+            await loadDirectoryProfileDetail(
+                card,
+                details,
+                options
+            );
+            return;
+        }
+
+        if (type === 'belongings') {
+            await loadDirectoryBelongingsDetail(
+                card,
+                details,
+                options
+            );
+        }
+    }
+
+
     async function loadGuestDirectoryConsolidated(
         options = {}
     ) {
@@ -3458,11 +4050,6 @@ let directoryConsolidatedLastFetch = 0;
             return;
         }
 
-        /*
-         * DOMContentLoaded, focus and visibilitychange can all fire during
-         * first paint. Never allow those events to start overlapping
-         * directory requests.
-         */
         if (
             directoryConsolidatedLoadInProgress
         ) {
@@ -3506,7 +4093,7 @@ let directoryConsolidatedLastFetch = 0;
             !options.quiet
         ) {
             grid.innerHTML =
-                '<div class="directory-page-loading">⏳ Loading Guest Directory, intake profiles, care, belongings and photos…</div>';
+                '<div class="directory-page-loading">⏳ Loading Guest Directory summary…<br><small>Detailed intake fields, belongings and photo galleries load only when opened.</small></div>';
         }
 
         try {
@@ -3518,33 +4105,63 @@ let directoryConsolidatedLastFetch = 0;
                     },
                     {
                         maxAttempts: 2,
-                        timeoutMs: 60000
+                        timeoutMs: 45000
                     }
                 );
 
+            const bookings =
+                response.bookings || [];
+
+            const nextSignature =
+                getDirectoryBookingSignature(
+                    bookings
+                );
+
+            const existingCards =
+                document.querySelector(
+                    '.directory-card[data-directory-stay-key]'
+                );
+
+            const shouldRebuildCards =
+                !options.quiet ||
+                !existingCards ||
+                !directoryBookingStateSignature ||
+                directoryBookingStateSignature !==
+                    nextSignature;
+
+            directorySummaryRecordsCache = {};
             directoryPhotoRecordsCache = {};
-            belongingsRecordsCache = {};
             careRiskRecordsCache = {};
             directoryIntakeStatusCache = {};
             directoryLegacyIntakeCache = {};
 
-            (response.belongings || [])
-                .forEach(record => {
-                    if (!record.stayKey) {
+            /*
+             * A manual Refresh intentionally drops lazy detail caches.
+             * Background summary refreshes preserve details already opened.
+             */
+            if (options.force) {
+                directoryProfileDetailCache = {};
+                directoryBelongingsDetailCache = {};
+                belongingsRecordsCache = {};
+            }
+
+            (response.summaries || [])
+                .forEach(summary => {
+                    if (!summary.stayKey) {
                         return;
                     }
 
-                    belongingsRecordsCache[
-                        record.stayKey
-                    ] = record;
+                    directorySummaryRecordsCache[
+                        summary.stayKey
+                    ] = summary;
 
                     directoryPhotoRecordsCache[
-                        record.stayKey
-                    ] = record;
+                        summary.stayKey
+                    ] = summary;
 
                     careRiskRecordsCache[
-                        record.stayKey
-                    ] = record;
+                        summary.stayKey
+                    ] = summary;
                 });
 
             (response.digitalIntakes || [])
@@ -3574,40 +4191,42 @@ let directoryConsolidatedLastFetch = 0;
             directoryConsolidatedLastFetch =
                 Date.now();
 
-            const csv =
-                guestDirectoryBookingsToCsv(
-                    response.bookings || []
+            if (shouldRebuildCards) {
+                const csv =
+                    guestDirectoryBookingsToCsv(
+                        bookings
+                    );
+
+                parseCSVToEvents(
+                    csv
                 );
 
-            parseCSVToEvents(
-                csv
-            );
-
-            directoryConsolidatedLoadInProgress =
-                false;
+                directoryBookingStateSignature =
+                    nextSignature;
+            }
 
             Object.entries(
-                belongingsRecordsCache
+                directorySummaryRecordsCache
             ).forEach(
-                ([stayKey, record]) => {
+                ([stayKey, summary]) => {
                     setDirectoryDogPhoto(
                         stayKey,
-                        record
+                        summary
                     );
 
                     setDirectoryCareFlags(
                         stayKey,
-                        record
+                        summary
                     );
 
-                    renderDirectoryOperationalSections(
+                    renderDirectoryLazySummary(
                         stayKey,
-                        record
+                        summary
                     );
 
                     reconcileDirectoryDigitalIntakeFromProfile(
                         stayKey,
-                        record
+                        summary
                     );
                 }
             );
@@ -3638,15 +4257,17 @@ let directoryConsolidatedLastFetch = 0;
             filterGuestDirectoryCards();
 
         } catch (error) {
-            directoryConsolidatedLoadInProgress =
-                false;
-
             console.error(
                 'Guest Directory load failed:',
                 error
             );
 
-            if (grid) {
+            if (
+                grid &&
+                !grid.querySelector(
+                    '.directory-card'
+                )
+            ) {
                 grid.innerHTML =
                     `<div class="directory-page-loading">⚠️ Guest Directory could not be loaded.<br>${escapeDashboardHtml(error.message || String(error))}</div>`;
             }
@@ -3654,6 +4275,9 @@ let directoryConsolidatedLastFetch = 0;
             throw error;
 
         } finally {
+            directoryConsolidatedLoadInProgress =
+                false;
+
             if (button) {
                 button.disabled = false;
                 button.textContent =
@@ -3775,6 +4399,16 @@ let directoryConsolidatedLastFetch = 0;
 
         if (!host) return;
 
+        const details =
+            host.closest(
+                '[data-directory-detail="profile"]'
+            );
+
+        if (details) {
+            details.dataset.detailLoaded =
+                'true';
+        }
+
         const attributes =
             record &&
             record.intakeAttributes &&
@@ -3863,6 +4497,16 @@ let directoryConsolidatedLastFetch = 0;
             );
 
         if (!host) return;
+
+        const details =
+            host.closest(
+                '[data-directory-detail="belongings"]'
+            );
+
+        if (details) {
+            details.dataset.detailLoaded =
+                'true';
+        }
 
         record =
             record || {
@@ -4223,25 +4867,45 @@ let directoryConsolidatedLastFetch = 0;
     }
 
     function getBelongingsCardPayload(card) {
-        const intakeAttributes =
-            collectIntakeAttributes(
-                card
+        const profileDetails =
+            card.querySelector(
+                '[data-directory-detail="profile"]'
             );
 
-        syncPositiveCareFlagsFromIntake(
-            card,
-            intakeAttributes
-        );
+        const profileLoaded =
+            profileDetails?.dataset
+                .detailLoaded ===
+                'true';
 
-        return {
+        const intakeAttributes =
+            profileLoaded
+                ? collectIntakeAttributes(
+                    card
+                )
+                : undefined;
+
+        if (profileLoaded) {
+            syncPositiveCareFlagsFromIntake(
+                card,
+                intakeAttributes
+            );
+        }
+
+        const payload = {
             stayKey: card.dataset.stayKey,
             dogName: card.dataset.dogName,
             startDate: card.dataset.startDate,
             endDate: card.dataset.endDate,
             items: collectBelongingsItems(card),
-            riskFlags: collectCareSafetyFlags(card),
-            intakeAttributes
+            riskFlags: collectCareSafetyFlags(card)
         };
+
+        if (profileLoaded) {
+            payload.intakeAttributes =
+                intakeAttributes;
+        }
+
+        return payload;
     }
 
     async function saveBelongingsCard(card, button) {
@@ -4263,8 +4927,14 @@ let directoryConsolidatedLastFetch = 0;
                 endDate: payload.endDate,
                 items: payload.items,
                 riskFlags: payload.riskFlags,
-                intakeAttributes: payload.intakeAttributes,
-                intakeAttributesSource: 'Web App',
+                ...(payload.intakeAttributes
+                    ? {
+                        intakeAttributes:
+                            payload.intakeAttributes,
+                        intakeAttributesSource:
+                            'Web App'
+                      }
+                    : {}),
                 photos: belongingsRecordsCache[payload.stayKey]?.photos || [],
                 dogPhoto: belongingsRecordsCache[payload.stayKey]?.dogPhoto || null
             };
@@ -6140,6 +6810,10 @@ let directoryConsolidatedLastFetch = 0;
                 : {};
 
         const hasAttributes =
+            Number(
+                record.intakeFieldCount ||
+                0
+            ) > 0 ||
             Object.values(attributes)
                 .some(value =>
                     String(value ?? '').trim()
@@ -7378,7 +8052,10 @@ let directoryConsolidatedLastFetch = 0;
                                             </button>
                                         </div>
 
-                                        <details class="directory-fused-details">
+                                        <details
+                                            class="directory-fused-details"
+                                            data-directory-detail="profile"
+                                            data-detail-loaded="false">
                                             <summary>
                                                 <span>📋 Intake &amp; Profile Attributes</span>
                                                 <span
@@ -7391,12 +8068,15 @@ let directoryConsolidatedLastFetch = 0;
                                                 class="directory-fused-details-body"
                                                 data-directory-intake-attributes>
                                                 <div class="intake-profile-empty">
-                                                    Loading stored intake attributes…
+                                                    Open this section to load intake attributes…
                                                 </div>
                                             </div>
                                         </details>
 
-                                        <details class="directory-fused-details">
+                                        <details
+                                            class="directory-fused-details"
+                                            data-directory-detail="belongings"
+                                            data-detail-loaded="false">
                                             <summary>
                                                 <span>🧳 Belongings, Care &amp; Photos</span>
                                             </summary>
@@ -7404,7 +8084,7 @@ let directoryConsolidatedLastFetch = 0;
                                                 class="directory-fused-details-body"
                                                 data-directory-belongings>
                                                 <div class="intake-profile-empty">
-                                                    Loading belongings and care details…
+                                                    Open this section to load belongings and photos…
                                                 </div>
                                             </div>
                                         </details>
