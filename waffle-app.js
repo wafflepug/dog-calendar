@@ -288,6 +288,8 @@ function waffleReadRequestKey(payload) {
             'get_past_guest_directory',
             'get_guest_profile',
             'get_guest_belongings',
+            'get_stay_operations',
+            'get_dog_master_profile',
             'get_reminders_notes',
             'get_intake_statuses',
             'get_legacy_intake_statuses',
@@ -4195,7 +4197,7 @@ function registerWaffleServiceWorker() {
             navigator
                 .serviceWorker
                 .register(
-                    './service-worker.js?v=10.8.9',
+                    './service-worker.js?v=11.0',
                     {
                         scope: './'
                     }
@@ -10505,6 +10507,7 @@ registerWaffleServiceWorker();
         const photoLabelInput = card.querySelector('[data-belongings-photo-label]');
         const payloadBase = getBelongingsCardPayload(card);
         const isDogProfile = photoType === 'dogProfile';
+        const isStayPhoto = photoType === 'stayPhoto';
         const requestToken = makeHostedPhotoRequestToken();
 
         belongingsUploadInProgress = true;
@@ -10513,7 +10516,7 @@ registerWaffleServiceWorker();
             if (status) {
                 status.textContent = isDogProfile
                     ? '💾 Preparing dog profile...'
-                    : '💾 Saving belongings details...';
+                    : (isStayPhoto ? '💾 Preparing stay media...' : '💾 Saving belongings details...');
             }
 
             // Ensure an existing shared Pet_Belongings row is present. The
@@ -10564,7 +10567,7 @@ registerWaffleServiceWorker();
                 endDate: payloadBase.endDate || '',
                 photoLabel: isDogProfile
                     ? `${payloadBase.dogName || 'Dog'} profile photo`
-                    : (photoLabelInput?.value.trim() || ''),
+                    : (isStayPhoto ? (photoLabelInput?.value.trim() || 'Stay photo') : (photoLabelInput?.value.trim() || '')),
                 photoType,
                 requestToken,
                 _ts: String(Date.now())
@@ -10581,7 +10584,7 @@ registerWaffleServiceWorker();
                 modalTitle.textContent =
                     isDogProfile
                         ? '🐶 Position Dog Photo'
-                        : '📷 Add Belongings Photos';
+                        : (isStayPhoto ? '📸 Add Stay Photos' : '📷 Add Belongings Photos');
             }
 
             frame.src = APPS_SCRIPT_WEBAPP_URL + '?' + params.toString();
@@ -10591,7 +10594,7 @@ registerWaffleServiceWorker();
             if (status) {
                 status.textContent = isDogProfile
                     ? '🐶 Dog photo uploader opened.'
-                    : '📷 Photo uploader opened. Choose or take a photo.';
+                    : (isStayPhoto ? '📸 Stay photo uploader opened.' : '📷 Photo uploader opened. Choose or take a photo.');
             }
 
         } catch (error) {
