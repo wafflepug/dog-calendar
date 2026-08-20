@@ -81,10 +81,57 @@ function v110OperationDisplayState(card){
 function v110EnsureCareOperationBar(card){
   if(!card||card.dataset.v1082PastStay==='true')return;
   const profile=card.querySelector('.directory-profile-content');if(!profile)return;
+
   let bar=card.querySelector('[data-v110-operation-bar]');
-  if(!bar){bar=document.createElement('section');bar.className='v110-operation-bar';bar.dataset.v110OperationBar='';const tabs=profile.querySelector('.directory-main-profile-tabs');if(tabs)tabs.parentNode.insertBefore(bar,tabs);}
-  const state=v110OperationDisplayState(card),p=v110OperationalPayloadFromCard(card),today=getLocalTodayDateString(),canCheckout=state.code==='checked_in'||(state.code==='date_active'&&p.endDate<=today),canCheckIn=!['checked_in','checked_out','completed'].includes(state.code);
+
+  if(!bar){
+    bar=document.createElement('section');
+    bar.className='v110-operation-bar';
+    bar.dataset.v110OperationBar='';
+    const tabs=profile.querySelector('.directory-main-profile-tabs');
+    if(tabs)tabs.parentNode.insertBefore(bar,tabs);
+  }
+
+  const state=v110OperationDisplayState(card);
+  const p=v110OperationalPayloadFromCard(card);
+  const today=getLocalTodayDateString();
+  const canCheckout=
+    state.code==='checked_in'||
+    (state.code==='date_active'&&p.endDate<=today);
+  const canCheckIn=
+    !['checked_in','checked_out','completed'].includes(state.code);
+
+  /*
+   * V11.0.2 Care crash fix:
+   * the Care grids have a subtree MutationObserver. In V11.0 the observer
+   * called v110EnhanceAllCareCards(), which called this function, which
+   * unconditionally replaced bar.innerHTML. That replacement triggered the
+   * same MutationObserver again, producing an endless DOM mutation loop.
+   *
+   * Make the operation bar idempotent. If its meaningful render state has not
+   * changed, do not touch the DOM.
+   */
+  const signature=JSON.stringify([
+    p.stayKey,
+    state.code,
+    state.label,
+    state.meta,
+    canCheckIn,
+    canCheckout
+  ]);
+
+  if(bar.dataset.v110RenderSignature===signature){
+    return;
+  }
+
+  /*
+   * Set the signature before changing innerHTML. MutationObserver callbacks
+   * run after the current DOM task, so the observer's next enhancement pass
+   * immediately sees this signature and becomes a no-op.
+   */
+  bar.dataset.v110RenderSignature=signature;
   bar.dataset.state=state.code;
+
   bar.innerHTML=`<div class="v110-operation-state"><span class="v110-operation-icon">${state.icon}</span><div><small>STAY STATUS</small><strong>${v110Escape(state.label)}</strong><span>${v110Escape(state.meta)}</span></div></div><div class="v110-operation-actions">${canCheckIn?'<button type="button" class="v110-checkin-button" data-v110-checkin>🛬 Check In</button>':''}${canCheckout?'<button type="button" class="v110-checkout-button" data-v110-checkout>👋 Check Out</button>':''}</div>`;
 }
 
@@ -114,9 +161,37 @@ function v110OpenPhotoViewer(url){if(!url)return;const v=v110EnsurePhotoViewer()
 
 function v110OpenCustomPanel(card,name){if(!card)return;card.querySelectorAll('.directory-main-profile-tab').forEach(b=>{const a=b.dataset.v110Tab===name;b.classList.toggle('is-active',a);b.setAttribute('aria-selected',a?'true':'false');});card.querySelectorAll('.directory-main-profile-panel').forEach(p=>{const a=p.dataset.v110Panel===name;p.hidden=!a;p.classList.toggle('is-active',a);});if(name==='master')v110LoadMasterProfile(card);if(name==='media')v110LoadMedia(card);}
 function v110EnhanceCareCard(card){if(!card)return;v110EnsureTab(card,'master','⭐','Master');v110EnsureTab(card,'media','📸','Media');v110EnsureCareOperationBar(card);}
-function v110EnhanceAllCareCards(){if(WAFFLE_PAGE!=='directory')return;document.querySelectorAll('.directory-card[data-directory-stay-key]').forEach(v110EnhanceCareCard);}
+let v110CareEnhanceQueued=false;
 
-applyGuestDirectoryResponse=function(response,options={}){if(Array.isArray(response?.operations))v110IndexOperations(response.operations);const r=v110BaseApplyDirectoryResponse(response,options);setTimeout(v110EnhanceAllCareCards,20);return r;};
+function v110EnhanceAllCareCards(){
+  if(WAFFLE_PAGE!=='directory')return;
+  document
+    .querySelectorAll('.directory-card[data-directory-stay-key]')
+    .forEach(v110EnhanceCareCard);
+}
+
+function v110ScheduleCareEnhancement(){
+  if(WAFFLE_PAGE!=='directory'||v110CareEnhanceQueued)return;
+  v110CareEnhanceQueued=true;
+
+  const run=()=>{
+    v110CareEnhanceQueued=false;
+    v110EnhanceAllCareCards();
+  };
+
+  if(typeof requestAnimationFrame==='function'){
+    requestAnimationFrame(run);
+  }else{
+    setTimeout(run,0);
+  }
+}
+
+applyGuestDirectoryResponse=function(response,options={}){
+  if(Array.isArray(response?.operations))v110IndexOperations(response.operations);
+  const r=v110BaseApplyDirectoryResponse(response,options);
+  setTimeout(v110ScheduleCareEnhancement,20);
+  return r;
+};
 
 document.addEventListener('click',async e=>{
   const dep=e.target.closest('[data-v10-jump="departures"]');if(dep&&WAFFLE_PAGE==='calendar'){e.preventDefault();e.stopPropagation();await v110OpenLeavingModal();return;}
@@ -134,5 +209,24 @@ window.addEventListener('message',e=>{const d=e?.data;if(d?.type!=='waffleBelong
 document.addEventListener('DOMContentLoaded',()=>{
   v110EnsureLeavingModal();v110EnsurePhotoViewer();
   if(WAFFLE_PAGE==='calendar'){setTimeout(()=>v110LoadOperations(),500);setInterval(()=>v110LoadOperations(),60000);}
-  if(WAFFLE_PAGE==='directory'){setTimeout(v110EnhanceAllCareCards,250);setTimeout(()=>v110LoadOperations({noRender:true}),500);['directory-grid','past-directory-grid'].map(id=>document.getElementById(id)).filter(Boolean).forEach(host=>new MutationObserver(()=>v110EnhanceAllCareCards()).observe(host,{childList:true,subtree:true}));}
+  if(WAFFLE_PAGE==='directory'){
+    setTimeout(v110ScheduleCareEnhancement,250);
+    setTimeout(()=>v110LoadOperations({noRender:true}),500);
+
+    ['directory-grid','past-directory-grid']
+      .map(id=>document.getElementById(id))
+      .filter(Boolean)
+      .forEach(host=>
+        new MutationObserver(mutations=>{
+          /*
+           * Coalesce a burst of card/profile DOM mutations into one pass.
+           * Combined with the operation-bar render signature above, V11
+           * enhancements can no longer recursively trigger themselves.
+           */
+          if(mutations.some(m=>m.type==='childList')){
+            v110ScheduleCareEnhancement();
+          }
+        }).observe(host,{childList:true,subtree:true})
+      );
+  }
 });
