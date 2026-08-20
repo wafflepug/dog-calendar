@@ -1,0 +1,290 @@
+/* ============================================================
+   WAFFLE HOUSE V10.8.2 — CARE CURRENT / PAST STAYS
+   ============================================================ */
+
+.v1082-stay-tabs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+    margin: 12px 0 10px;
+    padding: 5px;
+    border: 1px solid var(--wh-border, #dbe3ea);
+    border-radius: 12px;
+    background: var(--wh-surface-muted, #f8fafc);
+}
+
+.v1082-stay-tab {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 43px;
+    padding: 8px 12px;
+    border: 1px solid transparent;
+    border-radius: 9px;
+    background: transparent;
+    color: var(--wh-text-muted, #64748b);
+    font: inherit;
+    font-size: 11px;
+    font-weight: 900;
+    cursor: pointer;
+}
+
+.v1082-stay-tab strong {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 25px;
+    min-height: 22px;
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: rgba(100,116,139,.12);
+    font-size: 9px;
+}
+
+.v1082-stay-tab.is-active {
+    border-color: #93c5fd;
+    background: var(--wh-surface, #ffffff);
+    color: #1d4ed8;
+    box-shadow: 0 2px 8px rgba(15,23,42,.07);
+}
+
+.v1082-stay-tab.is-active strong {
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+
+.v1082-stay-panel[hidden] {
+    display: none !important;
+}
+
+.v1082-past-heading {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 10px;
+    margin: 3px 0 11px;
+    padding: 0 2px;
+}
+
+.v1082-past-heading > div span,
+.v1082-past-heading > div strong {
+    display: block;
+}
+
+.v1082-past-heading > div span {
+    color: #64748b;
+    font-size: 9px;
+    font-weight: 850;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+
+.v1082-past-heading > div strong {
+    margin-top: 2px;
+    font-size: 14px;
+}
+
+.v1082-past-heading > span {
+    color: #64748b;
+    font-size: 9px;
+    font-weight: 800;
+}
+
+.v1082-past-card {
+    border-color: color-mix(in srgb, #64748b 45%, var(--wh-border, #dbe3ea));
+}
+
+.v1082-past-tile {
+    min-height: 155px;
+}
+
+.v1082-past-tile-date {
+    position: absolute;
+    right: 10px;
+    bottom: 10px;
+    left: 10px;
+    z-index: 3;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 25px;
+    padding: 4px 7px;
+    border: 1px solid rgba(255,255,255,.28);
+    border-radius: 999px;
+    background: rgba(15,23,42,.72);
+    color: #ffffff;
+    font-size: 9px;
+    font-weight: 850;
+    backdrop-filter: blur(5px);
+}
+
+.v1082-past-card .directory-guest-tile-name {
+    bottom: 43px !important;
+}
+
+.v1082-past-status {
+    border: 1px solid #cbd5e1 !important;
+    background: #f1f5f9 !important;
+    color: #475569 !important;
+}
+
+.v1082-readonly-name,
+.v1082-readonly-breed {
+    cursor: default !important;
+}
+
+.v1082-readonly-name {
+    color: inherit;
+    font-weight: 900;
+}
+
+.v1082-past-core-details .directory-attribute {
+    cursor: default;
+}
+
+.is-v1082-readonly
+.directory-profile-section-tools
+.directory-profile-edit-toggle,
+.is-v1082-readonly
+.directory-profile-save-bar,
+.is-v1082-readonly
+.belongings-photo-upload-card,
+.is-v1082-readonly
+.directory-belongings-save-bar,
+.is-v1082-readonly
+.belongings-photo-delete {
+    display: none !important;
+}
+
+.is-v1082-readonly
+[data-directory-main-panel="belongings"]
+input:disabled,
+.is-v1082-readonly
+[data-directory-main-panel="belongings"]
+textarea:disabled,
+.is-v1082-readonly
+[data-directory-main-panel="belongings"]
+select:disabled {
+    opacity: 1;
+    color: var(--wh-text, #172033);
+    -webkit-text-fill-color: var(--wh-text, #172033);
+}
+
+.is-v1082-readonly
+.care-risk-option {
+    cursor: default;
+}
+
+.is-v1082-readonly
+.care-risk-option input:disabled {
+    opacity: 1;
+}
+
+.v1082-past-empty {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 190px;
+    padding: 25px;
+    border: 1px dashed var(--wh-border, #dbe3ea);
+    border-radius: 12px;
+    color: #64748b;
+    text-align: center;
+}
+
+.v1082-past-empty > span {
+    margin-bottom: 6px;
+    font-size: 30px;
+}
+
+.v1082-past-empty strong {
+    color: var(--wh-text, #172033);
+    font-size: 13px;
+}
+
+.v1082-past-empty small {
+    margin-top: 4px;
+    font-size: 10px;
+}
+
+.v1082-past-empty.is-error {
+    color: #b91c1c;
+}
+
+.directory-dashboard-fused.is-profile-mode
+.v1082-stay-tabs,
+.directory-dashboard-fused.is-profile-mode
+.v1082-past-heading {
+    display: none !important;
+}
+
+body.dark-theme .v1082-stay-tabs {
+    background: #202c3e;
+    border-color: #40516a;
+}
+
+body.dark-theme .v1082-stay-tab.is-active {
+    border-color: #3b82f6;
+    background: #182235;
+    color: #bfdbfe;
+}
+
+body.dark-theme .v1082-stay-tab.is-active strong {
+    background: #1e3a5f;
+    color: #bfdbfe;
+}
+
+body.dark-theme .v1082-past-status {
+    border-color: #475569 !important;
+    background: #334155 !important;
+    color: #e2e8f0 !important;
+}
+
+@media (max-width: 768px) {
+    .v1082-stay-tabs {
+        position: sticky;
+        top: 62px;
+        z-index: 65;
+        margin-top: 8px;
+        background: var(--wh-surface, #ffffff);
+        box-shadow: 0 4px 12px rgba(15,23,42,.07);
+    }
+
+    body.dark-theme .v1082-stay-tabs {
+        background: #182235;
+    }
+
+    .v1082-stay-tab {
+        min-height: 47px;
+        padding: 7px 8px;
+        font-size: 12px;
+    }
+
+    .v1082-past-heading {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 3px;
+    }
+
+    .v1082-past-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+
+    .v1082-past-tile {
+        min-height: 138px;
+    }
+}
+
+@media (max-width: 390px) {
+    .v1082-stay-tab span {
+        font-size: 11px;
+    }
+
+    .v1082-past-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 8px !important;
+    }
+}

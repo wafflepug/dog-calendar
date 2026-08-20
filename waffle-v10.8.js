@@ -276,12 +276,63 @@ function v108EnsureMeetOutlook() {
 }
 
 function v108RenderMeetOutlook(events) {
-    const host=v108EnsureMeetOutlook(); if(!host)return; const today=getLocalTodayDateString(); const cells=[];
+    const host=v108EnsureMeetOutlook();
+    if(!host)return;
+
+    const today=getLocalTodayDateString();
+    const cells=[];
+
+    /*
+     * V10.8.1 hotfix:
+     * Operations Home is normally rendered from plain calendar event objects.
+     * Plain Meet & Greet events use event.start and do not carry rawStartDate.
+     * The previous outlook relied on v10EventRawDates(), which could therefore
+     * resolve an empty date even though FullCalendar itself displayed the event.
+     *
+     * getCalendarEventDateString() is the canonical helper that supports:
+     *   - plain events (event.start)
+     *   - FullCalendar EventApi (event.start / event.startStr)
+     *   - rawStartDate where present
+     */
     for(let i=0;i<7;i++){
-        const d=new Date(today+'T12:00:00');d.setDate(d.getDate()+i);const ds=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-        const meets=(events||[]).filter(e=>e.extendedProps?.isMeetGreet&&v10EventRawDates(e).start===ds).sort((a,b)=>meetGreetTimeToMinutes(a.extendedProps?.time||'')-meetGreetTimeToMinutes(b.extendedProps?.time||''));
-        cells.push(`<div class="v108-meet-day ${meets.length?'busy':''}"><small>${escapeDashboardHtml(d.toLocaleDateString('en-AU',{weekday:'short'}))}</small><strong>${meets.length?`🤝 ${meets.length}`:'—'}</strong><i>${d.getDate()}/${d.getMonth()+1}</i>${meets.length?`<div>${meets.slice(0,2).map(e=>`<span>${escapeDashboardHtml(e.extendedProps?.time||'')} ${escapeDashboardHtml(e.extendedProps?.dogName||'')}</span>`).join('')}</div>`:''}</div>`);
+        const d=new Date(today+'T12:00:00');
+        d.setDate(d.getDate()+i);
+
+        const ds=
+            `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+
+        const meets=(Array.isArray(events)?events:[])
+            .filter(e=>{
+                const props=e?.extendedProps||{};
+                return (
+                    props.isMeetGreet===true &&
+                    getCalendarEventDateString(e)===ds
+                );
+            })
+            .sort((a,b)=>
+                meetGreetTimeToMinutes(getMeetGreetTime(a))-
+                meetGreetTimeToMinutes(getMeetGreetTime(b))
+            );
+
+        cells.push(
+            `<div class="v108-meet-day ${meets.length?'busy':''}">
+                <small>${escapeDashboardHtml(d.toLocaleDateString('en-AU',{weekday:'short'}))}</small>
+                <strong>${meets.length?`🤝 ${meets.length}`:'—'}</strong>
+                <i>${d.getDate()}/${d.getMonth()+1}</i>
+                ${
+                    meets.length
+                        ? `<div>${
+                            meets.slice(0,2).map(e=>{
+                                const props=e.extendedProps||{};
+                                return `<span>${escapeDashboardHtml(getMeetGreetTime(e))} ${escapeDashboardHtml(props.dogName||'')}</span>`;
+                            }).join('')
+                          }</div>`
+                        : ''
+                }
+            </div>`
+        );
     }
+
     host.innerHTML=cells.join('');
 }
 

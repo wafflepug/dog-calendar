@@ -1,0 +1,40 @@
+/* ============================================================
+   WAFFLE HOUSE V10.8.5 — MEET OUTLOOK LIVE REFRESH POLISH
+   ============================================================ */
+
+/*
+ * During a live Calendar source refresh the Meet outlook should not visually
+ * collapse or flash blank while its authoritative CSV snapshot is reconciled.
+ */
+#v108MeetOutlook {
+    min-height: 66px;
+}
+
+.v108-meet-day.busy {
+    border-color: #14b8a6 !important;
+    background:
+        linear-gradient(
+            180deg,
+            rgba(20,184,166,.09),
+            rgba(15,118,110,.035)
+        ) !important;
+}
+
+.v108-meet-day.busy strong {
+    color: #0f766e !important;
+}
+
+body.dark-theme
+.v108-meet-day.busy {
+    background:
+        linear-gradient(
+            180deg,
+            rgba(45,212,191,.12),
+            rgba(15,118,110,.08)
+        ) !important;
+}
+
+body.dark-theme
+.v108-meet-day.busy strong {
+    color: #5eead4 !important;
+}

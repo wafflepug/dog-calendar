@@ -1,0 +1,287 @@
+/* ============================================================
+   WAFFLE HOUSE V10.8.6 — CARE CURRENT / PAST STAYS UI
+   ============================================================ */
+
+/* Replace the browser-looking buttons with the same polished app language. */
+.v1082-stay-tabs {
+    display: grid !important;
+    grid-template-columns:
+        repeat(2, minmax(0, 1fr)) !important;
+    gap: 7px !important;
+    margin: 12px 0 11px !important;
+    padding: 5px !important;
+    border: 1px solid var(--v10-border, var(--wh-border, #dbe3ea)) !important;
+    border-radius: 13px !important;
+    background: var(--v10-card-soft, var(--wh-surface-muted, #f8fafc)) !important;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.45);
+}
+
+.v1082-stay-tab {
+    position: relative;
+    display: grid !important;
+    grid-template-columns:
+        38px minmax(0, 1fr) auto !important;
+    gap: 9px !important;
+    align-items: center !important;
+    justify-content: stretch !important;
+    min-height: 58px !important;
+    padding: 8px 10px !important;
+    border: 1px solid transparent !important;
+    border-radius: 10px !important;
+    background: transparent !important;
+    color: var(--v10-muted, var(--wh-text-muted, #64748b)) !important;
+    text-align: left !important;
+    box-shadow: none !important;
+    transition:
+        border-color .16s ease,
+        background .16s ease,
+        box-shadow .16s ease,
+        transform .16s ease;
+}
+
+.v1082-stay-tab:hover {
+    background:
+        color-mix(
+            in srgb,
+            var(--v10-card, #ffffff) 72%,
+            transparent
+        ) !important;
+}
+
+.v1082-stay-tab.is-active {
+    border-color: #bfdbfe !important;
+    background: var(--v10-card, var(--wh-surface, #ffffff)) !important;
+    color: var(--v10-text, var(--wh-text, #172033)) !important;
+    box-shadow:
+        0 3px 10px rgba(15,23,42,.08),
+        inset 0 0 0 1px rgba(37,99,235,.035) !important;
+}
+
+.v1082-stay-tab.is-active::after {
+    content: "";
+    position: absolute;
+    right: 12px;
+    bottom: -1px;
+    left: 12px;
+    height: 3px;
+    border-radius: 999px 999px 0 0;
+    background: #2563eb;
+}
+
+.v1086-stay-tab-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border: 1px solid var(--v10-border, var(--wh-border, #dbe3ea));
+    border-radius: 10px;
+    background: var(--v10-card, var(--wh-surface, #ffffff));
+    font-size: 17px;
+}
+
+.v1082-stay-tab.is-active
+.v1086-stay-tab-icon {
+    border-color: #bfdbfe;
+    background: #eff6ff;
+}
+
+.v1086-stay-tab-copy {
+    min-width: 0;
+}
+
+.v1086-stay-tab-copy strong,
+.v1086-stay-tab-copy small {
+    display: block;
+}
+
+.v1086-stay-tab-copy strong {
+    color: inherit;
+    font-size: 11px;
+    font-weight: 900;
+    line-height: 1.15;
+}
+
+.v1086-stay-tab-copy small {
+    margin-top: 2px;
+    overflow: hidden;
+    color: var(--v10-muted, var(--wh-text-muted, #64748b));
+    font-size: 8.5px;
+    font-weight: 750;
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.v1086-stay-tab-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 30px;
+    height: 28px;
+    padding: 0 8px;
+    border: 1px solid var(--v10-border, var(--wh-border, #dbe3ea));
+    border-radius: 999px;
+    background: var(--v10-card-soft, var(--wh-surface-muted, #f8fafc));
+    color: var(--v10-text, var(--wh-text, #172033));
+    font-size: 10px;
+    font-weight: 900;
+}
+
+.v1082-stay-tab.is-active
+.v1086-stay-tab-count {
+    border-color: #bfdbfe;
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+
+
+/* Past tiles should feel like the current dog tiles, not administrative records. */
+.v1082-past-grid {
+    align-items: start;
+}
+
+.v1082-past-card {
+    border-color: var(--v10-border, var(--wh-border, #dbe3ea)) !important;
+}
+
+.v1082-past-tile {
+    min-height: 155px;
+    border-radius: inherit;
+}
+
+.v1082-past-tile::after {
+    content: "Past stay";
+    position: absolute;
+    top: 9px;
+    right: 9px;
+    z-index: 4;
+    padding: 4px 7px;
+    border: 1px solid rgba(255,255,255,.34);
+    border-radius: 999px;
+    background: rgba(15,23,42,.67);
+    color: #ffffff;
+    font-size: 7.5px;
+    font-weight: 900;
+    letter-spacing: .02em;
+    backdrop-filter: blur(5px);
+}
+
+.v1082-past-tile-date {
+    right: 9px !important;
+    bottom: 9px !important;
+    left: 9px !important;
+    min-height: 23px !important;
+    padding: 3px 7px !important;
+    font-size: 8px !important;
+}
+
+
+/* Clearer historical section title. */
+.v1082-past-heading {
+    margin: 5px 0 11px !important;
+    padding: 0 3px !important;
+}
+
+.v1082-past-heading > div span {
+    color: #2563eb !important;
+    font-size: 8px !important;
+}
+
+.v1082-past-heading > div strong {
+    font-size: 13px !important;
+}
+
+
+/* Dark mode */
+body.dark-theme
+.v1082-stay-tabs {
+    background: #111b2c !important;
+    border-color: #34445b !important;
+}
+
+body.dark-theme
+.v1082-stay-tab.is-active {
+    border-color: #3b82f6 !important;
+    background: #182235 !important;
+    color: #f8fafc !important;
+}
+
+body.dark-theme
+.v1086-stay-tab-icon {
+    background: #202c3e;
+    border-color: #40516a;
+}
+
+body.dark-theme
+.v1082-stay-tab.is-active
+.v1086-stay-tab-icon {
+    background: #1e3a5f;
+    border-color: #3b82f6;
+}
+
+body.dark-theme
+.v1086-stay-tab-count {
+    background: #202c3e;
+    border-color: #40516a;
+    color: #e2e8f0;
+}
+
+body.dark-theme
+.v1082-stay-tab.is-active
+.v1086-stay-tab-count {
+    background: #1e3a5f;
+    border-color: #3b82f6;
+    color: #bfdbfe;
+}
+
+
+@media (max-width: 768px) {
+    .v1082-stay-tabs {
+        top: 62px !important;
+        gap: 5px !important;
+        padding: 4px !important;
+        border-radius: 12px !important;
+    }
+
+    .v1082-stay-tab {
+        grid-template-columns:
+            32px minmax(0, 1fr) auto !important;
+        gap: 6px !important;
+        min-height: 54px !important;
+        padding: 7px !important;
+    }
+
+    .v1086-stay-tab-icon {
+        width: 31px;
+        height: 31px;
+        border-radius: 8px;
+        font-size: 15px;
+    }
+
+    .v1086-stay-tab-copy strong {
+        font-size: 10.5px;
+    }
+
+    .v1086-stay-tab-copy small {
+        font-size: 7.5px;
+    }
+
+    .v1086-stay-tab-count {
+        min-width: 27px;
+        height: 25px;
+        padding: 0 6px;
+        font-size: 9px;
+    }
+}
+
+@media (max-width: 410px) {
+    .v1082-stay-tab {
+        grid-template-columns:
+            30px minmax(0, 1fr) auto !important;
+    }
+
+    .v1086-stay-tab-copy small {
+        display: none;
+    }
+}
