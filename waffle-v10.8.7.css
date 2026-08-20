@@ -1,0 +1,70 @@
+/* ============================================================
+   WAFFLE HOUSE V10.8.7 — HISTORICAL DOG PHOTOS
+   ============================================================ */
+
+.v1087-past-photo-shell {
+    position: relative;
+}
+
+.v1087-past-photo-edit {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
+/*
+ * Past stays stay read-only for profile/care/belongings.
+ * The dog photo pencil is the deliberate exception.
+ */
+.is-v1082-readonly
+.v1087-past-photo-edit {
+    pointer-events: auto !important;
+    cursor: pointer !important;
+}
+
+.v1087-past-photo-edit::after {
+    content: "Photo";
+    position: absolute;
+    left: 50%;
+    bottom: -22px;
+    transform: translateX(-50%);
+    padding: 3px 6px;
+    border: 1px solid var(--v10-border, #dbe3ea);
+    border-radius: 6px;
+    background: var(--v10-card, #ffffff);
+    color: var(--v10-muted, #64748b);
+    font-size: 7px;
+    font-weight: 850;
+    line-height: 1;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .14s ease;
+    box-shadow: 0 3px 10px rgba(15,23,42,.1);
+}
+
+.v1087-past-photo-edit:hover::after,
+.v1087-past-photo-edit:focus-visible::after {
+    opacity: 1;
+}
+
+body.dark-theme
+.v1087-past-photo-edit::after {
+    background: #182235;
+    border-color: #40516a;
+    color: #cbd5e1;
+}
+
+@media (max-width: 768px) {
+    .v1087-past-photo-edit {
+        width: 34px !important;
+        height: 34px !important;
+        font-size: 16px !important;
+    }
+
+    .v1087-past-photo-edit::after {
+        display: none;
+    }
+}

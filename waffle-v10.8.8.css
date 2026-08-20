@@ -1,0 +1,511 @@
+/* ============================================================
+   WAFFLE HOUSE V10.8.8 — MINOR UX ENHANCEMENTS
+   ============================================================ */
+
+
+/* ============================================================
+   1 + 2. PAST DOG PROFILE — RE-BOOK / CONSOLIDATED STAYS
+   ============================================================ */
+
+.v1088-rebook-button {
+    flex: 0 0 auto;
+    min-height: 30px;
+    padding: 5px 9px;
+    border: 1px solid #bfdbfe;
+    border-radius: 8px;
+    background: #eff6ff;
+    color: #1d4ed8;
+    font: inherit;
+    font-size: 9px;
+    font-weight: 900;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.v1088-rebook-button:hover {
+    border-color: #93c5fd;
+    background: #dbeafe;
+}
+
+.v1088-profile-stay-summary {
+    display: block;
+    margin-top: 3px;
+    color: var(--v10-muted, #64748b);
+    font-size: 8px;
+    font-weight: 750;
+}
+
+.v1088-past-stay-count {
+    position: absolute;
+    top: 9px;
+    left: 9px;
+    z-index: 5;
+    padding: 4px 7px;
+    border: 1px solid rgba(255,255,255,.5);
+    border-radius: 999px;
+    background: rgba(15,23,42,.72);
+    color: #ffffff;
+    font-size: 8px;
+    font-weight: 900;
+    letter-spacing: .02em;
+}
+
+
+/* ============================================================
+   3. MOBILE QUICK ADD — FIFTH SLOT IN BOTTOM NAV
+   No floating button over Care/Calendar content.
+   ============================================================ */
+
+@media (max-width: 768px) {
+    .app-tabs.v1088-has-quick-add {
+        display: grid !important;
+        grid-template-columns:
+            repeat(5, minmax(0, 1fr)) !important;
+        align-items: stretch !important;
+    }
+
+    .app-tabs.v1088-has-quick-add
+    .app-tab-button {
+        width: auto !important;
+        min-width: 0 !important;
+        flex: none !important;
+    }
+
+    .v10-quick-add-button.v1088-nav-quick-add {
+        position: static !important;
+        inset: auto !important;
+        align-self: center !important;
+        justify-self: center !important;
+        width: 48px !important;
+        height: 48px !important;
+        margin: 0 !important;
+        transform: none !important;
+        border: 4px solid var(--wh-surface, #ffffff) !important;
+        border-radius: 50% !important;
+        font-size: 27px !important;
+        box-shadow:
+            0 6px 16px rgba(37,99,235,.28) !important;
+    }
+
+    body.dark-theme
+    .v10-quick-add-button.v1088-nav-quick-add {
+        border-color: var(--wh-surface, #182235) !important;
+    }
+}
+
+
+/* ============================================================
+   4. DATE-CLICK BOOKING TYPE CHOOSER
+   ============================================================ */
+
+.v1088-date-choice-card {
+    width: min(100%, 620px) !important;
+}
+
+.v1088-date-choice-grid {
+    display: grid;
+    grid-template-columns:
+        repeat(3, minmax(0, 1fr));
+    gap: 9px;
+}
+
+.v1088-date-choice-grid button {
+    display: grid;
+    grid-template-columns:
+        40px minmax(0, 1fr);
+    grid-template-rows:
+        auto auto;
+    gap: 2px 9px;
+    align-items: center;
+    min-height: 86px;
+    padding: 11px;
+    border: 1px solid var(--v10-border);
+    border-radius: 11px;
+    background: var(--v10-card-soft);
+    color: var(--v10-text);
+    text-align: left;
+    font: inherit;
+    cursor: pointer;
+    transition:
+        transform .15s ease,
+        border-color .15s ease,
+        box-shadow .15s ease;
+}
+
+.v1088-date-choice-grid button:hover,
+.v1088-date-choice-grid button:focus-visible {
+    transform: translateY(-1px);
+    border-color: #93c5fd;
+    box-shadow: 0 6px 15px rgba(15,23,42,.07);
+    outline: none;
+}
+
+.v1088-date-choice-grid button > span {
+    grid-row: 1 / 3;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border: 1px solid var(--v10-border);
+    border-radius: 10px;
+    background: var(--v10-card);
+    font-size: 20px;
+}
+
+.v1088-date-choice-grid strong {
+    font-size: 11px;
+}
+
+.v1088-date-choice-grid small {
+    color: var(--v10-muted);
+    font-size: 8.5px;
+    line-height: 1.3;
+}
+
+
+/* ============================================================
+   5. MEET & GREET / POTENTIAL — MATCH CONFIRMED STAY MODAL
+   ============================================================ */
+
+#customBookingModal.v1088-booking-modal,
+#potentialStayModal.v1088-booking-modal {
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 2900 !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 16px !important;
+    background: rgba(15,23,42,.68) !important;
+    backdrop-filter: blur(5px) !important;
+}
+
+#customBookingModal.v1088-booking-modal
+.v1088-booking-modal-card,
+#potentialStayModal.v1088-booking-modal
+.v1088-booking-modal-card {
+    position: relative !important;
+    width: min(100%, 650px) !important;
+    max-width: 650px !important;
+    max-height: min(880px,94vh) !important;
+    box-sizing: border-box !important;
+    overflow-y: auto !important;
+    padding: 18px !important;
+    border: 1px solid var(--v10-border) !important;
+    border-radius: 17px !important;
+    background: var(--v10-card) !important;
+    color: var(--v10-text) !important;
+    box-shadow: 0 26px 80px rgba(15,23,42,.3) !important;
+}
+
+.v1088-modal-kicker {
+    display: block;
+    margin: 0 46px 2px 0;
+    color: var(--v10-primary);
+    font-size: 9px;
+    font-weight: 900;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+}
+
+#customBookingModal.v1088-booking-modal h3,
+#potentialStayModal.v1088-booking-modal h3 {
+    margin: 3px 46px 14px 0 !important;
+    color: var(--v10-text) !important;
+    font-size: 20px !important;
+    line-height: 1.2 !important;
+}
+
+.v1088-modal-x {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: var(--v10-card-soft);
+    color: var(--v10-text);
+    font: inherit;
+    font-size: 24px;
+    cursor: pointer;
+}
+
+#customBookingModal.v1088-booking-modal label,
+#potentialStayModal.v1088-booking-modal label {
+    margin-bottom: 4px !important;
+    color: var(--v10-muted) !important;
+    font-size: 9.5px !important;
+    font-weight: 850 !important;
+}
+
+#customBookingModal.v1088-booking-modal input,
+#potentialStayModal.v1088-booking-modal input {
+    width: 100% !important;
+    min-height: 41px !important;
+    box-sizing: border-box !important;
+    margin-bottom: 10px !important;
+    padding: 8px 9px !important;
+    border: 1px solid var(--v10-border) !important;
+    border-radius: 8px !important;
+    background: var(--v10-card-soft) !important;
+    color: var(--v10-text) !important;
+    font: inherit !important;
+    font-size: 12px !important;
+}
+
+#customBookingModal.v1088-booking-modal
+#deleteModalBtn,
+#customBookingModal.v1088-booking-modal
+#closeModalBtn,
+#customBookingModal.v1088-booking-modal
+#saveModalBtn,
+#potentialStayModal.v1088-booking-modal
+#deletePotentialBtn,
+#potentialStayModal.v1088-booking-modal
+#confirmStayBtn,
+#potentialStayModal.v1088-booking-modal
+#potentialIntakeLinkBtn,
+#potentialStayModal.v1088-booking-modal
+#closePotentialModalBtn,
+#potentialStayModal.v1088-booking-modal
+#savePotentialBtn {
+    min-height: 40px !important;
+    padding: 8px 11px !important;
+    border: 1px solid var(--v10-border) !important;
+    border-radius: 8px !important;
+    background: var(--v10-card-soft) !important;
+    color: var(--v10-text) !important;
+    font: inherit !important;
+    font-size: 10px !important;
+    font-weight: 900 !important;
+    box-shadow: none !important;
+}
+
+#customBookingModal.v1088-booking-modal
+#saveModalBtn,
+#potentialStayModal.v1088-booking-modal
+#savePotentialBtn,
+#potentialStayModal.v1088-booking-modal
+#confirmStayBtn {
+    border-color: #2563eb !important;
+    background: #2563eb !important;
+    color: #ffffff !important;
+}
+
+#customBookingModal.v1088-booking-modal
+#deleteModalBtn,
+#potentialStayModal.v1088-booking-modal
+#deletePotentialBtn {
+    border-color: #fecaca !important;
+    background: #fef2f2 !important;
+    color: #b91c1c !important;
+}
+
+#potentialStayModal.v1088-booking-modal
+#potentialIntakeLinkBtn {
+    border-color: #bfdbfe !important;
+    background: #eff6ff !important;
+    color: #1d4ed8 !important;
+}
+
+
+/* ============================================================
+   6. PAST TILE — REMOVE BLURRED NAME / DATE BANNERS
+   ============================================================ */
+
+.v1082-past-card.has-profile-photo
+.v1082-past-tile::after {
+    /*
+     * This pseudo-element was the large photo gradient inherited from the
+     * current-dog tiles. Historical tiles use clean text instead.
+     */
+    background: transparent !important;
+    backdrop-filter: none !important;
+}
+
+.v1082-past-card.has-profile-photo
+.directory-guest-tile-open::after {
+    display: none !important;
+}
+
+.v1082-past-card.has-profile-photo
+.directory-guest-tile-name {
+    right: 11px !important;
+    bottom: 28px !important;
+    left: 11px !important;
+    padding: 0 !important;
+    background: transparent !important;
+    color: #ffffff !important;
+    text-shadow:
+        0 2px 6px rgba(0,0,0,.85),
+        0 1px 2px rgba(0,0,0,.85) !important;
+}
+
+.v1082-past-tile-date {
+    right: 11px !important;
+    bottom: 9px !important;
+    left: 11px !important;
+    justify-content: flex-start !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    backdrop-filter: none !important;
+    color: #ffffff !important;
+    text-align: left !important;
+    text-shadow:
+        0 2px 5px rgba(0,0,0,.85),
+        0 1px 2px rgba(0,0,0,.85) !important;
+}
+
+.v1082-past-card:not(.has-profile-photo)
+.directory-guest-tile-name {
+    bottom: auto !important;
+    color: var(--v10-text, #172033) !important;
+    text-shadow: none !important;
+}
+
+.v1082-past-card:not(.has-profile-photo)
+.v1082-past-tile-date {
+    right: 10px !important;
+    bottom: 12px !important;
+    left: 10px !important;
+    justify-content: center !important;
+    color: var(--v10-muted, #64748b) !important;
+    text-align: center !important;
+    text-shadow: none !important;
+}
+
+.v1082-past-tile::after {
+    /*
+     * Keep a small historical state badge but remove the glass/blur treatment.
+     */
+    backdrop-filter: none !important;
+    background: rgba(15,23,42,.78) !important;
+}
+
+
+/* ============================================================
+   7. DESKTOP HEADER — NOTIFICATION / THEME ICONS ONLY
+   ============================================================ */
+
+@media (min-width: 769px) {
+    .waffle-notification-button-label,
+    #themeToggle .theme-toggle-label {
+        display: none !important;
+    }
+
+    .waffle-notification-button,
+    #themeToggle.theme-toggle-header {
+        width: 42px !important;
+        min-width: 42px !important;
+        height: 42px !important;
+        min-height: 42px !important;
+        padding: 0 !important;
+        border-radius: 50% !important;
+        justify-content: center !important;
+    }
+
+    .waffle-notification-button-icon,
+    #themeToggle .theme-toggle-icon {
+        margin: 0 !important;
+        font-size: 17px !important;
+    }
+}
+
+
+/* ============================================================
+   DARK MODE
+   ============================================================ */
+
+body.dark-theme
+.v1088-rebook-button {
+    border-color: #3b82f6;
+    background: #1e3a5f;
+    color: #bfdbfe;
+}
+
+body.dark-theme
+#customBookingModal.v1088-booking-modal
+#deleteModalBtn,
+body.dark-theme
+#potentialStayModal.v1088-booking-modal
+#deletePotentialBtn {
+    border-color: #7f1d1d !important;
+    background: #451a1a !important;
+    color: #fecaca !important;
+}
+
+body.dark-theme
+#potentialStayModal.v1088-booking-modal
+#potentialIntakeLinkBtn {
+    border-color: #3b82f6 !important;
+    background: #1e3a5f !important;
+    color: #bfdbfe !important;
+}
+
+
+/* ============================================================
+   MOBILE
+   ============================================================ */
+
+@media (max-width: 768px) {
+    .v1088-date-choice-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .v1088-date-choice-grid button {
+        min-height: 68px;
+    }
+
+    #customBookingModal.v1088-booking-modal,
+    #potentialStayModal.v1088-booking-modal {
+        align-items: flex-end !important;
+        padding: 0 !important;
+    }
+
+    #customBookingModal.v1088-booking-modal
+    .v1088-booking-modal-card,
+    #potentialStayModal.v1088-booking-modal
+    .v1088-booking-modal-card {
+        width: 100% !important;
+        max-width: none !important;
+        max-height: 91vh !important;
+        border-radius: 20px 20px 0 0 !important;
+        padding-bottom:
+            calc(
+                16px +
+                env(safe-area-inset-bottom)
+            ) !important;
+    }
+
+    #customBookingModal.v1088-booking-modal input,
+    #potentialStayModal.v1088-booking-modal input {
+        min-height: 46px !important;
+        font-size: 15px !important;
+    }
+
+    .directory-name-row
+    .v1088-rebook-button {
+        margin-left: auto;
+    }
+}
+
+@media (max-width: 420px) {
+    .v1088-past-stay-count {
+        top: 7px;
+        left: 7px;
+        font-size: 7px;
+    }
+
+    .v1088-rebook-button {
+        padding: 5px 7px;
+        font-size: 8.5px;
+    }
+}

@@ -102,13 +102,21 @@ function v1082PastCardHtml(booking) {
             <div class="directory-profile-content">
                 <div class="directory-card-header">
                     <div
-                        class="directory-photo-shell"
+                        class="directory-photo-shell v1087-past-photo-shell"
                         data-directory-photo="${v1082Escape(stayKey)}">
                         <div class="directory-photo-media">
                             <div
                                 class="directory-photo-placeholder"
                                 aria-label="No dog profile photo">🐶</div>
                         </div>
+                        <button
+                            type="button"
+                            class="directory-photo-edit-button v1087-past-photo-edit"
+                            data-upload-dog-photo
+                            title="Add or change historical dog profile photo"
+                            aria-label="Add or change ${v1082Escape(dogName)} historical profile photo">
+                            ✎
+                        </button>
                     </div>
 
                     <div class="directory-card-identity">
@@ -717,6 +725,31 @@ function v1082HandlePastGridClick(event) {
         );
 
     if (!grid || !grid.contains(event.target)) {
+        return;
+    }
+
+    const dogPhotoButton =
+        event.target.closest(
+            '[data-upload-dog-photo]'
+        );
+
+    if (dogPhotoButton) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        const card =
+            dogPhotoButton.closest(
+                '.belongings-pet-card'
+            );
+
+        if (card) {
+            openHostedBelongingsPhotoUploader(
+                card,
+                'upload',
+                'dogProfile'
+            );
+        }
+
         return;
     }
 

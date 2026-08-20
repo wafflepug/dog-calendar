@@ -4195,7 +4195,7 @@ function registerWaffleServiceWorker() {
             navigator
                 .serviceWorker
                 .register(
-                    './service-worker.js?v=10.8.6',
+                    './service-worker.js?v=10.8.8',
                     {
                         scope: './'
                     }
@@ -10518,10 +10518,35 @@ registerWaffleServiceWorker();
 
             // Ensure an existing shared Pet_Belongings row is present. The
             // Apps Script-hosted uploader only appends a photo to this record.
-            await sendPayloadToAppsScript({
-                action: 'save_belongings',
-                ...payloadBase
-            });
+            //
+            // Historical stays are read-only except for the dog profile photo.
+            // Do NOT send save_belongings for those cards because collecting
+            // disabled historical controls could overwrite archived care flags
+            // or belongings. The dedicated ensure action creates only a missing
+            // Pet_Belongings row and otherwise leaves the snapshot untouched.
+            if (
+                card.dataset.v1082PastStay ===
+                'true'
+            ) {
+                await sendPayloadToAppsScript({
+                    action:
+                        'ensure_belongings_record',
+                    stayKey:
+                        payloadBase.stayKey,
+                    dogName:
+                        payloadBase.dogName,
+                    startDate:
+                        payloadBase.startDate,
+                    endDate:
+                        payloadBase.endDate
+                });
+            } else {
+                await sendPayloadToAppsScript({
+                    action:
+                        'save_belongings',
+                    ...payloadBase
+                });
+            }
 
             hostedBelongingsPhotoContext = {
                 card,
