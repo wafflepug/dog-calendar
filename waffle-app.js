@@ -4195,7 +4195,7 @@ function registerWaffleServiceWorker() {
             navigator
                 .serviceWorker
                 .register(
-                    './service-worker.js?v=10.8.8',
+                    './service-worker.js?v=10.8.9',
                     {
                         scope: './'
                     }

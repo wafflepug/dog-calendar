@@ -1,0 +1,550 @@
+/* ============================================================
+   WAFFLE HOUSE V10.8.9 — PROFILE / LOADING / ICON POLISH
+   ============================================================ */
+
+
+/* ============================================================
+   LARGE CENTRED DOG PROFILE IMAGE
+   ============================================================ */
+
+.directory-profile-content
+.directory-card-header {
+    grid-template-columns:
+        minmax(0, 1fr) !important;
+    justify-items:
+        center !important;
+    gap:
+        10px !important;
+    padding-top:
+        8px;
+    text-align:
+        center;
+}
+
+.directory-profile-content
+.directory-photo-shell {
+    width:
+        128px !important;
+    height:
+        128px !important;
+    border-radius:
+        22px !important;
+    border-width:
+        2px !important;
+    box-shadow:
+        0 8px 24px rgba(15,23,42,.15) !important;
+}
+
+.directory-profile-content
+.directory-photo-placeholder {
+    font-size:
+        48px !important;
+}
+
+.directory-profile-content
+.directory-card-identity {
+    display:
+        grid;
+    justify-items:
+        center;
+    width:
+        100%;
+    max-width:
+        640px;
+}
+
+.directory-profile-content
+.directory-name-row {
+    justify-content:
+        center !important;
+    flex-wrap:
+        wrap;
+}
+
+.directory-profile-content
+.directory-dog-name-btn,
+.directory-profile-content
+.v1082-readonly-name {
+    text-align:
+        center !important;
+}
+
+.directory-profile-content
+.directory-primary-breed,
+.directory-profile-content
+.directory-stay-dates {
+    text-align:
+        center !important;
+}
+
+.directory-profile-content
+.directory-photo-edit-button {
+    right:
+        5px !important;
+    bottom:
+        5px !important;
+    width:
+        34px !important;
+    height:
+        34px !important;
+    font-size:
+        17px !important;
+}
+
+
+/* ============================================================
+   PAST STAY STATUS + RE-BOOK
+   ============================================================ */
+
+.v1082-past-card
+.directory-name-row {
+    justify-content:
+        center !important;
+    gap:
+        8px !important;
+}
+
+.v1082-past-card
+.v1082-readonly-name {
+    flex:
+        0 0 100%;
+    width:
+        100%;
+    margin:
+        0 0 3px !important;
+    text-align:
+        center !important;
+}
+
+.v1082-past-card
+.v1082-past-status,
+.v1082-past-card
+.v1088-rebook-button {
+    flex:
+        0 0 auto;
+}
+
+.v1082-past-card
+.v1088-rebook-button {
+    min-height:
+        38px !important;
+    padding:
+        8px 14px !important;
+    border-radius:
+        10px !important;
+    font-size:
+        11px !important;
+    box-shadow:
+        0 3px 10px rgba(37,99,235,.12);
+}
+
+.v1082-past-card
+.v1082-past-status {
+    min-height:
+        38px !important;
+    display:
+        inline-flex !important;
+    align-items:
+        center;
+    padding:
+        7px 11px !important;
+    font-size:
+        10px !important;
+}
+
+
+/* ============================================================
+   CURRENT / PAST SELECTOR — DO NOT FOLLOW SCROLL
+   ============================================================ */
+
+.v1082-stay-tabs {
+    position:
+        static !important;
+    top:
+        auto !important;
+    z-index:
+        auto !important;
+}
+
+@media (max-width: 768px) {
+    .v1082-stay-tabs {
+        position:
+            static !important;
+        top:
+            auto !important;
+        box-shadow:
+            inset 0 1px 0 rgba(255,255,255,.35) !important;
+    }
+}
+
+
+/* ============================================================
+   LAZY PROFILE / BELONGINGS LOADING TILES
+   ============================================================ */
+
+.directory-lazy-placeholder.is-loading {
+    position:
+        relative;
+    min-height:
+        105px;
+    overflow:
+        hidden;
+    border-style:
+        solid !important;
+    background:
+        var(--v10-card-soft, #f8fafc) !important;
+}
+
+.directory-lazy-placeholder.is-loading > div {
+    width:
+        100%;
+}
+
+.directory-lazy-placeholder.is-loading strong,
+.directory-lazy-placeholder.is-loading span {
+    position:
+        relative;
+    z-index:
+        2;
+}
+
+.directory-lazy-placeholder.is-loading::before {
+    content:
+        "";
+    position:
+        absolute;
+    inset:
+        0;
+    background:
+        linear-gradient(
+            100deg,
+            transparent 20%,
+            rgba(148,163,184,.18) 42%,
+            rgba(255,255,255,.42) 50%,
+            rgba(148,163,184,.18) 58%,
+            transparent 80%
+        );
+    background-size:
+        220% 100%;
+    animation:
+        v1089-shimmer 1.35s linear infinite;
+}
+
+.directory-lazy-placeholder.is-loading::after {
+    content:
+        "";
+    display:
+        block;
+    width:
+        min(72%, 440px);
+    height:
+        9px;
+    margin-top:
+        13px;
+    border-radius:
+        999px;
+    background:
+        rgba(148,163,184,.22);
+    box-shadow:
+        0 18px 0 rgba(148,163,184,.16),
+        0 36px 0 rgba(148,163,184,.12);
+}
+
+
+/* ============================================================
+   UPLOAD LOADING TILE / ANIMATION
+   ============================================================ */
+
+.belongings-pet-card {
+    position:
+        relative;
+}
+
+.v1089-upload-loading {
+    position:
+        absolute;
+    inset:
+        0;
+    z-index:
+        120;
+    display:
+        flex;
+    align-items:
+        center;
+    justify-content:
+        center;
+    padding:
+        18px;
+    border-radius:
+        inherit;
+    background:
+        color-mix(
+            in srgb,
+            var(--v10-card, #ffffff) 84%,
+            transparent
+        );
+    backdrop-filter:
+        blur(5px);
+}
+
+.v1089-upload-loading[hidden] {
+    display:
+        none !important;
+}
+
+.v1089-upload-loading-card {
+    display:
+        grid;
+    grid-template-columns:
+        46px minmax(0, 1fr);
+    gap:
+        12px;
+    align-items:
+        center;
+    width:
+        min(100%, 390px);
+    padding:
+        14px;
+    border:
+        1px solid var(--v10-border, #dbe3ea);
+    border-radius:
+        13px;
+    background:
+        var(--v10-card, #ffffff);
+    box-shadow:
+        0 14px 40px rgba(15,23,42,.16);
+}
+
+.v1089-upload-spinner {
+    width:
+        40px;
+    height:
+        40px;
+    border:
+        4px solid rgba(37,99,235,.15);
+    border-top-color:
+        #2563eb;
+    border-radius:
+        50%;
+    animation:
+        v1089-spin .85s linear infinite;
+}
+
+.v1089-upload-loading-copy {
+    min-width:
+        0;
+}
+
+.v1089-upload-loading-copy strong,
+.v1089-upload-loading-copy span {
+    display:
+        block;
+}
+
+.v1089-upload-loading-copy strong {
+    color:
+        var(--v10-text, #172033);
+    font-size:
+        12px;
+}
+
+.v1089-upload-loading-copy span {
+    margin-top:
+        3px;
+    color:
+        var(--v10-muted, #64748b);
+    font-size:
+        9.5px;
+    line-height:
+        1.4;
+}
+
+.v1089-upload-progress {
+    overflow:
+        hidden;
+    height:
+        6px;
+    margin-top:
+        9px;
+    border-radius:
+        999px;
+    background:
+        rgba(148,163,184,.16);
+}
+
+.v1089-upload-progress i {
+    display:
+        block;
+    width:
+        10%;
+    height:
+        100%;
+    border-radius:
+        inherit;
+    background:
+        linear-gradient(
+            90deg,
+            #2563eb,
+            #0f766e
+        );
+    transition:
+        width .25s ease;
+}
+
+.is-v1089-uploading
+.directory-profile-content {
+    pointer-events:
+        none;
+}
+
+
+/* ============================================================
+   SUBTLE CARD ANIMATIONS
+   ============================================================ */
+
+.directory-guest-tile-open,
+.v1082-past-card,
+.directory-profile-content,
+.v1089-upload-loading-card {
+    animation:
+        v1089-card-enter .24s cubic-bezier(.2,.8,.2,1) both;
+}
+
+@keyframes v1089-card-enter {
+    from {
+        opacity:
+            0;
+        transform:
+            translateY(6px);
+    }
+
+    to {
+        opacity:
+            1;
+        transform:
+            translateY(0);
+    }
+}
+
+@keyframes v1089-spin {
+    to {
+        transform:
+            rotate(360deg);
+    }
+}
+
+@keyframes v1089-shimmer {
+    from {
+        background-position:
+            200% 0;
+    }
+
+    to {
+        background-position:
+            -200% 0;
+    }
+}
+
+
+/* ============================================================
+   DARK MODE
+   ============================================================ */
+
+body.dark-theme
+.v1089-upload-loading {
+    background:
+        rgba(15,23,42,.78);
+}
+
+body.dark-theme
+.v1089-upload-loading-card {
+    background:
+        #182235;
+    border-color:
+        #40516a;
+}
+
+body.dark-theme
+.directory-lazy-placeholder.is-loading::before {
+    background:
+        linear-gradient(
+            100deg,
+            transparent 20%,
+            rgba(71,85,105,.18) 42%,
+            rgba(148,163,184,.15) 50%,
+            rgba(71,85,105,.18) 58%,
+            transparent 80%
+        );
+    background-size:
+        220% 100%;
+}
+
+
+/* ============================================================
+   MOBILE
+   ============================================================ */
+
+@media (max-width: 768px) {
+    .directory-profile-content
+    .directory-photo-shell {
+        width:
+            112px !important;
+        height:
+            112px !important;
+        border-radius:
+            20px !important;
+    }
+
+    .directory-profile-content
+    .directory-photo-placeholder {
+        font-size:
+            42px !important;
+    }
+
+    .v1082-past-card
+    .v1088-rebook-button {
+        min-height:
+            40px !important;
+        padding:
+            8px 13px !important;
+        font-size:
+            11px !important;
+    }
+
+    .v1089-upload-loading {
+        padding:
+            10px;
+    }
+
+    .v1089-upload-loading-card {
+        grid-template-columns:
+            42px minmax(0, 1fr);
+        padding:
+            12px;
+    }
+
+    .v1089-upload-spinner {
+        width:
+            36px;
+        height:
+            36px;
+    }
+}
+
+
+@media (prefers-reduced-motion: reduce) {
+    .directory-lazy-placeholder.is-loading::before,
+    .v1089-upload-spinner,
+    .directory-guest-tile-open,
+    .v1082-past-card,
+    .directory-profile-content,
+    .v1089-upload-loading-card {
+        animation:
+            none !important;
+    }
+
+    .v1089-upload-progress i {
+        transition:
+            none !important;
+    }
+}

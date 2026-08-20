@@ -1,6 +1,6 @@
 /* Waffle House Boarding — V8.4 Service Worker */
 
-const WAFFLE_SW_VERSION = 'v10.8.8';
+const WAFFLE_SW_VERSION = 'v10.8.9';
 const WAFFLE_CACHE_PREFIX = 'waffle-house-';
 const APP_SHELL_CACHE = `${WAFFLE_CACHE_PREFIX}shell-${WAFFLE_SW_VERSION}`;
 const RUNTIME_CACHE = `${WAFFLE_CACHE_PREFIX}runtime-${WAFFLE_SW_VERSION}`;
@@ -11,28 +11,30 @@ const APP_SHELL = [
   './directory.html',
   './reminders.html',
   './audit.html',
-  './waffle-app.css?v=10.8.8',
-  './waffle-app.js?v=10.8.8',
+  './waffle-app.css?v=10.8.9',
+  './waffle-app.js?v=10.8.9',
   './waffle-logo.png',
-  './manifest.webmanifest?v=10.8.8',
-  './pwa-icon-192.png',
-  './pwa-icon-512.png',
-  './pwa-maskable-512.png',
-  './pwa-apple-touch-icon.png',
-  './waffle-firebase-config.js?v=10.8.8',
-  './waffle-v10.8.css?v=10.8.8',
-  './waffle-v10.8.js?v=10.8.8',
-  './waffle-v10.8.2.css?v=10.8.8',
-  './waffle-v10.8.2.js?v=10.8.8',
-  './waffle-v10.8.3.css?v=10.8.8',
-  './waffle-v10.8.3.js?v=10.8.8',
-  './waffle-v10.8.5.css?v=10.8.8',
-  './waffle-v10.8.5.js?v=10.8.8',
-  './waffle-v10.8.6.css?v=10.8.8',
-  './waffle-v10.8.6.js?v=10.8.8',
-  './waffle-v10.8.7.css?v=10.8.8',
-  './waffle-v10.8.8.css?v=10.8.8',
-  './waffle-v10.8.8.js?v=10.8.8'
+  './manifest.webmanifest?v=10.8.9',
+  './pwa-icon-192.png?v=10.8.9',
+  './pwa-icon-512.png?v=10.8.9',
+  './pwa-maskable-512.png?v=10.8.9',
+  './pwa-apple-touch-icon.png?v=10.8.9',
+  './waffle-firebase-config.js?v=10.8.9',
+  './waffle-v10.8.css?v=10.8.9',
+  './waffle-v10.8.js?v=10.8.9',
+  './waffle-v10.8.2.css?v=10.8.9',
+  './waffle-v10.8.2.js?v=10.8.9',
+  './waffle-v10.8.3.css?v=10.8.9',
+  './waffle-v10.8.3.js?v=10.8.9',
+  './waffle-v10.8.5.css?v=10.8.9',
+  './waffle-v10.8.5.js?v=10.8.9',
+  './waffle-v10.8.6.css?v=10.8.9',
+  './waffle-v10.8.6.js?v=10.8.9',
+  './waffle-v10.8.7.css?v=10.8.9',
+  './waffle-v10.8.8.css?v=10.8.9',
+  './waffle-v10.8.8.js?v=10.8.9',
+  './waffle-v10.8.9.css?v=10.8.9',
+  './waffle-v10.8.9.js?v=10.8.9'
 ];
 
 const OPTIONAL_EXTERNAL_ASSETS = [
@@ -71,7 +73,7 @@ function waffleFirebaseConfigReady(config) {
 }
 
 try {
-  importScripts('./waffle-firebase-config.js?v=10.8.8');
+  importScripts('./waffle-firebase-config.js?v=10.8.9');
 
   const config =
     self.WAFFLE_FIREBASE_CONFIG ||
@@ -125,9 +127,9 @@ try {
         {
           body,
           icon:
-            './pwa-icon-192.png',
+            './pwa-icon-192.png?v=10.8.9',
           badge:
-            './pwa-icon-192.png',
+            './pwa-icon-192.png?v=10.8.9',
           tag,
           renotify: true,
           data: {
