@@ -194,6 +194,31 @@ applyGuestDirectoryResponse=function(response,options={}){
 };
 
 document.addEventListener('click',async e=>{
+  /*
+   * V11.0.3 mobile/profile-tab fix:
+   * The original Profile/Belongings tab controller only knows about
+   * data-directory-main-panel, while V11 Master/Media use data-v110-panel.
+   * When returning from Master/Media to a built-in tab, the custom panel could
+   * remain visible underneath the built-in panel. On narrow screens that
+   * produced stacked/wide content and severe horizontal overflow.
+   */
+  const builtInTab=e.target.closest('[data-directory-main-tab]');
+  if(builtInTab){
+    const card=builtInTab.closest('.directory-card');
+    if(card){
+      card.querySelectorAll('[data-v110-panel]').forEach(panel=>{
+        panel.hidden=true;
+        panel.classList.remove('is-active');
+      });
+      card.querySelectorAll('[data-v110-tab]').forEach(button=>{
+        button.classList.remove('is-active');
+        button.setAttribute('aria-selected','false');
+      });
+    }
+    /* Do not preventDefault: the existing Care handler now switches the
+       requested Profile/Belongings panel normally. */
+  }
+
   const dep=e.target.closest('[data-v10-jump="departures"]');if(dep&&WAFFLE_PAGE==='calendar'){e.preventDefault();e.stopPropagation();await v110OpenLeavingModal();return;}
   const tab=e.target.closest('[data-v110-tab]');if(tab){e.preventDefault();e.stopPropagation();v110OpenCustomPanel(tab.closest('.directory-card'),tab.dataset.v110Tab);return;}
   const ci=e.target.closest('[data-v110-checkin]');if(ci){const card=ci.closest('.directory-card'),p=v110OperationalPayloadFromCard(card);ci.disabled=true;ci.textContent='⏳ Checking in…';try{await v110SaveOperationalStatus(p,'checked_in');v110EnsureCareOperationBar(card);showWaffleForegroundPush({title:`🏡 ${p.dogName} checked in`,body:'Operational stay tracking is now active.'});}catch(err){alert('Check In could not be saved.\n\n'+(err?.message||String(err)));}finally{ci.disabled=false;}return;}
