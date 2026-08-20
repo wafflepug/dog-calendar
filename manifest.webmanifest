@@ -1,7 +1,7 @@
 {
   "name": "Waffle House Boarding",
   "short_name": "Waffle House",
-  "description": "Waffle House dog boarding command centre with shared bookings, care profiles, history, photo galleries, offline writes and notifications.",
+  "description": "Waffle House dog boarding command centre with current and past care profiles, history, belongings, offline writes and notifications.",
   "id": "./index.html",
   "start_url": "./index.html",
   "scope": "./",

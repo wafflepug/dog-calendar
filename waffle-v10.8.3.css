@@ -1,0 +1,333 @@
+/* ============================================================
+   WAFFLE HOUSE V10.8.3 — OUTLOOK DAY DETAILS
+   ============================================================ */
+
+.v10-capacity-day[data-v1083-outlook-key],
+.v108-meet-day[data-v1083-outlook-key] {
+    position: relative;
+    cursor: pointer;
+    outline: none;
+    transition:
+        transform .16s ease,
+        border-color .16s ease,
+        box-shadow .16s ease,
+        background .16s ease;
+}
+
+.v10-capacity-day[data-v1083-outlook-key]::after,
+.v108-meet-day[data-v1083-outlook-key]::after {
+    content: "ⓘ";
+    position: absolute;
+    top: 4px;
+    right: 5px;
+    color: var(--v10-muted);
+    font-size: 7px;
+    font-weight: 900;
+    opacity: .62;
+}
+
+.v10-capacity-day[data-v1083-outlook-key]:hover,
+.v10-capacity-day[data-v1083-outlook-key]:focus-visible,
+.v10-capacity-day[data-v1083-outlook-key].is-v1083-active {
+    transform: translateY(-2px);
+    border-color: #f87171 !important;
+    box-shadow:
+        0 7px 18px rgba(239,68,68,.13),
+        0 0 0 2px rgba(239,68,68,.08);
+}
+
+.v108-meet-day[data-v1083-outlook-key]:hover,
+.v108-meet-day[data-v1083-outlook-key]:focus-visible,
+.v108-meet-day[data-v1083-outlook-key].is-v1083-active {
+    transform: translateY(-2px);
+    border-color: #14b8a6 !important;
+    box-shadow:
+        0 7px 18px rgba(13,148,136,.14),
+        0 0 0 2px rgba(13,148,136,.08);
+}
+
+.v1083-outlook-popover {
+    position: fixed;
+    z-index: 3400;
+    width: min(390px, calc(100vw - 20px));
+    max-height: min(520px, calc(100vh - 20px));
+    overflow: auto;
+    padding: 0;
+    border: 1px solid var(--v10-border);
+    border-radius: 13px;
+    background: var(--v10-card);
+    color: var(--v10-text);
+    box-shadow:
+        0 20px 55px rgba(15,23,42,.28),
+        0 3px 10px rgba(15,23,42,.12);
+    animation: v1083-popover-in .14s ease both;
+}
+
+.v1083-outlook-popover[hidden] {
+    display: none !important;
+}
+
+@keyframes v1083-popover-in {
+    from {
+        opacity: 0;
+        transform: translateY(4px) scale(.985);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.v1083-outlook-popover-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 12px 13px 10px;
+    border-bottom: 1px solid var(--v10-border);
+}
+
+.v1083-outlook-popover-heading.capacity {
+    border-top: 3px solid #ef4444;
+    background:
+        linear-gradient(
+            180deg,
+            rgba(239,68,68,.08),
+            transparent
+        );
+}
+
+.v1083-outlook-popover-heading.meet {
+    border-top: 3px solid #0f766e;
+    background:
+        linear-gradient(
+            180deg,
+            rgba(15,118,110,.09),
+            transparent
+        );
+}
+
+.v1083-outlook-popover-heading > div {
+    min-width: 0;
+}
+
+.v1083-outlook-popover-heading > div > span {
+    display: block;
+    margin-bottom: 2px;
+    color: var(--v10-muted);
+    font-size: 8px;
+    font-weight: 900;
+    letter-spacing: .07em;
+}
+
+.v1083-outlook-popover-heading strong {
+    display: block;
+    font-size: 13px;
+    line-height: 1.25;
+}
+
+.v1083-outlook-summary-pill {
+    flex: 0 0 auto;
+    min-height: 27px;
+    padding: 6px 8px;
+    border-radius: 999px;
+    background: var(--v10-card-soft);
+    color: var(--v10-text);
+    font-size: 9px;
+    font-weight: 900;
+    white-space: nowrap;
+}
+
+.v1083-outlook-popover-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 8px 13px;
+    border-bottom: 1px solid var(--v10-border);
+    background: var(--v10-card-soft);
+}
+
+.v1083-outlook-popover-summary strong {
+    font-size: 10px;
+}
+
+.v1083-outlook-popover-summary span {
+    color: var(--v10-muted);
+    font-size: 8.5px;
+}
+
+.v1083-outlook-detail-list {
+    display: grid;
+}
+
+.v1083-outlook-detail-row {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 9px;
+    align-items: start;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--v10-border);
+}
+
+.v1083-outlook-detail-row:last-child {
+    border-bottom: 0;
+}
+
+.v1083-outlook-detail-copy {
+    min-width: 0;
+}
+
+.v1083-outlook-detail-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.v1083-outlook-detail-title strong {
+    min-width: 0;
+    overflow: hidden;
+    font-size: 10.5px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.v1083-outlook-detail-title span {
+    flex: 0 0 auto;
+    padding: 3px 6px;
+    border-radius: 999px;
+    background: var(--v10-card-soft);
+    color: var(--v10-muted);
+    font-size: 7.5px;
+    font-weight: 850;
+}
+
+.v1083-outlook-detail-copy small {
+    display: block;
+    margin-top: 3px;
+    color: var(--v10-muted);
+    font-size: 8.5px;
+    line-height: 1.4;
+}
+
+.v1083-outlook-type-dot {
+    width: 10px;
+    height: 10px;
+    margin-top: 3px;
+    border-radius: 50%;
+}
+
+.v1083-outlook-type-dot.confirmed {
+    background: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37,99,235,.1);
+}
+
+.v1083-outlook-type-dot.potential {
+    background: #f59e0b;
+    box-shadow: 0 0 0 3px rgba(245,158,11,.12);
+}
+
+.v1083-outlook-time {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 50px;
+    min-height: 28px;
+    padding: 5px 6px;
+    border-radius: 7px;
+    background: rgba(15,118,110,.11);
+    color: #0f766e;
+    font-size: 9px;
+    font-weight: 900;
+}
+
+.v1083-outlook-empty {
+    padding: 18px 13px;
+    color: var(--v10-muted);
+    font-size: 9.5px;
+    line-height: 1.45;
+    text-align: center;
+}
+
+body.dark-theme
+.v1083-outlook-popover {
+    background: #182235;
+    border-color: #40516a;
+}
+
+body.dark-theme
+.v1083-outlook-popover-summary,
+body.dark-theme
+.v1083-outlook-summary-pill,
+body.dark-theme
+.v1083-outlook-detail-title span {
+    background: #202c3e;
+}
+
+body.dark-theme
+.v1083-outlook-detail-row,
+body.dark-theme
+.v1083-outlook-popover-heading,
+body.dark-theme
+.v1083-outlook-popover-summary {
+    border-color: #40516a;
+}
+
+body.dark-theme
+.v1083-outlook-time {
+    background: rgba(45,212,191,.12);
+    color: #5eead4;
+}
+
+@media (max-width: 768px) {
+    .v1083-outlook-popover {
+        width: calc(100vw - 18px);
+        max-height: min(62vh, 520px);
+        border-radius: 14px;
+    }
+
+    .v10-capacity-day[data-v1083-outlook-key]::after,
+    .v108-meet-day[data-v1083-outlook-key]::after {
+        top: 3px;
+        right: 4px;
+        font-size: 8px;
+    }
+
+    .v1083-outlook-popover-heading {
+        padding: 12px;
+    }
+
+    .v1083-outlook-popover-heading strong {
+        font-size: 14px;
+    }
+
+    .v1083-outlook-detail-row {
+        min-height: 52px;
+        padding: 10px 11px;
+    }
+
+    .v1083-outlook-detail-title strong {
+        font-size: 12px;
+    }
+
+    .v1083-outlook-detail-copy small {
+        font-size: 10px;
+    }
+
+    .v1083-outlook-time {
+        min-width: 54px;
+        min-height: 31px;
+        font-size: 10px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .v1083-outlook-popover,
+    .v10-capacity-day[data-v1083-outlook-key],
+    .v108-meet-day[data-v1083-outlook-key] {
+        animation: none !important;
+        transition: none !important;
+    }
+}

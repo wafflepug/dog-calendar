@@ -8,12 +8,14 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Waffle House">
-    <link rel="manifest" href="manifest.webmanifest?v=10.8">
+    <link rel="manifest" href="manifest.webmanifest?v=10.8.3">
     <link rel="icon" type="image/png" sizes="192x192" href="pwa-icon-192.png">
     <link rel="apple-touch-icon" sizes="180x180" href="pwa-apple-touch-icon.png">
     <title>Waffle House — Guest Directory & Care</title>
-    <link rel="stylesheet" href="waffle-app.css?v=10.8">
-    <link rel="stylesheet" href="waffle-v10.8.css?v=10.8">
+    <link rel="stylesheet" href="waffle-app.css?v=10.8.3">
+    <link rel="stylesheet" href="waffle-v10.8.css?v=10.8.3">
+    <link rel="stylesheet" href="waffle-v10.8.2.css?v=10.8.3">
+    <link rel="stylesheet" href="waffle-v10.8.3.css?v=10.8.3">
 
 </head>
 <body data-waffle-page="directory">
@@ -207,7 +209,7 @@
                 <div>
                     <h3>🐾 Guest Directory &amp; Care</h3>
                     <p class="directory-dashboard-subtitle">
-                        Select a guest to open their complete care profile, intake details, belongings and photos.
+                        Switch between current/upcoming guests and completed stays. Select a dog to open the stay-specific care profile, intake, belongings and photos.
                     </p>
                 </div>
 
@@ -231,6 +233,17 @@
                     </span>
                 </div>
             </div>
+
+            <nav class="v1082-stay-tabs" role="tablist" aria-label="Care stay status">
+                <button type="button" class="v1082-stay-tab is-active" role="tab" aria-selected="true" data-v1082-stay-tab="current">
+                    <span>🏡 Current</span>
+                    <strong id="v1082CurrentStayCount">0</strong>
+                </button>
+                <button type="button" class="v1082-stay-tab" role="tab" aria-selected="false" data-v1082-stay-tab="past">
+                    <span>🕘 Past Stays</span>
+                    <strong id="v1082PastStayCount">0</strong>
+                </button>
+            </nav>
 
             <div class="guest-directory-toolbar">
                 <input
@@ -262,10 +275,31 @@
                 </div>
             </div>
 
-            <div id="directory-grid" class="directory-grid directory-grid-fused">
-                <div class="no-dogs" style="grid-column:1/-1;text-align:center;padding:20px;">
-                    Sync the spreadsheet to load current and upcoming guests.
-                </div>
+            <div class="v1082-stay-panels">
+                <section id="v1082CurrentStayPanel" class="v1082-stay-panel is-active" data-v1082-stay-panel="current">
+                    <div id="directory-grid" class="directory-grid directory-grid-fused">
+                        <div class="no-dogs" style="grid-column:1/-1;text-align:center;padding:20px;">
+                            Sync the spreadsheet to load current and upcoming guests.
+                        </div>
+                    </div>
+                </section>
+
+                <section id="v1082PastStayPanel" class="v1082-stay-panel" data-v1082-stay-panel="past" hidden>
+                    <div class="v1082-past-heading">
+                        <div>
+                            <span>Completed boarding stays</span>
+                            <strong>Past Care Profiles</strong>
+                        </div>
+                        <span>Newest stays first</span>
+                    </div>
+                    <div id="past-directory-grid" class="directory-grid directory-grid-fused v1082-past-grid">
+                        <div class="v101-skeleton-list v101-skeleton-directory" aria-label="Loading past stays">
+                            <div class="v101-skeleton-tile"><div class="v101-skeleton-block"></div><div class="v101-skeleton-line medium"></div></div>
+                            <div class="v101-skeleton-tile"><div class="v101-skeleton-block"></div><div class="v101-skeleton-line short"></div></div>
+                            <div class="v101-skeleton-tile"><div class="v101-skeleton-block"></div><div class="v101-skeleton-line medium"></div></div>
+                        </div>
+                    </div>
+                </section>
             </div>
         </div>
     </div>
@@ -559,8 +593,10 @@
     body.dark-theme .modal-content-panel input { background: #334155; border-color: #475569; color: white; }
 </style>
 
-<script src="waffle-firebase-config.js?v=10.8"></script>
-    <script src="waffle-app.js?v=10.8"></script>
-    <script src="waffle-v10.8.js?v=10.8"></script>
+<script src="waffle-firebase-config.js?v=10.8.3"></script>
+    <script src="waffle-app.js?v=10.8.3"></script>
+    <script src="waffle-v10.8.js?v=10.8.3"></script>
+    <script src="waffle-v10.8.2.js?v=10.8.3"></script>
+    <script src="waffle-v10.8.3.js?v=10.8.3"></script>
 
 </html>

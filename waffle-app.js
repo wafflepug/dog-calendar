@@ -285,6 +285,7 @@ function waffleReadRequestKey(payload) {
             'get_notification_centre',
             'get_audit_log',
             'get_guest_directory',
+            'get_past_guest_directory',
             'get_guest_profile',
             'get_guest_belongings',
             'get_reminders_notes',
@@ -4194,7 +4195,7 @@ function registerWaffleServiceWorker() {
             navigator
                 .serviceWorker
                 .register(
-                    './service-worker.js?v=10.8',
+                    './service-worker.js?v=10.8.3',
                     {
                         scope: './'
                     }
