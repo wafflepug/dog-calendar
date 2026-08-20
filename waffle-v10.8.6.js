@@ -192,10 +192,24 @@ function v1086PastBookingsFromCsv(
                     ''
                 ),
             stayKey:
-                makeGuestStayKey(
-                    dogName,
-                    startDate,
-                    endDate
+                (
+                    typeof v110MakeStayKey ===
+                        'function'
+                        ? v110MakeStayKey(
+                            dogName,
+                            startDate,
+                            endDate
+                          )
+                        : [
+                            String(
+                                dogName ||
+                                ''
+                            )
+                                .trim()
+                                .toLowerCase(),
+                            startDate,
+                            endDate
+                          ].join('|')
                 ),
             dogName,
             breed:

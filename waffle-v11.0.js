@@ -11,7 +11,37 @@ let v110MediaCache={};
 let v110MasterCache={};
 
 function v110Escape(v){return escapeDashboardHtml(v==null?'':String(v));}
-function v110StayKeyForEvent(event){const p=event?.extendedProps||{},d=v10EventRawDates(event);return makeGuestStayKey(String(p.dogName||event?.title||'').replace(/^.*Meet & Greet:\s*/i,'').trim(),d.start,d.end);}
+function v110NormaliseStayDate(value){
+  const text=String(value||'').trim();
+  if(!text)return'';
+  const iso=text.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(iso)return`${iso[1]}-${iso[2]}-${iso[3]}`;
+  const au=text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if(au)return`${au[3]}-${String(au[2]).padStart(2,'0')}-${String(au[1]).padStart(2,'0')}`;
+  const parsed=new Date(text);
+  if(Number.isNaN(parsed.getTime()))return text.slice(0,10);
+  const local=new Date(parsed.getTime()-parsed.getTimezoneOffset()*60000);
+  return local.toISOString().slice(0,10);
+}
+
+function v110MakeStayKey(dogName,startDate,endDate){
+  const start=v110NormaliseStayDate(startDate);
+  const end=v110NormaliseStayDate(endDate||startDate);
+  return[
+    String(dogName||'').trim().toLowerCase(),
+    start,
+    end
+  ].join('|');
+}
+
+function v110StayKeyForEvent(event){
+  const p=event?.extendedProps||{};
+  const d=v10EventRawDates(event);
+  const dogName=String(p.dogName||event?.title||'')
+    .replace(/^.*Meet & Greet:\s*/i,'')
+    .trim();
+  return v110MakeStayKey(dogName,d.start,d.end);
+}
 function v110OperationForStay(k){return v110OperationsMap[String(k||'')]||null;}
 function v110IndexOperations(records){v110OperationsMap={};(Array.isArray(records)?records:[]).forEach(r=>{if(r?.stayKey)v110OperationsMap[String(r.stayKey)]=r;});}
 function v110IsCheckedOutEvent(event){return v110OperationForStay(v110StayKeyForEvent(event))?.status==='checked_out';}
