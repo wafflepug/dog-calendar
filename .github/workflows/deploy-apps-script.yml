@@ -2,6 +2,11 @@ name: Deploy Google Apps Script
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'apps-script/**'
 
 permissions:
   contents: read
