@@ -1,0 +1,181 @@
+/* ============================================================
+   WAFFLE HOUSE V11.1.1 — UI CONSISTENCY FOLLOW-UP
+   ============================================================ */
+
+/* Desktop Calendar navigation is pinned to the viewport, not to the
+   scrolling calendar container. The body top padding replaces its normal
+   layout space so content never sits underneath it. */
+@media (min-width: 769px) {
+    body[data-waffle-page="calendar"] {
+        padding-top: 76px !important;
+    }
+
+    body[data-waffle-page="calendar"] .app-tabs {
+        position: fixed !important;
+        top: 0 !important;
+        left: 16px !important;
+        right: 16px !important;
+        width: auto !important;
+        z-index: 6000 !important;
+        box-sizing: border-box;
+        margin: 0 !important;
+        padding: 10px !important;
+        border: 1px solid var(--v10-border, #dbe3ea) !important;
+        border-top: 0 !important;
+        border-radius: 0 0 14px 14px !important;
+        background: color-mix(in srgb, var(--v10-card, #ffffff) 96%, transparent) !important;
+        box-shadow: 0 8px 24px rgba(15, 23, 42, .12) !important;
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        transform: none !important;
+    }
+}
+
+/* Quick Photos now deliberately reuses the Care dog-tile visual language. */
+.v111-dog-grid {
+    grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)) !important;
+    align-items: stretch;
+}
+
+.v111-care-dog-tile.directory-guest-tile-open {
+    position: relative;
+    width: 100%;
+    min-height: 142px;
+    box-sizing: border-box;
+    cursor: pointer;
+}
+
+.v111-care-dog-tile.is-selected {
+    outline: 3px solid #7c3aed;
+    outline-offset: 2px;
+    box-shadow: 0 0 0 5px rgba(124, 58, 237, .14);
+}
+
+.v111-care-dog-tile .directory-guest-tile-photo {
+    overflow: hidden;
+}
+
+.v111-care-dog-tile .directory-guest-tile-photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Mobile type scale: one consistent 16pt reading size, with a small,
+   deliberate hierarchy for headings and secondary metadata only. */
+@media (max-width: 768px) {
+    body {
+        font-size: 16pt !important;
+        line-height: 1.42;
+    }
+
+    input,
+    select,
+    textarea,
+    button,
+    .app-tab-button,
+    .nav-label,
+    .v10-stat-card,
+    .v10-agenda-item,
+    .v10-next-item,
+    .v10-quick-actions button,
+    .v108-modal-card,
+    .directory-card,
+    .reminders-card,
+    .v110-checkin-button,
+    .v110-checkout-button,
+    .v111-photo-actions button,
+    .v111-photo-back {
+        font-size: 16pt !important;
+    }
+
+    h1,
+    .v10-ops-heading h1 {
+        font-size: 22pt !important;
+        line-height: 1.2;
+    }
+
+    h2,
+    .v10-card-heading h2 {
+        font-size: 18pt !important;
+        line-height: 1.25;
+    }
+
+    h3,
+    .v108-modal-head h3 {
+        font-size: 17pt !important;
+        line-height: 1.25;
+    }
+
+    h4,
+    .directory-card h4 {
+        font-size: 16pt !important;
+    }
+
+    small,
+    .v10-eyebrow,
+    .v10-card-kicker,
+    .directory-dashboard-subtitle,
+    .v110-leaving-copy small,
+    .v110-leaving-copy span,
+    .v111-photo-status {
+        font-size: 12pt !important;
+        line-height: 1.35;
+    }
+
+    /* FullCalendar needs a slightly tighter scale so seven columns remain
+       usable, but its labels now use one consistent size rather than a mix. */
+    body[data-waffle-page="calendar"] .fc,
+    body[data-waffle-page="calendar"] .fc .fc-daygrid-day-number,
+    body[data-waffle-page="calendar"] .fc .fc-col-header-cell-cushion,
+    body[data-waffle-page="calendar"] .fc .fc-event {
+        font-size: 12pt !important;
+    }
+
+    body[data-waffle-page="calendar"] .fc .fc-toolbar-title {
+        font-size: 17pt !important;
+    }
+
+    body[data-waffle-page="calendar"] .fc button {
+        font-size: 12pt !important;
+    }
+
+    /* Mobile notification control is icon-only. Keep the accessible label on
+       the button itself, but never render the word “Notifications”. */
+    .waffle-notification-button {
+        width: 48px !important;
+        min-width: 48px !important;
+        height: 48px !important;
+        padding: 0 !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 0 !important;
+    }
+
+    .waffle-notification-button-label {
+        display: none !important;
+    }
+
+    .waffle-notification-button-icon {
+        display: inline-flex !important;
+        align-items: center;
+        justify-content: center;
+        font-size: 20pt !important;
+        line-height: 1 !important;
+    }
+
+    .v111-dog-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 12px !important;
+    }
+
+    .v111-care-dog-tile.directory-guest-tile-open {
+        min-height: 138px;
+        font-size: 16pt !important;
+    }
+
+    .v111-care-dog-tile .directory-guest-tile-name {
+        font-size: 16pt !important;
+    }
+}
