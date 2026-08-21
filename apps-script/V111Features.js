@@ -3,7 +3,7 @@
  * ======================================================================== */
 
 var WAFFLE_REQUEST_SOURCE_HEADER_ = "Request Source";
-var WAFFLE_REQUEST_SOURCE_VALUES_ = ["MadPaws", "Pawshake", "Facebook"];
+var WAFFLE_REQUEST_SOURCE_VALUES_ = ["MadPaws", "Pawshake", "Facebook", "Other"];
 
 function normalizeWaffleRequestSource_(value) {
   var text = String(value || "").trim();
@@ -15,7 +15,7 @@ function normalizeWaffleRequestSource_(value) {
     }
   }
 
-  throw new Error("Request Source must be MadPaws, Pawshake or Facebook.");
+  throw new Error("Request Source must be MadPaws, Pawshake, Facebook or Other.");
 }
 
 function getWaffleRequestSourceColumn_(sheet, createIfMissing) {
