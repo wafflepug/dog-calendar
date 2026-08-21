@@ -1,0 +1,256 @@
+/* ============================================================
+   WAFFLE HOUSE V11.1 — READABILITY + OPS UX
+   ============================================================ */
+
+.v111-busy-indicator {
+    position: fixed;
+    top: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 5000;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 44px;
+    max-width: calc(100vw - 28px);
+    padding: 9px 15px;
+    border-radius: 999px;
+    background: rgba(20, 27, 45, .94);
+    color: #fff;
+    box-shadow: 0 8px 28px rgba(0,0,0,.22);
+    pointer-events: none;
+}
+
+.v111-busy-indicator[hidden] { display: none !important; }
+
+.v111-throbber {
+    width: 18px;
+    height: 18px;
+    flex: 0 0 18px;
+    border: 3px solid rgba(255,255,255,.35);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: v111-spin .75s linear infinite;
+}
+
+@keyframes v111-spin { to { transform: rotate(360deg); } }
+
+.v111-request-source-field select {
+    display: block;
+    width: 100%;
+    min-height: 44px;
+    margin-top: 6px;
+}
+
+.v111-photo-card { width: min(760px, calc(100vw - 28px)); }
+
+.v111-dog-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+    gap: 12px;
+    margin-top: 14px;
+}
+
+.v111-dog-tile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    min-height: 155px;
+    padding: 12px;
+    border: 2px solid #dfe4ee;
+    border-radius: 16px;
+    background: #fff;
+    color: inherit;
+    text-align: center;
+}
+
+.v111-dog-tile.is-selected {
+    border-color: #7c3aed;
+    box-shadow: 0 0 0 3px rgba(124,58,237,.15);
+    background: #f7f3ff;
+}
+
+.v111-dog-photo {
+    display: grid;
+    place-items: center;
+    width: 72px;
+    height: 72px;
+    overflow: hidden;
+    border-radius: 50%;
+    background: #eef1f6;
+    font-size: 34px;
+}
+
+.v111-dog-photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.v111-dog-tile strong { font-size: 1rem; }
+.v111-dog-tile small { color: #667085; }
+
+.v111-photo-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 16px;
+}
+
+.v111-photo-actions[hidden] { display: none !important; }
+
+.v111-photo-actions button,
+.v111-photo-back {
+    min-height: 48px;
+    border: 1px solid #d8deea;
+    border-radius: 12px;
+    padding: 10px 14px;
+    font-weight: 800;
+}
+
+.v111-photo-actions .primary {
+    background: #7c3aed;
+    color: #fff;
+    border-color: #7c3aed;
+}
+
+.v111-photo-frame-wrap iframe {
+    width: 100%;
+    height: min(70vh, 650px);
+    border: 0;
+    border-radius: 14px;
+    background: #fff;
+}
+
+.v111-photo-back {
+    margin-bottom: 10px;
+    background: #f4f6fa;
+}
+
+.v111-photo-status {
+    min-height: 24px;
+    margin-top: 10px;
+    font-weight: 700;
+}
+
+.v111-photo-empty {
+    grid-column: 1 / -1;
+    padding: 28px 16px;
+    text-align: center;
+}
+
+.v111-photo-empty span,
+.v111-photo-empty strong,
+.v111-photo-empty small {
+    display: block;
+    margin: 4px 0;
+}
+
+body.dark-theme .v111-dog-tile {
+    background: #1f2937;
+    border-color: #3d4757;
+}
+
+body.dark-theme .v111-dog-tile.is-selected {
+    background: #2d2144;
+    border-color: #a78bfa;
+}
+
+body.dark-theme .v111-dog-tile small { color: #c7ceda; }
+
+/* Make Today unmistakable without obscuring event colours. */
+body[data-waffle-page="calendar"] .fc .fc-day-today {
+    background: rgba(250, 204, 21, .24) !important;
+    box-shadow: inset 0 0 0 3px rgba(217, 119, 6, .72);
+}
+
+body[data-waffle-page="calendar"] .fc .fc-day-today .fc-daygrid-day-number {
+    margin: 4px;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: #f59e0b;
+    color: #111827;
+    font-weight: 900;
+}
+
+body.dark-theme[data-waffle-page="calendar"] .fc .fc-day-today {
+    background: rgba(245, 158, 11, .20) !important;
+    box-shadow: inset 0 0 0 3px rgba(251, 191, 36, .9);
+}
+
+/* Desktop calendar navigation remains visible while the page scrolls. */
+@media (min-width: 769px) {
+    body[data-waffle-page="calendar"] .app-tabs {
+        position: sticky !important;
+        top: 0;
+        z-index: 1400;
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+    }
+}
+
+/* 16pt mobile baseline for readable iPhone / Android controls and core content. */
+@media (max-width: 768px) {
+    body { font-size: 16pt; }
+    input, select, textarea, button { font-size: 16pt !important; }
+    small { font-size: .78em; }
+
+    .app-tabs a,
+    .app-tabs button,
+    .v10-stat-card,
+    .v10-agenda-item,
+    .v10-next-item,
+    .v10-quick-actions button,
+    .v108-modal-card,
+    .directory-card,
+    .reminders-card {
+        font-size: 16pt;
+    }
+
+    body[data-waffle-page="calendar"] .fc { font-size: 13pt; }
+    body[data-waffle-page="calendar"] .fc .fc-toolbar-title { font-size: 17pt !important; }
+    body[data-waffle-page="calendar"] .fc button {
+        font-size: 13pt !important;
+        min-height: 40px;
+    }
+
+    .v111-photo-card {
+        width: 100vw;
+        max-width: 100vw;
+        max-height: 94vh;
+        margin-top: auto;
+        border-radius: 20px 20px 0 0;
+        overflow-y: auto;
+    }
+
+    .v111-dog-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+    }
+
+    .v111-dog-tile {
+        min-height: 150px;
+        padding: 10px 6px;
+        font-size: 14pt !important;
+    }
+
+    .v111-dog-tile strong { font-size: 15pt; }
+    .v111-dog-tile small { font-size: 11.5pt; }
+
+    .v111-photo-actions {
+        grid-template-columns: 1fr;
+        position: sticky;
+        bottom: 0;
+        padding: 10px 0;
+        background: inherit;
+    }
+
+    .v111-photo-actions button { font-size: 15pt !important; }
+    .v111-photo-frame-wrap iframe { height: 68vh; }
+
+    .v111-busy-indicator {
+        top: max(10px, env(safe-area-inset-top));
+        font-size: 12.5pt;
+    }
+}
