@@ -83,7 +83,6 @@ function sendNewReminderEmail_(record) {
   var subject = "📌 New Waffle House Reminder" + (dogName ? " — " + dogName : "");
   var textBody = [
     "A new Waffle House reminder has been created.",
-    "",
     dogName ? "Dog: " + dogName : "Dog: General",
     "When: " + whenText,
     author ? "Added by: " + author : "",
@@ -91,7 +90,7 @@ function sendNewReminderEmail_(record) {
     note || "No reminder note was supplied.",
     "",
     "Open Waffle House → Reminders to manage this item."
-  ].filter(function(line) { return line !== "" || true; }).join("\n");
+  ].join("\n");
 
   var htmlBody =
     "<div style=\"font-family:Arial,sans-serif;line-height:1.5;color:#172033\">" +
@@ -113,3 +112,73 @@ function sendNewReminderEmail_(record) {
 
   return true;
 }
+
+/*
+ * Wrap the existing mutation router instead of duplicating the large Code.js
+ * implementation. The original mutation completes first; V11.1 then adds the
+ * source metadata and reminder email without changing established responses.
+ */
+var v111BaseProcessSheetAction_ = processSheetAction_;
+processSheetAction_ = function(data) {
+  data = data && typeof data === "object" ? data : {};
+  var action = String(data.action || "");
+  var isNewReminder = action === "save_reminder_note" && !String(data.noteId || "").trim();
+  var result = v111BaseProcessSheetAction_(data);
+
+  if (
+    result &&
+    Number(result.row || 0) >= 2 &&
+    ["create_boarding", "save_intake", "create_potential", "update_potential", "confirm_potential"].indexOf(action) !== -1
+  ) {
+    storeWaffleRequestSource_(getTargetSheet_(), result.row, data.requestSource);
+  }
+
+  if (isNewReminder && result && result.record) {
+    try {
+      sendNewReminderEmail_(result.record);
+      result.reminderEmailSent = true;
+    } catch (reminderEmailError) {
+      result.reminderEmailSent = false;
+      result.reminderEmailError = String(reminderEmailError && reminderEmailError.message || reminderEmailError || "");
+      console.warn("Reminder email could not be sent:", reminderEmailError);
+    }
+  }
+
+  return result;
+};
+
+/* Return persisted Request Source with the shared Potential Stay snapshot. */
+var v111BaseReadPotentialStayRecords_ = readPotentialStayRecords_;
+readPotentialStayRecords_ = function() {
+  var records = v111BaseReadPotentialStayRecords_();
+  var sheet = getTargetSheet_();
+
+  return (records || []).map(function(record) {
+    var enriched = {};
+    Object.keys(record || {}).forEach(function(key) {
+      enriched[key] = record[key];
+    });
+    enriched.requestSource = readWaffleRequestSource_(sheet, enriched.row);
+    return enriched;
+  });
+};
+
+/* Correct the iframe copy for Stay Photos without changing belongings/profile modes. */
+var v111BaseBuildBelongingsPhotoUploaderHtml_ = buildBelongingsPhotoUploaderHtml_;
+buildBelongingsPhotoUploaderHtml_ = function(params) {
+  var output = v111BaseBuildBelongingsPhotoUploaderHtml_(params);
+  var photoType = String(params && params.photoType || "belongings");
+
+  if (photoType === "stayPhoto" && output && typeof output.getContent === "function" && typeof output.setContent === "function") {
+    var content = output.getContent();
+    content = content
+      .replace("📷 Add Belongings Photos", "📸 Add Stay Photos")
+      .replace(
+        "Choose up to 8 photos in one selection, or take a photo with the camera.",
+        "Choose up to 8 photos for this stay, or take a photo with the camera."
+      );
+    output.setContent(content);
+  }
+
+  return output;
+};
