@@ -1,0 +1,205 @@
+/* ============================================================
+   WAFFLE HOUSE V11.1.2 — BRAND THEME + SOURCE TILES
+   ============================================================ */
+
+:root {
+  --waffle-primary: #0F6292;
+  --waffle-secondary: #88D49E;
+  --waffle-bg: #F5F7FA;
+  --waffle-surface: #FFFFFF;
+  --waffle-surface-elevated: #FFFFFF;
+  --waffle-text: #111827;
+  --waffle-muted: #475569;
+  --waffle-border: #D9E2EC;
+}
+
+body.dark-theme {
+  --waffle-primary: #0F6292;
+  --waffle-secondary: #88D49E;
+  --waffle-bg: #111827;
+  --waffle-surface: #182235;
+  --waffle-surface-elevated: #22304A;
+  --waffle-text: #E5EEF7;
+  --waffle-muted: #94A3B8;
+  --waffle-border: #334155;
+}
+
+body {
+  background: var(--waffle-bg) !important;
+  color: var(--waffle-text);
+}
+.container,
+.v10-ops-card,
+.directory-dashboard,
+.reminders-card,
+.v108-modal-card,
+.v10-quick-add-sheet,
+.v111-photo-card {
+  background: var(--waffle-surface) !important;
+  color: var(--waffle-text);
+  border-color: var(--waffle-border) !important;
+}
+input, select, textarea {
+  background: var(--waffle-surface-elevated) !important;
+  color: var(--waffle-text) !important;
+  border-color: var(--waffle-border) !important;
+}
+.app-tab-button.active,
+.v10-quick-actions button:hover,
+button.primary {
+  background: var(--waffle-primary) !important;
+}
+a, .v10-text-action, .v10-card-kicker, .v10-eyebrow { color: var(--waffle-primary); }
+
+.v1112-source-native {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0 0 0 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+.v1112-source-picker { margin: 12px 0 16px; }
+.v1112-source-title {
+  display: block;
+  margin-bottom: 10px;
+  color: var(--waffle-text);
+  font-weight: 850;
+}
+.v1112-source-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: flex-start;
+}
+.v1112-source-tile {
+  width: 104px;
+  padding: 0;
+  border: 0;
+  background: transparent !important;
+  cursor: pointer;
+}
+.v1112-source-circle {
+  position: relative;
+  display: block;
+  width: 96px;
+  height: 96px;
+  margin: auto;
+  overflow: hidden;
+  border: 3px solid var(--waffle-border);
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 4px 15px rgba(15, 23, 42, .08);
+  transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+}
+.v1112-source-circle img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: grayscale(1) saturate(0);
+  opacity: .68;
+  transition: filter .18s ease, opacity .18s ease;
+}
+.v1112-source-circle span {
+  position: absolute;
+  left: 7px;
+  right: 7px;
+  bottom: 8px;
+  padding: 3px 5px;
+  border-radius: 999px;
+  background: rgba(17,24,39,.82);
+  color: #fff;
+  font-size: 11px;
+  line-height: 1.1;
+  font-weight: 900;
+  text-align: center;
+}
+.v1112-source-tile.is-selected .v1112-source-circle {
+  border-color: var(--waffle-primary);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--waffle-primary) 20%, transparent);
+  transform: translateY(-2px);
+}
+.v1112-source-tile.is-selected img {
+  filter: none;
+  opacity: 1;
+}
+
+/* Quick Photos now mirrors the Care grid: full rectangular photo, name bottom-left. */
+.v111-photo-modal .v111-dog-grid {
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)) !important;
+  gap: 16px !important;
+}
+.v111-photo-modal .v111-care-dog-tile {
+  position: relative !important;
+  display: block !important;
+  min-height: 170px !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  border: 2px solid var(--waffle-border) !important;
+  border-radius: 14px !important;
+  background: var(--waffle-surface) !important;
+}
+.v111-photo-modal .v111-care-dog-tile .v111-dog-photo {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 170px !important;
+  border-radius: 0 !important;
+  background: var(--waffle-surface-elevated) !important;
+}
+.v111-photo-modal .v111-care-dog-tile .v111-dog-photo img {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 170px !important;
+  object-fit: cover !important;
+}
+.v111-photo-modal .v111-care-dog-tile .directory-guest-tile-name {
+  position: absolute !important;
+  left: 12px !important;
+  right: 12px !important;
+  bottom: 10px !important;
+  z-index: 2;
+  color: #fff !important;
+  font-size: 19px !important;
+  line-height: 1.1 !important;
+  font-weight: 900 !important;
+  text-align: left !important;
+  text-shadow: 0 2px 5px rgba(0,0,0,.78);
+}
+.v111-photo-modal .v111-care-dog-tile.is-selected {
+  border-color: var(--waffle-primary) !important;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--waffle-primary) 22%, transparent) !important;
+}
+
+@media (max-width: 768px) {
+  .waffle-install-button span:last-child { display: none !important; }
+  .waffle-install-button {
+    width: 46px !important;
+    min-width: 46px !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    justify-content: center !important;
+  }
+
+  .v1112-source-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .v1112-source-tile { width: 100%; }
+  .v1112-source-circle { width: 82px; height: 82px; }
+  .v1112-source-circle span { font-size: 10px; }
+
+  .v111-photo-modal .v111-dog-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+  }
+  .v111-photo-modal .v111-care-dog-tile,
+  .v111-photo-modal .v111-care-dog-tile .v111-dog-photo,
+  .v111-photo-modal .v111-care-dog-tile .v111-dog-photo img {
+    min-height: 145px !important;
+  }
+}
