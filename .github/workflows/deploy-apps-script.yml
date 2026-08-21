@@ -7,6 +7,7 @@ on:
       - main
     paths:
       - 'apps-script/**'
+      - '.github/workflows/deploy-apps-script.yml'
 
 permissions:
   contents: read
@@ -39,3 +40,17 @@ jobs:
       - name: Push source to Google Apps Script
         working-directory: apps-script
         run: clasp push --force
+
+      - name: Update live Apps Script web app deployment
+        working-directory: apps-script
+        env:
+          APPS_SCRIPT_DEPLOYMENT_ID: AKfycbwn4HL49K9c3AZbXJRUjPw3UYWxJt8DmqXwMnTytyqdSstj3ZIJwWdDEC2IsBjetOf3pw
+        run: |
+          test -n "$APPS_SCRIPT_DEPLOYMENT_ID"
+          clasp create-deployment \
+            --deploymentId "$APPS_SCRIPT_DEPLOYMENT_ID" \
+            --description "GitHub main ${GITHUB_SHA::7}"
+
+      - name: Show Apps Script deployments
+        working-directory: apps-script
+        run: clasp list-deployments
