@@ -1,6 +1,6 @@
 /* Waffle House Boarding — V8.4 Service Worker */
 
-const WAFFLE_SW_VERSION = 'v11.0.5';
+const WAFFLE_SW_VERSION = 'v11.1.3';
 const WAFFLE_CACHE_PREFIX = 'waffle-house-';
 const APP_SHELL_CACHE = `${WAFFLE_CACHE_PREFIX}shell-${WAFFLE_SW_VERSION}`;
 const RUNTIME_CACHE = `${WAFFLE_CACHE_PREFIX}runtime-${WAFFLE_SW_VERSION}`;
@@ -40,15 +40,21 @@ const APP_SHELL = [
   './waffle-v11.0.3.css?v=11.0.5',
   './waffle-v11.0.4.js?v=11.0.5',
   './waffle-v11.0.5.css?v=11.0.5',
-  './waffle-v11.0.5.js?v=11.0.5'
+  './waffle-v11.0.5.js?v=11.0.5',
+  './waffle-v11.1.css?v=11.1.0',
+  './waffle-v11.1.js?v=11.1.0',
+  './waffle-v11.1.1.css?v=11.1.1',
+  './waffle-v11.1.1.js?v=11.1.1',
+  './waffle-v11.1.2.css?v=11.1.2',
+  './waffle-v11.1.2.js?v=11.1.2',
+  './waffle-v11.1.3.css?v=11.1.3',
+  './waffle-v11.1.3.js?v=11.1.3'
 ];
 
 const OPTIONAL_EXTERNAL_ASSETS = [
   'https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css',
   'https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js'
 ];
-
-
 
 /* ============================================================
    V9 FIREBASE CLOUD MESSAGING
@@ -70,7 +76,6 @@ function waffleFirebaseConfigReady(config) {
 
   return required.every(value => {
     const text = String(value || '').trim();
-
     return (
       text &&
       !text.startsWith('PASTE_')
@@ -152,7 +157,6 @@ try {
   );
 }
 
-
 self.addEventListener(
   'notificationclick',
   event => {
@@ -211,14 +215,12 @@ self.addEventListener(
   }
 );
 
-
 self.addEventListener('install', event => {
   event.waitUntil(
     (async () => {
       const cache = await caches.open(APP_SHELL_CACHE);
       await cache.addAll(APP_SHELL);
 
-      // Best-effort runtime seed. A CDN failure must never block installation.
       const runtime = await caches.open(RUNTIME_CACHE);
 
       await Promise.allSettled(
@@ -335,8 +337,6 @@ self.addEventListener('fetch', event => {
 
   const url = new URL(request.url);
 
-  // Operational/user data stays out of Cache Storage.
-  // IndexedDB stale-while-revalidate remains the source for cached app data.
   if (isOperationalDataRequest(url)) {
     return;
   }
