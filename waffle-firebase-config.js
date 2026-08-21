@@ -19,10 +19,10 @@
 })(typeof self !== "undefined" ? self : window);
 
 /*
- * V11.1 release loader + V11.1.1 follow-up.
+ * V11.1 release loader + V11.1.1/V11.1.2 follow-ups.
  * This file is also imported by the service worker, so browser DOM access is
- * deliberately guarded. The follow-up script is loaded only after V11.1 so
- * its focused overrides always see the base feature functions first.
+ * deliberately guarded. Each patch loads after the previous layer so focused
+ * overrides always see their base functions first.
  */
 (function () {
   if (typeof window === "undefined" || typeof document === "undefined") return;
@@ -37,13 +37,29 @@
     document.head.appendChild(stylesheet);
   }
 
+  function loadV1112Script() {
+    if (document.querySelector('script[data-waffle-v1112]')) return;
+
+    var patch = document.createElement("script");
+    patch.src = "waffle-v11.1.2.js?v=11.1.2";
+    patch.async = false;
+    patch.setAttribute("data-waffle-v1112", "js");
+    document.body.appendChild(patch);
+  }
+
   function loadV1111Script() {
-    if (document.querySelector('script[data-waffle-v1111]')) return;
+    var existing = document.querySelector('script[data-waffle-v1111]');
+    if (existing) {
+      existing.addEventListener("load", loadV1112Script, { once: true });
+      setTimeout(loadV1112Script, 600);
+      return;
+    }
 
     var patch = document.createElement("script");
     patch.src = "waffle-v11.1.1.js?v=11.1.1";
     patch.async = false;
     patch.setAttribute("data-waffle-v1111", "js");
+    patch.addEventListener("load", loadV1112Script, { once: true });
     document.body.appendChild(patch);
   }
 
@@ -58,6 +74,12 @@
       'link[data-waffle-v1111]',
       "waffle-v11.1.1.css?v=11.1.1",
       "data-waffle-v1111"
+    );
+
+    ensureStylesheet(
+      'link[data-waffle-v1112]',
+      "waffle-v11.1.2.css?v=11.1.2",
+      "data-waffle-v1112"
     );
 
     var existingBase = document.querySelector('script[data-waffle-v111]');
