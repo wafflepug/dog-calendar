@@ -1,6 +1,6 @@
 /* Waffle House Boarding — V8.4 Service Worker */
 
-const WAFFLE_SW_VERSION = 'v11.0.3';
+const WAFFLE_SW_VERSION = 'v11.0.4';
 const WAFFLE_CACHE_PREFIX = 'waffle-house-';
 const APP_SHELL_CACHE = `${WAFFLE_CACHE_PREFIX}shell-${WAFFLE_SW_VERSION}`;
 const RUNTIME_CACHE = `${WAFFLE_CACHE_PREFIX}runtime-${WAFFLE_SW_VERSION}`;
@@ -11,33 +11,34 @@ const APP_SHELL = [
   './directory.html',
   './reminders.html',
   './audit.html',
-  './waffle-app.css?v=11.0.3',
-  './waffle-app.js?v=11.0.3',
+  './waffle-app.css?v=11.0.4',
+  './waffle-app.js?v=11.0.4',
   './waffle-logo.png',
-  './manifest.webmanifest?v=11.0.3',
-  './pwa-icon-192.png?v=11.0.3',
-  './pwa-icon-512.png?v=11.0.3',
-  './pwa-maskable-512.png?v=11.0.3',
-  './pwa-apple-touch-icon.png?v=11.0.3',
-  './waffle-firebase-config.js?v=11.0.3',
-  './waffle-v10.8.css?v=11.0.3',
-  './waffle-v10.8.js?v=11.0.3',
-  './waffle-v10.8.2.css?v=11.0.3',
-  './waffle-v10.8.2.js?v=11.0.3',
-  './waffle-v10.8.3.css?v=11.0.3',
-  './waffle-v10.8.3.js?v=11.0.3',
-  './waffle-v10.8.5.css?v=11.0.3',
-  './waffle-v10.8.5.js?v=11.0.3',
-  './waffle-v10.8.6.css?v=11.0.3',
-  './waffle-v10.8.6.js?v=11.0.3',
-  './waffle-v10.8.7.css?v=11.0.3',
-  './waffle-v10.8.8.css?v=11.0.3',
-  './waffle-v10.8.8.js?v=11.0.3',
-  './waffle-v10.8.9.css?v=11.0.3',
-  './waffle-v10.8.9.js?v=11.0.3',
-  './waffle-v11.0.css?v=11.0.3',
-  './waffle-v11.0.js?v=11.0.3',
-  './waffle-v11.0.3.css?v=11.0.3'
+  './manifest.webmanifest?v=11.0.4',
+  './pwa-icon-192.png?v=11.0.4',
+  './pwa-icon-512.png?v=11.0.4',
+  './pwa-maskable-512.png?v=11.0.4',
+  './pwa-apple-touch-icon.png?v=11.0.4',
+  './waffle-firebase-config.js?v=11.0.4',
+  './waffle-v10.8.css?v=11.0.4',
+  './waffle-v10.8.js?v=11.0.4',
+  './waffle-v10.8.2.css?v=11.0.4',
+  './waffle-v10.8.2.js?v=11.0.4',
+  './waffle-v10.8.3.css?v=11.0.4',
+  './waffle-v10.8.3.js?v=11.0.4',
+  './waffle-v10.8.5.css?v=11.0.4',
+  './waffle-v10.8.5.js?v=11.0.4',
+  './waffle-v10.8.6.css?v=11.0.4',
+  './waffle-v10.8.6.js?v=11.0.4',
+  './waffle-v10.8.7.css?v=11.0.4',
+  './waffle-v10.8.8.css?v=11.0.4',
+  './waffle-v10.8.8.js?v=11.0.4',
+  './waffle-v10.8.9.css?v=11.0.4',
+  './waffle-v10.8.9.js?v=11.0.4',
+  './waffle-v11.0.css?v=11.0.4',
+  './waffle-v11.0.js?v=11.0.4',
+  './waffle-v11.0.3.css?v=11.0.4',
+  './waffle-v11.0.4.js?v=11.0.4'
 ];
 
 const OPTIONAL_EXTERNAL_ASSETS = [
@@ -76,7 +77,7 @@ function waffleFirebaseConfigReady(config) {
 }
 
 try {
-  importScripts('./waffle-firebase-config.js?v=11.0.3');
+  importScripts('./waffle-firebase-config.js?v=11.0.4');
 
   const config =
     self.WAFFLE_FIREBASE_CONFIG ||
@@ -130,9 +131,9 @@ try {
         {
           body,
           icon:
-            './pwa-icon-192.png?v=11.0.3',
+            './pwa-icon-192.png?v=11.0.4',
           badge:
-            './pwa-icon-192.png?v=11.0.3',
+            './pwa-icon-192.png?v=11.0.4',
           tag,
           renotify: true,
           data: {

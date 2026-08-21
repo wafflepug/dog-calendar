@@ -285,6 +285,7 @@ function waffleReadRequestKey(payload) {
             'get_notification_centre',
             'get_audit_log',
             'get_guest_directory',
+            'get_potential_stays',
             'get_past_guest_directory',
             'get_guest_profile',
             'get_guest_belongings',
@@ -4197,7 +4198,7 @@ function registerWaffleServiceWorker() {
             navigator
                 .serviceWorker
                 .register(
-                    './service-worker.js?v=11.0.3',
+                    './service-worker.js?v=11.0.4',
                     {
                         scope: './'
                     }
@@ -4620,7 +4621,19 @@ registerWaffleServiceWorker();
                 localPotentials.forEach(addLocalEventCapacity);
                 localConfirmed.forEach(addLocalEventCapacity);
 
-                const allCalendarEvents = spreadsheetEvents.concat(localMeets, localPotentials, localConfirmed);
+                const allCalendarEvents =
+                    typeof v1104ComposeCalendarEvents === 'function'
+                        ? v1104ComposeCalendarEvents(
+                            spreadsheetEvents,
+                            localMeets,
+                            localPotentials,
+                            localConfirmed
+                          )
+                        : spreadsheetEvents.concat(
+                            localMeets,
+                            localPotentials,
+                            localConfirmed
+                          );
 
                 updateFullyBookedPanel();
                 updateTodayMeetGreetPanel(allCalendarEvents);
@@ -11643,7 +11656,19 @@ registerWaffleServiceWorker();
         localPotentials.forEach(addLocalEventCapacity);
         localConfirmed.forEach(addLocalEventCapacity);
 
-        const allCalendarEvents = spreadsheetEvents.concat(localMeets, localPotentials, localConfirmed);
+        const allCalendarEvents =
+            typeof v1104ComposeCalendarEvents === 'function'
+                ? v1104ComposeCalendarEvents(
+                    spreadsheetEvents,
+                    localMeets,
+                    localPotentials,
+                    localConfirmed
+                  )
+                : spreadsheetEvents.concat(
+                    localMeets,
+                    localPotentials,
+                    localConfirmed
+                  );
 
         updateFullyBookedPanel();
         updateTodayMeetGreetPanel(allCalendarEvents);
