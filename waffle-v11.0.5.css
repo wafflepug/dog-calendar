@@ -1,0 +1,46 @@
+/* ============================================================
+   WAFFLE HOUSE V11.0.5 — SHARED POTENTIAL SYNC STATUS
+   ============================================================ */
+
+.v1105-potential-sync {
+    display: inline-flex;
+    align-items: center;
+    width: fit-content;
+    min-height: 24px;
+    margin: 0 0 7px;
+    padding: 4px 7px;
+    border: 1px solid #bfdbfe;
+    border-radius: 999px;
+    background: #eff6ff;
+    color: #1d4ed8;
+    font-size: 8px;
+    font-weight: 900;
+    letter-spacing: .01em;
+}
+
+.v1105-potential-sync.is-error {
+    border-color: #fed7aa;
+    background: #fff7ed;
+    color: #9a3412;
+}
+
+body.dark-theme
+.v1105-potential-sync {
+    border-color: #3b82f6;
+    background: #1e3a5f;
+    color: #bfdbfe;
+}
+
+body.dark-theme
+.v1105-potential-sync.is-error {
+    border-color: #9a3412;
+    background: #431407;
+    color: #fed7aa;
+}
+
+@media (max-width: 768px) {
+    .v1105-potential-sync {
+        min-height: 26px;
+        font-size: 8.5px;
+    }
+}
