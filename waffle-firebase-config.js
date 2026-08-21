@@ -19,29 +19,64 @@
 })(typeof self !== "undefined" ? self : window);
 
 /*
- * V11.1 release loader.
+ * V11.1 release loader + V11.1.1 follow-up.
  * This file is also imported by the service worker, so browser DOM access is
- * deliberately guarded. Loading the release layer here lets all existing app
- * pages receive the same feature module without duplicating markup changes.
+ * deliberately guarded. The follow-up script is loaded only after V11.1 so
+ * its focused overrides always see the base feature functions first.
  */
 (function () {
   if (typeof window === "undefined" || typeof document === "undefined") return;
 
-  function loadV111Assets() {
-    if (!document.querySelector('link[data-waffle-v111]')) {
-      var stylesheet = document.createElement("link");
-      stylesheet.rel = "stylesheet";
-      stylesheet.href = "waffle-v11.1.css?v=11.1.0";
-      stylesheet.setAttribute("data-waffle-v111", "css");
-      document.head.appendChild(stylesheet);
-    }
+  function ensureStylesheet(selector, href, marker) {
+    if (document.querySelector(selector)) return;
 
-    if (!document.querySelector('script[data-waffle-v111]')) {
+    var stylesheet = document.createElement("link");
+    stylesheet.rel = "stylesheet";
+    stylesheet.href = href;
+    stylesheet.setAttribute(marker, "css");
+    document.head.appendChild(stylesheet);
+  }
+
+  function loadV1111Script() {
+    if (document.querySelector('script[data-waffle-v1111]')) return;
+
+    var patch = document.createElement("script");
+    patch.src = "waffle-v11.1.1.js?v=11.1.1";
+    patch.async = false;
+    patch.setAttribute("data-waffle-v1111", "js");
+    document.body.appendChild(patch);
+  }
+
+  function loadV111Assets() {
+    ensureStylesheet(
+      'link[data-waffle-v111]',
+      "waffle-v11.1.css?v=11.1.0",
+      "data-waffle-v111"
+    );
+
+    ensureStylesheet(
+      'link[data-waffle-v1111]',
+      "waffle-v11.1.1.css?v=11.1.1",
+      "data-waffle-v1111"
+    );
+
+    var existingBase = document.querySelector('script[data-waffle-v111]');
+
+    if (!existingBase) {
       var script = document.createElement("script");
       script.src = "waffle-v11.1.js?v=11.1.0";
       script.async = false;
       script.setAttribute("data-waffle-v111", "js");
+      script.addEventListener("load", loadV1111Script, { once: true });
       document.body.appendChild(script);
+      return;
+    }
+
+    if (window.v111Initialised) {
+      loadV1111Script();
+    } else {
+      existingBase.addEventListener("load", loadV1111Script, { once: true });
+      setTimeout(loadV1111Script, 800);
     }
   }
 
