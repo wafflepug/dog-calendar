@@ -1,0 +1,276 @@
+/* ============================================================
+   WAFFLE HOUSE V11.1.6 — CALENDAR DETAIL MODALS + OTHER SOURCE
+   ============================================================ */
+
+.v1116-calendar-detail-card {
+  width: min(720px, calc(100vw - 28px));
+  max-height: min(82vh, 760px);
+  overflow: auto;
+}
+
+/* At Home reuses the visual language of the Care dog grid. */
+.v1116-at-home-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  padding-top: 4px;
+}
+
+.v1116-at-home-tile {
+  position: relative;
+  min-height: 190px;
+  overflow: hidden;
+  border-radius: 16px;
+  border: 1px solid var(--wh-border, #D9E2EC);
+  background: var(--wh-surface, #FFFFFF);
+  cursor: pointer;
+}
+
+.v1116-at-home-tile .directory-guest-tile-photo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  font-size: 38px;
+  background: #E8EEF4;
+}
+
+.v1116-at-home-tile .directory-guest-tile-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.v1116-at-home-tile::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 0;
+  height: 48%;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(17, 24, 39, 0), rgba(17, 24, 39, .78));
+}
+
+.v1116-at-home-tile .directory-guest-tile-name {
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: 12px;
+  z-index: 2;
+  color: #FFFFFF;
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1.15;
+  text-align: left;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, .45);
+}
+
+.v1116-at-home-tile:focus-visible {
+  outline: 3px solid var(--wh-accent-secondary, #88D49E);
+  outline-offset: 3px;
+}
+
+.v1116-detail-empty {
+  grid-column: 1 / -1;
+  min-height: 190px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 7px;
+  text-align: center;
+  border: 1px dashed var(--wh-border, #D9E2EC);
+  border-radius: 16px;
+  color: var(--wh-text, #111827);
+}
+
+.v1116-detail-empty > span {
+  font-size: 34px;
+}
+
+.v1116-detail-empty small {
+  color: var(--wh-muted, #475569);
+}
+
+/* Meet & Greet list */
+.v1116-meet-sections {
+  display: grid;
+  gap: 20px;
+}
+
+.v1116-meet-section {
+  display: grid;
+  gap: 9px;
+}
+
+.v1116-meet-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.v1116-meet-section-head h4 {
+  margin: 0;
+  color: var(--wh-text, #111827);
+  font-size: 16px;
+}
+
+.v1116-meet-section-head > span {
+  min-width: 28px;
+  height: 28px;
+  padding: 0 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--wh-accent, #0F6292) 13%, transparent);
+  color: var(--wh-accent, #0F6292);
+  font-weight: 800;
+  font-size: 12px;
+}
+
+.v1116-meet-list {
+  display: grid;
+  gap: 8px;
+}
+
+.v1116-meet-row {
+  display: grid;
+  grid-template-columns: 130px minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+  padding: 13px 14px;
+  border: 1px solid var(--wh-border, #D9E2EC);
+  border-radius: 13px;
+  background: var(--wh-surface-elevated, var(--wh-surface, #FFFFFF));
+}
+
+.v1116-meet-date,
+.v1116-meet-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.v1116-meet-date strong {
+  color: var(--wh-accent, #0F6292);
+  font-size: 13px;
+}
+
+.v1116-meet-date span,
+.v1116-meet-copy span {
+  color: var(--wh-muted, #475569);
+  font-size: 12px;
+}
+
+.v1116-meet-copy strong {
+  color: var(--wh-text, #111827);
+  font-size: 15px;
+}
+
+.v1116-meet-empty {
+  padding: 16px;
+  border: 1px dashed var(--wh-border, #D9E2EC);
+  border-radius: 12px;
+  color: var(--wh-muted, #475569);
+  text-align: center;
+  font-size: 13px;
+}
+
+/* Request From: four choices must always remain on one row. */
+.v1112-source-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 8px !important;
+  align-items: start;
+}
+
+.v1112-source-tile {
+  min-width: 0;
+}
+
+.v1112-source-circle {
+  width: 76px !important;
+  height: 76px !important;
+  max-width: 100%;
+}
+
+.v1116-source-other .v1112-source-circle {
+  background: var(--wh-surface-elevated, #F5F7FA);
+  border: 2px solid var(--wh-border, #D9E2EC);
+}
+
+.v1116-source-other.is-selected .v1112-source-circle {
+  border-color: var(--wh-accent, #0F6292);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--wh-accent, #0F6292) 18%, transparent);
+}
+
+.v1116-source-other .v1112-source-circle > span {
+  position: static !important;
+  width: auto !important;
+  padding: 0 !important;
+  background: transparent !important;
+  color: var(--wh-text, #111827) !important;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+  text-shadow: none !important;
+}
+
+/* If a profile source is Other, retain the logo circle but leave it blank. */
+.v1115-profile-source-card[data-v1115-profile-source="Other"] .v1115-profile-source-logo > span {
+  font-size: 0;
+}
+
+body.dark-theme .v1116-source-other .v1112-source-circle {
+  background: var(--wh-surface-elevated, #22304A);
+}
+
+@media (max-width: 600px) {
+  .v1116-calendar-detail-card {
+    width: calc(100vw - 18px);
+    max-height: 88vh;
+  }
+
+  .v1116-at-home-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 9px;
+  }
+
+  .v1116-at-home-tile {
+    min-height: 150px;
+    border-radius: 13px;
+  }
+
+  .v1116-at-home-tile .directory-guest-tile-name {
+    left: 10px;
+    right: 10px;
+    bottom: 9px;
+    font-size: 16px;
+  }
+
+  .v1116-meet-row {
+    grid-template-columns: 104px minmax(0, 1fr);
+    gap: 10px;
+    padding: 11px;
+  }
+
+  .v1112-source-grid {
+    gap: 5px !important;
+  }
+
+  .v1112-source-circle {
+    width: 62px !important;
+    height: 62px !important;
+  }
+
+  .v1112-source-circle > span {
+    font-size: 9px !important;
+  }
+
+  .v1116-source-other .v1112-source-circle > span {
+    font-size: 10px !important;
+  }
+}
