@@ -1,0 +1,284 @@
+/* ============================================================
+   WAFFLE HOUSE V11.2 — BRAND THEME + SOURCE TILE SYSTEM
+   ============================================================ */
+
+:root,
+body:not(.dark-theme) {
+    --wh-primary: #0F6292;
+    --wh-secondary: #88D49E;
+    --wh-bg: #F5F7FA;
+    --wh-surface: #FFFFFF;
+    --wh-surface-elevated: #FFFFFF;
+    --wh-surface-muted: #F5F7FA;
+    --wh-text: #111827;
+    --wh-muted: #475569;
+    --wh-border: #D9E2EC;
+    --wh-success: #16A34A;
+    --wh-warning: #F59E0B;
+    --wh-danger: #DC2626;
+    --wh-info: #2563EB;
+    --v10-primary: #0F6292;
+    --v10-card: #FFFFFF;
+    --v10-card-soft: #F5F7FA;
+    --v10-text: #111827;
+    --v10-muted: #475569;
+    --v10-border: #D9E2EC;
+}
+
+body.dark-theme {
+    --wh-primary: #0F6292;
+    --wh-secondary: #88D49E;
+    --wh-bg: #111827;
+    --wh-surface: #182235;
+    --wh-surface-elevated: #22304A;
+    --wh-surface-muted: #22304A;
+    --wh-text: #E5EEF7;
+    --wh-muted: #94A3B8;
+    --wh-border: #334155;
+    --wh-success: #22C55E;
+    --wh-warning: #FBBF24;
+    --wh-danger: #F87171;
+    --wh-info: #60A5FA;
+    --v10-primary: #0F6292;
+    --v10-card: #182235;
+    --v10-card-soft: #22304A;
+    --v10-text: #E5EEF7;
+    --v10-muted: #94A3B8;
+    --v10-border: #334155;
+}
+
+body {
+    background: var(--wh-bg) !important;
+    color: var(--wh-text) !important;
+}
+
+.container,
+.v10-ops-card,
+.directory-dashboard,
+.directory-card,
+.reminders-dashboard,
+.reminders-card,
+.audit-dashboard,
+.audit-card,
+.v108-modal-card,
+.modal-content-panel,
+.v111-photo-card,
+.v101-notification-modal-card {
+    background: var(--wh-surface) !important;
+    color: var(--wh-text) !important;
+    border-color: var(--wh-border) !important;
+}
+
+input,
+select,
+textarea {
+    background: var(--wh-surface) !important;
+    color: var(--wh-text) !important;
+    border-color: var(--wh-border) !important;
+}
+
+.app-tabs {
+    background: var(--wh-surface) !important;
+    border-color: var(--wh-border) !important;
+}
+
+.app-tab-button {
+    background: var(--wh-surface-muted) !important;
+    color: var(--wh-muted) !important;
+}
+
+.app-tab-button.active {
+    background: var(--wh-primary) !important;
+    color: #fff !important;
+}
+
+.theme-toggle-header,
+.waffle-notification-button,
+.waffle-install-button {
+    border-color: var(--wh-border) !important;
+}
+
+.v112-source-fieldset {
+    min-width: 0;
+    margin: 14px 0;
+    padding: 0;
+    border: 0;
+}
+
+.v112-source-fieldset legend {
+    margin-bottom: 10px;
+    padding: 0;
+    color: var(--wh-text);
+    font-weight: 800;
+}
+
+.v112-source-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+    width: 100%;
+}
+
+.v112-source-tile {
+    appearance: none;
+    display: grid;
+    place-items: center;
+    min-width: 0;
+    padding: 6px;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    border-radius: 999px;
+}
+
+.v112-source-circle {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: min(112px, 100%);
+    aspect-ratio: 1;
+    overflow: hidden;
+    border: 3px solid var(--wh-border);
+    border-radius: 50%;
+    background: var(--wh-surface-muted);
+    box-shadow: 0 5px 16px rgba(15, 23, 42, .08);
+    transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+}
+
+.v112-source-circle img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: grayscale(1) saturate(0) contrast(.92);
+    opacity: .58;
+    transition: filter .2s ease, opacity .2s ease, transform .2s ease;
+}
+
+.v112-source-brand {
+    position: absolute;
+    left: 9px;
+    right: 9px;
+    bottom: 10px;
+    z-index: 2;
+    padding: 4px 5px;
+    border-radius: 999px;
+    background: rgba(17, 24, 39, .74);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 900;
+    line-height: 1.1;
+    text-align: center;
+    text-shadow: 0 1px 2px rgba(0,0,0,.4);
+}
+
+.v112-source-tile.is-selected .v112-source-circle {
+    border-color: var(--wh-primary);
+    box-shadow: 0 0 0 5px color-mix(in srgb, var(--wh-primary) 18%, transparent), 0 8px 20px rgba(15, 98, 146, .2);
+    transform: translateY(-2px);
+}
+
+.v112-source-tile.is-selected .v112-source-circle img {
+    filter: none;
+    opacity: 1;
+    transform: scale(1.02);
+}
+
+.v112-source-tile:focus-visible .v112-source-circle {
+    outline: 3px solid color-mix(in srgb, var(--wh-primary) 35%, transparent);
+    outline-offset: 3px;
+}
+
+.v112-source-native {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    margin: -1px !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    clip: rect(0 0 0 0) !important;
+    clip-path: inset(50%) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+}
+
+/* Quick Photos is the Care grid, not a second visual component. */
+.v112-quick-photo-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)) !important;
+    gap: 14px !important;
+    max-height: none !important;
+    overflow: visible !important;
+    padding-right: 0 !important;
+    margin-top: 14px;
+}
+
+.v112-quick-photo-tile {
+    min-height: 150px !important;
+}
+
+.v112-quick-photo-tile .directory-guest-tile-photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.v112-quick-photo-tile.is-selected {
+    outline: 3px solid var(--wh-primary) !important;
+    outline-offset: 3px;
+    border-color: var(--wh-primary) !important;
+    box-shadow: 0 0 0 5px rgba(15, 98, 146, .15), 0 8px 22px rgba(15, 23, 42, .14) !important;
+}
+
+@media (max-width: 768px) {
+    .v112-source-grid {
+        gap: 8px;
+    }
+
+    .v112-source-circle {
+        width: min(94px, 100%);
+        border-width: 2px;
+    }
+
+    .v112-source-brand {
+        left: 6px;
+        right: 6px;
+        bottom: 7px;
+        padding: 3px 4px;
+        font-size: 9.5pt !important;
+    }
+
+    .v112-quick-photo-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 10px !important;
+    }
+
+    .v112-quick-photo-tile {
+        min-height: 138px !important;
+    }
+
+    .waffle-install-button {
+        width: 48px !important;
+        min-width: 48px !important;
+        height: 48px !important;
+        padding: 0 !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 0 !important;
+    }
+
+    .waffle-install-button > span:last-child {
+        display: none !important;
+    }
+
+    .waffle-install-button > span:first-child {
+        font-size: 20pt !important;
+        line-height: 1 !important;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .v112-source-circle,
+    .v112-source-circle img {
+        transition: none !important;
+    }
+}
