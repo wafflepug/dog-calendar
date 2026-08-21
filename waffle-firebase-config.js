@@ -19,15 +19,17 @@
 })(typeof self !== "undefined" ? self : window);
 
 /*
- * V11.1 release loader + focused follow-ups.
+ * V11.1 release loader + V11.1.1/V11.1.2 follow-ups.
  * This file is also imported by the service worker, so browser DOM access is
- * deliberately guarded. Each patch loads after the previous layer.
+ * deliberately guarded. Each patch loads after the previous layer so focused
+ * overrides always see their base functions first.
  */
 (function () {
   if (typeof window === "undefined" || typeof document === "undefined") return;
 
   function ensureStylesheet(selector, href, marker) {
     if (document.querySelector(selector)) return;
+
     var stylesheet = document.createElement("link");
     stylesheet.rel = "stylesheet";
     stylesheet.href = href;
@@ -35,28 +37,13 @@
     document.head.appendChild(stylesheet);
   }
 
-  function loadV1113Script() {
-    if (document.querySelector('script[data-waffle-v1113]')) return;
-    var patch = document.createElement("script");
-    patch.src = "waffle-v11.1.3.js?v=11.1.3";
-    patch.async = false;
-    patch.setAttribute("data-waffle-v1113", "js");
-    document.body.appendChild(patch);
-  }
-
   function loadV1112Script() {
-    var existing = document.querySelector('script[data-waffle-v1112]');
-    if (existing) {
-      existing.addEventListener("load", loadV1113Script, { once: true });
-      setTimeout(loadV1113Script, 500);
-      return;
-    }
+    if (document.querySelector('script[data-waffle-v1112]')) return;
 
     var patch = document.createElement("script");
     patch.src = "waffle-v11.1.2.js?v=11.1.2";
     patch.async = false;
     patch.setAttribute("data-waffle-v1112", "js");
-    patch.addEventListener("load", loadV1113Script, { once: true });
     document.body.appendChild(patch);
   }
 
@@ -82,23 +69,21 @@
       "waffle-v11.1.css?v=11.1.0",
       "data-waffle-v111"
     );
+
     ensureStylesheet(
       'link[data-waffle-v1111]',
       "waffle-v11.1.1.css?v=11.1.1",
       "data-waffle-v1111"
     );
+
     ensureStylesheet(
       'link[data-waffle-v1112]',
       "waffle-v11.1.2.css?v=11.1.2",
       "data-waffle-v1112"
     );
-    ensureStylesheet(
-      'link[data-waffle-v1113]',
-      "waffle-v11.1.3.css?v=11.1.3",
-      "data-waffle-v1113"
-    );
 
     var existingBase = document.querySelector('script[data-waffle-v111]');
+
     if (!existingBase) {
       var script = document.createElement("script");
       script.src = "waffle-v11.1.js?v=11.1.0";
