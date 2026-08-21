@@ -6,7 +6,6 @@
   'use strict';
 
   const VERSION = '11.1.7';
-  const DIRECTORY_REFRESH_MARKER = 'waffle-v1117-directory-source-refresh';
 
   function escapeHtml(value) {
     return String(value == null ? '' : value)
@@ -510,12 +509,13 @@
     });
   }
 
-  async function forceOneDirectorySourceRefresh() {
+  async function forceDirectorySourceRefresh() {
     if (String(document.body?.dataset?.wafflePage || '') !== 'directory') return;
 
     try {
-      if (localStorage.getItem(DIRECTORY_REFRESH_MARKER) === VERSION) return;
-      localStorage.setItem(DIRECTORY_REFRESH_MARKER, VERSION);
+      /* V11.1.7 changes the directory payload shape by adding Request From.
+         Clear the old six-hour snapshot once per page load so a pre-release
+         cached payload cannot hide the new source badges after deployment. */
       if (typeof invalidateWaffleClientCaches === 'function') {
         await invalidateWaffleClientCaches(['directory']);
       }
@@ -540,7 +540,7 @@
       if (active) scheduleProfileSourceEditor(active);
     }, delay));
 
-    forceOneDirectorySourceRefresh();
+    forceDirectorySourceRefresh();
   }
 
   if (document.readyState === 'loading') {
