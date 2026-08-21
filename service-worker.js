@@ -1,6 +1,6 @@
-/* Waffle House Boarding — V8.4 Service Worker */
+/* Waffle House Boarding — recovery service worker */
 
-const WAFFLE_SW_VERSION = 'v11.0.5';
+const WAFFLE_SW_VERSION = 'v11.1.4-recovery';
 const WAFFLE_CACHE_PREFIX = 'waffle-house-';
 const APP_SHELL_CACHE = `${WAFFLE_CACHE_PREFIX}shell-${WAFFLE_SW_VERSION}`;
 const RUNTIME_CACHE = `${WAFFLE_CACHE_PREFIX}runtime-${WAFFLE_SW_VERSION}`;
@@ -19,7 +19,7 @@ const APP_SHELL = [
   './pwa-icon-512.png?v=11.0.5',
   './pwa-maskable-512.png?v=11.0.5',
   './pwa-apple-touch-icon.png?v=11.0.5',
-  './waffle-firebase-config.js?v=11.0.5',
+  './waffle-firebase-config.js?v=11.1.4-recovery',
   './waffle-v10.8.css?v=11.0.5',
   './waffle-v10.8.js?v=11.0.5',
   './waffle-v10.8.2.css?v=11.0.5',
@@ -48,52 +48,23 @@ const OPTIONAL_EXTERNAL_ASSETS = [
   'https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js'
 ];
 
-
-
-/* ============================================================
-   V9 FIREBASE CLOUD MESSAGING
-   Uses the same app-shell service worker registration.
-   ============================================================ */
-
 let waffleMessaging = null;
 
 function waffleFirebaseConfigReady(config) {
   if (!config || typeof config !== 'object') return false;
-
-  const required = [
-    config.apiKey,
-    config.projectId,
-    config.messagingSenderId,
-    config.appId,
-    config.vapidKey
-  ];
-
+  const required = [config.apiKey, config.projectId, config.messagingSenderId, config.appId, config.vapidKey];
   return required.every(value => {
     const text = String(value || '').trim();
-
-    return (
-      text &&
-      !text.startsWith('PASTE_')
-    );
+    return text && !text.startsWith('PASTE_');
   });
 }
 
 try {
-  importScripts('./waffle-firebase-config.js?v=11.0.5');
-
-  const config =
-    self.WAFFLE_FIREBASE_CONFIG ||
-    null;
-
+  importScripts('./waffle-firebase-config.js?v=11.1.4-recovery');
+  const config = self.WAFFLE_FIREBASE_CONFIG || null;
   if (waffleFirebaseConfigReady(config)) {
-    importScripts(
-      'https://www.gstatic.com/firebasejs/12.17.1/firebase-app-compat.js'
-    );
-
-    importScripts(
-      'https://www.gstatic.com/firebasejs/12.17.1/firebase-messaging-compat.js'
-    );
-
+    importScripts('https://www.gstatic.com/firebasejs/12.17.1/firebase-app-compat.js');
+    importScripts('https://www.gstatic.com/firebasejs/12.17.1/firebase-messaging-compat.js');
     firebase.initializeApp({
       apiKey: config.apiKey,
       authDomain: config.authDomain,
@@ -101,159 +72,66 @@ try {
       messagingSenderId: config.messagingSenderId,
       appId: config.appId
     });
-
-    waffleMessaging =
-      firebase.messaging();
-
+    waffleMessaging = firebase.messaging();
     waffleMessaging.onBackgroundMessage(payload => {
-      const data =
-        payload && payload.data
-          ? payload.data
-          : {};
-
-      const title =
-        data.title ||
-        '🐾 Waffle House';
-
-      const body =
-        data.body ||
-        'Waffle House has an update.';
-
-      const link =
-        data.link ||
-        'index.html';
-
-      const tag =
-        data.tag ||
-        data.category ||
-        'waffle-update';
-
-      self.registration.showNotification(
-        title,
-        {
-          body,
-          icon:
-            './pwa-icon-192.png?v=11.0.5',
-          badge:
-            './pwa-icon-192.png?v=11.0.5',
-          tag,
-          renotify: true,
-          data: {
-            link
-          }
-        }
-      );
+      const data = payload && payload.data ? payload.data : {};
+      self.registration.showNotification(data.title || '🐾 Waffle House', {
+        body: data.body || 'Waffle House has an update.',
+        icon: './pwa-icon-192.png?v=11.0.5',
+        badge: './pwa-icon-192.png?v=11.0.5',
+        tag: data.tag || data.category || 'waffle-update',
+        renotify: true,
+        data: { link: data.link || 'index.html' }
+      });
     });
   }
 } catch (error) {
-  console.warn(
-    'Waffle push messaging is not configured yet:',
-    error
-  );
+  console.warn('Waffle push messaging is not configured yet:', error);
 }
 
-
-self.addEventListener(
-  'notificationclick',
-  event => {
-    const rawLink =
-      event.notification &&
-      event.notification.data
-        ? event.notification.data.link
-        : '';
-
-    if (!rawLink) return;
-
-    event.notification.close();
-
-    const targetUrl =
-      new URL(
-        rawLink,
-        self.registration.scope
-      ).href;
-
-    event.waitUntil(
-      clients
-        .matchAll({
-          type: 'window',
-          includeUncontrolled: true
-        })
-        .then(windowClients => {
-          const exact =
-            windowClients.find(client =>
-              client.url === targetUrl
-            );
-
-          if (exact) {
-            return exact.focus();
-          }
-
-          const sameScope =
-            windowClients.find(client =>
-              client.url.startsWith(
-                self.registration.scope
-              )
-            );
-
-          if (sameScope) {
-            return sameScope
-              .navigate(targetUrl)
-              .then(() =>
-                sameScope.focus()
-              );
-          }
-
-          return clients.openWindow(
-            targetUrl
-          );
-        })
-    );
-  }
-);
-
-
-self.addEventListener('install', event => {
+self.addEventListener('notificationclick', event => {
+  const rawLink = event.notification && event.notification.data ? event.notification.data.link : '';
+  if (!rawLink) return;
+  event.notification.close();
+  const targetUrl = new URL(rawLink, self.registration.scope).href;
   event.waitUntil(
-    (async () => {
-      const cache = await caches.open(APP_SHELL_CACHE);
-      await cache.addAll(APP_SHELL);
-
-      // Best-effort runtime seed. A CDN failure must never block installation.
-      const runtime = await caches.open(RUNTIME_CACHE);
-
-      await Promise.allSettled(
-        OPTIONAL_EXTERNAL_ASSETS.map(async url => {
-          const response = await fetch(url, { cache: 'reload' });
-
-          if (response && (response.ok || response.type === 'opaque')) {
-            await runtime.put(url, response.clone());
-          }
-        })
-      );
-
-      await self.skipWaiting();
-    })()
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(windowClients => {
+      const exact = windowClients.find(client => client.url === targetUrl);
+      if (exact) return exact.focus();
+      const sameScope = windowClients.find(client => client.url.startsWith(self.registration.scope));
+      if (sameScope) return sameScope.navigate(targetUrl).then(() => sameScope.focus());
+      return clients.openWindow(targetUrl);
+    })
   );
 });
 
+self.addEventListener('install', event => {
+  event.waitUntil((async () => {
+    const cache = await caches.open(APP_SHELL_CACHE);
+    await cache.addAll(APP_SHELL);
+    const runtime = await caches.open(RUNTIME_CACHE);
+    await Promise.allSettled(
+      OPTIONAL_EXTERNAL_ASSETS.map(async url => {
+        const response = await fetch(url, { cache: 'reload' });
+        if (response && (response.ok || response.type === 'opaque')) {
+          await runtime.put(url, response.clone());
+        }
+      })
+    );
+    await self.skipWaiting();
+  })());
+});
+
 self.addEventListener('activate', event => {
-  event.waitUntil(
-    (async () => {
-      const keys = await caches.keys();
-
-      await Promise.all(
-        keys
-          .filter(key =>
-            key.startsWith(WAFFLE_CACHE_PREFIX) &&
-            key !== APP_SHELL_CACHE &&
-            key !== RUNTIME_CACHE
-          )
-          .map(key => caches.delete(key))
-      );
-
-      await self.clients.claim();
-    })()
-  );
+  event.waitUntil((async () => {
+    const keys = await caches.keys();
+    await Promise.all(
+      keys
+        .filter(key => key.startsWith(WAFFLE_CACHE_PREFIX) && key !== APP_SHELL_CACHE && key !== RUNTIME_CACHE)
+        .map(key => caches.delete(key))
+    );
+    await self.clients.claim();
+  })());
 });
 
 function isOperationalDataRequest(url) {
@@ -267,54 +145,55 @@ function isOperationalDataRequest(url) {
   );
 }
 
+function isRecoveryCriticalAsset(url) {
+  return url.origin === self.location.origin && url.pathname.endsWith('/waffle-firebase-config.js');
+}
+
 async function networkFirstNavigation(request) {
   try {
-    const response = await fetch(request);
-
+    const response = await fetch(request, { cache: 'no-store' });
     if (response && response.ok) {
       const cache = await caches.open(APP_SHELL_CACHE);
       cache.put(request, response.clone()).catch(() => {});
     }
-
     return response;
-  } catch (_) {
+  } catch (error) {
     const cached = await caches.match(request);
-
     if (cached) return cached;
-
     const url = new URL(request.url);
     const file = url.pathname.split('/').pop() || 'index.html';
-
-    const fallback =
-      await caches.match(`./${file}`) ||
-      await caches.match('./index.html');
-
+    const fallback = await caches.match(`./${file}`) || await caches.match('./index.html');
     if (fallback) return fallback;
+    throw error;
+  }
+}
 
-    throw _;
+async function networkFirstStatic(request) {
+  try {
+    const response = await fetch(request, { cache: 'no-store' });
+    if (response && response.ok) {
+      const cache = await caches.open(RUNTIME_CACHE);
+      cache.put(request, response.clone()).catch(() => {});
+    }
+    return response;
+  } catch (error) {
+    const cached = await caches.match(request);
+    if (cached) return cached;
+    throw error;
   }
 }
 
 async function staleWhileRevalidate(request) {
   const cache = await caches.open(RUNTIME_CACHE);
   const cached = await cache.match(request);
-
-  const networkPromise =
-    fetch(request)
-      .then(response => {
-        if (
-          response &&
-          (
-            response.ok ||
-            response.type === 'opaque'
-          )
-        ) {
-          cache.put(request, response.clone()).catch(() => {});
-        }
-
-        return response;
-      })
-      .catch(() => null);
+  const networkPromise = fetch(request)
+    .then(response => {
+      if (response && (response.ok || response.type === 'opaque')) {
+        cache.put(request, response.clone()).catch(() => {});
+      }
+      return response;
+    })
+    .catch(() => null);
 
   if (cached) {
     networkPromise.catch(() => {});
@@ -322,39 +201,31 @@ async function staleWhileRevalidate(request) {
   }
 
   const network = await networkPromise;
-
   if (network) return network;
-
   throw new Error('Network unavailable and no cached asset exists.');
 }
 
 self.addEventListener('fetch', event => {
   const request = event.request;
-
   if (request.method !== 'GET') return;
-
   const url = new URL(request.url);
 
-  // Operational/user data stays out of Cache Storage.
-  // IndexedDB stale-while-revalidate remains the source for cached app data.
-  if (isOperationalDataRequest(url)) {
+  if (isOperationalDataRequest(url)) return;
+
+  if (request.mode === 'navigate') {
+    event.respondWith(networkFirstNavigation(request));
     return;
   }
 
-  if (request.mode === 'navigate') {
-    event.respondWith(
-      networkFirstNavigation(request)
-    );
+  if (isRecoveryCriticalAsset(url)) {
+    event.respondWith(networkFirstStatic(request));
     return;
   }
 
   const sameOrigin = url.origin === self.location.origin;
   const isJsDelivr = url.hostname === 'cdn.jsdelivr.net';
-
   if (sameOrigin || isJsDelivr) {
-    event.respondWith(
-      staleWhileRevalidate(request)
-    );
+    event.respondWith(staleWhileRevalidate(request));
   }
 });
 
