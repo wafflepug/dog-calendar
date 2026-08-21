@@ -1,0 +1,286 @@
+/* ============================================================
+   WAFFLE HOUSE V11.1.4 — BRAND PALETTE + REQUEST SOURCE LAYOUT
+   ============================================================ */
+
+:root {
+  --waffle-primary: #0F6292;
+  --waffle-secondary: #88D49E;
+  --waffle-bg: #F5F7FA;
+  --waffle-surface: #FFFFFF;
+  --waffle-surface-elevated: #FFFFFF;
+  --waffle-text: #111827;
+  --waffle-muted: #475569;
+  --waffle-border: #D9E2EC;
+
+  --wh-bg: #F5F7FA;
+  --wh-surface: #FFFFFF;
+  --wh-surface-soft: #F8FAFC;
+  --wh-surface-muted: #EEF3F6;
+  --wh-border: #D9E2EC;
+  --wh-border-soft: #E5ECF2;
+  --wh-text: #111827;
+  --wh-text-muted: #475569;
+  --wh-primary: #0F6292;
+  --wh-primary-hover: #0C527B;
+  --wh-accent: #0F6292;
+  --wh-accent-hover: #0C527B;
+  --wh-success: #4FAF72;
+  --wh-success-hover: #3F965F;
+  --wh-meet: #0F766E;
+  --wh-meet-hover: #115E59;
+  --wh-meet-soft: #ECFDF5;
+  --wh-meet-border: #88D49E;
+}
+
+body.dark-theme {
+  --waffle-primary: #0F6292;
+  --waffle-secondary: #88D49E;
+  --waffle-bg: #111827;
+  --waffle-surface: #182235;
+  --waffle-surface-elevated: #22304A;
+  --waffle-text: #E5EEF7;
+  --waffle-muted: #94A3B8;
+  --waffle-border: #334155;
+
+  --wh-bg: #111827;
+  --wh-surface: #182235;
+  --wh-surface-soft: #182235;
+  --wh-surface-muted: #22304A;
+  --wh-border: #334155;
+  --wh-border-soft: #2A394E;
+  --wh-text: #E5EEF7;
+  --wh-text-muted: #94A3B8;
+  --wh-primary: #E5EEF7;
+  --wh-primary-hover: #FFFFFF;
+  --wh-accent: #0F6292;
+  --wh-accent-hover: #167CAD;
+  --wh-success: #88D49E;
+  --wh-success-hover: #73C58B;
+  --wh-meet: #0F6292;
+  --wh-meet-hover: #167CAD;
+  --wh-meet-soft: #132C3B;
+  --wh-meet-border: #2B718D;
+}
+
+/* Light theme */
+body:not(.dark-theme) {
+  background: #F5F7FA !important;
+  color: #111827 !important;
+}
+body:not(.dark-theme) .container,
+body:not(.dark-theme) .v10-ops-card,
+body:not(.dark-theme) .directory-dashboard,
+body:not(.dark-theme) .reminders-card,
+body:not(.dark-theme) .v108-modal-card,
+body:not(.dark-theme) .v10-quick-add-panel,
+body:not(.dark-theme) .modal-content-panel {
+  background: #FFFFFF !important;
+  border-color: #D9E2EC !important;
+  color: #111827 !important;
+}
+body:not(.dark-theme) .app-tabs {
+  background: #FFFFFF !important;
+  border-color: #D9E2EC !important;
+}
+body:not(.dark-theme) .app-tab-button {
+  background: transparent !important;
+  color: #475569 !important;
+}
+body:not(.dark-theme) .app-tab-button.active {
+  background: #0F6292 !important;
+  border-color: #0F6292 !important;
+  color: #FFFFFF !important;
+}
+body:not(.dark-theme) .v10-stat-card,
+body:not(.dark-theme) .v10-next-item,
+body:not(.dark-theme) .v10-agenda-item,
+body:not(.dark-theme) .v10-capacity-day,
+body:not(.dark-theme) .v10-potential-item {
+  background: #F8FAFC !important;
+  border-color: #D9E2EC !important;
+  color: #111827 !important;
+}
+body:not(.dark-theme) input,
+body:not(.dark-theme) select,
+body:not(.dark-theme) textarea {
+  background: #FFFFFF !important;
+  color: #111827 !important;
+  border-color: #D9E2EC !important;
+}
+body:not(.dark-theme) button.primary,
+body:not(.dark-theme) #manualRefreshBtn,
+body:not(.dark-theme) .v10-text-action,
+body:not(.dark-theme) .v108-modal-actions .primary {
+  background: #0F6292 !important;
+  border-color: #0F6292 !important;
+  color: #FFFFFF !important;
+}
+body:not(.dark-theme) .v10-today-status[data-mode="clear"],
+body:not(.dark-theme) .v10-all-clear > span {
+  background: #E5F7EB !important;
+  color: #2F7D4B !important;
+}
+
+/* Dark theme */
+body.dark-theme {
+  background: #111827 !important;
+  color: #E5EEF7 !important;
+}
+body.dark-theme .container,
+body.dark-theme #calendar,
+body.dark-theme .v10-operations-home,
+body.dark-theme .directory-dashboard,
+body.dark-theme .reminders-card,
+body.dark-theme .v108-modal-card,
+body.dark-theme .v10-quick-add-panel,
+body.dark-theme .modal-content-panel {
+  background: #182235 !important;
+  border-color: #334155 !important;
+  color: #E5EEF7 !important;
+}
+body.dark-theme .app-tabs {
+  background: #182235 !important;
+  border-color: #334155 !important;
+}
+body.dark-theme .app-tab-button {
+  background: transparent !important;
+  color: #94A3B8 !important;
+}
+body.dark-theme .app-tab-button.active {
+  background: #0F6292 !important;
+  border-color: #167CAD !important;
+  color: #FFFFFF !important;
+}
+body.dark-theme .v10-ops-card,
+body.dark-theme .v10-stat-card,
+body.dark-theme .v10-next-item,
+body.dark-theme .v10-agenda-item,
+body.dark-theme .v10-capacity-day,
+body.dark-theme .v10-potential-item,
+body.dark-theme .v1114-source-field {
+  background: #182235 !important;
+  border-color: #334155 !important;
+  color: #E5EEF7 !important;
+}
+body.dark-theme input,
+body.dark-theme select,
+body.dark-theme textarea {
+  background: #22304A !important;
+  color: #E5EEF7 !important;
+  border-color: #334155 !important;
+}
+body.dark-theme .v10-card-kicker,
+body.dark-theme .v10-eyebrow,
+body.dark-theme .calendar-brand-subtitle {
+  color: #88D49E !important;
+}
+body.dark-theme .v10-card-heading h2,
+body.dark-theme .v10-ops-heading h1,
+body.dark-theme .v10-next-item strong,
+body.dark-theme .v10-agenda-item strong,
+body.dark-theme .v10-potential-item strong,
+body.dark-theme .modal-content-panel h3,
+body.dark-theme .modal-content-panel label {
+  color: #E5EEF7 !important;
+}
+body.dark-theme button.primary,
+body.dark-theme #manualRefreshBtn,
+body.dark-theme .v108-modal-actions .primary {
+  background: #0F6292 !important;
+  border-color: #167CAD !important;
+  color: #FFFFFF !important;
+}
+body.dark-theme #themeToggle.theme-toggle-header {
+  background: #22304A !important;
+  border-color: #334155 !important;
+  color: #88D49E !important;
+}
+
+/* Quick Action must never show a Request From selector. */
+#v10QuickAddSheet .v1112-source-picker,
+#v10QuickAddSheet .v1112-meet-source-field,
+#v10QuickAddSheet [data-v1112-meet-source] {
+  display: none !important;
+}
+
+/* Request From fields */
+.v111-request-source-field,
+.v1114-source-field {
+  width: 100% !important;
+  box-sizing: border-box;
+}
+.v111-request-source-field {
+  font-size: 0 !important;
+}
+.v1114-potential-source-field,
+.v1114-meet-source-field,
+.v1114-boarding-source-field {
+  display: block !important;
+  margin: 2px 0 10px !important;
+}
+.v1112-source-picker {
+  width: 100%;
+  margin: 8px 0 10px !important;
+  box-sizing: border-box;
+}
+.v1112-source-title {
+  display: block;
+  margin: 0 0 9px !important;
+  color: var(--wh-text) !important;
+  font-size: 12px !important;
+  font-weight: 850 !important;
+}
+.v1112-source-grid {
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  align-items: flex-start !important;
+  justify-content: flex-start !important;
+  gap: 12px !important;
+  width: 100% !important;
+  overflow: visible !important;
+}
+.v1112-source-tile {
+  flex: 0 0 88px !important;
+  width: 88px !important;
+  min-width: 0 !important;
+}
+.v1112-source-circle {
+  width: 82px !important;
+  height: 82px !important;
+  border-color: var(--wh-border) !important;
+  background: #FFFFFF !important;
+}
+.v1112-source-tile.is-selected .v1112-source-circle {
+  border-color: #0F6292 !important;
+  box-shadow: 0 0 0 4px rgba(15, 98, 146, .20) !important;
+}
+.v1112-source-circle img {
+  object-fit: cover !important;
+}
+.v1112-source-circle span {
+  left: 5px !important;
+  right: 5px !important;
+  bottom: 5px !important;
+  font-size: 10px !important;
+}
+[data-v1112-source-value="Facebook"] .v1112-source-circle img {
+  object-fit: cover !important;
+  transform: none !important;
+}
+
+@media (max-width: 520px) {
+  .v1112-source-grid {
+    gap: 7px !important;
+  }
+  .v1112-source-tile {
+    flex-basis: 76px !important;
+    width: 76px !important;
+  }
+  .v1112-source-circle {
+    width: 72px !important;
+    height: 72px !important;
+  }
+  .v1112-source-circle span {
+    font-size: 9px !important;
+  }
+}
