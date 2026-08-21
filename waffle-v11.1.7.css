@@ -1,0 +1,528 @@
+/* ============================================================
+   WAFFLE HOUSE V11.1.7 — CARE SOURCE + MOBILE FIT FOLLOW-UP
+   ============================================================ */
+
+/* ------------------------------------------------------------
+   AT HOME — MATCH CARE CURRENT TILES EXACTLY
+   ------------------------------------------------------------ */
+.v1117-at-home-card {
+  width: min(720px, calc(100vw - 28px));
+}
+
+.v1117-at-home-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  align-items: stretch;
+}
+
+/* The base .directory-guest-tile-open rules own aspect ratio, height,
+   border radius and typography. Only add the photo state class locally. */
+.v1117-at-home-tile .v1117-at-home-photo {
+  display: none;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.v1117-at-home-tile.has-profile-photo .v1117-at-home-photo {
+  display: block;
+}
+
+.v1117-at-home-tile.has-profile-photo::after {
+  content: "";
+  position: absolute;
+  inset: 45% 0 0;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(to bottom, rgba(0,0,0,0), rgba(0,0,0,.72));
+}
+
+.v1117-at-home-tile.has-profile-photo .directory-guest-tile-name {
+  position: absolute;
+  right: 14px;
+  bottom: 13px;
+  left: 14px;
+  max-width: none;
+  z-index: 2;
+  color: #fff;
+  font-size: 19px;
+  text-align: left;
+  text-shadow: 0 1px 5px rgba(0,0,0,.55);
+}
+
+.v1117-at-home-empty {
+  grid-column: 1 / -1;
+}
+
+/* ------------------------------------------------------------
+   REQUEST FROM — OTHER IS A DELIBERATE GREY BRAND TILE
+   ------------------------------------------------------------ */
+.v1116-source-other .v1112-source-circle,
+.v1117-source-other .v1112-source-circle {
+  display: grid !important;
+  place-items: center !important;
+  background: #94a3b8 !important;
+  border-color: #64748b !important;
+}
+
+.v1116-source-other .v1112-source-circle > span,
+.v1117-source-other .v1112-source-circle > span {
+  position: static !important;
+  display: block !important;
+  width: auto !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  background: transparent !important;
+  color: #fff !important;
+  font-size: 12px !important;
+  line-height: 1 !important;
+  font-weight: 900 !important;
+  text-align: center !important;
+  text-shadow: none !important;
+}
+
+.v1116-source-other.is-selected .v1112-source-circle,
+.v1117-source-other.is-selected .v1112-source-circle {
+  border-color: var(--wh-accent, #0f6292) !important;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--wh-accent, #0f6292) 22%, transparent) !important;
+}
+
+body.dark-theme .v1116-source-other .v1112-source-circle,
+body.dark-theme .v1117-source-other .v1112-source-circle {
+  background: #64748b !important;
+  border-color: #94a3b8 !important;
+}
+
+/* ------------------------------------------------------------
+   DOG PROFILE — EDIT REQUEST FROM INSIDE ITS EXISTING BOX
+   ------------------------------------------------------------ */
+.v1115-profile-source-host {
+  margin: 14px 0 16px;
+}
+
+.v1117-profile-source-picker {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 12px 14px 14px;
+  border: 1px solid var(--wh-border, #d9e2ec);
+  border-radius: 14px;
+  background: var(--wh-surface-soft, #f8fafc);
+}
+
+.v1117-profile-source-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 10px;
+}
+
+.v1117-profile-source-heading > div {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.v1117-profile-source-heading > div > span {
+  color: var(--wh-text-muted, #475569);
+  font-size: 12px;
+  font-weight: 850;
+  letter-spacing: .04em;
+}
+
+.v1117-profile-source-heading small {
+  color: var(--wh-text-muted, #64748b);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.v1117-profile-source-heading > strong {
+  flex: 0 0 auto;
+  max-width: 42%;
+  color: var(--wh-accent, #0f6292);
+  font-size: 11px;
+  line-height: 1.3;
+  text-align: right;
+}
+
+.v1117-profile-source-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  width: min(100%, 390px);
+}
+
+.v1117-profile-source-tile {
+  min-width: 0;
+  padding: 3px 0;
+  border: 0;
+  border-radius: 12px;
+  background: transparent !important;
+  color: var(--wh-text, #111827);
+  cursor: pointer;
+}
+
+.v1117-profile-source-circle {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  max-width: 100%;
+  margin: 0 auto;
+  overflow: hidden;
+  box-sizing: border-box;
+  border: 2px solid var(--wh-border, #d9e2ec);
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 3px 10px rgba(15, 23, 42, .08);
+  transition: border-color .16s ease, box-shadow .16s ease, transform .16s ease;
+}
+
+.v1117-profile-source-circle img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: grayscale(1) saturate(0);
+  opacity: .64;
+  transition: filter .16s ease, opacity .16s ease;
+}
+
+.v1117-profile-source-caption {
+  display: block;
+  margin-top: 5px;
+  color: var(--wh-text-muted, #475569);
+  font-size: 10px;
+  line-height: 1.15;
+  font-weight: 800;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.v1117-profile-source-tile.is-selected .v1117-profile-source-circle {
+  border-color: var(--wh-accent, #0f6292);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--wh-accent, #0f6292) 20%, transparent);
+  transform: translateY(-1px);
+}
+
+.v1117-profile-source-tile.is-selected .v1117-profile-source-circle img {
+  filter: none;
+  opacity: 1;
+}
+
+.v1117-profile-source-tile.is-selected .v1117-profile-source-caption {
+  color: var(--wh-accent, #0f6292);
+}
+
+.v1117-profile-source-tile.is-other .v1117-profile-source-circle {
+  background: #94a3b8;
+  border-color: #64748b;
+}
+
+.v1117-profile-source-other-label {
+  color: #fff;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.v1117-profile-source-tile:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--wh-accent, #0f6292) 20%, transparent);
+  outline-offset: 2px;
+}
+
+.v1117-profile-source-tile:disabled {
+  opacity: .58;
+  cursor: wait;
+}
+
+body.dark-theme .v1117-profile-source-picker {
+  background: var(--wh-surface-elevated, #22304a);
+}
+
+body.dark-theme .v1117-profile-source-circle {
+  background: #182235;
+}
+
+body.dark-theme .v1117-profile-source-tile.is-other .v1117-profile-source-circle {
+  background: #64748b;
+  border-color: #94a3b8;
+}
+
+/* ------------------------------------------------------------
+   CARE CURRENT — REQUEST SOURCE BADGE ON THE TILE
+   ------------------------------------------------------------ */
+.v1117-care-source-badge {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  z-index: 4;
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  box-sizing: border-box;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 3px 10px rgba(15, 23, 42, .30);
+  pointer-events: none;
+}
+
+.v1117-care-source-badge img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.v1117-care-source-badge.is-other {
+  background: #94a3b8;
+  color: #fff;
+  border-color: #fff;
+}
+
+.v1117-care-source-badge.is-other > span {
+  font-size: 8px;
+  line-height: 1;
+  font-weight: 900;
+  text-align: center;
+}
+
+.directory-card.has-profile-photo.has-request-source .directory-guest-tile-name {
+  right: 56px;
+}
+
+/* ------------------------------------------------------------
+   MOBILE TYPOGRAPHY — COMPACT, CONSISTENT, FIT-FIRST SCALE
+   V11.1.1 used 16pt globally. This later release replaces that with a
+   coherent pixel scale while keeping form controls at 16px to avoid iOS zoom.
+   ------------------------------------------------------------ */
+@media (max-width: 768px) {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  body {
+    font-size: 14px !important;
+    line-height: 1.4 !important;
+  }
+
+  button,
+  .app-tab-button,
+  .nav-label,
+  .v10-stat-card,
+  .v10-agenda-item,
+  .v10-next-item,
+  .v10-quick-actions button,
+  .directory-card,
+  .reminders-card,
+  .v110-checkin-button,
+  .v110-checkout-button,
+  .v111-photo-actions button,
+  .v111-photo-back,
+  .v1115-delete-profile-button,
+  .v1115-recovery-item button {
+    font-size: 13px !important;
+    line-height: 1.3 !important;
+  }
+
+  input,
+  select,
+  textarea,
+  .guest-detail-edit-control,
+  .intake-profile-control,
+  .belongings-description {
+    font-size: 16px !important;
+    line-height: 1.35 !important;
+  }
+
+  h1,
+  .v10-ops-heading h1 {
+    font-size: 20px !important;
+    line-height: 1.18 !important;
+  }
+
+  h2,
+  .v10-card-heading h2 {
+    font-size: 17px !important;
+    line-height: 1.22 !important;
+  }
+
+  h3,
+  .v108-modal-head h3,
+  .directory-dashboard-header h3,
+  .reminders-header h3 {
+    font-size: 16px !important;
+    line-height: 1.24 !important;
+  }
+
+  h4,
+  .directory-card h4 {
+    font-size: 15px !important;
+    line-height: 1.25 !important;
+  }
+
+  small,
+  .v10-eyebrow,
+  .v10-card-kicker,
+  .directory-dashboard-subtitle,
+  .v110-leaving-copy small,
+  .v110-leaving-copy span,
+  .v111-photo-status,
+  .directory-stay-dates,
+  .directory-primary-breed,
+  .v1116-meet-date span,
+  .v1116-meet-copy span {
+    font-size: 11px !important;
+    line-height: 1.35 !important;
+  }
+
+  .v10-stat-card strong {
+    font-size: 18px !important;
+    line-height: 1.05 !important;
+  }
+
+  .v10-stat-card > span:last-child,
+  .directory-main-profile-tab,
+  .directory-profile-subtab,
+  .v1082-stay-tab,
+  .calendar-event-legend,
+  .legend-label,
+  .legend-item {
+    font-size: 11px !important;
+  }
+
+  body[data-waffle-page="calendar"] .fc,
+  body[data-waffle-page="calendar"] .fc .fc-daygrid-day-number,
+  body[data-waffle-page="calendar"] .fc .fc-col-header-cell-cushion,
+  body[data-waffle-page="calendar"] .fc .fc-event {
+    font-size: 10.5px !important;
+    line-height: 1.25 !important;
+  }
+
+  body[data-waffle-page="calendar"] .fc .fc-toolbar-title {
+    font-size: 16px !important;
+  }
+
+  body[data-waffle-page="calendar"] .fc button {
+    font-size: 11px !important;
+    line-height: 1.2 !important;
+  }
+
+  .waffle-notification-button-icon {
+    font-size: 18px !important;
+  }
+
+  .v108-modal-head > button,
+  [data-v1117-at-home-close],
+  [data-v1116-meet-close],
+  .v1115-confirm-close {
+    font-size: 22px !important;
+    line-height: 1 !important;
+  }
+
+  .directory-guest-tile-name,
+  .v111-care-dog-tile .directory-guest-tile-name,
+  .v1117-at-home-tile .directory-guest-tile-name {
+    font-size: 16px !important;
+    line-height: 1.12 !important;
+  }
+
+  .v1117-at-home-grid {
+    gap: 10px;
+  }
+
+  .v1117-profile-source-picker {
+    padding: 11px 10px 12px;
+  }
+
+  .v1117-profile-source-heading {
+    gap: 8px;
+  }
+
+  .v1117-profile-source-heading > div > span {
+    font-size: 11px;
+  }
+
+  .v1117-profile-source-heading small,
+  .v1117-profile-source-heading > strong {
+    font-size: 10px !important;
+  }
+
+  .v1117-profile-source-grid {
+    width: 100%;
+    gap: 5px;
+  }
+
+  .v1117-profile-source-circle {
+    width: 54px;
+    height: 54px;
+  }
+
+  .v1117-profile-source-caption {
+    font-size: 9px !important;
+  }
+
+  .v1117-profile-source-other-label {
+    font-size: 10px !important;
+  }
+
+  /* The form source picker also needs to fit four circles without overflow. */
+  .v1112-source-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 4px !important;
+  }
+
+  .v1112-source-circle {
+    width: 58px !important;
+    height: 58px !important;
+  }
+
+  .v1112-source-circle > span {
+    font-size: 9px !important;
+  }
+
+  .v1116-source-other .v1112-source-circle > span,
+  .v1117-source-other .v1112-source-circle > span {
+    font-size: 10px !important;
+  }
+
+  .v1117-care-source-badge {
+    right: 7px;
+    bottom: 7px;
+    width: 32px;
+    height: 32px;
+  }
+
+  .v1117-care-source-badge.is-other > span {
+    font-size: 7px;
+  }
+
+  .directory-card.has-profile-photo.has-request-source .directory-guest-tile-name {
+    right: 46px;
+  }
+}
+
+@media (max-width: 390px) {
+  .v1117-profile-source-grid {
+    gap: 3px;
+  }
+
+  .v1117-profile-source-circle {
+    width: 48px;
+    height: 48px;
+  }
+
+  .v1112-source-circle {
+    width: 52px !important;
+    height: 52px !important;
+  }
+
+  .v1117-care-source-badge {
+    width: 30px;
+    height: 30px;
+  }
+}
