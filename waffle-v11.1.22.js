@@ -161,7 +161,7 @@
   function loadV11123Cleanup() {
     if (document.querySelector('script[data-waffle-v11123-cleanup]')) return;
     const script = document.createElement('script');
-    script.src = 'waffle-v11.1.23.js?v=11.1.25';
+    script.src = 'waffle-v11.1.23.js?v=11.1.26';
     script.async = false;
     script.setAttribute('data-waffle-v11123-cleanup', 'js');
     document.body.appendChild(script);
