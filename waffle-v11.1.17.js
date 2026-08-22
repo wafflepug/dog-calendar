@@ -15,6 +15,11 @@
     if (nav.parentElement !== document.body) document.body.appendChild(nav);
     nav.classList.add('v11117-mobile-nav-fixed');
 
+    /* The Reminder page is now Organiser. Keep the mobile footer label aligned
+       with the current primary navigation naming. */
+    const organiserLabel = nav.querySelector('a[href$="reminders.html"] small');
+    if (organiserLabel) organiserLabel.textContent = 'Organiser';
+
     /* Inline important values protect the first mobile paint from older page
        rules that can briefly win before the final stylesheet settles. */
     nav.style.setProperty('position', 'fixed', 'important');
@@ -48,8 +53,8 @@
     apply();
 
     /* Bounded passes cover the mobile nav created by the earlier operations
-       layer and the summary modal created on first Capacity/Arriving/Leaving
-       interaction. No MutationObserver or polling loop is introduced. */
+       layer and the summary modal created on first interaction. No
+       MutationObserver or polling loop is introduced. */
     [40, 120, 300, 700, 1400, 2400].forEach(delay => setTimeout(apply, delay));
 
     window.addEventListener('pageshow', apply);
