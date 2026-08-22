@@ -1,0 +1,88 @@
+/* ============================================================
+   WAFFLE HOUSE V11.1.12 — CARE REQUEST FROM PLACEMENT
+   ============================================================ */
+
+/* The Request From editor now lives in the core Care details grid directly
+   after the full-width Notes row. */
+.directory-attributes-grid > .v11112-care-source-host {
+  grid-column: 1 / -1;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+}
+
+.v11112-care-source-host .v11112-care-source-picker {
+  width: 100%;
+  margin: 0;
+  padding: 12px 14px 14px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--wh-surface-soft, #f8fafc) 92%, var(--wh-accent, #0f6292) 8%);
+}
+
+.v11112-care-source-host .v11112-care-source-heading {
+  align-items: flex-start;
+  margin-bottom: 11px;
+}
+
+.v11112-care-source-host .v11112-care-source-heading > strong {
+  max-width: 46%;
+}
+
+.v11112-care-source-host .v11112-care-source-grid {
+  width: min(100%, 410px);
+}
+
+.v11112-care-source-host .v1117-profile-source-tile {
+  transition: transform .15s ease, opacity .15s ease;
+}
+
+.v11112-care-source-host .v1117-profile-source-tile:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.v11112-care-source-host .v1117-profile-source-tile.is-selected .v1117-profile-source-caption::after {
+  content: " · selected";
+  font-weight: 700;
+}
+
+.v11112-care-source-picker.is-loading {
+  min-height: 72px;
+}
+
+body.dark-theme .v11112-care-source-host .v11112-care-source-picker {
+  background: color-mix(in srgb, var(--wh-surface-elevated, #22304a) 90%, var(--wh-accent, #0f6292) 10%);
+}
+
+@media (max-width: 768px) {
+  .directory-attributes-grid > .v11112-care-source-host {
+    grid-column: 1 / -1;
+  }
+
+  .v11112-care-source-host .v11112-care-source-picker {
+    padding: 11px 9px 12px;
+  }
+
+  .v11112-care-source-host .v11112-care-source-heading {
+    gap: 7px;
+  }
+
+  .v11112-care-source-host .v11112-care-source-heading > strong {
+    max-width: 44%;
+    font-size: 10px !important;
+  }
+
+  .v11112-care-source-host .v11112-care-source-grid {
+    width: 100%;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 4px;
+  }
+
+  .v11112-care-source-host .v1117-profile-source-circle {
+    width: 52px;
+    height: 52px;
+  }
+
+  .v11112-care-source-host .v1117-profile-source-caption {
+    font-size: 9px !important;
+  }
+}
