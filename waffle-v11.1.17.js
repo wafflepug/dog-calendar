@@ -5,8 +5,20 @@
 (function () {
   'use strict';
 
+  function isMobile() {
+    return !!window.matchMedia && window.matchMedia('(max-width: 768px)').matches;
+  }
+
+  function isFoldNarrow() {
+    return !!window.matchMedia && window.matchMedia('(max-width: 480px)').matches;
+  }
+
+  function pageName() {
+    return String(window.WAFFLE_PAGE || document.body?.dataset?.wafflePage || 'calendar');
+  }
+
   function pinMobileNav() {
-    if (!window.matchMedia || !window.matchMedia('(max-width: 768px)').matches) return;
+    if (!isMobile()) return;
 
     const nav = document.getElementById('v1118MobileNav') || document.querySelector('.v1118-mobile-nav');
     if (!nav) return;
@@ -44,22 +56,95 @@
     if (list) list.classList.add('v11117-mobile-fit-list');
   }
 
+  function hideLegacyMobileMeetGreetBanner() {
+    if (!isMobile() || pageName() !== 'calendar') return;
+
+    const hide = element => {
+      if (!element) return;
+      element.hidden = true;
+      element.setAttribute('aria-hidden', 'true');
+      element.style.setProperty('display', 'none', 'important');
+    };
+
+    document.querySelectorAll('.meet-greet-dashboard, [data-mobile-dashboard-section="meet"]').forEach(hide);
+
+    /* Fallback for any clone/re-render that loses the original class names. */
+    document.querySelectorAll('h1,h2,h3,h4,strong').forEach(heading => {
+      const text = String(heading.textContent || '').replace(/\s+/g, ' ').trim().toLowerCase();
+      if (text !== "🤝 today's meet & greets" && text !== "today's meet & greets" && text !== '🤝 today’s meet & greets' && text !== 'today’s meet & greets') return;
+      hide(heading.closest('[data-mobile-dashboard-section="meet"], .meet-greet-dashboard, article, section'));
+    });
+  }
+
+  function unwrapFoldHeader(header) {
+    const actions = header?.querySelector(':scope > .v11120-fold-actions');
+    if (!actions) {
+      header?.classList.remove('v11120-fold-header');
+      return;
+    }
+
+    while (actions.firstChild) header.insertBefore(actions.firstChild, actions);
+    actions.remove();
+    header.classList.remove('v11120-fold-header');
+  }
+
+  function prepareFoldHeader() {
+    if (pageName() !== 'calendar') return;
+
+    const header = document.querySelector('.calendar-header-branding');
+    if (!header) return;
+
+    if (!isFoldNarrow()) {
+      unwrapFoldHeader(header);
+      return;
+    }
+
+    header.classList.add('v11120-fold-header');
+
+    const brandHome = header.querySelector(':scope > .v11116-brand-home-link') || header.querySelector(':scope > .calendar-brand-img')?.parentElement;
+    const brandCopy = header.querySelector(':scope > .calendar-brand-copy');
+
+    let actions = header.querySelector(':scope > .v11120-fold-actions');
+    if (!actions) {
+      actions = document.createElement('div');
+      actions.className = 'v11120-fold-actions';
+      actions.setAttribute('aria-label', 'Calendar actions');
+      header.appendChild(actions);
+    }
+
+    Array.from(header.children).forEach(child => {
+      if (child === brandHome || child === brandCopy || child === actions) return;
+      actions.appendChild(child);
+    });
+
+    Array.from(actions.children).forEach(control => {
+      const identity = [control.id, control.className, control.textContent].join(' ').toLowerCase();
+      if (/sync|refresh|updat/.test(identity)) {
+        control.classList.add('v11120-fold-sync');
+        if (!control.getAttribute('aria-label')) control.setAttribute('aria-label', 'Sync Spreadsheet');
+        if (!control.getAttribute('title')) control.setAttribute('title', 'Sync Spreadsheet');
+      }
+    });
+  }
+
   function apply() {
     pinMobileNav();
     fitSummaryModal();
+    hideLegacyMobileMeetGreetBanner();
+    prepareFoldHeader();
   }
 
   function start() {
     apply();
 
-    /* Bounded passes cover the mobile nav created by the earlier operations
-       layer and the summary modal created on first interaction. No
-       MutationObserver or polling loop is introduced. */
+    /* Bounded passes cover mobile UI inserted by earlier layers without an
+       open-ended observer or polling loop. */
     [40, 120, 300, 700, 1400, 2400].forEach(delay => setTimeout(apply, delay));
 
     window.addEventListener('pageshow', apply);
     window.addEventListener('focus', apply);
     window.addEventListener('orientationchange', () => setTimeout(apply, 80));
+    window.addEventListener('resize', () => setTimeout(apply, 40));
 
     if (window.visualViewport) {
       window.visualViewport.addEventListener('resize', apply);
@@ -91,7 +176,7 @@
     if (!document.querySelector('link[data-waffle-v11119]')) {
       const stylesheet = document.createElement('link');
       stylesheet.rel = 'stylesheet';
-      stylesheet.href = 'waffle-v11.1.19.css?v=11.1.19';
+      stylesheet.href = 'waffle-v11.1.19.css?v=11.1.19.1';
       stylesheet.setAttribute('data-waffle-v11119', 'css');
       document.head.appendChild(stylesheet);
     }
