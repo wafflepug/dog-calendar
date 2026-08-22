@@ -29,18 +29,17 @@
       try { return window.getLocalTodayDateString(); } catch (_) {}
     }
     const now = new Date();
-    return new Date(now.getTime() - now.getTimezoneOffset() * 60000)
-      .toISOString()
-      .slice(0, 10);
+    return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
   }
 
   function addDays(dateString, days) {
     const date = new Date(`${dateString}T00:00:00`);
     date.setDate(date.getDate() + Number(days || 0));
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    return [
+      date.getFullYear(),
+      String(date.getMonth() + 1).padStart(2, '0'),
+      String(date.getDate()).padStart(2, '0')
+    ].join('-');
   }
 
   function normaliseDate(value) {
@@ -57,15 +56,15 @@
   }
 
   function eventDates(eventRecord) {
-    if (typeof window.v10EventRawDates === 'function') {
-      try {
-        const dates = window.v10EventRawDates(eventRecord) || {};
+    try {
+      if (typeof v10EventRawDates === 'function') {
+        const dates = v10EventRawDates(eventRecord) || {};
         return {
           start: normaliseDate(dates.start),
           end: normaliseDate(dates.end || dates.start)
         };
-      } catch (_) {}
-    }
+      }
+    } catch (_) {}
     const props = eventRecord?.extendedProps || {};
     const start = props.rawStartDate || eventRecord?.startStr || eventRecord?.start || '';
     const end = props.rawEndDate || eventRecord?.endStr || eventRecord?.end || start;
@@ -76,7 +75,6 @@
     const props = eventRecord?.extendedProps || {};
     return String(props.dogName || eventRecord?.title || 'Meet & Greet')
       .replace(/^.*Meet & Greet:\s*/i, '')
-      .replace(/^.*-\s*/, match => /meet/i.test(match) ? '' : match)
       .trim() || 'Meet & Greet';
   }
 
@@ -84,11 +82,9 @@
     const props = eventRecord?.extendedProps || {};
     const direct = String(props.time || props.bookingTime || '').trim();
     if (direct) return direct;
-    const title = String(eventRecord?.title || '');
-    const titleMatch = title.match(/(?:^|\s)(\d{1,2}:\d{2})(?:\s|$)/);
+    const titleMatch = String(eventRecord?.title || '').match(/(?:^|\s)(\d{1,2}:\d{2})(?:\s|$)/);
     if (titleMatch) return titleMatch[1];
-    const notes = String(props.notes || '');
-    const noteMatch = notes.match(/\b(\d{1,2}:\d{2})\b/);
+    const noteMatch = String(props.notes || '').match(/\b(\d{1,2}:\d{2})\b/);
     return noteMatch ? noteMatch[1] : '';
   }
 
@@ -106,7 +102,7 @@
       if (char === '"') {
         if (quoted && line[index + 1] === '"') {
           value += '"';
-          index++;
+          index += 1;
         } else {
           quoted = !quoted;
         }
@@ -126,16 +122,14 @@
   function cachedSpreadsheetMeetEvents() {
     const csv = String(localStorage.getItem('boardingDataCache') || '');
     if (!csv) return [];
-    const rows = csv.split(/\r?\n/);
     const events = [];
-    for (let index = 1; index < rows.length; index++) {
-      if (!rows[index].trim()) continue;
-      const columns = parseCsvLine(rows[index]);
-      const bookingType = String(columns[11] || '').trim();
-      if (!/meet\s*&\s*greet/i.test(bookingType)) continue;
+    csv.split(/\r?\n/).slice(1).forEach(line => {
+      if (!line.trim()) return;
+      const columns = parseCsvLine(line);
+      if (!/meet\s*&\s*greet/i.test(String(columns[11] || '').trim())) return;
       const dogName = String(columns[1] || '').trim();
       const start = normaliseDate(columns[3]);
-      if (!dogName || !start) continue;
+      if (!dogName || !start) return;
       const notes = String(columns[9] || '').trim();
       const timeMatch = notes.match(/\b(\d{1,2}:\d{2})\b/);
       events.push({
@@ -153,7 +147,7 @@
           time: timeMatch ? timeMatch[1] : ''
         }
       });
-    }
+    });
     return events;
   }
 
@@ -174,14 +168,23 @@
 
   function robustMeetEvents() {
     const candidates = [];
+
+    try {
+      if (typeof globalCalendar !== 'undefined' && globalCalendar && typeof globalCalendar.getEvents === 'function') {
+        candidates.push(...globalCalendar.getEvents());
+      }
+    } catch (_) {}
+
     if (window.globalCalendar && typeof window.globalCalendar.getEvents === 'function') {
       try { candidates.push(...window.globalCalendar.getEvents()); } catch (_) {}
     }
+
     try {
       if (typeof v110LatestCalendarEvents !== 'undefined' && Array.isArray(v110LatestCalendarEvents)) {
         candidates.push(...v110LatestCalendarEvents);
       }
     } catch (_) {}
+
     candidates.push(...temporaryMeetEvents());
     candidates.push(...cachedSpreadsheetMeetEvents());
 
@@ -190,7 +193,8 @@
       if (!eventRecord || !isMeet(eventRecord)) return;
       const dates = eventDates(eventRecord);
       if (!dates.start) return;
-      const key = [meetName(eventRecord).toLowerCase(), dates.start, meetTime(eventRecord)].join('|');
+      // One Meet & Greet per dog/date. Prefer whichever source has richer details.
+      const key = [meetName(eventRecord).toLowerCase(), dates.start].join('|');
       const existing = unique.get(key);
       if (!existing || eventRichness(eventRecord) > eventRichness(existing)) unique.set(key, eventRecord);
     });
@@ -207,8 +211,7 @@
       })
       .sort((a, b) => {
         const dateCompare = eventDates(a).start.localeCompare(eventDates(b).start);
-        if (dateCompare) return dateCompare;
-        return meetTime(a).localeCompare(meetTime(b));
+        return dateCompare || meetTime(a).localeCompare(meetTime(b));
       });
     return {
       today,
@@ -220,9 +223,12 @@
   function meetRowHtml(eventRecord, showDate) {
     const dates = eventDates(eventRecord);
     const props = eventRecord?.extendedProps || {};
-    const dateText = showDate && dates.start
-      ? (typeof window.formatStayDateShort === 'function' ? window.formatStayDateShort(dates.start) : dates.start)
-      : '';
+    let dateText = '';
+    if (showDate && dates.start) {
+      try {
+        dateText = typeof formatStayDateShort === 'function' ? formatStayDateShort(dates.start) : dates.start;
+      } catch (_) { dateText = dates.start; }
+    }
     return `
       <article class="v1116-meet-row">
         <div class="v1116-meet-date">
@@ -248,8 +254,7 @@
 
   function renderRobustMeetModal() {
     if (pageName() !== 'calendar') return;
-    const modal = document.getElementById('v1116MeetGreetListModal');
-    const host = modal?.querySelector('[data-v1116-meet-sections]');
+    const host = document.getElementById('v1116MeetGreetListModal')?.querySelector('[data-v1116-meet-sections]');
     if (!host) return;
     const data = meetWindow();
     host.innerHTML =
@@ -281,7 +286,7 @@
     const todayMeets = meetWindow().todayEvents;
     if (todayMeets.length) {
       host.querySelector('.v1118-attention-clear')?.remove();
-      for (let index = todayMeets.length - 1; index >= 0; index--) {
+      for (let index = todayMeets.length - 1; index >= 0; index -= 1) {
         host.insertAdjacentHTML('afterbegin', attentionMeetHtml(todayMeets[index]));
       }
     }
@@ -302,23 +307,29 @@
   }
 
   function meaningfulPhone(value) {
-    const digits = String(value || '').replace(/\D+/g, '');
-    return digits.length >= 6;
+    return String(value || '').replace(/\D+/g, '').length >= 6;
   }
 
-  function profileAttributesHavePhone(attributes) {
-    if (!attributes || typeof attributes !== 'object') return false;
-    return Object.entries(attributes).some(([key, value]) => {
+  function phoneFromAttributes(attributes) {
+    if (!attributes || typeof attributes !== 'object') return '';
+    for (const [key, value] of Object.entries(attributes)) {
       const normalized = String(key || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
       const phoneKey = normalized === 'mobile' || normalized.includes('phone') || normalized.includes('contactnumber');
-      return phoneKey && meaningfulPhone(value);
-    });
+      if (phoneKey && meaningfulPhone(value)) return String(value).trim();
+    }
+    return '';
   }
 
-  function cardHasKnownPhone(card) {
-    if (!card) return false;
+  function phoneFromRecord(record) {
+    if (!record || typeof record !== 'object') return '';
+    const direct = [record.phone, record.contactNumber, record.mobile, record.emergencyPhone].find(meaningfulPhone);
+    return direct ? String(direct).trim() : phoneFromAttributes(record.intakeAttributes);
+  }
+
+  function cardPhone(card) {
+    if (!card) return '';
     const editPhone = card.querySelector('[data-directory-edit-field="phone"]');
-    const directValues = [
+    const direct = [
       card.dataset.phone,
       card.dataset.directoryPhone,
       card.dataset.v1088Phone,
@@ -326,48 +337,56 @@
       card.dataset.directoryContactNumber,
       editPhone?.dataset?.directoryCurrentValue,
       editPhone?.textContent
-    ];
-    if (directValues.some(meaningfulPhone)) return true;
+    ].find(meaningfulPhone);
+    if (direct) return String(direct).trim();
 
-    const controls = Array.from(card.querySelectorAll('[data-intake-attribute]'));
-    if (controls.some(control => {
-      const key = String(control.dataset.intakeAttribute || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
-      return (key === 'mobile' || key.includes('phone') || key.includes('contactnumber')) && meaningfulPhone(control.value || control.textContent);
-    })) return true;
+    const control = Array.from(card.querySelectorAll('[data-intake-attribute]')).find(item => {
+      const key = String(item.dataset.intakeAttribute || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+      return (key === 'mobile' || key.includes('phone') || key.includes('contactnumber')) && meaningfulPhone(item.value || item.textContent);
+    });
+    if (control) return String(control.value || control.textContent || '').trim();
 
     const stayKey = String(card.dataset.directoryStayKey || card.dataset.stayKey || '');
     try {
       if (typeof directoryProfileDetailCache !== 'undefined') {
-        const record = directoryProfileDetailCache?.[stayKey];
-        if (meaningfulPhone(record?.phone) || profileAttributesHavePhone(record?.intakeAttributes)) return true;
+        const fromProfile = phoneFromRecord(directoryProfileDetailCache?.[stayKey]);
+        if (fromProfile) return fromProfile;
       }
     } catch (_) {}
     try {
       if (typeof directorySummaryRecordsCache !== 'undefined') {
-        const record = directorySummaryRecordsCache?.[stayKey];
-        if (meaningfulPhone(record?.phone) || profileAttributesHavePhone(record?.intakeAttributes)) return true;
+        const fromSummary = phoneFromRecord(directorySummaryRecordsCache?.[stayKey]);
+        if (fromSummary) return fromSummary;
       }
     } catch (_) {}
-    return false;
+    return '';
   }
 
-  function removeFalsePhoneSignal(card) {
-    if (!cardHasKnownPhone(card)) return false;
+  function removeFalsePhoneSignal(card, knownPhone) {
+    const phone = knownPhone || cardPhone(card);
+    if (!phone) return false;
+
+    // Make the correction durable: V11.1.8 reads v1088Phone when it decorates again.
+    card.dataset.v1088Phone = phone;
+
     const host = card.querySelector('[data-v1118-care-signals]');
     if (!host) return false;
     const phoneSignals = Array.from(host.querySelectorAll('span[title],span[aria-label]'))
       .filter(signal => /phone missing/i.test(String(signal.title || signal.getAttribute('aria-label') || '')));
     if (!phoneSignals.length) return false;
+
     phoneSignals.forEach(signal => signal.remove());
     host.hidden = host.children.length === 0;
-    const score = Number(card.dataset.v1118PriorityScore || 0);
-    card.dataset.v1118PriorityScore = String(Math.max(0, score - PHONE_MISSING_WEIGHT * phoneSignals.length));
+    if (card.dataset.v11111PhoneScoreAdjusted !== 'true') {
+      card.dataset.v11111PhoneScoreAdjusted = 'true';
+      card.dataset.v1118PriorityScore = String(Math.max(0, Number(card.dataset.v1118PriorityScore || 0) - PHONE_MISSING_WEIGHT));
+    }
     return true;
   }
 
   function reconcilePhoneSignals() {
     if (pageName() !== 'directory') return;
-    document.querySelectorAll('.directory-card[data-directory-stay-key]').forEach(removeFalsePhoneSignal);
+    document.querySelectorAll('.directory-card[data-directory-stay-key]').forEach(card => removeFalsePhoneSignal(card));
   }
 
   async function hydrateFlaggedPhoneCards() {
@@ -377,7 +396,7 @@
         const host = card.querySelector('[data-v1118-care-signals]');
         const flagged = Array.from(host?.querySelectorAll('span[title],span[aria-label]') || [])
           .some(signal => /phone missing/i.test(String(signal.title || signal.getAttribute('aria-label') || '')));
-        return flagged && !cardHasKnownPhone(card) && card.dataset.v11111PhoneLookup !== 'done';
+        return flagged && !cardPhone(card) && card.dataset.v11111PhoneLookup !== 'done';
       })
       .slice(0, 6);
 
@@ -386,14 +405,18 @@
       if (!stayKey) continue;
       card.dataset.v11111PhoneLookup = 'done';
       try {
-        const response = await window.queryAppsScript({ action: 'get_guest_profile', stayKey }, { maxAttempts: 1, timeoutMs: 20000 });
+        const response = await window.queryAppsScript(
+          { action: 'get_guest_profile', stayKey },
+          { maxAttempts: 1, timeoutMs: 20000 }
+        );
         const record = response?.record || null;
+        const phone = phoneFromRecord(record);
         if (record) {
           try {
             if (typeof directoryProfileDetailCache !== 'undefined') directoryProfileDetailCache[stayKey] = record;
           } catch (_) {}
-          if (meaningfulPhone(record.phone) || profileAttributesHavePhone(record.intakeAttributes)) removeFalsePhoneSignal(card);
         }
+        if (phone) removeFalsePhoneSignal(card, phone);
       } catch (_) {
         card.dataset.v11111PhoneLookup = 'retry';
       }
@@ -401,15 +424,11 @@
   }
 
   function scheduleCalendarReconcile() {
-    setTimeout(() => {
+    [30, 180].forEach(delay => setTimeout(() => {
       fixSearchButton();
       reconcileMeetPriority();
       renderRobustMeetModal();
-    }, 30);
-    setTimeout(() => {
-      reconcileMeetPriority();
-      renderRobustMeetModal();
-    }, 180);
+    }, delay));
   }
 
   function scheduleDirectoryReconcile() {
@@ -417,7 +436,7 @@
       reconcilePhoneSignals();
       hydrateFlaggedPhoneCards().catch(() => {});
     }, 50);
-    setTimeout(reconcilePhoneSignals, 500);
+    [500, 1800, 4500].forEach(delay => setTimeout(reconcilePhoneSignals, delay));
   }
 
   function wrapOperationsRender() {
@@ -484,6 +503,7 @@
       if (pageName() === 'calendar') scheduleCalendarReconcile();
       if (pageName() === 'directory') scheduleDirectoryReconcile();
     });
+
     window.addEventListener('pageshow', () => {
       if (pageName() === 'calendar') scheduleCalendarReconcile();
       if (pageName() === 'directory') scheduleDirectoryReconcile();
@@ -496,6 +516,7 @@
     wrapProfileRenderer();
     wireLifecycle();
     fixSearchButton();
+
     if (pageName() === 'calendar') scheduleCalendarReconcile();
     if (pageName() === 'directory') scheduleDirectoryReconcile();
 
