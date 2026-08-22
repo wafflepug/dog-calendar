@@ -130,14 +130,14 @@
     if (!document.querySelector('link[data-waffle-v11117]')) {
       const stylesheet = document.createElement('link');
       stylesheet.rel = 'stylesheet';
-      stylesheet.href = 'waffle-v11.1.17.css?v=11.1.17.2';
+      stylesheet.href = 'waffle-v11.1.17.css?v=11.1.17.3';
       stylesheet.setAttribute('data-waffle-v11117', 'css');
       document.head.appendChild(stylesheet);
     }
 
     if (!document.querySelector('script[data-waffle-v11117]')) {
       const script = document.createElement('script');
-      script.src = 'waffle-v11.1.17.js?v=11.1.17.4';
+      script.src = 'waffle-v11.1.17.js?v=11.1.17.5';
       script.async = false;
       script.setAttribute('data-waffle-v11117', 'js');
       document.body.appendChild(script);
