@@ -67,3 +67,33 @@
     start();
   }
 })();
+
+/* V11.1.18 centered mobile modal follow-up. Load from the final mobile patch
+   layer so the recovery service worker and main Firebase loader stay untouched. */
+(function () {
+  if (typeof window === 'undefined' || typeof document === 'undefined') return;
+
+  function loadV11118Assets() {
+    if (!document.querySelector('link[data-waffle-v11118]')) {
+      const stylesheet = document.createElement('link');
+      stylesheet.rel = 'stylesheet';
+      stylesheet.href = 'waffle-v11.1.18.css?v=11.1.18';
+      stylesheet.setAttribute('data-waffle-v11118', 'css');
+      document.head.appendChild(stylesheet);
+    }
+
+    if (!document.querySelector('script[data-waffle-v11118]')) {
+      const script = document.createElement('script');
+      script.src = 'waffle-v11.1.18.js?v=11.1.18';
+      script.async = false;
+      script.setAttribute('data-waffle-v11118', 'js');
+      document.body.appendChild(script);
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', loadV11118Assets, { once: true });
+  } else {
+    loadV11118Assets();
+  }
+})();
