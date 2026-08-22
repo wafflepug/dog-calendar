@@ -152,3 +152,24 @@
     start();
   }
 })();
+
+/* Phase 3 continues the cleanup chain without touching the recovery-sensitive
+   Firebase/service-worker loader. */
+(function () {
+  if (typeof window === 'undefined' || typeof document === 'undefined') return;
+
+  function loadV11123Cleanup() {
+    if (document.querySelector('script[data-waffle-v11123-cleanup]')) return;
+    const script = document.createElement('script');
+    script.src = 'waffle-v11.1.23.js?v=11.1.23';
+    script.async = false;
+    script.setAttribute('data-waffle-v11123-cleanup', 'js');
+    document.body.appendChild(script);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', loadV11123Cleanup, { once: true });
+  } else {
+    loadV11123Cleanup();
+  }
+})();
