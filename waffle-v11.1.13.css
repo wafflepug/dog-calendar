@@ -1,0 +1,210 @@
+/* ============================================================
+   WAFFLE HOUSE V11.1.13 — PROFILE DATES + PRIORITY/RECOVERY POLISH
+   ============================================================ */
+
+.directory-card.is-profile-active .v11113-editable-stay-dates {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 8px;
+  margin: -5px -8px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease;
+}
+.directory-card.is-profile-active .v11113-editable-stay-dates::after {
+  content: "✎";
+  font-size: 11px;
+  opacity: .72;
+}
+.directory-card.is-profile-active .v11113-editable-stay-dates:hover,
+.directory-card.is-profile-active .v11113-editable-stay-dates:focus-visible {
+  background: color-mix(in srgb, var(--wh-accent, #0f6292) 14%, transparent);
+  outline: none;
+}
+.v11113-stay-dates-card { width: min(520px, calc(100vw - 28px)); }
+.v11113-stay-dates-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  padding: 18px;
+}
+.v11113-stay-dates-fields label {
+  display: grid;
+  gap: 6px;
+  color: var(--wh-text-muted, #475569);
+  font-size: 11px;
+  font-weight: 800;
+}
+.v11113-stay-dates-fields input {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid var(--wh-border, #d9e2ec);
+  border-radius: 10px;
+  padding: 9px 10px;
+  background: var(--wh-surface, #fff);
+  color: var(--wh-text, #111827);
+  font: inherit;
+  font-size: 16px;
+}
+.v11113-stay-dates-status {
+  min-height: 24px;
+  padding: 0 18px;
+  color: var(--wh-text-muted, #64748b);
+  font-size: 11px;
+  font-weight: 700;
+}
+.v11113-stay-dates-status.is-error { color: #dc2626; }
+.v11113-stay-dates-status.is-success { color: #15803d; }
+.v11113-stay-dates-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 9px;
+  padding: 14px 18px 18px;
+}
+.v11113-stay-dates-actions button {
+  min-height: 40px;
+  border: 1px solid var(--wh-border, #d9e2ec);
+  border-radius: 9px;
+  padding: 8px 14px;
+  background: var(--wh-surface, #fff);
+  color: var(--wh-text, #111827);
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+.v11113-stay-dates-actions button.is-primary {
+  border-color: var(--wh-accent, #0f6292);
+  background: var(--wh-accent, #0f6292);
+  color: #fff;
+}
+
+body[data-waffle-page="calendar"] .v10-operations-home > #v1118AttentionPanel { display: none !important; }
+
+#waffleNotificationModal .v11113-notification-priority {
+  margin: 0 0 14px !important;
+  width: 100%;
+  box-shadow: none;
+}
+#waffleNotificationModal .v11113-notification-priority .v1118-attention-heading { position: static; }
+
+body[data-waffle-page="calendar"] #calendarTabPanel > .search-container { display: none !important; }
+#calendar .v11113-calendar-sync-button {
+  min-height: 34px;
+  border: 1px solid color-mix(in srgb, var(--wh-accent, #0f6292) 72%, #fff 12%);
+  border-radius: 8px;
+  padding: 7px 11px;
+  background: var(--wh-accent, #0f6292);
+  color: #fff;
+  font: inherit;
+  font-size: 11px;
+  line-height: 1.1;
+  font-weight: 850;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow: none;
+}
+#calendar .fc-toolbar-chunk:last-child {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+body[data-waffle-page="audit"] [data-v1115-recovery-panel] { display: none !important; }
+.v11113-audit-header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.v11113-recovery-button [data-v11113-recovery-count] {
+  display: inline-grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  margin-left: 4px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.16);
+  font-size: 10px;
+}
+.v11113-recovery-card {
+  width: min(760px, calc(100vw - 28px));
+  max-height: min(82vh, 760px);
+  overflow: hidden;
+}
+.v11113-recovery-list {
+  display: grid;
+  gap: 10px;
+  max-height: 58vh;
+  overflow: auto;
+  padding: 16px 18px 20px;
+}
+.v11113-recovery-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  border: 1px solid var(--wh-border, #d9e2ec);
+  border-radius: 13px;
+  background: var(--wh-surface-soft, #f8fafc);
+}
+.v11113-recovery-item > div {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+.v11113-recovery-item strong { color: var(--wh-text, #111827); }
+.v11113-recovery-item span,
+.v11113-recovery-item small { color: var(--wh-text-muted, #64748b); }
+.v11113-recovery-item button {
+  flex: 0 0 auto;
+  min-height: 40px;
+  border: 0;
+  border-radius: 9px;
+  padding: 8px 13px;
+  background: var(--wh-accent, #0f6292);
+  color: #fff;
+  font: inherit;
+  font-weight: 850;
+  cursor: pointer;
+}
+.v11113-recovery-empty,
+.v11113-recovery-loading,
+.v11113-recovery-error {
+  min-height: 150px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 6px;
+  padding: 24px;
+  border: 1px dashed var(--wh-border, #d9e2ec);
+  border-radius: 13px;
+  color: var(--wh-text-muted, #64748b);
+  text-align: center;
+}
+.v11113-recovery-empty > span { font-size: 28px; }
+.v11113-recovery-empty strong { color: var(--wh-text, #111827); }
+
+@media (max-width: 768px) {
+  .v11113-stay-dates-fields { grid-template-columns: 1fr; }
+  .v11113-stay-dates-actions button { flex: 1 1 0; }
+  #calendar .v11113-calendar-sync-button {
+    padding: 6px 8px;
+    font-size: 10px !important;
+  }
+  .v11113-audit-header-actions {
+    width: 100%;
+    justify-content: stretch;
+  }
+  .v11113-audit-header-actions > button { flex: 1 1 0; }
+  .v11113-recovery-item {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .v11113-recovery-item button { width: 100%; }
+}
