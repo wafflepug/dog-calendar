@@ -19,7 +19,7 @@
 })(typeof self !== "undefined" ? self : window);
 
 /*
- * V11.1 release loader + focused follow-ups through V11.1.10.
+ * V11.1 release loader + focused follow-ups through V11.1.11.
  * This file is also imported by the service worker, so browser DOM access is
  * deliberately guarded. Each patch loads after the previous layer.
  */
@@ -35,12 +35,27 @@
     document.head.appendChild(stylesheet);
   }
 
+  function loadV11111Script() {
+    if (document.querySelector('script[data-waffle-v11111]')) return;
+    var patch = document.createElement("script");
+    patch.src = "waffle-v11.1.11.js?v=11.1.11";
+    patch.async = false;
+    patch.setAttribute("data-waffle-v11111", "js");
+    document.body.appendChild(patch);
+  }
+
   function loadV11110Script() {
-    if (document.querySelector('script[data-waffle-v11110]')) return;
+    var existing = document.querySelector('script[data-waffle-v11110]');
+    if (existing) {
+      existing.addEventListener("load", loadV11111Script, { once: true });
+      setTimeout(loadV11111Script, 500);
+      return;
+    }
     var patch = document.createElement("script");
     patch.src = "waffle-v11.1.10.js?v=11.1.10";
     patch.async = false;
     patch.setAttribute("data-waffle-v11110", "js");
+    patch.addEventListener("load", loadV11111Script, { once: true });
     document.body.appendChild(patch);
   }
 
@@ -174,6 +189,7 @@
     ensureStylesheet('link[data-waffle-v1117]', "waffle-v11.1.7.css?v=11.1.7", "data-waffle-v1117");
     ensureStylesheet('link[data-waffle-v1118]', "waffle-v11.1.8.css?v=11.1.8", "data-waffle-v1118");
     ensureStylesheet('link[data-waffle-v11110]', "waffle-v11.1.10.css?v=11.1.10", "data-waffle-v11110");
+    ensureStylesheet('link[data-waffle-v11111]', "waffle-v11.1.11.css?v=11.1.11", "data-waffle-v11111");
 
     var existingBase = document.querySelector('script[data-waffle-v111]');
     if (!existingBase) {
