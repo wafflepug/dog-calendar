@@ -158,9 +158,9 @@
   }
 })();
 
-/* V11.1.18 centered mobile modal follow-up + V11.1.19 mobile Calendar cleanup.
-   Load from the final mobile patch layer so the recovery service worker and
-   main Firebase loader stay untouched. */
+/* V11.1.18 centered mobile modal follow-up + V11.1.19 mobile Calendar cleanup
+   + V11.1.20 modern visual system. Load from the final mobile patch layer so
+   the recovery service worker and main Firebase loader stay untouched. */
 (function () {
   if (typeof window === 'undefined' || typeof document === 'undefined') return;
 
@@ -178,6 +178,14 @@
       stylesheet.rel = 'stylesheet';
       stylesheet.href = 'waffle-v11.1.19.css?v=11.1.19.1';
       stylesheet.setAttribute('data-waffle-v11119', 'css');
+      document.head.appendChild(stylesheet);
+    }
+
+    if (!document.querySelector('link[data-waffle-v11120-modern]')) {
+      const stylesheet = document.createElement('link');
+      stylesheet.rel = 'stylesheet';
+      stylesheet.href = 'waffle-v11.1.20.css?v=11.1.20';
+      stylesheet.setAttribute('data-waffle-v11120-modern', 'css');
       document.head.appendChild(stylesheet);
     }
 
