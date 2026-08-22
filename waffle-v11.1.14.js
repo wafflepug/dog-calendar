@@ -130,7 +130,7 @@
     if (!document.querySelector('link[data-waffle-v11117]')) {
       const stylesheet = document.createElement('link');
       stylesheet.rel = 'stylesheet';
-      stylesheet.href = 'waffle-v11.1.17.css?v=11.1.17.2';
+      stylesheet.href = 'waffle-v11.1.17.css?v=11.1.17.3';
       stylesheet.setAttribute('data-waffle-v11117', 'css');
       document.head.appendChild(stylesheet);
     }
