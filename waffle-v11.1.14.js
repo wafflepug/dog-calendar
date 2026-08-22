@@ -114,10 +114,29 @@
   }
 })();
 
-/* V11.1.15 organiser planner loader. Kept here so the recovery service worker
- * and the main Firebase loader do not need another cache-sensitive change. */
+/* V11.1.15 organiser planner + V11.1.16 header polish loader. Kept here so
+ * the recovery service worker and the main Firebase loader do not need another
+ * cache-sensitive change. */
 (function () {
   if (typeof window === 'undefined' || typeof document === 'undefined') return;
+
+  function loadV11116Assets() {
+    if (!document.querySelector('link[data-waffle-v11116]')) {
+      const stylesheet = document.createElement('link');
+      stylesheet.rel = 'stylesheet';
+      stylesheet.href = 'waffle-v11.1.16.css?v=11.1.16';
+      stylesheet.setAttribute('data-waffle-v11116', 'css');
+      document.head.appendChild(stylesheet);
+    }
+
+    if (!document.querySelector('script[data-waffle-v11116]')) {
+      const script = document.createElement('script');
+      script.src = 'waffle-v11.1.16.js?v=11.1.16';
+      script.async = false;
+      script.setAttribute('data-waffle-v11116', 'js');
+      document.body.appendChild(script);
+    }
+  }
 
   function loadOrganiserAssets() {
     if (!document.querySelector('link[data-waffle-v11115]')) {
@@ -128,13 +147,19 @@
       document.head.appendChild(stylesheet);
     }
 
-    if (!document.querySelector('script[data-waffle-v11115]')) {
-      const script = document.createElement('script');
-      script.src = 'waffle-v11.1.15.js?v=11.1.15';
-      script.async = false;
-      script.setAttribute('data-waffle-v11115', 'js');
-      document.body.appendChild(script);
+    const existing = document.querySelector('script[data-waffle-v11115]');
+    if (existing) {
+      existing.addEventListener('load', loadV11116Assets, { once: true });
+      setTimeout(loadV11116Assets, 500);
+      return;
     }
+
+    const script = document.createElement('script');
+    script.src = 'waffle-v11.1.15.js?v=11.1.15';
+    script.async = false;
+    script.setAttribute('data-waffle-v11115', 'js');
+    script.addEventListener('load', loadV11116Assets, { once: true });
+    document.body.appendChild(script);
   }
 
   if (document.readyState === 'loading') {
