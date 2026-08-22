@@ -31,6 +31,20 @@
     isolation: isolate;
   }
 
+  /* The app shell already provides the fixed footer surface. Keep only one
+     visible navigation bar by removing this nav's second rounded panel. */
+  body .v1118-mobile-nav,
+  body .v1118-mobile-nav.v11117-mobile-nav-fixed,
+  body.dark-theme .v1118-mobile-nav,
+  body.dark-theme .v1118-mobile-nav.v11117-mobile-nav-fixed {
+    background: transparent !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
   /* Reserve enough room that the fixed nav never hides the last page card. */
   body {
     padding-bottom: calc(86px + env(safe-area-inset-bottom)) !important;
