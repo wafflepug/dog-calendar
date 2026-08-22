@@ -1,0 +1,16 @@
+/* ============================================================
+   WAFFLE HOUSE V11.1.10 — MEET & GREET PRIORITY IS INFORMATIONAL
+   ============================================================ */
+
+#v1118AttentionPanel .v1118-attention-item.v11110-informational {
+  grid-template-columns: 34px minmax(0, 1fr);
+  cursor: default;
+}
+
+#v1118AttentionPanel .v1118-attention-item.v11110-informational:hover {
+  border-color: #f3dcc7;
+}
+
+body.dark-theme #v1118AttentionPanel .v1118-attention-item.v11110-informational:hover {
+  border-color: var(--v1118-border, #334155);
+}
