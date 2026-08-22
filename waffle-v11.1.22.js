@@ -45,9 +45,6 @@
     let button = document.getElementById('v10QuickAddButton');
     if (!button) return null;
 
-    /* The original floating Add button had its own direct click listener while
-       V11.1.8 introduced a second delegated Add trigger. Clone once to remove
-       the old direct listener and keep one canonical delegated action path. */
     if (button.dataset.v11122CanonicalAdd !== 'true') {
       const replacement = button.cloneNode(true);
       replacement.dataset.v11122CanonicalAdd = 'true';
@@ -119,9 +116,6 @@
   }
 
   function apply() {
-    /* V11.1.8 historically generated a second five-button mobile footer.
-       Remove that duplicate and promote the original .app-tabs navigation as
-       the one canonical navigation surface at every viewport width. */
     removeGeneratedMobileNav();
     prepareCanonicalNav();
     removeGeneratedMobileNav();
@@ -129,9 +123,6 @@
 
   function start() {
     apply();
-
-    /* Bounded startup passes cover the older quick-add/nav startup order.
-       No MutationObserver or open-ended polling is used. */
     [40, 120, 300, 700, 1400, 2400].forEach(delay => setTimeout(apply, delay));
 
     window.addEventListener('pageshow', apply);
@@ -153,17 +144,32 @@
   }
 })();
 
-/* Phase 3 continues the cleanup chain without touching the recovery-sensitive
-   Firebase/service-worker loader. */
+/* Phase 3 continues the cleanup chain. The inline branding patch loads only
+   after Phase 3 so it is the final authority for the header logo. */
 (function () {
   if (typeof window === 'undefined' || typeof document === 'undefined') return;
 
+  function loadInlineBrand() {
+    if (document.querySelector('script[data-waffle-v11127-brand]')) return;
+    const brand = document.createElement('script');
+    brand.src = 'waffle-v11.1.27-brand.js?v=11.1.27';
+    brand.async = false;
+    brand.setAttribute('data-waffle-v11127-brand', 'js');
+    document.body.appendChild(brand);
+  }
+
   function loadV11123Cleanup() {
-    if (document.querySelector('script[data-waffle-v11123-cleanup]')) return;
+    if (document.querySelector('script[data-waffle-v11123-cleanup]')) {
+      loadInlineBrand();
+      return;
+    }
+
     const script = document.createElement('script');
-    script.src = 'waffle-v11.1.23.js?v=11.1.26';
+    script.src = 'waffle-v11.1.23.js?v=11.1.27';
     script.async = false;
     script.setAttribute('data-waffle-v11123-cleanup', 'js');
+    script.addEventListener('load', loadInlineBrand, { once: true });
+    script.addEventListener('error', loadInlineBrand, { once: true });
     document.body.appendChild(script);
   }
 
