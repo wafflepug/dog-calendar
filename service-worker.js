@@ -1,6 +1,6 @@
 /* Waffle House Boarding — recovery service worker */
 
-const WAFFLE_SW_VERSION = 'v11.1.4-recovery';
+const WAFFLE_SW_VERSION = 'v11.1.24-branding';
 const WAFFLE_CACHE_PREFIX = 'waffle-house-';
 const APP_SHELL_CACHE = `${WAFFLE_CACHE_PREFIX}shell-${WAFFLE_SW_VERSION}`;
 const RUNTIME_CACHE = `${WAFFLE_CACHE_PREFIX}runtime-${WAFFLE_SW_VERSION}`;
@@ -13,12 +13,13 @@ const APP_SHELL = [
   './audit.html',
   './waffle-app.css?v=11.0.5',
   './waffle-app.js?v=11.0.5',
-  './waffle-logo.png',
-  './manifest.webmanifest?v=11.0.5',
-  './pwa-icon-192.png?v=11.0.5',
-  './pwa-icon-512.png?v=11.0.5',
-  './pwa-maskable-512.png?v=11.0.5',
-  './pwa-apple-touch-icon.png?v=11.0.5',
+  './waffle-logo.png?v=11.1.24',
+  './waffle-logo-dark.png?v=11.1.24',
+  './manifest.webmanifest?v=11.1.24',
+  './pwa-icon-192.png?v=11.1.24',
+  './pwa-icon-512.png?v=11.1.24',
+  './pwa-maskable-512.png?v=11.1.24',
+  './pwa-apple-touch-icon.png?v=11.1.24',
   './waffle-firebase-config.js?v=11.1.4-recovery',
   './waffle-v10.8.css?v=11.0.5',
   './waffle-v10.8.js?v=11.0.5',
@@ -77,8 +78,8 @@ try {
       const data = payload && payload.data ? payload.data : {};
       self.registration.showNotification(data.title || '🐾 Waffle House', {
         body: data.body || 'Waffle House has an update.',
-        icon: './pwa-icon-192.png?v=11.0.5',
-        badge: './pwa-icon-192.png?v=11.0.5',
+        icon: './pwa-icon-192.png?v=11.1.24',
+        badge: './pwa-icon-192.png?v=11.1.24',
         tag: data.tag || data.category || 'waffle-update',
         renotify: true,
         data: { link: data.link || 'index.html' }
