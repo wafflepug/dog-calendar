@@ -122,3 +122,64 @@
     start();
   }
 })();
+
+/* ============================================================
+   BRAND REFRESH — LIGHT / DARK HEADER LOGOS + PWA CACHE BUST
+   ============================================================ */
+(function () {
+  'use strict';
+
+  const BRAND_VERSION = '11.1.24';
+  const LIGHT_LOGO = `waffle-logo.png?v=${BRAND_VERSION}`;
+  const DARK_LOGO = `waffle-logo-dark.png?v=${BRAND_VERSION}`;
+
+  function syncHeaderBranding() {
+    const dark = document.body?.classList.contains('dark-theme');
+    const source = dark ? DARK_LOGO : LIGHT_LOGO;
+
+    document.querySelectorAll('img.calendar-brand-img, img.calendar-brand-logo').forEach(img => {
+      if (img.getAttribute('src') !== source) img.setAttribute('src', source);
+      img.setAttribute('data-waffle-brand-mode', dark ? 'dark' : 'light');
+    });
+  }
+
+  function syncPwaMetadata() {
+    const manifest = document.querySelector('link[rel="manifest"]');
+    if (manifest) manifest.href = `manifest.webmanifest?v=${BRAND_VERSION}`;
+
+    document.querySelectorAll('link[rel~="icon"]').forEach(link => {
+      link.href = `pwa-icon-192.png?v=${BRAND_VERSION}`;
+    });
+
+    document.querySelectorAll('link[rel="apple-touch-icon"]').forEach(link => {
+      link.href = `pwa-apple-touch-icon.png?v=${BRAND_VERSION}`;
+    });
+  }
+
+  function applyBranding() {
+    syncHeaderBranding();
+    syncPwaMetadata();
+  }
+
+  function startBranding() {
+    applyBranding();
+
+    if (document.body && typeof MutationObserver === 'function') {
+      const observer = new MutationObserver(mutations => {
+        if (mutations.some(mutation => mutation.attributeName === 'class')) {
+          syncHeaderBranding();
+        }
+      });
+      observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+    }
+
+    window.addEventListener('pageshow', applyBranding);
+    window.waffleBrandingVersion = BRAND_VERSION;
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', startBranding, { once: true });
+  } else {
+    startBranding();
+  }
+})();
