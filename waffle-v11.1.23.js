@@ -124,20 +124,41 @@
 })();
 
 /* ============================================================
-   BRAND REFRESH — LIGHT / DARK HEADER LOGOS + PWA CACHE BUST
+   BRAND REFRESH — TRANSPARENT LIGHT / DARK HEADER LOGOS
    ============================================================ */
 (function () {
   'use strict';
 
-  const BRAND_VERSION = '11.1.25';
+  const BRAND_VERSION = '11.1.26';
   const REPO_RAW_BASE = 'https://raw.githubusercontent.com/wafflepug/dog-calendar/main/';
+  const LOGO_STYLE_ID = 'waffleThemeLogoTransparentStyle';
+
+  function ensureTransparentLogoStyle() {
+    if (document.getElementById(LOGO_STYLE_ID)) return;
+
+    const style = document.createElement('style');
+    style.id = LOGO_STYLE_ID;
+    style.textContent = `
+      img.calendar-brand-img,
+      img.calendar-brand-logo,
+      body.dark-theme img.calendar-brand-logo {
+        background: transparent !important;
+        background-color: transparent !important;
+        box-shadow: none !important;
+        border: 0 !important;
+        padding: 0 !important;
+        border-radius: 0 !important;
+        object-fit: contain !important;
+      }
+    `;
+    document.head.appendChild(style);
+  }
 
   function logoCandidates(dark) {
     const file = dark ? 'waffle-logo-dark.png' : 'waffle-logo.png';
     return [
       `${file}?v=${BRAND_VERSION}`,
-      `${REPO_RAW_BASE}${file}?v=${BRAND_VERSION}`,
-      `pwa-icon-192.png?v=${BRAND_VERSION}`
+      `${REPO_RAW_BASE}${file}?v=${BRAND_VERSION}`
     ];
   }
 
@@ -149,13 +170,26 @@
     const currentMode = String(img.dataset.waffleBrandMode || '');
     const currentVersion = String(img.dataset.waffleBrandVersion || '');
 
+    img.style.setProperty('background', 'transparent', 'important');
+    img.style.setProperty('background-color', 'transparent', 'important');
+    img.style.setProperty('box-shadow', 'none', 'important');
+    img.style.setProperty('border', '0', 'important');
+    img.style.setProperty('padding', '0', 'important');
+    img.style.setProperty('object-fit', 'contain', 'important');
+
     if (currentMode === mode && currentVersion === BRAND_VERSION && img.complete && img.naturalWidth > 0) {
+      img.style.visibility = 'visible';
       return;
     }
 
     img.dataset.waffleBrandMode = mode;
     img.dataset.waffleBrandVersion = BRAND_VERSION;
     img.dataset.waffleBrandFallbackIndex = '0';
+    img.style.visibility = 'hidden';
+
+    img.onload = function () {
+      this.style.visibility = 'visible';
+    };
 
     img.onerror = function () {
       const nextIndex = Number(this.dataset.waffleBrandFallbackIndex || '0') + 1;
@@ -166,13 +200,18 @@
         return;
       }
 
+      /* Never fall back to the opposite-theme PWA icon. If both copies of the
+         requested theme logo fail, hide the image rather than showing the
+         wrong badge or exposing broken-image alt text. */
       this.onerror = null;
+      this.style.visibility = 'hidden';
     };
 
     img.src = sources[0];
   }
 
   function syncHeaderBranding() {
+    ensureTransparentLogoStyle();
     const dark = document.body?.classList.contains('dark-theme');
 
     document.querySelectorAll('img.calendar-brand-img, img.calendar-brand-logo').forEach(img => {
@@ -208,6 +247,14 @@
         }
       });
       observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+    }
+
+    const themeToggle = document.getElementById('themeToggle');
+    if (themeToggle) {
+      themeToggle.addEventListener('click', () => {
+        requestAnimationFrame(syncHeaderBranding);
+        setTimeout(syncHeaderBranding, 40);
+      });
     }
 
     window.addEventListener('pageshow', applyBranding);
