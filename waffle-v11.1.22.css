@@ -121,8 +121,19 @@ nav#v1118MobileNav:not(.app-tabs) {
     background: var(--v1118-primary, #0f6292) !important;
     color: #fff !important;
     box-shadow: 0 5px 16px rgba(15, 98, 146, .32) !important;
-    font-size: 27px !important;
-    line-height: 1 !important;
+    font-size: 25px !important;
+    line-height: .82 !important;
+  }
+
+  body .app-tabs.v11122-unified-nav > .v10-quick-add-button.v1088-nav-quick-add::after {
+    content: "Add";
+    display: block;
+    margin-top: 2px;
+    color: #fff;
+    font-size: 8px;
+    font-weight: 850;
+    line-height: 1;
+    letter-spacing: 0;
   }
 
   body.dark-theme .app-tabs.v11122-unified-nav {
