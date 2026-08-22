@@ -1,0 +1,763 @@
+/* ============================================================
+   WAFFLE HOUSE V11.1.20 — MODERN OPERATIONS VISUAL REFRESH
+   Presentation only: Calendar, Care, Profile, Organiser, Notifications
+   ============================================================ */
+
+:root {
+  --v11120-radius-sm: 12px;
+  --v11120-radius: 18px;
+  --v11120-radius-lg: 24px;
+  --v11120-shadow-sm: 0 4px 14px rgba(15, 23, 42, .06);
+  --v11120-shadow: 0 10px 30px rgba(15, 23, 42, .08);
+  --v11120-shadow-lg: 0 22px 60px rgba(15, 23, 42, .14);
+  --v11120-blue-soft: color-mix(in srgb, var(--wh-accent, #0f6292) 8%, var(--wh-surface, #fff));
+  --v11120-green-soft: color-mix(in srgb, var(--wh-success, #88d49e) 14%, var(--wh-surface, #fff));
+  --v11120-warm-soft: color-mix(in srgb, #f59e0b 9%, var(--wh-surface, #fff));
+}
+
+body.dark-theme {
+  --v11120-shadow-sm: 0 5px 16px rgba(0, 0, 0, .16);
+  --v11120-shadow: 0 12px 34px rgba(0, 0, 0, .22);
+  --v11120-shadow-lg: 0 24px 70px rgba(0, 0, 0, .38);
+}
+
+/* ---------- Shared polish ---------- */
+body[data-waffle-page] .container {
+  border-radius: var(--v11120-radius-lg) !important;
+}
+
+body[data-waffle-page] button,
+body[data-waffle-page] a,
+body[data-waffle-page] input,
+body[data-waffle-page] select,
+body[data-waffle-page] textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+
+body[data-waffle-page] button:focus-visible,
+body[data-waffle-page] a:focus-visible,
+body[data-waffle-page] input:focus-visible,
+body[data-waffle-page] select:focus-visible,
+body[data-waffle-page] textarea:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--wh-accent, #0f6292) 24%, transparent) !important;
+  outline-offset: 2px;
+}
+
+/* ============================================================
+   CALENDAR / OPERATIONS HOME
+   ============================================================ */
+body[data-waffle-page="calendar"] .v10-operations-home {
+  display: grid;
+  gap: 18px;
+}
+
+body[data-waffle-page="calendar"] .v10-ops-heading {
+  margin-bottom: 2px;
+}
+
+body[data-waffle-page="calendar"] .v10-ops-heading h1 {
+  margin-top: 4px !important;
+  font-size: clamp(28px, 3vw, 38px) !important;
+  line-height: 1.02 !important;
+  letter-spacing: -.035em;
+}
+
+body[data-waffle-page="calendar"] .v10-ops-heading p,
+body[data-waffle-page="calendar"] .v10-ops-heading > span {
+  color: var(--wh-text-muted, #475569) !important;
+}
+
+body[data-waffle-page="calendar"] .v10-stat-grid {
+  gap: 12px !important;
+}
+
+body[data-waffle-page="calendar"] .v10-stat-card {
+  min-height: 108px !important;
+  padding: 17px 18px !important;
+  border: 1px solid color-mix(in srgb, var(--wh-border, #d9e2ec) 72%, transparent) !important;
+  border-radius: var(--v11120-radius) !important;
+  background:
+    linear-gradient(145deg, color-mix(in srgb, var(--wh-surface, #fff) 98%, var(--wh-accent, #0f6292)), var(--wh-surface, #fff)) !important;
+  box-shadow: var(--v11120-shadow-sm) !important;
+  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease !important;
+}
+
+body[data-waffle-page="calendar"] .v10-stat-card:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--wh-accent, #0f6292) 24%, var(--wh-border, #d9e2ec)) !important;
+  box-shadow: var(--v11120-shadow) !important;
+}
+
+body[data-waffle-page="calendar"] .v10-stat-card::after {
+  right: 14px !important;
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--wh-surface-soft, #f8fafc);
+  font-size: 18px !important;
+  opacity: .72 !important;
+}
+
+body[data-waffle-page="calendar"] .v10-stat-icon {
+  width: 48px !important;
+  height: 48px !important;
+  border-radius: 15px !important;
+  background: var(--v11120-blue-soft) !important;
+  font-size: 23px !important;
+}
+
+body[data-waffle-page="calendar"] .v10-stat-card strong {
+  font-size: 30px !important;
+  line-height: .95 !important;
+  letter-spacing: -.04em;
+}
+
+body[data-waffle-page="calendar"] .v10-stat-card > span:last-child {
+  margin-top: 4px;
+  color: var(--wh-text-muted, #475569) !important;
+  font-size: 10px !important;
+  font-weight: 850 !important;
+  letter-spacing: .035em;
+}
+
+body[data-waffle-page="calendar"] .v10-ops-card {
+  border: 1px solid color-mix(in srgb, var(--wh-border, #d9e2ec) 72%, transparent) !important;
+  border-radius: var(--v11120-radius-lg) !important;
+  background: var(--wh-surface, #fff) !important;
+  box-shadow: var(--v11120-shadow-sm) !important;
+}
+
+body[data-waffle-page="calendar"] .v10-card-heading {
+  padding-bottom: 4px;
+}
+
+body[data-waffle-page="calendar"] .v10-card-heading h2 {
+  letter-spacing: -.025em;
+}
+
+body[data-waffle-page="calendar"] .v10-card-kicker,
+body[data-waffle-page="calendar"] .v10-eyebrow {
+  font-size: 10px !important;
+  letter-spacing: .09em !important;
+}
+
+body[data-waffle-page="calendar"] .v10-capacity-strip,
+body[data-waffle-page="calendar"] .v108-meet-strip {
+  gap: 9px !important;
+  padding: 3px 1px 5px;
+}
+
+body[data-waffle-page="calendar"] .v10-capacity-day,
+body[data-waffle-page="calendar"] .v108-meet-day {
+  min-height: 82px !important;
+  border: 1px solid color-mix(in srgb, var(--wh-border, #d9e2ec) 68%, transparent) !important;
+  border-radius: 15px !important;
+  background: var(--wh-surface-soft, #f8fafc) !important;
+  box-shadow: none !important;
+  transition: transform .16s ease, background .16s ease, border-color .16s ease !important;
+}
+
+body[data-waffle-page="calendar"] .v10-capacity-day:hover,
+body[data-waffle-page="calendar"] .v108-meet-day:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--wh-accent, #0f6292) 25%, var(--wh-border, #d9e2ec)) !important;
+  background: var(--v11120-blue-soft) !important;
+}
+
+body[data-waffle-page="calendar"] .v1118-attention-panel {
+  margin: 2px 0 0 !important;
+  padding: 17px !important;
+  border: 1px solid color-mix(in srgb, #f59e0b 24%, var(--wh-border, #d9e2ec)) !important;
+  border-radius: var(--v11120-radius-lg) !important;
+  background: var(--v11120-warm-soft) !important;
+  box-shadow: none !important;
+}
+
+body[data-waffle-page="calendar"] .v1118-attention-item {
+  min-height: 58px;
+  padding: 11px 12px !important;
+  border: 0 !important;
+  border-radius: 14px !important;
+  background: color-mix(in srgb, var(--wh-surface, #fff) 94%, transparent) !important;
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--wh-border, #d9e2ec) 55%, transparent);
+}
+
+/* ============================================================
+   CARE DIRECTORY
+   ============================================================ */
+.directory-dashboard-fused {
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.directory-dashboard-header {
+  margin-bottom: 18px !important;
+}
+
+.directory-dashboard-header h3 {
+  border: 0 !important;
+  padding: 0 !important;
+  font-size: clamp(21px, 2.2vw, 28px) !important;
+  letter-spacing: -.025em;
+}
+
+.guest-directory-toolbar,
+.directory-toolbar,
+.directory-fused-toolbar {
+  border-radius: var(--v11120-radius) !important;
+  background: var(--wh-surface, #fff) !important;
+  box-shadow: var(--v11120-shadow-sm);
+}
+
+.directory-grid-fused,
+.directory-grid {
+  gap: 16px !important;
+}
+
+.directory-card:not(.is-profile-active) {
+  border: 1px solid color-mix(in srgb, var(--wh-border, #d9e2ec) 64%, transparent) !important;
+  border-radius: var(--v11120-radius) !important;
+  background: var(--wh-surface, #fff) !important;
+  box-shadow: var(--v11120-shadow-sm) !important;
+  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease !important;
+}
+
+.directory-card:not(.is-profile-active):hover {
+  transform: translateY(-2px);
+  box-shadow: var(--v11120-shadow) !important;
+  border-color: color-mix(in srgb, var(--wh-accent, #0f6292) 20%, var(--wh-border, #d9e2ec)) !important;
+}
+
+.directory-card:not(.is-profile-active) .directory-photo-shell,
+.directory-card:not(.is-profile-active) .directory-guest-tile-photo {
+  border-radius: 16px !important;
+  overflow: hidden !important;
+}
+
+.directory-card-header {
+  gap: 13px !important;
+}
+
+.directory-name-row h4,
+.directory-card h4 {
+  border-bottom: 0 !important;
+  padding-bottom: 0 !important;
+  font-size: 17px !important;
+  letter-spacing: -.018em;
+}
+
+.directory-card .v1118-status-chip {
+  min-height: 24px;
+  padding: 5px 8px;
+  border: 0;
+  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, .06);
+}
+
+.v1118-care-signals > span {
+  width: 30px !important;
+  height: 30px !important;
+  border: 2px solid rgba(255,255,255,.84) !important;
+  box-shadow: 0 4px 12px rgba(15,23,42,.18) !important;
+}
+
+/* ============================================================
+   DOG PROFILE
+   ============================================================ */
+.directory-card.is-profile-active {
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.directory-card.is-profile-active .directory-profile-content {
+  padding-top: 8px !important;
+}
+
+.directory-profile-back-bar {
+  padding: 10px 12px !important;
+  border: 1px solid color-mix(in srgb, var(--wh-border, #d9e2ec) 70%, transparent) !important;
+  border-radius: 16px !important;
+  background: color-mix(in srgb, var(--wh-surface, #fff) 95%, transparent) !important;
+  box-shadow: var(--v11120-shadow-sm) !important;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.directory-profile-back-btn {
+  border: 0 !important;
+  border-radius: 12px !important;
+  background: var(--wh-surface-soft, #f8fafc) !important;
+}
+
+.directory-main-profile-tabs {
+  gap: 6px !important;
+  padding: 5px !important;
+  border: 1px solid color-mix(in srgb, var(--wh-border, #d9e2ec) 70%, transparent) !important;
+  border-radius: 15px !important;
+  background: var(--wh-surface-soft, #f8fafc) !important;
+}
+
+.directory-main-profile-tab {
+  border: 0 !important;
+  border-radius: 11px !important;
+  background: transparent !important;
+  transition: background .16s ease, color .16s ease !important;
+}
+
+.directory-main-profile-tab.is-active {
+  background: var(--wh-surface, #fff) !important;
+  color: var(--wh-accent, #0f6292) !important;
+  box-shadow: 0 3px 10px rgba(15, 23, 42, .08) !important;
+}
+
+.directory-profile-subtabs {
+  gap: 7px !important;
+}
+
+.directory-profile-subtab {
+  border-radius: 999px !important;
+}
+
+.directory-profile-section,
+.v110-master-hero,
+.v110-operation-bar,
+.v1115-profile-source-card {
+  border: 1px solid color-mix(in srgb, var(--wh-border, #d9e2ec) 68%, transparent) !important;
+  border-radius: var(--v11120-radius) !important;
+  box-shadow: var(--v11120-shadow-sm) !important;
+}
+
+.directory-profile-section {
+  margin-top: 16px !important;
+  overflow: clip !important;
+}
+
+.directory-profile-section-heading {
+  padding: 15px 16px !important;
+  border-bottom: 1px solid color-mix(in srgb, var(--wh-border, #d9e2ec) 58%, transparent) !important;
+  background: transparent !important;
+}
+
+.directory-profile-section-heading h4 {
+  font-size: 15px !important;
+  letter-spacing: -.015em;
+}
+
+.v110-operation-bar {
+  padding: 14px 15px !important;
+  background: linear-gradient(135deg, var(--v11120-blue-soft), var(--wh-surface, #fff)) !important;
+}
+
+.v110-operation-icon {
+  width: 46px !important;
+  height: 46px !important;
+  border-radius: 14px !important;
+}
+
+.v110-master-hero {
+  padding: 17px !important;
+  background: linear-gradient(135deg, var(--v11120-warm-soft), var(--wh-surface, #fff)) !important;
+}
+
+.v110-master-photo {
+  border-radius: 24px !important;
+  box-shadow: 0 10px 28px rgba(15,23,42,.14) !important;
+}
+
+.v1115-profile-source-card {
+  padding: 14px 16px !important;
+  background: var(--wh-surface, #fff) !important;
+}
+
+/* ============================================================
+   ORGANISER
+   ============================================================ */
+.v11115-organiser {
+  gap: 20px !important;
+}
+
+.v11115-organiser-hero {
+  padding: 26px 28px !important;
+  border: 1px solid color-mix(in srgb, var(--wh-accent, #0f6292) 13%, var(--wh-border, #d9e2ec)) !important;
+  border-radius: var(--v11120-radius-lg) !important;
+  background:
+    radial-gradient(circle at 90% 0%, color-mix(in srgb, var(--wh-success, #88d49e) 22%, transparent), transparent 32%),
+    linear-gradient(135deg, var(--v11120-blue-soft), var(--wh-surface, #fff)) !important;
+  box-shadow: var(--v11120-shadow) !important;
+}
+
+.v11115-organiser-hero h1 {
+  font-size: clamp(28px, 3.2vw, 40px) !important;
+  letter-spacing: -.035em;
+}
+
+.v11115-organiser-tabs {
+  gap: 6px !important;
+  padding: 6px !important;
+  border: 1px solid color-mix(in srgb, var(--wh-border, #d9e2ec) 68%, transparent);
+  border-radius: 16px;
+  background: var(--wh-surface, #fff);
+  box-shadow: var(--v11120-shadow-sm);
+}
+
+.v11115-organiser-tabs button {
+  border: 0 !important;
+  border-radius: 11px !important;
+  background: transparent !important;
+}
+
+.v11115-organiser-tabs button.is-active {
+  background: var(--wh-accent, #0f6292) !important;
+  box-shadow: 0 5px 14px color-mix(in srgb, var(--wh-accent, #0f6292) 24%, transparent) !important;
+}
+
+.v11115-summary-grid button,
+.v11115-panel,
+.v11115-target-card,
+.v11115-prep-card,
+.v11115-task,
+.v11115-unassigned {
+  border: 1px solid color-mix(in srgb, var(--wh-border, #d9e2ec) 65%, transparent) !important;
+  border-radius: var(--v11120-radius) !important;
+  background: var(--wh-surface, #fff) !important;
+  box-shadow: var(--v11120-shadow-sm) !important;
+}
+
+.v11115-summary-grid button {
+  min-height: 104px !important;
+  padding: 16px !important;
+  transition: transform .16s ease, box-shadow .16s ease !important;
+}
+
+.v11115-summary-grid button:hover,
+.v11115-target-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--v11120-shadow) !important;
+}
+
+.v11115-summary-grid button > span {
+  width: 46px !important;
+  height: 46px !important;
+  border-radius: 15px !important;
+  background: var(--v11120-blue-soft) !important;
+}
+
+.v11115-panel {
+  padding: 20px !important;
+}
+
+.v11115-target-card,
+.v11115-prep-card {
+  padding: 18px !important;
+}
+
+.v11115-house-status > div,
+.v11115-quick-grid button,
+.v11115-check-grid label {
+  border: 0 !important;
+  border-radius: 14px !important;
+  background: var(--wh-surface-soft, #f8fafc) !important;
+}
+
+.v11115-progress {
+  height: 8px !important;
+}
+
+/* ============================================================
+   NOTIFICATIONS / ACTIVITY CENTRE
+   ============================================================ */
+.v101-notification-centre {
+  border: 1px solid color-mix(in srgb, var(--wh-border, #d9e2ec) 68%, transparent) !important;
+  border-radius: var(--v11120-radius-lg) !important;
+  background: var(--wh-surface, #fff) !important;
+  box-shadow: var(--v11120-shadow-lg) !important;
+}
+
+.v101-notification-tabs {
+  padding: 5px !important;
+  border-radius: 14px !important;
+  background: var(--wh-surface-soft, #f8fafc) !important;
+}
+
+.v101-notification-tab {
+  border-radius: 10px !important;
+}
+
+.v101-notification-feed {
+  gap: 16px !important;
+}
+
+.v101-notification-section {
+  overflow: visible !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+}
+
+.v101-notification-section-heading {
+  padding: 7px 2px 9px !important;
+  border: 0 !important;
+  background: transparent !important;
+}
+
+.v101-notification-section-heading strong {
+  color: var(--wh-text-muted, #475569) !important;
+  font-size: 10px !important;
+  letter-spacing: .09em !important;
+}
+
+.v101-notification-list {
+  gap: 8px !important;
+}
+
+.v101-notification-item {
+  min-height: 64px;
+  padding: 11px 12px !important;
+  border: 1px solid color-mix(in srgb, var(--wh-border, #d9e2ec) 62%, transparent) !important;
+  border-radius: 14px !important;
+  background: var(--wh-surface, #fff) !important;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, .04);
+}
+
+.v101-notification-item:hover {
+  transform: translateY(-1px);
+  background: var(--v11120-blue-soft) !important;
+  box-shadow: var(--v11120-shadow-sm);
+}
+
+.v101-notification-item.is-unread {
+  border-color: color-mix(in srgb, var(--wh-accent, #0f6292) 26%, var(--wh-border, #d9e2ec)) !important;
+  background: var(--v11120-blue-soft) !important;
+}
+
+.v101-notification-item.is-urgent {
+  border-color: color-mix(in srgb, #dc2626 25%, var(--wh-border, #d9e2ec)) !important;
+  background: color-mix(in srgb, #dc2626 5%, var(--wh-surface, #fff)) !important;
+}
+
+.v101-notification-icon {
+  border-radius: 12px !important;
+}
+
+.v101-notification-centre .v1118-attention-panel {
+  margin: 4px 0 16px !important;
+  border: 1px solid color-mix(in srgb, #f59e0b 22%, var(--wh-border, #d9e2ec)) !important;
+  border-radius: var(--v11120-radius) !important;
+  background: var(--v11120-warm-soft) !important;
+  box-shadow: none !important;
+}
+
+/* ============================================================
+   MODALS / FORMS
+   ============================================================ */
+.v108-modal {
+  background: rgba(15, 23, 42, .55) !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+}
+
+.v108-modal-card,
+.v1115-confirm-card {
+  border: 1px solid color-mix(in srgb, var(--wh-border, #d9e2ec) 68%, transparent) !important;
+  border-radius: var(--v11120-radius-lg) !important;
+  box-shadow: var(--v11120-shadow-lg) !important;
+}
+
+.v108-modal-head > button,
+.v1115-confirm-close {
+  width: 40px !important;
+  height: 40px !important;
+  background: var(--wh-surface-soft, #f8fafc) !important;
+}
+
+.v108-form-grid input,
+.v108-form-grid select,
+.v108-form-grid textarea,
+.directory-profile-intake-section .intake-profile-control {
+  border-radius: 12px !important;
+  border-width: 1px !important;
+}
+
+/* ============================================================
+   DARK THEME FINISHING
+   ============================================================ */
+body.dark-theme .v10-stat-card,
+body.dark-theme .v10-ops-card,
+body.dark-theme .directory-card:not(.is-profile-active),
+body.dark-theme .directory-profile-section,
+body.dark-theme .v110-master-hero,
+body.dark-theme .v110-operation-bar,
+body.dark-theme .v1115-profile-source-card,
+body.dark-theme .v11115-organiser-hero,
+body.dark-theme .v11115-summary-grid button,
+body.dark-theme .v11115-panel,
+body.dark-theme .v11115-target-card,
+body.dark-theme .v11115-prep-card,
+body.dark-theme .v11115-task,
+body.dark-theme .v101-notification-item,
+body.dark-theme .v101-notification-centre {
+  border-color: color-mix(in srgb, var(--wh-border, #334155) 82%, transparent) !important;
+}
+
+body.dark-theme .directory-main-profile-tab.is-active {
+  background: var(--wh-surface-muted, #22304a) !important;
+  color: #e5eef7 !important;
+}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width: 768px) {
+  body[data-waffle-page] .container {
+    border-radius: 18px !important;
+  }
+
+  body[data-waffle-page="calendar"] .v10-operations-home {
+    gap: 13px;
+  }
+
+  body[data-waffle-page="calendar"] .v10-ops-heading h1 {
+    font-size: 27px !important;
+  }
+
+  body[data-waffle-page="calendar"] .v10-stat-grid {
+    gap: 8px !important;
+  }
+
+  body[data-waffle-page="calendar"] .v10-stat-card {
+    min-height: 94px !important;
+    padding: 13px !important;
+    border-radius: 16px !important;
+  }
+
+  body[data-waffle-page="calendar"] .v10-stat-icon {
+    width: 43px !important;
+    height: 43px !important;
+    border-radius: 13px !important;
+  }
+
+  body[data-waffle-page="calendar"] .v10-stat-card strong {
+    font-size: 25px !important;
+  }
+
+  body[data-waffle-page="calendar"] .v10-ops-card,
+  body[data-waffle-page="calendar"] .v1118-attention-panel {
+    border-radius: 18px !important;
+  }
+
+  .directory-grid-fused,
+  .directory-grid {
+    gap: 10px !important;
+  }
+
+  .directory-card:not(.is-profile-active) {
+    border-radius: 16px !important;
+  }
+
+  .directory-profile-section,
+  .v110-operation-bar,
+  .v110-master-hero,
+  .v1115-profile-source-card {
+    border-radius: 16px !important;
+  }
+
+  .directory-main-profile-tabs {
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .directory-main-profile-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .v11115-organiser-hero {
+    padding: 20px !important;
+    border-radius: 18px !important;
+  }
+
+  .v11115-organiser-hero h1 {
+    font-size: 28px !important;
+  }
+
+  .v11115-organiser-tabs {
+    position: sticky;
+    top: 8px;
+    z-index: 30;
+    border-radius: 14px;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+  }
+
+  .v11115-summary-grid button,
+  .v11115-panel,
+  .v11115-target-card,
+  .v11115-prep-card,
+  .v11115-task {
+    border-radius: 16px !important;
+  }
+
+  .v101-notification-centre {
+    width: calc(100vw - 20px) !important;
+    max-width: 680px !important;
+    max-height: calc(100dvh - 20px) !important;
+    border-radius: 20px !important;
+  }
+
+  .v101-notification-item {
+    min-height: 68px;
+    border-radius: 13px !important;
+  }
+
+  .v108-modal-card,
+  .v1115-confirm-card {
+    border-radius: 18px !important;
+  }
+}
+
+@media (max-width: 430px) {
+  body[data-waffle-page="calendar"] .v10-stat-card {
+    grid-template-columns: 39px minmax(0, 1fr) !important;
+    padding: 12px 10px !important;
+  }
+
+  body[data-waffle-page="calendar"] .v10-stat-icon {
+    width: 39px !important;
+    height: 39px !important;
+    font-size: 20px !important;
+  }
+
+  body[data-waffle-page="calendar"] .v10-stat-card strong {
+    font-size: 23px !important;
+  }
+
+  body[data-waffle-page="calendar"] .v10-stat-card::after {
+    display: none !important;
+  }
+
+  .v11115-organiser-hero {
+    padding: 18px 16px !important;
+  }
+
+  .v101-notification-centre {
+    width: calc(100vw - 12px) !important;
+    max-height: calc(100dvh - 12px) !important;
+    border-radius: 18px !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body[data-waffle-page="calendar"] .v10-stat-card,
+  body[data-waffle-page="calendar"] .v10-capacity-day,
+  body[data-waffle-page="calendar"] .v108-meet-day,
+  .directory-card,
+  .v11115-summary-grid button,
+  .v11115-target-card,
+  .v101-notification-item {
+    transition: none !important;
+  }
+}
