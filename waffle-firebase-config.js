@@ -19,7 +19,7 @@
 })(typeof self !== "undefined" ? self : window);
 
 /*
- * V11.1 release loader + focused follow-ups through V11.1.13.
+ * V11.1 release loader + focused follow-ups through V11.1.14.
  * This file is also imported by the service worker, so browser DOM access is
  * deliberately guarded. Each patch loads after the previous layer.
  */
@@ -35,12 +35,27 @@
     document.head.appendChild(stylesheet);
   }
 
+  function loadV11114Script() {
+    if (document.querySelector('script[data-waffle-v11114]')) return;
+    var patch = document.createElement("script");
+    patch.src = "waffle-v11.1.14.js?v=11.1.14";
+    patch.async = false;
+    patch.setAttribute("data-waffle-v11114", "js");
+    document.body.appendChild(patch);
+  }
+
   function loadV11113Script() {
-    if (document.querySelector('script[data-waffle-v11113]')) return;
+    var existing = document.querySelector('script[data-waffle-v11113]');
+    if (existing) {
+      existing.addEventListener("load", loadV11114Script, { once: true });
+      setTimeout(loadV11114Script, 500);
+      return;
+    }
     var patch = document.createElement("script");
     patch.src = "waffle-v11.1.13.js?v=11.1.13";
     patch.async = false;
     patch.setAttribute("data-waffle-v11113", "js");
+    patch.addEventListener("load", loadV11114Script, { once: true });
     document.body.appendChild(patch);
   }
 
