@@ -302,3 +302,34 @@
     loadV11123Cleanup();
   }
 })();
+
+/* Ask Waffle v1 is intentionally a separate final frontend layer. It reads the
+   live FullCalendar events and does not mutate bookings, Care or Organiser data. */
+(function () {
+  'use strict';
+  if (typeof window === 'undefined' || typeof document === 'undefined') return;
+
+  function loadAskWaffle() {
+    if (!document.querySelector('link[data-waffle-v11133-assistant]')) {
+      const stylesheet = document.createElement('link');
+      stylesheet.rel = 'stylesheet';
+      stylesheet.href = 'waffle-v11.1.33.css?v=11.1.33';
+      stylesheet.setAttribute('data-waffle-v11133-assistant', 'css');
+      document.head.appendChild(stylesheet);
+    }
+
+    if (!document.querySelector('script[data-waffle-v11133-assistant]')) {
+      const script = document.createElement('script');
+      script.src = 'waffle-v11.1.33.js?v=11.1.33';
+      script.async = false;
+      script.setAttribute('data-waffle-v11133-assistant', 'js');
+      document.body.appendChild(script);
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', loadAskWaffle, { once: true });
+  } else {
+    loadAskWaffle();
+  }
+})();
