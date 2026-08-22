@@ -155,7 +155,7 @@
     }
 
     const script = document.createElement('script');
-    script.src = 'waffle-v11.1.16.js?v=11.1.16';
+    script.src = 'waffle-v11.1.16.js?v=11.1.16.1';
     script.async = false;
     script.setAttribute('data-waffle-v11116', 'js');
     script.addEventListener('load', loadV11117Assets, { once: true });
