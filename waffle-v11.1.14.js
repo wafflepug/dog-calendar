@@ -131,7 +131,7 @@
 
     if (!document.querySelector('script[data-waffle-v11117]')) {
       const script = document.createElement('script');
-      script.src = 'waffle-v11.1.17.js?v=11.1.17.1';
+      script.src = 'waffle-v11.1.17.js?v=11.1.17.2';
       script.async = false;
       script.setAttribute('data-waffle-v11117', 'js');
       document.body.appendChild(script);
