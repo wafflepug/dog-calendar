@@ -1,12 +1,14 @@
 /* ============================================================
    WAFFLE HOUSE V11.1.29 — PR36 REGRESSION HOTFIX
-   CALENDAR LAYOUT + PROFILE TAB ACTIONS
+   CALENDAR LAYOUT + PROFILE TAB ACTIONS + LEGACY PDF INTAKE
    ============================================================ */
 (function () {
   'use strict';
 
   const VERSION = '11.1.29';
   const PROFILE_ORDER = ['profile', 'belongings', 'media', 'history', 'master'];
+  const LEGACY_INTAKE_SELECTOR =
+    '#openLegacyIntakeUploadBtn, [data-upload-legacy-intake], [data-reassign-legacy-intake]';
 
   function pageName() {
     return String(window.WAFFLE_PAGE || document.body?.dataset?.wafflePage || 'calendar');
@@ -201,8 +203,7 @@
     /* Let the historical delegated/direct listeners run first. Then call the
        known canonical routers as a fallback and finally reconcile the visible
        panel. This repairs Profile/Belongings/Media/Master while preserving any
-       specialised History handler that is already attached to its original
-       button node. */
+       specialised History handler already attached to its original node. */
     setTimeout(() => {
       callNativeProfileRouter(card, key);
       syncPanelVisibility(card, key);
@@ -228,16 +229,83 @@
     });
   }
 
+  function restoreLegacyIntakeControls() {
+    if (pageName() !== 'directory') return;
+
+    document.getElementById('v11123LegacyIntakeHistoryNote')?.remove();
+
+    document.querySelectorAll(LEGACY_INTAKE_SELECTOR).forEach(control => {
+      control.hidden = false;
+      control.removeAttribute('aria-hidden');
+      control.removeAttribute('tabindex');
+      control.style.removeProperty('display');
+    });
+
+    if (document.body) document.body.dataset.legacyIntakeMode = 'active';
+  }
+
+  function legacyIntakeUploader() {
+    try {
+      if (typeof window.openLegacyIntakeUploader === 'function') return window.openLegacyIntakeUploader;
+    } catch (_) {}
+
+    try {
+      if (typeof openLegacyIntakeUploader === 'function') return openLegacyIntakeUploader;
+    } catch (_) {}
+
+    return null;
+  }
+
+  function wireLegacyIntakeOverride() {
+    if (window.v11129LegacyIntakeWired) return;
+    window.v11129LegacyIntakeWired = true;
+
+    /* PR #31 installed a document-capture read-only guard. Window capture runs
+       before that guard, so the restored controls can call the original
+       uploader directly without duplicating any upload/backend behaviour. */
+    window.addEventListener('click', event => {
+      if (pageName() !== 'directory') return;
+
+      const target = event.target instanceof Element
+        ? event.target.closest(LEGACY_INTAKE_SELECTOR)
+        : null;
+      if (!target) return;
+
+      const uploader = legacyIntakeUploader();
+      if (!uploader) return;
+
+      event.preventDefault();
+      event.stopImmediatePropagation();
+
+      const card = target.closest('.directory-card');
+      const stayKey = String(card?.dataset?.directoryStayKey || '');
+      const documentId = target.matches('[data-reassign-legacy-intake]')
+        ? String(target.dataset?.legacyDocumentId || '')
+        : '';
+
+      try {
+        if (target.id === 'openLegacyIntakeUploadBtn') uploader();
+        else uploader(stayKey, documentId);
+      } catch (error) {
+        console.error('Legacy PDF Intake could not be opened:', error);
+      }
+    }, true);
+  }
+
   function apply() {
     repairCalendarDensity();
     reorderProfileTabs();
+    restoreLegacyIntakeControls();
   }
 
   function start() {
     wireProfileTabs();
+    wireLegacyIntakeOverride();
     apply();
 
-    [60, 180, 420, 850, 1500, 2600, 4200].forEach(delay => setTimeout(apply, delay));
+    /* The earlier Phase 3 layer has bounded passes through 2.6s. Keep later
+       final passes so its old read-only styling cannot win after V11.1.29. */
+    [60, 180, 420, 850, 1500, 2800, 4200, 5200].forEach(delay => setTimeout(apply, delay));
 
     window.addEventListener('pageshow', apply);
     window.addEventListener('focus', apply);
