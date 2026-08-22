@@ -144,11 +144,28 @@
   }
 })();
 
-/* Phase 3 continues the cleanup chain. The inline branding patch remains the
-   header authority, then V11.1.28 loads last for UI refinements requested on
-   Calendar, Notifications, Profile and Organiser. */
+/* Phase 3 naming/intake compatibility, final branding, V11.1.28 UI refinement
+   and the V11.1.29 PR36 regression hotfix are loaded serially here. */
 (function () {
   if (typeof window === 'undefined' || typeof document === 'undefined') return;
+
+  function loadV11129Hotfix() {
+    if (!document.querySelector('link[data-waffle-v11129-hotfix]')) {
+      const stylesheet = document.createElement('link');
+      stylesheet.rel = 'stylesheet';
+      stylesheet.href = 'waffle-v11.1.29.css?v=11.1.29';
+      stylesheet.setAttribute('data-waffle-v11129-hotfix', 'css');
+      document.head.appendChild(stylesheet);
+    }
+
+    if (!document.querySelector('script[data-waffle-v11129-hotfix]')) {
+      const script = document.createElement('script');
+      script.src = 'waffle-v11.1.29.js?v=11.1.29';
+      script.async = false;
+      script.setAttribute('data-waffle-v11129-hotfix', 'js');
+      document.body.appendChild(script);
+    }
+  }
 
   function loadV11128Refinement() {
     if (!document.querySelector('link[data-waffle-v11128-ui]')) {
@@ -159,13 +176,20 @@
       document.head.appendChild(stylesheet);
     }
 
-    if (!document.querySelector('script[data-waffle-v11128-ui]')) {
-      const script = document.createElement('script');
-      script.src = 'waffle-v11.1.28.js?v=11.1.28';
-      script.async = false;
-      script.setAttribute('data-waffle-v11128-ui', 'js');
-      document.body.appendChild(script);
+    const existing = document.querySelector('script[data-waffle-v11128-ui]');
+    if (existing) {
+      existing.addEventListener('load', loadV11129Hotfix, { once: true });
+      setTimeout(loadV11129Hotfix, 100);
+      return;
     }
+
+    const script = document.createElement('script');
+    script.src = 'waffle-v11.1.28.js?v=11.1.28';
+    script.async = false;
+    script.setAttribute('data-waffle-v11128-ui', 'js');
+    script.addEventListener('load', loadV11129Hotfix, { once: true });
+    script.addEventListener('error', loadV11129Hotfix, { once: true });
+    document.body.appendChild(script);
   }
 
   function loadInlineBrand() {
@@ -177,7 +201,7 @@
     }
 
     const brand = document.createElement('script');
-    brand.src = 'waffle-v11.1.27-brand.js?v=11.1.28';
+    brand.src = 'waffle-v11.1.27-brand.js?v=11.1.29';
     brand.async = false;
     brand.setAttribute('data-waffle-v11127-brand', 'js');
     brand.addEventListener('load', loadV11128Refinement, { once: true });
@@ -193,7 +217,7 @@
     }
 
     const script = document.createElement('script');
-    script.src = 'waffle-v11.1.23.js?v=11.1.28';
+    script.src = 'waffle-v11.1.23.js?v=11.1.29';
     script.async = false;
     script.setAttribute('data-waffle-v11123-cleanup', 'js');
     script.addEventListener('load', loadInlineBrand, { once: true });
