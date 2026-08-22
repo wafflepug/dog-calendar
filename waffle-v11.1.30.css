@@ -1,0 +1,50 @@
+/* ============================================================
+   WAFFLE HOUSE V11.1.30 — CALENDAR + PROFILE REGRESSION RECOVERY
+   ============================================================ */
+
+/* PR #36 loaded late and changed FullCalendar event height after month-lane
+   geometry had already been calculated. Restore the pre-refinement event box
+   sizing so multi-day bars no longer collide with neighbouring rows/dates. */
+#calendar .fc-daygrid-day-events {
+  margin: 0 !important;
+}
+
+#calendar .fc-daygrid-event-harness,
+#calendar .fc-daygrid-event-harness-abs {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+#calendar .fc-daygrid-event {
+  min-height: 0 !important;
+  padding: 0 !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  box-sizing: border-box !important;
+}
+
+/* Keep the compact rounded appearance without changing FullCalendar's measured
+   vertical lane height. */
+#calendar .fc-daygrid-event {
+  border-radius: 5px !important;
+}
+
+/* V11.1.29 is no longer loaded. These declarations are defensive for clients
+   that briefly retain its stylesheet while the new loader is being adopted. */
+.directory-main-profile-tabs .directory-main-profile-tab {
+  pointer-events: auto !important;
+  cursor: pointer !important;
+}
+
+.directory-main-profile-panel[hidden] {
+  display: none !important;
+}
+
+@media (max-width: 768px) {
+  #calendar .fc-daygrid-event {
+    min-height: 0 !important;
+    padding: 0 !important;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+  }
+}
