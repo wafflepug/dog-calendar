@@ -114,11 +114,29 @@
   }
 })();
 
-/* V11.1.15 organiser planner + V11.1.16 header polish loader. Kept here so
- * the recovery service worker and the main Firebase loader do not need another
+/* V11.1.15 organiser planner + later frontend patch loader. Kept here so the
+ * recovery service worker and the main Firebase loader do not need another
  * cache-sensitive change. */
 (function () {
   if (typeof window === 'undefined' || typeof document === 'undefined') return;
+
+  function loadV11117Assets() {
+    if (!document.querySelector('link[data-waffle-v11117]')) {
+      const stylesheet = document.createElement('link');
+      stylesheet.rel = 'stylesheet';
+      stylesheet.href = 'waffle-v11.1.17.css?v=11.1.17';
+      stylesheet.setAttribute('data-waffle-v11117', 'css');
+      document.head.appendChild(stylesheet);
+    }
+
+    if (!document.querySelector('script[data-waffle-v11117]')) {
+      const script = document.createElement('script');
+      script.src = 'waffle-v11.1.17.js?v=11.1.17';
+      script.async = false;
+      script.setAttribute('data-waffle-v11117', 'js');
+      document.body.appendChild(script);
+    }
+  }
 
   function loadV11116Assets() {
     if (!document.querySelector('link[data-waffle-v11116]')) {
@@ -129,13 +147,19 @@
       document.head.appendChild(stylesheet);
     }
 
-    if (!document.querySelector('script[data-waffle-v11116]')) {
-      const script = document.createElement('script');
-      script.src = 'waffle-v11.1.16.js?v=11.1.16';
-      script.async = false;
-      script.setAttribute('data-waffle-v11116', 'js');
-      document.body.appendChild(script);
+    const existing = document.querySelector('script[data-waffle-v11116]');
+    if (existing) {
+      existing.addEventListener('load', loadV11117Assets, { once: true });
+      setTimeout(loadV11117Assets, 350);
+      return;
     }
+
+    const script = document.createElement('script');
+    script.src = 'waffle-v11.1.16.js?v=11.1.16';
+    script.async = false;
+    script.setAttribute('data-waffle-v11116', 'js');
+    script.addEventListener('load', loadV11117Assets, { once: true });
+    document.body.appendChild(script);
   }
 
   function loadOrganiserAssets() {
