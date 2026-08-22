@@ -122,22 +122,43 @@
 
     /* V11.1.28/V11.1.30/V11.1.31 all have delayed Calendar passes. Wrap the
        option setter once so any later attempt to lower/remove the row limit is
-       normalised back to the requested five visible rows. */
+       normalised back to the requested five visible rows. The guard avoids a
+       second FullCalendar render when the effective option is already five. */
     if (!calendar.v11132SetOptionWrapped) {
       const originalSetOption = calendar.setOption.bind(calendar);
       calendar.setOption = function (name, value) {
-        if (name === 'dayMaxEventRows') value = MIN_VISIBLE_ROWS;
+        if (name === 'dayMaxEventRows') {
+          value = MIN_VISIBLE_ROWS;
+          try {
+            if (typeof calendar.getOption === 'function' && calendar.getOption(name) === value) return;
+          } catch (_) {}
+        }
         return originalSetOption(name, value);
       };
       calendar.v11132SetOptionWrapped = true;
     }
 
-    try { calendar.setOption('dayMaxEvents', false); } catch (_) {}
-    try { calendar.setOption('dayMaxEventRows', MIN_VISIBLE_ROWS); } catch (_) {}
+    let changed = false;
 
     try {
-      if (typeof calendar.updateSize === 'function') calendar.updateSize();
+      if (typeof calendar.getOption !== 'function' || calendar.getOption('dayMaxEvents') !== false) {
+        calendar.setOption('dayMaxEvents', false);
+        changed = true;
+      }
     } catch (_) {}
+
+    try {
+      if (typeof calendar.getOption !== 'function' || calendar.getOption('dayMaxEventRows') !== MIN_VISIBLE_ROWS) {
+        calendar.setOption('dayMaxEventRows', MIN_VISIBLE_ROWS);
+        changed = true;
+      }
+    } catch (_) {}
+
+    if (changed) {
+      try {
+        if (typeof calendar.updateSize === 'function') calendar.updateSize();
+      } catch (_) {}
+    }
   }
 
   function renderCapacityDots(calendar) {
