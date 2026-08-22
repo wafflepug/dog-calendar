@@ -1,0 +1,54 @@
+/* ============================================================
+   WAFFLE HOUSE V11.1.29 — PR36 REGRESSION HOTFIX
+   ============================================================ */
+
+/* FullCalendar owns event-harness positioning. V11.1.28 applied margin to
+   these harnesses, which can make multi-day bars visually collide. Remove the
+   manual offset and keep spacing on the rendered event itself only. */
+#calendar .fc-daygrid-event-harness,
+#calendar .fc-daygrid-event-harness-abs {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+#calendar .fc-daygrid-event {
+  margin-top: 1px !important;
+  margin-bottom: 1px !important;
+}
+
+#calendar .fc-daygrid-day-events {
+  margin-top: 2px !important;
+  margin-bottom: 4px !important;
+}
+
+#calendar .fc-daygrid-more-link {
+  position: relative;
+  z-index: 3;
+  margin-top: 3px !important;
+}
+
+/* Keep profile navigation fully interactive after reordering. */
+.directory-main-profile-tabs {
+  position: relative;
+  z-index: 2;
+}
+
+.directory-main-profile-tabs .directory-main-profile-tab {
+  pointer-events: auto !important;
+  cursor: pointer !important;
+}
+
+.directory-main-profile-panel[hidden] {
+  display: none !important;
+}
+
+.directory-main-profile-panel.is-active:not([hidden]) {
+  display: block;
+}
+
+@media (max-width: 768px) {
+  #calendar .fc-daygrid-event {
+    margin-top: 1px !important;
+    margin-bottom: 1px !important;
+  }
+}
