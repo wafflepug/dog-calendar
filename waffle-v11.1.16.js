@@ -224,24 +224,6 @@
     modal.hidden = false;
   }
 
-  function capacityMarkup() {
-    const source = document.getElementById('full-dates-list');
-    if (!source) return '<div class="v11116-calendar-empty"><span>📅</span><strong>Capacity is still loading</strong><small>Try again in a moment.</small></div>';
-    const clone = source.cloneNode(true);
-    clone.removeAttribute('id');
-    clone.classList.add('v11116-capacity-list');
-    return clone.outerHTML;
-  }
-
-  function openCapacityModal() {
-    const modal = ensureSummaryModal();
-    modal.querySelector('[data-v11116-modal-kicker]').textContent = 'CAPACITY';
-    modal.querySelector('[data-v11116-modal-title]').textContent = '📅 Capacity';
-    modal.querySelector('[data-v11116-modal-copy]').textContent = 'Original capacity ranges and boarding levels.';
-    modal.querySelector('[data-v11116-modal-list]').innerHTML = capacityMarkup();
-    modal.hidden = false;
-  }
-
   function wireCalendarSummaryTiles() {
     if (pageName() !== 'calendar' || window.v11116CalendarSummaryWired) return;
     window.v11116CalendarSummaryWired = true;
@@ -260,14 +242,6 @@
         event.preventDefault();
         event.stopImmediatePropagation();
         openPetModal('leaving');
-        return;
-      }
-
-      const capacity = event.target.closest('.v10-capacity-card');
-      if (capacity) {
-        event.preventDefault();
-        event.stopImmediatePropagation();
-        openCapacityModal();
       }
     }, true);
   }
@@ -276,19 +250,15 @@
     if (pageName() !== 'calendar') return;
     const card = document.querySelector('.v10-capacity-card');
     if (!card) return;
-    card.classList.add('v11116-capacity-clickable');
-    card.setAttribute('role', 'button');
-    card.setAttribute('tabindex', '0');
-    card.setAttribute('aria-label', 'Open Capacity details');
-    if (!card.dataset.v11116Keyboard) {
-      card.dataset.v11116Keyboard = 'true';
-      card.addEventListener('keydown', event => {
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault();
-          openCapacityModal();
-        }
-      });
-    }
+
+    /* Capacity stays as the native 7-day Outlook. Do not turn the whole card
+       into a second feature window; individual day interactions remain owned
+       by the underlying Calendar capacity behaviour. */
+    card.classList.remove('v11116-capacity-clickable');
+    card.removeAttribute('role');
+    card.removeAttribute('tabindex');
+    if (card.getAttribute('aria-label') === 'Open Capacity details') card.removeAttribute('aria-label');
+    delete card.dataset.v11116Keyboard;
   }
 
   function apply() {
