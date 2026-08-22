@@ -113,3 +113,33 @@
     start();
   }
 })();
+
+/* V11.1.15 organiser planner loader. Kept here so the recovery service worker
+ * and the main Firebase loader do not need another cache-sensitive change. */
+(function () {
+  if (typeof window === 'undefined' || typeof document === 'undefined') return;
+
+  function loadOrganiserAssets() {
+    if (!document.querySelector('link[data-waffle-v11115]')) {
+      const stylesheet = document.createElement('link');
+      stylesheet.rel = 'stylesheet';
+      stylesheet.href = 'waffle-v11.1.15.css?v=11.1.15';
+      stylesheet.setAttribute('data-waffle-v11115', 'css');
+      document.head.appendChild(stylesheet);
+    }
+
+    if (!document.querySelector('script[data-waffle-v11115]')) {
+      const script = document.createElement('script');
+      script.src = 'waffle-v11.1.15.js?v=11.1.15';
+      script.async = false;
+      script.setAttribute('data-waffle-v11115', 'js');
+      document.body.appendChild(script);
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', loadOrganiserAssets, { once: true });
+  } else {
+    loadOrganiserAssets();
+  }
+})();
