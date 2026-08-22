@@ -1,0 +1,299 @@
+/* ============================================================
+   WAFFLE HOUSE V11.1.28 — OPERATIONS + PROFILE UI REFINEMENT
+   ============================================================ */
+
+/* 1. Dark-mode unread activity: keep every line readable. */
+body.dark-theme .v101-notification-item.is-unread {
+  background: #21314a !important;
+  border-color: #31557c !important;
+  color: #f8fafc !important;
+}
+body.dark-theme .v101-notification-item.is-unread .v101-notification-copy,
+body.dark-theme .v101-notification-item.is-unread .v101-notification-title-row,
+body.dark-theme .v101-notification-item.is-unread .v101-notification-title-row strong,
+body.dark-theme .v101-notification-item.is-unread .v101-notification-copy > span {
+  color: #f8fafc !important;
+}
+body.dark-theme .v101-notification-item.is-unread .v101-notification-copy > small {
+  color: #b9c7d8 !important;
+}
+body.dark-theme .v101-notification-item.is-unread .v101-notification-icon {
+  background: #17243a !important;
+  color: #ffffff !important;
+}
+
+/* 2. Today's Priority must stay inside Notifications and use brand colour. */
+#waffleNotificationModal .v11113-notification-priority {
+  box-sizing: border-box !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  margin: 0 0 14px !important;
+  padding: 16px !important;
+  overflow: hidden !important;
+  border: 1px solid color-mix(in srgb, var(--wh-accent, #0f6292) 34%, var(--wh-border, #d9e2ec)) !important;
+  background: color-mix(in srgb, var(--wh-accent, #0f6292) 9%, var(--wh-surface, #ffffff)) !important;
+}
+#waffleNotificationModal .v11113-notification-priority .v1118-attention-heading {
+  width: 100% !important;
+  min-width: 0 !important;
+}
+#waffleNotificationModal .v11113-notification-priority .v1118-attention-heading small {
+  color: var(--wh-accent, #0f6292) !important;
+}
+#waffleNotificationModal .v11113-notification-priority [data-v1118-attention-count] {
+  background: var(--wh-accent, #0f6292) !important;
+  color: #ffffff !important;
+}
+#waffleNotificationModal .v11113-notification-priority .v1118-attention-list {
+  min-width: 0 !important;
+  width: 100% !important;
+}
+#waffleNotificationModal .v11113-notification-priority .v1118-attention-item {
+  box-sizing: border-box !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  background: var(--wh-surface, #ffffff) !important;
+  border: 1px solid color-mix(in srgb, var(--wh-accent, #0f6292) 18%, var(--wh-border, #d9e2ec)) !important;
+}
+body.dark-theme #waffleNotificationModal .v11113-notification-priority {
+  background: #17283c !important;
+  border-color: #2d5875 !important;
+}
+body.dark-theme #waffleNotificationModal .v11113-notification-priority .v1118-attention-item {
+  background: #22304a !important;
+  border-color: #334862 !important;
+  color: #f8fafc !important;
+}
+body.dark-theme #waffleNotificationModal .v11113-notification-priority .v1118-attention-item strong {
+  color: #f8fafc !important;
+}
+body.dark-theme #waffleNotificationModal .v11113-notification-priority .v1118-attention-item span,
+body.dark-theme #waffleNotificationModal .v11113-notification-priority .v1118-attention-item small {
+  color: #b9c7d8 !important;
+}
+
+/* 3. FullCalendar: cap dense dates at seven visible events, then show +N more. */
+#calendar .fc-daygrid-day-events {
+  margin: 2px 3px 5px !important;
+}
+#calendar .fc-daygrid-event-harness {
+  margin-top: 2px !important;
+}
+#calendar .fc-daygrid-event {
+  min-height: 20px !important;
+  border-radius: 6px !important;
+  padding: 1px 4px !important;
+  overflow: hidden !important;
+}
+#calendar .fc-daygrid-event .fc-event-main {
+  min-width: 0 !important;
+  overflow: hidden !important;
+}
+#calendar .fc-daygrid-event .fc-event-title,
+#calendar .fc-daygrid-event .fc-event-time {
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+#calendar .fc-daygrid-more-link {
+  display: inline-flex !important;
+  align-items: center;
+  min-height: 22px;
+  margin: 3px 3px 1px !important;
+  padding: 3px 7px !important;
+  border-radius: 999px !important;
+  background: color-mix(in srgb, var(--wh-accent, #0f6292) 12%, var(--wh-surface, #ffffff)) !important;
+  color: var(--wh-accent, #0f6292) !important;
+  font-size: 10px !important;
+  font-weight: 850 !important;
+  text-decoration: none !important;
+}
+body.dark-theme #calendar .fc-daygrid-more-link {
+  background: #22304a !important;
+  color: #8ec9ed !important;
+}
+
+/* 4 + 5. One departures modal: Leaving Today first, next-seven-days second. */
+.v11128-departure-card {
+  width: min(720px, calc(100vw - 28px)) !important;
+  max-height: min(86dvh, 820px) !important;
+  overflow: auto !important;
+}
+.v11128-departure-sections {
+  display: grid;
+  gap: 22px;
+  padding: 4px 18px 20px;
+}
+.v11128-departure-section {
+  min-width: 0;
+}
+.v11128-departure-section + .v11128-departure-section {
+  padding-top: 18px;
+  border-top: 1px solid var(--wh-border, #d9e2ec);
+}
+.v11128-section-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.v11128-section-heading > div {
+  min-width: 0;
+}
+.v11128-section-heading small {
+  display: block;
+  color: var(--wh-accent, #0f6292);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .085em;
+  text-transform: uppercase;
+}
+.v11128-section-heading h4 {
+  margin: 3px 0 0;
+  color: var(--wh-text, #111827);
+  font-size: 18px;
+}
+.v11128-section-heading > span {
+  flex: 0 0 auto;
+  display: inline-grid;
+  place-items: center;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--wh-accent, #0f6292) 12%, var(--wh-surface, #fff));
+  color: var(--wh-accent, #0f6292);
+  font-size: 10px;
+  font-weight: 900;
+}
+.v11128-departure-list {
+  display: grid;
+  gap: 9px;
+}
+.v11128-departure-row {
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr) auto;
+  gap: 11px;
+  align-items: center;
+  padding: 11px 12px;
+  border: 1px solid var(--wh-border, #d9e2ec);
+  border-radius: 13px;
+  background: var(--wh-surface-soft, #f8fafc);
+}
+.v11128-departure-icon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--wh-accent, #0f6292) 9%, var(--wh-surface, #fff));
+  font-size: 20px;
+}
+.v11128-departure-copy {
+  min-width: 0;
+}
+.v11128-departure-copy strong,
+.v11128-departure-copy span,
+.v11128-departure-copy small {
+  display: block;
+}
+.v11128-departure-copy strong {
+  color: var(--wh-text, #111827);
+  font-size: 13px;
+}
+.v11128-departure-copy span,
+.v11128-departure-copy small {
+  margin-top: 2px;
+  color: var(--wh-text-muted, #64748b);
+  font-size: 10px;
+}
+.v11128-departure-date {
+  color: var(--wh-accent, #0f6292) !important;
+  font-weight: 850;
+  white-space: nowrap;
+}
+.v11128-departure-empty {
+  display: grid;
+  justify-items: center;
+  gap: 5px;
+  min-height: 105px;
+  align-content: center;
+  padding: 18px;
+  border: 1px dashed var(--wh-border, #d9e2ec);
+  border-radius: 13px;
+  color: var(--wh-text-muted, #64748b);
+  text-align: center;
+}
+.v11128-departure-empty > span {
+  font-size: 26px;
+}
+.v11128-departure-empty strong {
+  color: var(--wh-text, #111827);
+  font-size: 12px;
+}
+.v11128-departure-empty small {
+  font-size: 9px;
+}
+.v11128-departure-row .v110-checkout-button {
+  min-width: 102px;
+}
+
+/* 6 + 8. Profile blocks use the same solid card surface; no gradients. */
+.v110-operation-bar,
+.v110-master-hero {
+  background: var(--v10-card, var(--wh-surface, #ffffff)) !important;
+  background-image: none !important;
+}
+.v110-operation-icon {
+  overflow: hidden !important;
+  background-image: url("data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAcFBQYFBAcGBgYIBwcICxILCwoKCxYPEA0SGhYbGhkWGRgcICgiHB4mHhgZIzAkJiorLS4tGyIyNTEsNSgsLSz/2wBDAQcICAsJCxULCxUsHRkdLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCz/wAARCABgAGADASIAAhEBAxEB/8QAGwAAAgMBAQEAAAAAAAAAAAAABQYCAwQAAQf/xABAEAACAQIEBAQDBQQHCQAAAAABAgMEEQAFEiEGEzFBIlFhcRQygRWRobHBQlJy0gcWIyQzovA0NVNUYmOC0+H/xAAaAQACAwEBAAAAAAAAAAAAAAAEBQABAwIG/8QALREAAQMDAgUCBgMBAAAAAAAAAQACAwQRIRIxBRNBUWFxkRQyscHR8CJSU6H/2gAMAwEAAhEDEQA/AGeWVIU1yMFXpfHJIkkYdGDIe4O2FWu4gVZ1WWXTJ1UqLBB5/Xz64Gz8QxGRW5by9zcWBbzKnYn19sNnccGshjLt6dM/heZbwslo1OsU/Y7FfB1flGbwT0UrLTPKA0ErKQEkvYp5WOxA998EK/LpsuqjDMAe6sOjDzGGlHXR1TbjB7IKppHwb5HdY8dienHaMH3QahjsS0HHj6UW7sFF7XJtirhSy8w05PwprV5s0RoxtojD2+pt09sL9FUvQ1SzokbsvQSLcYIz8WVSI008cbIgJI3/AA3wJU80i0eB3RlNyWnVJk9luzHhONXM9JVww0oF2M77J9fLCtUPDTVhpmqYHkvYcuQMG8iCPPA7PuLKnNUETJGnKJYRx3YKfNidiR7W3OFHM80n5YiR7zSDSETb/wArDvjzDePvbJoaNTe+32TKShjfluCo8UUdNBmvNo5GlgmPyhSNDd1Xa1vIdumKMsymWevp2qIXjoZJCjTP4VtvexPe33Y3T5fnObtFLLG9HSPKq86Q3FydiSNx1/1fBWprfs3LnNQqVJp5yg5g2kkJF3t3tpvb78ZsGpxkkbbrZGX0t0MN/KxRI1BXMtIssuVElEqDGRygehLdCLnY+m9sPdMzVVJFO99Uihjc3wFyDiBq+SLmVAkjlcI3MAUKCbAjy3IuPLfDxVZPU0aBpYxptuV3C+hwy4c+EOc+M2v02yl9YyVzQHDbrug3KxbT0M1XLy4ImkbvYdPfyx7WVVJl8XMq50hU9NR3PsOpwPT+kWFIdEQqeUvTSiAEDv1wxmrGRYLgD5KHp6GWfLWkjwEWzNcv4anhhr1NdVTWdYULIqx3szk27dhhV4t4hylqarjoYZoFX5GdgyyENcafQ6T3OxwN4w4pOeTULLDNopizagwSS5tcCxO1gO18KHxTVVPJFIwQHxObanlfV4Rc9Laug8jjy1TxGfmlgddpx4zunPwTY2jUzSfO6bKTiZcxmipKeYwqo8T7kgX6bbkgdB6XOCvEcs9PkEdTSKamNGVnIYXI7N6+K1xhV4X4Zmkkq5Y4knlp2uscgtrFyLi/fbodjuMGuKcwp6QNlqWpYPCXjU6fGbNfz22t264IbUvZTyc65DhYb+lh06Z69coOSFolaGbg5/folebPDHIqTxyRLbSdQA9beuOmzmjpKd/g440lkUhnC3JPmSenfpgZJl1RWPzoI5qiFWKiRiN/PrjHS0Ms1Q6aSGh28XY/phIIov37piG3F19ByHOOZB/bRwSR1CiOpj2AYaupHUNY3vuMFYcrSuonyloElQFiamXcQhZHBf8Ai3298IFBXQ0LK4Blkc6Tq2WMW3PXckbduuC32vJVqRJ8WtLIxblwoCLEk9enU+/rgiknMbNLhcDb7hFRULp7lpsD19EWq8q4dyuq/uMtbW1MY1uiSBY2Hrt09vvwSm404rvLonKCUXACAhF8/P8AP9cK8eY8qRFSnqBCjki9Opax7kkbnEmrKV9YMFdYnUpECXJ6m+3ni31EhN2jT6J3Dw6njbZ38j3KlzxUStLUs9S7bl5AxI8mFjv+ONL1ETRi7MjDqAkm3XxdeuBMlQjaI1gnub+Bo1XUepI8u+/33xJXlB08uJQOnMVL7+dr364FcCTcpkzS0aW7IgahAjLyi5NxYh9h9+KarJ0lplmkhkRzsihG3HW4a+2309MZykxc3SIb3+UD9MQYTEbqm+2xG34YqytzWvFnC6OcM5lmGSZgpqjI+WSsUk1JflnsVPffqNupNsaOManhidJKpKaOorJmWN6khwEsPcb2FunvhcSORhsFA7C3zfhiuamWVOXKI2UfsHoD6bXH0wY2rkEXJ3H09EjqeDRSP5sZsf8AhWWsz5ESMQoGC+EKRYKPIDAaQy1daW0MrSNey9SfK3+umCNTk0kYR6eMHWL6SwJHsdrj7vrgtkdJO5KZbRwGobYtUVKiQ+gXqB6D8cZRtY35UEKJ7b6x+F5Bw1n0EodsqaSQWCs0q7f5sfYOH6ZI+D8uaSnQTLSKWBW/iC79vPCZxHxSmTNDHTLDUzSlrjmfIBbqB7/hh3yB3qeD8vkIGuWjVrAdyv8A9x2TfNkSyBsWWleQwVM1Car+6ogTmWMI6W/XHslPUQ5d8S3w2opzBGIBe1u5vtixalhlXwrUVUSkWgAJszW6k3xXUVE02XmnFJU62jCline35YMtChNU6H8VZLRZhk0NRLTRNLAGkXUrAf4ZYg2I/dHfHy6aqoKcgPldGL9LCX/2Y+w54pXh9gQAREwO3/ZfHxjNlSL4culwyNYjzvgRqYhxAwUay6joa2FpDl1ItiALCToQD+/64yS/BpKyjKqIgG2/N/nwzcIUsZypuYiOwddyO2hTbFcuXgS/7AzESkkiO9xjWINJOpczSPDRougM0NJDSUkxyyib4hXa1pfDpkZP+J6XxpoaGgqo3ZstpFKm23M/nwRq444spilekZkgEjMNHyATvcemOos1oKYSBqO4ZrgADbb2xJDG1vlSF0z3ZvZKmcV1NluYz00eT0DiIIQW5oJuPR8FcjkyyZFzOXLIIhS1IVBT62OrQzA3dulx5YWuMKpKjiKpkgUxxSRx3T2Fv0xtyuqSm4NqJggYCvSwO+/Ka344x+YYWkzyxhPZVyV0cCy0k0EZkDsjagDve17/AK4css40qaDJKfL4qmjK0qpEJ2XcADYWvY++KjklPyfDlsgboVKC354iuR0Jk8WRlFVbDTGpJPqb7YA5zehsh/hwCdMoW8f0gVryugqKNG1araLgD90HVv8AniH9fK/WScwpQ17BOWukEjod77djf3vjPHklFyRHLki2N90iUEfebH9MRjyGl1gNlMag3W5gDFQfriuaP7fRTkH/AGCJU3Gv2zBU5bUhHmWB5Emh+WT+ykJBHRSBb39MIbS1koDOobbYFFYKOthcemCAyrPaaqd6DKTTauYp0lCCrKU2F9vCcV/Y/EQFhlhA6fs+Vv38bc4Ww4e6Pp+RGLSPB9loyziLM8qgeCKGKUO+q8im42AtsQLbDGz+u+b/APKU1v4X/mwK+yuIiTbLenX5ff8AfxxyniID/dtvL5fP+PE5vke6IL6TuPdE8zz2vOQQRpBFfMIJuaCG8BMzjbf874VllzFQAtOjDsWW5+u+DLZZxM8UUTZcTHCGWMWTwgsWI+bfcnrjNDR51USSRxUayPEbSKCt1N7b+L0/XEdI05uPdVG+nA+Ye6CVtNW1a62gCspvZB83ra53xtpSY+CZiwZWGZKLDY35L4KHKeIR1y30307/AObE4skz+oKUtRQqtLJKJJA4S1wpF73J6Htjpk7W7ke6ErOS+M6HC/qmOo4py9YtVIZKmQ9FSMgXsdmJ6dMZxxDmDqH+zRCwsSskliRYfs+u9j2264UBWSQxkpJemdL+F9TBdh477/cMbqqvMpBmBgiiYaHQEaiLEIb9ze58sB/DAYASAOFsphrOJKuKJtFGsbvYIzPqCdblvUEdO4OB+V8S14imjqtcuqO6SKNwSSSwv7iy/wDT1wOerrq1moooY45FDNqCeJhuV077kgdTfGFcxrJEhklhl3l5ekXUFug9gACLX7k9sW2nFrWC7Eg06QMpkp8wz50kp5mpnXTpaV9idQFhcdPT3xVS12YxMJRmccstOvIVCuoGxFw3rtbV164ALWtAW+IVlEa8yGMyAAtezXt13ubbYthrI3eOeFWVpdbSIqBgbXI2FjsB29e+2OjARmyhkBKbxn1c9KsS0yJVqxErv/hqNzt0vsPp3xFs3zENGxenfS+8YSwdTt1JvselvLfC7T5oughtBDMxnYMAsIutrEfMBcWNu/fGc8QPbmssrMbmNjYAkAAkEe3l02xmKcnYLLVc4TAuc5iWjqbQSNOg8BLDTY7WXzve/niFF8fRvU1SVULy1TanEnyna4Gm+x9fI+eFs5nAuXqqF1kKjUXa4ZvECbC5Fr2H34jHmSTQTpUVEqcxtUesMV037WO1iLb9Rfe+NDTkDZdteRcDbr6XTLJmWYKFkeseD4jZQtnFidtF+lj9cV/astHJMErzLPMxLXh3FlPiF+jWsOp6e2FuOoginRpqqpZE0FkSwubdhfp+XlfFDZqXonpngSTmDUZD8wbub47FNfoqDwMAr//Z") !important;
+  background-size: cover !important;
+  background-position: center !important;
+  background-repeat: no-repeat !important;
+  color: transparent !important;
+  font-size: 0 !important;
+}
+.v110-operation-icon > * {
+  visibility: hidden !important;
+}
+
+/* 10. Organiser hero aligns with the solid Quick Organiser card language. */
+.v11115-organiser-hero {
+  background: var(--wh-surface, var(--v10-card, #ffffff)) !important;
+  background-image: none !important;
+}
+
+/* Mobile refinements for the unified departures dialog. */
+@media (max-width: 768px) {
+  .v11128-departure-card {
+    width: calc(100vw - 20px) !important;
+    max-height: calc(100dvh - 20px) !important;
+  }
+  .v11128-departure-sections {
+    padding: 2px 12px 16px;
+    gap: 18px;
+  }
+  .v11128-departure-row {
+    grid-template-columns: 42px minmax(0, 1fr);
+  }
+  .v11128-departure-row .v110-checkout-button,
+  .v11128-departure-row .v11128-departure-date {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+  .v11128-departure-date {
+    text-align: right;
+  }
+}
+
+@media (max-width: 430px) {
+  #waffleNotificationModal .v11113-notification-priority {
+    padding: 13px !important;
+  }
+  .v11128-section-heading h4 {
+    font-size: 16px;
+  }
+}
