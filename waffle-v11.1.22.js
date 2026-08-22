@@ -41,6 +41,24 @@
     return document.querySelector('.app-tabs');
   }
 
+  function canonicalQuickAddButton() {
+    let button = document.getElementById('v10QuickAddButton');
+    if (!button) return null;
+
+    /* The original floating Add button had its own direct click listener while
+       V11.1.8 introduced a second delegated Add trigger. Clone once to remove
+       the old direct listener and keep one canonical delegated action path. */
+    if (button.dataset.v11122CanonicalAdd !== 'true') {
+      const replacement = button.cloneNode(true);
+      replacement.dataset.v11122CanonicalAdd = 'true';
+      replacement.setAttribute('data-v1118-open-quick-add', '');
+      button.replaceWith(replacement);
+      button = replacement;
+    }
+
+    return button;
+  }
+
   function prepareQuickAdd(nav) {
     if (!nav || !isMobile()) return;
 
@@ -52,15 +70,14 @@
       }
     } catch (_) {}
 
-    const button = document.getElementById('v10QuickAddButton');
+    const button = canonicalQuickAddButton();
     if (!button) return;
 
     const organiser = nav.querySelector('[data-page-link="reminders"], a[href$="reminders.html"]');
     if (button.parentElement !== nav) nav.insertBefore(button, organiser || null);
 
     button.classList.add('v1088-nav-quick-add', 'v11122-nav-add');
-    button.setAttribute('data-v1118-open-quick-add', '');
-    button.setAttribute('aria-label', 'Add booking, potential stay, Meet and Greet or reminder');
+    button.setAttribute('aria-label', 'Add booking, potential stay, Meet and Greet or Organiser item');
     nav.classList.add('v1088-has-quick-add');
   }
 
