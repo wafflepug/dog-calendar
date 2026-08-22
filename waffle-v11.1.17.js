@@ -56,26 +56,6 @@
     if (list) list.classList.add('v11117-mobile-fit-list');
   }
 
-  function hideLegacyMobileMeetGreetBanner() {
-    if (!isMobile() || pageName() !== 'calendar') return;
-
-    const hide = element => {
-      if (!element) return;
-      element.hidden = true;
-      element.setAttribute('aria-hidden', 'true');
-      element.style.setProperty('display', 'none', 'important');
-    };
-
-    document.querySelectorAll('.meet-greet-dashboard, [data-mobile-dashboard-section="meet"]').forEach(hide);
-
-    /* Fallback for any clone/re-render that loses the original class names. */
-    document.querySelectorAll('h1,h2,h3,h4,strong').forEach(heading => {
-      const text = String(heading.textContent || '').replace(/\s+/g, ' ').trim().toLowerCase();
-      if (text !== "🤝 today's meet & greets" && text !== "today's meet & greets" && text !== '🤝 today’s meet & greets' && text !== 'today’s meet & greets') return;
-      hide(heading.closest('[data-mobile-dashboard-section="meet"], .meet-greet-dashboard, article, section'));
-    });
-  }
-
   function unwrapFoldHeader(header) {
     const actions = header?.querySelector(':scope > .v11120-fold-actions');
     if (!actions) {
@@ -130,7 +110,6 @@
   function apply() {
     pinMobileNav();
     fitSummaryModal();
-    hideLegacyMobileMeetGreetBanner();
     prepareFoldHeader();
   }
 
@@ -158,11 +137,22 @@
   }
 })();
 
-/* V11.1.18 centered mobile modal follow-up + V11.1.19 mobile Calendar cleanup
-   + V11.1.20 modern visual system. Load from the final mobile patch layer so
-   the recovery service worker and main Firebase loader stay untouched. */
+/* V11.1.18 centered mobile modal follow-up + V11.1.19 foldable layout,
+   V11.1.20 modern visual system and V11.1.21 legacy cleanup. Load from the
+   final mobile patch layer so the recovery service worker and main Firebase
+   loader stay untouched. */
 (function () {
   if (typeof window === 'undefined' || typeof document === 'undefined') return;
+
+  function loadV11121Cleanup() {
+    if (document.querySelector('script[data-waffle-v11121-cleanup]')) return;
+
+    const script = document.createElement('script');
+    script.src = 'waffle-v11.1.21.js?v=11.1.21';
+    script.async = false;
+    script.setAttribute('data-waffle-v11121-cleanup', 'js');
+    document.body.appendChild(script);
+  }
 
   function loadV11118Assets() {
     if (!document.querySelector('link[data-waffle-v11118]')) {
@@ -189,13 +179,19 @@
       document.head.appendChild(stylesheet);
     }
 
-    if (!document.querySelector('script[data-waffle-v11118]')) {
-      const script = document.createElement('script');
-      script.src = 'waffle-v11.1.18.js?v=11.1.18';
-      script.async = false;
-      script.setAttribute('data-waffle-v11118', 'js');
-      document.body.appendChild(script);
+    const existingV11118 = document.querySelector('script[data-waffle-v11118]');
+    if (existingV11118) {
+      existingV11118.addEventListener('load', loadV11121Cleanup, { once: true });
+      setTimeout(loadV11121Cleanup, 350);
+      return;
     }
+
+    const script = document.createElement('script');
+    script.src = 'waffle-v11.1.18.js?v=11.1.18';
+    script.async = false;
+    script.setAttribute('data-waffle-v11118', 'js');
+    script.addEventListener('load', loadV11121Cleanup, { once: true });
+    document.body.appendChild(script);
   }
 
   if (document.readyState === 'loading') {
