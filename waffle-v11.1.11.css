@@ -1,0 +1,53 @@
+/* ============================================================
+   WAFFLE HOUSE V11.1.11 — MEET DATA RESILIENCE + HEADER/PHONE FIXES
+   ============================================================ */
+
+#v1118AttentionPanel .v1118-attention-item.v11111-meet-informational {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  grid-template-columns: 34px minmax(0, 1fr) 18px;
+  cursor: default;
+}
+
+#v1118AttentionPanel .v1118-attention-item.v11111-meet-informational:hover {
+  border-color: #f3dcc7;
+  background: var(--v1118-surface);
+}
+
+body.dark-theme #v1118AttentionPanel .v1118-attention-item.v11111-meet-informational:hover {
+  border-color: var(--v1118-border, #334155);
+  background: var(--v1118-surface, #182235);
+}
+
+.v11111-no-action {
+  width: 18px;
+  height: 1px;
+  pointer-events: none;
+}
+
+.v1118-global-search-button.v11111-search-icon-only {
+  width: 42px;
+  min-width: 42px;
+  height: 42px;
+  min-height: 42px;
+  padding: 0;
+  gap: 0;
+  border-radius: 50%;
+}
+
+.v1118-global-search-button.v11111-search-icon-only > span[aria-hidden="true"] {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+}
+
+@media (max-width: 768px) {
+  .v1118-global-search-button.v11111-search-icon-only {
+    width: 40px;
+    min-width: 40px;
+    height: 40px;
+    min-height: 40px;
+  }
+}
