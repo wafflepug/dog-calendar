@@ -1,5 +1,5 @@
 /* ============================================================
-   WAFFLE HOUSE V11.1.17 — MOBILE NAV + CAPACITY MODAL FIT
+   WAFFLE HOUSE V11.1.17 — MOBILE CALENDAR MODAL FIT
    ============================================================ */
 
 @media (max-width: 768px) {
@@ -9,145 +9,8 @@
     overflow-x: clip;
   }
 
-  /* Mobile must use ONE navigation system only. The legacy/app tab strip was
-     rendering under the five-button footer and duplicating four icons/labels. */
-  body .app-tabs,
-  body .app-tabs.v11116-calendar-nav {
-    display: none !important;
-    visibility: hidden !important;
-    pointer-events: none !important;
-  }
-
-  /* Keep one clean, fixed five-button footer. */
-  body .v1118-mobile-nav,
-  body .v1118-mobile-nav.v11117-mobile-nav-fixed {
-    position: fixed !important;
-    top: auto !important;
-    left: max(6px, env(safe-area-inset-left)) !important;
-    right: max(6px, env(safe-area-inset-right)) !important;
-    bottom: calc(7px + env(safe-area-inset-bottom)) !important;
-    width: auto !important;
-    max-width: none !important;
-    min-height: 68px !important;
-    margin: 0 !important;
-    padding: 6px 8px !important;
-    transform: none !important;
-    translate: none !important;
-    z-index: 2147482000 !important;
-    display: grid !important;
-    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
-    align-items: end !important;
-    gap: 2px !important;
-    box-sizing: border-box !important;
-    isolation: isolate;
-    overflow: visible !important;
-    border: 1px solid var(--v1118-border, #d9e2ec) !important;
-    border-radius: 16px !important;
-    background: color-mix(in srgb, var(--v1118-surface, #fff) 97%, transparent) !important;
-    box-shadow: 0 8px 28px rgba(15, 23, 42, .18) !important;
-    backdrop-filter: blur(16px) !important;
-    -webkit-backdrop-filter: blur(16px) !important;
-  }
-
-  body .v1118-mobile-nav > a,
-  body .v1118-mobile-nav > button {
-    position: relative !important;
-    width: 100% !important;
-    min-width: 0 !important;
-    min-height: 52px !important;
-    margin: 0 !important;
-    padding: 6px 2px !important;
-    border: 0 !important;
-    border-radius: 11px !important;
-    background: transparent !important;
-    box-shadow: none !important;
-    transform: none !important;
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: center !important;
-    justify-content: center !important;
-    gap: 3px !important;
-    color: var(--v1118-muted, #64748b) !important;
-    text-decoration: none !important;
-    text-shadow: none !important;
-    line-height: 1 !important;
-  }
-
-  body .v1118-mobile-nav > a > span,
-  body .v1118-mobile-nav > button > span {
-    display: block !important;
-    margin: 0 !important;
-    font-size: 20px !important;
-    line-height: 1 !important;
-    filter: none !important;
-    text-shadow: none !important;
-  }
-
-  body .v1118-mobile-nav small {
-    display: block !important;
-    width: 100% !important;
-    max-width: 74px !important;
-    margin: 0 auto !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-    white-space: nowrap !important;
-    color: inherit !important;
-    font-size: 9px !important;
-    font-weight: 800 !important;
-    line-height: 1.1 !important;
-    letter-spacing: 0 !important;
-    text-align: center !important;
-    text-shadow: none !important;
-  }
-
-  body .v1118-mobile-nav > a.is-active {
-    background: color-mix(in srgb, var(--v1118-primary, #0f6292) 12%, transparent) !important;
-    color: var(--v1118-primary, #0f6292) !important;
-  }
-
-  body .v1118-mobile-nav .v1118-mobile-add {
-    justify-self: center !important;
-    align-self: end !important;
-    width: 52px !important;
-    min-width: 52px !important;
-    height: 52px !important;
-    min-height: 52px !important;
-    margin: -12px auto 0 !important;
-    padding: 4px !important;
-    border: 4px solid var(--v1118-surface, #fff) !important;
-    border-radius: 50% !important;
-    background: var(--v1118-primary, #0f6292) !important;
-    color: #fff !important;
-    box-shadow: 0 5px 16px rgba(15, 98, 146, .32) !important;
-  }
-
-  body .v1118-mobile-nav .v1118-mobile-add > span {
-    font-size: 24px !important;
-  }
-
-  body .v1118-mobile-nav .v1118-mobile-add small {
-    max-width: 42px !important;
-    color: #fff !important;
-    font-size: 8.5px !important;
-  }
-
-  body.dark-theme .v1118-mobile-nav,
-  body.dark-theme .v1118-mobile-nav.v11117-mobile-nav-fixed {
-    border-color: #334155 !important;
-    background: rgba(24, 34, 53, .97) !important;
-    box-shadow: 0 8px 28px rgba(0, 0, 0, .34) !important;
-  }
-
-  body.dark-theme .v1118-mobile-nav .v1118-mobile-add {
-    border-color: #182235 !important;
-  }
-
-  /* Reserve enough room that the fixed nav never hides the last page card. */
-  body {
-    padding-bottom: calc(88px + env(safe-area-inset-bottom)) !important;
-  }
-
-  /* Summary modals behave as contained mobile bottom sheets. */
+  /* Summary modals behave as contained mobile bottom sheets. V11.1.18 later
+     promotes these to the shared centered-modal treatment. */
   #v11116CalendarSummaryModal.v11116-calendar-summary-modal:not([hidden]) {
     position: fixed !important;
     inset: 0 !important;
@@ -212,9 +75,6 @@
     padding: 6px 14px calc(18px + env(safe-area-inset-bottom)) !important;
   }
 
-  /* The cloned original Capacity list must shrink to the device width rather
-     than preserving the desktop row width that caused the right-side badges
-     to be clipped off-screen. */
   #v11116CalendarSummaryModal .v11116-capacity-list {
     width: 100% !important;
     min-width: 0 !important;
@@ -255,18 +115,6 @@
 }
 
 @media (max-width: 390px) {
-  body .v1118-mobile-nav,
-  body .v1118-mobile-nav.v11117-mobile-nav-fixed {
-    left: max(4px, env(safe-area-inset-left)) !important;
-    right: max(4px, env(safe-area-inset-right)) !important;
-    padding-left: 5px !important;
-    padding-right: 5px !important;
-  }
-
-  body .v1118-mobile-nav small {
-    font-size: 8.5px !important;
-  }
-
   #v11116CalendarSummaryModal .v11116-calendar-summary-head {
     padding-left: 13px !important;
     padding-right: 13px !important;
