@@ -93,3 +93,34 @@
     start();
   }
 })();
+
+/* Phase 2 is intentionally loaded after the Phase 1 compatibility cleanup so
+   the original page navigation is available before it becomes the canonical
+   responsive navigation surface. */
+(function () {
+  'use strict';
+
+  function loadV11122NavigationCleanup() {
+    if (!document.querySelector('link[data-waffle-v11122-cleanup]')) {
+      const stylesheet = document.createElement('link');
+      stylesheet.rel = 'stylesheet';
+      stylesheet.href = 'waffle-v11.1.22.css?v=11.1.22';
+      stylesheet.setAttribute('data-waffle-v11122-cleanup', 'css');
+      document.head.appendChild(stylesheet);
+    }
+
+    if (!document.querySelector('script[data-waffle-v11122-cleanup]')) {
+      const script = document.createElement('script');
+      script.src = 'waffle-v11.1.22.js?v=11.1.22';
+      script.async = false;
+      script.setAttribute('data-waffle-v11122-cleanup', 'js');
+      document.body.appendChild(script);
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', loadV11122NavigationCleanup, { once: true });
+  } else {
+    loadV11122NavigationCleanup();
+  }
+})();
