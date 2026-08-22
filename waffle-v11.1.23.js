@@ -129,17 +129,54 @@
 (function () {
   'use strict';
 
-  const BRAND_VERSION = '11.1.24';
-  const LIGHT_LOGO = `waffle-logo.png?v=${BRAND_VERSION}`;
-  const DARK_LOGO = `waffle-logo-dark.png?v=${BRAND_VERSION}`;
+  const BRAND_VERSION = '11.1.25';
+  const REPO_RAW_BASE = 'https://raw.githubusercontent.com/wafflepug/dog-calendar/main/';
+
+  function logoCandidates(dark) {
+    const file = dark ? 'waffle-logo-dark.png' : 'waffle-logo.png';
+    return [
+      `${file}?v=${BRAND_VERSION}`,
+      `${REPO_RAW_BASE}${file}?v=${BRAND_VERSION}`,
+      `pwa-icon-192.png?v=${BRAND_VERSION}`
+    ];
+  }
+
+  function setHeaderLogo(img, dark) {
+    if (!img) return;
+
+    const mode = dark ? 'dark' : 'light';
+    const sources = logoCandidates(dark);
+    const currentMode = String(img.dataset.waffleBrandMode || '');
+    const currentVersion = String(img.dataset.waffleBrandVersion || '');
+
+    if (currentMode === mode && currentVersion === BRAND_VERSION && img.complete && img.naturalWidth > 0) {
+      return;
+    }
+
+    img.dataset.waffleBrandMode = mode;
+    img.dataset.waffleBrandVersion = BRAND_VERSION;
+    img.dataset.waffleBrandFallbackIndex = '0';
+
+    img.onerror = function () {
+      const nextIndex = Number(this.dataset.waffleBrandFallbackIndex || '0') + 1;
+      this.dataset.waffleBrandFallbackIndex = String(nextIndex);
+
+      if (nextIndex < sources.length) {
+        this.src = sources[nextIndex];
+        return;
+      }
+
+      this.onerror = null;
+    };
+
+    img.src = sources[0];
+  }
 
   function syncHeaderBranding() {
     const dark = document.body?.classList.contains('dark-theme');
-    const source = dark ? DARK_LOGO : LIGHT_LOGO;
 
     document.querySelectorAll('img.calendar-brand-img, img.calendar-brand-logo').forEach(img => {
-      if (img.getAttribute('src') !== source) img.setAttribute('src', source);
-      img.setAttribute('data-waffle-brand-mode', dark ? 'dark' : 'light');
+      setHeaderLogo(img, dark);
     });
   }
 
@@ -174,6 +211,7 @@
     }
 
     window.addEventListener('pageshow', applyBranding);
+    window.addEventListener('online', applyBranding);
     window.waffleBrandingVersion = BRAND_VERSION;
   }
 
