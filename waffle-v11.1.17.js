@@ -1,13 +1,9 @@
 /* ============================================================
-   WAFFLE HOUSE V11.1.17 — MOBILE NAV + CAPACITY MODAL FIT
+   WAFFLE HOUSE V11.1.17 — MOBILE MODAL FIT + FOLDABLE HEADER
    ============================================================ */
 
 (function () {
   'use strict';
-
-  function isMobile() {
-    return !!window.matchMedia && window.matchMedia('(max-width: 768px)').matches;
-  }
 
   function isFoldNarrow() {
     return !!window.matchMedia && window.matchMedia('(max-width: 480px)').matches;
@@ -15,34 +11,6 @@
 
   function pageName() {
     return String(window.WAFFLE_PAGE || document.body?.dataset?.wafflePage || 'calendar');
-  }
-
-  function pinMobileNav() {
-    if (!isMobile()) return;
-
-    const nav = document.getElementById('v1118MobileNav') || document.querySelector('.v1118-mobile-nav');
-    if (!nav) return;
-
-    /* Keep the fixed bar outside any page/container layout context. */
-    if (nav.parentElement !== document.body) document.body.appendChild(nav);
-    nav.classList.add('v11117-mobile-nav-fixed');
-
-    /* The Reminder page is now Organiser. Keep the mobile footer label aligned
-       with the current primary navigation naming. */
-    const organiserLabel = nav.querySelector('a[href$="reminders.html"] small');
-    if (organiserLabel) organiserLabel.textContent = 'Organiser';
-
-    /* Inline important values protect the first mobile paint from older page
-       rules that can briefly win before the final stylesheet settles. */
-    nav.style.setProperty('position', 'fixed', 'important');
-    nav.style.setProperty('top', 'auto', 'important');
-    nav.style.setProperty('bottom', 'calc(7px + env(safe-area-inset-bottom))', 'important');
-    nav.style.setProperty('left', 'max(6px, env(safe-area-inset-left))', 'important');
-    nav.style.setProperty('right', 'max(6px, env(safe-area-inset-right))', 'important');
-    nav.style.setProperty('width', 'auto', 'important');
-    nav.style.setProperty('margin', '0', 'important');
-    nav.style.setProperty('transform', 'none', 'important');
-    nav.style.setProperty('z-index', '2147482000', 'important');
   }
 
   function fitSummaryModal() {
@@ -108,7 +76,6 @@
   }
 
   function apply() {
-    pinMobileNav();
     fitSummaryModal();
     prepareFoldHeader();
   }
@@ -138,7 +105,7 @@
 })();
 
 /* V11.1.18 centered mobile modal follow-up + V11.1.19 foldable layout,
-   V11.1.20 modern visual system and V11.1.21 legacy cleanup. Load from the
+   V11.1.20 modern visual system and V11.1.21+ legacy cleanup. Load from the
    final mobile patch layer so the recovery service worker and main Firebase
    loader stay untouched. */
 (function () {
@@ -148,7 +115,7 @@
     if (document.querySelector('script[data-waffle-v11121-cleanup]')) return;
 
     const script = document.createElement('script');
-    script.src = 'waffle-v11.1.21.js?v=11.1.21';
+    script.src = 'waffle-v11.1.21.js?v=11.1.21.1';
     script.async = false;
     script.setAttribute('data-waffle-v11121-cleanup', 'js');
     document.body.appendChild(script);
