@@ -1,0 +1,13 @@
+/* ============================================================
+   WAFFLE HOUSE V11.1.19 — MOBILE CALENDAR MEET & GREET CLEANUP
+   ============================================================ */
+
+@media (max-width: 768px) {
+  /* Keep Meet & Greet available through the Calendar summary tile/modal, but
+     remove the older standalone Today's Meet & Greets dashboard banner from
+     the Calendar mobile page. Desktop remains unchanged. */
+  body[data-waffle-page="calendar"] .meet-greet-dashboard.mobile-dashboard-section,
+  body[data-waffle-page="calendar"] [data-mobile-dashboard-section="meet"] {
+    display: none !important;
+  }
+}
