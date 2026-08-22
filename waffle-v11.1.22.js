@@ -147,19 +147,53 @@
 /* Phase 3 naming/intake compatibility, final branding and V11.1.28 visual
    refinements remain in place. V11.1.29 is intentionally retired because its
    profile router continued to conflict with the original Care handlers.
-   V11.1.30 restores Calendar/Profile stability; V11.1.31 then owns the final
-   compact Calendar month view and date-agenda interaction. */
+   V11.1.30 restores Calendar/Profile stability; V11.1.31 owns the compact
+   Calendar/day agenda, and V11.1.32 restores full capacity dots + five rows. */
 (function () {
   if (typeof window === 'undefined' || typeof document === 'undefined') return;
 
+  function loadV11132Calendar() {
+    function loadScript() {
+      if (document.querySelector('script[data-waffle-v11132-calendar]')) return;
+
+      const script = document.createElement('script');
+      script.src = 'waffle-v11.1.32.js?v=11.1.32';
+      script.async = false;
+      script.setAttribute('data-waffle-v11132-calendar', 'js');
+      document.body.appendChild(script);
+    }
+
+    const existingStyle = document.querySelector('link[data-waffle-v11132-calendar]');
+    if (existingStyle) {
+      loadScript();
+      return;
+    }
+
+    const stylesheet = document.createElement('link');
+    stylesheet.rel = 'stylesheet';
+    stylesheet.href = 'waffle-v11.1.32.css?v=11.1.32';
+    stylesheet.setAttribute('data-waffle-v11132-calendar', 'css');
+    stylesheet.addEventListener('load', loadScript, { once: true });
+    stylesheet.addEventListener('error', loadScript, { once: true });
+    document.head.appendChild(stylesheet);
+    setTimeout(loadScript, 180);
+  }
+
   function loadV11131Calendar() {
     function loadScript() {
-      if (document.querySelector('script[data-waffle-v11131-calendar]')) return;
+      const existingScript = document.querySelector('script[data-waffle-v11131-calendar]');
+      if (existingScript) {
+        existingScript.addEventListener('load', loadV11132Calendar, { once: true });
+        setTimeout(loadV11132Calendar, 120);
+        return;
+      }
 
       const script = document.createElement('script');
       script.src = 'waffle-v11.1.31.js?v=11.1.31';
       script.async = false;
       script.setAttribute('data-waffle-v11131-calendar', 'js');
+      script.addEventListener('load', loadV11132Calendar, { once: true });
+      script.addEventListener('error', loadV11132Calendar, { once: true });
       document.body.appendChild(script);
     }
 
