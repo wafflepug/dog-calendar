@@ -144,28 +144,56 @@
   }
 })();
 
-/* Phase 3 continues the cleanup chain. The inline branding patch loads only
-   after Phase 3 so it is the final authority for the header logo. */
+/* Phase 3 continues the cleanup chain. The inline branding patch remains the
+   header authority, then V11.1.28 loads last for UI refinements requested on
+   Calendar, Notifications, Profile and Organiser. */
 (function () {
   if (typeof window === 'undefined' || typeof document === 'undefined') return;
 
+  function loadV11128Refinement() {
+    if (!document.querySelector('link[data-waffle-v11128-ui]')) {
+      const stylesheet = document.createElement('link');
+      stylesheet.rel = 'stylesheet';
+      stylesheet.href = 'waffle-v11.1.28.css?v=11.1.28';
+      stylesheet.setAttribute('data-waffle-v11128-ui', 'css');
+      document.head.appendChild(stylesheet);
+    }
+
+    if (!document.querySelector('script[data-waffle-v11128-ui]')) {
+      const script = document.createElement('script');
+      script.src = 'waffle-v11.1.28.js?v=11.1.28';
+      script.async = false;
+      script.setAttribute('data-waffle-v11128-ui', 'js');
+      document.body.appendChild(script);
+    }
+  }
+
   function loadInlineBrand() {
-    if (document.querySelector('script[data-waffle-v11127-brand]')) return;
+    const existing = document.querySelector('script[data-waffle-v11127-brand]');
+    if (existing) {
+      existing.addEventListener('load', loadV11128Refinement, { once: true });
+      setTimeout(loadV11128Refinement, 80);
+      return;
+    }
+
     const brand = document.createElement('script');
-    brand.src = 'waffle-v11.1.27-brand.js?v=11.1.27';
+    brand.src = 'waffle-v11.1.27-brand.js?v=11.1.28';
     brand.async = false;
     brand.setAttribute('data-waffle-v11127-brand', 'js');
+    brand.addEventListener('load', loadV11128Refinement, { once: true });
+    brand.addEventListener('error', loadV11128Refinement, { once: true });
     document.body.appendChild(brand);
   }
 
   function loadV11123Cleanup() {
-    if (document.querySelector('script[data-waffle-v11123-cleanup]')) {
+    const existing = document.querySelector('script[data-waffle-v11123-cleanup]');
+    if (existing) {
       loadInlineBrand();
       return;
     }
 
     const script = document.createElement('script');
-    script.src = 'waffle-v11.1.23.js?v=11.1.27';
+    script.src = 'waffle-v11.1.23.js?v=11.1.28';
     script.async = false;
     script.setAttribute('data-waffle-v11123-cleanup', 'js');
     script.addEventListener('load', loadInlineBrand, { once: true });
