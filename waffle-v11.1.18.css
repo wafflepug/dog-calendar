@@ -1,0 +1,119 @@
+/* ============================================================
+   WAFFLE HOUSE V11.1.18 — CENTERED MOBILE MODALS + SINGLE CAPACITY DETAIL
+   ============================================================ */
+
+@media (max-width: 768px) {
+  /* Modal overlays now sit above the fixed navigation and center their card
+     within the usable phone viewport. */
+  body .v108-modal:not([hidden]),
+  body .v11118-mobile-centered-overlay {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100dvh !important;
+    max-width: 100vw !important;
+    margin: 0 !important;
+    padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)) !important;
+    box-sizing: border-box !important;
+    align-items: center !important;
+    justify-content: center !important;
+    overflow: hidden !important;
+    z-index: 2147483000 !important;
+  }
+
+  /* The navigation remains fixed on normal pages, but should not float over a
+     modal or block the lower rows of a scrollable dialog. */
+  body.v11118-mobile-modal-open .v1118-mobile-nav {
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+  }
+
+  body .v108-modal:not([hidden]) > .v108-modal-card,
+  body .v11118-mobile-centered-card {
+    width: min(520px, calc(100vw - 28px)) !important;
+    min-width: 0 !important;
+    max-width: min(520px, calc(100vw - 28px)) !important;
+    height: auto !important;
+    max-height: calc(100dvh - max(34px, env(safe-area-inset-top)) - max(34px, env(safe-area-inset-bottom))) !important;
+    margin: auto !important;
+    border-radius: 18px !important;
+    box-sizing: border-box !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    overscroll-behavior: contain !important;
+    -webkit-overflow-scrolling: touch;
+    transform: none !important;
+  }
+
+  /* Remove the bottom-sheet grab handle now that phone dialogs are centered. */
+  body .v108-modal:not([hidden]) > .v108-modal-card::before,
+  body .v11118-mobile-centered-card::before {
+    display: none !important;
+  }
+
+  /* Override the V11.1.17 bottom-sheet treatment specifically for the shared
+     Calendar summary modal. */
+  #v11116CalendarSummaryModal.v11116-calendar-summary-modal:not([hidden]) {
+    align-items: center !important;
+    justify-content: center !important;
+    padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)) !important;
+  }
+
+  #v11116CalendarSummaryModal .v11116-calendar-summary-card.v108-modal-card {
+    width: min(520px, calc(100vw - 28px)) !important;
+    max-width: min(520px, calc(100vw - 28px)) !important;
+    max-height: min(84dvh, 720px) !important;
+    margin: auto !important;
+    padding: 0 !important;
+    border-radius: 18px !important;
+    overflow: hidden !important;
+  }
+
+  #v11116CalendarSummaryModal .v11116-calendar-summary-list {
+    min-height: 0 !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 16px !important;
+  }
+
+  /* Common Calendar modals from the supplied screenshots. Keep a predictable
+     centered width while allowing long Meet & Greet / Leaving / At Home lists
+     to scroll inside the viewport. */
+  #v1116MeetGreetListModal .v108-modal-card,
+  #v1116AtHomeListModal .v108-modal-card,
+  #v110LeavingModal .v108-modal-card,
+  #v111ArrivalModal .v108-modal-card,
+  #v1118SearchModal .v108-modal-card,
+  #v11113RecoveryModal .v108-modal-card,
+  #v11113StayDatesModal .v108-modal-card {
+    width: min(520px, calc(100vw - 28px)) !important;
+    max-width: min(520px, calc(100vw - 28px)) !important;
+    max-height: min(84dvh, 720px) !important;
+    margin: auto !important;
+    border-radius: 18px !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+  }
+
+  /* Capacity/day detail dialogs may come from older layers without the shared
+     v108 class. V11.1.18 decorates the active fixed modal at runtime, so this
+     catches those legacy cards too. */
+  body .v11118-mobile-centered-card > * {
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+}
+
+@media (max-width: 390px) {
+  body .v108-modal:not([hidden]) > .v108-modal-card,
+  body .v11118-mobile-centered-card,
+  #v11116CalendarSummaryModal .v11116-calendar-summary-card.v108-modal-card {
+    width: calc(100vw - 20px) !important;
+    max-width: calc(100vw - 20px) !important;
+    max-height: calc(100dvh - 24px) !important;
+    border-radius: 16px !important;
+  }
+}
