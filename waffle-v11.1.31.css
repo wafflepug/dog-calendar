@@ -1,0 +1,464 @@
+/* ============================================================
+   WAFFLE HOUSE V11.1.31 — CLEAN CALENDAR + DAY AGENDA
+   ============================================================ */
+
+/* Month grid: reduce visual noise without changing FullCalendar lane geometry. */
+#calendar .fc-scrollgrid,
+#calendar .fc-scrollgrid td,
+#calendar .fc-scrollgrid th {
+  border-color: color-mix(in srgb, var(--wh-border, #d9e2ec) 58%, transparent) !important;
+}
+
+body.dark-theme #calendar .fc-scrollgrid,
+body.dark-theme #calendar .fc-scrollgrid td,
+body.dark-theme #calendar .fc-scrollgrid th {
+  border-color: rgba(148, 163, 184, .18) !important;
+}
+
+#calendar .fc-daygrid-day-frame {
+  min-height: 0 !important;
+}
+
+#calendar .fc-daygrid-day-top {
+  min-height: 24px;
+  align-items: center;
+  padding: 2px 4px 1px;
+}
+
+#calendar .fc-daygrid-day-number {
+  padding: 0 !important;
+  font-size: 11px !important;
+  font-weight: 850 !important;
+  line-height: 20px !important;
+}
+
+/* Capacity markers become small status dots beside the date. */
+#calendar .capacity-indicator.v11131-capacity-indicator,
+#calendar .capacity-indicator {
+  display: inline-block !important;
+  flex: 0 0 auto;
+  width: 8px !important;
+  height: 8px !important;
+  margin: 0 4px 0 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 50% !important;
+  background: #94a3b8;
+  font-size: 0 !important;
+  line-height: 0 !important;
+  box-shadow: 0 0 0 2px color-mix(in srgb, currentColor 10%, transparent);
+}
+
+#calendar .capacity-indicator[title*="Busy"] {
+  background: #f59e0b !important;
+}
+
+#calendar .capacity-indicator[title*="Full"] {
+  background: #ef4444 !important;
+}
+
+/* Today is a soft tint/ring rather than a heavy yellow block. */
+#calendar .fc-day-today {
+  background: color-mix(in srgb, var(--wh-accent, #0f6292) 5%, transparent) !important;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--wh-accent, #0f6292) 34%, transparent) !important;
+}
+
+#calendar .fc-day-today .fc-daygrid-day-number {
+  display: inline-grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--wh-accent, #0f6292) 16%, transparent);
+  color: var(--wh-accent, #0f6292) !important;
+}
+
+body.dark-theme #calendar .fc-day-today {
+  background: rgba(15, 98, 146, .10) !important;
+  box-shadow: inset 0 0 0 1px rgba(91, 162, 203, .34) !important;
+}
+
+/* Keep the outer event box geometry untouched; compact the inner label only. */
+#calendar .v11131-event-label {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+  height: 18px;
+  padding: 0 5px;
+  overflow: hidden;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 18px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+#calendar .v11131-event-label > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#calendar .v11131-boarding-label {
+  color: inherit;
+}
+
+#calendar .v11131-meet-label {
+  justify-content: flex-start;
+  font-size: 9px;
+  letter-spacing: -.01em;
+}
+
+#calendar .v11131-meet-type {
+  opacity: .82;
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: .04em;
+}
+
+#calendar .v11131-potential-label {
+  font-size: 9px;
+}
+
+/* FullCalendar's overflow link is the clean expansion affordance. */
+#calendar .fc-daygrid-more-link {
+  display: inline-flex !important;
+  align-items: center;
+  min-height: 18px;
+  margin: 2px 3px 1px !important;
+  padding: 1px 6px !important;
+  border-radius: 999px !important;
+  background: color-mix(in srgb, var(--wh-accent, #0f6292) 11%, var(--wh-surface, #fff)) !important;
+  color: var(--wh-accent, #0f6292) !important;
+  font-size: 9px !important;
+  font-weight: 900 !important;
+  line-height: 16px !important;
+  text-decoration: none !important;
+}
+
+body.dark-theme #calendar .fc-daygrid-more-link {
+  background: #22304a !important;
+  color: #8ec9ed !important;
+}
+
+/* Day agenda modal. */
+.v11131-day-modal {
+  padding: max(16px, env(safe-area-inset-top)) 14px max(18px, env(safe-area-inset-bottom)) !important;
+}
+
+.v11131-day-card {
+  width: min(720px, calc(100vw - 28px)) !important;
+  max-height: min(88dvh, 820px) !important;
+  overflow: auto !important;
+  border-radius: 22px !important;
+}
+
+.v11131-day-head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 20px 20px 14px;
+  border-bottom: 1px solid var(--wh-border, #d9e2ec);
+  background: color-mix(in srgb, var(--wh-surface, #fff) 96%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.v11131-day-head small {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--wh-accent, #0f6292);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .09em;
+}
+
+.v11131-day-head h3 {
+  margin: 0;
+  color: var(--wh-text, #111827);
+  font-size: clamp(18px, 3vw, 24px);
+  line-height: 1.1;
+}
+
+.v11131-day-head button {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--wh-surface-soft, #f8fafc);
+  color: var(--wh-text, #111827);
+  font-size: 22px;
+  cursor: pointer;
+}
+
+.v11131-capacity-summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 16px 20px 6px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--wh-surface-soft, #f8fafc);
+}
+
+.v11131-capacity-summary small,
+.v11131-capacity-summary strong {
+  display: block;
+}
+
+.v11131-capacity-summary small {
+  color: var(--wh-text-muted, #64748b);
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: .08em;
+}
+
+.v11131-capacity-summary strong {
+  margin-top: 2px;
+  color: var(--wh-text, #111827);
+  font-size: 12px;
+}
+
+.v11131-capacity-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #88d49e;
+  box-shadow: 0 0 0 4px color-mix(in srgb, #88d49e 18%, transparent);
+}
+
+.v11131-capacity-dot.is-busy {
+  background: #f59e0b;
+  box-shadow: 0 0 0 4px rgba(245, 158, 11, .16);
+}
+
+.v11131-capacity-dot.is-full {
+  background: #ef4444;
+  box-shadow: 0 0 0 4px rgba(239, 68, 68, .16);
+}
+
+.v11131-agenda-sections {
+  display: grid;
+  gap: 18px;
+  padding: 12px 20px 22px;
+}
+
+.v11131-agenda-section {
+  display: grid;
+  gap: 8px;
+}
+
+.v11131-agenda-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.v11131-agenda-section-head h4 {
+  margin: 0;
+  color: var(--wh-text, #111827);
+  font-size: 13px;
+}
+
+.v11131-agenda-section-head > span {
+  display: inline-grid;
+  place-items: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--wh-accent, #0f6292) 10%, var(--wh-surface, #fff));
+  color: var(--wh-accent, #0f6292);
+  font-size: 9px;
+  font-weight: 900;
+}
+
+.v11131-agenda-list {
+  display: grid;
+  gap: 7px;
+}
+
+.v11131-agenda-row {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  min-width: 0;
+  padding: 10px 11px;
+  border: 1px solid color-mix(in srgb, var(--wh-border, #d9e2ec) 70%, transparent);
+  border-radius: 13px;
+  background: var(--wh-surface, #fff);
+}
+
+.v11131-agenda-icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
+  background: var(--wh-surface-soft, #f8fafc);
+  font-size: 17px;
+}
+
+.v11131-agenda-copy {
+  min-width: 0;
+}
+
+.v11131-agenda-copy strong,
+.v11131-agenda-copy span {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.v11131-agenda-copy strong {
+  color: var(--wh-text, #111827);
+  font-size: 12px;
+}
+
+.v11131-agenda-copy span {
+  margin-top: 2px;
+  color: var(--wh-text-muted, #64748b);
+  font-size: 9px;
+}
+
+.v11131-agenda-badge {
+  justify-self: end;
+  padding: 4px 7px;
+  border-radius: 999px;
+  background: var(--wh-surface-soft, #f8fafc);
+  color: var(--wh-text-muted, #64748b);
+  font-size: 8px;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.v11131-agenda-empty {
+  display: grid;
+  justify-items: center;
+  gap: 5px;
+  min-height: 160px;
+  align-content: center;
+  text-align: center;
+  color: var(--wh-text-muted, #64748b);
+}
+
+.v11131-agenda-empty > span {
+  font-size: 30px;
+}
+
+.v11131-agenda-empty strong {
+  color: var(--wh-text, #111827);
+  font-size: 13px;
+}
+
+.v11131-agenda-empty small {
+  max-width: 320px;
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+body.dark-theme .v11131-day-head,
+body.dark-theme .v11131-agenda-row {
+  background: #18253a;
+}
+
+body.dark-theme .v11131-capacity-summary,
+body.dark-theme .v11131-agenda-icon,
+body.dark-theme .v11131-agenda-badge {
+  background: #22304a;
+}
+
+@media (max-width: 768px) {
+  #calendar .fc-daygrid-day-top {
+    min-height: 20px;
+    padding: 1px 2px 0;
+  }
+
+  #calendar .fc-daygrid-day-number {
+    font-size: 9px !important;
+    line-height: 18px !important;
+  }
+
+  #calendar .capacity-indicator.v11131-capacity-indicator,
+  #calendar .capacity-indicator {
+    width: 7px !important;
+    height: 7px !important;
+    margin-right: 2px !important;
+  }
+
+  #calendar .v11131-event-label {
+    height: 16px;
+    padding: 0 3px;
+    font-size: 8px;
+    line-height: 16px;
+  }
+
+  #calendar .v11131-meet-label,
+  #calendar .v11131-potential-label {
+    font-size: 7px;
+  }
+
+  #calendar .v11131-meet-type {
+    display: none;
+  }
+
+  #calendar .fc-daygrid-more-link {
+    min-height: 16px;
+    margin: 1px 1px 0 !important;
+    padding: 0 4px !important;
+    font-size: 8px !important;
+    line-height: 15px !important;
+  }
+
+  .v11131-day-card {
+    width: min(560px, calc(100vw - 18px)) !important;
+    max-height: calc(100dvh - 34px) !important;
+  }
+
+  .v11131-day-head {
+    padding: 16px 15px 12px;
+  }
+
+  .v11131-capacity-summary {
+    margin: 12px 15px 4px;
+  }
+
+  .v11131-agenda-sections {
+    gap: 15px;
+    padding: 10px 15px 20px;
+  }
+
+  .v11131-agenda-row {
+    grid-template-columns: 34px minmax(0, 1fr);
+    padding: 9px;
+  }
+
+  .v11131-agenda-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    font-size: 15px;
+  }
+
+  .v11131-agenda-badge {
+    display: none;
+  }
+
+  body[data-waffle-page="calendar"] {
+    padding-bottom: calc(122px + env(safe-area-inset-bottom)) !important;
+  }
+}
