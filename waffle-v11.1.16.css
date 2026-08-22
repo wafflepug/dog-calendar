@@ -109,28 +109,6 @@
   }
 }
 
-/* Remove the old duplicate Calendar summary blocks. Their useful information
-   now lives behind the Operations tiles/modal interactions. */
-body[data-waffle-page="calendar"] .summary-card.active-now,
-body[data-waffle-page="calendar"] .summary-card.leaving-now,
-body[data-waffle-page="calendar"] .summary-card.upcoming-now,
-body[data-waffle-page="calendar"] .meet-greet-dashboard {
-  display: none !important;
-}
-
-body[data-waffle-page="calendar"] .summary-dashboard {
-  grid-template-columns: minmax(0, 1fr) !important;
-}
-
-.v11116-capacity-clickable {
-  cursor: pointer;
-}
-
-.v11116-capacity-clickable:focus-visible {
-  outline: 3px solid color-mix(in srgb, var(--wh-accent, #0f6292) 32%, transparent);
-  outline-offset: 3px;
-}
-
 .v11116-calendar-summary-modal[hidden] {
   display: none !important;
 }
@@ -223,18 +201,6 @@ body[data-waffle-page="calendar"] .summary-dashboard {
   color: var(--wh-text, #111827);
 }
 
-.v11116-capacity-list {
-  max-height: none !important;
-  overflow: visible !important;
-  margin: 0;
-  padding: 0;
-}
-
-.v11116-capacity-list li {
-  min-height: 44px;
-  padding: 10px 4px !important;
-}
-
 /* Mobile brand layout: keep logo, title and subtitle aligned and readable even
    with the compact Search / Theme actions present in the header. */
 @media (max-width: 768px) {
@@ -295,13 +261,6 @@ body[data-waffle-page="calendar"] .summary-dashboard {
     min-width: 38px !important;
     height: 38px !important;
     min-height: 38px !important;
-  }
-
-  /* Capacity remains available by tapping 7-day Outlook, but the legacy
-     capacity block is no longer duplicated on the mobile Calendar page. */
-  body[data-waffle-page="calendar"] .summary-card.fully-booked,
-  body[data-waffle-page="calendar"] .summary-dashboard {
-    display: none !important;
   }
 
   .v11116-calendar-summary-card {

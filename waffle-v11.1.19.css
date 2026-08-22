@@ -1,18 +1,6 @@
 /* ============================================================
-   WAFFLE HOUSE V11.1.19 — MOBILE CALENDAR MEET & GREET CLEANUP
+   WAFFLE HOUSE V11.1.19 — FOLDABLE CALENDAR HEADER
    ============================================================ */
-
-@media (max-width: 768px) {
-  /* Keep Meet & Greet available through the Calendar summary tile/modal, but
-     remove the older standalone Today's Meet & Greets dashboard banner from
-     the Calendar mobile page. Desktop remains unchanged. */
-  body[data-waffle-page="calendar"] .meet-greet-dashboard,
-  body[data-waffle-page="calendar"] .meet-greet-dashboard.mobile-dashboard-section,
-  body[data-waffle-page="calendar"] [data-mobile-dashboard-section="meet"] {
-    display: none !important;
-    visibility: hidden !important;
-  }
-}
 
 /* Narrow foldable/cover-screen layout: preserve access to every Calendar
    header action by giving the brand its own row and the controls a second row. */

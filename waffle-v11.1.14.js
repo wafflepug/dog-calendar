@@ -1,5 +1,5 @@
 /* ============================================================
-   WAFFLE HOUSE V11.1.14 — REMOVE LEGACY NEEDS ATTENTION GROUP
+   WAFFLE HOUSE V11.1.14 — NOTIFICATION ATTENTION CONSOLIDATION
    ============================================================ */
 
 (function () {
@@ -11,18 +11,6 @@
         try { target[key] = source[key]; } catch (_) {}
       });
     } catch (_) {}
-  }
-
-  function removeLegacyNeedsAttentionGroup() {
-    const feed = document.querySelector('[data-notification-feed]');
-    if (!feed) return;
-
-    feed.querySelectorAll('.v101-notification-section').forEach(section => {
-      const heading = section.querySelector('.v101-notification-section-heading strong');
-      if (String(heading?.textContent || '').trim().toLowerCase() === 'needs attention') {
-        section.remove();
-      }
-    });
   }
 
   function filteredUnreadCount(fallback) {
@@ -58,6 +46,41 @@
     window.getWaffleNotificationUnreadCount = wrapped;
   }
 
+  function installNotificationRenderFilter() {
+    const base = window.renderWaffleNotificationCentre;
+    if (typeof base !== 'function' || base.v11114AttentionFiltered) return;
+
+    const wrapped = function () {
+      let originalItems = null;
+      let filtered = false;
+
+      try {
+        if (
+          typeof waffleNotificationCentreItems !== 'undefined' &&
+          Array.isArray(waffleNotificationCentreItems)
+        ) {
+          originalItems = waffleNotificationCentreItems;
+          waffleNotificationCentreItems = originalItems.filter(item =>
+            item && item.kind !== 'attention'
+          );
+          filtered = true;
+        }
+      } catch (_) {}
+
+      try {
+        return base.apply(this, arguments);
+      } finally {
+        if (filtered) {
+          try { waffleNotificationCentreItems = originalItems; } catch (_) {}
+        }
+      }
+    };
+
+    copyFunctionFlags(base, wrapped);
+    wrapped.v11114AttentionFiltered = true;
+    window.renderWaffleNotificationCentre = wrapped;
+  }
+
   function refreshNotificationCounts() {
     try {
       const unread = typeof window.getWaffleNotificationUnreadCount === 'function'
@@ -76,35 +99,18 @@
     } catch (_) {}
   }
 
-  function cleanNotificationFeed() {
-    removeLegacyNeedsAttentionGroup();
+  function install() {
+    // Today's Priority (#v1118AttentionPanel) remains the single canonical
+    // attention surface inside Notifications. Legacy kind=attention items are
+    // filtered before the old notification renderer can create a second block.
+    installUnreadFilter();
+    installNotificationRenderFilter();
     refreshNotificationCounts();
   }
 
-  function wrapAndClean(name, marker) {
-    const base = window[name];
-    if (typeof base !== 'function' || base[marker]) return;
-
-    const wrapped = function () {
-      const result = base.apply(this, arguments);
-      [0, 25, 80, 180].forEach(delay => setTimeout(cleanNotificationFeed, delay));
-      return result;
-    };
-
-    copyFunctionFlags(base, wrapped);
-    wrapped[marker] = true;
-    window[name] = wrapped;
-  }
-
   function start() {
-    // Keep V11.1.13 Today's Priority (#v1118AttentionPanel) in Notifications.
-    // Remove only the older notification-centre group made from kind=attention
-    // items, which is separately headed "Needs attention".
-    installUnreadFilter();
-    wrapAndClean('renderWaffleNotificationCentre', 'v11114LegacyAttentionRemoved');
-    wrapAndClean('openWaffleNotificationCentre', 'v11114LegacyAttentionRemoved');
-
-    [0, 80, 250, 700, 1400].forEach(delay => setTimeout(cleanNotificationFeed, delay));
+    install();
+    [80, 250, 700, 1400].forEach(delay => setTimeout(install, delay));
   }
 
   if (document.readyState === 'loading') {
