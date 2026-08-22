@@ -6,8 +6,110 @@
   /* Keep Meet & Greet available through the Calendar summary tile/modal, but
      remove the older standalone Today's Meet & Greets dashboard banner from
      the Calendar mobile page. Desktop remains unchanged. */
+  body[data-waffle-page="calendar"] .meet-greet-dashboard,
   body[data-waffle-page="calendar"] .meet-greet-dashboard.mobile-dashboard-section,
   body[data-waffle-page="calendar"] [data-mobile-dashboard-section="meet"] {
     display: none !important;
+    visibility: hidden !important;
+  }
+}
+
+/* Narrow foldable/cover-screen layout: preserve access to every Calendar
+   header action by giving the brand its own row and the controls a second row. */
+@media (max-width: 480px) {
+  body[data-waffle-page="calendar"] .calendar-header-branding.v11116-branding.v11120-fold-header {
+    display: grid !important;
+    grid-template-columns: 56px minmax(0, 1fr) !important;
+    grid-template-areas:
+      "logo copy"
+      "actions actions" !important;
+    align-items: center !important;
+    justify-content: stretch !important;
+    gap: 7px 9px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    overflow: visible !important;
+  }
+
+  body[data-waffle-page="calendar"] .v11120-fold-header > .v11116-brand-home-link {
+    grid-area: logo;
+    width: 56px !important;
+    min-width: 56px !important;
+    max-width: 56px !important;
+    margin: 0 !important;
+  }
+
+  body[data-waffle-page="calendar"] .v11120-fold-header .calendar-brand-logo {
+    width: 56px !important;
+    min-width: 56px !important;
+    max-width: 56px !important;
+    height: 56px !important;
+  }
+
+  body[data-waffle-page="calendar"] .v11120-fold-header > .calendar-brand-copy {
+    grid-area: copy;
+    width: 100% !important;
+    min-width: 0 !important;
+    overflow: visible !important;
+  }
+
+  body[data-waffle-page="calendar"] .v11120-fold-header .calendar-brand-copy h2 {
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: unset !important;
+    font-size: 15px !important;
+    line-height: 1.03 !important;
+  }
+
+  body[data-waffle-page="calendar"] .v11120-fold-header .calendar-brand-subtitle {
+    white-space: normal !important;
+    font-size: 7px !important;
+    line-height: 1.05 !important;
+  }
+
+  body[data-waffle-page="calendar"] .v11120-fold-actions {
+    grid-area: actions;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    flex-wrap: nowrap !important;
+    gap: 7px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    overflow: visible !important;
+  }
+
+  body[data-waffle-page="calendar"] .v11120-fold-actions > button,
+  body[data-waffle-page="calendar"] .v11120-fold-actions > a {
+    flex: 0 0 42px !important;
+    width: 42px !important;
+    min-width: 42px !important;
+    max-width: 42px !important;
+    height: 42px !important;
+    min-height: 42px !important;
+    max-height: 42px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border-radius: 12px !important;
+    box-sizing: border-box !important;
+    overflow: visible !important;
+  }
+
+  body[data-waffle-page="calendar"] .v11120-fold-actions .theme-toggle-label,
+  body[data-waffle-page="calendar"] .v11120-fold-actions .v1118-search-button-label {
+    display: none !important;
+  }
+
+  body[data-waffle-page="calendar"] .v11120-fold-actions > .v11120-fold-sync {
+    font-size: 0 !important;
+    white-space: nowrap !important;
+  }
+
+  body[data-waffle-page="calendar"] .v11120-fold-actions > .v11120-fold-sync::before {
+    content: "↻";
+    display: inline-block;
+    font-size: 21px;
+    line-height: 1;
+    font-weight: 800;
   }
 }
