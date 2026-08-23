@@ -7,6 +7,7 @@ on:
       - main
     paths:
       - 'apps-script/**'
+      - 'scripts/patch-waffle-ai-router.py'
       - '.github/workflows/deploy-apps-script.yml'
 
 permissions:
@@ -36,6 +37,9 @@ jobs:
           test -n "$CLASP_JSON"
           printf '%s' "$CLASPRC_JSON" > "$HOME/.clasprc.json"
           printf '%s' "$CLASP_JSON" > "apps-script/.clasp.json"
+
+      - name: Inject conversational Waffle AI read-only route
+        run: python3 scripts/patch-waffle-ai-router.py
 
       - name: Push source to Google Apps Script
         working-directory: apps-script
