@@ -1,5 +1,5 @@
 /* ============================================================
-   WAFFLE HOUSE V11.1.47 — COMPATIBILITY + CONVERSATIONAL AI
+   WAFFLE HOUSE V11.1.48 — COMPATIBILITY + CONVERSATIONAL AI
    Keeps V11.0.5 synchronous, ensures the current Ask Waffle stack is present,
    adds organic tool-using Waffle AI, removes retired user-facing DOM before
    hydration, and loads the permanent Final UI Contract last.
@@ -28,7 +28,7 @@
     );
   }
 
-  function loadScript(src, ready, version = '11.1.47') {
+  function loadScript(src, ready, version = '11.1.48') {
     if (ready()) return Promise.resolve();
 
     return new Promise((resolve, reject) => {
@@ -49,7 +49,7 @@
       const script = document.createElement('script');
       script.src = src + '?v=' + version;
       script.async = false;
-      script.dataset.waffleV11147 = 'true';
+      script.dataset.waffleV11148 = 'true';
       script.addEventListener('load', resolve, { once: true });
       script.addEventListener('error', () => reject(new Error('Could not load ' + src)), { once: true });
       document.head.appendChild(script);
@@ -62,35 +62,41 @@
        guard themselves internally. */
     await loadScript(
       'waffle-v11.1.37-assets.js',
-      () => !!(window.WAFFLE_AI_ASSETS && window.WAFFLE_AI_ASSETS.icon)
+      () => !!(window.WAFFLE_AI_ASSETS && window.WAFFLE_AI_ASSETS.icon),
+      '11.1.47'
     );
 
     await loadScript(
       'waffle-v11.1.37.js',
-      () => !!window.v11137AskWaffleVersion
+      () => !!window.v11137AskWaffleVersion,
+      '11.1.47'
     );
 
     await loadScript(
       'waffle-v11.1.38.js',
-      () => !!window.v11138WaffleAiVersion
+      () => !!window.v11138WaffleAiVersion,
+      '11.1.47'
     );
 
     if (FLOATING_PARITY_PAGES.has(pageName())) {
       await loadScript(
         'waffle-v11.1.39.js',
-        () => !!window.v11139AskWaffleLayoutVersion
+        () => !!window.v11139AskWaffleLayoutVersion,
+        '11.1.47'
       );
 
       await loadScript(
         'waffle-v11.1.40.js',
-        () => !!window.v11140AskWaffleLayoutVersion
+        () => !!window.v11140AskWaffleLayoutVersion,
+        '11.1.47'
       );
     }
 
     if (pageName() === 'calendar') {
       await loadScript(
         'waffle-v11.1.45.js',
-        () => !!window.v11145CalendarStabilityVersion
+        () => !!window.v11145CalendarStabilityVersion,
+        '11.1.47'
       );
     }
 
@@ -98,6 +104,14 @@
       'waffle-v11.1.47.js',
       () => !!window.v11147WaffleAiVersion,
       '11.1.47'
+    );
+
+    /* V11.1.48 is deliberately last in the assistant stack. It owns submit
+       routing, backend diagnostics, provider failover UX and the Thinking icon. */
+    await loadScript(
+      'waffle-v11.1.48.js',
+      () => !!window.v11148WaffleAiVersion,
+      '11.1.48'
     );
   }
 
@@ -112,7 +126,7 @@
       await loadScript(
         'waffle-ui-contract.js',
         () => !!window.WAFFLE_UI_CONTRACT,
-        '11.1.47'
+        '11.1.48'
       );
     } catch (error) {
       console.warn('Waffle Final UI Contract could not load:', error);
