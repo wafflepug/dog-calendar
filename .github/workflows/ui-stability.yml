@@ -27,6 +27,7 @@ jobs:
           node --check waffle-v11.1.52.js
           node --check waffle-v11.1.53.js
           node --check waffle-v11.1.58.js
+          node --check waffle-v11.1.59.js
           node --check apps-script/WaffleAI.js
           node --check apps-script/WaffleAIProvider.js
           node --check apps-script/WaffleAIProviderV11148.js
@@ -68,9 +69,22 @@ jobs:
           grep -q "content: none !important" waffle-v11.1.53.js
           grep -q "label.textContent = 'Organiser'" waffle-v11.1.53.js
           if grep -q "event.stopImmediatePropagation" waffle-v11.1.53.js; then
-            echo "Care final layer must not suppress native profile-tab listeners"
+            echo "Care shared chrome layer must not suppress native profile-tab listeners"
             exit 1
           fi
+
+      - name: Validate deterministic desktop Care tab authority
+        run: |
+          grep -q "waffle-v11.1.59.js" waffle-v11.0.5.js
+          grep -q "window.addEventListener('click', handleClick, true)" waffle-v11.1.59.js
+          grep -q "'(min-width: 769px)'" waffle-v11.1.59.js
+          grep -q "'profile', 'belongings', 'media', 'history', 'master'" waffle-v11.1.59.js
+          grep -q "switchDirectoryProfileMainTab" waffle-v11.1.59.js
+          grep -q "v110OpenCustomPanel" waffle-v11.1.59.js
+          grep -q "loadDirectoryBelongingsDetail" waffle-v11.1.59.js
+          grep -q "ensureHistoryFallbackPanel" waffle-v11.1.59.js
+          grep -q "event.stopImmediatePropagation" waffle-v11.1.59.js
+          grep -q "window.v11159CareDesktopTabsVersion" waffle-v11.1.59.js
 
       - name: Validate Ask Waffle speech to text
         run: |
