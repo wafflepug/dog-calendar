@@ -24,6 +24,7 @@ jobs:
           node --check waffle-v11.1.47.js
           node --check apps-script/WaffleAI.js
           node --check apps-script/WaffleAIProvider.js
+          node --check apps-script/WaffleAICompat.js
 
       - name: Validate Apps Script AI router patch
         run: |
