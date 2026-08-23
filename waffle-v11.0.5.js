@@ -1,7 +1,8 @@
 /* ============================================================
-   WAFFLE HOUSE V11.1.43 — COMPATIBILITY + LEGACY RETIREMENT
+   WAFFLE HOUSE V11.1.45 — COMPATIBILITY + LEGACY RETIREMENT
    Keeps V11.0.5 synchronous, ensures the current Ask Waffle stack is present
-   on Calendar and Care, and removes retired user-facing DOM before hydration.
+   on Calendar and Care, removes retired user-facing DOM before hydration, and
+   loads the final Calendar/Care render-stability layers.
    ============================================================ */
 (function () {
   'use strict';
@@ -27,7 +28,7 @@
     );
   }
 
-  function loadScript(src, ready) {
+  function loadScript(src, ready, version = '11.1.45') {
     if (ready()) return Promise.resolve();
 
     return new Promise((resolve, reject) => {
@@ -46,9 +47,9 @@
       }
 
       const script = document.createElement('script');
-      script.src = src + '?v=11.1.40';
+      script.src = src + '?v=' + version;
       script.async = false;
-      script.dataset.waffleV11140 = 'true';
+      script.dataset.waffleV11145 = 'true';
       script.addEventListener('load', resolve, { once: true });
       script.addEventListener('error', () => reject(new Error('Could not load ' + src)), { once: true });
       document.head.appendChild(script);
@@ -83,8 +84,15 @@
         'waffle-v11.1.40.js',
         () => !!window.v11140AskWaffleLayoutVersion
       );
+
+      if (pageName() === 'calendar') {
+        await loadScript(
+          'waffle-v11.1.45.js',
+          () => !!window.v11145CalendarStabilityVersion
+        );
+      }
     } catch (error) {
-      console.warn('Ask Waffle launcher setup failed:', error);
+      console.warn('Waffle final UI setup failed:', error);
     }
   }
 
