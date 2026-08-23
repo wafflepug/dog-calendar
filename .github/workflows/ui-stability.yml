@@ -55,6 +55,15 @@ jobs:
           grep -q "waffle-v11.1.53.js?v=11.1.53" service-worker.js
           grep -q "url.pathname.endsWith('/waffle-v11.1.53.js')" service-worker.js
 
+      - name: Validate Care desktop tab parity and Organiser label
+        run: |
+          grep -q "v11155CareTabParityVersion" waffle-v11.1.53.js
+          grep -q "handleDesktopCareTab" waffle-v11.1.53.js
+          grep -q "stopImmediatePropagation" waffle-v11.1.53.js
+          grep -q "directory-main-profile-tab" waffle-v11.1.53.js
+          grep -q "content: none !important" waffle-v11.1.53.js
+          grep -q "label.textContent = 'Organiser'" waffle-v11.1.53.js
+
       - name: Validate Apps Script AI router patch
         run: |
           python3 scripts/patch-waffle-ai-router.py
