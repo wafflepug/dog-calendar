@@ -1,13 +1,14 @@
 /* ============================================================
    WAFFLE HOUSE V11.1.40 — ASK WAFFLE LAYOUT HARDENING
-   - Stack Quick Action above Ask Waffle.
+   - Stack Quick Action above Ask Waffle on desktop.
+   - Preserve Quick Add inside the mobile navigation.
    - Remove the stray Request From selector from Ask Waffle.
    - Keep the assistant inside narrow Fold/mobile viewports.
    ============================================================ */
 (function () {
   'use strict';
 
-  const VERSION = '11.1.40';
+  const VERSION = '11.1.40.1';
   const TARGET_PAGES = new Set(['calendar', 'directory']);
 
   function pageName() {
@@ -18,17 +19,35 @@
     );
   }
 
+  function isMobile() {
+    return !!window.matchMedia && window.matchMedia('(max-width: 768px)').matches;
+  }
+
   function ensureStyle() {
     if (document.getElementById('aw40-layout-style')) return;
 
     const style = document.createElement('style');
     style.id = 'aw40-layout-style';
     style.textContent = `
-      /* Keep the two global floating actions in a predictable vertical stack. */
-      body[data-waffle-page="calendar"] .v10-quick-add-button,
-      body[data-waffle-page="directory"] .v10-quick-add-button {
-        right: 18px !important;
-        bottom: 96px !important;
+      /* Only floating Quick Add gets desktop Ask Waffle spacing. Never move
+         the copy that V10.8.8/V11.1.22 docks into the mobile navigation. */
+      @media (min-width: 769px) {
+        body[data-waffle-page="calendar"] .v10-quick-add-button:not(.v1088-nav-quick-add),
+        body[data-waffle-page="directory"] .v10-quick-add-button:not(.v1088-nav-quick-add) {
+          right: 18px !important;
+          bottom: 96px !important;
+        }
+      }
+
+      @media (max-width: 768px) {
+        body .app-tabs > .v10-quick-add-button.v1088-nav-quick-add,
+        body .app-tabs > .v10-quick-add-button.v11122-nav-add {
+          top: auto !important;
+          right: auto !important;
+          bottom: auto !important;
+          left: auto !important;
+          inset: auto !important;
+        }
       }
 
       /* Defensive selectors for any request-source block injected into Waffle. */
@@ -88,12 +107,6 @@
       }
 
       @media (max-width: 768px) {
-        body[data-waffle-page="calendar"] .v10-quick-add-button,
-        body[data-waffle-page="directory"] .v10-quick-add-button {
-          right: 12px !important;
-          bottom: calc(160px + env(safe-area-inset-bottom)) !important;
-        }
-
         #v11133AskWaffleModal {
           padding: 8px !important;
         }
@@ -294,8 +307,6 @@
     const modal = document.getElementById('v11133AskWaffleModal');
     if (!modal) return false;
 
-    /* Prefer the smallest descendant that contains the heading plus provider
-       choices. This avoids touching similarly named controls elsewhere. */
     const directCandidates = Array.from(modal.querySelectorAll('*'))
       .filter(element => {
         const text = cleanText(element);
@@ -309,7 +320,6 @@
       return true;
     }
 
-    /* Fallback for source choices represented mainly by images/ARIA labels. */
     const heading = Array.from(
       modal.querySelectorAll('h1,h2,h3,h4,h5,h6,label,strong,p,span,div')
     ).find(element => cleanText(element) === 'request from');
@@ -345,9 +355,34 @@
     observer.observe(modal, { childList: true, subtree: true });
   }
 
+  function restoreMobileQuickAdd() {
+    if (!isMobile()) return;
+
+    try {
+      if (typeof window.v1088DockQuickAddButton === 'function') {
+        window.v1088DockQuickAddButton();
+      } else if (typeof v1088DockQuickAddButton === 'function') {
+        v1088DockQuickAddButton();
+      }
+    } catch (_) {}
+
+    const nav = document.querySelector('.app-tabs');
+    const button = document.getElementById('v10QuickAddButton');
+    if (!nav || !button) return;
+
+    if (button.parentElement !== nav) {
+      const organiser = nav.querySelector('[data-page-link="reminders"], a[href$="reminders.html"]');
+      nav.insertBefore(button, organiser || null);
+    }
+
+    button.classList.add('v1088-nav-quick-add', 'v11122-nav-add');
+    nav.classList.add('v1088-has-quick-add', 'v11122-unified-nav');
+  }
+
   function apply() {
     if (!TARGET_PAGES.has(pageName())) return;
     ensureStyle();
+    restoreMobileQuickAdd();
     removeRequestFromBlock();
     wireModalObserver();
   }
