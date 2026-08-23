@@ -26,16 +26,19 @@ jobs:
           node --check apps-script/WaffleAI.js
           node --check apps-script/WaffleAIProvider.js
           node --check apps-script/WaffleAIProviderV11148.js
+          node --check apps-script/WaffleAIProviderV11149.js
           node --check apps-script/WaffleAIGeminiRepairV11148.js
+          node --check apps-script/WaffleAICalendarFastV11149.js
           node --check apps-script/WaffleAICompat.js
           node --check apps-script/WaffleAIHealth.js
           node --check apps-script/WaffleAIHealthV11148.js
+          node --check apps-script/WaffleAIHealthV11149.js
 
       - name: Validate Apps Script AI router patch
         run: |
           python3 scripts/patch-waffle-ai-router.py
-          grep -q 'WAFFLE_AI_READ_ONLY_ROUTE_V11148' apps-script/Code.js
+          grep -q 'WAFFLE_AI_READ_ONLY_ROUTE_V11149' apps-script/Code.js
           grep -q 'waffle_ai_health: true' apps-script/Code.js
           grep -q 'ask_waffle_ai: true' apps-script/Code.js
-          grep -q 'getWaffleAiHealthResponseV11148_()' apps-script/Code.js
-          grep -q 'getWaffleAiConversationResponseV11148_(data)' apps-script/Code.js
+          grep -q 'getWaffleAiHealthResponseV11149_()' apps-script/Code.js
+          grep -q 'getWaffleAiConversationResponseV11149_(data)' apps-script/Code.js
