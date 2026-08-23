@@ -27,6 +27,24 @@
 
   const VERSION = '11.1.46';
   const CONTRACT_ATTR = 'data-waffle-ui-contract';
+  const PROTECTED_SELECTOR = [
+    '#aw37launch',
+    '#v11133AskWaffleButton',
+    '#openLegacyIntakeUploadBtn',
+    '#v11123LegacyIntakeHistoryNote',
+    '[data-upload-legacy-intake]',
+    '[data-reassign-legacy-intake]',
+    '[data-v1115-recovery-panel]',
+    '#v1118MobileNav',
+    'nav.v1118-mobile-nav',
+    '.calendar-brand-copy',
+    '.summary-dashboard',
+    '.meet-greet-dashboard',
+    '.directory-header-actions',
+    '.calendar-header-branding',
+    '.app-tabs'
+  ].join(', ');
+
   let observer = null;
   let frame = 0;
 
@@ -205,35 +223,35 @@
 
   function nodeMayAffectContract(node) {
     if (!(node instanceof Element)) return false;
+    return !!(node.matches?.(PROTECTED_SELECTOR) || node.querySelector?.(PROTECTED_SELECTOR));
+  }
 
-    return !!(
-      node.matches?.(
-        '#aw37launch, #v11133AskWaffleButton, #openLegacyIntakeUploadBtn, ' +
-        '[data-upload-legacy-intake], [data-reassign-legacy-intake], ' +
-        '[data-v1115-recovery-panel], #v1118MobileNav, nav.v1118-mobile-nav, ' +
-        '.calendar-brand-copy, .summary-dashboard, .meet-greet-dashboard'
-      ) ||
-      node.querySelector?.(
-        '#aw37launch, #v11133AskWaffleButton, #openLegacyIntakeUploadBtn, ' +
-        '[data-upload-legacy-intake], [data-reassign-legacy-intake], ' +
-        '[data-v1115-recovery-panel], #v1118MobileNav, nav.v1118-mobile-nav, ' +
-        '.calendar-brand-copy, .summary-dashboard, .meet-greet-dashboard'
-      )
-    );
+  function mutationMayAffectContract(mutation) {
+    const target = mutation.target instanceof Element ? mutation.target : mutation.target?.parentElement;
+
+    if (target && (target.matches?.(PROTECTED_SELECTOR) || target.closest?.(PROTECTED_SELECTOR))) {
+      return true;
+    }
+
+    if (Array.from(mutation.addedNodes || []).some(nodeMayAffectContract)) return true;
+    if (Array.from(mutation.removedNodes || []).some(nodeMayAffectContract)) return true;
+
+    return false;
   }
 
   function wireObserver() {
     if (observer || !document.body || typeof MutationObserver !== 'function') return;
 
     observer = new MutationObserver(mutations => {
-      if (mutations.some(mutation =>
-        Array.from(mutation.addedNodes || []).some(nodeMayAffectContract)
-      )) {
-        queueApply();
-      }
+      if (mutations.some(mutationMayAffectContract)) queueApply();
     });
 
-    observer.observe(document.body, { childList: true, subtree: true });
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['class', 'style', 'hidden']
+    });
   }
 
   function start() {
