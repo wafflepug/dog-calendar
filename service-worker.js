@@ -1,6 +1,6 @@
 /* Waffle House Boarding — recovery service worker */
 
-const WAFFLE_SW_VERSION = 'v11.1.43-legacy-dom-retirement';
+const WAFFLE_SW_VERSION = 'v11.1.44-care-render-stability';
 const WAFFLE_CACHE_PREFIX = 'waffle-house-';
 const APP_SHELL_CACHE = `${WAFFLE_CACHE_PREFIX}shell-${WAFFLE_SW_VERSION}`;
 const RUNTIME_CACHE = `${WAFFLE_CACHE_PREFIX}runtime-${WAFFLE_SW_VERSION}`;
@@ -40,14 +40,25 @@ const APP_SHELL = [
   './waffle-v11.0.js?v=11.0.5',
   './waffle-v11.0.3.css?v=11.0.5',
   './waffle-v11.0.4.js?v=11.0.5',
-  './waffle-v11.0.5.css?v=11.1.43',
-  './waffle-v11.0.5.js?v=11.1.43',
+
+  /* directory.html still references the historical query string directly.
+     Cache both aliases so first paint is current online and offline. */
+  './waffle-v11.0.5.css?v=11.0.5',
+  './waffle-v11.0.5.js?v=11.0.5',
+  './waffle-v11.0.5.css?v=11.1.44',
+  './waffle-v11.0.5.js?v=11.1.44',
   './waffle-v11.0.5-core.js?v=11.1.40',
+
+  /* V11.1.30 is still requested with the V11.1.31 compatibility URL by the
+     older enhancement chain. Cache that exact URL with its retired-intake fix. */
+  './waffle-v11.1.30.js?v=11.1.31',
+
   './waffle-v11.1.37-assets.js?v=11.1.40',
   './waffle-v11.1.37.js?v=11.1.40',
   './waffle-v11.1.38.js?v=11.1.40',
   './waffle-v11.1.39.js?v=11.1.40',
-  './waffle-v11.1.40.js?v=11.1.42'
+  './waffle-v11.1.40.js?v=11.1.40',
+  './waffle-v11.1.40.js?v=11.1.44'
 ];
 
 const OPTIONAL_EXTERNAL_ASSETS = [
@@ -160,6 +171,7 @@ function isFirstPaintCriticalAsset(url) {
   return url.origin === self.location.origin && (
     url.pathname.endsWith('/waffle-v11.0.5.css') ||
     url.pathname.endsWith('/waffle-v11.0.5.js') ||
+    url.pathname.endsWith('/waffle-v11.1.30.js') ||
     url.pathname.endsWith('/waffle-v11.1.40.js')
   );
 }
