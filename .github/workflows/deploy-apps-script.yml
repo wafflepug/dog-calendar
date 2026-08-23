@@ -55,7 +55,7 @@ jobs:
             --deploymentId "$APPS_SCRIPT_DEPLOYMENT_ID" \
             --description "GitHub main ${GITHUB_SHA::7}"
 
-      - name: Verify live conversational Waffle AI route
+      - name: Verify live Groq-first Waffle AI route
         env:
           APPS_SCRIPT_WEBAPP_URL: https://script.google.com/macros/s/AKfycbwn4HL49K9c3AZbXJRUjPw3UYWxJt8DmqXwMnTytyqdSstj3ZIJwWdDEC2IsBjetOf3pw/exec
         run: |
@@ -78,9 +78,12 @@ jobs:
           ok = (
               payload.get("result") == "success"
               and payload.get("action") == "waffle_ai_health"
-              and payload.get("version") == "11.1.50"
+              and payload.get("version") == "11.1.57"
               and payload.get("routeReady") is True
               and payload.get("readOnly") is True
+              and payload.get("groqArchitecture") is True
+              and payload.get("groqFreeTierOptimized") is True
+              and payload.get("paidOpenAiFallbackOptInOnly") is True
               and payload.get("calendarFastPath") is True
               and payload.get("completeMonthRosters") is True
               and payload.get("calendarFastNoAiRoundTrip") is True
@@ -90,22 +93,23 @@ jobs:
               sys.exit(1)
 
           print(
-              "Live Waffle AI V11.1.50 route verified · provider="
+              "Live Waffle AI V11.1.57 Groq architecture verified · provider="
               + str(payload.get("preferredProvider", payload.get("provider", "unknown")))
-              + " · configured="
-              + str(payload.get("configured", False)).lower()
-              + " · targeted-calendar=true"
+              + " · groqConfigured="
+              + str(payload.get("groqConfigured", False)).lower()
+              + " · migrationPending="
+              + str(payload.get("migrationPending", False)).lower()
           )
           PY
             then
               exit 0
             fi
 
-            echo "Waffle AI V11.1.50 health route not live yet (attempt $attempt/12); retrying..."
+            echo "Waffle AI V11.1.57 health route not live yet (attempt $attempt/12); retrying..."
             sleep 5
           done
 
-          echo "Live Waffle AI V11.1.50 route verification failed."
+          echo "Live Waffle AI V11.1.57 route verification failed."
           exit 1
 
       - name: Show Apps Script deployments
