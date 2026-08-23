@@ -81,7 +81,9 @@
     document.querySelectorAll(
       'a[href$="reminders.html"] .nav-label, [data-page-link="reminders"] .nav-label'
     ).forEach(label => {
-      label.textContent = 'Organiser';
+      if (String(label.textContent || '').trim() !== 'Organiser') {
+        label.textContent = 'Organiser';
+      }
     });
 
     document.querySelectorAll('a[href$="reminders.html"], [data-page-link="reminders"]')
@@ -155,16 +157,26 @@
     const actions = document.querySelector('.directory-header-actions');
     if (!actions) return;
 
+    const canonicalText = 'Historical PDF Intake · view only';
+    const canonicalTitle = 'Existing historical PDF Intake records remain view-only. Use Digital Intake for new or updated intake information.';
+
     let note = document.getElementById('v11123LegacyIntakeHistoryNote');
     if (!note) {
       note = document.createElement('span');
       note.id = 'v11123LegacyIntakeHistoryNote';
       note.className = 'directory-care-summary v11123-legacy-intake-history-note v11144-historical-intake-note';
+      note.textContent = canonicalText;
+      note.title = canonicalTitle;
       actions.insertBefore(note, actions.firstChild || null);
+      return;
     }
 
-    note.textContent = 'Historical PDF Intake · view only';
-    note.title = 'Existing historical PDF Intake records remain view-only. Use Digital Intake for new or updated intake information.';
+    if (String(note.textContent || '').trim() !== canonicalText) {
+      note.textContent = canonicalText;
+    }
+    if (note.title !== canonicalTitle) {
+      note.title = canonicalTitle;
+    }
   }
 
   function canonicalCare() {
@@ -189,7 +201,9 @@
     const panel = document.getElementById('remindersTabPanel');
     if (!panel) return;
 
-    panel.dataset.waffleFinalUiOwner = 'organiser';
+    if (panel.dataset.waffleFinalUiOwner !== 'organiser') {
+      panel.dataset.waffleFinalUiOwner = 'organiser';
+    }
   }
 
   function canonicalAudit() {
@@ -201,8 +215,12 @@
   function apply() {
     if (!document.body) return;
 
-    document.documentElement.setAttribute(CONTRACT_ATTR, VERSION);
-    document.body.setAttribute(CONTRACT_ATTR, VERSION);
+    if (document.documentElement.getAttribute(CONTRACT_ATTR) !== VERSION) {
+      document.documentElement.setAttribute(CONTRACT_ATTR, VERSION);
+    }
+    if (document.body.getAttribute(CONTRACT_ATTR) !== VERSION) {
+      document.body.setAttribute(CONTRACT_ATTR, VERSION);
+    }
 
     canonicalNavigation();
     canonicalBranding();
