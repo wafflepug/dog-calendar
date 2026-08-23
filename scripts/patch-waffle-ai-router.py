@@ -16,26 +16,34 @@ import sys
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 CODE = ROOT / "apps-script" / "Code.js"
 
-ROUTE_MARKER = "WAFFLE_AI_READ_ONLY_ROUTE_V11148"
-OLD_ROUTE_MARKER = "WAFFLE_AI_READ_ONLY_ROUTE_V11147"
-ROUTE = f'''\n  /* {ROUTE_MARKER}: conversational Waffle AI stays read-only. */\n  if (action === "waffle_ai_health") {{\n    return getWaffleAiHealthResponseV11148_();\n  }}\n\n  if (action === "ask_waffle_ai") {{\n    return getWaffleAiConversationResponseV11148_(data);\n  }}\n'''
+ROUTE_MARKER = "WAFFLE_AI_READ_ONLY_ROUTE_V11149"
+OLD_ROUTE_MARKERS = (
+    "WAFFLE_AI_READ_ONLY_ROUTE_V11147",
+    "WAFFLE_AI_READ_ONLY_ROUTE_V11148",
+)
+ROUTE = f'''\n  /* {ROUTE_MARKER}: conversational Waffle AI stays read-only. */\n  if (action === "waffle_ai_health") {{\n    return getWaffleAiHealthResponseV11149_();\n  }}\n\n  if (action === "ask_waffle_ai") {{\n    return getWaffleAiConversationResponseV11149_(data);\n  }}\n'''
 
 
 def main() -> int:
     text = CODE.read_text(encoding="utf-8")
 
-    # A generated checkout may contain the previous V11.1.47 injected block.
-    # Upgrade its targets/marker in-place before deciding whether to insert.
-    if OLD_ROUTE_MARKER in text:
-        text = text.replace(OLD_ROUTE_MARKER, ROUTE_MARKER)
-        text = text.replace(
-            'return getWaffleAiHealthResponse_();',
-            'return getWaffleAiHealthResponseV11148_();'
-        )
-        text = text.replace(
-            'return getWaffleAiConversationResponse_(data);',
-            'return getWaffleAiConversationResponseV11148_(data);'
-        )
+    for old_marker in OLD_ROUTE_MARKERS:
+        if old_marker in text:
+            text = text.replace(old_marker, ROUTE_MARKER)
+
+    # Upgrade all historical route targets to the current live wrapper.
+    health_targets = (
+        'return getWaffleAiHealthResponse_();',
+        'return getWaffleAiHealthResponseV11148_();',
+    )
+    conversation_targets = (
+        'return getWaffleAiConversationResponse_(data);',
+        'return getWaffleAiConversationResponseV11148_(data);',
+    )
+    for target in health_targets:
+        text = text.replace(target, 'return getWaffleAiHealthResponseV11149_();')
+    for target in conversation_targets:
+        text = text.replace(target, 'return getWaffleAiConversationResponseV11149_(data);')
 
     if ROUTE_MARKER not in text:
         anchor = '''function processReadOnlySheetAction_(data) {\n  var action =\n    String(data.action || "");\n'''
@@ -44,17 +52,9 @@ def main() -> int:
             print("Could not find processReadOnlySheetAction_ dispatcher anchor.", file=sys.stderr)
             return 2
         text = text.replace(anchor, anchor + ROUTE)
-        print(f"Injected Waffle AI V11.1.48 dispatcher routes into {count} dispatcher block(s).")
+        print(f"Injected Waffle AI V11.1.49 dispatcher routes into {count} dispatcher block(s).")
     else:
-        text = text.replace(
-            'return getWaffleAiHealthResponse_();',
-            'return getWaffleAiHealthResponseV11148_();'
-        )
-        text = text.replace(
-            'return getWaffleAiConversationResponse_(data);',
-            'return getWaffleAiConversationResponseV11148_(data);'
-        )
-        print("Waffle AI dispatcher routes already present; V11.1.48 targets verified.")
+        print("Waffle AI dispatcher routes already present; V11.1.49 targets verified.")
 
     registry_anchor = "var READ_ONLY_SHEET_ACTIONS_ = {\n"
     additions = ""
@@ -77,9 +77,9 @@ def main() -> int:
     required = (
         ROUTE_MARKER,
         'action === "waffle_ai_health"',
-        'getWaffleAiHealthResponseV11148_()',
+        'getWaffleAiHealthResponseV11149_()',
         'action === "ask_waffle_ai"',
-        'getWaffleAiConversationResponseV11148_(data)',
+        'getWaffleAiConversationResponseV11149_(data)',
         "  waffle_ai_health: true,\n",
         "  ask_waffle_ai: true,\n",
     )
@@ -87,7 +87,7 @@ def main() -> int:
         print("Waffle AI router verification failed.", file=sys.stderr)
         return 4
 
-    print("Waffle AI V11.1.48 router patch ready for clasp push.")
+    print("Waffle AI V11.1.49 router patch ready for clasp push.")
     return 0
 
 
