@@ -1,9 +1,9 @@
 /* ============================================================
-   WAFFLE HOUSE V11.1.52 — COMPATIBILITY + CONVERSATIONAL AI
+   WAFFLE HOUSE V11.1.53 — COMPATIBILITY + CONVERSATIONAL AI
    Keeps V11.0.5 synchronous, ensures the current Ask Waffle stack is present,
-   unifies action chrome across Calendar/Care/Organiser/Logs, adds organic
-   tool-using Waffle AI, removes retired DOM before hydration, and loads the
-   permanent Final UI Contract last.
+   unifies action chrome across Calendar/Care/Organiser/Logs, removes retired
+   Request From controls everywhere, adds organic tool-using Waffle AI, removes
+   retired DOM before hydration, and loads the permanent Final UI Contract last.
    ============================================================ */
 (function () {
   'use strict';
@@ -29,7 +29,7 @@
     );
   }
 
-  function loadScript(src, ready, version = '11.1.52') {
+  function loadScript(src, ready, version = '11.1.53') {
     if (ready()) return Promise.resolve();
 
     return new Promise((resolve, reject) => {
@@ -50,7 +50,7 @@
       const script = document.createElement('script');
       script.src = src + '?v=' + version;
       script.async = false;
-      script.dataset.waffleV11152 = 'true';
+      script.dataset.waffleV11153 = 'true';
       script.addEventListener('load', resolve, { once: true });
       script.addEventListener('error', () => reject(new Error('Could not load ' + src)), { once: true });
       document.head.appendChild(script);
@@ -65,13 +65,12 @@
       '11.1.47'
     );
 
-    /* Load unified chrome before the historical launcher creator. Its CSS is
-       therefore already active the instant #aw37launch is inserted, avoiding
-       a pill/circle visual transition on Organiser and Logs. */
+    /* Load unified chrome + retired-modal cleanup before the historical launcher
+       creator. Its CSS/observer are ready the instant legacy DOM is inserted. */
     await loadScript(
-      'waffle-v11.1.52.js',
-      () => !!window.v11152UnifiedActionChromeVersion,
-      '11.1.52'
+      'waffle-v11.1.53.js',
+      () => !!window.v11153UnifiedActionChromeVersion,
+      '11.1.53'
     );
 
     await loadScript(
@@ -86,8 +85,8 @@
       '11.1.47'
     );
 
-    /* Historical Calendar/Care layers remain for compatibility. V11.1.52 is
-       the shared authority for action chrome on all four pages. */
+    /* Historical Calendar/Care layers remain for compatibility. V11.1.53 is
+       the shared authority for action chrome/modal retirement on all pages. */
     if (FLOATING_PARITY_PAGES.has(pageName())) {
       await loadScript(
         'waffle-v11.1.39.js',
