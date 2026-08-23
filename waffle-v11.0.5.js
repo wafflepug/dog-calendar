@@ -1,8 +1,8 @@
 /* ============================================================
-   WAFFLE HOUSE V11.1.46 — COMPATIBILITY + FINAL UI CONTRACT
-   Keeps V11.0.5 synchronous, ensures the current Ask Waffle stack is present
-   on Calendar and Care, removes retired user-facing DOM before hydration, and
-   loads the permanent Final UI Contract as the last visual authority.
+   WAFFLE HOUSE V11.1.47 — COMPATIBILITY + CONVERSATIONAL AI
+   Keeps V11.0.5 synchronous, ensures the current Ask Waffle stack is present,
+   adds organic tool-using Waffle AI, removes retired user-facing DOM before
+   hydration, and loads the permanent Final UI Contract last.
    ============================================================ */
 (function () {
   'use strict';
@@ -18,7 +18,7 @@
     document.head.appendChild(core);
   }
 
-  const TARGET_PAGES = new Set(['calendar', 'directory']);
+  const FLOATING_PARITY_PAGES = new Set(['calendar', 'directory']);
 
   function pageName() {
     return String(
@@ -28,7 +28,7 @@
     );
   }
 
-  function loadScript(src, ready, version = '11.1.46') {
+  function loadScript(src, ready, version = '11.1.47') {
     if (ready()) return Promise.resolve();
 
     return new Promise((resolve, reject) => {
@@ -49,7 +49,7 @@
       const script = document.createElement('script');
       script.src = src + '?v=' + version;
       script.async = false;
-      script.dataset.waffleV11146 = 'true';
+      script.dataset.waffleV11147 = 'true';
       script.addEventListener('load', resolve, { once: true });
       script.addEventListener('error', () => reject(new Error('Could not load ' + src)), { once: true });
       document.head.appendChild(script);
@@ -57,8 +57,9 @@
   }
 
   async function ensureAskWaffle() {
-    if (!TARGET_PAGES.has(pageName())) return;
-
+    /* Ask Waffle is now a genuine cross-app assistant. Load the common assistant
+       on Calendar, Care, Organiser and Logs; page-specific layout layers still
+       guard themselves internally. */
     await loadScript(
       'waffle-v11.1.37-assets.js',
       () => !!(window.WAFFLE_AI_ASSETS && window.WAFFLE_AI_ASSETS.icon)
@@ -74,15 +75,17 @@
       () => !!window.v11138WaffleAiVersion
     );
 
-    await loadScript(
-      'waffle-v11.1.39.js',
-      () => !!window.v11139AskWaffleLayoutVersion
-    );
+    if (FLOATING_PARITY_PAGES.has(pageName())) {
+      await loadScript(
+        'waffle-v11.1.39.js',
+        () => !!window.v11139AskWaffleLayoutVersion
+      );
 
-    await loadScript(
-      'waffle-v11.1.40.js',
-      () => !!window.v11140AskWaffleLayoutVersion
-    );
+      await loadScript(
+        'waffle-v11.1.40.js',
+        () => !!window.v11140AskWaffleLayoutVersion
+      );
+    }
 
     if (pageName() === 'calendar') {
       await loadScript(
@@ -90,6 +93,12 @@
         () => !!window.v11145CalendarStabilityVersion
       );
     }
+
+    await loadScript(
+      'waffle-v11.1.47.js',
+      () => !!window.v11147WaffleAiVersion,
+      '11.1.47'
+    );
   }
 
   async function startFinalUi() {
@@ -103,7 +112,7 @@
       await loadScript(
         'waffle-ui-contract.js',
         () => !!window.WAFFLE_UI_CONTRACT,
-        '11.1.46'
+        '11.1.47'
       );
     } catch (error) {
       console.warn('Waffle Final UI Contract could not load:', error);
