@@ -59,18 +59,13 @@
     status.classList.add('v11145-calendar-connection-status');
   }
 
-  function markHeaderStable() {
-    const header = document.querySelector('.calendar-header-branding');
-    if (!header) return null;
-
-    header.classList.add('v11145-calendar-header-stable');
-    return header;
+  function calendarHeader() {
+    return document.querySelector('.calendar-header-branding');
   }
 
   function apply() {
     if (!isCalendar()) return;
 
-    markHeaderStable();
     normaliseLauncher();
     stabiliseConnectionStatus();
   }
@@ -87,7 +82,7 @@
   function wireObservers() {
     if (!isCalendar() || typeof MutationObserver !== 'function') return;
 
-    const header = markHeaderStable();
+    const header = calendarHeader();
     if (header && !headerObserver) {
       headerObserver = new MutationObserver(() => queueApply());
       headerObserver.observe(header, { childList: true, subtree: false });
