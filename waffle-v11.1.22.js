@@ -303,26 +303,26 @@
   }
 })();
 
-/* Ask Waffle v1 is intentionally a separate final frontend layer. It reads the
-   live FullCalendar events and does not mutate bookings, Care or Organiser data. */
+/* Ask Waffle v2 remains a separate final frontend layer. It is read-only and
+   answers from the live FullCalendar data, now with date-range/month parsing. */
 (function () {
   'use strict';
   if (typeof window === 'undefined' || typeof document === 'undefined') return;
 
   function loadAskWaffle() {
-    if (!document.querySelector('link[data-waffle-v11133-assistant]')) {
+    if (!document.querySelector('link[data-waffle-v11134-assistant]')) {
       const stylesheet = document.createElement('link');
       stylesheet.rel = 'stylesheet';
-      stylesheet.href = 'waffle-v11.1.33.css?v=11.1.33';
-      stylesheet.setAttribute('data-waffle-v11133-assistant', 'css');
+      stylesheet.href = 'waffle-v11.1.33.css?v=11.1.34';
+      stylesheet.setAttribute('data-waffle-v11134-assistant', 'css');
       document.head.appendChild(stylesheet);
     }
 
-    if (!document.querySelector('script[data-waffle-v11133-assistant]')) {
+    if (!document.querySelector('script[data-waffle-v11134-assistant]')) {
       const script = document.createElement('script');
-      script.src = 'waffle-v11.1.33.js?v=11.1.33';
+      script.src = 'waffle-v11.1.34.js?v=11.1.34';
       script.async = false;
-      script.setAttribute('data-waffle-v11133-assistant', 'js');
+      script.setAttribute('data-waffle-v11134-assistant', 'js');
       document.body.appendChild(script);
     }
   }
