@@ -169,14 +169,12 @@
       panel.hidden = !active;
       panel.classList.toggle('is-active', active);
       panel.setAttribute('aria-hidden', active ? 'false' : 'true');
-      panel.style.removeProperty('display');
     });
 
     if (target) {
       target.hidden = false;
       target.classList.add('is-active');
       target.setAttribute('aria-hidden', 'false');
-      target.style.removeProperty('display');
     }
 
     card.dataset.v11159ActiveTab = key;
