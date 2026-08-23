@@ -38,7 +38,7 @@ jobs:
           printf '%s' "$CLASPRC_JSON" > "$HOME/.clasprc.json"
           printf '%s' "$CLASP_JSON" > "apps-script/.clasp.json"
 
-      - name: Inject conversational Waffle AI read-only route
+      - name: Inject conversational Waffle AI read-only routes
         run: python3 scripts/patch-waffle-ai-router.py
 
       - name: Push source to Google Apps Script
@@ -54,6 +54,53 @@ jobs:
           clasp create-deployment \
             --deploymentId "$APPS_SCRIPT_DEPLOYMENT_ID" \
             --description "GitHub main ${GITHUB_SHA::7}"
+
+      - name: Verify live conversational Waffle AI route
+        env:
+          APPS_SCRIPT_WEBAPP_URL: https://script.google.com/macros/s/AKfycbwn4HL49K9c3AZbXJRUjPw3UYWxJt8DmqXwMnTytyqdSstj3ZIJwWdDEC2IsBjetOf3pw/exec
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 12); do
+            response="$(curl -fsSLG "$APPS_SCRIPT_WEBAPP_URL" \
+              --data-urlencode 'payload={"action":"waffle_ai_health"}' || true)"
+
+            if RESPONSE="$response" python3 - <<'PY'
+          import json
+          import os
+          import sys
+
+          raw = os.environ.get("RESPONSE", "")
+          try:
+              payload = json.loads(raw)
+          except Exception:
+              sys.exit(1)
+
+          ok = (
+              payload.get("result") == "success"
+              and payload.get("action") == "waffle_ai_health"
+              and payload.get("version") == "11.1.47"
+              and payload.get("readOnly") is True
+          )
+          if not ok:
+              sys.exit(1)
+
+          print(
+              "Live Waffle AI route verified · provider="
+              + str(payload.get("provider", "unknown"))
+              + " · configured="
+              + str(payload.get("configured", False)).lower()
+          )
+          PY
+            then
+              exit 0
+            fi
+
+            echo "Waffle AI health route not live yet (attempt $attempt/12); retrying..."
+            sleep 5
+          done
+
+          echo "Live Waffle AI route verification failed."
+          exit 1
 
       - name: Show Apps Script deployments
         working-directory: apps-script
