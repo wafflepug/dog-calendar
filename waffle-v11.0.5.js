@@ -1,10 +1,9 @@
 /* ============================================================
-   WAFFLE HOUSE V11.1.60 — COMPATIBILITY + CONVERSATIONAL AI
-   Keeps V11.0.5 synchronous, ensures the current Ask Waffle stack is present,
-   unifies action chrome across Calendar/Care/Organiser/Logs, removes retired
-   Request From controls everywhere, adds organic tool-using Waffle AI, speech
-   to text, loads the rebuilt desktop Care tabs, removes retired DOM before
-   hydration, and loads the permanent Final UI Contract last.
+   WAFFLE HOUSE V11.1.61 — COMPATIBILITY + CONVERSATIONAL AI
+   Keeps V11.0.5 synchronous, loads the clean Calendar and rebuilt Care UI as
+   independent first-class components, ensures the current Ask Waffle stack is
+   present, removes retired UI before hydration, and loads the permanent Final
+   UI Contract last.
    ============================================================ */
 (function () {
   'use strict';
@@ -30,7 +29,7 @@
     );
   }
 
-  function loadScript(src, ready, version = '11.1.60') {
+  function loadScript(src, ready, version = '11.1.61') {
     if (ready()) return Promise.resolve();
 
     return new Promise((resolve, reject) => {
@@ -51,7 +50,7 @@
       const script = document.createElement('script');
       script.src = src + '?v=' + version;
       script.async = false;
-      script.dataset.waffleV11160 = 'true';
+      script.dataset.waffleV11161 = 'true';
       script.addEventListener('load', resolve, { once: true });
       script.addEventListener('error', () => reject(new Error('Could not load ' + src)), { once: true });
       document.head.appendChild(script);
@@ -133,6 +132,15 @@
     );
   }
 
+  async function ensureCleanCalendar() {
+    if (pageName() !== 'calendar') return;
+    await loadScript(
+      'waffle-v11.1.61.js',
+      () => !!window.v11161CleanCalendarVersion,
+      '11.1.61'
+    );
+  }
+
   async function ensureDesktopCareRebuild() {
     if (pageName() !== 'directory') return;
     await loadScript(
@@ -143,8 +151,13 @@
   }
 
   async function startFinalUi() {
-    /* Care must not depend on AI startup. Load the rebuilt Care component first
-       and isolate its failure boundary from Ask Waffle/provider features. */
+    /* Calendar and Care must not depend on AI startup. */
+    try {
+      await ensureCleanCalendar();
+    } catch (error) {
+      console.warn('Clean Calendar could not load:', error);
+    }
+
     try {
       await ensureDesktopCareRebuild();
     } catch (error) {
