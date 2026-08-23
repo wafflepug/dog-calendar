@@ -155,9 +155,6 @@ body.dark-theme[data-waffle-page="directory"]
    V11.1.44 — CARE FIRST-PAINT STABILITY
    ============================================================ */
 
-/* Historical intake is informational, not a success state. Keep the real
-   semantic badge visually identical to the pre-hydration placeholder so it
-   cannot switch grey/green as older scripts finish loading. */
 body[data-waffle-page="directory"] #v11123LegacyIntakeHistoryNote,
 body[data-waffle-page="directory"] .v11144-historical-intake-note {
     border-color: #d9e2ec !important;
@@ -173,10 +170,6 @@ body.dark-theme[data-waffle-page="directory"] .v11144-historical-intake-note {
     color: #cbd5e1 !important;
 }
 
-/* The static HTML starts with "No active care alerts" before any guest care
-   records have loaded. Present that unconfirmed state as Loading until the
-   V11.1.44 stabiliser marks the summary ready. Real alert states already carry
-   .has-alerts and therefore remain immediately visible. */
 body[data-waffle-page="directory"]
 #directory-care-summary:not(.has-alerts):not(.v11144-care-ready) {
     border-color: #d9e2ec !important;
@@ -197,6 +190,60 @@ body.dark-theme[data-waffle-page="directory"]
     border-color: #475569 !important;
     background: #1e293b !important;
     color: #cbd5e1 !important;
+}
+
+/* ============================================================
+   V11.1.45 — CALENDAR FIRST-PAINT / HEADER STABILITY
+   ============================================================ */
+
+/* V11.1.37 historically creates Ask Waffle inside the Calendar header before
+   V11.1.39 moves it to the floating launcher. Make that intermediate DOM state
+   visually identical to the final state from the instant the button exists, so
+   it never participates in header flex layout and cannot shift other controls. */
+body[data-waffle-page="calendar"] #aw37launch {
+    position: fixed !important;
+    right: 18px !important;
+    bottom: 22px !important;
+    width: 52px !important;
+    height: 52px !important;
+    min-width: 52px !important;
+    min-height: 52px !important;
+    padding: 0 !important;
+    gap: 0 !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 50% !important;
+    z-index: 2147481000 !important;
+}
+
+body[data-waffle-page="calendar"] #aw37launch > span {
+    display: none !important;
+}
+
+body[data-waffle-page="calendar"] #aw37launch > img {
+    width: 40px !important;
+    height: 40px !important;
+    object-fit: contain !important;
+}
+
+/* The retired assistant button must never briefly appear in the header. */
+body[data-waffle-page="calendar"] #v11133AskWaffleButton {
+    display: none !important;
+}
+
+/* Reserve a stable connection-status footprint. "Updating", "Live" and
+   "Offline" may change text, but the right-side header controls no longer move. */
+body[data-waffle-page="calendar"] #waffleConnectionStatus,
+body[data-waffle-page="calendar"] .waffle-connection-status {
+    box-sizing: border-box !important;
+    min-width: 76px !important;
+    justify-content: center !important;
+    text-align: center !important;
+    white-space: nowrap !important;
+}
+
+body[data-waffle-page="calendar"] .calendar-header-branding.v11145-calendar-header-stable {
+    contain: layout style;
 }
 
 @media (max-width: 768px) {
@@ -232,5 +279,15 @@ body.dark-theme[data-waffle-page="directory"]
         bottom: auto !important;
         left: auto !important;
         inset: auto !important;
+    }
+
+    body[data-waffle-page="calendar"] #aw37launch {
+        right: 12px !important;
+        bottom: calc(88px + env(safe-area-inset-bottom)) !important;
+    }
+
+    body[data-waffle-page="calendar"] #waffleConnectionStatus,
+    body[data-waffle-page="calendar"] .waffle-connection-status {
+        min-width: 68px !important;
     }
 }
