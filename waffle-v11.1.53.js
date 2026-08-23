@@ -1,14 +1,17 @@
 /* ============================================================
-   WAFFLE HOUSE V11.1.54 — UNIFIED ACTION CHROME + MODAL TAIL RETIREMENT
-   Calendar, Care, Organiser and Logs share one canonical Ask Waffle +
-   Quick Action layout. Any historical UI appended after the Waffle AI footer
-   is retired before it can become visible.
+   WAFFLE HOUSE V11.1.55 — CARE DESKTOP TAB PARITY + NAV LABEL FINAL
+   - Keeps the unified Ask Waffle / Quick Action chrome on all app pages.
+   - Retires historical Request From controls in Waffle AI.
+   - Makes Care Profile / Belongings / Media / History / Master deterministic
+     on desktop without changing the working mobile routing.
+   - Makes the bottom navigation render one canonical "Organiser" label.
    ============================================================ */
 (function () {
   'use strict';
 
-  const VERSION = '11.1.54';
+  const VERSION = '11.1.55';
   const APP_PAGES = new Set(['calendar', 'directory', 'reminders', 'audit']);
+  const CARE_KEYS = ['profile', 'belongings', 'media', 'history', 'master'];
   let observer = null;
   let frame = 0;
 
@@ -25,10 +28,10 @@
   }
 
   function ensureStyle() {
-    if (document.getElementById('v11154-unified-action-chrome-style')) return;
+    if (document.getElementById('v11155-final-ui-style')) return;
 
     const style = document.createElement('style');
-    style.id = 'v11154-unified-action-chrome-style';
+    style.id = 'v11155-final-ui-style';
     style.textContent = `
       body[data-waffle-page="calendar"] #aw37launch,
       body[data-waffle-page="directory"] #aw37launch,
@@ -74,23 +77,32 @@
         display: none !important;
       }
 
-      /* Structured legacy Request From variants. */
       #v11133AskWaffleModal .request-from,
       #v11133AskWaffleModal .request-from-block,
       #v11133AskWaffleModal .request-source,
       #v11133AskWaffleModal .request-source-block,
       #v11133AskWaffleModal [data-request-from],
-      #v11133AskWaffleModal [data-request-source] {
-        display: none !important;
-      }
-
-      /* The canonical Waffle AI footer is the final element in the modal.
-         Historical Request From / provider controls were appended after it.
-         Hide every later sibling immediately, before JavaScript cleanup runs. */
+      #v11133AskWaffleModal [data-request-source],
       #v11133AskWaffleModal .aw37-foot ~ * {
         display: none !important;
         visibility: hidden !important;
         pointer-events: none !important;
+      }
+
+      /* The old first-paint layer generated "Organiser" with ::after while the
+         real nav label is now also Organiser. Keep only the real label. */
+      .app-tabs [data-page-link="reminders"] .nav-label,
+      .app-tabs a[href$="reminders.html"] .nav-label {
+        font-size: inherit !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        white-space: nowrap !important;
+      }
+
+      .app-tabs [data-page-link="reminders"] .nav-label::after,
+      .app-tabs a[href$="reminders.html"] .nav-label::after {
+        content: none !important;
+        display: none !important;
       }
 
       @media (min-width: 769px) {
@@ -102,6 +114,22 @@
           right: 18px !important;
           bottom: 96px !important;
           z-index: 2147480999 !important;
+        }
+
+        /* Desktop Care profile tabs must remain clickable above profile content
+           and any historical overlays. */
+        body[data-waffle-page="directory"] .directory-main-profile-tabs {
+          position: relative !important;
+          z-index: 70 !important;
+          pointer-events: auto !important;
+        }
+
+        body[data-waffle-page="directory"] .directory-main-profile-tab {
+          position: relative !important;
+          z-index: 71 !important;
+          pointer-events: auto !important;
+          cursor: pointer !important;
+          touch-action: manipulation !important;
         }
       }
 
@@ -173,7 +201,6 @@
       changed = true;
     });
 
-    /* Fallback for very old unclassed markup. */
     const candidates = Array.from(modal.querySelectorAll('*'))
       .filter(element => {
         const text = cleanText(element);
@@ -221,7 +248,7 @@
       'float',
       'aw39-round-launch',
       'waffle-final-ui-launcher',
-      'v11154-unified-launcher'
+      'v11155-unified-launcher'
     );
     launcher.setAttribute('aria-label', 'Ask Waffle');
     launcher.setAttribute('title', 'Ask Waffle');
@@ -229,6 +256,26 @@
     if (launcher.parentElement !== document.body) {
       document.body.appendChild(launcher);
     }
+  }
+
+  function normaliseOrganiserLabels() {
+    document.querySelectorAll(
+      '.app-tabs [data-page-link="reminders"] .nav-label, ' +
+      '.app-tabs a[href$="reminders.html"] .nav-label'
+    ).forEach(label => {
+      if (String(label.textContent || '').trim() !== 'Organiser') {
+        label.textContent = 'Organiser';
+      }
+    });
+
+    document.querySelectorAll(
+      '.v1118-mobile-nav a[href$="reminders.html"] small, ' +
+      '#v1118MobileNav a[href$="reminders.html"] small'
+    ).forEach(label => {
+      if (String(label.textContent || '').trim() !== 'Organiser') {
+        label.textContent = 'Organiser';
+      }
+    });
   }
 
   function dockMobileQuickAdd() {
@@ -270,11 +317,149 @@
     }
   }
 
+  function normaliseCareKey(value) {
+    const text = String(value || '').trim().toLowerCase();
+    if (text.includes('belong')) return 'belongings';
+    if (text.includes('media')) return 'media';
+    if (text.includes('history')) return 'history';
+    if (text.includes('master')) return 'master';
+    if (text.includes('profile')) return 'profile';
+    return '';
+  }
+
+  function careTabKey(button) {
+    if (!button) return '';
+    return normaliseCareKey(
+      button.dataset?.directoryMainTab ||
+      button.dataset?.v110Tab ||
+      button.dataset?.profileTab ||
+      button.dataset?.tab ||
+      [
+        button.id,
+        button.className,
+        button.getAttribute?.('aria-controls'),
+        button.textContent
+      ].join(' ')
+    );
+  }
+
+  function carePanelKey(panel) {
+    if (!panel) return '';
+    return normaliseCareKey(
+      panel.dataset?.directoryMainPanel ||
+      panel.dataset?.v110Panel ||
+      panel.dataset?.profilePanel ||
+      panel.dataset?.panel ||
+      [
+        panel.id,
+        panel.className,
+        panel.getAttribute?.('aria-labelledby')
+      ].join(' ')
+    );
+  }
+
+  function syncCarePanels(card, key) {
+    if (!card || !CARE_KEYS.includes(key)) return false;
+
+    const panels = Array.from(card.querySelectorAll('.directory-main-profile-panel'));
+    const target = panels.find(panel => carePanelKey(panel) === key);
+    if (!target) return false;
+
+    card.querySelectorAll('.directory-main-profile-tab').forEach(button => {
+      const active = careTabKey(button) === key;
+      button.classList.toggle('is-active', active);
+      button.setAttribute('aria-selected', active ? 'true' : 'false');
+      button.setAttribute('tabindex', active ? '0' : '-1');
+    });
+
+    panels.forEach(panel => {
+      const active = panel === target;
+      panel.hidden = !active;
+      panel.classList.toggle('is-active', active);
+      panel.setAttribute('aria-hidden', active ? 'false' : 'true');
+    });
+
+    return true;
+  }
+
+  function callCareNativeRouter(card, key) {
+    if (!card) return false;
+
+    if (key === 'profile' || key === 'belongings') {
+      try {
+        if (typeof window.switchDirectoryProfileMainTab === 'function') {
+          window.switchDirectoryProfileMainTab(card, key);
+          return true;
+        }
+      } catch (_) {}
+      try {
+        if (typeof switchDirectoryProfileMainTab === 'function') {
+          switchDirectoryProfileMainTab(card, key);
+          return true;
+        }
+      } catch (_) {}
+    }
+
+    if (key === 'media' || key === 'master') {
+      try {
+        if (typeof window.v110OpenCustomPanel === 'function') {
+          window.v110OpenCustomPanel(card, key);
+          return true;
+        }
+      } catch (_) {}
+      try {
+        if (typeof v110OpenCustomPanel === 'function') {
+          v110OpenCustomPanel(card, key);
+          return true;
+        }
+      } catch (_) {}
+    }
+
+    return false;
+  }
+
+  function handleDesktopCareTab(event) {
+    if (pageName() !== 'directory' || isMobile()) return;
+    if (!(event.target instanceof Element)) return;
+
+    const button = event.target.closest('.directory-main-profile-tab');
+    if (!button) return;
+
+    const card = button.closest('.directory-card');
+    const key = careTabKey(button);
+    if (!card || !CARE_KEYS.includes(key)) return;
+
+    /* The historical directory-grid delegate only understood Profile and
+       Belongings and could reset later Media/Master routing. Own the click in
+       capture phase for the four deterministic tabs. History keeps its existing
+       specialised loader, then this layer normalises its final panel state. */
+    if (key !== 'history') {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      callCareNativeRouter(card, key);
+      syncCarePanels(card, key);
+    }
+
+    [0, 60, 180].forEach(delay => {
+      window.setTimeout(() => {
+        if (key !== 'history') callCareNativeRouter(card, key);
+        syncCarePanels(card, key);
+      }, delay);
+    });
+  }
+
+  function wireDesktopCareTabs() {
+    if (window.v11155DesktopCareTabsWired === true) return;
+    window.v11155DesktopCareTabsWired = true;
+    window.addEventListener('click', handleDesktopCareTab, true);
+  }
+
   function apply() {
     if (!APP_PAGES.has(pageName())) return;
     ensureStyle();
     normaliseAskWaffle();
     removeRequestFromBlock();
+    normaliseOrganiserLabels();
     if (isMobile()) dockMobileQuickAdd();
     else normaliseDesktopQuickAdd();
   }
@@ -299,17 +484,19 @@
   }
 
   function start() {
+    wireDesktopCareTabs();
     apply();
     wireObserver();
     [40, 100, 220, 500, 1000, 2200, 5000].forEach(delay => setTimeout(apply, delay));
     window.addEventListener('pageshow', apply);
     window.addEventListener('focus', apply);
     window.addEventListener('resize', () => setTimeout(apply, 60));
+
+    /* Preserve the loader compatibility flag while exposing the new contract. */
     window.v11153UnifiedActionChromeVersion = VERSION;
+    window.v11155CareTabParityVersion = VERSION;
   }
 
-  /* This layer loads before the historical modal creator, so its CSS is active
-     before the old Request From block can paint. */
   ensureStyle();
 
   if (document.readyState === 'loading') {
