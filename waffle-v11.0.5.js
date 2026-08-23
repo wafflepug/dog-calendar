@@ -1,8 +1,9 @@
 /* ============================================================
-   WAFFLE HOUSE V11.1.48 — COMPATIBILITY + CONVERSATIONAL AI
+   WAFFLE HOUSE V11.1.52 — COMPATIBILITY + CONVERSATIONAL AI
    Keeps V11.0.5 synchronous, ensures the current Ask Waffle stack is present,
-   adds organic tool-using Waffle AI, removes retired user-facing DOM before
-   hydration, and loads the permanent Final UI Contract last.
+   unifies action chrome across Calendar/Care/Organiser/Logs, adds organic
+   tool-using Waffle AI, removes retired DOM before hydration, and loads the
+   permanent Final UI Contract last.
    ============================================================ */
 (function () {
   'use strict';
@@ -28,7 +29,7 @@
     );
   }
 
-  function loadScript(src, ready, version = '11.1.48') {
+  function loadScript(src, ready, version = '11.1.52') {
     if (ready()) return Promise.resolve();
 
     return new Promise((resolve, reject) => {
@@ -49,7 +50,7 @@
       const script = document.createElement('script');
       script.src = src + '?v=' + version;
       script.async = false;
-      script.dataset.waffleV11148 = 'true';
+      script.dataset.waffleV11152 = 'true';
       script.addEventListener('load', resolve, { once: true });
       script.addEventListener('error', () => reject(new Error('Could not load ' + src)), { once: true });
       document.head.appendChild(script);
@@ -57,13 +58,20 @@
   }
 
   async function ensureAskWaffle() {
-    /* Ask Waffle is now a genuine cross-app assistant. Load the common assistant
-       on Calendar, Care, Organiser and Logs; page-specific layout layers still
-       guard themselves internally. */
+    /* Ask Waffle is a cross-app assistant on Calendar, Care, Organiser and Logs. */
     await loadScript(
       'waffle-v11.1.37-assets.js',
       () => !!(window.WAFFLE_AI_ASSETS && window.WAFFLE_AI_ASSETS.icon),
       '11.1.47'
+    );
+
+    /* Load unified chrome before the historical launcher creator. Its CSS is
+       therefore already active the instant #aw37launch is inserted, avoiding
+       a pill/circle visual transition on Organiser and Logs. */
+    await loadScript(
+      'waffle-v11.1.52.js',
+      () => !!window.v11152UnifiedActionChromeVersion,
+      '11.1.52'
     );
 
     await loadScript(
@@ -78,6 +86,8 @@
       '11.1.47'
     );
 
+    /* Historical Calendar/Care layers remain for compatibility. V11.1.52 is
+       the shared authority for action chrome on all four pages. */
     if (FLOATING_PARITY_PAGES.has(pageName())) {
       await loadScript(
         'waffle-v11.1.39.js',
@@ -106,8 +116,8 @@
       '11.1.47'
     );
 
-    /* V11.1.48 is deliberately last in the assistant stack. It owns submit
-       routing, backend diagnostics, provider failover UX and the Thinking icon. */
+    /* V11.1.48 owns submit routing, backend diagnostics, provider failover UX
+       and the Thinking icon. */
     await loadScript(
       'waffle-v11.1.48.js',
       () => !!window.v11148WaffleAiVersion,
@@ -126,7 +136,7 @@
       await loadScript(
         'waffle-ui-contract.js',
         () => !!window.WAFFLE_UI_CONTRACT,
-        '11.1.48'
+        '11.1.51'
       );
     } catch (error) {
       console.warn('Waffle Final UI Contract could not load:', error);
