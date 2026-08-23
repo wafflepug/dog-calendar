@@ -1,9 +1,10 @@
 /* ============================================================
-   WAFFLE HOUSE V11.1.53 — COMPATIBILITY + CONVERSATIONAL AI
+   WAFFLE HOUSE V11.1.58 — COMPATIBILITY + CONVERSATIONAL AI
    Keeps V11.0.5 synchronous, ensures the current Ask Waffle stack is present,
    unifies action chrome across Calendar/Care/Organiser/Logs, removes retired
-   Request From controls everywhere, adds organic tool-using Waffle AI, removes
-   retired DOM before hydration, and loads the permanent Final UI Contract last.
+   Request From controls everywhere, adds organic tool-using Waffle AI, speech
+   to text, removes retired DOM before hydration, and loads the permanent Final
+   UI Contract last.
    ============================================================ */
 (function () {
   'use strict';
@@ -29,7 +30,7 @@
     );
   }
 
-  function loadScript(src, ready, version = '11.1.53') {
+  function loadScript(src, ready, version = '11.1.58') {
     if (ready()) return Promise.resolve();
 
     return new Promise((resolve, reject) => {
@@ -50,7 +51,7 @@
       const script = document.createElement('script');
       script.src = src + '?v=' + version;
       script.async = false;
-      script.dataset.waffleV11153 = 'true';
+      script.dataset.waffleV11158 = 'true';
       script.addEventListener('load', resolve, { once: true });
       script.addEventListener('error', () => reject(new Error('Could not load ' + src)), { once: true });
       document.head.appendChild(script);
@@ -121,6 +122,14 @@
       'waffle-v11.1.48.js',
       () => !!window.v11148WaffleAiVersion,
       '11.1.48'
+    );
+
+    /* V11.1.58 progressively adds browser speech recognition. Unsupported
+       browsers simply keep the established text-only composer. */
+    await loadScript(
+      'waffle-v11.1.58.js',
+      () => !!window.v11158WaffleSpeechVersion,
+      '11.1.58'
     );
   }
 
