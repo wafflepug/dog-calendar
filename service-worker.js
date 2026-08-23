@@ -1,6 +1,6 @@
 /* Waffle House Boarding — recovery service worker */
 
-const WAFFLE_SW_VERSION = 'v11.1.42-logo-mobile-add';
+const WAFFLE_SW_VERSION = 'v11.1.43-legacy-dom-retirement';
 const WAFFLE_CACHE_PREFIX = 'waffle-house-';
 const APP_SHELL_CACHE = `${WAFFLE_CACHE_PREFIX}shell-${WAFFLE_SW_VERSION}`;
 const RUNTIME_CACHE = `${WAFFLE_CACHE_PREFIX}runtime-${WAFFLE_SW_VERSION}`;
@@ -40,8 +40,8 @@ const APP_SHELL = [
   './waffle-v11.0.js?v=11.0.5',
   './waffle-v11.0.3.css?v=11.0.5',
   './waffle-v11.0.4.js?v=11.0.5',
-  './waffle-v11.0.5.css?v=11.1.42',
-  './waffle-v11.0.5.js?v=11.1.42',
+  './waffle-v11.0.5.css?v=11.1.43',
+  './waffle-v11.0.5.js?v=11.1.43',
   './waffle-v11.0.5-core.js?v=11.1.40',
   './waffle-v11.1.37-assets.js?v=11.1.40',
   './waffle-v11.1.37.js?v=11.1.40',
