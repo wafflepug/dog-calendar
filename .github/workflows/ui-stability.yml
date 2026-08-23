@@ -28,6 +28,7 @@ jobs:
           node --check waffle-v11.1.53.js
           node --check waffle-v11.1.58.js
           node --check waffle-v11.1.59.js
+          node --check waffle-v11.1.60.js
           node --check apps-script/WaffleAI.js
           node --check apps-script/WaffleAIProvider.js
           node --check apps-script/WaffleAIProviderV11148.js
@@ -55,17 +56,12 @@ jobs:
         run: |
           grep -q "removeEverythingAfterFooter" waffle-v11.1.53.js
           grep -q ".aw37-foot ~ \*" waffle-v11.1.53.js
-          grep -q "v11.1.54-request-from-final" service-worker.js
+          grep -q "v11.1.60-care-tabs-rebuild" service-worker.js
           grep -q "waffle-v11.1.53.js?v=11.1.53" service-worker.js
           grep -q "url.pathname.endsWith('/waffle-v11.1.53.js')" service-worker.js
 
-      - name: Validate Care desktop tab parity and Organiser label
+      - name: Validate Organiser label
         run: |
-          grep -q "v11156CareTabParityVersion" waffle-v11.1.53.js
-          grep -q "handleDesktopCareTab" waffle-v11.1.53.js
-          grep -q "document.addEventListener('click', handleDesktopCareTab, false)" waffle-v11.1.53.js
-          grep -q "Native listeners are allowed to run first" waffle-v11.1.53.js
-          grep -q "directory-main-profile-tab" waffle-v11.1.53.js
           grep -q "content: none !important" waffle-v11.1.53.js
           grep -q "label.textContent = 'Organiser'" waffle-v11.1.53.js
           if grep -q "event.stopImmediatePropagation" waffle-v11.1.53.js; then
@@ -73,18 +69,32 @@ jobs:
             exit 1
           fi
 
-      - name: Validate deterministic desktop Care tab authority
+      - name: Validate rebuilt desktop Care tabs
         run: |
-          grep -q "waffle-v11.1.59.js" waffle-v11.0.5.js
-          grep -q "window.addEventListener('click', handleClick, true)" waffle-v11.1.59.js
-          grep -q "'(min-width: 769px)'" waffle-v11.1.59.js
-          grep -q "'profile', 'belongings', 'media', 'history', 'master'" waffle-v11.1.59.js
-          grep -q "switchDirectoryProfileMainTab" waffle-v11.1.59.js
-          grep -q "v110OpenCustomPanel" waffle-v11.1.59.js
-          grep -q "loadDirectoryBelongingsDetail" waffle-v11.1.59.js
-          grep -q "ensureHistoryFallbackPanel" waffle-v11.1.59.js
-          grep -q "event.stopImmediatePropagation" waffle-v11.1.59.js
-          grep -q "window.v11159CareDesktopTabsVersion" waffle-v11.1.59.js
+          grep -q "waffle-v11.1.60.js" waffle-v11.0.5.js
+          grep -q "v11160DesktopCareRebuildVersion" waffle-v11.1.60.js
+          grep -q "v11160-desktop-tabs" waffle-v11.1.60.js
+          grep -q "v11160-legacy-tabs" waffle-v11.1.60.js
+          grep -q "Profile', icon" waffle-v11.1.60.js || grep -q "label: 'Profile'" waffle-v11.1.60.js
+          grep -q "label: 'Belongings'" waffle-v11.1.60.js
+          grep -q "label: 'Media'" waffle-v11.1.60.js
+          grep -q "label: 'History'" waffle-v11.1.60.js
+          grep -q "label: 'Master'" waffle-v11.1.60.js
+          grep -q "switchDirectoryProfileMainTab" waffle-v11.1.60.js
+          grep -q "v108LoadHistory" waffle-v11.1.60.js
+          grep -q "v110LoadMedia" waffle-v11.1.60.js
+          grep -q "v110LoadMasterProfile" waffle-v11.1.60.js
+          grep -q "@media (min-width:769px)" waffle-v11.1.60.js
+          grep -q "waffle-v11.1.60.js?v=11.1.60" service-worker.js
+          grep -q "url.pathname.endsWith('/waffle-v11.1.60.js')" service-worker.js
+          if grep -q "window.addEventListener('click', handleClick, true)" waffle-v11.1.60.js; then
+            echo "Rebuilt desktop tabs must not use the old window-capture interception architecture"
+            exit 1
+          fi
+          if grep -q "style.removeProperty('display')" waffle-v11.1.60.js; then
+            echo "Rebuilt desktop tabs must not unhide panels using the banned display recovery pattern"
+            exit 1
+          fi
 
       - name: Validate Ask Waffle speech to text
         run: |
