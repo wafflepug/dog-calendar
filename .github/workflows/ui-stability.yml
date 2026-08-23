@@ -22,6 +22,7 @@ jobs:
       - name: Validate conversational Waffle AI JavaScript
         run: |
           node --check waffle-v11.0.5.js
+          node --check waffle-v11.1.45.js
           node --check waffle-v11.1.47.js
           node --check waffle-v11.1.48.js
           node --check waffle-v11.1.52.js
@@ -118,6 +119,14 @@ jobs:
             echo "Calendar overhaul must not use the banned display recovery pattern"
             exit 1
           fi
+
+      - name: Validate legacy Calendar date chooser retirement
+        run: |
+          grep -q "v11162CalendarDateClickVersion" waffle-v11.1.45.js
+          grep -q "v1088DateChoiceModal" waffle-v11.1.45.js
+          grep -q "calendar.setOption('dateClick'" waffle-v11.1.45.js
+          grep -q "v11161-day-button" waffle-v11.1.45.js
+          grep -q "Booking creation remains in the" waffle-v11.1.45.js
 
       - name: Validate Ask Waffle speech to text
         run: |
