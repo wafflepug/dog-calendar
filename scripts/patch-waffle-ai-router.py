@@ -16,12 +16,13 @@ import sys
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 CODE = ROOT / "apps-script" / "Code.js"
 
-ROUTE_MARKER = "WAFFLE_AI_READ_ONLY_ROUTE_V11149"
+ROUTE_MARKER = "WAFFLE_AI_READ_ONLY_ROUTE_V11150"
 OLD_ROUTE_MARKERS = (
     "WAFFLE_AI_READ_ONLY_ROUTE_V11147",
     "WAFFLE_AI_READ_ONLY_ROUTE_V11148",
+    "WAFFLE_AI_READ_ONLY_ROUTE_V11149",
 )
-ROUTE = f'''\n  /* {ROUTE_MARKER}: conversational Waffle AI stays read-only. */\n  if (action === "waffle_ai_health") {{\n    return getWaffleAiHealthResponseV11149_();\n  }}\n\n  if (action === "ask_waffle_ai") {{\n    return getWaffleAiConversationResponseV11149_(data);\n  }}\n'''
+ROUTE = f'''\n  /* {ROUTE_MARKER}: conversational Waffle AI stays read-only. */\n  if (action === "waffle_ai_health") {{\n    return getWaffleAiHealthResponseV11150_();\n  }}\n\n  if (action === "ask_waffle_ai") {{\n    return getWaffleAiConversationResponseV11150_(data);\n  }}\n'''
 
 
 def main() -> int:
@@ -31,19 +32,21 @@ def main() -> int:
         if old_marker in text:
             text = text.replace(old_marker, ROUTE_MARKER)
 
-    # Upgrade all historical route targets to the current live wrapper.
     health_targets = (
         'return getWaffleAiHealthResponse_();',
         'return getWaffleAiHealthResponseV11148_();',
+        'return getWaffleAiHealthResponseV11149_();',
     )
     conversation_targets = (
         'return getWaffleAiConversationResponse_(data);',
         'return getWaffleAiConversationResponseV11148_(data);',
+        'return getWaffleAiConversationResponseV11149_(data);',
     )
+
     for target in health_targets:
-        text = text.replace(target, 'return getWaffleAiHealthResponseV11149_();')
+        text = text.replace(target, 'return getWaffleAiHealthResponseV11150_();')
     for target in conversation_targets:
-        text = text.replace(target, 'return getWaffleAiConversationResponseV11149_(data);')
+        text = text.replace(target, 'return getWaffleAiConversationResponseV11150_(data);')
 
     if ROUTE_MARKER not in text:
         anchor = '''function processReadOnlySheetAction_(data) {\n  var action =\n    String(data.action || "");\n'''
@@ -52,9 +55,9 @@ def main() -> int:
             print("Could not find processReadOnlySheetAction_ dispatcher anchor.", file=sys.stderr)
             return 2
         text = text.replace(anchor, anchor + ROUTE)
-        print(f"Injected Waffle AI V11.1.49 dispatcher routes into {count} dispatcher block(s).")
+        print(f"Injected Waffle AI V11.1.50 dispatcher routes into {count} dispatcher block(s).")
     else:
-        print("Waffle AI dispatcher routes already present; V11.1.49 targets verified.")
+        print("Waffle AI dispatcher routes already present; V11.1.50 targets verified.")
 
     registry_anchor = "var READ_ONLY_SHEET_ACTIONS_ = {\n"
     additions = ""
@@ -77,9 +80,9 @@ def main() -> int:
     required = (
         ROUTE_MARKER,
         'action === "waffle_ai_health"',
-        'getWaffleAiHealthResponseV11149_()',
+        'getWaffleAiHealthResponseV11150_()',
         'action === "ask_waffle_ai"',
-        'getWaffleAiConversationResponseV11149_(data)',
+        'getWaffleAiConversationResponseV11150_(data)',
         "  waffle_ai_health: true,\n",
         "  ask_waffle_ai: true,\n",
     )
@@ -87,7 +90,7 @@ def main() -> int:
         print("Waffle AI router verification failed.", file=sys.stderr)
         return 4
 
-    print("Waffle AI V11.1.49 router patch ready for clasp push.")
+    print("Waffle AI V11.1.50 router patch ready for clasp push.")
     return 0
 
 
