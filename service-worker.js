@@ -1,6 +1,6 @@
 /* Waffle House Boarding — recovery service worker */
 
-const WAFFLE_SW_VERSION = 'v11.1.40-ask-waffle-layout';
+const WAFFLE_SW_VERSION = 'v11.1.41-first-paint-cleanup';
 const WAFFLE_CACHE_PREFIX = 'waffle-house-';
 const APP_SHELL_CACHE = `${WAFFLE_CACHE_PREFIX}shell-${WAFFLE_SW_VERSION}`;
 const RUNTIME_CACHE = `${WAFFLE_CACHE_PREFIX}runtime-${WAFFLE_SW_VERSION}`;
@@ -156,6 +156,10 @@ function isRecoveryCriticalAsset(url) {
   return url.origin === self.location.origin && url.pathname.endsWith('/waffle-firebase-config.js');
 }
 
+function isFirstPaintCriticalAsset(url) {
+  return url.origin === self.location.origin && url.pathname.endsWith('/waffle-v11.0.5.css');
+}
+
 async function networkFirstNavigation(request) {
   try {
     const response = await fetch(request, { cache: 'no-store' });
@@ -224,7 +228,7 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  if (isRecoveryCriticalAsset(url)) {
+  if (isRecoveryCriticalAsset(url) || isFirstPaintCriticalAsset(url)) {
     event.respondWith(networkFirstStatic(request));
     return;
   }
