@@ -26,6 +26,7 @@ jobs:
           node --check waffle-v11.1.48.js
           node --check waffle-v11.1.52.js
           node --check waffle-v11.1.53.js
+          node --check waffle-v11.1.58.js
           node --check apps-script/WaffleAI.js
           node --check apps-script/WaffleAIProvider.js
           node --check apps-script/WaffleAIProviderV11148.js
@@ -70,6 +71,17 @@ jobs:
             echo "Care final layer must not suppress native profile-tab listeners"
             exit 1
           fi
+
+      - name: Validate Ask Waffle speech to text
+        run: |
+          grep -q "waffle-v11.1.58.js" waffle-v11.0.5.js
+          grep -q "SpeechRecognition" waffle-v11.1.58.js
+          grep -q "webkitSpeechRecognition" waffle-v11.1.58.js
+          grep -q "recognition.lang = 'en-AU'" waffle-v11.1.58.js
+          grep -q "Listening…" waffle-v11.1.58.js
+          grep -q "aw58-listening-avatar" waffle-v11.1.58.js
+          grep -q "data:image/webp;base64" waffle-v11.1.58.js
+          grep -q "window.v11158WaffleSpeechVersion" waffle-v11.1.58.js
 
       - name: Validate Groq-first Waffle AI architecture
         run: |
