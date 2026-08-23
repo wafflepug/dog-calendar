@@ -39,9 +39,19 @@ body.dark-theme
 }
 
 /* ============================================================
-   V11.1.41 — FIRST-PAINT LEGACY UI SUPPRESSION
-   Keep legacy content from painting before later enhancement layers hydrate.
+   V11.1.41 — FIRST-PAINT / BRANDING CLEANUP
    ============================================================ */
+
+/* The current Waffle logo already contains the Waffle House name and boarding
+   descriptor. Do not duplicate that copy beside it on desktop or mobile. */
+.calendar-header-branding .calendar-brand-copy {
+    display: none !important;
+}
+
+.calendar-header-branding .calendar-brand-img,
+.calendar-header-branding .calendar-brand-logo {
+    margin-right: 0 !important;
+}
 
 /* Organiser: the historical Reminders/Sticky Notes DOM is deliberately moved
    into the Organiser's hidden Sticky Notes tab by V11.1.15. While those nodes
@@ -145,5 +155,16 @@ body.dark-theme[data-waffle-page="directory"]
         justify-content: center;
         white-space: normal;
         text-align: center;
+    }
+
+    /* Last-line safeguard: once Quick Add belongs to the mobile nav, it must
+       never retain floating coordinates from desktop action layers. */
+    .app-tabs > .v10-quick-add-button.v1088-nav-quick-add,
+    .app-tabs > .v10-quick-add-button.v11122-nav-add {
+        top: auto !important;
+        right: auto !important;
+        bottom: auto !important;
+        left: auto !important;
+        inset: auto !important;
     }
 }
