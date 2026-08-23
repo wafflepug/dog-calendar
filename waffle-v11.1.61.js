@@ -4,48 +4,61 @@
    Historical entry points still request this filename. All former visible
    Calendar renderers (V11.1.61, V11.1.63 and V11.1.64) are retired.
 
-   V11.1.65 is now the only visible Calendar. FullCalendar remains hidden only
-   as the existing data/editing adapter.
+   V11.1.65 is the only visible Calendar. V11.1.66 is a mobile-only formatting
+   layer for Meet & Greet badges. FullCalendar remains hidden only as the
+   existing data/editing adapter.
    ============================================================ */
 (function () {
   'use strict';
 
-  const FILE = 'waffle-v11.1.65.js';
-  const VERSION = '11.1.65';
+  const SCRIPTS = [
+    ['waffle-v11.1.65.js', '11.1.65', () => !!window.v11165SingleCalendarVersion],
+    ['waffle-v11.1.66.js', '11.1.66', () => !!window.v11166MobileMeetVersion]
+  ];
 
   function markReady() {
-    window.v11161CleanCalendarVersion = '11.1.65-single-calendar-bridge';
+    window.v11161CleanCalendarVersion = '11.1.66-single-calendar-bridge';
   }
 
-  function load() {
-    if (window.v11165SingleCalendarVersion) {
-      markReady();
-      return;
-    }
+  function loadOne(file, version, ready) {
+    if (ready()) return Promise.resolve();
 
-    const existing = Array.from(document.scripts).find(script =>
-      String(script.src || '').includes('/' + FILE)
-    );
+    return new Promise((resolve, reject) => {
+      const existing = Array.from(document.scripts).find(script =>
+        String(script.src || '').includes('/' + file)
+      );
 
-    if (existing) {
-      existing.addEventListener('load', markReady, { once:true });
-      existing.addEventListener('error', markReady, { once:true });
-      markReady();
-      return;
-    }
+      if (existing) {
+        if (ready()) {
+          resolve();
+          return;
+        }
+        existing.addEventListener('load', resolve, { once:true });
+        existing.addEventListener('error', reject, { once:true });
+        return;
+      }
 
-    const script = document.createElement('script');
-    script.src = FILE + '?v=' + VERSION;
-    script.async = false;
-    script.dataset.waffleSingleCalendar = VERSION;
-    script.addEventListener('load', markReady, { once:true });
-    script.addEventListener('error', () => {
-      console.warn('Waffle single Calendar could not load.');
-      markReady();
-    }, { once:true });
-    document.head.appendChild(script);
-    markReady();
+      const script = document.createElement('script');
+      script.src = file + '?v=' + version;
+      script.async = false;
+      script.dataset.waffleSingleCalendar = version;
+      script.addEventListener('load', resolve, { once:true });
+      script.addEventListener('error', () => reject(new Error('Could not load ' + file)), { once:true });
+      document.head.appendChild(script);
+    });
   }
 
-  load();
+  async function start() {
+    try {
+      for (const [file, version, ready] of SCRIPTS) {
+        await loadOne(file, version, ready);
+      }
+    } catch (error) {
+      console.warn('Waffle single Calendar could not fully load:', error);
+    } finally {
+      markReady();
+    }
+  }
+
+  start();
 })();
