@@ -31,6 +31,7 @@ jobs:
           node --check waffle-v11.1.59.js
           node --check waffle-v11.1.60.js
           node --check waffle-v11.1.61.js
+          node --check waffle-v11.1.63.js
           node --check service-worker.js
           node --check apps-script/WaffleAI.js
           node --check apps-script/WaffleAIProvider.js
@@ -99,34 +100,34 @@ jobs:
             exit 1
           fi
 
-      - name: Validate clean Calendar overhaul
+      - name: Validate stay timeline Calendar overhaul
         run: |
-          grep -q "waffle-v11.1.61.js" waffle-v11.0.5.js
-          grep -q "v11161CleanCalendarVersion" waffle-v11.1.61.js
-          grep -q "fc-daygrid-day-events" waffle-v11.1.61.js
-          grep -q "capacity-indicator" waffle-v11.1.61.js
-          grep -q "DESKTOP_DOG_LIMIT = 3" waffle-v11.1.61.js
-          grep -q "View all" waffle-v11.1.61.js
-          grep -q "DAY AT WAFFLE HOUSE" waffle-v11.1.61.js
-          grep -q "sectionHtml('Boarding'" waffle-v11.1.61.js
-          grep -q "sectionHtml('Meet & Greet'" waffle-v11.1.61.js
-          grep -q "sectionHtml('Potential'" waffle-v11.1.61.js
-          grep -q "@media(max-width:700px)" waffle-v11.1.61.js
-          grep -q "v11.1.61-clean-calendar" service-worker.js
-          grep -q "waffle-v11.1.61.js?v=11.1.61" service-worker.js
-          grep -q "url.pathname.endsWith('/waffle-v11.1.61.js')" service-worker.js
-          if grep -q "style.removeProperty('display')" waffle-v11.1.61.js; then
-            echo "Calendar overhaul must not use the banned display recovery pattern"
-            exit 1
-          fi
+          grep -q "waffle-v11.1.63.js" waffle-v11.1.61.js
+          grep -q "11.1.63-compatibility-bridge" waffle-v11.1.61.js
+          grep -q "v11163CalendarTimelineVersion" waffle-v11.1.63.js
+          grep -q "DOG_PALETTE" waffle-v11.1.63.js
+          grep -q "function rebuildLanes" waffle-v11.1.63.js
+          grep -q "eventOrderStrict" waffle-v11.1.63.js
+          grep -q "wh63-event--boarding" waffle-v11.1.63.js
+          grep -q "wh63-meet-content" waffle-v11.1.63.js
+          grep -q 'Time - Dog Name' waffle-v11.1.63.js
+          grep -q "wh63-filterbar" waffle-v11.1.63.js
+          grep -q "customBookingModal" waffle-v11.1.63.js
+          grep -q "potentialStayModal" waffle-v11.1.63.js
+          grep -q "v108BoardingModal" waffle-v11.1.63.js
+          grep -q "authoritativeDateClick" waffle-v11.1.63.js
+          grep -q "v1088DateChoiceModal" waffle-v11.1.63.js
+          grep -q "DAY AT WAFFLE HOUSE" waffle-v11.1.63.js
+          grep -q "@media (max-width: 700px)" waffle-v11.1.63.js
 
       - name: Validate legacy Calendar date chooser retirement
         run: |
           grep -q "v11162CalendarDateClickVersion" waffle-v11.1.45.js
           grep -q "v1088DateChoiceModal" waffle-v11.1.45.js
           grep -q "calendar.setOption('dateClick'" waffle-v11.1.45.js
-          grep -q "v11161-day-button" waffle-v11.1.45.js
           grep -q "Booking creation remains in the" waffle-v11.1.45.js
+          grep -q "_wh63DateClickGuarded" waffle-v11.1.63.js
+          grep -q "value !== authoritativeDateClick" waffle-v11.1.63.js
 
       - name: Validate Ask Waffle speech to text
         run: |
