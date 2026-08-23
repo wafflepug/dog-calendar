@@ -61,7 +61,7 @@ jobs:
         run: |
           set -euo pipefail
           for attempt in $(seq 1 12); do
-            response="$(curl -fsSLG "$APPS_SCRIPT_WEBAPP_URL" \
+            response="$(curl -fsSLG --max-time 20 "$APPS_SCRIPT_WEBAPP_URL" \
               --data-urlencode 'payload={"action":"waffle_ai_health"}' || true)"
 
             if RESPONSE="$response" python3 - <<'PY'
@@ -78,32 +78,34 @@ jobs:
           ok = (
               payload.get("result") == "success"
               and payload.get("action") == "waffle_ai_health"
-              and payload.get("version") == "11.1.49"
+              and payload.get("version") == "11.1.50"
               and payload.get("routeReady") is True
               and payload.get("readOnly") is True
               and payload.get("calendarFastPath") is True
               and payload.get("completeMonthRosters") is True
+              and payload.get("calendarFastNoAiRoundTrip") is True
+              and payload.get("calendarFastPathMode") == "targeted-B-L-month-filter"
           )
           if not ok:
               sys.exit(1)
 
           print(
-              "Live Waffle AI V11.1.49 route verified · provider="
+              "Live Waffle AI V11.1.50 route verified · provider="
               + str(payload.get("preferredProvider", payload.get("provider", "unknown")))
               + " · configured="
               + str(payload.get("configured", False)).lower()
-              + " · fast-calendar=true"
+              + " · targeted-calendar=true"
           )
           PY
             then
               exit 0
             fi
 
-            echo "Waffle AI V11.1.49 health route not live yet (attempt $attempt/12); retrying..."
+            echo "Waffle AI V11.1.50 health route not live yet (attempt $attempt/12); retrying..."
             sleep 5
           done
 
-          echo "Live Waffle AI V11.1.49 route verification failed."
+          echo "Live Waffle AI V11.1.50 route verification failed."
           exit 1
 
       - name: Show Apps Script deployments
