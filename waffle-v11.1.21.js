@@ -96,26 +96,49 @@
 
 /* Phase 2 is intentionally loaded after the Phase 1 compatibility cleanup so
    the original page navigation is available before it becomes the canonical
-   responsive navigation surface. */
+   responsive navigation surface. V11.1.35 is loaded independently as a final
+   Ask Waffle routing hotfix so explicit questions cannot inherit a stale
+   capacity clarification context. */
 (function () {
   'use strict';
+
+  function loadAskWaffleFreshIntent() {
+    if (document.querySelector('script[data-waffle-v11135-assistant]')) return;
+
+    const script = document.createElement('script');
+    script.src = 'waffle-v11.1.35.js?v=11.1.35';
+    script.async = false;
+    script.setAttribute('data-waffle-v11135-assistant', 'js');
+    document.body.appendChild(script);
+  }
 
   function loadV11122NavigationCleanup() {
     if (!document.querySelector('link[data-waffle-v11122-cleanup]')) {
       const stylesheet = document.createElement('link');
       stylesheet.rel = 'stylesheet';
-      stylesheet.href = 'waffle-v11.1.22.css?v=11.1.34';
+      stylesheet.href = 'waffle-v11.1.22.css?v=11.1.35';
       stylesheet.setAttribute('data-waffle-v11122-cleanup', 'css');
       document.head.appendChild(stylesheet);
     }
 
-    if (!document.querySelector('script[data-waffle-v11122-cleanup]')) {
-      const script = document.createElement('script');
-      script.src = 'waffle-v11.1.22.js?v=11.1.34';
-      script.async = false;
-      script.setAttribute('data-waffle-v11122-cleanup', 'js');
-      document.body.appendChild(script);
+    const existing = document.querySelector('script[data-waffle-v11122-cleanup]');
+    if (existing) {
+      existing.addEventListener('load', () => setTimeout(loadAskWaffleFreshIntent, 180), { once: true });
+      setTimeout(loadAskWaffleFreshIntent, 700);
+      return;
     }
+
+    const script = document.createElement('script');
+    script.src = 'waffle-v11.1.22.js?v=11.1.35';
+    script.async = false;
+    script.setAttribute('data-waffle-v11122-cleanup', 'js');
+    script.addEventListener('load', () => setTimeout(loadAskWaffleFreshIntent, 180), { once: true });
+    script.addEventListener('error', loadAskWaffleFreshIntent, { once: true });
+    document.body.appendChild(script);
+
+    // Defensive delayed load covers the older nested loader chain without
+    // relying on any single child script's timing.
+    setTimeout(loadAskWaffleFreshIntent, 900);
   }
 
   if (document.readyState === 'loading') {
