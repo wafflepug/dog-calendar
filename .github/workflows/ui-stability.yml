@@ -26,6 +26,7 @@ jobs:
           node --check apps-script/WaffleAI.js
           node --check apps-script/WaffleAIProvider.js
           node --check apps-script/WaffleAIProviderV11148.js
+          node --check apps-script/WaffleAIGeminiRepairV11148.js
           node --check apps-script/WaffleAICompat.js
           node --check apps-script/WaffleAIHealth.js
           node --check apps-script/WaffleAIHealthV11148.js
