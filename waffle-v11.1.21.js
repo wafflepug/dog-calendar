@@ -97,18 +97,54 @@
 /* Phase 2 is intentionally loaded after the Phase 1 compatibility cleanup so
    the original page navigation is available before it becomes the canonical
    responsive navigation surface. V11.1.35 prevents stale assistant intent;
-   V11.1.36 then applies requested-date capacity decisions as the final Ask
-   Waffle routing layer. */
+   V11.1.36 applies requested-date capacity decisions. V11.1.37 is loaded last
+   as the canonical global Ask Waffle UI and routing layer. */
 (function () {
   'use strict';
 
+  function loadAskWaffleGlobal() {
+    if (document.querySelector('script[data-waffle-v11137-assistant]')) return;
+
+    function loadCore() {
+      if (document.querySelector('script[data-waffle-v11137-assistant]')) return;
+      const core = document.createElement('script');
+      core.src = 'waffle-v11.1.37.js?v=11.1.37';
+      core.async = false;
+      core.setAttribute('data-waffle-v11137-assistant', 'js');
+      document.body.appendChild(core);
+    }
+
+    const existingAssets = document.querySelector('script[data-waffle-v11137-assets]');
+    if (existingAssets) {
+      if (window.WAFFLE_AI_ASSETS) loadCore();
+      else existingAssets.addEventListener('load', loadCore, { once: true });
+      setTimeout(loadCore, 350);
+      return;
+    }
+
+    const assets = document.createElement('script');
+    assets.src = 'waffle-v11.1.37-assets.js?v=11.1.37';
+    assets.async = false;
+    assets.setAttribute('data-waffle-v11137-assets', 'js');
+    assets.addEventListener('load', loadCore, { once: true });
+    assets.addEventListener('error', loadCore, { once: true });
+    document.body.appendChild(assets);
+  }
+
   function loadAskWaffleRangeDecision() {
-    if (document.querySelector('script[data-waffle-v11136-assistant]')) return;
+    const existing = document.querySelector('script[data-waffle-v11136-assistant]');
+    if (existing) {
+      existing.addEventListener('load', () => setTimeout(loadAskWaffleGlobal, 40), { once: true });
+      setTimeout(loadAskWaffleGlobal, 180);
+      return;
+    }
 
     const script = document.createElement('script');
     script.src = 'waffle-v11.1.36.js?v=11.1.36';
     script.async = false;
     script.setAttribute('data-waffle-v11136-assistant', 'js');
+    script.addEventListener('load', () => setTimeout(loadAskWaffleGlobal, 40), { once: true });
+    script.addEventListener('error', loadAskWaffleGlobal, { once: true });
     document.body.appendChild(script);
   }
 
@@ -133,7 +169,7 @@
     if (!document.querySelector('link[data-waffle-v11122-cleanup]')) {
       const stylesheet = document.createElement('link');
       stylesheet.rel = 'stylesheet';
-      stylesheet.href = 'waffle-v11.1.22.css?v=11.1.35';
+      stylesheet.href = 'waffle-v11.1.22.css?v=11.1.37';
       stylesheet.setAttribute('data-waffle-v11122-cleanup', 'css');
       document.head.appendChild(stylesheet);
     }
@@ -142,20 +178,22 @@
     if (existing) {
       existing.addEventListener('load', () => setTimeout(loadAskWaffleFreshIntent, 180), { once: true });
       setTimeout(loadAskWaffleFreshIntent, 700);
+      setTimeout(loadAskWaffleGlobal, 1200);
       return;
     }
 
     const script = document.createElement('script');
-    script.src = 'waffle-v11.1.22.js?v=11.1.35';
+    script.src = 'waffle-v11.1.22.js?v=11.1.37';
     script.async = false;
     script.setAttribute('data-waffle-v11122-cleanup', 'js');
     script.addEventListener('load', () => setTimeout(loadAskWaffleFreshIntent, 180), { once: true });
     script.addEventListener('error', loadAskWaffleFreshIntent, { once: true });
     document.body.appendChild(script);
 
-    // Defensive delayed load covers the older nested loader chain without
-    // relying on any single child script's timing.
+    // Defensive delayed loads cover the older nested loader chain and ensure
+    // V11.1.37 is present on Calendar, Care, Organiser, Logs and profile views.
     setTimeout(loadAskWaffleFreshIntent, 900);
+    setTimeout(loadAskWaffleGlobal, 1500);
   }
 
   if (document.readyState === 'loading') {
