@@ -31,6 +31,7 @@ jobs:
           node --check apps-script/WaffleAIProviderV11148.js
           node --check apps-script/WaffleAIProviderV11149.js
           node --check apps-script/WaffleAIProviderV11150.js
+          node --check apps-script/WaffleAIProviderV11157.js
           node --check apps-script/WaffleAIGeminiRepairV11148.js
           node --check apps-script/WaffleAICalendarFastV11149.js
           node --check apps-script/WaffleAICalendarFastV11150.js
@@ -39,6 +40,7 @@ jobs:
           node --check apps-script/WaffleAIHealthV11148.js
           node --check apps-script/WaffleAIHealthV11149.js
           node --check apps-script/WaffleAIHealthV11150.js
+          node --check apps-script/WaffleAIHealthV11157.js
 
       - name: Validate unified action chrome scope
         run: |
@@ -69,11 +71,21 @@ jobs:
             exit 1
           fi
 
+      - name: Validate Groq-first Waffle AI architecture
+        run: |
+          grep -q "GROQ_API_KEY" apps-script/WaffleAIProviderV11157.js
+          grep -q "openai/gpt-oss-120b" apps-script/WaffleAIProviderV11157.js
+          grep -q "https://api.groq.com/openai/v1/chat/completions" apps-script/WaffleAIProviderV11157.js
+          grep -q "WAFFLE_AI_ENABLE_GEMINI_FALLBACK" apps-script/WaffleAIProviderV11157.js
+          grep -q "WAFFLE_AI_ENABLE_OPENAI_FALLBACK" apps-script/WaffleAIProviderV11157.js
+          grep -q "groqFreeTierOptimized: true" apps-script/WaffleAIHealthV11157.js
+          grep -q "paidOpenAiFallbackOptInOnly: true" apps-script/WaffleAIHealthV11157.js
+
       - name: Validate Apps Script AI router patch
         run: |
           python3 scripts/patch-waffle-ai-router.py
-          grep -q 'WAFFLE_AI_READ_ONLY_ROUTE_V11150' apps-script/Code.js
+          grep -q 'WAFFLE_AI_READ_ONLY_ROUTE_V11157' apps-script/Code.js
           grep -q 'waffle_ai_health: true' apps-script/Code.js
           grep -q 'ask_waffle_ai: true' apps-script/Code.js
-          grep -q 'getWaffleAiHealthResponseV11150_()' apps-script/Code.js
-          grep -q 'getWaffleAiConversationResponseV11150_(data)' apps-script/Code.js
+          grep -q 'getWaffleAiHealthResponseV11157_()' apps-script/Code.js
+          grep -q 'getWaffleAiConversationResponseV11157_(data)' apps-script/Code.js
