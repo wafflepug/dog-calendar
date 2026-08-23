@@ -1,12 +1,13 @@
 /* ============================================================
-   WAFFLE HOUSE V11.1.53 — UNIFIED ACTION CHROME + MODAL RETIREMENT
+   WAFFLE HOUSE V11.1.54 — UNIFIED ACTION CHROME + MODAL TAIL RETIREMENT
    Calendar, Care, Organiser and Logs share one canonical Ask Waffle +
-   Quick Action layout, and retired Request From controls are removed everywhere.
+   Quick Action layout. Any historical UI appended after the Waffle AI footer
+   is retired before it can become visible.
    ============================================================ */
 (function () {
   'use strict';
 
-  const VERSION = '11.1.53';
+  const VERSION = '11.1.54';
   const APP_PAGES = new Set(['calendar', 'directory', 'reminders', 'audit']);
   let observer = null;
   let frame = 0;
@@ -24,10 +25,10 @@
   }
 
   function ensureStyle() {
-    if (document.getElementById('v11153-unified-action-chrome-style')) return;
+    if (document.getElementById('v11154-unified-action-chrome-style')) return;
 
     const style = document.createElement('style');
-    style.id = 'v11153-unified-action-chrome-style';
+    style.id = 'v11154-unified-action-chrome-style';
     style.textContent = `
       body[data-waffle-page="calendar"] #aw37launch,
       body[data-waffle-page="directory"] #aw37launch,
@@ -73,8 +74,7 @@
         display: none !important;
       }
 
-      /* Retired provider/source selector. These selectors cover any structured
-         version; the text-based remover below catches historical unclassed DOM. */
+      /* Structured legacy Request From variants. */
       #v11133AskWaffleModal .request-from,
       #v11133AskWaffleModal .request-from-block,
       #v11133AskWaffleModal .request-source,
@@ -82,6 +82,15 @@
       #v11133AskWaffleModal [data-request-from],
       #v11133AskWaffleModal [data-request-source] {
         display: none !important;
+      }
+
+      /* The canonical Waffle AI footer is the final element in the modal.
+         Historical Request From / provider controls were appended after it.
+         Hide every later sibling immediately, before JavaScript cleanup runs. */
+      #v11133AskWaffleModal .aw37-foot ~ * {
+        display: none !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
       }
 
       @media (min-width: 769px) {
@@ -133,22 +142,46 @@
       .reduce((count, provider) => count + (text.includes(provider) ? 1 : 0), 0);
   }
 
+  function removeEverythingAfterFooter() {
+    const modal = document.getElementById('v11133AskWaffleModal');
+    if (!modal) return false;
+
+    const foot = modal.querySelector('.aw37-foot');
+    if (!foot || !foot.parentElement) return false;
+
+    let changed = false;
+    let sibling = foot.nextElementSibling;
+    while (sibling) {
+      const next = sibling.nextElementSibling;
+      sibling.remove();
+      changed = true;
+      sibling = next;
+    }
+    return changed;
+  }
+
   function removeRequestFromBlock() {
     const modal = document.getElementById('v11133AskWaffleModal');
     if (!modal) return false;
 
+    let changed = removeEverythingAfterFooter();
+
     modal.querySelectorAll(
       '.request-from,.request-from-block,.request-source,.request-source-block,[data-request-from],[data-request-source]'
-    ).forEach(node => node.remove());
+    ).forEach(node => {
+      node.remove();
+      changed = true;
+    });
 
-    const directCandidates = Array.from(modal.querySelectorAll('*'))
+    /* Fallback for very old unclassed markup. */
+    const candidates = Array.from(modal.querySelectorAll('*'))
       .filter(element => {
         const text = cleanText(element);
         return text.includes('request from') && providerCount(text) >= 2;
       })
       .sort((a, b) => a.querySelectorAll('*').length - b.querySelectorAll('*').length);
 
-    const direct = directCandidates[0];
+    const direct = candidates[0];
     if (direct && direct !== modal && !direct.classList.contains('aw37-card')) {
       direct.remove();
       return true;
@@ -158,37 +191,24 @@
       modal.querySelectorAll('h1,h2,h3,h4,h5,h6,label,strong,p,span,div')
     ).find(element => cleanText(element) === 'request from');
 
-    if (!heading) return false;
+    if (!heading) return changed;
 
     let candidate = heading.parentElement;
     for (let depth = 0; candidate && depth < 6; depth += 1) {
       if (candidate === modal || candidate.classList.contains('aw37-card')) break;
-
       const text = cleanText(candidate);
       const controls = candidate.querySelectorAll(
         'button,label,input,[role="radio"],[role="button"]'
       ).length;
-
       if (providerCount(text) >= 2 || controls >= 3) {
         candidate.remove();
         return true;
       }
-
       candidate = candidate.parentElement;
     }
 
-    /* Last-resort cleanup for the historical markup shown in Organiser/Logs:
-       remove the heading and its immediately following provider-control group. */
-    const parent = heading.parentElement;
-    if (parent && parent !== modal && !parent.classList.contains('aw37-card')) {
-      heading.remove();
-      const next = parent.firstElementChild;
-      if (next && providerCount(cleanText(next)) >= 2) next.remove();
-      if (!cleanText(parent)) parent.remove();
-      return true;
-    }
-
-    return false;
+    heading.remove();
+    return true;
   }
 
   function normaliseAskWaffle() {
@@ -197,7 +217,12 @@
     const launcher = document.getElementById('aw37launch');
     if (!launcher) return;
 
-    launcher.classList.add('float', 'aw39-round-launch', 'waffle-final-ui-launcher', 'v11153-unified-launcher');
+    launcher.classList.add(
+      'float',
+      'aw39-round-launch',
+      'waffle-final-ui-launcher',
+      'v11154-unified-launcher'
+    );
     launcher.setAttribute('aria-label', 'Ask Waffle');
     launcher.setAttribute('title', 'Ask Waffle');
 
@@ -283,8 +308,8 @@
     window.v11153UnifiedActionChromeVersion = VERSION;
   }
 
-  /* Load before the historical Ask Waffle creator when possible so its CSS and
-     modal-retirement observer are ready before legacy UI is inserted. */
+  /* This layer loads before the historical modal creator, so its CSS is active
+     before the old Request From block can paint. */
   ensureStyle();
 
   if (document.readyState === 'loading') {
