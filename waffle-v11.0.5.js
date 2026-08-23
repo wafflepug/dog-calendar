@@ -1,8 +1,8 @@
 /* ============================================================
-   WAFFLE HOUSE V11.1.45 — COMPATIBILITY + LEGACY RETIREMENT
+   WAFFLE HOUSE V11.1.46 — COMPATIBILITY + FINAL UI CONTRACT
    Keeps V11.0.5 synchronous, ensures the current Ask Waffle stack is present
    on Calendar and Care, removes retired user-facing DOM before hydration, and
-   loads the final Calendar/Care render-stability layers.
+   loads the permanent Final UI Contract as the last visual authority.
    ============================================================ */
 (function () {
   'use strict';
@@ -28,7 +28,7 @@
     );
   }
 
-  function loadScript(src, ready, version = '11.1.45') {
+  function loadScript(src, ready, version = '11.1.46') {
     if (ready()) return Promise.resolve();
 
     return new Promise((resolve, reject) => {
@@ -49,7 +49,7 @@
       const script = document.createElement('script');
       script.src = src + '?v=' + version;
       script.async = false;
-      script.dataset.waffleV11145 = 'true';
+      script.dataset.waffleV11146 = 'true';
       script.addEventListener('load', resolve, { once: true });
       script.addEventListener('error', () => reject(new Error('Could not load ' + src)), { once: true });
       document.head.appendChild(script);
@@ -59,47 +59,61 @@
   async function ensureAskWaffle() {
     if (!TARGET_PAGES.has(pageName())) return;
 
+    await loadScript(
+      'waffle-v11.1.37-assets.js',
+      () => !!(window.WAFFLE_AI_ASSETS && window.WAFFLE_AI_ASSETS.icon)
+    );
+
+    await loadScript(
+      'waffle-v11.1.37.js',
+      () => !!window.v11137AskWaffleVersion
+    );
+
+    await loadScript(
+      'waffle-v11.1.38.js',
+      () => !!window.v11138WaffleAiVersion
+    );
+
+    await loadScript(
+      'waffle-v11.1.39.js',
+      () => !!window.v11139AskWaffleLayoutVersion
+    );
+
+    await loadScript(
+      'waffle-v11.1.40.js',
+      () => !!window.v11140AskWaffleLayoutVersion
+    );
+
+    if (pageName() === 'calendar') {
+      await loadScript(
+        'waffle-v11.1.45.js',
+        () => !!window.v11145CalendarStabilityVersion
+      );
+    }
+  }
+
+  async function startFinalUi() {
+    try {
+      await ensureAskWaffle();
+    } catch (error) {
+      console.warn('Waffle feature UI setup failed:', error);
+    }
+
     try {
       await loadScript(
-        'waffle-v11.1.37-assets.js',
-        () => !!(window.WAFFLE_AI_ASSETS && window.WAFFLE_AI_ASSETS.icon)
+        'waffle-ui-contract.js',
+        () => !!window.WAFFLE_UI_CONTRACT,
+        '11.1.46'
       );
-
-      await loadScript(
-        'waffle-v11.1.37.js',
-        () => !!window.v11137AskWaffleVersion
-      );
-
-      await loadScript(
-        'waffle-v11.1.38.js',
-        () => !!window.v11138WaffleAiVersion
-      );
-
-      await loadScript(
-        'waffle-v11.1.39.js',
-        () => !!window.v11139AskWaffleLayoutVersion
-      );
-
-      await loadScript(
-        'waffle-v11.1.40.js',
-        () => !!window.v11140AskWaffleLayoutVersion
-      );
-
-      if (pageName() === 'calendar') {
-        await loadScript(
-          'waffle-v11.1.45.js',
-          () => !!window.v11145CalendarStabilityVersion
-        );
-      }
     } catch (error) {
-      console.warn('Waffle final UI setup failed:', error);
+      console.warn('Waffle Final UI Contract could not load:', error);
     }
   }
 
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', ensureAskWaffle, { once: true });
+    document.addEventListener('DOMContentLoaded', startFinalUi, { once: true });
   } else {
-    ensureAskWaffle();
+    startFinalUi();
   }
 })();
 
