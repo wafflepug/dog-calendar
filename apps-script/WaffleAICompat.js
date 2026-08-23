@@ -5,8 +5,8 @@
    historical Apps Script monolith exposes lower-level read helpers instead.
    These adapters bridge the two without renaming or rewriting Code.js.
 
-   All functions here are READ ONLY. Contact/transport metadata that is not
-   needed for operational reasoning is removed before records reach an AI
+   All functions here are READ ONLY. Human contact/transport metadata that is
+   not needed for operational reasoning is removed before records reach an AI
    provider.
    ============================================================ */
 
@@ -90,7 +90,7 @@ function getAuditLogResponse_(data) {
         action: String(record.action || ''),
         dogName: String(record.dogName || ''),
         bookingType: String(record.bookingType || ''),
-        summary: String(record.summary || ''),
+        summary: waffleAiPrivacySafeText_(String(record.summary || '')),
         changedFields: record.changedFields || '',
         source: String(record.source || '')
       };
@@ -110,6 +110,24 @@ function getNotificationCentreResponse_() {
   };
 }
 
+function waffleAiPrivacySafeText_(value) {
+  var text = String(value || '');
+
+  /* Remove common human contact details that may have been pasted into free
+     text notes. Dog names, care instructions and operational dates remain. */
+  text = text.replace(
+    /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi,
+    '[email redacted]'
+  );
+  text = text.replace(
+    /(?:\+?61\s?|0)(?:\d[\s().-]?){8,10}\d/g,
+    '[phone redacted]'
+  );
+
+  if (text.length > 3000) text = text.slice(0, 3000) + '…';
+  return text;
+}
+
 function waffleAiPrivacySafeRecord_(value) {
   if (value === null || value === undefined) return value;
 
@@ -118,14 +136,13 @@ function waffleAiPrivacySafeRecord_(value) {
   }
 
   if (typeof value !== 'object') {
-    if (typeof value === 'string' && value.length > 3000) {
-      return value.slice(0, 3000) + '…';
-    }
-    return value;
+    return typeof value === 'string'
+      ? waffleAiPrivacySafeText_(value)
+      : value;
   }
 
   var result = {};
-  var blocked = /(?:phone|mobile|email|address|editlink|pdfurl|pdffileid|fileid|signature|token|upload|download|base64|dataurl)/i;
+  var blocked = /(?:phone|mobile|email|address|owner|contact|editlink|pdfurl|pdffileid|fileid|signature|token|upload|download|base64|dataurl)/i;
 
   Object.keys(value).forEach(function (key) {
     if (blocked.test(key)) return;
@@ -137,14 +154,17 @@ function waffleAiPrivacySafeRecord_(value) {
 
 function waffleAiCalendarRecords_() {
   var sheet = getTargetSheet_();
-  var lastRow = sheet.getLastRow();
+  var values = sheet.getDataRange().getValues();
   var records = [];
 
-  if (lastRow < 2) return records;
+  if (values.length < 2) return records;
 
-  for (var row = 2; row <= lastRow; row += 1) {
+  /* Read the sheet once rather than issuing one Spreadsheet service call per
+     booking row. This keeps conversational capacity/date questions responsive
+     as the historical booking sheet grows. */
+  for (var index = 1; index < values.length; index += 1) {
     try {
-      var snapshot = auditBookingSnapshotFromSheetRow_(sheet, row);
+      var snapshot = auditBookingSnapshotFromValues_(values[index]);
       if (!snapshot || typeof snapshot !== 'object') continue;
 
       var dogName = String(snapshot.dogName || '').trim();
@@ -155,18 +175,16 @@ function waffleAiCalendarRecords_() {
       if (!dogName && !bookingType && !startDate) continue;
 
       records.push({
-        row: row,
+        row: index + 1,
         dogName: dogName,
         bookingType: bookingType,
         startDate: startDate,
         endDate: endDate,
-        time: String(snapshot.time || snapshot.bookingTime || '').trim(),
-        breed: String(snapshot.breed || '').trim(),
-        status: String(snapshot.status || '').trim()
+        breed: String(snapshot.breed || '').trim()
       });
     } catch (_) {
       /* One malformed historical row must not make the entire AI calendar tool
-         unavailable. The normal Calendar renderer follows the same principle. */
+         unavailable. */
     }
   }
 
