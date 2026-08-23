@@ -552,9 +552,6 @@
       return;
     }
 
-    /* A zero while the current-stay cards are still being created is not a
-       valid all-clear result. Keep that state visibly neutral until the load
-       has completed. */
     if (loading && cards.length === 0) {
       summary.textContent = 'Loading care alerts…';
       summary.classList.remove('has-alerts', 'v11144-care-ready');
@@ -615,9 +612,6 @@
       const cardsAlreadyVisible = currentCards().length > 0;
       const fromCache = options?.fromCache === true;
 
-      /* The cache is an initial/offline fallback. Once real cards are already
-         on screen, replaying that snapshot has no UX value and is what caused
-         the directory to jump back to an older/loading state. */
       if (fromCache && cardsAlreadyVisible) {
         queueCareSummary();
         return;
@@ -625,9 +619,6 @@
 
       const nextOptions = { ...options };
 
-      /* Preserve the rendered cards for refreshes where the booking signature
-         has not changed. The base renderer still rebuilds automatically when
-         the actual set of bookings changes. */
       if (cardsAlreadyVisible) {
         nextOptions.quiet = true;
       }
@@ -660,8 +651,6 @@
       const hasCards = currentCards().length > 0;
       const nextOptions = { ...options };
 
-      /* Background/focus/manual refreshes should not blank an already useful
-         directory. A changed booking signature can still trigger a rebuild. */
       if (hasCards && typeof nextOptions.quiet === 'undefined') {
         nextOptions.quiet = true;
       }
@@ -698,7 +687,9 @@
       headerObserver.observe(actions, { childList: true });
     }
 
-    const root = document.getElementById('directoryTabPanel');
+    /* Observe only the Current-stay grid. Watching the whole Care panel would
+       also see our own summary text updates and continuously schedule itself. */
+    const root = currentGrid();
     if (root && !careObserver) {
       careObserver = new MutationObserver(() => queueCareSummary());
       careObserver.observe(root, {
@@ -731,8 +722,6 @@
 
     applyCareStability();
 
-    /* Re-check after the dynamically loaded Care layers have had a chance to
-       replace global render functions. Each installer is idempotent. */
     [60, 180, 420, 900, 1700, 3200, 5600].forEach(delay => setTimeout(applyCareStability, delay));
 
     window.addEventListener('pageshow', applyCareStability);
