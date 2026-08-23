@@ -18,3 +18,14 @@ jobs:
 
       - name: Validate final UI contract
         run: python3 scripts/check-ui-stability.py
+
+      - name: Validate conversational Waffle AI JavaScript
+        run: |
+          node --check waffle-v11.1.47.js
+          node --check apps-script/WaffleAI.js
+
+      - name: Validate Apps Script AI router patch
+        run: |
+          python3 scripts/patch-waffle-ai-router.py
+          grep -q 'WAFFLE_AI_READ_ONLY_ROUTE_V11147' apps-script/Code.js
+          grep -q 'ask_waffle_ai: true' apps-script/Code.js
