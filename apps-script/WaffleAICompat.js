@@ -15,15 +15,25 @@ function getGuestDirectoryResponse_() {
   var bookings = directory && Array.isArray(directory.bookings)
     ? directory.bookings.map(waffleAiPrivacySafeRecord_)
     : [];
+  var summaries = directory && Array.isArray(directory.summaries)
+    ? directory.summaries.map(waffleAiPrivacySafeRecord_)
+    : [];
+  var digitalIntakes = directory && Array.isArray(directory.digitalIntakes)
+    ? directory.digitalIntakes.map(waffleAiPrivacySafeRecord_)
+    : [];
 
   return {
     result: 'success',
     /* Keep bookings at the top level so WaffleAI.js can resolve a natural dog
        name to its stayKey without requiring the model to make an extra lookup. */
     records: bookings,
+    careSummaries: summaries,
+    intakeStatuses: digitalIntakes,
     directory: {
       generatedAt: directory && directory.generatedAt ? directory.generatedAt : '',
-      bookings: bookings
+      bookings: bookings,
+      summaries: summaries,
+      digitalIntakes: digitalIntakes
     },
     calendarRecords: waffleAiCalendarRecords_()
   };
