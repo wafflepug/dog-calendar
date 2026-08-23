@@ -1,6 +1,6 @@
 /* Waffle House Boarding — recovery service worker */
 
-const WAFFLE_SW_VERSION = 'v11.1.48-waffle-ai-diagnostics';
+const WAFFLE_SW_VERSION = 'v11.1.51-waffle-composer-compact';
 const WAFFLE_CACHE_PREFIX = 'waffle-house-';
 const APP_SHELL_CACHE = `${WAFFLE_CACHE_PREFIX}shell-${WAFFLE_SW_VERSION}`;
 const RUNTIME_CACHE = `${WAFFLE_CACHE_PREFIX}runtime-${WAFFLE_SW_VERSION}`;
@@ -61,7 +61,8 @@ const APP_SHELL = [
   './waffle-v11.1.45.js?v=11.1.47',
   './waffle-v11.1.47.js?v=11.1.47',
   './waffle-v11.1.48.js?v=11.1.48',
-  './waffle-ui-contract.js?v=11.1.48'
+  './waffle-ui-contract.js?v=11.1.48',
+  './waffle-ui-contract.js?v=11.1.51'
 ];
 
 const OPTIONAL_EXTERNAL_ASSETS = [
