@@ -1,6 +1,6 @@
 /* ============================================================
    WAFFLE HOUSE — FINAL UI CONTRACT
-   Version 11.1.46
+   Version 11.1.49
 
    Purpose
    -------
@@ -19,17 +19,19 @@
       feature inside Organiser, not a startup page.
    5. Historical PDF Intake is read-only UI. Legacy upload controls cannot be
       reintroduced by delayed/focus recovery passes.
-   6. This file performs geometry/visibility normalisation only. It does not
+   6. Waffle AI is free-form conversation; legacy quick-prompt chips are retired.
+   7. This file performs geometry/visibility normalisation only. It does not
       rebuild operational data views.
    ============================================================ */
 (function () {
   'use strict';
 
-  const VERSION = '11.1.46';
+  const VERSION = '11.1.49';
   const CONTRACT_ATTR = 'data-waffle-ui-contract';
   const PROTECTED_SELECTOR = [
     '#aw37launch',
     '#v11133AskWaffleButton',
+    '#v11133AskWaffleModal .aw37-prompts',
     '#openLegacyIntakeUploadBtn',
     '#v11123LegacyIntakeHistoryNote',
     '[data-upload-legacy-intake]',
@@ -123,6 +125,14 @@
     if (launcher.parentElement !== document.body) {
       document.body.appendChild(launcher);
     }
+  }
+
+  function canonicalAskWaffleConversation() {
+    /* Free-form Waffle AI no longer needs predefined prompt chips. Remove the
+       entire strip rather than merely hiding it, so it cannot reserve height or
+       flash during delayed legacy enhancement passes. */
+    document.querySelectorAll('#v11133AskWaffleModal .aw37-prompts')
+      .forEach(prompts => prompts.remove());
   }
 
   function canonicalCalendar() {
@@ -225,6 +235,7 @@
     canonicalNavigation();
     canonicalBranding();
     canonicalAskWaffle();
+    canonicalAskWaffleConversation();
     canonicalCalendar();
     canonicalCare();
     canonicalOrganiser();
