@@ -23,9 +23,11 @@ jobs:
         run: |
           node --check waffle-v11.1.47.js
           node --check apps-script/WaffleAI.js
+          node --check apps-script/WaffleAIProvider.js
 
       - name: Validate Apps Script AI router patch
         run: |
           python3 scripts/patch-waffle-ai-router.py
           grep -q 'WAFFLE_AI_READ_ONLY_ROUTE_V11147' apps-script/Code.js
           grep -q 'ask_waffle_ai: true' apps-script/Code.js
+          grep -q 'getWaffleAiConversationResponse_(data)' apps-script/Code.js
