@@ -9,7 +9,7 @@
   // Preserve the original V11.0.5 execution order. This loader itself is
   // parser-inserted at the old V11.0.5 script position.
   if (document.readyState === 'loading') {
-    document.write('<script src="waffle-v11.0.5-core.js?v=11.1.39"><\\/script>');
+    document.write('<script src="waffle-v11.0.5-core.js?v=11.1.39"></script>');
   } else {
     const core = document.createElement('script');
     core.src = 'waffle-v11.0.5-core.js?v=11.1.39';
