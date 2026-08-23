@@ -57,12 +57,17 @@ jobs:
 
       - name: Validate Care desktop tab parity and Organiser label
         run: |
-          grep -q "v11155CareTabParityVersion" waffle-v11.1.53.js
+          grep -q "v11156CareTabParityVersion" waffle-v11.1.53.js
           grep -q "handleDesktopCareTab" waffle-v11.1.53.js
-          grep -q "stopImmediatePropagation" waffle-v11.1.53.js
+          grep -q "document.addEventListener('click', handleDesktopCareTab, false)" waffle-v11.1.53.js
+          grep -q "Native listeners are allowed to run first" waffle-v11.1.53.js
           grep -q "directory-main-profile-tab" waffle-v11.1.53.js
           grep -q "content: none !important" waffle-v11.1.53.js
           grep -q "label.textContent = 'Organiser'" waffle-v11.1.53.js
+          if grep -q "event.stopImmediatePropagation" waffle-v11.1.53.js; then
+            echo "Care final layer must not suppress native profile-tab listeners"
+            exit 1
+          fi
 
       - name: Validate Apps Script AI router patch
         run: |
