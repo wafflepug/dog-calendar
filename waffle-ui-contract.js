@@ -1,6 +1,6 @@
 /* ============================================================
    WAFFLE HOUSE — FINAL UI CONTRACT
-   Version 11.1.49
+   Version 11.1.51
 
    Purpose
    -------
@@ -20,18 +20,21 @@
    5. Historical PDF Intake is read-only UI. Legacy upload controls cannot be
       reintroduced by delayed/focus recovery passes.
    6. Waffle AI is free-form conversation; legacy quick-prompt chips are retired.
-   7. This file performs geometry/visibility normalisation only. It does not
+   7. Ask Waffle composer geometry is canonical after prompt-strip retirement.
+   8. This file performs geometry/visibility normalisation only. It does not
       rebuild operational data views.
    ============================================================ */
 (function () {
   'use strict';
 
-  const VERSION = '11.1.49';
+  const VERSION = '11.1.51';
   const CONTRACT_ATTR = 'data-waffle-ui-contract';
   const PROTECTED_SELECTOR = [
     '#aw37launch',
     '#v11133AskWaffleButton',
     '#v11133AskWaffleModal .aw37-prompts',
+    '#v11133AskWaffleModal .aw37-card',
+    '#v11133AskWaffleModal .aw37-form',
     '#openLegacyIntakeUploadBtn',
     '#v11123LegacyIntakeHistoryNote',
     '[data-upload-legacy-intake]',
@@ -109,6 +112,76 @@
       .forEach(node => node.remove());
   }
 
+  function ensureAskWaffleComposerStyle() {
+    if (document.getElementById('waffleFinalUiAskComposerStyle')) return;
+
+    const style = document.createElement('style');
+    style.id = 'waffleFinalUiAskComposerStyle';
+    style.textContent = `
+      /* The prompt strip was retired in V11.1.49. The original Ask Waffle card
+         still declared five grid rows (header, prompts, thread, form, footer),
+         which caused the form to occupy the old flexible thread row once the
+         prompts node was removed. Four canonical rows restore the intended
+         conversation/composer geometry. */
+      #v11133AskWaffleModal .aw37-card {
+        grid-template-rows: auto minmax(220px, 1fr) auto auto !important;
+      }
+
+      #v11133AskWaffleModal .aw37-form {
+        min-height: 0 !important;
+        height: auto !important;
+        padding: 10px 14px !important;
+        gap: 9px !important;
+        align-items: center !important;
+      }
+
+      #v11133AskWaffleModal .aw37-form input {
+        height: 44px !important;
+        min-height: 44px !important;
+        max-height: 44px !important;
+        padding: 0 13px !important;
+        line-height: 44px !important;
+        align-self: center !important;
+      }
+
+      #v11133AskWaffleModal .aw37-form button {
+        height: 44px !important;
+        min-height: 44px !important;
+        max-height: 44px !important;
+        padding: 0 16px !important;
+        align-self: center !important;
+      }
+
+      @media (max-width: 520px) {
+        #v11133AskWaffleModal .aw37-card {
+          grid-template-rows: auto minmax(180px, 1fr) auto auto !important;
+        }
+
+        #v11133AskWaffleModal .aw37-form {
+          padding: 8px 10px !important;
+          gap: 8px !important;
+        }
+
+        #v11133AskWaffleModal .aw37-form input,
+        #v11133AskWaffleModal .aw37-form button {
+          height: 42px !important;
+          min-height: 42px !important;
+          max-height: 42px !important;
+        }
+
+        #v11133AskWaffleModal .aw37-form input {
+          padding: 0 12px !important;
+          line-height: 42px !important;
+        }
+
+        #v11133AskWaffleModal .aw37-form button {
+          padding: 0 13px !important;
+        }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
   function canonicalAskWaffle() {
     const page = pageName();
     if (page !== 'calendar' && page !== 'directory') return;
@@ -133,6 +206,8 @@
        flash during delayed legacy enhancement passes. */
     document.querySelectorAll('#v11133AskWaffleModal .aw37-prompts')
       .forEach(prompts => prompts.remove());
+
+    ensureAskWaffleComposerStyle();
   }
 
   function canonicalCalendar() {
