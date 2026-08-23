@@ -402,3 +402,347 @@
     start();
   }
 })();
+
+/* ============================================================
+   WAFFLE HOUSE V11.1.44 — CARE RENDER STABILISER
+   ============================================================
+   The directory uses stale-while-revalidate. Previously every background or
+   focus refresh re-applied the cached response with quiet:false before the
+   fresh response arrived. That rebuilt the current cards and made the page
+   alternate between its loaded state and its loading/empty state.
+
+   This layer makes the already-rendered Care UI authoritative during refresh:
+   - cached responses never replace visible current cards;
+   - same-booking live refreshes update data without rebuilding the cards;
+   - the care alert summary is scoped to Current stays only;
+   - loading is shown as loading, never as a false "No active care alerts";
+   - Historical PDF Intake stays a single neutral read-only indicator.
+   ============================================================ */
+(function () {
+  'use strict';
+
+  const VERSION = '11.1.44';
+  let summaryFrame = 0;
+  let headerObserver = null;
+  let careObserver = null;
+
+  function pageName() {
+    return String(window.WAFFLE_PAGE || document.body?.dataset?.wafflePage || 'calendar');
+  }
+
+  function isDirectory() {
+    return pageName() === 'directory';
+  }
+
+  function currentGrid() {
+    return document.getElementById('directory-grid');
+  }
+
+  function currentCards() {
+    const grid = currentGrid();
+    if (!grid) return [];
+    return Array.from(
+      grid.querySelectorAll('.directory-card[data-directory-stay-key], .directory-card[data-stay-key]')
+    );
+  }
+
+  function directoryIsVisiblyLoading() {
+    const grid = currentGrid();
+    if (!grid) return true;
+
+    return !!grid.querySelector(
+      '.v101-skeleton-list, .v101-skeleton-tile, .directory-page-loading'
+    );
+  }
+
+  function ensureCareStyle() {
+    if (document.getElementById('v11144CareStableStyle')) return;
+
+    const style = document.createElement('style');
+    style.id = 'v11144CareStableStyle';
+    style.textContent = `
+      body[data-waffle-page="directory"] #v11123LegacyIntakeHistoryNote,
+      body[data-waffle-page="directory"] .v11144-historical-intake-note {
+        border-color: #d9e2ec !important;
+        background: #f8fafc !important;
+        color: #475569 !important;
+        box-shadow: none !important;
+      }
+
+      body.dark-theme[data-waffle-page="directory"] #v11123LegacyIntakeHistoryNote,
+      body.dark-theme[data-waffle-page="directory"] .v11144-historical-intake-note {
+        border-color: #475569 !important;
+        background: #1e293b !important;
+        color: #cbd5e1 !important;
+      }
+
+      body[data-waffle-page="directory"] #directory-care-summary.v11144-care-loading {
+        border-color: #d9e2ec !important;
+        background: #f8fafc !important;
+        color: #475569 !important;
+      }
+
+      body.dark-theme[data-waffle-page="directory"] #directory-care-summary.v11144-care-loading {
+        border-color: #475569 !important;
+        background: #1e293b !important;
+        color: #cbd5e1 !important;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  function ensureHistoricalIntakeNote() {
+    if (!isDirectory()) return null;
+
+    const actions = document.querySelector('.directory-header-actions');
+    if (!actions) return null;
+
+    let note = document.getElementById('v11123LegacyIntakeHistoryNote');
+    if (!note) {
+      note = document.createElement('span');
+      note.id = 'v11123LegacyIntakeHistoryNote';
+      note.className = 'directory-care-summary v11123-legacy-intake-history-note v11144-historical-intake-note';
+      note.textContent = 'Historical PDF Intake · view only';
+      note.title = 'Existing historical PDF Intake records remain view-only. Use Digital Intake for new or updated intake information.';
+      actions.insertBefore(note, actions.firstChild || null);
+    } else {
+      note.classList.add('v11144-historical-intake-note');
+      note.textContent = 'Historical PDF Intake · view only';
+    }
+
+    return note;
+  }
+
+  function hideLegacyIntakeControls() {
+    if (!isDirectory()) return;
+
+    document.querySelectorAll(
+      '#openLegacyIntakeUploadBtn, [data-upload-legacy-intake], [data-reassign-legacy-intake]'
+    ).forEach(control => {
+      control.hidden = true;
+      control.setAttribute('aria-hidden', 'true');
+      control.setAttribute('tabindex', '-1');
+      control.style.setProperty('display', 'none', 'important');
+    });
+  }
+
+  function renderCanonicalCareSummary() {
+    if (!isDirectory()) return;
+
+    const summary = document.getElementById('directory-care-summary');
+    const grid = currentGrid();
+    if (!summary || !grid) return;
+
+    const cards = currentCards();
+    const loading = directoryIsVisiblyLoading() || document.body?.dataset?.v11144DirectoryState === 'loading';
+    const flagged = Array.from(
+      grid.querySelectorAll('.directory-care-strip.has-alerts')
+    );
+    const totalAlerts = flagged.reduce((total, container) => {
+      return total + container.querySelectorAll('[data-directory-care-alert]').length;
+    }, 0);
+
+    summary.classList.remove('v11144-care-loading');
+
+    if (totalAlerts > 0) {
+      summary.textContent =
+        `${totalAlerts} ${totalAlerts === 1 ? 'alert' : 'alerts'} · ` +
+        `${flagged.length} ${flagged.length === 1 ? 'dog' : 'dogs'}`;
+      summary.classList.add('has-alerts', 'v11144-care-ready');
+      return;
+    }
+
+    /* A zero while the current-stay cards are still being created is not a
+       valid all-clear result. Keep that state visibly neutral until the load
+       has completed. */
+    if (loading && cards.length === 0) {
+      summary.textContent = 'Loading care alerts…';
+      summary.classList.remove('has-alerts', 'v11144-care-ready');
+      summary.classList.add('v11144-care-loading');
+      return;
+    }
+
+    summary.textContent = 'No active care alerts';
+    summary.classList.remove('has-alerts', 'v11144-care-loading');
+    summary.classList.add('v11144-care-ready');
+  }
+
+  function queueCareSummary() {
+    if (!isDirectory()) return;
+
+    if (summaryFrame) cancelAnimationFrame(summaryFrame);
+    summaryFrame = requestAnimationFrame(() => {
+      summaryFrame = 0;
+      renderCanonicalCareSummary();
+    });
+  }
+
+  function installSummaryOverride() {
+    if (!isDirectory()) return;
+
+    const replacement = function () {
+      queueCareSummary();
+    };
+    replacement.v11144Canonical = true;
+
+    try {
+      const current = window.refreshDirectoryCareSummary;
+      if (!current || current.v11144Canonical !== true) {
+        window.refreshDirectoryCareSummary = replacement;
+      }
+    } catch (_) {}
+
+    try {
+      if (typeof refreshDirectoryCareSummary === 'function' && refreshDirectoryCareSummary.v11144Canonical !== true) {
+        refreshDirectoryCareSummary = replacement;
+      }
+    } catch (_) {}
+  }
+
+  function installApplyGuard() {
+    if (!isDirectory()) return;
+
+    let current = null;
+    try { current = window.applyGuestDirectoryResponse; } catch (_) {}
+    try {
+      if (!current && typeof applyGuestDirectoryResponse === 'function') current = applyGuestDirectoryResponse;
+    } catch (_) {}
+
+    if (typeof current !== 'function' || current.v11144Guard === true) return;
+
+    const base = current;
+    const guarded = function (response, options = {}) {
+      const cardsAlreadyVisible = currentCards().length > 0;
+      const fromCache = options?.fromCache === true;
+
+      /* The cache is an initial/offline fallback. Once real cards are already
+         on screen, replaying that snapshot has no UX value and is what caused
+         the directory to jump back to an older/loading state. */
+      if (fromCache && cardsAlreadyVisible) {
+        queueCareSummary();
+        return;
+      }
+
+      const nextOptions = { ...options };
+
+      /* Preserve the rendered cards for refreshes where the booking signature
+         has not changed. The base renderer still rebuilds automatically when
+         the actual set of bookings changes. */
+      if (cardsAlreadyVisible) {
+        nextOptions.quiet = true;
+      }
+
+      const result = base(response, nextOptions);
+      queueCareSummary();
+      return result;
+    };
+
+    guarded.v11144Guard = true;
+    guarded.v11144Base = base;
+
+    try { window.applyGuestDirectoryResponse = guarded; } catch (_) {}
+    try { applyGuestDirectoryResponse = guarded; } catch (_) {}
+  }
+
+  function installLoadGuard() {
+    if (!isDirectory()) return;
+
+    let current = null;
+    try { current = window.loadGuestDirectoryConsolidated; } catch (_) {}
+    try {
+      if (!current && typeof loadGuestDirectoryConsolidated === 'function') current = loadGuestDirectoryConsolidated;
+    } catch (_) {}
+
+    if (typeof current !== 'function' || current.v11144Guard === true) return;
+
+    const base = current;
+    const guarded = async function (options = {}) {
+      const hasCards = currentCards().length > 0;
+      const nextOptions = { ...options };
+
+      /* Background/focus/manual refreshes should not blank an already useful
+         directory. A changed booking signature can still trigger a rebuild. */
+      if (hasCards && typeof nextOptions.quiet === 'undefined') {
+        nextOptions.quiet = true;
+      }
+
+      if (document.body) {
+        document.body.dataset.v11144DirectoryState = hasCards ? 'refreshing' : 'loading';
+      }
+      queueCareSummary();
+
+      try {
+        return await base(nextOptions);
+      } finally {
+        if (document.body) document.body.dataset.v11144DirectoryState = 'ready';
+        queueCareSummary();
+      }
+    };
+
+    guarded.v11144Guard = true;
+    guarded.v11144Base = base;
+
+    try { window.loadGuestDirectoryConsolidated = guarded; } catch (_) {}
+    try { loadGuestDirectoryConsolidated = guarded; } catch (_) {}
+  }
+
+  function wireObservers() {
+    if (!isDirectory() || typeof MutationObserver !== 'function') return;
+
+    const actions = document.querySelector('.directory-header-actions');
+    if (actions && !headerObserver) {
+      headerObserver = new MutationObserver(() => {
+        ensureHistoricalIntakeNote();
+        hideLegacyIntakeControls();
+      });
+      headerObserver.observe(actions, { childList: true });
+    }
+
+    const root = document.getElementById('directoryTabPanel');
+    if (root && !careObserver) {
+      careObserver = new MutationObserver(() => queueCareSummary());
+      careObserver.observe(root, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['class', 'hidden']
+      });
+    }
+  }
+
+  function applyCareStability() {
+    if (!isDirectory()) return;
+    ensureCareStyle();
+    ensureHistoricalIntakeNote();
+    hideLegacyIntakeControls();
+    installSummaryOverride();
+    installApplyGuard();
+    installLoadGuard();
+    wireObservers();
+    queueCareSummary();
+  }
+
+  function start() {
+    if (!isDirectory()) return;
+
+    if (document.body && !document.body.dataset.v11144DirectoryState) {
+      document.body.dataset.v11144DirectoryState = currentCards().length ? 'ready' : 'loading';
+    }
+
+    applyCareStability();
+
+    /* Re-check after the dynamically loaded Care layers have had a chance to
+       replace global render functions. Each installer is idempotent. */
+    [60, 180, 420, 900, 1700, 3200, 5600].forEach(delay => setTimeout(applyCareStability, delay));
+
+    window.addEventListener('pageshow', applyCareStability);
+    window.addEventListener('focus', applyCareStability);
+    window.v11144CareStabilityVersion = VERSION;
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start, { once: true });
+  } else {
+    start();
+  }
+})();
