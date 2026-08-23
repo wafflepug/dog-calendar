@@ -38,9 +38,112 @@ body.dark-theme
     color: #fed7aa;
 }
 
+/* ============================================================
+   V11.1.41 — FIRST-PAINT LEGACY UI SUPPRESSION
+   Keep legacy content from painting before later enhancement layers hydrate.
+   ============================================================ */
+
+/* Organiser: the historical Reminders/Sticky Notes DOM is deliberately moved
+   into the Organiser's hidden Sticky Notes tab by V11.1.15. While those nodes
+   are still direct children of the page panel they are pre-hydration legacy
+   content and must never be visible. */
+body[data-waffle-page="reminders"]
+#remindersTabPanel > *:not(#v11115OrganiserRoot) {
+    display: none !important;
+}
+
+/* Show a stable Organiser-shaped first paint while the JS shell is loading,
+   rather than flashing the old Sticky Notes page. */
+body[data-waffle-page="reminders"]
+#remindersTabPanel:not(:has(#v11115OrganiserRoot))::before {
+    content: "🗂 Waffle House Organiser";
+    display: block;
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 96px;
+    padding: 22px 24px;
+    border: 1px solid #d9e2ec;
+    border-radius: 18px;
+    background: #ffffff;
+    color: #111827;
+    font-size: clamp(22px, 3vw, 32px);
+    font-weight: 850;
+    line-height: 1.15;
+}
+
+body.dark-theme[data-waffle-page="reminders"]
+#remindersTabPanel:not(:has(#v11115OrganiserRoot))::before {
+    border-color: #334155;
+    background: #111827;
+    color: #f8fafc;
+}
+
+/* Organiser naming should also be correct on the first paint, before the
+   later cleanup scripts replace the old Reminder label in the DOM. */
+body[data-waffle-page="reminders"]
+.app-tabs [data-page-link="reminders"] .nav-label {
+    font-size: 0 !important;
+}
+
+body[data-waffle-page="reminders"]
+.app-tabs [data-page-link="reminders"] .nav-label::after {
+    content: "Organiser";
+    font-size: 12px;
+}
+
+/* Care: Upload PDF is retired. Hide the legacy write button from first paint
+   instead of waiting for V11.1.23 to remove it after DOMContentLoaded. */
+body[data-waffle-page="directory"] #openLegacyIntakeUploadBtn,
+body[data-waffle-page="directory"] [data-upload-legacy-intake],
+body[data-waffle-page="directory"] [data-reassign-legacy-intake] {
+    display: none !important;
+}
+
+/* Match the final V11.1.23 read-only state immediately. The temporary CSS
+   label disappears as soon as the real semantic note is inserted. */
+body[data-waffle-page="directory"]
+.directory-header-actions:not(:has(#v11123LegacyIntakeHistoryNote))::before {
+    content: "Historical PDF Intake · view only";
+    display: inline-flex;
+    align-items: center;
+    min-height: 34px;
+    box-sizing: border-box;
+    padding: 7px 10px;
+    border: 1px solid #d9e2ec;
+    border-radius: 10px;
+    background: #f8fafc;
+    color: #475569;
+    font-size: 11px;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+body.dark-theme[data-waffle-page="directory"]
+.directory-header-actions:not(:has(#v11123LegacyIntakeHistoryNote))::before {
+    border-color: #475569;
+    background: #1e293b;
+    color: #cbd5e1;
+}
+
 @media (max-width: 768px) {
     .v1105-potential-sync {
         min-height: 26px;
         font-size: 8.5px;
+    }
+
+    body[data-waffle-page="reminders"]
+    #remindersTabPanel:not(:has(#v11115OrganiserRoot))::before {
+        min-height: 82px;
+        padding: 18px;
+        border-radius: 15px;
+        font-size: 22px;
+    }
+
+    body[data-waffle-page="directory"]
+    .directory-header-actions:not(:has(#v11123LegacyIntakeHistoryNote))::before {
+        width: 100%;
+        justify-content: center;
+        white-space: normal;
+        text-align: center;
     }
 }
