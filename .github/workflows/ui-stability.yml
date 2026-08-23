@@ -46,8 +46,14 @@ jobs:
           grep -q "waffle-v11.1.53.js" waffle-v11.0.5.js
           grep -q "bottom: 96px" waffle-v11.1.53.js
           grep -q "bottom: calc(88px" waffle-v11.1.53.js
-          grep -q "request from" waffle-v11.1.53.js
-          grep -q "providerCount" waffle-v11.1.53.js
+
+      - name: Validate Request From retirement
+        run: |
+          grep -q "removeEverythingAfterFooter" waffle-v11.1.53.js
+          grep -q ".aw37-foot ~ \*" waffle-v11.1.53.js
+          grep -q "v11.1.54-request-from-final" service-worker.js
+          grep -q "waffle-v11.1.53.js?v=11.1.53" service-worker.js
+          grep -q "url.pathname.endsWith('/waffle-v11.1.53.js')" service-worker.js
 
       - name: Validate Apps Script AI router patch
         run: |
