@@ -1,0 +1,25 @@
+name: Mobile Meet & Greet Calendar
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  mobile-meet-format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate mobile Meet & Greet formatting
+        run: |
+          node --check waffle-v11.1.66.js
+          grep -q "waffle-v11.1.66.js" waffle-v11.1.61.js
+          grep -q "max-width:700px" waffle-v11.1.66.js
+          grep -q "width:100% !important" waffle-v11.1.66.js
+          grep -q "height:22px !important" waffle-v11.1.66.js
+          grep -q "copy.textContent = mobile ? labels.time : labels.full" waffle-v11.1.66.js
+          grep -q "Meet & Greet ·" waffle-v11.1.66.js
+          grep -q "window.v11166MobileMeetVersion" waffle-v11.1.66.js
