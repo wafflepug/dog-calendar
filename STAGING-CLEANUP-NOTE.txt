@@ -1,0 +1,1 @@
+Temporary staging files will be removed after loader wiring is verified.
