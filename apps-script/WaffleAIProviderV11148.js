@@ -51,7 +51,7 @@ function getWaffleAiConversationResponseV11148_(data) {
     });
 
     if (geminiKey) {
-      var geminiFallback = getWaffleAiGeminiResponse_(data, geminiKey);
+      var geminiFallback = getWaffleAiGeminiResponseV11148Fixed_(data, geminiKey);
       if (geminiFallback && geminiFallback.result === 'success') {
         geminiFallback.version = '11.1.48';
         geminiFallback.provider = 'gemini';
@@ -66,7 +66,7 @@ function getWaffleAiConversationResponseV11148_(data) {
       });
     }
   } else {
-    var geminiResult = getWaffleAiGeminiResponse_(data, geminiKey);
+    var geminiResult = getWaffleAiGeminiResponseV11148Fixed_(data, geminiKey);
     if (geminiResult && geminiResult.result === 'success') {
       geminiResult.version = '11.1.48';
       geminiResult.provider = 'gemini';
