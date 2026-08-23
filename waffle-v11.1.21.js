@@ -40,8 +40,6 @@
 
     const sink = ensureCompatibilitySink();
 
-    // waffle-app.js still writes to these historical IDs during spreadsheet
-    // refreshes. Keep only the data targets, not their retired visual panels.
     [
       'at-home-list',
       'leaving-list',
@@ -63,10 +61,6 @@
 
   function retireLegacyInlineRecovery() {
     if (pageName() !== 'audit') return;
-
-    // Recovery is now owned by #v11113RecoveryButton / #v11113RecoveryModal.
-    // Delete the older inline V11.1.5 panel if its historical renderer inserts
-    // one during startup.
     document.querySelectorAll('[data-v1115-recovery-panel]').forEach(panel => panel.remove());
   }
 
@@ -77,11 +71,7 @@
 
   function start() {
     apply();
-
-    // Bounded passes cover older startup renderers without introducing another
-    // persistent observer or polling loop.
     [80, 250, 700, 1200, 1800, 2800].forEach(delay => setTimeout(apply, delay));
-
     window.addEventListener('pageshow', apply);
     window.addEventListener('focus', apply);
     window.v11121CleanupVersion = VERSION;
@@ -169,7 +159,7 @@
     if (!document.querySelector('link[data-waffle-v11122-cleanup]')) {
       const stylesheet = document.createElement('link');
       stylesheet.rel = 'stylesheet';
-      stylesheet.href = 'waffle-v11.1.22.css?v=11.1.37';
+      stylesheet.href = 'waffle-v11.1.22.css?v=11.1.38';
       stylesheet.setAttribute('data-waffle-v11122-cleanup', 'css');
       document.head.appendChild(stylesheet);
     }
@@ -183,15 +173,13 @@
     }
 
     const script = document.createElement('script');
-    script.src = 'waffle-v11.1.22.js?v=11.1.37';
+    script.src = 'waffle-v11.1.22.js?v=11.1.38';
     script.async = false;
     script.setAttribute('data-waffle-v11122-cleanup', 'js');
     script.addEventListener('load', () => setTimeout(loadAskWaffleFreshIntent, 180), { once: true });
     script.addEventListener('error', loadAskWaffleFreshIntent, { once: true });
     document.body.appendChild(script);
 
-    // Defensive delayed loads cover the older nested loader chain and ensure
-    // V11.1.37 is present on Calendar, Care, Organiser, Logs and profile views.
     setTimeout(loadAskWaffleFreshIntent, 900);
     setTimeout(loadAskWaffleGlobal, 1500);
   }
@@ -201,4 +189,37 @@
   } else {
     loadV11122NavigationCleanup();
   }
+})();
+
+/* V11.1.38 enhances the already-global Waffle assistant with Dog Profile care
+   intelligence. It waits for V11.1.37 so the existing Calendar routing remains
+   authoritative for bookings, capacity, movements and Meet & Greets. */
+(function () {
+  'use strict';
+
+  let attempts = 0;
+
+  function loadWaffleAiProfiles() {
+    if (document.querySelector('script[data-waffle-v11138-assistant]')) return;
+
+    if (!window.v11137AskWaffleVersion && attempts < 40) {
+      attempts += 1;
+      setTimeout(loadWaffleAiProfiles, 120);
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = 'waffle-v11.1.38.js?v=11.1.38';
+    script.async = false;
+    script.setAttribute('data-waffle-v11138-assistant', 'js');
+    document.body.appendChild(script);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => setTimeout(loadWaffleAiProfiles, 250), { once: true });
+  } else {
+    setTimeout(loadWaffleAiProfiles, 250);
+  }
+
+  window.addEventListener('pageshow', loadWaffleAiProfiles);
 })();
