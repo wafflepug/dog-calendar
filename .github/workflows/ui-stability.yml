@@ -32,6 +32,7 @@ jobs:
           node --check waffle-v11.1.60.js
           node --check waffle-v11.1.61.js
           node --check waffle-v11.1.63.js
+          node --check waffle-v11.1.64.js
           node --check service-worker.js
           node --check apps-script/WaffleAI.js
           node --check apps-script/WaffleAIProvider.js
@@ -103,7 +104,8 @@ jobs:
       - name: Validate stay timeline Calendar overhaul
         run: |
           grep -q "waffle-v11.1.63.js" waffle-v11.1.61.js
-          grep -q "11.1.63-compatibility-bridge" waffle-v11.1.61.js
+          grep -q "waffle-v11.1.64.js" waffle-v11.1.61.js
+          grep -q "11.1.64-compatibility-bridge" waffle-v11.1.61.js
           grep -q "v11163CalendarTimelineVersion" waffle-v11.1.63.js
           grep -q "DOG_PALETTE" waffle-v11.1.63.js
           grep -q "function rebuildLanes" waffle-v11.1.63.js
@@ -119,6 +121,20 @@ jobs:
           grep -q "v1088DateChoiceModal" waffle-v11.1.63.js
           grep -q "DAY AT WAFFLE HOUSE" waffle-v11.1.63.js
           grep -q "@media (max-width: 700px)" waffle-v11.1.63.js
+
+      - name: Validate unlimited Calendar activity rows
+        run: |
+          grep -q "v11164UnlimitedCalendarVersion" waffle-v11.1.64.js
+          grep -q "\['dayMaxEvents', false\]" waffle-v11.1.64.js
+          grep -q "\['dayMaxEventRows', false\]" waffle-v11.1.64.js
+          grep -q "\['eventMaxStack', null\]" waffle-v11.1.64.js
+          grep -q "function rebuildLanes" waffle-v11.1.64.js
+          grep -q "previousEnd < item.dates.start" waffle-v11.1.64.js
+          grep -q "eventOrderStrict" waffle-v11.1.64.js
+          grep -q "fc-daygrid-more-link" waffle-v11.1.64.js
+          grep -q "v11.1.64-unlimited-calendar-lanes" service-worker.js
+          grep -q "waffle-v11.1.64.js?v=11.1.64" service-worker.js
+          grep -q "url.pathname.endsWith('/waffle-v11.1.64.js')" service-worker.js
 
       - name: Validate legacy Calendar date chooser retirement
         run: |
