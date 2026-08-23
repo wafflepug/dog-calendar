@@ -143,11 +143,18 @@
   }
 
   async function startFinalUi() {
+    /* Care must not depend on AI startup. Load the rebuilt Care component first
+       and isolate its failure boundary from Ask Waffle/provider features. */
     try {
-      await ensureAskWaffle();
       await ensureDesktopCareRebuild();
     } catch (error) {
-      console.warn('Waffle feature UI setup failed:', error);
+      console.warn('Desktop Care rebuild could not load:', error);
+    }
+
+    try {
+      await ensureAskWaffle();
+    } catch (error) {
+      console.warn('Waffle AI feature setup failed:', error);
     }
 
     try {
