@@ -21,8 +21,10 @@ jobs:
 
       - name: Validate conversational Waffle AI JavaScript
         run: |
+          node --check waffle-v11.0.5.js
           node --check waffle-v11.1.47.js
           node --check waffle-v11.1.48.js
+          node --check waffle-v11.1.52.js
           node --check apps-script/WaffleAI.js
           node --check apps-script/WaffleAIProvider.js
           node --check apps-script/WaffleAIProviderV11148.js
@@ -36,6 +38,13 @@ jobs:
           node --check apps-script/WaffleAIHealthV11148.js
           node --check apps-script/WaffleAIHealthV11149.js
           node --check apps-script/WaffleAIHealthV11150.js
+
+      - name: Validate unified action chrome scope
+        run: |
+          grep -q "'calendar', 'directory', 'reminders', 'audit'" waffle-v11.1.52.js
+          grep -q "waffle-v11.1.52.js" waffle-v11.0.5.js
+          grep -q "bottom: 96px" waffle-v11.1.52.js
+          grep -q "bottom: calc(88px" waffle-v11.1.52.js
 
       - name: Validate Apps Script AI router patch
         run: |
