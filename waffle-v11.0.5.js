@@ -1,10 +1,10 @@
 /* ============================================================
-   WAFFLE HOUSE V11.1.59 — COMPATIBILITY + CONVERSATIONAL AI
+   WAFFLE HOUSE V11.1.60 — COMPATIBILITY + CONVERSATIONAL AI
    Keeps V11.0.5 synchronous, ensures the current Ask Waffle stack is present,
    unifies action chrome across Calendar/Care/Organiser/Logs, removes retired
    Request From controls everywhere, adds organic tool-using Waffle AI, speech
-   to text, applies deterministic desktop Care tab routing, removes retired DOM
-   before hydration, and loads the permanent Final UI Contract last.
+   to text, loads the rebuilt desktop Care tabs, removes retired DOM before
+   hydration, and loads the permanent Final UI Contract last.
    ============================================================ */
 (function () {
   'use strict';
@@ -30,7 +30,7 @@
     );
   }
 
-  function loadScript(src, ready, version = '11.1.59') {
+  function loadScript(src, ready, version = '11.1.60') {
     if (ready()) return Promise.resolve();
 
     return new Promise((resolve, reject) => {
@@ -51,7 +51,7 @@
       const script = document.createElement('script');
       script.src = src + '?v=' + version;
       script.async = false;
-      script.dataset.waffleV11159 = 'true';
+      script.dataset.waffleV11160 = 'true';
       script.addEventListener('load', resolve, { once: true });
       script.addEventListener('error', () => reject(new Error('Could not load ' + src)), { once: true });
       document.head.appendChild(script);
@@ -133,19 +133,19 @@
     );
   }
 
-  async function ensureDesktopCareRouting() {
+  async function ensureDesktopCareRebuild() {
     if (pageName() !== 'directory') return;
     await loadScript(
-      'waffle-v11.1.59.js',
-      () => !!window.v11159CareDesktopTabsVersion,
-      '11.1.59'
+      'waffle-v11.1.60.js',
+      () => !!window.v11160DesktopCareRebuildVersion,
+      '11.1.60'
     );
   }
 
   async function startFinalUi() {
     try {
       await ensureAskWaffle();
-      await ensureDesktopCareRouting();
+      await ensureDesktopCareRebuild();
     } catch (error) {
       console.warn('Waffle feature UI setup failed:', error);
     }
