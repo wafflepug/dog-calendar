@@ -9,30 +9,109 @@
       dependable local assistant act as fallback.
 
    Both providers use the same read-only Waffle data tools from WaffleAI.js.
+   A global minute/day limiter protects the anonymous web-app endpoint from
+   accidental loops or runaway AI spend. Limits can be adjusted with Script
+   Properties WAFFLE_AI_MAX_PER_MINUTE and WAFFLE_AI_MAX_PER_DAY.
    ============================================================ */
 
 var WAFFLE_AI_GEMINI_MODEL_DEFAULT_ = 'gemini-3.6-flash';
 var WAFFLE_AI_GEMINI_MAX_ROUNDS_ = 5;
+var WAFFLE_AI_MAX_PER_MINUTE_DEFAULT_ = 20;
+var WAFFLE_AI_MAX_PER_DAY_DEFAULT_ = 250;
 
 function getWaffleAiConversationResponse_(data) {
   var properties = PropertiesService.getScriptProperties();
   var openAiKey = String(properties.getProperty('OPENAI_API_KEY') || '').trim();
   var geminiKey = String(properties.getProperty('GEMINI_API_KEY') || '').trim();
 
+  if (!openAiKey && !geminiKey) {
+    return {
+      result: 'error',
+      aiConfigured: false,
+      version: WAFFLE_AI_VERSION_,
+      error: 'Waffle AI needs OPENAI_API_KEY or GEMINI_API_KEY in Apps Script Script Properties.'
+    };
+  }
+
+  var allowance = waffleAiConsumeAllowance_(properties);
+  if (!allowance.ok) {
+    return {
+      result: 'error',
+      aiConfigured: true,
+      version: WAFFLE_AI_VERSION_,
+      error: allowance.message
+    };
+  }
+
   if (openAiKey) {
     return getWaffleAiResponse_(data);
   }
 
-  if (geminiKey) {
-    return getWaffleAiGeminiResponse_(data, geminiKey);
+  return getWaffleAiGeminiResponse_(data, geminiKey);
+}
+
+function waffleAiConsumeAllowance_(properties) {
+  var perMinute = Math.max(
+    1,
+    Number(properties.getProperty('WAFFLE_AI_MAX_PER_MINUTE') || WAFFLE_AI_MAX_PER_MINUTE_DEFAULT_)
+  );
+  var perDay = Math.max(
+    perMinute,
+    Number(properties.getProperty('WAFFLE_AI_MAX_PER_DAY') || WAFFLE_AI_MAX_PER_DAY_DEFAULT_)
+  );
+
+  var timezone = 'Australia/Sydney';
+  try { timezone = Session.getScriptTimeZone() || timezone; } catch (_) {}
+
+  var now = new Date();
+  var minuteKey = 'waffle-ai-minute-' + Utilities.formatDate(now, timezone, 'yyyyMMddHHmm');
+  var day = Utilities.formatDate(now, timezone, 'yyyyMMdd');
+  var dayKey = 'WAFFLE_AI_RATE_DAY';
+  var cache = CacheService.getScriptCache();
+  var lock = LockService.getScriptLock();
+
+  if (!lock.tryLock(1500)) {
+    return {
+      ok: false,
+      message: 'Waffle AI is busy with another request. Please try again in a moment.'
+    };
   }
 
-  return {
-    result: 'error',
-    aiConfigured: false,
-    version: WAFFLE_AI_VERSION_,
-    error: 'Waffle AI needs OPENAI_API_KEY or GEMINI_API_KEY in Apps Script Script Properties.'
-  };
+  try {
+    var minuteCount = Number(cache.get(minuteKey) || 0);
+    if (minuteCount >= perMinute) {
+      return {
+        ok: false,
+        message: 'Waffle AI has reached its short-term request limit. Please try again in about a minute.'
+      };
+    }
+
+    var dayState = { day: day, count: 0 };
+    try {
+      var saved = JSON.parse(properties.getProperty(dayKey) || 'null');
+      if (saved && saved.day === day) {
+        dayState.count = Number(saved.count || 0);
+      }
+    } catch (_) {}
+
+    if (dayState.count >= perDay) {
+      return {
+        ok: false,
+        message: 'Waffle AI has reached today’s configured request limit.'
+      };
+    }
+
+    minuteCount += 1;
+    dayState.count += 1;
+
+    cache.put(minuteKey, String(minuteCount), 90);
+    properties.setProperty(dayKey, JSON.stringify(dayState));
+
+    return { ok: true };
+
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 function getWaffleAiGeminiResponse_(data, apiKey) {
