@@ -3,8 +3,8 @@
 
 Code.js predates the split-file architecture and is intentionally not hand-edited
 for small feature routes. The Apps Script deploy workflow runs this patch before
-`clasp push`, so the deployed project always contains the route while WaffleAI.js
-holds the implementation.
+`clasp push`, so the deployed project always contains the route while the split
+WaffleAI*.js files hold the implementation.
 
 The patch is idempotent and fails closed if the expected dispatcher anchors move.
 """
@@ -17,7 +17,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 CODE = ROOT / "apps-script" / "Code.js"
 
 ROUTE_MARKER = "WAFFLE_AI_READ_ONLY_ROUTE_V11147"
-ROUTE = f'''\n  /* {ROUTE_MARKER}: conversational Waffle AI stays read-only. */\n  if (action === "ask_waffle_ai") {{\n    return getWaffleAiResponse_(data);\n  }}\n'''
+ROUTE = f'''\n  /* {ROUTE_MARKER}: conversational Waffle AI stays read-only. */\n  if (action === "ask_waffle_ai") {{\n    return getWaffleAiConversationResponse_(data);\n  }}\n'''
 
 
 def main() -> int:
@@ -32,7 +32,13 @@ def main() -> int:
         text = text.replace(anchor, anchor + ROUTE)
         print(f"Injected Waffle AI dispatcher route into {count} dispatcher block(s).")
     else:
-        print("Waffle AI dispatcher route already present.")
+        # If the marker already exists in a generated/local checkout, upgrade an
+        # older provider target rather than duplicating the route.
+        text = text.replace(
+            'return getWaffleAiResponse_(data);',
+            'return getWaffleAiConversationResponse_(data);'
+        )
+        print("Waffle AI dispatcher route already present; provider target verified.")
 
     # The V10.8 receipt/read-only classification prevents AI questions from
     # being treated as mutation actions or creating misleading write receipts.
@@ -50,7 +56,11 @@ def main() -> int:
 
     # Verify both requirements after writing.
     final = CODE.read_text(encoding="utf-8")
-    if ROUTE_MARKER not in final or registry_entry not in final:
+    if (
+        ROUTE_MARKER not in final
+        or registry_entry not in final
+        or 'getWaffleAiConversationResponse_(data)' not in final
+    ):
         print("Waffle AI router verification failed.", file=sys.stderr)
         return 4
 
