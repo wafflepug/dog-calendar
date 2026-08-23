@@ -9,9 +9,16 @@
    ============================================================ */
 
 function getGuestDirectoryResponse_() {
+  var directory = getGuestDirectoryPayload_();
+
   return {
     result: 'success',
-    directory: getGuestDirectoryPayload_(),
+    /* Keep bookings at the top level so WaffleAI.js can resolve a natural dog
+       name to its stayKey without requiring the model to make an extra lookup. */
+    records: directory && Array.isArray(directory.bookings)
+      ? directory.bookings
+      : [],
+    directory: directory,
     calendarRecords: waffleAiCalendarRecords_()
   };
 }
