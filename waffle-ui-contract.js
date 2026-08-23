@@ -164,18 +164,14 @@
   function canonicalOrganiser() {
     if (pageName() !== 'reminders') return;
 
+    /* Do not place inline display rules on Sticky Notes. They remain an active
+       Organiser feature. The shared first-paint CSS alone suppresses the old
+       top-level Reminders DOM until #v11115OrganiserRoot mounts, after which
+       Organiser owns visibility of its own tabs and panels. */
     const panel = document.getElementById('remindersTabPanel');
     if (!panel) return;
 
-    /* Sticky-note legacy DOM is intentionally not removed: Organiser owns and
-       reuses it. It simply cannot be the visible top-level page before the
-       Organiser shell has mounted. First-paint CSS enforces the same rule. */
-    Array.from(panel.children).forEach(child => {
-      if (child.id === 'v11115OrganiserRoot') return;
-      if (!document.getElementById('v11115OrganiserRoot')) {
-        child.style.setProperty('display', 'none', 'important');
-      }
-    });
+    panel.dataset.waffleFinalUiOwner = 'organiser';
   }
 
   function canonicalAudit() {
