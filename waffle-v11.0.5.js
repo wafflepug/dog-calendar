@@ -1,5 +1,5 @@
 /* ============================================================
-   WAFFLE HOUSE V11.1.39 — COMPATIBILITY LOADER
+   WAFFLE HOUSE V11.1.40 — COMPATIBILITY LOADER
    Keeps V11.0.5 synchronous and ensures the current Ask Waffle stack
    is present on Calendar and Care without duplicating newer HTML loads.
    ============================================================ */
@@ -9,10 +9,10 @@
   // Preserve the original V11.0.5 execution order. This loader itself is
   // parser-inserted at the old V11.0.5 script position.
   if (document.readyState === 'loading') {
-    document.write('<script src="waffle-v11.0.5-core.js?v=11.1.39"></script>');
+    document.write('<script src="waffle-v11.0.5-core.js?v=11.1.40"></script>');
   } else {
     const core = document.createElement('script');
-    core.src = 'waffle-v11.0.5-core.js?v=11.1.39';
+    core.src = 'waffle-v11.0.5-core.js?v=11.1.40';
     core.async = false;
     document.head.appendChild(core);
   }
@@ -46,9 +46,9 @@
       }
 
       const script = document.createElement('script');
-      script.src = src + '?v=11.1.39';
+      script.src = src + '?v=11.1.40';
       script.async = false;
-      script.dataset.waffleV11139 = 'true';
+      script.dataset.waffleV11140 = 'true';
       script.addEventListener('load', resolve, { once: true });
       script.addEventListener('error', () => reject(new Error('Could not load ' + src)), { once: true });
       document.head.appendChild(script);
@@ -77,6 +77,11 @@
       await loadScript(
         'waffle-v11.1.39.js',
         () => !!window.v11139AskWaffleLayoutVersion
+      );
+
+      await loadScript(
+        'waffle-v11.1.40.js',
+        () => !!window.v11140AskWaffleLayoutVersion
       );
     } catch (error) {
       console.warn('Ask Waffle launcher setup failed:', error);
