@@ -1,6 +1,6 @@
 /* Waffle House Boarding — recovery service worker */
 
-const WAFFLE_SW_VERSION = 'v11.1.61-clean-calendar';
+const WAFFLE_SW_VERSION = 'v11.1.64-unlimited-calendar-lanes';
 const WAFFLE_CACHE_PREFIX = 'waffle-house-';
 const APP_SHELL_CACHE = `${WAFFLE_CACHE_PREFIX}shell-${WAFFLE_SW_VERSION}`;
 const RUNTIME_CACHE = `${WAFFLE_CACHE_PREFIX}runtime-${WAFFLE_SW_VERSION}`;
@@ -65,6 +65,8 @@ const APP_SHELL = [
   './waffle-v11.1.58.js?v=11.1.58',
   './waffle-v11.1.60.js?v=11.1.60',
   './waffle-v11.1.61.js?v=11.1.61',
+  './waffle-v11.1.63.js?v=11.1.63',
+  './waffle-v11.1.64.js?v=11.1.64',
   './waffle-ui-contract.js?v=11.1.48',
   './waffle-ui-contract.js?v=11.1.51'
 ];
@@ -188,6 +190,8 @@ function isFirstPaintCriticalAsset(url) {
     url.pathname.endsWith('/waffle-v11.1.58.js') ||
     url.pathname.endsWith('/waffle-v11.1.60.js') ||
     url.pathname.endsWith('/waffle-v11.1.61.js') ||
+    url.pathname.endsWith('/waffle-v11.1.63.js') ||
+    url.pathname.endsWith('/waffle-v11.1.64.js') ||
     url.pathname.endsWith('/waffle-ui-contract.js')
   );
 }
