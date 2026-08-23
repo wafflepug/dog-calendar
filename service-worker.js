@@ -1,6 +1,6 @@
 /* Waffle House Boarding — recovery service worker */
 
-const WAFFLE_SW_VERSION = 'v11.1.60-care-tabs-rebuild';
+const WAFFLE_SW_VERSION = 'v11.1.61-clean-calendar';
 const WAFFLE_CACHE_PREFIX = 'waffle-house-';
 const APP_SHELL_CACHE = `${WAFFLE_CACHE_PREFIX}shell-${WAFFLE_SW_VERSION}`;
 const RUNTIME_CACHE = `${WAFFLE_CACHE_PREFIX}runtime-${WAFFLE_SW_VERSION}`;
@@ -64,6 +64,7 @@ const APP_SHELL = [
   './waffle-v11.1.53.js?v=11.1.53',
   './waffle-v11.1.58.js?v=11.1.58',
   './waffle-v11.1.60.js?v=11.1.60',
+  './waffle-v11.1.61.js?v=11.1.61',
   './waffle-ui-contract.js?v=11.1.48',
   './waffle-ui-contract.js?v=11.1.51'
 ];
@@ -186,6 +187,7 @@ function isFirstPaintCriticalAsset(url) {
     url.pathname.endsWith('/waffle-v11.1.53.js') ||
     url.pathname.endsWith('/waffle-v11.1.58.js') ||
     url.pathname.endsWith('/waffle-v11.1.60.js') ||
+    url.pathname.endsWith('/waffle-v11.1.61.js') ||
     url.pathname.endsWith('/waffle-ui-contract.js')
   );
 }
