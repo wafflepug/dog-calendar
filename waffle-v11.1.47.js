@@ -10,6 +10,9 @@
 
   const VERSION = '11.1.47';
   const HISTORY_KEY = 'waffleAiConversationV11147';
+  const MAX_HISTORY_TURNS = 4;
+  const MAX_HISTORY_CHARS = 600;
+  const MAX_QUESTION_CHARS = 1400;
   const APPS_SCRIPT_WEBAPP_URL =
     'https://script.google.com/macros/s/AKfycbwn4HL49K9c3AZbXJRUjPw3UYWxJt8DmqXwMnTytyqdSstj3ZIJwWdDEC2IsBjetOf3pw/exec';
 
@@ -45,10 +48,10 @@
         .filter(item => item && (item.role === 'user' || item.role === 'assistant'))
         .map(item => ({
           role: item.role,
-          content: String(item.content || '').slice(0, 1800)
+          content: String(item.content || '').slice(0, MAX_HISTORY_CHARS)
         }))
         .filter(item => item.content.trim())
-        .slice(-8);
+        .slice(-MAX_HISTORY_TURNS);
     } catch (_) {
       return [];
     }
@@ -56,9 +59,12 @@
 
   function saveTurn(role, content) {
     const rows = history();
-    rows.push({ role, content: String(content || '').slice(0, 1800) });
+    rows.push({ role, content: String(content || '').slice(0, MAX_HISTORY_CHARS) });
     try {
-      sessionStorage.setItem(HISTORY_KEY, JSON.stringify(rows.slice(-8)));
+      sessionStorage.setItem(
+        HISTORY_KEY,
+        JSON.stringify(rows.slice(-MAX_HISTORY_TURNS))
+      );
     } catch (_) {}
   }
 
@@ -194,7 +200,7 @@
   }
 
   async function ask(question) {
-    const q = String(question || '').trim();
+    const q = String(question || '').trim().slice(0, MAX_QUESTION_CHARS);
     if (!q) return;
 
     const previousHistory = history();
