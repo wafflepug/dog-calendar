@@ -45,8 +45,6 @@ body.dark-theme
    renderers still write to are kept in a hidden DOM sink by JavaScript.
    ============================================================ */
 
-/* The current Waffle logo already contains the Waffle House name and boarding
-   descriptor. Do not duplicate that copy beside it on desktop or mobile. */
 .calendar-header-branding .calendar-brand-copy {
     display: none !important;
 }
@@ -56,9 +54,6 @@ body.dark-theme
     margin-right: 0 !important;
 }
 
-/* The V11.1.8 generated mobile footer is retired. The static .app-tabs nav is
-   now the sole navigation surface. Hide any old footer at first paint even if
-   an older script briefly recreates it before the cleanup layer runs. */
 body > .v1118-mobile-nav:not(.app-tabs),
 nav#v1118MobileNav:not(.app-tabs) {
     display: none !important;
@@ -66,9 +61,6 @@ nav#v1118MobileNav:not(.app-tabs) {
     pointer-events: none !important;
 }
 
-/* Calendar: these summary blocks were superseded by Operations Home and the
-   dedicated 7-day outlook cards. V11.1.21 used to remove them after load,
-   which allowed a short flash on slower devices. */
 body[data-waffle-page="calendar"]
 #calendarTabPanel > .summary-dashboard,
 body[data-waffle-page="calendar"]
@@ -80,23 +72,15 @@ body[data-waffle-page="calendar"]
     display: none !important;
 }
 
-/* Audit: the inline recovery panel was replaced by the current Logs/recovery
-   experience and is no longer a user-facing surface. */
 body[data-waffle-page="audit"] [data-v1115-recovery-panel] {
     display: none !important;
 }
 
-/* Organiser: the historical Reminders/Sticky Notes DOM is deliberately reused
-   inside the Organiser's Sticky Notes tab by V11.1.15. It is not deleted, but
-   while those nodes remain direct children of the page panel they are legacy
-   pre-hydration content and must never be visible. */
 body[data-waffle-page="reminders"]
 #remindersTabPanel > *:not(#v11115OrganiserRoot) {
     display: none !important;
 }
 
-/* Show a stable Organiser-shaped first paint while the JS shell is loading,
-   rather than flashing the old Sticky Notes page. */
 body[data-waffle-page="reminders"]
 #remindersTabPanel:not(:has(#v11115OrganiserRoot))::before {
     content: "🗂 Waffle House Organiser";
@@ -121,8 +105,6 @@ body.dark-theme[data-waffle-page="reminders"]
     color: #f8fafc;
 }
 
-/* The navigation was renamed from Reminder to Organiser. Make the canonical
-   label correct on every page at first paint, not only on reminders.html. */
 .app-tabs [data-page-link="reminders"] .nav-label {
     font-size: 0 !important;
 }
@@ -132,16 +114,12 @@ body.dark-theme[data-waffle-page="reminders"]
     font-size: 12px;
 }
 
-/* Care: Upload PDF is retired. Hide the legacy write button from first paint
-   instead of waiting for V11.1.23 to remove it after DOMContentLoaded. */
 body[data-waffle-page="directory"] #openLegacyIntakeUploadBtn,
 body[data-waffle-page="directory"] [data-upload-legacy-intake],
 body[data-waffle-page="directory"] [data-reassign-legacy-intake] {
     display: none !important;
 }
 
-/* Match the final V11.1.23 read-only state immediately. The temporary CSS
-   label disappears as soon as the real semantic note is inserted. */
 body[data-waffle-page="directory"]
 .directory-header-actions:not(:has(#v11123LegacyIntakeHistoryNote))::before {
     content: "Historical PDF Intake · view only";
@@ -166,13 +144,59 @@ body.dark-theme[data-waffle-page="directory"]
     color: #cbd5e1;
 }
 
-/* All compatibility sinks are structural only and can never participate in
-   layout, even if an older rule attempts to style one of their descendants. */
 #v11121LegacyCompatibilitySinks,
 #v11143LegacyCompatibilitySinks {
     display: none !important;
     visibility: hidden !important;
     pointer-events: none !important;
+}
+
+/* ============================================================
+   V11.1.44 — CARE FIRST-PAINT STABILITY
+   ============================================================ */
+
+/* Historical intake is informational, not a success state. Keep the real
+   semantic badge visually identical to the pre-hydration placeholder so it
+   cannot switch grey/green as older scripts finish loading. */
+body[data-waffle-page="directory"] #v11123LegacyIntakeHistoryNote,
+body[data-waffle-page="directory"] .v11144-historical-intake-note {
+    border-color: #d9e2ec !important;
+    background: #f8fafc !important;
+    color: #475569 !important;
+    box-shadow: none !important;
+}
+
+body.dark-theme[data-waffle-page="directory"] #v11123LegacyIntakeHistoryNote,
+body.dark-theme[data-waffle-page="directory"] .v11144-historical-intake-note {
+    border-color: #475569 !important;
+    background: #1e293b !important;
+    color: #cbd5e1 !important;
+}
+
+/* The static HTML starts with "No active care alerts" before any guest care
+   records have loaded. Present that unconfirmed state as Loading until the
+   V11.1.44 stabiliser marks the summary ready. Real alert states already carry
+   .has-alerts and therefore remain immediately visible. */
+body[data-waffle-page="directory"]
+#directory-care-summary:not(.has-alerts):not(.v11144-care-ready) {
+    border-color: #d9e2ec !important;
+    background: #f8fafc !important;
+    color: #475569 !important;
+    font-size: 0 !important;
+}
+
+body[data-waffle-page="directory"]
+#directory-care-summary:not(.has-alerts):not(.v11144-care-ready)::after {
+    content: "Loading care alerts…";
+    font-size: 11px;
+    font-weight: 800;
+}
+
+body.dark-theme[data-waffle-page="directory"]
+#directory-care-summary:not(.has-alerts):not(.v11144-care-ready) {
+    border-color: #475569 !important;
+    background: #1e293b !important;
+    color: #cbd5e1 !important;
 }
 
 @media (max-width: 768px) {
@@ -201,8 +225,6 @@ body.dark-theme[data-waffle-page="directory"]
         text-align: center;
     }
 
-    /* Last-line safeguard: once Quick Add belongs to the mobile nav, it must
-       never retain floating coordinates from desktop action layers. */
     .app-tabs > .v10-quick-add-button.v1088-nav-quick-add,
     .app-tabs > .v10-quick-add-button.v11122-nav-add {
         top: auto !important;
