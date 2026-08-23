@@ -1,15 +1,14 @@
 /* ============================================================
-   WAFFLE HOUSE V11.1.55 — CARE DESKTOP TAB PARITY + NAV LABEL FINAL
-   - Keeps the unified Ask Waffle / Quick Action chrome on all app pages.
+   WAFFLE HOUSE V11.1.56 — CARE DESKTOP NATIVE ROUTING RECOVERY
+   - Keeps unified Ask Waffle / Quick Action chrome.
    - Retires historical Request From controls in Waffle AI.
-   - Makes Care Profile / Belongings / Media / History / Master deterministic
-     on desktop without changing the working mobile routing.
-   - Makes the bottom navigation render one canonical "Organiser" label.
+   - Restores desktop Care tab parity without suppressing native listeners.
+   - Keeps one canonical Organiser navigation label.
    ============================================================ */
 (function () {
   'use strict';
 
-  const VERSION = '11.1.55';
+  const VERSION = '11.1.56';
   const APP_PAGES = new Set(['calendar', 'directory', 'reminders', 'audit']);
   const CARE_KEYS = ['profile', 'belongings', 'media', 'history', 'master'];
   let observer = null;
@@ -28,10 +27,10 @@
   }
 
   function ensureStyle() {
-    if (document.getElementById('v11155-final-ui-style')) return;
+    if (document.getElementById('v11156-final-ui-style')) return;
 
     const style = document.createElement('style');
-    style.id = 'v11155-final-ui-style';
+    style.id = 'v11156-final-ui-style';
     style.textContent = `
       body[data-waffle-page="calendar"] #aw37launch,
       body[data-waffle-page="directory"] #aw37launch,
@@ -89,8 +88,6 @@
         pointer-events: none !important;
       }
 
-      /* The old first-paint layer generated "Organiser" with ::after while the
-         real nav label is now also Organiser. Keep only the real label. */
       .app-tabs [data-page-link="reminders"] .nav-label,
       .app-tabs a[href$="reminders.html"] .nav-label {
         font-size: inherit !important;
@@ -116,17 +113,26 @@
           z-index: 2147480999 !important;
         }
 
-        /* Desktop Care profile tabs must remain clickable above profile content
-           and any historical overlays. */
+        body[data-waffle-page="directory"] .directory-card.is-profile-active {
+          position: relative !important;
+          isolation: isolate !important;
+        }
+
         body[data-waffle-page="directory"] .directory-main-profile-tabs {
           position: relative !important;
-          z-index: 70 !important;
+          z-index: 1000 !important;
+          isolation: isolate !important;
           pointer-events: auto !important;
+        }
+
+        body[data-waffle-page="directory"] .directory-main-profile-tabs::before,
+        body[data-waffle-page="directory"] .directory-main-profile-tabs::after {
+          pointer-events: none !important;
         }
 
         body[data-waffle-page="directory"] .directory-main-profile-tab {
           position: relative !important;
-          z-index: 71 !important;
+          z-index: 1001 !important;
           pointer-events: auto !important;
           cursor: pointer !important;
           touch-action: manipulation !important;
@@ -248,7 +254,7 @@
       'float',
       'aw39-round-launch',
       'waffle-final-ui-launcher',
-      'v11155-unified-launcher'
+      'v11156-unified-launcher'
     );
     launcher.setAttribute('aria-label', 'Ask Waffle');
     launcher.setAttribute('title', 'Ask Waffle');
@@ -338,6 +344,7 @@
         button.id,
         button.className,
         button.getAttribute?.('aria-controls'),
+        button.getAttribute?.('title'),
         button.textContent
       ].join(' ')
     );
@@ -356,6 +363,11 @@
         panel.getAttribute?.('aria-labelledby')
       ].join(' ')
     );
+  }
+
+  function activeCareCard(button) {
+    return button?.closest('.directory-card') ||
+      document.querySelector('.directory-card.is-profile-active');
   }
 
   function syncCarePanels(card, key) {
@@ -382,7 +394,7 @@
     return true;
   }
 
-  function callCareNativeRouter(card, key) {
+  function callCareNativeFallback(card, key) {
     if (!card) return false;
 
     if (key === 'profile' || key === 'belongings') {
@@ -418,6 +430,18 @@
     return false;
   }
 
+  function reconcileDesktopCareTab(button, key) {
+    const card = activeCareCard(button);
+    if (!card || !CARE_KEYS.includes(key)) return;
+
+    /* Native listeners are allowed to run first. Profile/Belongings and
+       Media/Master then get their established router as an idempotent fallback.
+       History keeps its specialised native loader and we only reconcile the
+       final visible tab/panel state. */
+    if (key !== 'history') callCareNativeFallback(card, key);
+    syncCarePanels(card, key);
+  }
+
   function handleDesktopCareTab(event) {
     if (pageName() !== 'directory' || isMobile()) return;
     if (!(event.target instanceof Element)) return;
@@ -425,33 +449,21 @@
     const button = event.target.closest('.directory-main-profile-tab');
     if (!button) return;
 
-    const card = button.closest('.directory-card');
     const key = careTabKey(button);
-    if (!card || !CARE_KEYS.includes(key)) return;
+    if (!CARE_KEYS.includes(key)) return;
 
-    /* The historical directory-grid delegate only understood Profile and
-       Belongings and could reset later Media/Master routing. Own the click in
-       capture phase for the four deterministic tabs. History keeps its existing
-       specialised loader, then this layer normalises its final panel state. */
-    if (key !== 'history') {
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      callCareNativeRouter(card, key);
-      syncCarePanels(card, key);
-    }
-
-    [0, 60, 180].forEach(delay => {
-      window.setTimeout(() => {
-        if (key !== 'history') callCareNativeRouter(card, key);
-        syncCarePanels(card, key);
-      }, delay);
+    /* Do not preventDefault/stopPropagation here. Several historical layers
+       own legitimate specialised loaders. Reconcile after all native listeners
+       have had their turn instead of racing or suppressing them. */
+    [0, 60, 180, 360].forEach(delay => {
+      window.setTimeout(() => reconcileDesktopCareTab(button, key), delay);
     });
   }
 
   function wireDesktopCareTabs() {
-    if (window.v11155DesktopCareTabsWired === true) return;
-    window.v11155DesktopCareTabsWired = true;
-    window.addEventListener('click', handleDesktopCareTab, true);
+    if (window.v11156DesktopCareTabsWired === true) return;
+    window.v11156DesktopCareTabsWired = true;
+    document.addEventListener('click', handleDesktopCareTab, false);
   }
 
   function apply() {
@@ -484,17 +496,16 @@
   }
 
   function start() {
-    wireDesktopCareTabs();
     apply();
+    wireDesktopCareTabs();
     wireObserver();
     [40, 100, 220, 500, 1000, 2200, 5000].forEach(delay => setTimeout(apply, delay));
     window.addEventListener('pageshow', apply);
     window.addEventListener('focus', apply);
     window.addEventListener('resize', () => setTimeout(apply, 60));
-
-    /* Preserve the loader compatibility flag while exposing the new contract. */
     window.v11153UnifiedActionChromeVersion = VERSION;
     window.v11155CareTabParityVersion = VERSION;
+    window.v11156CareTabParityVersion = VERSION;
   }
 
   ensureStyle();
