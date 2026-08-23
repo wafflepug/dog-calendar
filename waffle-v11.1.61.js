@@ -2,50 +2,64 @@
    WAFFLE HOUSE V11.1.61 — CALENDAR COMPATIBILITY BRIDGE
    ============================================================
    Historical shared loaders still request this filename. The former V11.1.61
-   per-day occupancy renderer has been retired in favour of V11.1.63's native
-   FullCalendar stay timeline.
+   per-day occupancy renderer has been retired in favour of:
+   - V11.1.63 native FullCalendar stay timeline; and
+   - V11.1.64 unlimited, non-collapsing lane authority.
 
-   Keep this tiny bridge until all historical entry points have aged out of
-   installed PWA caches. It deliberately contains no Calendar presentation of
-   its own, so there is only one Calendar authority.
+   This bridge deliberately contains no Calendar presentation of its own, so
+   installed PWAs and old HTML entry points still converge on one Calendar UI.
    ============================================================ */
 (function () {
   'use strict';
 
-  const TARGET = 'waffle-v11.1.63.js';
-  const VERSION = '11.1.63';
+  const SCRIPTS = [
+    ['waffle-v11.1.63.js', '11.1.63', () => !!window.v11163CalendarTimelineVersion],
+    ['waffle-v11.1.64.js', '11.1.64', () => !!window.v11164UnlimitedCalendarVersion]
+  ];
 
   function markBridgeReady() {
-    window.v11161CleanCalendarVersion = '11.1.63-compatibility-bridge';
+    window.v11161CleanCalendarVersion = '11.1.64-compatibility-bridge';
   }
 
-  if (window.v11163CalendarTimelineVersion) {
-    markBridgeReady();
-    return;
+  function loadOne(file, version, ready) {
+    if (ready()) return Promise.resolve();
+
+    return new Promise((resolve, reject) => {
+      const existing = Array.from(document.scripts).find(script =>
+        String(script.src || '').includes('/' + file)
+      );
+
+      if (existing) {
+        if (ready()) {
+          resolve();
+          return;
+        }
+        existing.addEventListener('load', resolve, { once: true });
+        existing.addEventListener('error', reject, { once: true });
+        return;
+      }
+
+      const script = document.createElement('script');
+      script.src = file + '?v=' + version;
+      script.async = false;
+      script.dataset.waffleCalendarAuthority = version;
+      script.addEventListener('load', resolve, { once: true });
+      script.addEventListener('error', () => reject(new Error('Could not load ' + file)), { once: true });
+      document.head.appendChild(script);
+    });
   }
 
-  const existing = Array.from(document.scripts).find(script =>
-    String(script.src || '').includes('/' + TARGET)
-  );
-
-  if (existing) {
-    existing.addEventListener('load', markBridgeReady, { once: true });
-    markBridgeReady();
-    return;
+  async function start() {
+    try {
+      for (const [file, version, ready] of SCRIPTS) {
+        await loadOne(file, version, ready);
+      }
+    } catch (error) {
+      console.warn('Waffle Calendar authority could not fully load:', error);
+    } finally {
+      markBridgeReady();
+    }
   }
 
-  const script = document.createElement('script');
-  script.src = TARGET + '?v=' + VERSION;
-  script.async = false;
-  script.dataset.waffleCalendarTimeline = VERSION;
-  script.addEventListener('load', markBridgeReady, { once: true });
-  script.addEventListener('error', () => {
-    console.warn('Waffle stay timeline could not load.');
-    markBridgeReady();
-  }, { once: true });
-  document.head.appendChild(script);
-
-  // The compatibility filename itself has loaded successfully. The timeline
-  // script continues synchronously behind it and owns Calendar presentation.
-  markBridgeReady();
+  start();
 })();
