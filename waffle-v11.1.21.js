@@ -96,19 +96,36 @@
 
 /* Phase 2 is intentionally loaded after the Phase 1 compatibility cleanup so
    the original page navigation is available before it becomes the canonical
-   responsive navigation surface. V11.1.35 is loaded independently as a final
-   Ask Waffle routing hotfix so explicit questions cannot inherit a stale
-   capacity clarification context. */
+   responsive navigation surface. V11.1.35 prevents stale assistant intent;
+   V11.1.36 then applies requested-date capacity decisions as the final Ask
+   Waffle routing layer. */
 (function () {
   'use strict';
 
+  function loadAskWaffleRangeDecision() {
+    if (document.querySelector('script[data-waffle-v11136-assistant]')) return;
+
+    const script = document.createElement('script');
+    script.src = 'waffle-v11.1.36.js?v=11.1.36';
+    script.async = false;
+    script.setAttribute('data-waffle-v11136-assistant', 'js');
+    document.body.appendChild(script);
+  }
+
   function loadAskWaffleFreshIntent() {
-    if (document.querySelector('script[data-waffle-v11135-assistant]')) return;
+    const existing = document.querySelector('script[data-waffle-v11135-assistant]');
+    if (existing) {
+      existing.addEventListener('load', () => setTimeout(loadAskWaffleRangeDecision, 60), { once: true });
+      setTimeout(loadAskWaffleRangeDecision, 220);
+      return;
+    }
 
     const script = document.createElement('script');
     script.src = 'waffle-v11.1.35.js?v=11.1.35';
     script.async = false;
     script.setAttribute('data-waffle-v11135-assistant', 'js');
+    script.addEventListener('load', () => setTimeout(loadAskWaffleRangeDecision, 60), { once: true });
+    script.addEventListener('error', loadAskWaffleRangeDecision, { once: true });
     document.body.appendChild(script);
   }
 
