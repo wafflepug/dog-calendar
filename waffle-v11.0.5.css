@@ -39,7 +39,10 @@ body.dark-theme
 }
 
 /* ============================================================
-   V11.1.41 — FIRST-PAINT / BRANDING CLEANUP
+   V11.1.43 — LEGACY DOM RETIREMENT / FIRST-PAINT CLEANUP
+   Retired UI must never become a visible intermediate screen while the
+   current application layers initialise. Compatibility IDs that older base
+   renderers still write to are kept in a hidden DOM sink by JavaScript.
    ============================================================ */
 
 /* The current Waffle logo already contains the Waffle House name and boarding
@@ -53,10 +56,40 @@ body.dark-theme
     margin-right: 0 !important;
 }
 
-/* Organiser: the historical Reminders/Sticky Notes DOM is deliberately moved
-   into the Organiser's hidden Sticky Notes tab by V11.1.15. While those nodes
-   are still direct children of the page panel they are pre-hydration legacy
-   content and must never be visible. */
+/* The V11.1.8 generated mobile footer is retired. The static .app-tabs nav is
+   now the sole navigation surface. Hide any old footer at first paint even if
+   an older script briefly recreates it before the cleanup layer runs. */
+body > .v1118-mobile-nav:not(.app-tabs),
+nav#v1118MobileNav:not(.app-tabs) {
+    display: none !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+}
+
+/* Calendar: these summary blocks were superseded by Operations Home and the
+   dedicated 7-day outlook cards. V11.1.21 used to remove them after load,
+   which allowed a short flash on slower devices. */
+body[data-waffle-page="calendar"]
+#calendarTabPanel > .summary-dashboard,
+body[data-waffle-page="calendar"]
+#calendarTabPanel > .meet-greet-dashboard,
+body[data-waffle-page="calendar"]
+[data-mobile-dashboard-section="summary"],
+body[data-waffle-page="calendar"]
+[data-mobile-dashboard-section="meet"] {
+    display: none !important;
+}
+
+/* Audit: the inline recovery panel was replaced by the current Logs/recovery
+   experience and is no longer a user-facing surface. */
+body[data-waffle-page="audit"] [data-v1115-recovery-panel] {
+    display: none !important;
+}
+
+/* Organiser: the historical Reminders/Sticky Notes DOM is deliberately reused
+   inside the Organiser's Sticky Notes tab by V11.1.15. It is not deleted, but
+   while those nodes remain direct children of the page panel they are legacy
+   pre-hydration content and must never be visible. */
 body[data-waffle-page="reminders"]
 #remindersTabPanel > *:not(#v11115OrganiserRoot) {
     display: none !important;
@@ -88,14 +121,12 @@ body.dark-theme[data-waffle-page="reminders"]
     color: #f8fafc;
 }
 
-/* Organiser naming should also be correct on the first paint, before the
-   later cleanup scripts replace the old Reminder label in the DOM. */
-body[data-waffle-page="reminders"]
+/* The navigation was renamed from Reminder to Organiser. Make the canonical
+   label correct on every page at first paint, not only on reminders.html. */
 .app-tabs [data-page-link="reminders"] .nav-label {
     font-size: 0 !important;
 }
 
-body[data-waffle-page="reminders"]
 .app-tabs [data-page-link="reminders"] .nav-label::after {
     content: "Organiser";
     font-size: 12px;
@@ -135,6 +166,15 @@ body.dark-theme[data-waffle-page="directory"]
     color: #cbd5e1;
 }
 
+/* All compatibility sinks are structural only and can never participate in
+   layout, even if an older rule attempts to style one of their descendants. */
+#v11121LegacyCompatibilitySinks,
+#v11143LegacyCompatibilitySinks {
+    display: none !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+}
+
 @media (max-width: 768px) {
     .v1105-potential-sync {
         min-height: 26px;
@@ -147,6 +187,10 @@ body.dark-theme[data-waffle-page="directory"]
         padding: 18px;
         border-radius: 15px;
         font-size: 22px;
+    }
+
+    .app-tabs [data-page-link="reminders"] .nav-label::after {
+        font-size: 9px;
     }
 
     body[data-waffle-page="directory"]
