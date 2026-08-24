@@ -11,7 +11,8 @@
    Stay bars compact by showing only the pet name. V11.1.71 permanently retires
    the obsolete All / Confirmed / Meet & Greet / Potential filter strip and its
    historical desktop drag instruction. V11.1.72 aligns the Meet & Greet 7-day
-   outlook to the same vertical rhythm as Capacity Outlook.
+   outlook to the same vertical rhythm as Capacity Outlook. V11.1.73 replaces
+   the four Operations emoji icons with the supplied pug avatar artwork.
    FullCalendar remains hidden only as the existing data/editing adapter.
    ============================================================ */
 (function () {
@@ -24,11 +25,12 @@
     ['waffle-v11.1.68.js', '11.1.68', () => !!window.v11168CapacityHealthVersion],
     ['waffle-v11.1.70.js', '11.1.70', () => !!window.v11170PotentialLabelVersion],
     ['waffle-v11.1.71.js', '11.1.71', () => !!window.v11171LegacyCalendarFilterRetirementVersion],
-    ['waffle-v11.1.72.js', '11.1.72', () => !!window.v11172MeetOutlookAlignmentVersion]
+    ['waffle-v11.1.72.js', '11.1.72', () => !!window.v11172MeetOutlookAlignmentVersion],
+    ['waffle-v11.1.73.js', '11.1.73', () => !!window.v11173OperationsAvatarVersion]
   ];
 
   function markReady() {
-    window.v11161CleanCalendarVersion = '11.1.72-outlook-alignment-bridge';
+    window.v11161CleanCalendarVersion = '11.1.73-operations-pug-avatar-bridge';
   }
 
   function loadOne(file, version, ready) {
