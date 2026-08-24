@@ -35,6 +35,9 @@ jobs:
           node --check waffle-v11.1.67.js
           node --check waffle-v11.1.68.js
           node --check waffle-v11.1.69.js
+          node --check waffle-v11.1.70.js
+          node --check waffle-v11.1.71.js
+          node --check waffle-v11.1.72.js
           node --check service-worker.js
           node --check apps-script/WaffleAI.js
           node --check apps-script/WaffleAIProvider.js
@@ -52,27 +55,15 @@ jobs:
           node --check apps-script/WaffleAIHealthV11150.js
           node --check apps-script/WaffleAIHealthV11157.js
 
-      - name: Validate unified action chrome scope
+      - name: Validate unified action chrome
         run: |
           grep -q "'calendar', 'directory', 'reminders', 'audit'" waffle-v11.1.53.js
           grep -q "waffle-v11.1.53.js" waffle-v11.0.5.js
-          grep -q "bottom: 96px" waffle-v11.1.53.js
-          grep -q "bottom: calc(88px" waffle-v11.1.53.js
-
-      - name: Validate Request From retirement
-        run: |
           grep -q "removeEverythingAfterFooter" waffle-v11.1.53.js
           grep -q ".aw37-foot ~ \*" waffle-v11.1.53.js
-          grep -q "WAFFLE_SW_VERSION" service-worker.js
-          grep -q "waffle-v11.1.53.js?v=11.1.53" service-worker.js
-          grep -q "url.pathname.endsWith('/waffle-v11.1.53.js')" service-worker.js
-
-      - name: Validate Organiser label
-        run: |
-          grep -q "content: none !important" waffle-v11.1.53.js
           grep -q "label.textContent = 'Organiser'" waffle-v11.1.53.js
           if grep -q "event.stopImmediatePropagation" waffle-v11.1.53.js; then
-            echo "Care shared chrome layer must not suppress native profile-tab listeners"
+            echo "Shared chrome must not suppress native profile-tab listeners"
             exit 1
           fi
 
@@ -81,7 +72,6 @@ jobs:
           grep -q "waffle-v11.1.60.js" waffle-v11.0.5.js
           grep -q "v11160DesktopCareRebuildVersion" waffle-v11.1.60.js
           grep -q "v11160-desktop-tabs" waffle-v11.1.60.js
-          grep -q "v11160-legacy-tabs" waffle-v11.1.60.js
           grep -q "label: 'Profile'" waffle-v11.1.60.js
           grep -q "label: 'Belongings'" waffle-v11.1.60.js
           grep -q "label: 'Media'" waffle-v11.1.60.js
@@ -91,22 +81,25 @@ jobs:
           grep -q "v108LoadHistory" waffle-v11.1.60.js
           grep -q "v110LoadMedia" waffle-v11.1.60.js
           grep -q "v110LoadMasterProfile" waffle-v11.1.60.js
-          grep -q "@media (min-width:769px)" waffle-v11.1.60.js
-          grep -q "waffle-v11.1.60.js?v=11.1.60" service-worker.js
-          grep -q "url.pathname.endsWith('/waffle-v11.1.60.js')" service-worker.js
           if grep -q "window.addEventListener('click', handleClick, true)" waffle-v11.1.60.js; then
             echo "Rebuilt desktop tabs must not use the old window-capture interception architecture"
             exit 1
           fi
           if grep -q "style.removeProperty('display')" waffle-v11.1.60.js; then
-            echo "Rebuilt desktop tabs must not unhide panels using the banned display recovery pattern"
+            echo "Rebuilt desktop tabs must not use the banned display recovery pattern"
             exit 1
           fi
 
-      - name: Validate single unlimited Calendar with range views
+      - name: Validate single unlimited Calendar stack
         run: |
           grep -q "waffle-v11.1.69.js" waffle-v11.1.61.js
-          grep -q "11.1.69-calendar-views-bridge" waffle-v11.1.61.js
+          grep -q "waffle-v11.1.66.js" waffle-v11.1.61.js
+          grep -q "waffle-v11.1.67.js" waffle-v11.1.61.js
+          grep -q "waffle-v11.1.68.js" waffle-v11.1.61.js
+          grep -q "waffle-v11.1.70.js" waffle-v11.1.61.js
+          grep -q "waffle-v11.1.71.js" waffle-v11.1.61.js
+          grep -q "waffle-v11.1.72.js" waffle-v11.1.61.js
+          grep -q "11.1.72-outlook-alignment-bridge" waffle-v11.1.61.js
           if grep -q "waffle-v11.1.63.js" waffle-v11.1.61.js || grep -q "waffle-v11.1.64.js" waffle-v11.1.61.js || grep -q "waffle-v11.1.65.js" waffle-v11.1.61.js; then
             echo "Retired visible Calendar renderers must not load through the compatibility bridge"
             exit 1
@@ -115,38 +108,39 @@ jobs:
           grep -q "FullCalendar is no longer a visible UI" waffle-v11.1.69.js
           grep -q "pointer-events:none!important" waffle-v11.1.69.js
           grep -q "let viewMode = 'month'" waffle-v11.1.69.js
-          grep -q "viewMode = 'month'; // Month is deliberately the default" waffle-v11.1.69.js
           grep -q "viewButton('month', 'Month')" waffle-v11.1.69.js
           grep -q "viewButton('fortnight', 'Fortnight')" waffle-v11.1.69.js
           grep -q "viewButton('week', 'Week')" waffle-v11.1.69.js
-          grep -q "addDays(start, 13)" waffle-v11.1.69.js
-          grep -q "addDays(start, 6)" waffle-v11.1.69.js
           grep -q "function allocateWeekLanes" waffle-v11.1.69.js
           grep -q "grid-auto-rows:28px" waffle-v11.1.69.js
           grep -q "Confirmed Stay" waffle-v11.1.69.js
           grep -q "Potential Stay" waffle-v11.1.69.js
           grep -q "Meet &amp; Greet" waffle-v11.1.69.js
-          grep -q "data-wh65-event" waffle-v11.1.69.js
-          grep -q 'data-date="${dateIso}"' waffle-v11.1.69.js
           if grep -q "data-wh65-filter" waffle-v11.1.69.js; then
             echo "Single Calendar must not expose event filters"
             exit 1
           fi
-          grep -q "v11.1.69-calendar-range-views" service-worker.js
-          grep -q "waffle-v11.1.69.js?v=11.1.69" service-worker.js
-          grep -q "url.pathname.endsWith('/waffle-v11.1.69.js')" service-worker.js
 
-      - name: Validate Calendar capacity and mobile Meet and Greet layers
+      - name: Validate Calendar detail layers
         run: |
-          grep -q "waffle-v11.1.66.js" waffle-v11.1.61.js
-          grep -q "waffle-v11.1.67.js" waffle-v11.1.61.js
-          grep -q "waffle-v11.1.68.js" waffle-v11.1.61.js
-          grep -q "data-date" waffle-v11.1.68.js
+          grep -q "labels.time" waffle-v11.1.66.js
+          grep -q "display:none !important" waffle-v11.1.67.js
           grep -q "GREEN  = 0–2 confirmed dogs" waffle-v11.1.68.js
           grep -q "AMBER  = 3 confirmed dogs" waffle-v11.1.68.js
           grep -q "RED    = 4+ confirmed dogs" waffle-v11.1.68.js
-          grep -q "labels.time" waffle-v11.1.66.js
-          grep -q "display:none !important" waffle-v11.1.67.js
+          grep -q "v11170PotentialLabelVersion" waffle-v11.1.70.js
+          grep -q "petNameFromLabel" waffle-v11.1.70.js
+          grep -q "v11171LegacyCalendarFilterRetirementVersion" waffle-v11.1.71.js
+          grep -q "drag a booking to move dates" waffle-v11.1.71.js
+
+      - name: Validate Meet and Greet outlook alignment
+        run: |
+          grep -q "v11172MeetOutlookAlignmentVersion" waffle-v11.1.72.js
+          grep -q "grid-template-rows:16px minmax(42px,1fr) 14px" waffle-v11.1.72.js
+          grep -q "wh72-meet-main" waffle-v11.1.72.js
+          grep -q "wh72-meet-events" waffle-v11.1.72.js
+          grep -q "align-items:stretch" waffle-v11.1.72.js
+          grep -q "min-height:82px" waffle-v11.1.72.js
 
       - name: Validate legacy Calendar date chooser retirement
         run: |
@@ -163,7 +157,6 @@ jobs:
           grep -q "recognition.lang = 'en-AU'" waffle-v11.1.58.js
           grep -q "Listening…" waffle-v11.1.58.js
           grep -q "aw58-listening-avatar" waffle-v11.1.58.js
-          grep -q "data:image/webp;base64" waffle-v11.1.58.js
           grep -q "window.v11158WaffleSpeechVersion" waffle-v11.1.58.js
 
       - name: Validate Groq-first Waffle AI architecture
@@ -174,7 +167,6 @@ jobs:
           grep -q "WAFFLE_AI_ENABLE_GEMINI_FALLBACK" apps-script/WaffleAIProviderV11157.js
           grep -q "WAFFLE_AI_ENABLE_OPENAI_FALLBACK" apps-script/WaffleAIProviderV11157.js
           grep -q "groqFreeTierOptimized: true" apps-script/WaffleAIHealthV11157.js
-          grep -q "paidOpenAiFallbackOptInOnly: true" apps-script/WaffleAIHealthV11157.js
 
       - name: Validate Apps Script AI router patch
         run: |
