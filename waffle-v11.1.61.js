@@ -10,7 +10,8 @@
    health markers based only on confirmed boarding. V11.1.70 keeps Potential
    Stay bars compact by showing only the pet name. V11.1.71 permanently retires
    the obsolete All / Confirmed / Meet & Greet / Potential filter strip and its
-   historical desktop drag instruction.
+   historical desktop drag instruction. V11.1.72 aligns the Meet & Greet 7-day
+   outlook to the same vertical rhythm as Capacity Outlook.
    FullCalendar remains hidden only as the existing data/editing adapter.
    ============================================================ */
 (function () {
@@ -22,11 +23,12 @@
     ['waffle-v11.1.67.js', '11.1.67', () => !!window.v11167NoCapacityCountVersion],
     ['waffle-v11.1.68.js', '11.1.68', () => !!window.v11168CapacityHealthVersion],
     ['waffle-v11.1.70.js', '11.1.70', () => !!window.v11170PotentialLabelVersion],
-    ['waffle-v11.1.71.js', '11.1.71', () => !!window.v11171LegacyCalendarFilterRetirementVersion]
+    ['waffle-v11.1.71.js', '11.1.71', () => !!window.v11171LegacyCalendarFilterRetirementVersion],
+    ['waffle-v11.1.72.js', '11.1.72', () => !!window.v11172MeetOutlookAlignmentVersion]
   ];
 
   function markReady() {
-    window.v11161CleanCalendarVersion = '11.1.71-calendar-controls-bridge';
+    window.v11161CleanCalendarVersion = '11.1.72-outlook-alignment-bridge';
   }
 
   function loadOne(file, version, ready) {
