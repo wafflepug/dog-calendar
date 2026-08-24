@@ -13,6 +13,8 @@
    historical desktop drag instruction. V11.1.72 aligns the Meet & Greet 7-day
    outlook to the same vertical rhythm as Capacity Outlook. V11.1.73 replaces
    the four Operations emoji icons with the supplied pug avatar artwork.
+   V11.1.75 is a reversible preview of the independent-sitter product direction:
+   Today Run Sheet, Quick Enquiry + Capacity, and Owner Self-Service Care Form.
    FullCalendar remains hidden only as the existing data/editing adapter.
    ============================================================ */
 (function () {
@@ -26,13 +28,14 @@
     ['waffle-v11.1.70.js', '11.1.70', () => !!window.v11170PotentialLabelVersion],
     ['waffle-v11.1.71.js', '11.1.71', () => !!window.v11171LegacyCalendarFilterRetirementVersion],
     ['waffle-v11.1.72.js', '11.1.72', () => !!window.v11172MeetOutlookAlignmentVersion],
-    ['waffle-v11.1.73.js', '11.1.73', () => !!window.v11173OperationsAvatarVersion]
+    ['waffle-v11.1.73.js', '11.1.73', () => !!window.v11173OperationsAvatarVersion],
+    ['waffle-v11.1.75.js', '11.1.75', () => !!window.v11175SitterToolkitPreviewVersion]
   ];
 
   function markReady() {
     // Backward-compatible stability marker retained for the existing CI guard:
     // 11.1.72-outlook-alignment-bridge
-    window.v11161CleanCalendarVersion = '11.1.73-operations-pug-avatar-bridge';
+    window.v11161CleanCalendarVersion = '11.1.75-sitter-toolkit-preview-bridge';
   }
 
   function loadOne(file, version, ready) {
