@@ -31,7 +31,10 @@ jobs:
           node --check waffle-v11.1.59.js
           node --check waffle-v11.1.60.js
           node --check waffle-v11.1.61.js
-          node --check waffle-v11.1.65.js
+          node --check waffle-v11.1.66.js
+          node --check waffle-v11.1.67.js
+          node --check waffle-v11.1.68.js
+          node --check waffle-v11.1.69.js
           node --check service-worker.js
           node --check apps-script/WaffleAI.js
           node --check apps-script/WaffleAIProvider.js
@@ -100,42 +103,57 @@ jobs:
             exit 1
           fi
 
-      - name: Validate single unlimited Calendar
+      - name: Validate single unlimited Calendar with range views
         run: |
-          grep -q "waffle-v11.1.65.js" waffle-v11.1.61.js
-          grep -q "11.1.65-single-calendar-bridge" waffle-v11.1.61.js
-          if grep -q "waffle-v11.1.63.js" waffle-v11.1.61.js || grep -q "waffle-v11.1.64.js" waffle-v11.1.61.js; then
-            echo "Legacy visible Calendar renderers must not load through the compatibility bridge"
+          grep -q "waffle-v11.1.69.js" waffle-v11.1.61.js
+          grep -q "11.1.69-calendar-views-bridge" waffle-v11.1.61.js
+          if grep -q "waffle-v11.1.63.js" waffle-v11.1.61.js || grep -q "waffle-v11.1.64.js" waffle-v11.1.61.js || grep -q "waffle-v11.1.65.js" waffle-v11.1.61.js; then
+            echo "Retired visible Calendar renderers must not load through the compatibility bridge"
             exit 1
           fi
-          grep -q "v11165SingleCalendarVersion" waffle-v11.1.65.js
-          grep -q "FullCalendar is no longer a visible UI" waffle-v11.1.65.js
-          grep -q "pointer-events:none!important" waffle-v11.1.65.js
-          grep -q "function allocateWeekLanes" waffle-v11.1.65.js
-          grep -q "grid-auto-rows:28px" waffle-v11.1.65.js
-          grep -q "Confirmed Stay" waffle-v11.1.65.js
-          grep -q "Potential Stay" waffle-v11.1.65.js
-          grep -q "Meet &amp; Greet" waffle-v11.1.65.js
-          grep -q "eventTime(event)" waffle-v11.1.65.js
-          grep -q "data-wh65-event" waffle-v11.1.65.js
-          if grep -q "data-wh65-filter" waffle-v11.1.65.js; then
+          grep -q "v11169CalendarViewsVersion" waffle-v11.1.69.js
+          grep -q "FullCalendar is no longer a visible UI" waffle-v11.1.69.js
+          grep -q "pointer-events:none!important" waffle-v11.1.69.js
+          grep -q "let viewMode = 'month'" waffle-v11.1.69.js
+          grep -q "viewMode = 'month'; // Month is deliberately the default" waffle-v11.1.69.js
+          grep -q "data-wh69-view=\"month\"" waffle-v11.1.69.js
+          grep -q "data-wh69-view=\"fortnight\"" waffle-v11.1.69.js
+          grep -q "data-wh69-view=\"week\"" waffle-v11.1.69.js
+          grep -q "addDays(start, 13)" waffle-v11.1.69.js
+          grep -q "addDays(start, 6)" waffle-v11.1.69.js
+          grep -q "function allocateWeekLanes" waffle-v11.1.69.js
+          grep -q "grid-auto-rows:28px" waffle-v11.1.69.js
+          grep -q "Confirmed Stay" waffle-v11.1.69.js
+          grep -q "Potential Stay" waffle-v11.1.69.js
+          grep -q "Meet &amp; Greet" waffle-v11.1.69.js
+          grep -q "data-wh65-event" waffle-v11.1.69.js
+          grep -q "data-date=\"\${dateIso}\"" waffle-v11.1.69.js
+          if grep -q "data-wh65-filter" waffle-v11.1.69.js; then
             echo "Single Calendar must not expose event filters"
             exit 1
           fi
-          grep -q "v11.1.65-single-unlimited-calendar" service-worker.js
-          grep -q "waffle-v11.1.65.js?v=11.1.65" service-worker.js
-          grep -q "url.pathname.endsWith('/waffle-v11.1.65.js')" service-worker.js
-          if grep -q "waffle-v11.1.63.js?v=11.1.63" service-worker.js || grep -q "waffle-v11.1.64.js?v=11.1.64" service-worker.js; then
-            echo "PWA shell must not cache retired visible Calendar layers"
-            exit 1
-          fi
+          grep -q "v11.1.69-calendar-range-views" service-worker.js
+          grep -q "waffle-v11.1.69.js?v=11.1.69" service-worker.js
+          grep -q "url.pathname.endsWith('/waffle-v11.1.69.js')" service-worker.js
+
+      - name: Validate Calendar capacity and mobile Meet and Greet layers
+        run: |
+          grep -q "waffle-v11.1.66.js" waffle-v11.1.61.js
+          grep -q "waffle-v11.1.67.js" waffle-v11.1.61.js
+          grep -q "waffle-v11.1.68.js" waffle-v11.1.61.js
+          grep -q "data-date" waffle-v11.1.68.js
+          grep -q "GREEN  = 0–2 confirmed dogs" waffle-v11.1.68.js
+          grep -q "AMBER  = 3 confirmed dogs" waffle-v11.1.68.js
+          grep -q "RED    = 4+ confirmed dogs" waffle-v11.1.68.js
+          grep -q "labels.time" waffle-v11.1.66.js
+          grep -q "display:none !important" waffle-v11.1.67.js
 
       - name: Validate legacy Calendar date chooser retirement
         run: |
           grep -q "v11162CalendarDateClickVersion" waffle-v11.1.45.js
           grep -q "v1088DateChoiceModal" waffle-v11.1.45.js
           grep -q "Booking creation remains in the" waffle-v11.1.45.js
-          grep -q "v1088DateChoiceModal" waffle-v11.1.65.js
+          grep -q "v1088DateChoiceModal" waffle-v11.1.69.js
 
       - name: Validate Ask Waffle speech to text
         run: |
