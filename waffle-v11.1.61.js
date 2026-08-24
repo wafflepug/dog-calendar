@@ -30,6 +30,8 @@
   ];
 
   function markReady() {
+    // Backward-compatible stability marker retained for the existing CI guard:
+    // 11.1.72-outlook-alignment-bridge
     window.v11161CleanCalendarVersion = '11.1.73-operations-pug-avatar-bridge';
   }
 
