@@ -1,0 +1,31 @@
+name: Calendar Capacity Health
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  capacity-health:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate capacity health layer
+        run: |
+          node --check waffle-v11.1.68.js
+          grep -q "GREEN  = 0–2 confirmed dogs" waffle-v11.1.68.js
+          grep -q "AMBER  = 3 confirmed dogs" waffle-v11.1.68.js
+          grep -q "RED    = 4+ confirmed dogs" waffle-v11.1.68.js
+          grep -q "props.isMeetGreet !== true && props.isPotential !== true" waffle-v11.1.68.js
+          grep -q "wh68-capacity-health" waffle-v11.1.68.js
+          grep -q "data-tone=\"green\"" waffle-v11.1.68.js
+          grep -q "data-tone=\"amber\"" waffle-v11.1.68.js
+          grep -q "data-tone=\"red\"" waffle-v11.1.68.js
+          grep -q "waffle-v11.1.68.js" waffle-v11.1.61.js
+          grep -q "11.1.68-single-calendar-bridge" waffle-v11.1.61.js
