@@ -1,14 +1,15 @@
 /* ============================================================
    WAFFLE HOUSE V11.1.68 — CALENDAR CAPACITY HEALTH
    ============================================================
-   Adds a non-numeric health marker to every date in the single V11.1.65
-   Calendar. Capacity is based ONLY on confirmed boarding stays:
+   Adds a non-numeric health marker to every date in the single Calendar.
+   Capacity is based ONLY on confirmed boarding stays:
 
    GREEN  = 0–2 confirmed dogs
    AMBER  = 3 confirmed dogs
    RED    = 4+ confirmed dogs
 
    Meet & Greets and Potential Stays do not affect capacity health.
+   V11.1.69 date cells expose data-date so Week/Fortnight markers are exact.
    ============================================================ */
 (function () {
   'use strict';
@@ -48,12 +49,10 @@
     const props = event?.extendedProps || {};
     const start = String(props.rawStartDate || props.startDate || event?.startStr || '').slice(0, 10) || isoDate(event?.start);
     let end = String(props.rawEndDate || props.endDate || '').slice(0, 10);
-
     if (!end && event?.end) {
       const rawEnd = String(event.endStr || '').slice(0, 10) || isoDate(event.end);
       end = event.allDay === false ? rawEnd : shiftIso(rawEnd, -1);
     }
-
     return { start, end: end || start };
   }
 
@@ -81,7 +80,6 @@
     let current = null;
     try { current = calendar?.getDate?.(); } catch (_) {}
     if (!(current instanceof Date) || Number.isNaN(current.getTime())) current = new Date();
-
     const first = new Date(current.getFullYear(), current.getMonth(), 1);
     const gridStart = new Date(first);
     gridStart.setDate(first.getDate() - first.getDay());
@@ -90,41 +88,22 @@
 
   function ensureStyle() {
     if (document.getElementById('v11168CapacityHealthStyle')) return;
-
     const style = document.createElement('style');
     style.id = 'v11168CapacityHealthStyle';
     style.textContent = `
-      body[data-waffle-page="calendar"] #wh65Calendar .wh65-date {
-        justify-content:flex-start !important;
-      }
+      body[data-waffle-page="calendar"] #wh65Calendar .wh65-date { justify-content:flex-start !important; }
       body[data-waffle-page="calendar"] #wh65Calendar .wh68-capacity-health {
-        width:9px;
-        height:9px;
-        flex:0 0 9px;
-        margin-left:auto;
-        border-radius:50%;
-        border:1px solid rgba(255,255,255,.7);
-        box-shadow:0 0 0 2px rgba(15,23,42,.07);
+        width:9px;height:9px;flex:0 0 9px;margin-left:auto;border-radius:50%;
+        border:1px solid rgba(255,255,255,.7);box-shadow:0 0 0 2px rgba(15,23,42,.07);
       }
-      body[data-waffle-page="calendar"] #wh65Calendar .wh68-capacity-health[data-tone="green"] {
-        background:#22c55e;
-      }
-      body[data-waffle-page="calendar"] #wh65Calendar .wh68-capacity-health[data-tone="amber"] {
-        background:#f59e0b;
-      }
-      body[data-waffle-page="calendar"] #wh65Calendar .wh68-capacity-health[data-tone="red"] {
-        background:#ef4444;
-      }
+      body[data-waffle-page="calendar"] #wh65Calendar .wh68-capacity-health[data-tone="green"] { background:#22c55e; }
+      body[data-waffle-page="calendar"] #wh65Calendar .wh68-capacity-health[data-tone="amber"] { background:#f59e0b; }
+      body[data-waffle-page="calendar"] #wh65Calendar .wh68-capacity-health[data-tone="red"] { background:#ef4444; }
       body.dark-theme[data-waffle-page="calendar"] #wh65Calendar .wh68-capacity-health {
-        border-color:rgba(255,255,255,.22);
-        box-shadow:0 0 0 2px rgba(255,255,255,.04);
+        border-color:rgba(255,255,255,.22);box-shadow:0 0 0 2px rgba(255,255,255,.04);
       }
       @media(max-width:700px) {
-        body[data-waffle-page="calendar"] #wh65Calendar .wh68-capacity-health {
-          width:8px;
-          height:8px;
-          flex-basis:8px;
-        }
+        body[data-waffle-page="calendar"] #wh65Calendar .wh68-capacity-health { width:8px;height:8px;flex-basis:8px; }
       }
     `;
     document.head.appendChild(style);
@@ -133,7 +112,6 @@
   function apply() {
     scheduled = 0;
     if (!isCalendarPage()) return;
-
     ensureStyle();
 
     const host = document.getElementById('wh65Calendar');
@@ -144,15 +122,18 @@
     if (!cells.length) return;
 
     const events = calendar.getEvents();
-    const gridStart = currentGridStart();
+    const fallbackGridStart = currentGridStart();
 
     cells.forEach((cell, index) => {
-      const date = new Date(gridStart);
-      date.setDate(gridStart.getDate() + index);
-      const dateIso = isoDate(date);
+      let dateIso = String(cell.dataset.date || '');
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(dateIso)) {
+        const date = new Date(fallbackGridStart);
+        date.setDate(fallbackGridStart.getDate() + index);
+        dateIso = isoDate(date);
+      }
+
       const count = confirmedCountForDate(events, dateIso);
       const health = healthForCount(count);
-
       let marker = cell.querySelector('.wh68-capacity-health');
       if (!marker) {
         marker = document.createElement('span');
@@ -175,20 +156,16 @@
 
   function observe() {
     if (observer || !document.body || typeof MutationObserver !== 'function') return;
-
     observer = new MutationObserver(mutations => {
       const relevant = mutations.some(mutation =>
         Array.from(mutation.addedNodes || []).some(node => {
           if (!(node instanceof Element)) return false;
-          return node.id === 'wh65Calendar' ||
-            node.classList?.contains('wh65-date') ||
-            node.classList?.contains('wh65-week') ||
-            !!node.querySelector?.('.wh65-date');
+          return node.id === 'wh65Calendar' || node.classList?.contains('wh65-date') ||
+            node.classList?.contains('wh65-week') || !!node.querySelector?.('.wh65-date');
         })
       );
       if (relevant) scheduleApply();
     });
-
     observer.observe(document.body, { childList:true, subtree:true });
   }
 
@@ -196,7 +173,6 @@
     const calendar = adapter();
     if (!calendar || calendar._wh68CapacityHealthBound || typeof calendar.on !== 'function') return;
     calendar._wh68CapacityHealthBound = true;
-
     ['eventsSet', 'eventAdd', 'eventChange', 'eventRemove', 'datesSet'].forEach(name => {
       try { calendar.on(name, scheduleApply); } catch (_) {}
     });
@@ -206,12 +182,10 @@
     if (!isCalendarPage()) return;
     ensureStyle();
     observe();
-
     [100, 300, 700, 1400, 2600, 5000].forEach(delay => setTimeout(() => {
       bindAdapter();
       apply();
     }, delay));
-
     window.addEventListener('pageshow', scheduleApply);
     window.addEventListener('focus', scheduleApply);
     window.v11168CapacityHealthVersion = VERSION;
