@@ -116,9 +116,9 @@ jobs:
           grep -q "pointer-events:none!important" waffle-v11.1.69.js
           grep -q "let viewMode = 'month'" waffle-v11.1.69.js
           grep -q "viewMode = 'month'; // Month is deliberately the default" waffle-v11.1.69.js
-          grep -q "data-wh69-view=\"month\"" waffle-v11.1.69.js
-          grep -q "data-wh69-view=\"fortnight\"" waffle-v11.1.69.js
-          grep -q "data-wh69-view=\"week\"" waffle-v11.1.69.js
+          grep -q "viewButton('month', 'Month')" waffle-v11.1.69.js
+          grep -q "viewButton('fortnight', 'Fortnight')" waffle-v11.1.69.js
+          grep -q "viewButton('week', 'Week')" waffle-v11.1.69.js
           grep -q "addDays(start, 13)" waffle-v11.1.69.js
           grep -q "addDays(start, 6)" waffle-v11.1.69.js
           grep -q "function allocateWeekLanes" waffle-v11.1.69.js
@@ -127,7 +127,7 @@ jobs:
           grep -q "Potential Stay" waffle-v11.1.69.js
           grep -q "Meet &amp; Greet" waffle-v11.1.69.js
           grep -q "data-wh65-event" waffle-v11.1.69.js
-          grep -q "data-date=\"\${dateIso}\"" waffle-v11.1.69.js
+          grep -q 'data-date="${dateIso}"' waffle-v11.1.69.js
           if grep -q "data-wh65-filter" waffle-v11.1.69.js; then
             echo "Single Calendar must not expose event filters"
             exit 1
