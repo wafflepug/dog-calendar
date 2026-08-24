@@ -1,6 +1,6 @@
 /* Waffle House Boarding — recovery service worker */
 
-const WAFFLE_SW_VERSION = 'v11.1.69-calendar-range-views';
+const WAFFLE_SW_VERSION = 'v11.1.71-calendar-filter-retired';
 const WAFFLE_CACHE_PREFIX = 'waffle-house-';
 const APP_SHELL_CACHE = `${WAFFLE_CACHE_PREFIX}shell-${WAFFLE_SW_VERSION}`;
 const RUNTIME_CACHE = `${WAFFLE_CACHE_PREFIX}runtime-${WAFFLE_SW_VERSION}`;
@@ -69,6 +69,8 @@ const APP_SHELL = [
   './waffle-v11.1.67.js?v=11.1.67',
   './waffle-v11.1.68.js?v=11.1.68',
   './waffle-v11.1.69.js?v=11.1.69',
+  './waffle-v11.1.70.js?v=11.1.70',
+  './waffle-v11.1.71.js?v=11.1.71',
   './waffle-ui-contract.js?v=11.1.48',
   './waffle-ui-contract.js?v=11.1.51'
 ];
@@ -196,6 +198,8 @@ function isFirstPaintCriticalAsset(url) {
     url.pathname.endsWith('/waffle-v11.1.67.js') ||
     url.pathname.endsWith('/waffle-v11.1.68.js') ||
     url.pathname.endsWith('/waffle-v11.1.69.js') ||
+    url.pathname.endsWith('/waffle-v11.1.70.js') ||
+    url.pathname.endsWith('/waffle-v11.1.71.js') ||
     url.pathname.endsWith('/waffle-ui-contract.js')
   );
 }
