@@ -4,20 +4,21 @@
    Historical entry points still request this filename. All former visible
    Calendar renderers (V11.1.61, V11.1.63 and V11.1.64) are retired.
 
-   V11.1.65 is the only visible Calendar. V11.1.66 is a mobile-only formatting
-   layer for Meet & Greet badges. FullCalendar remains hidden only as the
-   existing data/editing adapter.
+   V11.1.65 is the only visible Calendar. V11.1.66 compacts Meet & Greet badges
+   on mobile. V11.1.67 removes numeric capacity/activity pills from date headers.
+   FullCalendar remains hidden only as the existing data/editing adapter.
    ============================================================ */
 (function () {
   'use strict';
 
   const SCRIPTS = [
     ['waffle-v11.1.65.js', '11.1.65', () => !!window.v11165SingleCalendarVersion],
-    ['waffle-v11.1.66.js', '11.1.66', () => !!window.v11166MobileMeetVersion]
+    ['waffle-v11.1.66.js', '11.1.66', () => !!window.v11166MobileMeetVersion],
+    ['waffle-v11.1.67.js', '11.1.67', () => !!window.v11167NoCapacityCountVersion]
   ];
 
   function markReady() {
-    window.v11161CleanCalendarVersion = '11.1.66-single-calendar-bridge';
+    window.v11161CleanCalendarVersion = '11.1.67-single-calendar-bridge';
   }
 
   function loadOne(file, version, ready) {
