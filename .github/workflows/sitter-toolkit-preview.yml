@@ -1,0 +1,32 @@
+name: Sitter Toolkit Preview
+
+on:
+  push:
+    branches:
+      - main
+      - preview/self-service-sitter-toolkit
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-preview:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate preview JavaScript
+        run: node --check waffle-v11.1.75.js
+
+      - name: Validate reversible sitter toolkit contract
+        run: |
+          grep -q "v11175SitterToolkitPreviewVersion" waffle-v11.1.75.js
+          grep -q "Today Run Sheet" waffle-v11.1.75.js
+          grep -q "Quick Enquiry + Capacity" waffle-v11.1.75.js
+          grep -q "Owner Self-Service Care Form" waffle-v11.1.75.js
+          grep -q "Preview only: this does not create a Potential Stay yet" waffle-v11.1.75.js
+          grep -q "Nothing is sent to an owner in this preview" waffle-v11.1.75.js
+          grep -q "waffle-v11.1.75.js" waffle-v11.1.61.js
+          grep -q "11.1.72-outlook-alignment-bridge" waffle-v11.1.61.js
