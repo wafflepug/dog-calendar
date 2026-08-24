@@ -291,3 +291,37 @@ body[data-waffle-page="calendar"] .calendar-header-branding.v11145-calendar-head
         min-width: 68px !important;
     }
 }
+
+/* ============================================================
+   V11.1.74 — THEME AVATAR TOGGLE
+   The toggle icon represents the target theme: sunglasses Waffle while the app
+   is light, and clear-glasses Waffle while the app is dark.
+   ============================================================ */
+#themeToggle .theme-toggle-icon {
+    display: inline-block !important;
+    width: 30px !important;
+    height: 30px !important;
+    min-width: 30px !important;
+    flex: 0 0 30px !important;
+    overflow: hidden !important;
+    border-radius: 50% !important;
+    font-size: 0 !important;
+    line-height: 0 !important;
+    background-image: url('theme-dark-avatar-v1174.svg') !important;
+    background-repeat: no-repeat !important;
+    background-position: center !important;
+    background-size: cover !important;
+}
+
+body.dark-theme #themeToggle .theme-toggle-icon {
+    background-image: url('theme-light-avatar-v1174.svg') !important;
+}
+
+@media (max-width: 768px) {
+    #themeToggle .theme-toggle-icon {
+        width: 32px !important;
+        height: 32px !important;
+        min-width: 32px !important;
+        flex-basis: 32px !important;
+    }
+}
