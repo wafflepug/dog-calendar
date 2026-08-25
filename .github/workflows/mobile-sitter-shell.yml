@@ -25,6 +25,7 @@ jobs:
           grep -q "waffle-v11.1.76.js" waffle-v11.0.5.js
           grep -q "v11175MobileSitterShellVersion" waffle-v11.1.75.js
           grep -q "v11176AuthoritativeMobileFooterVersion" waffle-v11.1.76.js
+          grep -q "v11178UniformMobileFooterVersion" waffle-v11.1.76.js
           grep -q "index.html?view=today" waffle-v11.1.75.js
           grep -q "index.html?view=calendar" waffle-v11.1.75.js
           grep -q "Today" waffle-v11.1.75.js
@@ -47,6 +48,16 @@ jobs:
           grep -q "ensureBottomNav" waffle-v11.1.76.js
           grep -q "display', 'grid', 'important'" waffle-v11.1.76.js
           grep -q "display', 'none', 'important'" waffle-v11.1.76.js
+          grep -q "today-calendar-add-care-waffle-ai" waffle-v11.1.76.js
+          grep -q "waffle-today-avatar-v1178.svg" waffle-v11.1.76.js
+          grep -q "waffle-calendar-avatar-v1178.svg" waffle-v11.1.76.js
+          grep -q "waffle-care-avatar-v1178.svg" waffle-v11.1.76.js
+          grep -q "wh78-avatar-shell" waffle-v11.1.76.js
+          grep -q "border-radius:50%" waffle-v11.1.76.js
+          grep -q "Waffle AI" waffle-v11.1.76.js
+          test -f waffle-today-avatar-v1178.svg
+          test -f waffle-calendar-avatar-v1178.svg
+          test -f waffle-care-avatar-v1178.svg
           if grep -q "style.removeProperty('display')" waffle-v11.1.75.js waffle-v11.1.76.js; then
             echo "Mobile sitter shell must not use the banned display recovery pattern"
             exit 1
