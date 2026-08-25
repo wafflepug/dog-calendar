@@ -58,6 +58,13 @@ jobs:
           test -f waffle-today-avatar-v1178.svg
           test -f waffle-calendar-avatar-v1178.svg
           test -f waffle-care-avatar-v1178.svg
+          grep -q "Waffle holding a calendar" waffle-calendar-avatar-v1178.svg
+          grep -q "data:image/webp;base64" waffle-calendar-avatar-v1178.svg
+          grep -q "V11.1.79 — MOBILE FOOTER TYPOGRAPHY" waffle-v11.0.5.css
+          grep -q "font-size: 11px" waffle-v11.0.5.css
+          grep -q "font-weight: 700" waffle-v11.0.5.css
+          grep -q "v11.1.79-footer-avatar-fix" service-worker.js
+          grep -q "waffle-calendar-avatar-v1178.svg" service-worker.js
           if grep -q "style.removeProperty('display')" waffle-v11.1.75.js waffle-v11.1.76.js; then
             echo "Mobile sitter shell must not use the banned display recovery pattern"
             exit 1
