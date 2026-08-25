@@ -1,5 +1,5 @@
 /* ============================================================
-   WAFFLE HOUSE V11.1.86 — CENTERED MOBILE TODAY DATE
+   WAFFLE HOUSE V11.1.87 — INSET MOBILE DATE FRAME
    ------------------------------------------------------------
    Final mobile Calendar / Today header authority:
    - keeps the Waffle House branding logo retired on mobile;
@@ -7,18 +7,18 @@
    - uses Waffle artwork for Notifications and Search;
    - keeps Install in a safe left-side slot below the date;
    - removes All clear, Operations Home and Today at Waffle House;
-   - promotes the live date to the exact font metrics of the retired title;
-   - centres the live date within the mobile header with symmetric action-safe space;
+   - promotes and centres the live date with symmetric action-safe space;
+   - moves colour-style side borders inward so neither mobile action rail covers them;
    - preserves original action listeners by moving live DOM nodes.
    ============================================================ */
 (function () {
   'use strict';
 
-  const VERSION = '11.1.86';
+  const VERSION = '11.1.87';
   const MOBILE_QUERY = '(max-width: 820px)';
-  const NOTIFICATION_AVATAR = 'waffle-notification-avatar-v1181.svg?v=11.1.82';
-  const SEARCH_AVATAR = 'waffle-search-avatar-v1181.svg?v=11.1.82';
-  const TODAY_AVATAR = 'waffle-today-avatar-v1178.svg?v=11.1.82';
+  const NOTIFICATION_AVATAR = 'waffle-notification-avatar-v1181.svg?v=11.1.87';
+  const SEARCH_AVATAR = 'waffle-search-avatar-v1181.svg?v=11.1.87';
+  const TODAY_AVATAR = 'waffle-today-avatar-v1178.svg?v=11.1.87';
 
   const moved = new Map();
   let frame = 0;
@@ -62,11 +62,20 @@
           pointer-events:none!important;
         }
 
+        /* Retire the exposed colour-style side edge that can sit under the
+           fixed hamburger / right rail. The accent is redrawn safely below. */
+        body[data-waffle-page="calendar"][data-wh75-mobile-view="today"] .v10-operations-home {
+          border-left-color:transparent!important;
+          border-right-color:transparent!important;
+        }
+
         body[data-waffle-page="calendar"] #v10TodayDateLabel {
+          position:relative!important;
+          z-index:2!important;
           width:100%!important;
           max-width:none!important;
           margin:0 auto!important;
-          padding:0 64px!important;
+          padding:0 72px!important;
           box-sizing:border-box!important;
           text-align:center!important;
           font-family:var(--wh82-title-font-family,inherit)!important;
@@ -79,9 +88,40 @@
         }
 
         body[data-waffle-page="calendar"] .v10-ops-heading {
+          position:relative!important;
+          isolation:isolate!important;
           width:100%!important;
           align-items:center!important;
-          min-height:0!important;
+          min-height:42px!important;
+        }
+
+        /* Symmetric colour-style brackets sit just inside both action-safe
+           gutters. They visually replace the side accent that was hidden
+           behind the hamburger and mirror it on the right. */
+        body[data-waffle-page="calendar"] .v10-ops-heading::before,
+        body[data-waffle-page="calendar"] .v10-ops-heading::after {
+          content:"";
+          position:absolute;
+          top:-7px;
+          bottom:-7px;
+          width:18px;
+          box-sizing:border-box;
+          border:3px solid var(--wh75-accent,var(--v10-primary,#2563eb));
+          pointer-events:none;
+          z-index:1;
+          opacity:.92;
+        }
+
+        body[data-waffle-page="calendar"] .v10-ops-heading::before {
+          left:66px;
+          border-right:0;
+          border-radius:18px 0 0 18px;
+        }
+
+        body[data-waffle-page="calendar"] .v10-ops-heading::after {
+          right:66px;
+          border-left:0;
+          border-radius:0 18px 18px 0;
         }
 
         #wh80MobileHeaderRail {
@@ -177,9 +217,11 @@
 
       @media (max-width:380px) {
         body[data-waffle-page="calendar"] #v10TodayDateLabel {
-          padding-left:58px!important;
-          padding-right:58px!important;
+          padding-left:64px!important;
+          padding-right:64px!important;
         }
+        body[data-waffle-page="calendar"] .v10-ops-heading::before { left:58px; }
+        body[data-waffle-page="calendar"] .v10-ops-heading::after { right:58px; }
       }
 
       @media (min-width:821px) {
@@ -203,8 +245,7 @@
   }
 
   function excluded(node) {
-    return !node ||
-      node.id === 'wh75MenuButton' ||
+    return !node || node.id === 'wh75MenuButton' ||
       !!node.closest('#wh75MobileDrawer,#wh75MobileBottomNav,#wh75SettingsPanel,#wh80MobileHeaderRail,#wh81MobileInstallSlot');
   }
 
@@ -224,7 +265,6 @@
     const title = document.getElementById('v10OperationsTitle');
     const date = document.getElementById('v10TodayDateLabel');
     if (!(title instanceof HTMLElement) || !(date instanceof HTMLElement)) return;
-
     const titleStyle = getComputedStyle(title);
     date.style.setProperty('--wh82-title-font-family', titleStyle.fontFamily || 'inherit');
     date.style.setProperty('--wh82-title-font-size', titleStyle.fontSize || '28px');
@@ -239,26 +279,18 @@
   function findAction(kind, rail) {
     const existing = rail?.querySelector(`[data-wh80-role="${kind}"]`);
     if (existing) return existing;
-
     const candidates = Array.from(document.querySelectorAll('button,a,[role="button"]'))
       .filter(node => !excluded(node) && visibleNearTop(node));
-
-    if (kind === 'notification') {
-      return candidates.find(node => /notif|notification|bell|🔔|🔕/.test(signature(node))) || null;
-    }
-    if (kind === 'search') {
-      return candidates.find(node => /search|magnif|🔍|🔎/.test(signature(node))) || null;
-    }
+    if (kind === 'notification') return candidates.find(node => /notif|notification|bell|🔔|🔕/.test(signature(node))) || null;
+    if (kind === 'search') return candidates.find(node => /search|magnif|🔍|🔎/.test(signature(node))) || null;
     return null;
   }
 
   function findStatus(rail) {
     const existing = rail?.querySelector('[data-wh80-role="status"]');
     if (existing) return existing;
-
     const direct = document.querySelector('#waffleConnectionStatus,.waffle-connection-status,[data-waffle-connection-status],[data-connection-status]');
     if (direct && !excluded(direct)) return direct;
-
     return Array.from(document.querySelectorAll('button,span,div'))
       .filter(node => !excluded(node) && visibleNearTop(node))
       .find(node => /^(↻\s*)?(updating|syncing|live|offline|online|synced)(\b|…|\.\.\.)/.test(String(node.textContent || '').replace(/\s+/g, ' ').trim().toLowerCase())) || null;
@@ -267,10 +299,8 @@
   function findInstall(slot) {
     const existing = slot?.querySelector('[data-wh81-role="install"]');
     if (existing) return existing;
-
     const preferred = document.querySelector('#installAppBtn,#pwaInstallButton,#installPwaButton,#installButton,[data-install-app],[data-pwa-install]');
     if (preferred && !excluded(preferred) && visible(preferred)) return preferred;
-
     return Array.from(document.querySelectorAll('button,a,[role="button"]'))
       .filter(node => !excluded(node) && visible(node))
       .find(node => /(^|\s)install(\s|$)|install app|add to home/.test(signature(node))) || null;
@@ -290,14 +320,12 @@
   function ensureInstallSlot() {
     const operations = document.querySelector('.v10-operations-home');
     if (!operations) return null;
-
     let slot = document.getElementById('wh81MobileInstallSlot');
     if (!slot) {
       slot = document.createElement('div');
       slot.id = 'wh81MobileInstallSlot';
       slot.setAttribute('aria-label', 'Install Waffle House');
     }
-
     const heading = operations.querySelector('.v10-ops-heading');
     if (heading?.parentNode === operations) {
       if (heading.nextSibling !== slot) operations.insertBefore(slot, heading.nextSibling);
@@ -373,7 +401,6 @@
       restoreAll();
       return;
     }
-
     ensureStyle();
     if (!isMobile()) {
       restoreAll();
@@ -381,7 +408,6 @@
     }
 
     promoteTodayDate();
-
     const rail = ensureRail();
     const installSlot = ensureInstallSlot();
     const notification = findAction('notification', rail);
@@ -401,7 +427,6 @@
       const node = rail.querySelector(`[data-wh80-role="${role}"]`);
       if (node) rail.appendChild(node);
     });
-
     syncTodayFooterAvatar();
   }
 
@@ -426,11 +451,9 @@
     window.v11181MobileHeaderAvatarsVersion = VERSION;
     window.v11182CleanMobileTodayHeaderVersion = VERSION;
     window.v11186CenteredMobileDateVersion = VERSION;
+    window.v11187InsetMobileDateFrameVersion = VERSION;
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', start, { once:true });
-  } else {
-    start();
-  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once:true });
+  else start();
 })();
