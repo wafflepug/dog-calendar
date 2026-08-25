@@ -1,25 +1,29 @@
 /* ============================================================
-   WAFFLE HOUSE V11.1.77 — AUTHORITATIVE MOBILE FOOTER AVATARS
+   WAFFLE HOUSE V11.1.78 — UNIFORM MOBILE FOOTER AVATARS
    ------------------------------------------------------------
    Canonical mobile footer:
-   Today · Calendar · Add · Care · Ask Waffle
+   Today · Calendar · Add · Care · Waffle AI
 
-   - keeps legacy mobile footers retired;
-   - uses the supplied Waffle Add artwork for the centre Add action;
-   - reuses the canonical Ask Waffle smile avatar used by the assistant launcher;
-   - removes the separate floating Ask Waffle launcher from mobile presentation;
-   - self-heals if a historical enhancement pass removes or recreates footer UI.
+   - all five footer icons use the same circular avatar treatment;
+   - Today / Calendar / Care use the sitter-supplied artwork;
+   - Add keeps the supplied Waffle Add artwork in a circular shell;
+   - Ask Waffle is renamed Waffle AI and reuses the canonical smile avatar;
+   - the separate floating Ask Waffle launcher stays retired on mobile;
+   - legacy mobile footers stay suppressed and the canonical footer self-heals.
 
    Compatibility note: this authority remains in waffle-v11.1.76.js because the
-   shared loader already treats that file as the final footer authority.
+   shared loader already treats that file as the final mobile-footer authority.
    ============================================================ */
 (function () {
   'use strict';
 
-  const VERSION = '11.1.77';
+  const VERSION = '11.1.78';
   const MOBILE_QUERY = '(max-width: 820px)';
-  const LAYOUT = 'today-calendar-add-care-ask';
-  const ADD_AVATAR = 'waffle-add-avatar-v1177.svg?v=11.1.77';
+  const LAYOUT = 'today-calendar-add-care-waffle-ai';
+  const TODAY_AVATAR = 'waffle-today-avatar-v1178.svg?v=11.1.78';
+  const CALENDAR_AVATAR = 'waffle-calendar-avatar-v1178.svg?v=11.1.78';
+  const ADD_AVATAR = 'waffle-add-avatar-v1177.svg?v=11.1.78';
+  const CARE_AVATAR = 'waffle-care-avatar-v1178.svg?v=11.1.78';
   const LEGACY_SELECTOR = [
     'nav.app-tabs',
     '#v1118MobileNav',
@@ -60,9 +64,10 @@
   }
 
   function ensureStyle() {
-    if (document.getElementById('wh77MobileFooterStyle')) return;
+    if (document.getElementById('wh78MobileFooterStyle')) return;
+    document.getElementById('wh77MobileFooterStyle')?.remove();
     const style = document.createElement('style');
-    style.id = 'wh77MobileFooterStyle';
+    style.id = 'wh78MobileFooterStyle';
     style.textContent = `
       @media (max-width:820px) {
         body #aw37launch,
@@ -74,38 +79,42 @@
         #wh75MobileBottomNav {
           grid-template-columns:repeat(5,minmax(0,1fr))!important;
         }
-        #wh75MobileBottomNav .wh77-bottom-add .wh75-bottom-icon {
-          width:48px!important;
-          height:48px!important;
-          min-width:48px!important;
-          margin-top:-21px!important;
+        #wh75MobileBottomNav .wh75-bottom-item {
+          min-width:0!important;
+        }
+        #wh75MobileBottomNav .wh75-bottom-icon.wh78-avatar-shell {
+          display:grid!important;
+          place-items:center!important;
+          width:42px!important;
+          height:42px!important;
+          min-width:42px!important;
+          min-height:42px!important;
           padding:0!important;
-          border-radius:15px!important;
+          margin:0 auto 4px!important;
+          border-radius:50%!important;
           overflow:hidden!important;
-          background:transparent!important;
-          box-shadow:0 8px 22px var(--wh75-ring)!important;
+          background:color-mix(in srgb,var(--wh75-panel,#132139) 88%,#fff 12%)!important;
+          box-shadow:0 0 0 2px var(--wh75-ring),0 6px 16px rgba(0,0,0,.18)!important;
         }
-        #wh75MobileBottomNav .wh77-add-avatar {
+        #wh75MobileBottomNav .wh78-nav-avatar {
           display:block!important;
-          width:48px!important;
-          height:48px!important;
+          width:100%!important;
+          height:100%!important;
+          max-width:none!important;
           object-fit:cover!important;
-          border-radius:15px!important;
+          border-radius:50%!important;
         }
-        #wh75MobileBottomNav .wh77-ask-avatar {
-          display:block;
-          width:34px;
-          height:34px;
-          object-fit:cover;
-          border-radius:50%;
-          box-shadow:0 0 0 2px var(--wh75-ring);
-        }
-        #wh75MobileBottomNav .wh77-ask-avatar[hidden] {
+        #wh75MobileBottomNav .wh78-nav-avatar[hidden] {
           display:none!important;
         }
-        #wh75MobileBottomNav .wh77-bottom-ask .wh75-bottom-icon {
-          height:36px;
-          min-width:36px;
+        #wh75MobileBottomNav .wh75-bottom-add .wh75-bottom-icon.wh78-avatar-shell {
+          width:44px!important;
+          height:44px!important;
+          min-width:44px!important;
+          min-height:44px!important;
+        }
+        #wh75MobileBottomNav .wh75-bottom-item.is-active .wh78-avatar-shell {
+          box-shadow:0 0 0 3px var(--wh75-accent,#b86cff),0 7px 18px var(--wh75-ring)!important;
         }
       }
     `;
@@ -152,13 +161,13 @@
     document.querySelectorAll('#aw37launch,#v11133AskWaffleButton').forEach(node => {
       if (!(node instanceof HTMLElement)) return;
       if (isMobile()) {
-        node.dataset.wh77MobileLauncherRetired = 'true';
+        node.dataset.wh78MobileLauncherRetired = 'true';
         node.setAttribute('aria-hidden', 'true');
         node.style.setProperty('display', 'none', 'important');
         node.style.setProperty('visibility', 'hidden', 'important');
         node.style.setProperty('pointer-events', 'none', 'important');
-      } else if (node.dataset.wh77MobileLauncherRetired === 'true') {
-        delete node.dataset.wh77MobileLauncherRetired;
+      } else if (node.dataset.wh78MobileLauncherRetired === 'true') {
+        delete node.dataset.wh78MobileLauncherRetired;
         node.removeAttribute('aria-hidden');
         node.style.display = '';
         node.style.visibility = '';
@@ -167,13 +176,17 @@
     });
   }
 
+  function avatarMarkup(src, alt, extra) {
+    return `<span class="wh75-bottom-icon wh78-avatar-shell" aria-hidden="true"><img class="wh78-nav-avatar ${extra || ''}" src="${src}" alt="${alt || ''}"></span>`;
+  }
+
   function bottomMarkup() {
     return [
-      '<a class="wh75-bottom-item" href="index.html?view=today" data-wh75-route="today"><span class="wh75-bottom-icon" aria-hidden="true">⌂</span><span>Today</span></a>',
-      '<a class="wh75-bottom-item" href="index.html?view=calendar" data-wh75-route="calendar"><span class="wh75-bottom-icon" aria-hidden="true">▦</span><span>Calendar</span></a>',
-      `<button class="wh75-bottom-item wh75-bottom-add wh77-bottom-add" type="button" data-wh77-quick-add aria-label="Add"><span class="wh75-bottom-icon"><img class="wh77-add-avatar" src="${ADD_AVATAR}" alt=""></span><span>Add</span></button>`,
-      '<a class="wh75-bottom-item" href="directory.html" data-wh75-route="directory"><span class="wh75-bottom-icon" aria-hidden="true">🐾</span><span>Care</span></a>',
-      '<button class="wh75-bottom-item wh77-bottom-ask" type="button" data-wh77-ask aria-label="Ask Waffle"><span class="wh75-bottom-icon"><img class="wh77-ask-avatar" data-wh77-ask-avatar alt="Waffle" hidden></span><span>Ask Waffle</span></button>'
+      `<a class="wh75-bottom-item" href="index.html?view=today" data-wh75-route="today">${avatarMarkup(TODAY_AVATAR, '')}<span>Today</span></a>`,
+      `<a class="wh75-bottom-item" href="index.html?view=calendar" data-wh75-route="calendar">${avatarMarkup(CALENDAR_AVATAR, '')}<span>Calendar</span></a>`,
+      `<button class="wh75-bottom-item wh75-bottom-add" type="button" data-wh78-quick-add aria-label="Add">${avatarMarkup(ADD_AVATAR, '')}<span>Add</span></button>`,
+      `<a class="wh75-bottom-item" href="directory.html" data-wh75-route="directory">${avatarMarkup(CARE_AVATAR, '')}<span>Care</span></a>`,
+      '<button class="wh75-bottom-item wh78-bottom-ai" type="button" data-wh78-ai aria-label="Waffle AI"><span class="wh75-bottom-icon wh78-avatar-shell" aria-hidden="true"><img class="wh78-nav-avatar" data-wh78-ai-avatar alt="" hidden></span><span>Waffle AI</span></button>'
     ].join('');
   }
 
@@ -190,7 +203,7 @@
     document.getElementById('openPotentialBtn')?.click();
   }
 
-  function triggerAskWaffle() {
+  function triggerWaffleAI() {
     const modal = document.getElementById('v11133AskWaffleModal');
     if (modal) {
       modal.hidden = false;
@@ -206,23 +219,23 @@
   }
 
   function wireBottom(nav) {
-    if (!nav || nav.dataset.wh77Wired === 'true') return;
-    nav.dataset.wh77Wired = 'true';
-    nav.querySelector('[data-wh77-quick-add]')?.addEventListener('click', triggerQuickAdd);
-    nav.querySelector('[data-wh77-ask]')?.addEventListener('click', triggerAskWaffle);
+    if (!nav || nav.dataset.wh78Wired === 'true') return;
+    nav.dataset.wh78Wired = 'true';
+    nav.querySelector('[data-wh78-quick-add]')?.addEventListener('click', triggerQuickAdd);
+    nav.querySelector('[data-wh78-ai]')?.addEventListener('click', triggerWaffleAI);
   }
 
-  function askAvatarSource() {
+  function aiAvatarSource() {
     const asset = String(window.WAFFLE_AI_ASSETS?.icon || '').trim();
     if (asset) return asset;
     const launcherImage = document.querySelector('#aw37launch img,#v11133AskWaffleButton img');
     return String(launcherImage?.src || '').trim();
   }
 
-  function syncAskAvatar(nav) {
-    const image = (nav || document).querySelector?.('[data-wh77-ask-avatar]');
+  function syncAIAvatar(nav) {
+    const image = (nav || document).querySelector?.('[data-wh78-ai-avatar]');
     if (!image) return;
-    const source = askAvatarSource();
+    const source = aiAvatarSource();
     if (!source) {
       image.hidden = true;
       return;
@@ -243,10 +256,10 @@
 
   function ensureCanonicalMarkup(nav) {
     if (!nav) return;
-    if (nav.dataset.wh77Layout === LAYOUT && nav.querySelector('[data-wh77-quick-add]') && nav.querySelector('[data-wh77-ask]')) return;
+    if (nav.dataset.wh78Layout === LAYOUT && nav.querySelector('[data-wh78-quick-add]') && nav.querySelector('[data-wh78-ai]')) return;
     nav.innerHTML = bottomMarkup();
-    nav.dataset.wh77Layout = LAYOUT;
-    delete nav.dataset.wh77Wired;
+    nav.dataset.wh78Layout = LAYOUT;
+    delete nav.dataset.wh78Wired;
     wireBottom(nav);
   }
 
@@ -270,7 +283,7 @@
       nav.hidden = false;
       nav.removeAttribute('aria-hidden');
       nav.inert = false;
-      nav.dataset.wh77ForcedMobile = 'true';
+      nav.dataset.wh78ForcedMobile = 'true';
       nav.style.setProperty('display', 'grid', 'important');
       nav.style.setProperty('visibility', 'visible', 'important');
       nav.style.setProperty('pointer-events', 'auto', 'important');
@@ -279,8 +292,8 @@
       nav.style.setProperty('right', '0', 'important');
       nav.style.setProperty('bottom', '0', 'important');
       nav.style.setProperty('z-index', '2147481795', 'important');
-    } else if (nav.dataset.wh77ForcedMobile === 'true') {
-      delete nav.dataset.wh77ForcedMobile;
+    } else if (nav.dataset.wh78ForcedMobile === 'true') {
+      delete nav.dataset.wh78ForcedMobile;
       nav.style.display = '';
       nav.style.visibility = '';
       nav.style.pointerEvents = '';
@@ -292,7 +305,7 @@
     }
 
     syncActiveNavigation(nav);
-    syncAskAvatar(nav);
+    syncAIAvatar(nav);
     return nav;
   }
 
@@ -355,6 +368,7 @@
 
     window.v11176AuthoritativeMobileFooterVersion = VERSION;
     window.v11177MobileFooterAvatarVersion = VERSION;
+    window.v11178UniformMobileFooterVersion = VERSION;
     window.WAFFLE_MOBILE_FOOTER = Object.freeze({ version:VERSION, reconcile, layout:LAYOUT });
   }
 
