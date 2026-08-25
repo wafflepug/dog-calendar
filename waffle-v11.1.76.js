@@ -378,3 +378,16 @@
     start();
   }
 })();
+
+/* V11.1.80 — load the final mobile Calendar header authority after the footer. */
+(function () {
+  'use strict';
+  if (window.v11180MobileHeaderRailVersion) return;
+  const existing = Array.from(document.scripts).find(script => String(script.src || '').includes('/waffle-v11.1.80.js'));
+  if (existing) return;
+  const script = document.createElement('script');
+  script.src = 'waffle-v11.1.80.js?v=11.1.80';
+  script.async = false;
+  script.dataset.waffleV11180 = 'true';
+  document.head.appendChild(script);
+})();
