@@ -1,5 +1,5 @@
 /* ============================================================
-   WAFFLE HOUSE V11.1.82 — CLEAN MOBILE TODAY HEADER
+   WAFFLE HOUSE V11.1.86 — CENTERED MOBILE TODAY DATE
    ------------------------------------------------------------
    Final mobile Calendar / Today header authority:
    - keeps the Waffle House branding logo retired on mobile;
@@ -8,12 +8,13 @@
    - keeps Install in a safe left-side slot below the date;
    - removes All clear, Operations Home and Today at Waffle House;
    - promotes the live date to the exact font metrics of the retired title;
+   - centres the live date within the mobile header with symmetric action-safe space;
    - preserves original action listeners by moving live DOM nodes.
    ============================================================ */
 (function () {
   'use strict';
 
-  const VERSION = '11.1.82';
+  const VERSION = '11.1.86';
   const MOBILE_QUERY = '(max-width: 820px)';
   const NOTIFICATION_AVATAR = 'waffle-notification-avatar-v1181.svg?v=11.1.82';
   const SEARCH_AVATAR = 'waffle-search-avatar-v1181.svg?v=11.1.82';
@@ -62,8 +63,12 @@
         }
 
         body[data-waffle-page="calendar"] #v10TodayDateLabel {
-          margin:0!important;
-          padding:0!important;
+          width:100%!important;
+          max-width:none!important;
+          margin:0 auto!important;
+          padding:0 64px!important;
+          box-sizing:border-box!important;
+          text-align:center!important;
           font-family:var(--wh82-title-font-family,inherit)!important;
           font-size:var(--wh82-title-font-size,28px)!important;
           font-weight:var(--wh82-title-font-weight,800)!important;
@@ -74,7 +79,8 @@
         }
 
         body[data-waffle-page="calendar"] .v10-ops-heading {
-          align-items:flex-start!important;
+          width:100%!important;
+          align-items:center!important;
           min-height:0!important;
         }
 
@@ -166,6 +172,13 @@
           margin:0!important;
           flex:none!important;
           white-space:nowrap!important;
+        }
+      }
+
+      @media (max-width:380px) {
+        body[data-waffle-page="calendar"] #v10TodayDateLabel {
+          padding-left:58px!important;
+          padding-right:58px!important;
         }
       }
 
@@ -412,6 +425,7 @@
     window.v11180MobileHeaderRailVersion = VERSION;
     window.v11181MobileHeaderAvatarsVersion = VERSION;
     window.v11182CleanMobileTodayHeaderVersion = VERSION;
+    window.v11186CenteredMobileDateVersion = VERSION;
   }
 
   if (document.readyState === 'loading') {
