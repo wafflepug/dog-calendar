@@ -1,6 +1,6 @@
 /* Waffle House Boarding — recovery service worker */
 
-const WAFFLE_SW_VERSION = 'v11.1.79-footer-avatar-fix';
+const WAFFLE_SW_VERSION = 'v11.1.80-mobile-header-rail';
 const WAFFLE_CACHE_PREFIX = 'waffle-house-';
 const APP_SHELL_CACHE = `${WAFFLE_CACHE_PREFIX}shell-${WAFFLE_SW_VERSION}`;
 const RUNTIME_CACHE = `${WAFFLE_CACHE_PREFIX}runtime-${WAFFLE_SW_VERSION}`;
@@ -73,6 +73,7 @@ const APP_SHELL = [
   './waffle-v11.1.71.js?v=11.1.71',
   './waffle-v11.1.75.js?v=11.1.75',
   './waffle-v11.1.76.js?v=11.1.76',
+  './waffle-v11.1.80.js?v=11.1.80',
   './waffle-ui-contract.js?v=11.1.48',
   './waffle-ui-contract.js?v=11.1.51'
 ];
@@ -204,6 +205,7 @@ function isFirstPaintCriticalAsset(url) {
     url.pathname.endsWith('/waffle-v11.1.71.js') ||
     url.pathname.endsWith('/waffle-v11.1.75.js') ||
     url.pathname.endsWith('/waffle-v11.1.76.js') ||
+    url.pathname.endsWith('/waffle-v11.1.80.js') ||
     url.pathname.endsWith('/waffle-today-avatar-v1178.svg') ||
     url.pathname.endsWith('/waffle-calendar-avatar-v1178.svg') ||
     url.pathname.endsWith('/waffle-care-avatar-v1178.svg') ||
