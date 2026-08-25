@@ -93,6 +93,16 @@ jobs:
           grep -q "V11.1.79 — MOBILE FOOTER TYPOGRAPHY" waffle-v11.0.5.css
           grep -q "font-size: 11px" waffle-v11.0.5.css
           grep -q "font-weight: 700" waffle-v11.0.5.css
+
+          # Colour Style is a full mobile application theme, not navigation-only chrome.
+          grep -q "V11.1.84 — MOBILE FULL-PAGE COLOUR THEMES" waffle-v11.0.5.css
+          grep -q -- "--wh84-page" waffle-v11.0.5.css
+          grep -q "body\[data-waffle-colour-style\] > .container" waffle-v11.0.5.css
+          grep -q "body\[data-waffle-colour-style\] .v10-stat-card" waffle-v11.0.5.css
+          grep -q "body\[data-waffle-page=\"calendar\"\]\[data-waffle-colour-style\] .wh65-calendar" waffle-v11.0.5.css
+          grep -q "#v11115OrganiserRoot" waffle-v11.0.5.css
+          grep -q "body\[data-waffle-page=\"audit\"\]\[data-waffle-colour-style\] #auditLogContainer" waffle-v11.0.5.css
+
           grep -q "v11.1.83-search-avatar" service-worker.js
           grep -q "waffle-v11.1.80.js" service-worker.js
           grep -q "waffle-search-avatar-v1181.svg" service-worker.js
