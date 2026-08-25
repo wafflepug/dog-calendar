@@ -84,13 +84,18 @@ jobs:
           grep -q "Waffle today avatar" waffle-today-avatar-v1178.svg
           grep -q "Waffle notification avatar" waffle-notification-avatar-v1181.svg
           grep -q "Waffle Search" waffle-search-avatar-v1181.svg
-          grep -q "data:image/jpeg;base64" waffle-search-avatar-v1181.svg
+          grep -q "self-contained Waffle pug search icon" waffle-search-avatar-v1181.svg
+          if grep -Eq "data:image/(jpeg|webp);base64" waffle-search-avatar-v1181.svg; then
+            echo "Search avatar must remain pure vector without embedded raster data"
+            exit 1
+          fi
 
           grep -q "V11.1.79 — MOBILE FOOTER TYPOGRAPHY" waffle-v11.0.5.css
           grep -q "font-size: 11px" waffle-v11.0.5.css
           grep -q "font-weight: 700" waffle-v11.0.5.css
-          grep -q "v11.1.80-mobile-header-rail" service-worker.js
+          grep -q "v11.1.83-search-avatar" service-worker.js
           grep -q "waffle-v11.1.80.js" service-worker.js
+          grep -q "waffle-search-avatar-v1181.svg" service-worker.js
 
           if grep -q "style.removeProperty('display')" waffle-v11.1.75.js waffle-v11.1.76.js waffle-v11.1.80.js; then
             echo "Mobile sitter shell must not use the banned display recovery pattern"
