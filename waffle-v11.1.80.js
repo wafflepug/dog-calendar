@@ -307,7 +307,7 @@
   function findInstall(slot) {
     const existing = slot?.querySelector('[data-wh81-role="install"]');
     if (existing) return existing;
-    const preferred = document.querySelector('#installAppBtn,#pwaInstallButton,#installButton,[data-install-app],[data-pwa-install]');
+    const preferred = document.querySelector('#installAppBtn,#pwaInstallButton,#installPwaButton,#installButton,[data-install-app],[data-pwa-install]');
     if (preferred && !excluded(preferred) && visible(preferred)) return preferred;
     return Array.from(document.querySelectorAll('button,a,[role="button"]'))
       .filter(node => !excluded(node) && visible(node))
