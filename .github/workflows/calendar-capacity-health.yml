@@ -28,4 +28,4 @@ jobs:
           grep -q "data-tone=\"amber\"" waffle-v11.1.68.js
           grep -q "data-tone=\"red\"" waffle-v11.1.68.js
           grep -q "waffle-v11.1.68.js" waffle-v11.1.61.js
-          grep -q "11.1.68-single-calendar-bridge" waffle-v11.1.61.js
+          grep -q "11.1.73-operations-pug-avatar-bridge" waffle-v11.1.61.js
