@@ -1,9 +1,10 @@
 /* ============================================================
-   WAFFLE HOUSE V11.1.75 — COMPATIBILITY + SITTER MOBILE SHELL
-   Keeps V11.0.5 synchronous, loads the independent-sitter mobile shell,
-   clean Calendar and rebuilt Care UI as independent first-class components,
-   ensures the current Ask Waffle stack is present, removes retired UI before
-   hydration, and loads the permanent Final UI Contract last.
+   WAFFLE HOUSE V11.1.76 — COMPATIBILITY + SITTER MOBILE SHELL
+   Keeps V11.0.5 synchronous, loads the independent-sitter mobile shell and
+   authoritative mobile-footer recovery layer, clean Calendar and rebuilt Care
+   UI as independent first-class components, ensures the current Ask Waffle
+   stack is present, removes retired UI before hydration, and loads the
+   permanent Final UI Contract last.
    ============================================================ */
 (function () {
   'use strict';
@@ -155,6 +156,15 @@
       'waffle-v11.1.75.js',
       () => !!window.v11175MobileSitterShellVersion,
       '11.1.75'
+    );
+
+    /* V11.1.76 is the final mobile-footer authority. It suppresses late legacy
+       .app-tabs/V11.1.8 footers and restores the V11.1.75 bottom bar if an old
+       enhancement pass removes it after the drawer has already mounted. */
+    await loadScript(
+      'waffle-v11.1.76.js',
+      () => !!window.v11176AuthoritativeMobileFooterVersion,
+      '11.1.76'
     );
   }
 
