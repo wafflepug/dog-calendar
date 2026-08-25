@@ -1,27 +1,27 @@
 /* ============================================================
-   WAFFLE HOUSE V11.1.81 — MOBILE HEADER AVATARS + SAFE INSTALL
+   WAFFLE HOUSE V11.1.82 — CLEAN MOBILE TODAY HEADER
    ------------------------------------------------------------
-   Mobile Calendar / Today authority:
-   - keeps the Waffle House logo retired behind the hamburger;
-   - keeps Notifications, Search and connection/update status vertical right;
-   - replaces Notifications and Search chrome with supplied Waffle avatars;
-   - moves the install action into a safe left-side operations slot;
-   - retires the redundant All clear badge on mobile;
-   - refreshes the Today footer avatar to the supplied checklist artwork;
-   - preserves original button listeners by moving live nodes, not cloning them.
+   Final mobile Calendar / Today header authority:
+   - keeps the Waffle House branding logo retired on mobile;
+   - keeps Notifications, Search and Live/Updating in the right rail;
+   - uses Waffle artwork for Notifications and Search;
+   - keeps Install in a safe left-side slot below the date;
+   - removes All clear, Operations Home and Today at Waffle House;
+   - promotes the live date to the exact font metrics of the retired title;
+   - preserves original action listeners by moving live DOM nodes.
    ============================================================ */
 (function () {
   'use strict';
 
-  const VERSION = '11.1.81';
+  const VERSION = '11.1.82';
   const MOBILE_QUERY = '(max-width: 820px)';
-  const NOTIFICATION_AVATAR = 'waffle-notification-avatar-v1181.svg?v=11.1.81';
-  const SEARCH_AVATAR = 'waffle-search-avatar-v1181.svg?v=11.1.81';
-  const TODAY_AVATAR = 'waffle-today-avatar-v1178.svg?v=11.1.81';
+  const NOTIFICATION_AVATAR = 'waffle-notification-avatar-v1181.svg?v=11.1.82';
+  const SEARCH_AVATAR = 'waffle-search-avatar-v1181.svg?v=11.1.82';
+  const TODAY_AVATAR = 'waffle-today-avatar-v1178.svg?v=11.1.82';
 
   const moved = new Map();
-  let observer = null;
   let frame = 0;
+  let observer = null;
 
   function isCalendarPage() {
     return String(window.WAFFLE_PAGE || document.body?.dataset?.wafflePage || 'calendar') === 'calendar';
@@ -52,11 +52,30 @@
           min-height:0!important;
         }
 
+        body[data-waffle-page="calendar"] .v10-ops-heading .v10-eyebrow,
+        body[data-waffle-page="calendar"] #v10OperationsTitle,
         body[data-waffle-page="calendar"] #v10TodayStatus,
         body[data-waffle-page="calendar"] .v10-today-status {
           display:none!important;
           visibility:hidden!important;
           pointer-events:none!important;
+        }
+
+        body[data-waffle-page="calendar"] #v10TodayDateLabel {
+          margin:0!important;
+          padding:0!important;
+          font-family:var(--wh82-title-font-family,inherit)!important;
+          font-size:var(--wh82-title-font-size,28px)!important;
+          font-weight:var(--wh82-title-font-weight,800)!important;
+          font-style:var(--wh82-title-font-style,normal)!important;
+          line-height:var(--wh82-title-line-height,1.05)!important;
+          letter-spacing:var(--wh82-title-letter-spacing,-0.02em)!important;
+          color:var(--wh82-title-color,inherit)!important;
+        }
+
+        body[data-waffle-page="calendar"] .v10-ops-heading {
+          align-items:flex-start!important;
+          min-height:0!important;
         }
 
         #wh80MobileHeaderRail {
@@ -135,7 +154,7 @@
           justify-content:flex-start!important;
           width:min(180px,calc(100% - 112px))!important;
           min-height:0!important;
-          margin:8px 0 14px!important;
+          margin:12px 0 14px!important;
           padding:0!important;
           box-sizing:border-box!important;
         }
@@ -185,8 +204,23 @@
   }
 
   function visibleNearTop(node) {
-    if (!visible(node)) return false;
-    return node.getBoundingClientRect().top < 220;
+    return visible(node) && node.getBoundingClientRect().top < 220;
+  }
+
+  function promoteTodayDate() {
+    const title = document.getElementById('v10OperationsTitle');
+    const date = document.getElementById('v10TodayDateLabel');
+    if (!(title instanceof HTMLElement) || !(date instanceof HTMLElement)) return;
+
+    const titleStyle = getComputedStyle(title);
+    date.style.setProperty('--wh82-title-font-family', titleStyle.fontFamily || 'inherit');
+    date.style.setProperty('--wh82-title-font-size', titleStyle.fontSize || '28px');
+    date.style.setProperty('--wh82-title-font-weight', titleStyle.fontWeight || '800');
+    date.style.setProperty('--wh82-title-font-style', titleStyle.fontStyle || 'normal');
+    date.style.setProperty('--wh82-title-line-height', titleStyle.lineHeight || '1.05');
+    date.style.setProperty('--wh82-title-letter-spacing', titleStyle.letterSpacing || '-0.02em');
+    date.style.setProperty('--wh82-title-color', titleStyle.color || 'inherit');
+    date.setAttribute('aria-label', `Today: ${String(date.textContent || '').trim()}`);
   }
 
   function findAction(kind, rail) {
@@ -199,11 +233,9 @@
     if (kind === 'notification') {
       return candidates.find(node => /notif|notification|bell|🔔|🔕/.test(signature(node))) || null;
     }
-
     if (kind === 'search') {
       return candidates.find(node => /search|magnif|🔍|🔎/.test(signature(node))) || null;
     }
-
     return null;
   }
 
@@ -211,27 +243,19 @@
     const existing = rail?.querySelector('[data-wh80-role="status"]');
     if (existing) return existing;
 
-    const direct = document.querySelector(
-      '#waffleConnectionStatus,.waffle-connection-status,[data-waffle-connection-status],[data-connection-status]'
-    );
+    const direct = document.querySelector('#waffleConnectionStatus,.waffle-connection-status,[data-waffle-connection-status],[data-connection-status]');
     if (direct && !excluded(direct)) return direct;
 
-    const candidates = Array.from(document.querySelectorAll('button,span,div'))
-      .filter(node => !excluded(node) && visibleNearTop(node));
-
-    return candidates.find(node => {
-      const text = String(node.textContent || '').replace(/\s+/g, ' ').trim().toLowerCase();
-      return /^(↻\s*)?(updating|syncing|live|offline|online|synced)(\b|…|\.\.\.)/.test(text);
-    }) || null;
+    return Array.from(document.querySelectorAll('button,span,div'))
+      .filter(node => !excluded(node) && visibleNearTop(node))
+      .find(node => /^(↻\s*)?(updating|syncing|live|offline|online|synced)(\b|…|\.\.\.)/.test(String(node.textContent || '').replace(/\s+/g, ' ').trim().toLowerCase())) || null;
   }
 
   function findInstall(slot) {
     const existing = slot?.querySelector('[data-wh81-role="install"]');
     if (existing) return existing;
 
-    const preferred = document.querySelector(
-      '#installAppBtn,#pwaInstallButton,#installPwaButton,#installButton,[data-install-app],[data-pwa-install]'
-    );
+    const preferred = document.querySelector('#installAppBtn,#pwaInstallButton,#installPwaButton,#installButton,[data-install-app],[data-pwa-install]');
     if (preferred && !excluded(preferred) && visible(preferred)) return preferred;
 
     return Array.from(document.querySelectorAll('button,a,[role="button"]'))
@@ -267,7 +291,6 @@
     } else if (slot.parentNode !== operations) {
       operations.insertBefore(slot, operations.firstChild);
     }
-
     return slot;
   }
 
@@ -309,10 +332,7 @@
   }
 
   function syncTodayFooterAvatar() {
-    const image = document.querySelector(
-      '#wh75MobileBottomNav [data-wh75-route="today"] .wh78-nav-avatar, ' +
-      '#wh75MobileBottomNav [data-wh75-route="today"] img'
-    );
+    const image = document.querySelector('#wh75MobileBottomNav [data-wh75-route="today"] .wh78-nav-avatar,#wh75MobileBottomNav [data-wh75-route="today"] img');
     if (!image) return;
     const desired = new URL(TODAY_AVATAR, document.baseURI).href;
     if (image.src !== desired) image.src = TODAY_AVATAR;
@@ -320,7 +340,6 @@
 
   function restoreAll() {
     document.querySelectorAll('.wh81-header-avatar').forEach(image => image.remove());
-
     moved.forEach((location, node) => {
       if (!(node instanceof HTMLElement)) return;
       delete node.dataset.wh80Role;
@@ -330,7 +349,6 @@
       if (location.next && location.next.parentNode === parent) parent.insertBefore(node, location.next);
       else parent.appendChild(node);
     });
-
     moved.clear();
     document.getElementById('wh80MobileHeaderRail')?.remove();
     document.getElementById('wh81MobileInstallSlot')?.remove();
@@ -344,11 +362,12 @@
     }
 
     ensureStyle();
-
     if (!isMobile()) {
       restoreAll();
       return;
     }
+
+    promoteTodayDate();
 
     const rail = ensureRail();
     const installSlot = ensureInstallSlot();
@@ -380,13 +399,11 @@
 
   function start() {
     reconcile();
-
     if (typeof MutationObserver === 'function' && document.body) {
       observer = new MutationObserver(queue);
       observer.observe(document.body, { childList:true, subtree:true });
     }
-
-    [40, 120, 260, 520, 900, 1500, 2600, 4400, 7200].forEach(delay => setTimeout(reconcile, delay));
+    [40,120,260,520,900,1500,2600,4400,7200].forEach(delay => setTimeout(reconcile, delay));
     window.addEventListener('pageshow', reconcile);
     window.addEventListener('focus', reconcile);
     window.addEventListener('resize', queue);
@@ -394,6 +411,7 @@
 
     window.v11180MobileHeaderRailVersion = VERSION;
     window.v11181MobileHeaderAvatarsVersion = VERSION;
+    window.v11182CleanMobileTodayHeaderVersion = VERSION;
   }
 
   if (document.readyState === 'loading') {
