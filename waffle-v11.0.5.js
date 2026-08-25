@@ -1,9 +1,9 @@
 /* ============================================================
-   WAFFLE HOUSE V11.1.61 — COMPATIBILITY + CONVERSATIONAL AI
-   Keeps V11.0.5 synchronous, loads the clean Calendar and rebuilt Care UI as
-   independent first-class components, ensures the current Ask Waffle stack is
-   present, removes retired UI before hydration, and loads the permanent Final
-   UI Contract last.
+   WAFFLE HOUSE V11.1.75 — COMPATIBILITY + SITTER MOBILE SHELL
+   Keeps V11.0.5 synchronous, loads the independent-sitter mobile shell,
+   clean Calendar and rebuilt Care UI as independent first-class components,
+   ensures the current Ask Waffle stack is present, removes retired UI before
+   hydration, and loads the permanent Final UI Contract last.
    ============================================================ */
 (function () {
   'use strict';
@@ -150,7 +150,23 @@
     );
   }
 
+  async function ensureMobileSitterShell() {
+    await loadScript(
+      'waffle-v11.1.75.js',
+      () => !!window.v11175MobileSitterShellVersion,
+      '11.1.75'
+    );
+  }
+
   async function startFinalUi() {
+    /* The sitter shell is shared app chrome and must not depend on Calendar,
+       Care or AI startup. */
+    try {
+      await ensureMobileSitterShell();
+    } catch (error) {
+      console.warn('Mobile sitter shell could not load:', error);
+    }
+
     /* Calendar and Care must not depend on AI startup. */
     try {
       await ensureCleanCalendar();
