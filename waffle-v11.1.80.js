@@ -1,5 +1,5 @@
 /* ============================================================
-   WAFFLE HOUSE V11.1.87 — INSET MOBILE DATE FRAME
+   WAFFLE HOUSE V11.1.88 — SINGLE INSET MOBILE DATE FRAME
    ------------------------------------------------------------
    Final mobile Calendar / Today header authority:
    - keeps the Waffle House branding logo retired on mobile;
@@ -8,17 +8,18 @@
    - keeps Install in a safe left-side slot below the date;
    - removes All clear, Operations Home and Today at Waffle House;
    - promotes and centres the live date with symmetric action-safe space;
-   - moves colour-style side borders inward so neither mobile action rail covers them;
+   - keeps only the inset colour-style brackets around the date;
+   - retires the legacy outer-left accent so the left border is not doubled;
    - preserves original action listeners by moving live DOM nodes.
    ============================================================ */
 (function () {
   'use strict';
 
-  const VERSION = '11.1.87';
+  const VERSION = '11.1.88';
   const MOBILE_QUERY = '(max-width: 820px)';
-  const NOTIFICATION_AVATAR = 'waffle-notification-avatar-v1181.svg?v=11.1.87';
-  const SEARCH_AVATAR = 'waffle-search-avatar-v1181.svg?v=11.1.87';
-  const TODAY_AVATAR = 'waffle-today-avatar-v1178.svg?v=11.1.87';
+  const NOTIFICATION_AVATAR = 'waffle-notification-avatar-v1181.svg?v=11.1.88';
+  const SEARCH_AVATAR = 'waffle-search-avatar-v1181.svg?v=11.1.88';
+  const TODAY_AVATAR = 'waffle-today-avatar-v1178.svg?v=11.1.88';
 
   const moved = new Map();
   let frame = 0;
@@ -62,11 +63,19 @@
           pointer-events:none!important;
         }
 
-        /* Retire the exposed colour-style side edge that can sit under the
-           fixed hamburger / right rail. The accent is redrawn safely below. */
+        /* Retire the legacy exposed colour-style edge. Only the inset
+           heading brackets below are allowed to render the date frame. */
         body[data-waffle-page="calendar"][data-wh75-mobile-view="today"] .v10-operations-home {
           border-left-color:transparent!important;
           border-right-color:transparent!important;
+        }
+
+        body[data-waffle-page="calendar"][data-wh75-mobile-view="today"] .v10-operations-home::before {
+          content:none!important;
+          display:none!important;
+          border:0!important;
+          box-shadow:none!important;
+          background:none!important;
         }
 
         body[data-waffle-page="calendar"] #v10TodayDateLabel {
@@ -96,8 +105,7 @@
         }
 
         /* Symmetric colour-style brackets sit just inside both action-safe
-           gutters. They visually replace the side accent that was hidden
-           behind the hamburger and mirror it on the right. */
+           gutters. They are the single visible date frame. */
         body[data-waffle-page="calendar"] .v10-ops-heading::before,
         body[data-waffle-page="calendar"] .v10-ops-heading::after {
           content:"";
@@ -299,7 +307,7 @@
   function findInstall(slot) {
     const existing = slot?.querySelector('[data-wh81-role="install"]');
     if (existing) return existing;
-    const preferred = document.querySelector('#installAppBtn,#pwaInstallButton,#installPwaButton,#installButton,[data-install-app],[data-pwa-install]');
+    const preferred = document.querySelector('#installAppBtn,#pwaInstallButton,#installButton,[data-install-app],[data-pwa-install]');
     if (preferred && !excluded(preferred) && visible(preferred)) return preferred;
     return Array.from(document.querySelectorAll('button,a,[role="button"]'))
       .filter(node => !excluded(node) && visible(node))
@@ -452,6 +460,7 @@
     window.v11182CleanMobileTodayHeaderVersion = VERSION;
     window.v11186CenteredMobileDateVersion = VERSION;
     window.v11187InsetMobileDateFrameVersion = VERSION;
+    window.v11188SingleInsetMobileDateFrameVersion = VERSION;
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once:true });
