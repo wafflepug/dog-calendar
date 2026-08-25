@@ -19,9 +19,12 @@ jobs:
       - name: Validate mobile sitter shell
         run: |
           node --check waffle-v11.1.75.js
+          node --check waffle-v11.1.76.js
           node --check waffle-v11.0.5.js
           grep -q "waffle-v11.1.75.js" waffle-v11.0.5.js
+          grep -q "waffle-v11.1.76.js" waffle-v11.0.5.js
           grep -q "v11175MobileSitterShellVersion" waffle-v11.1.75.js
+          grep -q "v11176AuthoritativeMobileFooterVersion" waffle-v11.1.76.js
           grep -q "index.html?view=today" waffle-v11.1.75.js
           grep -q "index.html?view=calendar" waffle-v11.1.75.js
           grep -q "Today" waffle-v11.1.75.js
@@ -39,7 +42,12 @@ jobs:
           grep -q "warm-honey" waffle-v11.1.75.js
           grep -q "grid-template-columns:repeat(5" waffle-v11.1.75.js
           grep -q "data-wh75-mobile-view" waffle-v11.1.75.js
-          if grep -q "style.removeProperty('display')" waffle-v11.1.75.js; then
+          grep -q "nav.app-tabs" waffle-v11.1.76.js
+          grep -q "#v1118MobileNav" waffle-v11.1.76.js
+          grep -q "ensureBottomNav" waffle-v11.1.76.js
+          grep -q "display', 'grid', 'important'" waffle-v11.1.76.js
+          grep -q "display', 'none', 'important'" waffle-v11.1.76.js
+          if grep -q "style.removeProperty('display')" waffle-v11.1.75.js waffle-v11.1.76.js; then
             echo "Mobile sitter shell must not use the banned display recovery pattern"
             exit 1
           fi
