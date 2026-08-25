@@ -1,0 +1,45 @@
+name: Mobile Sitter Shell
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  mobile-sitter-shell:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate mobile sitter shell
+        run: |
+          node --check waffle-v11.1.75.js
+          node --check waffle-v11.0.5.js
+          grep -q "waffle-v11.1.75.js" waffle-v11.0.5.js
+          grep -q "v11175MobileSitterShellVersion" waffle-v11.1.75.js
+          grep -q "index.html?view=today" waffle-v11.1.75.js
+          grep -q "index.html?view=calendar" waffle-v11.1.75.js
+          grep -q "Today" waffle-v11.1.75.js
+          grep -q "Calendar" waffle-v11.1.75.js
+          grep -q "Care" waffle-v11.1.75.js
+          grep -q "Organiser" waffle-v11.1.75.js
+          grep -q "Logs" waffle-v11.1.75.js
+          grep -q "Quick Add" waffle-v11.1.75.js
+          grep -q "Ask Waffle" waffle-v11.1.75.js
+          grep -q "Appearance &amp; Colour" waffle-v11.1.75.js
+          grep -q "waffle-purple" waffle-v11.1.75.js
+          grep -q "coastal-blue" waffle-v11.1.75.js
+          grep -q "eucalyptus" waffle-v11.1.75.js
+          grep -q "sunset-coral" waffle-v11.1.75.js
+          grep -q "warm-honey" waffle-v11.1.75.js
+          grep -q "grid-template-columns:repeat(5" waffle-v11.1.75.js
+          grep -q "data-wh75-mobile-view" waffle-v11.1.75.js
+          if grep -q "style.removeProperty('display')" waffle-v11.1.75.js; then
+            echo "Mobile sitter shell must not use the banned display recovery pattern"
+            exit 1
+          fi
