@@ -29,8 +29,13 @@ jobs:
           grep -q "v11178UniformMobileFooterVersion" waffle-v11.1.76.js
           grep -q "waffle-v11.1.80.js" waffle-v11.1.76.js
           grep -q "v11180MobileHeaderRailVersion" waffle-v11.1.80.js
+          grep -q "v11181MobileHeaderAvatarsVersion" waffle-v11.1.80.js
           grep -q "calendar-brand-logo" waffle-v11.1.80.js
           grep -q "wh80MobileHeaderRail" waffle-v11.1.80.js
+          grep -q "wh81MobileInstallSlot" waffle-v11.1.80.js
+          grep -q "v10TodayStatus" waffle-v11.1.80.js
+          grep -q "waffle-notification-avatar-v1181.svg" waffle-v11.1.80.js
+          grep -q "waffle-search-avatar-v1181.svg" waffle-v11.1.80.js
           grep -q "data-wh80-role=\"notification\"" waffle-v11.1.80.js
           grep -q "data-wh80-role=\"search\"" waffle-v11.1.80.js
           grep -q "data-wh80-role=\"status\"" waffle-v11.1.80.js
@@ -68,8 +73,13 @@ jobs:
           test -f waffle-today-avatar-v1178.svg
           test -f waffle-calendar-avatar-v1178.svg
           test -f waffle-care-avatar-v1178.svg
+          test -f waffle-notification-avatar-v1181.svg
+          test -f waffle-search-avatar-v1181.svg
           grep -q "Waffle holding a calendar" waffle-calendar-avatar-v1178.svg
           grep -q "data:image/webp;base64" waffle-calendar-avatar-v1178.svg
+          grep -q "Waffle today avatar" waffle-today-avatar-v1178.svg
+          grep -q "Waffle notification avatar" waffle-notification-avatar-v1181.svg
+          grep -q "Waffle search avatar" waffle-search-avatar-v1181.svg
           grep -q "V11.1.79 — MOBILE FOOTER TYPOGRAPHY" waffle-v11.0.5.css
           grep -q "font-size: 11px" waffle-v11.0.5.css
           grep -q "font-weight: 700" waffle-v11.0.5.css
