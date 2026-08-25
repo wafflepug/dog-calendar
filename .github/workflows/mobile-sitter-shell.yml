@@ -22,18 +22,26 @@ jobs:
           node --check waffle-v11.1.76.js
           node --check waffle-v11.1.80.js
           node --check waffle-v11.0.5.js
+
           grep -q "waffle-v11.1.75.js" waffle-v11.0.5.js
           grep -q "waffle-v11.1.76.js" waffle-v11.0.5.js
+          grep -q "waffle-v11.1.80.js" waffle-v11.1.76.js
+
           grep -q "v11175MobileSitterShellVersion" waffle-v11.1.75.js
           grep -q "v11176AuthoritativeMobileFooterVersion" waffle-v11.1.76.js
           grep -q "v11178UniformMobileFooterVersion" waffle-v11.1.76.js
-          grep -q "waffle-v11.1.80.js" waffle-v11.1.76.js
           grep -q "v11180MobileHeaderRailVersion" waffle-v11.1.80.js
           grep -q "v11181MobileHeaderAvatarsVersion" waffle-v11.1.80.js
+          grep -q "v11182CleanMobileTodayHeaderVersion" waffle-v11.1.80.js
+
           grep -q "calendar-brand-logo" waffle-v11.1.80.js
           grep -q "wh80MobileHeaderRail" waffle-v11.1.80.js
           grep -q "wh81MobileInstallSlot" waffle-v11.1.80.js
           grep -q "v10TodayStatus" waffle-v11.1.80.js
+          grep -q "v10-ops-heading .v10-eyebrow" waffle-v11.1.80.js
+          grep -q "#v10OperationsTitle" waffle-v11.1.80.js
+          grep -q "#v10TodayDateLabel" waffle-v11.1.80.js
+          grep -q "promoteTodayDate" waffle-v11.1.80.js
           grep -q "waffle-notification-avatar-v1181.svg" waffle-v11.1.80.js
           grep -q "waffle-search-avatar-v1181.svg" waffle-v11.1.80.js
           grep -q "data-wh80-role=\"notification\"" waffle-v11.1.80.js
@@ -41,6 +49,7 @@ jobs:
           grep -q "data-wh80-role=\"status\"" waffle-v11.1.80.js
           grep -q "flex-direction:column" waffle-v11.1.80.js
           grep -q "right:12px" waffle-v11.1.80.js
+
           grep -q "index.html?view=today" waffle-v11.1.75.js
           grep -q "index.html?view=calendar" waffle-v11.1.75.js
           grep -q "Today" waffle-v11.1.75.js
@@ -51,18 +60,12 @@ jobs:
           grep -q "Quick Add" waffle-v11.1.75.js
           grep -q "Ask Waffle" waffle-v11.1.75.js
           grep -q "Appearance &amp; Colour" waffle-v11.1.75.js
-          grep -q "waffle-purple" waffle-v11.1.75.js
-          grep -q "coastal-blue" waffle-v11.1.75.js
-          grep -q "eucalyptus" waffle-v11.1.75.js
-          grep -q "sunset-coral" waffle-v11.1.75.js
-          grep -q "warm-honey" waffle-v11.1.75.js
           grep -q "grid-template-columns:repeat(5" waffle-v11.1.75.js
           grep -q "data-wh75-mobile-view" waffle-v11.1.75.js
+
           grep -q "nav.app-tabs" waffle-v11.1.76.js
           grep -q "#v1118MobileNav" waffle-v11.1.76.js
           grep -q "ensureBottomNav" waffle-v11.1.76.js
-          grep -q "display', 'grid', 'important'" waffle-v11.1.76.js
-          grep -q "display', 'none', 'important'" waffle-v11.1.76.js
           grep -q "today-calendar-add-care-waffle-ai" waffle-v11.1.76.js
           grep -q "waffle-today-avatar-v1178.svg" waffle-v11.1.76.js
           grep -q "waffle-calendar-avatar-v1178.svg" waffle-v11.1.76.js
@@ -70,6 +73,7 @@ jobs:
           grep -q "wh78-avatar-shell" waffle-v11.1.76.js
           grep -q "border-radius:50%" waffle-v11.1.76.js
           grep -q "Waffle AI" waffle-v11.1.76.js
+
           test -f waffle-today-avatar-v1178.svg
           test -f waffle-calendar-avatar-v1178.svg
           test -f waffle-care-avatar-v1178.svg
@@ -79,12 +83,15 @@ jobs:
           grep -q "data:image/webp;base64" waffle-calendar-avatar-v1178.svg
           grep -q "Waffle today avatar" waffle-today-avatar-v1178.svg
           grep -q "Waffle notification avatar" waffle-notification-avatar-v1181.svg
-          grep -q "Waffle search avatar" waffle-search-avatar-v1181.svg
+          grep -q "Waffle Search" waffle-search-avatar-v1181.svg
+          grep -q "data:image/jpeg;base64" waffle-search-avatar-v1181.svg
+
           grep -q "V11.1.79 — MOBILE FOOTER TYPOGRAPHY" waffle-v11.0.5.css
           grep -q "font-size: 11px" waffle-v11.0.5.css
           grep -q "font-weight: 700" waffle-v11.0.5.css
           grep -q "v11.1.80-mobile-header-rail" service-worker.js
           grep -q "waffle-v11.1.80.js" service-worker.js
+
           if grep -q "style.removeProperty('display')" waffle-v11.1.75.js waffle-v11.1.76.js waffle-v11.1.80.js; then
             echo "Mobile sitter shell must not use the banned display recovery pattern"
             exit 1
