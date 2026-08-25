@@ -1,17 +1,24 @@
 /* ============================================================
-   WAFFLE HOUSE V11.1.80 — MOBILE HEADER ACTION RAIL
+   WAFFLE HOUSE V11.1.81 — MOBILE HEADER AVATARS + SAFE INSTALL
    ------------------------------------------------------------
-   Mobile Calendar header authority:
-   - removes the branding logo from behind the hamburger menu;
-   - stacks Notifications, Search and connection/update status on the right;
-   - preserves the original controls/listeners by moving the live DOM nodes;
-   - restores nodes when leaving the mobile breakpoint.
+   Mobile Calendar / Today authority:
+   - keeps the Waffle House logo retired behind the hamburger;
+   - keeps Notifications, Search and connection/update status vertical right;
+   - replaces Notifications and Search chrome with supplied Waffle avatars;
+   - moves the install action into a safe left-side operations slot;
+   - retires the redundant All clear badge on mobile;
+   - refreshes the Today footer avatar to the supplied checklist artwork;
+   - preserves original button listeners by moving live nodes, not cloning them.
    ============================================================ */
 (function () {
   'use strict';
 
-  const VERSION = '11.1.80';
+  const VERSION = '11.1.81';
   const MOBILE_QUERY = '(max-width: 820px)';
+  const NOTIFICATION_AVATAR = 'waffle-notification-avatar-v1181.svg?v=11.1.81';
+  const SEARCH_AVATAR = 'waffle-search-avatar-v1181.svg?v=11.1.81';
+  const TODAY_AVATAR = 'waffle-today-avatar-v1178.svg?v=11.1.81';
+
   const moved = new Map();
   let observer = null;
   let frame = 0;
@@ -25,9 +32,13 @@
   }
 
   function ensureStyle() {
-    if (document.getElementById('wh80MobileHeaderStyle')) return;
-    const style = document.createElement('style');
-    style.id = 'wh80MobileHeaderStyle';
+    let style = document.getElementById('wh80MobileHeaderStyle');
+    if (!style) {
+      style = document.createElement('style');
+      style.id = 'wh80MobileHeaderStyle';
+      document.head.appendChild(style);
+    }
+
     style.textContent = `
       @media (max-width:820px) {
         body[data-waffle-page="calendar"] .calendar-header-branding .calendar-brand-img,
@@ -39,6 +50,13 @@
 
         body[data-waffle-page="calendar"] .calendar-header-branding {
           min-height:0!important;
+        }
+
+        body[data-waffle-page="calendar"] #v10TodayStatus,
+        body[data-waffle-page="calendar"] .v10-today-status {
+          display:none!important;
+          visibility:hidden!important;
+          pointer-events:none!important;
         }
 
         #wh80MobileHeaderRail {
@@ -69,15 +87,36 @@
 
         #wh80MobileHeaderRail [data-wh80-role="notification"],
         #wh80MobileHeaderRail [data-wh80-role="search"] {
-          width:44px!important;
-          height:44px!important;
-          min-width:44px!important;
-          min-height:44px!important;
+          position:relative!important;
+          width:46px!important;
+          height:46px!important;
+          min-width:46px!important;
+          min-height:46px!important;
           padding:0!important;
           display:inline-flex!important;
           align-items:center!important;
           justify-content:center!important;
-          border-radius:14px!important;
+          overflow:hidden!important;
+          border-radius:50%!important;
+          font-size:0!important;
+          line-height:0!important;
+          color:transparent!important;
+        }
+
+        #wh80MobileHeaderRail [data-wh80-role="notification"] > :not(.wh81-header-avatar),
+        #wh80MobileHeaderRail [data-wh80-role="search"] > :not(.wh81-header-avatar) {
+          display:none!important;
+        }
+
+        #wh80MobileHeaderRail .wh81-header-avatar {
+          display:block!important;
+          width:100%!important;
+          height:100%!important;
+          max-width:none!important;
+          object-fit:cover!important;
+          object-position:center!important;
+          border-radius:50%!important;
+          pointer-events:none!important;
         }
 
         #wh80MobileHeaderRail [data-wh80-role="status"] {
@@ -89,13 +128,33 @@
           justify-content:center!important;
           text-align:center!important;
         }
+
+        #wh81MobileInstallSlot {
+          display:flex!important;
+          align-items:center!important;
+          justify-content:flex-start!important;
+          width:min(180px,calc(100% - 112px))!important;
+          min-height:0!important;
+          margin:8px 0 14px!important;
+          padding:0!important;
+          box-sizing:border-box!important;
+        }
+
+        #wh81MobileInstallSlot > * {
+          width:auto!important;
+          max-width:180px!important;
+          min-height:38px!important;
+          margin:0!important;
+          flex:none!important;
+          white-space:nowrap!important;
+        }
       }
 
       @media (min-width:821px) {
-        #wh80MobileHeaderRail { display:none!important; }
+        #wh80MobileHeaderRail,
+        #wh81MobileInstallSlot { display:none!important; }
       }
     `;
-    document.head.appendChild(style);
   }
 
   function signature(node) {
@@ -114,18 +173,26 @@
   function excluded(node) {
     return !node ||
       node.id === 'wh75MenuButton' ||
-      !!node.closest('#wh75MobileDrawer,#wh75MobileBottomNav,#wh75SettingsPanel,#wh80MobileHeaderRail');
+      !!node.closest('#wh75MobileDrawer,#wh75MobileBottomNav,#wh75SettingsPanel,#wh80MobileHeaderRail,#wh81MobileInstallSlot');
   }
 
-  function visibleNearTop(node) {
+  function visible(node) {
     if (!(node instanceof HTMLElement)) return false;
     const style = getComputedStyle(node);
     if (style.display === 'none' || style.visibility === 'hidden') return false;
     const rect = node.getBoundingClientRect();
-    return rect.width > 0 && rect.height > 0 && rect.top < 190;
+    return rect.width > 0 && rect.height > 0;
   }
 
-  function findAction(kind) {
+  function visibleNearTop(node) {
+    if (!visible(node)) return false;
+    return node.getBoundingClientRect().top < 220;
+  }
+
+  function findAction(kind, rail) {
+    const existing = rail?.querySelector(`[data-wh80-role="${kind}"]`);
+    if (existing) return existing;
+
     const candidates = Array.from(document.querySelectorAll('button,a,[role="button"]'))
       .filter(node => !excluded(node) && visibleNearTop(node));
 
@@ -140,7 +207,10 @@
     return null;
   }
 
-  function findStatus() {
+  function findStatus(rail) {
+    const existing = rail?.querySelector('[data-wh80-role="status"]');
+    if (existing) return existing;
+
     const direct = document.querySelector(
       '#waffleConnectionStatus,.waffle-connection-status,[data-waffle-connection-status],[data-connection-status]'
     );
@@ -155,6 +225,20 @@
     }) || null;
   }
 
+  function findInstall(slot) {
+    const existing = slot?.querySelector('[data-wh81-role="install"]');
+    if (existing) return existing;
+
+    const preferred = document.querySelector(
+      '#installAppBtn,#pwaInstallButton,#installPwaButton,#installButton,[data-install-app],[data-pwa-install]'
+    );
+    if (preferred && !excluded(preferred) && visible(preferred)) return preferred;
+
+    return Array.from(document.querySelectorAll('button,a,[role="button"]'))
+      .filter(node => !excluded(node) && visible(node))
+      .find(node => /(^|\s)install(\s|$)|install app|add to home/.test(signature(node))) || null;
+  }
+
   function ensureRail() {
     let rail = document.getElementById('wh80MobileHeaderRail');
     if (!rail) {
@@ -166,12 +250,30 @@
     return rail;
   }
 
+  function ensureInstallSlot() {
+    const operations = document.querySelector('.v10-operations-home');
+    if (!operations) return null;
+
+    let slot = document.getElementById('wh81MobileInstallSlot');
+    if (!slot) {
+      slot = document.createElement('div');
+      slot.id = 'wh81MobileInstallSlot';
+      slot.setAttribute('aria-label', 'Install Waffle House');
+    }
+
+    const heading = operations.querySelector('.v10-ops-heading');
+    if (heading?.parentNode === operations) {
+      if (heading.nextSibling !== slot) operations.insertBefore(slot, heading.nextSibling);
+    } else if (slot.parentNode !== operations) {
+      operations.insertBefore(slot, operations.firstChild);
+    }
+
+    return slot;
+  }
+
   function remember(node) {
     if (!node || moved.has(node)) return;
-    moved.set(node, {
-      parent: node.parentNode,
-      next: node.nextSibling
-    });
+    moved.set(node, { parent:node.parentNode, next:node.nextSibling });
   }
 
   function moveIntoRail(node, role, rail) {
@@ -181,17 +283,57 @@
     if (node.parentNode !== rail) rail.appendChild(node);
   }
 
+  function moveInstall(node, slot) {
+    if (!(node instanceof HTMLElement) || !slot) return;
+    remember(node);
+    node.dataset.wh81Role = 'install';
+    if (node.parentNode !== slot) slot.appendChild(node);
+  }
+
+  function ensureAvatar(node, role, src, label) {
+    if (!(node instanceof HTMLElement)) return;
+    let image = node.querySelector(`.wh81-header-avatar[data-wh81-avatar="${role}"]`);
+    if (!image) {
+      image = document.createElement('img');
+      image.className = 'wh81-header-avatar';
+      image.dataset.wh81Avatar = role;
+      image.alt = '';
+      image.decoding = 'async';
+      image.draggable = false;
+      node.appendChild(image);
+    }
+    const desired = new URL(src, document.baseURI).href;
+    if (image.src !== desired) image.src = src;
+    node.setAttribute('aria-label', label);
+    node.setAttribute('title', label);
+  }
+
+  function syncTodayFooterAvatar() {
+    const image = document.querySelector(
+      '#wh75MobileBottomNav [data-wh75-route="today"] .wh78-nav-avatar, ' +
+      '#wh75MobileBottomNav [data-wh75-route="today"] img'
+    );
+    if (!image) return;
+    const desired = new URL(TODAY_AVATAR, document.baseURI).href;
+    if (image.src !== desired) image.src = TODAY_AVATAR;
+  }
+
   function restoreAll() {
+    document.querySelectorAll('.wh81-header-avatar').forEach(image => image.remove());
+
     moved.forEach((location, node) => {
       if (!(node instanceof HTMLElement)) return;
       delete node.dataset.wh80Role;
+      delete node.dataset.wh81Role;
       const parent = location.parent;
       if (!(parent instanceof Node) || !parent.isConnected) return;
       if (location.next && location.next.parentNode === parent) parent.insertBefore(node, location.next);
       else parent.appendChild(node);
     });
+
     moved.clear();
     document.getElementById('wh80MobileHeaderRail')?.remove();
+    document.getElementById('wh81MobileInstallSlot')?.remove();
   }
 
   function reconcile() {
@@ -209,18 +351,26 @@
     }
 
     const rail = ensureRail();
-    const notification = findAction('notification');
-    const search = findAction('search');
-    const status = findStatus();
+    const installSlot = ensureInstallSlot();
+    const notification = findAction('notification', rail);
+    const search = findAction('search', rail);
+    const status = findStatus(rail);
+    const install = findInstall(installSlot);
 
     moveIntoRail(notification, 'notification', rail);
     moveIntoRail(search, 'search', rail);
     moveIntoRail(status, 'status', rail);
+    moveInstall(install, installSlot);
+
+    if (notification) ensureAvatar(notification, 'notification', NOTIFICATION_AVATAR, 'Notifications');
+    if (search) ensureAvatar(search, 'search', SEARCH_AVATAR, 'Search');
 
     ['notification', 'search', 'status'].forEach(role => {
       const node = rail.querySelector(`[data-wh80-role="${role}"]`);
       if (node) rail.appendChild(node);
     });
+
+    syncTodayFooterAvatar();
   }
 
   function queue() {
@@ -236,13 +386,14 @@
       observer.observe(document.body, { childList:true, subtree:true });
     }
 
-    [60, 160, 360, 700, 1200, 2200, 4200, 7000].forEach(delay => setTimeout(reconcile, delay));
+    [40, 120, 260, 520, 900, 1500, 2600, 4400, 7200].forEach(delay => setTimeout(reconcile, delay));
     window.addEventListener('pageshow', reconcile);
     window.addEventListener('focus', reconcile);
     window.addEventListener('resize', queue);
     window.addEventListener('orientationchange', () => setTimeout(reconcile, 80));
 
     window.v11180MobileHeaderRailVersion = VERSION;
+    window.v11181MobileHeaderAvatarsVersion = VERSION;
   }
 
   if (document.readyState === 'loading') {
