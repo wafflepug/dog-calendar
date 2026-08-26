@@ -1,0 +1,24 @@
+name: Maintenance Safety Contract
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify maintenance protections
+        run: |
+          set -euo pipefail
+          test -f maintenance.html
+          test -f waffle-maintenance.webp
+          test -f apps-script/MaintenanceMode.js
+          grep -q 'V11.1.91 — MAINTENANCE GATE' waffle-v11.0.5.js
+          grep -q 'maintenance_status' apps-script/Code.js
+          grep -q 'assertWaffleActionAllowedDuringMaintenance_' apps-script/Code.js
+          grep -q 'WAFFLE_MAINTENANCE_DEFAULT_' apps-script/MaintenanceMode.js
+          grep -q 'waffle-maintenance.webp' service-worker.js
+          echo 'Maintenance redirect, write lock and outage page are present.'
