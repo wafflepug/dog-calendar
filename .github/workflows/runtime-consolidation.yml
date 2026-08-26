@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - 'scripts/consolidate-runtime.py'
+      - 'scripts/consolidate-runtime-v2.py'
       - '.github/workflows/runtime-consolidation.yml'
   workflow_dispatch:
 
@@ -22,11 +23,11 @@ jobs:
           fetch-depth: 0
 
       - name: Consolidate active runtime references
-        run: python3 scripts/consolidate-runtime.py
+        run: python3 scripts/consolidate-runtime-v2.py
 
       - name: Validate generated runtime
         run: |
-          python3 -m py_compile scripts/consolidate-runtime.py
+          python3 -m py_compile scripts/consolidate-runtime.py scripts/consolidate-runtime-v2.py
           node --check waffle-bootstrap.js
           node --check waffle-v11.0.5.js
           node --check waffle-v11.1.61.js
