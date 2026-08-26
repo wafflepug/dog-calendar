@@ -1,0 +1,60 @@
+name: Runtime Consolidation
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'scripts/consolidate-runtime.py'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  consolidate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Consolidate active runtime references
+        run: python3 scripts/consolidate-runtime.py
+
+      - name: Validate generated runtime
+        run: |
+          python3 -m py_compile scripts/consolidate-runtime.py
+          node --check waffle-bootstrap.js
+          node --check waffle-v11.0.5.js
+          node --check waffle-v11.1.61.js
+          node --check service-worker.js
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          build = json.loads(Path('waffle-build.json').read_text())['build']
+          for page in ['index.html','directory.html','reminders.html','audit.html']:
+              text = Path(page).read_text()
+              assert f'waffle-bootstrap.js?v={build}' in text, page
+              assert f'waffle-runtime.css?v={build}' in text, page
+              assert 'src="waffle-v10.' not in text, page
+              assert 'src="waffle-v11.' not in text, page
+              assert 'href="waffle-v10.' not in text, page
+              assert 'href="waffle-v11.' not in text, page
+          print('Runtime consolidation validation passed for build', build)
+          PY
+
+      - name: Commit generated consolidation
+        run: |
+          if git diff --quiet; then
+            echo 'No consolidation changes required.'
+            exit 0
+          fi
+          git config user.name 'wafflepug'
+          git config user.email 'actions@users.noreply.github.com'
+          git add index.html directory.html reminders.html audit.html \
+            waffle-bootstrap.js waffle-runtime.css waffle-build.json \
+            waffle-v11.0.5.js waffle-v11.1.61.js service-worker.js
+          git commit -m 'Consolidate Waffle active runtime entry points'
+          git push origin HEAD:main
