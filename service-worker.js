@@ -1,6 +1,6 @@
 /* Waffle House Boarding — recovery service worker */
 
-const WAFFLE_SW_VERSION = 'v11.1.83-search-avatar';
+const WAFFLE_SW_VERSION = 'v11.1.91-maintenance-safety';
 const WAFFLE_CACHE_PREFIX = 'waffle-house-';
 const APP_SHELL_CACHE = `${WAFFLE_CACHE_PREFIX}shell-${WAFFLE_SW_VERSION}`;
 const RUNTIME_CACHE = `${WAFFLE_CACHE_PREFIX}runtime-${WAFFLE_SW_VERSION}`;
@@ -11,6 +11,8 @@ const APP_SHELL = [
   './directory.html',
   './reminders.html',
   './audit.html',
+  './maintenance.html',
+  './waffle-maintenance.webp?v=11.1.91',
   './waffle-app.css?v=11.0.5',
   './waffle-app.js?v=11.0.5',
   './waffle-logo.png?v=11.1.24',

@@ -1,4 +1,81 @@
 /* ============================================================
+   WAFFLE HOUSE V11.1.91 — MAINTENANCE GATE
+   ------------------------------------------------------------
+   Checks the authoritative Apps Script maintenance switch before the
+   shared UI hydrates. While status is pending, interaction is blocked.
+   If maintenance is enabled — or the safety status cannot be confirmed
+   within the timeout — users are sent to maintenance.html.
+   ============================================================ */
+(function () {
+  'use strict';
+  if (window.WAFFLE_MAINTENANCE_GATE) return;
+
+  const VERSION = '11.1.91';
+  const ENDPOINT = 'https://script.google.com/macros/s/AKfycbwn4HL49K9c3AZbXJRUjPw3UYWxJt8DmqXwMnTytyqdSstj3ZIJwWdDEC2IsBjetOf3pw/exec';
+  const maintenanceUrl = new URL('maintenance.html', window.location.href);
+
+  if (/\/maintenance\.html$/i.test(window.location.pathname)) return;
+
+  const style = document.createElement('style');
+  style.id = 'waffleMaintenanceGateStyle';
+  style.textContent = 'html[data-waffle-maintenance-check="pending"] body{pointer-events:none!important;user-select:none!important;}';
+  (document.head || document.documentElement).appendChild(style);
+  document.documentElement.setAttribute('data-waffle-maintenance-check', 'pending');
+
+  let settled = false;
+  let timer = 0;
+  const callbackName = '__waffleMaintenanceGate' + Date.now() + Math.floor(Math.random() * 10000);
+  const script = document.createElement('script');
+
+  function clean() {
+    if (timer) clearTimeout(timer);
+    try { delete window[callbackName]; } catch (_) { window[callbackName] = undefined; }
+    script.remove();
+  }
+
+  function unlock() {
+    if (settled) return;
+    settled = true;
+    clean();
+    document.documentElement.removeAttribute('data-waffle-maintenance-check');
+    style.remove();
+    window.dispatchEvent(new CustomEvent('waffle:maintenance-clear'));
+  }
+
+  function redirect(reason) {
+    if (settled) return;
+    settled = true;
+    clean();
+    const from = window.location.pathname + window.location.search + window.location.hash;
+    maintenanceUrl.searchParams.set('from', from);
+    if (reason) maintenanceUrl.searchParams.set('reason', reason);
+    window.location.replace(maintenanceUrl.href);
+  }
+
+  window[callbackName] = status => {
+    if (status && status.enabled === true) {
+      redirect('maintenance');
+      return;
+    }
+    if (status && status.result === 'success') {
+      unlock();
+      return;
+    }
+    redirect('status-unconfirmed');
+  };
+
+  script.onerror = () => redirect('status-unavailable');
+  script.src = ENDPOINT + '?action=maintenance_status&callback=' + encodeURIComponent(callbackName) + '&_=' + Date.now();
+  (document.head || document.documentElement).appendChild(script);
+  timer = setTimeout(() => redirect('status-timeout'), 6500);
+
+  window.WAFFLE_MAINTENANCE_GATE = Object.freeze({
+    version: VERSION,
+    endpoint: ENDPOINT
+  });
+})();
+
+/* ============================================================
    WAFFLE HOUSE V11.1.76 — COMPATIBILITY + SITTER MOBILE SHELL
    Keeps V11.0.5 synchronous, loads the independent-sitter mobile shell and
    authoritative mobile-footer recovery layer, clean Calendar and rebuilt Care

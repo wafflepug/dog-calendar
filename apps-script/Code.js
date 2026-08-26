@@ -244,6 +244,8 @@ function doPost(e) {
       }
     }
 
+    assertWaffleActionAllowedDuringMaintenance_(data && data.action);
+
     if (
       data.action === "upload_belongings_photo" &&
       String(data.uploadToken || "").trim()
@@ -326,6 +328,22 @@ function doGet(e) {
   var callback = e && e.parameter ? String(e.parameter.callback || "") : "";
 
   try {
+    var requestedAction = e && e.parameter ? String(e.parameter.action || "").trim() : "";
+
+    if (requestedAction === "maintenance_status") {
+      var maintenanceStatus = getWaffleMaintenanceStatus_();
+      return callback
+        ? javascriptResponse_(callback, maintenanceStatus)
+        : jsonResponse_(maintenanceStatus);
+    }
+
+    if (
+      isWaffleMaintenanceMode_() &&
+      ["photo_uploader", "intake", "legacy_intake"].indexOf(requestedAction) !== -1
+    ) {
+      return buildWaffleMaintenanceRedirectHtml_();
+    }
+
     // Serve the photo uploader itself from Apps Script. This keeps the actual
     // image upload inside the Apps Script origin, where google.script.run can
     // call server functions directly without a cross-origin POST/redirect.
@@ -391,6 +409,8 @@ function doGet(e) {
     }
 
     var data = JSON.parse(e.parameter.payload);
+
+    assertWaffleActionAllowedDuringMaintenance_(data && data.action);
 
     if (data.action === "begin_belongings_photo_upload") {
       var beginToken = String(data.uploadToken || "").trim();
@@ -3463,6 +3483,7 @@ function saveV108MutationReceipt_(id) {
   PropertiesService.getScriptProperties().setProperty("WAFFLE_V108_MUTATION_RECEIPTS",JSON.stringify(clean));
 }
 function processSheetActionWithV108Receipt_(data) {
+  assertWaffleActionAllowedDuringMaintenance_(data && data.action);
   data=data&&typeof data==="object"?data:{};
   var id=String(data.clientMutationId||"").trim();
   if(!id || isReadOnlySheetAction_(data.action)) return processSheetAction_(data);
@@ -5526,6 +5547,8 @@ function getIntakePrefillForHtml(token) {
  * origin, which avoids the form-urlencoded/JSON parsing path entirely.
  */
 function submitIntakeFromHtml(payload) {
+  assertWaffleActionAllowedDuringMaintenance_("submitIntakeFromHtml");
+
   payload = payload && typeof payload === "object" ? payload : {};
 
   return processIntakeSubmission_({
@@ -8900,6 +8923,8 @@ function processStoredLegacyIntakeWithGemini_(
 function retryGeminiLegacyIntakeFromHtml(
   documentId
 ) {
+  assertWaffleActionAllowedDuringMaintenance_("retryGeminiLegacyIntakeFromHtml");
+
   documentId =
     String(
       documentId || ""
@@ -8920,6 +8945,8 @@ function retryGeminiLegacyIntakeFromHtml(
 function applyLegacyIntakeConflictResolutionsFromHtml(
   payload
 ) {
+  assertWaffleActionAllowedDuringMaintenance_("applyLegacyIntakeConflictResolutionsFromHtml");
+
   payload =
     payload &&
     typeof payload === "object"
@@ -9235,6 +9262,8 @@ function testWaffleHouseGeminiLegacyIntake() {
 
 
 function saveLegacyIntakeFromHtml(payload) {
+  assertWaffleActionAllowedDuringMaintenance_("saveLegacyIntakeFromHtml");
+
   payload =
     payload &&
     typeof payload === "object"
@@ -9525,6 +9554,8 @@ function saveLegacyIntakeFromHtml(payload) {
 
 
 function reassignLegacyIntakeFromHtml(payload) {
+  assertWaffleActionAllowedDuringMaintenance_("reassignLegacyIntakeFromHtml");
+
   payload = payload && typeof payload === "object"
     ? payload
     : {};
@@ -13763,6 +13794,8 @@ function buildBelongingsPhotoUploaderHtml_(params) {
  * without overwriting the checklist/descriptions already saved by the parent UI.
  */
 function uploadBelongingsPhotoFromHtml(data) {
+  assertWaffleActionAllowedDuringMaintenance_("uploadBelongingsPhotoFromHtml");
+
   data = data && typeof data === "object" ? data : {};
 
   var stayKey = String(data.stayKey || "").trim();
