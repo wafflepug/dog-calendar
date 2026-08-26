@@ -21,11 +21,13 @@ jobs:
           node --check waffle-v11.1.75.js
           node --check waffle-v11.1.76.js
           node --check waffle-v11.1.80.js
+          node --check waffle-v11.1.89.js
           node --check waffle-v11.0.5.js
 
           grep -q "waffle-v11.1.75.js" waffle-v11.0.5.js
           grep -q "waffle-v11.1.76.js" waffle-v11.0.5.js
           grep -q "waffle-v11.1.80.js" waffle-v11.1.76.js
+          grep -q "waffle-v11.1.89.js?v=11.1.89" waffle-v11.0.5.js
 
           grep -q "v11175MobileSitterShellVersion" waffle-v11.1.75.js
           grep -q "v11176AuthoritativeMobileFooterVersion" waffle-v11.1.76.js
@@ -33,6 +35,7 @@ jobs:
           grep -q "v11180MobileHeaderRailVersion" waffle-v11.1.80.js
           grep -q "v11181MobileHeaderAvatarsVersion" waffle-v11.1.80.js
           grep -q "v11182CleanMobileTodayHeaderVersion" waffle-v11.1.80.js
+          grep -q "v11189MobileQuickActionCompletionVersion" waffle-v11.1.89.js
 
           grep -q "calendar-brand-logo" waffle-v11.1.80.js
           grep -q "wh80MobileHeaderRail" waffle-v11.1.80.js
@@ -74,6 +77,28 @@ jobs:
           grep -q "border-radius:50%" waffle-v11.1.76.js
           grep -q "Waffle AI" waffle-v11.1.76.js
 
+          # V11.1.89: every canonical Quick Action remains available and mobile forms are completable.
+          grep -q 'data-v10-quick-action=\"boarding\"' waffle-app.js
+          grep -q 'data-v10-quick-action=\"potential\"' waffle-app.js
+          grep -q 'data-v10-quick-action=\"meet\"' waffle-app.js
+          grep -q 'data-v10-quick-action=\"reminder\"' waffle-app.js
+          grep -q '#v10QuickAddSheet' waffle-v11.1.89.js
+          grep -q '#potentialStayModal' waffle-v11.1.89.js
+          grep -q '#customBookingModal' waffle-v11.1.89.js
+          grep -q 'overflow-y:auto!important' waffle-v11.1.89.js
+          grep -q 'max-height:100dvh' waffle-v11.1.89.js
+          grep -q 'z-index:2147483200' waffle-v11.1.89.js
+          grep -q '92px + env(safe-area-inset-bottom)' waffle-v11.1.89.js
+          grep -q "Organiser · Sticky Notes" waffle-v11.1.89.js
+          grep -q "organiser', 'notes" waffle-v11.1.89.js
+          grep -q 'data-organiser-tab=\"notes\"' waffle-v11.1.89.js
+          grep -q 'openReminderComposer' waffle-v11.1.89.js
+          grep -q 'waffle-v11.1.15.js?v=11.1.89' waffle-v11.1.89.js
+          grep -q 'waffle-v11.1.15.css?v=11.1.89' waffle-v11.1.89.js
+          grep -q 'WAFFLE_QUICK_ACTION_STATUS' waffle-v11.1.89.js
+          test -f waffle-v11.1.15.js
+          test -f waffle-v11.1.15.css
+
           test -f waffle-today-avatar-v1178.svg
           test -f waffle-calendar-avatar-v1178.svg
           test -f waffle-care-avatar-v1178.svg
@@ -107,7 +132,7 @@ jobs:
           grep -q "waffle-v11.1.80.js" service-worker.js
           grep -q "waffle-search-avatar-v1181.svg" service-worker.js
 
-          if grep -q "style.removeProperty('display')" waffle-v11.1.75.js waffle-v11.1.76.js waffle-v11.1.80.js; then
+          if grep -q "style.removeProperty('display')" waffle-v11.1.75.js waffle-v11.1.76.js waffle-v11.1.80.js waffle-v11.1.89.js; then
             echo "Mobile sitter shell must not use the banned display recovery pattern"
             exit 1
           fi
