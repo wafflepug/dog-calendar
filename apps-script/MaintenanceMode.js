@@ -7,10 +7,10 @@
  * validation. A Script Property can override the code default when
  * an operator needs an emergency switch from Apps Script itself.
  *
- * Deployment note: maintenance is enabled while Waffle House active-code
- * consolidation and cache hardening are being performed.
+ * Deployment note: maintenance is off after Runtime Consolidation
+ * Phase 1 validation and Pages deployment completed successfully.
  * ============================================================ */
-var WAFFLE_MAINTENANCE_DEFAULT_ = true;
+var WAFFLE_MAINTENANCE_DEFAULT_ = false;
 var WAFFLE_MAINTENANCE_PROPERTY_ = 'WAFFLE_MAINTENANCE_MODE';
 var WAFFLE_MAINTENANCE_MESSAGE_PROPERTY_ = 'WAFFLE_MAINTENANCE_MESSAGE';
 var WAFFLE_MAINTENANCE_UPDATED_PROPERTY_ = 'WAFFLE_MAINTENANCE_UPDATED_AT';
