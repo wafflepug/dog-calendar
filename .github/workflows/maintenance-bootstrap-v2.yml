@@ -1,0 +1,60 @@
+name: Complete Waffle Maintenance Bootstrap
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/maintenance-bootstrap-v2.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  bootstrap:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out current main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Reuse validated maintenance generator
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import textwrap
+
+          source = Path('.github/workflows/maintenance-bootstrap.yml').read_text(encoding='utf-8')
+          marker = "          python3 - <<'PY'\n"
+          start = source.index(marker) + len(marker)
+          end = source.index("\n          PY\n", start)
+          generator = textwrap.dedent(source[start:end])
+          compile(generator, 'maintenance-bootstrap-generator.py', 'exec')
+          exec(generator, {'__name__': '__main__'})
+          PY
+
+      - name: Validate maintenance protections
+        run: |
+          set -euo pipefail
+          test -s maintenance.html
+          test -s waffle-maintenance.webp
+          test -s apps-script/MaintenanceMode.js
+          node --check waffle-v11.0.5.js
+          grep -q 'V11.1.91 — MAINTENANCE GATE' waffle-v11.0.5.js
+          grep -q 'maintenance_status' apps-script/Code.js
+          grep -q 'assertWaffleActionAllowedDuringMaintenance_' apps-script/Code.js
+          grep -q 'v11.1.91-maintenance-safety' service-worker.js
+
+      - name: Commit app and backend maintenance safety
+        run: |
+          set -euo pipefail
+          git config user.name 'wafflepug'
+          git config user.email 'actions@users.noreply.github.com'
+          git add maintenance.html waffle-v11.0.5.js service-worker.js apps-script/Code.js apps-script/MaintenanceMode.js
+          git diff --cached --quiet && exit 0
+          git commit -m 'Install Waffle maintenance safety mode'
+          git push origin HEAD:main
