@@ -55,6 +55,69 @@ jobs:
             --deploymentId "$APPS_SCRIPT_DEPLOYMENT_ID" \
             --description "GitHub main ${GITHUB_SHA::7}"
 
+      - name: Verify live Waffle maintenance safety state
+        env:
+          APPS_SCRIPT_WEBAPP_URL: https://script.google.com/macros/s/AKfycbwn4HL49K9c3AZbXJRUjPw3UYWxJt8DmqXwMnTytyqdSstj3ZIJwWdDEC2IsBjetOf3pw/exec
+        run: |
+          set -euo pipefail
+
+          expected="$(python3 - <<'PY'
+          import pathlib
+          import re
+          import sys
+
+          text = pathlib.Path('apps-script/MaintenanceMode.js').read_text(encoding='utf-8')
+          match = re.search(r'WAFFLE_MAINTENANCE_DEFAULT_\s*=\s*(true|false)\s*;', text)
+          if not match:
+              sys.exit('Could not determine WAFFLE_MAINTENANCE_DEFAULT_.')
+          print(match.group(1))
+          PY
+          )"
+
+          for attempt in $(seq 1 12); do
+            response="$(curl -fsSLG --max-time 20 "$APPS_SCRIPT_WEBAPP_URL" \
+              --data-urlencode 'action=maintenance_status' \
+              --data-urlencode "_=${GITHUB_RUN_ID}-${attempt}" || true)"
+
+            if RESPONSE="$response" EXPECTED="$expected" python3 - <<'PY'
+          import json
+          import os
+          import sys
+
+          raw = os.environ.get('RESPONSE', '')
+          expected = os.environ.get('EXPECTED', '').lower() == 'true'
+          try:
+              payload = json.loads(raw)
+          except Exception:
+              sys.exit(1)
+
+          ok = (
+              payload.get('result') == 'success'
+              and payload.get('action') == 'maintenance_status'
+              and payload.get('version') == '11.1.91'
+              and payload.get('enabled') is expected
+          )
+          if not ok:
+              sys.exit(1)
+
+          print(
+              'Live maintenance safety verified · enabled=' +
+              str(payload.get('enabled')).lower() +
+              ' · source=' +
+              str(payload.get('source', 'unknown'))
+          )
+          PY
+            then
+              exit 0
+            fi
+
+            echo "Maintenance status endpoint not at expected state $expected yet (attempt $attempt/12); retrying..."
+            sleep 5
+          done
+
+          echo "Live maintenance safety verification failed; refusing to mark deployment healthy."
+          exit 1
+
       - name: Verify live Groq-first Waffle AI route
         env:
           APPS_SCRIPT_WEBAPP_URL: https://script.google.com/macros/s/AKfycbwn4HL49K9c3AZbXJRUjPw3UYWxJt8DmqXwMnTytyqdSstj3ZIJwWdDEC2IsBjetOf3pw/exec
