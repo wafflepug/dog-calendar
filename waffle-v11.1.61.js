@@ -56,7 +56,7 @@
       }
 
       const script = document.createElement('script');
-      script.src = file + '?v=' + version;
+      script.src = file + '?v=' + encodeURIComponent(version) + '&build=' + encodeURIComponent(String(window.WAFFLE_BUILD || '2026.08.27.01'));
       script.async = false;
       script.dataset.waffleSingleCalendar = version;
       script.addEventListener('load', resolve, { once:true });

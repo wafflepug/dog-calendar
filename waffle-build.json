@@ -1,0 +1,7 @@
+{
+  "build": "2026.08.27.01",
+  "runtime": "waffle-bootstrap.js",
+  "styles": "waffle-runtime.css",
+  "phase": "runtime-consolidation-1",
+  "legacySourceDeletion": false
+}

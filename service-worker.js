@@ -1,6 +1,6 @@
 /* Waffle House Boarding — recovery service worker */
 
-const WAFFLE_SW_VERSION = 'v11.1.92-maintenance-avatar';
+const WAFFLE_SW_VERSION = 'v11.2.0-runtime-2026.08.27.01';
 const WAFFLE_CACHE_PREFIX = 'waffle-house-';
 const APP_SHELL_CACHE = `${WAFFLE_CACHE_PREFIX}shell-${WAFFLE_SW_VERSION}`;
 const RUNTIME_CACHE = `${WAFFLE_CACHE_PREFIX}runtime-${WAFFLE_SW_VERSION}`;
@@ -12,73 +12,18 @@ const APP_SHELL = [
   './reminders.html',
   './audit.html',
   './maintenance.html',
+  './waffle-build.json',
+  './waffle-bootstrap.js?v=2026.08.27.01',
+  './waffle-runtime.css?v=2026.08.27.01',
   './waffle-maintenance.webp?v=11.1.92',
-  './waffle-app.css?v=11.0.5',
-  './waffle-app.js?v=11.0.5',
-  './waffle-logo.png?v=11.1.24',
-  './waffle-logo-dark.png?v=11.1.24',
-  './manifest.webmanifest?v=11.1.24',
-  './pwa-icon-192.png?v=11.1.24',
-  './pwa-icon-512.png?v=11.1.24',
-  './pwa-maskable-512.png?v=11.1.24',
-  './pwa-apple-touch-icon.png?v=11.1.24',
-  './waffle-firebase-config.js?v=11.1.4-recovery',
-  './waffle-v10.8.css?v=11.0.5',
-  './waffle-v10.8.js?v=11.0.5',
-  './waffle-v10.8.2.css?v=11.0.5',
-  './waffle-v10.8.2.js?v=11.0.5',
-  './waffle-v10.8.3.css?v=11.0.5',
-  './waffle-v10.8.3.js?v=11.0.5',
-  './waffle-v10.8.5.css?v=11.0.5',
-  './waffle-v10.8.5.js?v=11.0.5',
-  './waffle-v10.8.6.css?v=11.0.5',
-  './waffle-v10.8.6.js?v=11.0.5',
-  './waffle-v10.8.7.css?v=11.0.5',
-  './waffle-v10.8.8.css?v=11.0.5',
-  './waffle-v10.8.8.js?v=11.0.5',
-  './waffle-v10.8.9.css?v=11.0.5',
-  './waffle-v10.8.9.js?v=11.0.5',
-  './waffle-v11.0.css?v=11.0.5',
-  './waffle-v11.0.js?v=11.0.5',
-  './waffle-v11.0.3.css?v=11.0.5',
-  './waffle-v11.0.4.js?v=11.0.5',
-
-  /* The HTML pages still reference the historical V11.0.5 query string.
-     Cache exact aliases so first-paint CSS and the shared loader stay current
-     online and offline. */
-  './waffle-v11.0.5.css?v=11.0.5',
-  './waffle-v11.0.5.js?v=11.0.5',
-  './waffle-v11.0.5.css?v=11.1.47',
-  './waffle-v11.0.5.js?v=11.1.47',
-  './waffle-v11.0.5.css?v=11.1.48',
-  './waffle-v11.0.5.js?v=11.1.48',
-  './waffle-v11.0.5-core.js?v=11.1.40',
-
-  './waffle-v11.1.30.js?v=11.1.31',
-  './waffle-v11.1.37-assets.js?v=11.1.47',
-  './waffle-v11.1.37.js?v=11.1.47',
-  './waffle-v11.1.38.js?v=11.1.47',
-  './waffle-v11.1.39.js?v=11.1.47',
-  './waffle-v11.1.40.js?v=11.1.47',
-  './waffle-v11.1.45.js?v=11.1.47',
-  './waffle-v11.1.47.js?v=11.1.47',
-  './waffle-v11.1.48.js?v=11.1.48',
-  './waffle-v11.1.53.js?v=11.1.53',
-  './waffle-v11.1.58.js?v=11.1.58',
-  './waffle-v11.1.60.js?v=11.1.60',
-  './waffle-v11.1.61.js?v=11.1.61',
-  './waffle-v11.1.66.js?v=11.1.66',
-  './waffle-v11.1.67.js?v=11.1.67',
-  './waffle-v11.1.68.js?v=11.1.68',
-  './waffle-v11.1.69.js?v=11.1.69',
-  './waffle-v11.1.70.js?v=11.1.70',
-  './waffle-v11.1.71.js?v=11.1.71',
-  './waffle-v11.1.75.js?v=11.1.75',
-  './waffle-v11.1.76.js?v=11.1.76',
-  './waffle-v11.1.80.js?v=11.1.80',
-  './waffle-search-avatar-v1181.svg?v=11.1.82',
-  './waffle-ui-contract.js?v=11.1.48',
-  './waffle-ui-contract.js?v=11.1.51'
+  './waffle-logo.png',
+  './waffle-logo-dark.png',
+  './manifest.webmanifest?v=2026.08.27.01',
+  './pwa-icon-192.png?v=2026.08.27.01',
+  './pwa-icon-512.png?v=2026.08.27.01',
+  './pwa-maskable-512.png?v=2026.08.27.01',
+  './pwa-apple-touch-icon.png?v=2026.08.27.01',
+  './waffle-firebase-config.js?build=2026.08.27.01'
 ];
 
 const OPTIONAL_EXTERNAL_ASSETS = [
@@ -98,7 +43,7 @@ function waffleFirebaseConfigReady(config) {
 }
 
 try {
-  importScripts('./waffle-firebase-config.js?v=11.1.4-recovery');
+  importScripts('./waffle-firebase-config.js?build=2026.08.27.01');
   const config = self.WAFFLE_FIREBASE_CONFIG || null;
   if (waffleFirebaseConfigReady(config)) {
     importScripts('https://www.gstatic.com/firebasejs/12.17.1/firebase-app-compat.js');
@@ -188,35 +133,14 @@ function isRecoveryCriticalAsset(url) {
 }
 
 function isFirstPaintCriticalAsset(url) {
-  return url.origin === self.location.origin && (
-    url.pathname.endsWith('/waffle-maintenance.webp') ||
-    url.pathname.endsWith('/waffle-v11.0.5.css') ||
-    url.pathname.endsWith('/waffle-v11.0.5.js') ||
-    url.pathname.endsWith('/waffle-v11.1.30.js') ||
-    url.pathname.endsWith('/waffle-v11.1.40.js') ||
-    url.pathname.endsWith('/waffle-v11.1.45.js') ||
-    url.pathname.endsWith('/waffle-v11.1.47.js') ||
-    url.pathname.endsWith('/waffle-v11.1.48.js') ||
-    url.pathname.endsWith('/waffle-v11.1.53.js') ||
-    url.pathname.endsWith('/waffle-v11.1.58.js') ||
-    url.pathname.endsWith('/waffle-v11.1.60.js') ||
-    url.pathname.endsWith('/waffle-v11.1.61.js') ||
-    url.pathname.endsWith('/waffle-v11.1.66.js') ||
-    url.pathname.endsWith('/waffle-v11.1.67.js') ||
-    url.pathname.endsWith('/waffle-v11.1.68.js') ||
-    url.pathname.endsWith('/waffle-v11.1.69.js') ||
-    url.pathname.endsWith('/waffle-v11.1.70.js') ||
-    url.pathname.endsWith('/waffle-v11.1.71.js') ||
-    url.pathname.endsWith('/waffle-v11.1.75.js') ||
-    url.pathname.endsWith('/waffle-v11.1.76.js') ||
-    url.pathname.endsWith('/waffle-v11.1.80.js') ||
-    url.pathname.endsWith('/waffle-today-avatar-v1178.svg') ||
-    url.pathname.endsWith('/waffle-calendar-avatar-v1178.svg') ||
-    url.pathname.endsWith('/waffle-care-avatar-v1178.svg') ||
-    url.pathname.endsWith('/waffle-add-avatar-v1177.svg') ||
-    url.pathname.endsWith('/waffle-notification-avatar-v1181.svg') ||
-    url.pathname.endsWith('/waffle-search-avatar-v1181.svg') ||
-    url.pathname.endsWith('/waffle-ui-contract.js')
+  if (url.origin !== self.location.origin) return false;
+  const path = url.pathname.toLowerCase();
+  return (
+    path.endsWith('/waffle-maintenance.webp') ||
+    path.endsWith('/waffle-build.json') ||
+    path.endsWith('/manifest.webmanifest') ||
+    path.endsWith('.js') ||
+    path.endsWith('.css')
   );
 }
 

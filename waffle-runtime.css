@@ -1,0 +1,16 @@
+/* Waffle House consolidated style entry point.
+   Build: 2026.08.27.01
+   Historical files remain source modules during Phase 1, but pages no longer
+   reference them individually. Preserve this import order until modules are folded in. */
+@import url("waffle-app.css?build=2026.08.27.01");
+@import url("waffle-v10.8.css?build=2026.08.27.01");
+@import url("waffle-v10.8.2.css?build=2026.08.27.01");
+@import url("waffle-v10.8.3.css?build=2026.08.27.01");
+@import url("waffle-v10.8.5.css?build=2026.08.27.01");
+@import url("waffle-v10.8.6.css?build=2026.08.27.01");
+@import url("waffle-v10.8.7.css?build=2026.08.27.01");
+@import url("waffle-v10.8.8.css?build=2026.08.27.01");
+@import url("waffle-v10.8.9.css?build=2026.08.27.01");
+@import url("waffle-v11.0.css?build=2026.08.27.01");
+@import url("waffle-v11.0.3.css?build=2026.08.27.01");
+@import url("waffle-v11.0.5.css?build=2026.08.27.01");
