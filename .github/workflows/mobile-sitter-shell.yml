@@ -18,12 +18,17 @@ jobs:
 
       - name: Validate mobile sitter shell
         run: |
+          node --check waffle-bootstrap.js
           node --check waffle-v11.1.75.js
           node --check waffle-v11.1.76.js
           node --check waffle-v11.1.80.js
           node --check waffle-v11.1.89.js
           node --check waffle-v11.0.5.js
+          node --check service-worker.js
 
+          # Phase 1 consolidated runtime: HTML loads one authoritative bootstrap;
+          # the existing mobile compatibility order remains reachable from it.
+          grep -q '"waffle-v11.0.5.js"' waffle-bootstrap.js
           grep -q "waffle-v11.1.75.js" waffle-v11.0.5.js
           grep -q "waffle-v11.1.76.js" waffle-v11.0.5.js
           grep -q "waffle-v11.1.80.js" waffle-v11.1.76.js
@@ -128,9 +133,17 @@ jobs:
           grep -q "#v11115OrganiserRoot" waffle-v11.0.5.css
           grep -q "body\[data-waffle-page=\"audit\"\]\[data-waffle-colour-style\] #auditLogContainer" waffle-v11.0.5.css
 
-          grep -q "v11.1.83-search-avatar" service-worker.js
-          grep -q "waffle-v11.1.80.js" service-worker.js
-          grep -q "waffle-search-avatar-v1181.svg" service-worker.js
+          # PWA no longer pins mobile patch files in the cache. The bootstrap is
+          # cached, while current JS/CSS is network-first/no-store.
+          grep -q "waffle-bootstrap.js" service-worker.js
+          grep -q "waffle-runtime.css" service-worker.js
+          grep -q "path.endsWith('.js')" service-worker.js
+          grep -q "path.endsWith('.css')" service-worker.js
+          grep -q "fetch(request, { cache: 'no-store' })" service-worker.js
+          if grep -q "waffle-v11.1.80.js" service-worker.js; then
+            echo "Historical mobile patch JS must not be pinned in the service-worker app shell"
+            exit 1
+          fi
 
           if grep -q "style.removeProperty('display')" waffle-v11.1.75.js waffle-v11.1.76.js waffle-v11.1.80.js waffle-v11.1.89.js; then
             echo "Mobile sitter shell must not use the banned display recovery pattern"
