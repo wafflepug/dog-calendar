@@ -385,3 +385,202 @@
     loadQuickActionCompletion();
   }
 })();
+
+/* ============================================================
+   V11.1.90 — CANONICAL CARE PDF OCR ACTION
+   ------------------------------------------------------------
+   The historical PDF uploader remains hidden compatibility plumbing. This
+   layer exposes one clean Care action for typed, scanned and handwritten intake
+   forms and delegates to the established Apps Script/Gemini review workflow.
+   ============================================================ */
+(function () {
+  'use strict';
+
+  const VERSION = '11.1.90';
+  let observer = null;
+  let frame = 0;
+
+  function isCarePage() {
+    return String(
+      window.WAFFLE_PAGE ||
+      document.body?.dataset?.wafflePage ||
+      ''
+    ) === 'directory';
+  }
+
+  function ensureStyle() {
+    if (document.getElementById('wh90CarePdfOcrStyle')) return;
+    const style = document.createElement('style');
+    style.id = 'wh90CarePdfOcrStyle';
+    style.textContent = `
+      body[data-waffle-page="directory"] #v11123LegacyIntakeHistoryNote {
+        display:none!important;
+        visibility:hidden!important;
+        pointer-events:none!important;
+      }
+      body[data-waffle-page="directory"] #v11190ScanIntakePdfBtn {
+        min-height:40px;
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+        gap:8px;
+        padding:9px 13px;
+        border:1px solid color-mix(in srgb,var(--wh75-accent,#7c3aed) 48%,#cbd5e1);
+        border-radius:10px;
+        background:color-mix(in srgb,var(--wh75-accent,#7c3aed) 12%,#fff);
+        color:color-mix(in srgb,var(--wh75-accent-strong,#6d28d9) 88%,#172033);
+        box-shadow:0 2px 8px rgba(15,23,42,.06);
+        font:inherit;
+        font-size:11px;
+        font-weight:900;
+        line-height:1.2;
+        cursor:pointer;
+        white-space:nowrap;
+      }
+      body.dark-theme[data-waffle-page="directory"] #v11190ScanIntakePdfBtn {
+        background:color-mix(in srgb,var(--wh75-accent,#c084fc) 16%,#17243a);
+        color:var(--wh75-accent-ink,#f3e8ff);
+        border-color:color-mix(in srgb,var(--wh75-accent,#c084fc) 46%,#334155);
+      }
+      body[data-waffle-page="directory"] #v11190ScanIntakePdfBtn:hover {
+        border-color:var(--wh75-accent,#7c3aed);
+        box-shadow:0 0 0 3px var(--wh75-ring,rgba(124,58,237,.16));
+      }
+      body[data-waffle-page="directory"] #v11190ScanIntakePdfBtn:focus-visible {
+        outline:3px solid var(--wh75-ring,rgba(124,58,237,.22));
+        outline-offset:2px;
+      }
+      body[data-waffle-page="directory"] #v11190PdfOcrReviewNote {
+        display:inline-flex;
+        align-items:center;
+        min-height:30px;
+        padding:5px 9px;
+        border-radius:999px;
+        background:color-mix(in srgb,var(--wh75-accent,#7c3aed) 8%,transparent);
+        color:inherit;
+        opacity:.72;
+        font-size:9px;
+        font-weight:800;
+        white-space:nowrap;
+      }
+      @media(max-width:700px) {
+        body[data-waffle-page="directory"] #v11190ScanIntakePdfBtn {
+          min-height:44px;
+          padding:10px 12px;
+          font-size:11px;
+        }
+        body[data-waffle-page="directory"] #v11190PdfOcrReviewNote {
+          white-space:normal;
+          line-height:1.35;
+        }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  function activeStayKey() {
+    const card = document.querySelector('.directory-card.is-profile-active');
+    if (!card) return '';
+    return String(
+      card.dataset?.directoryStayKey ||
+      card.dataset?.stayKey ||
+      ''
+    ).trim();
+  }
+
+  function launchPdfOcr() {
+    const stayKey = activeStayKey();
+
+    if (typeof window.openLegacyIntakeUploader === 'function') {
+      window.openLegacyIntakeUploader(stayKey);
+      return;
+    }
+
+    /* The original control is deliberately kept in a hidden compatibility sink
+       because waffle-app.js already owns its launch listener. Use it only as a
+       fallback; it never becomes visible again. */
+    const compatibilityButton = document.getElementById('openLegacyIntakeUploadBtn');
+    if (compatibilityButton instanceof HTMLElement) {
+      compatibilityButton.click();
+      return;
+    }
+
+    window.alert(
+      'The PDF OCR uploader is not ready yet. Refresh Care and try again.'
+    );
+  }
+
+  function ensureControl() {
+    if (!isCarePage() || !document.body) return;
+    ensureStyle();
+
+    const actions = document.querySelector('.directory-header-actions');
+    if (!actions) return;
+
+    let button = document.getElementById('v11190ScanIntakePdfBtn');
+    if (!button) {
+      button = document.createElement('button');
+      button.id = 'v11190ScanIntakePdfBtn';
+      button.type = 'button';
+      button.innerHTML = '<span aria-hidden="true">📄</span><span>Scan Intake PDF</span>';
+      button.setAttribute(
+        'aria-label',
+        'Scan Intake PDF — read typed, scanned or handwritten intake forms and review values before profile updates'
+      );
+      button.title = 'Upload a typed, scanned or handwritten PDF. Waffle reads it with Gemini and lets you review profile values before conflicts are replaced.';
+      button.addEventListener('click', launchPdfOcr);
+
+      const refresh = actions.querySelector('#refreshGuestDirectoryBtn');
+      actions.insertBefore(button, refresh || actions.firstChild || null);
+    }
+
+    let note = document.getElementById('v11190PdfOcrReviewNote');
+    if (!note) {
+      note = document.createElement('span');
+      note.id = 'v11190PdfOcrReviewNote';
+      note.textContent = 'Handwritten PDF OCR · review before profile update';
+      note.title = 'Waffle saves the original PDF, reads handwriting/tick boxes, maps supported values to Care, and asks you to review conflicts before replacing existing profile information.';
+      button.insertAdjacentElement('afterend', note);
+    }
+  }
+
+  function queueEnsure() {
+    if (frame) return;
+    frame = requestAnimationFrame(() => {
+      frame = 0;
+      ensureControl();
+    });
+  }
+
+  function start() {
+    if (!isCarePage()) return;
+    ensureControl();
+
+    if (typeof MutationObserver === 'function' && document.body) {
+      observer = new MutationObserver(mutations => {
+        if (mutations.some(mutation =>
+          Array.from(mutation.addedNodes || []).some(node =>
+            node instanceof Element && (
+              node.matches?.('.directory-header-actions,.directory-dashboard-header') ||
+              node.querySelector?.('.directory-header-actions')
+            )
+          )
+        )) queueEnsure();
+      });
+      observer.observe(document.body, { childList:true, subtree:true });
+    }
+
+    [80,220,520,1000,1800,3200,5200].forEach(delay => setTimeout(ensureControl, delay));
+    window.addEventListener('pageshow', ensureControl);
+    window.addEventListener('focus', ensureControl);
+    window.addEventListener('waffle:ui-contract-ready', ensureControl);
+
+    window.v11190CarePdfOcrVersion = VERSION;
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start, { once:true });
+  } else {
+    start();
+  }
+})();
