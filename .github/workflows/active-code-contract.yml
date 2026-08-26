@@ -1,0 +1,89 @@
+name: Active Code Contract
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  active-runtime:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Validate authoritative runtime
+        run: |
+          node --check waffle-bootstrap.js
+          node --check waffle-v11.0.5.js
+          node --check waffle-v11.1.61.js
+          node --check service-worker.js
+          python3 - <<'PY'
+          import json
+          import re
+          from pathlib import Path
+
+          pages = ['index.html', 'directory.html', 'reminders.html', 'audit.html']
+          manifest = json.loads(Path('waffle-build.json').read_text(encoding='utf-8'))
+          build = str(manifest.get('build', '')).strip()
+          assert build, 'waffle-build.json must contain a build id'
+          assert manifest.get('runtime') == 'waffle-bootstrap.js'
+          assert manifest.get('styles') == 'waffle-runtime.css'
+          assert manifest.get('legacySourceDeletion') is False
+
+          script_pattern = re.compile(
+              r'<script\b[^>]*\bsrc=["\']((?:waffle-app|waffle-v(?:10|11)\.[^"\']+)\.js)(?:\?[^"\']*)?["\'][^>]*>',
+              re.I,
+          )
+          style_pattern = re.compile(
+              r'<link\b[^>]*\bhref=["\']((?:waffle-app|waffle-v(?:10|11)\.[^"\']+)\.css)(?:\?[^"\']*)?["\'][^>]*>',
+              re.I,
+          )
+
+          for page in pages:
+              text = Path(page).read_text(encoding='utf-8')
+              expected_js = f'waffle-bootstrap.js?v={build}'
+              expected_css = f'waffle-runtime.css?v={build}'
+              assert text.count(expected_js) == 1, f'{page}: expected exactly one {expected_js}'
+              assert text.count(expected_css) == 1, f'{page}: expected exactly one {expected_css}'
+              assert not script_pattern.findall(text), f'{page}: direct legacy JS tag remains: {script_pattern.findall(text)}'
+              assert not style_pattern.findall(text), f'{page}: direct legacy CSS tag remains: {style_pattern.findall(text)}'
+
+          bootstrap = Path('waffle-bootstrap.js').read_text(encoding='utf-8')
+          for required in [
+              'waffle-firebase-config.js', 'waffle-app.js', 'waffle-v10.8.js',
+              'waffle-v10.8.2.js', 'waffle-v10.8.3.js', 'waffle-v10.8.5.js',
+              'waffle-v10.8.6.js', 'waffle-v10.8.8.js', 'waffle-v10.8.9.js',
+              'waffle-v11.0.js', 'waffle-v11.0.4.js', 'waffle-v11.0.5.js'
+          ]:
+              assert f'"{required}"' in bootstrap, f'bootstrap missing approved runtime module {required}'
+              assert Path(required).exists(), f'approved runtime module missing from repository: {required}'
+          assert f"const BUILD = '{build}'" in bootstrap
+          assert 'waffle-build.json?_=' in bootstrap
+          assert 'A newer Waffle House is ready.' in bootstrap
+          assert 'action=maintenance_status' in bootstrap
+
+          runtime_css = Path('waffle-runtime.css').read_text(encoding='utf-8')
+          assert f'Build: {build}' in runtime_css
+          for required in ['waffle-app.css','waffle-v10.8.css','waffle-v11.0.5.css']:
+              assert required in runtime_css
+              assert Path(required).exists(), f'approved stylesheet missing: {required}'
+
+          worker = Path('service-worker.js').read_text(encoding='utf-8')
+          assert f'v11.2.0-runtime-{build}' in worker
+          assert "fetch(request, { cache: 'no-store' })" in worker
+          shell_match = re.search(r'const APP_SHELL = \[(.*?)\n\];', worker, re.S)
+          assert shell_match, 'service worker APP_SHELL not found'
+          shell = shell_match.group(1)
+          assert 'waffle-bootstrap.js' in shell
+          assert 'waffle-runtime.css' in shell
+          assert 'waffle-build.json' in shell
+          assert 'waffle-v10.' not in shell and 'waffle-v11.' not in shell, 'legacy version file remains pre-cached'
+
+          print('Active Waffle runtime contract passed · build', build)
+          PY
