@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - 'scripts/consolidate-runtime.py'
+      - '.github/workflows/runtime-consolidation.yml'
   workflow_dispatch:
 
 permissions:
