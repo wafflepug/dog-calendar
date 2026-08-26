@@ -24,15 +24,26 @@ def require(path: str, needle: str, reason: str) -> None:
         errors.append(f"{path}: missing {needle!r} ({reason})")
 
 
-# Every app page must load the shared first-paint/compatibility layer.
+# Every app page must use the consolidated first-paint/runtime entry points.
+# Historical CSS/JS remains approved source during Phase 1, but individual
+# version files must no longer be wired directly into each HTML page.
 for page in ("index.html", "directory.html", "reminders.html", "audit.html"):
-    require(page, "waffle-v11.0.5.css", "shared first-paint retirement CSS must load")
-    require(page, "waffle-v11.0.5.js", "shared final UI loader must load")
+    require(page, "waffle-runtime.css", "consolidated first-paint stylesheet must load")
+    require(page, "waffle-bootstrap.js", "authoritative runtime bootstrap must load")
 
-# The final contract must remain wired into runtime and the PWA shell.
+# The consolidated entries must still preserve the proven final UI layer.
+require("waffle-runtime.css", "waffle-v11.0.5.css", "shared first-paint retirement CSS must remain in approved style order")
+require("waffle-bootstrap.js", '"waffle-v11.0.5.js"', "shared final UI loader must remain in approved runtime order")
 require("waffle-v11.0.5.js", "waffle-ui-contract.js", "Final UI Contract must load last")
-require("service-worker.js", "waffle-ui-contract.js", "installed PWAs must cache the Final UI Contract")
 require("waffle-ui-contract.js", "WAFFLE_UI_CONTRACT", "runtime contract marker must exist")
+
+# Installed PWAs must fetch current JS/CSS rather than pinning historical
+# compatibility layers in the app-shell cache.
+require("service-worker.js", "waffle-bootstrap.js", "PWA shell must cache the authoritative bootstrap")
+require("service-worker.js", "waffle-runtime.css", "PWA shell must cache the consolidated stylesheet entry")
+require("service-worker.js", "path.endsWith('.js')", "runtime JavaScript must use the network-first critical-asset path")
+require("service-worker.js", "path.endsWith('.css')", "runtime CSS must use the network-first critical-asset path")
+require("service-worker.js", "fetch(request, { cache: 'no-store' })", "critical runtime assets must bypass stale browser cache")
 
 # First-paint CSS is deliberately independent from JavaScript timing.
 for needle, reason in (
@@ -42,19 +53,19 @@ for needle, reason in (
 ):
     require("waffle-v11.0.5.css", needle, reason)
 
-# Care exposes one canonical PDF OCR action while the old legacy control remains
-# hidden compatibility plumbing. The existing Apps Script workflow must continue
-# to read scanned/handwritten forms and require review before conflicting values
-# replace profile data.
+# Care exposes one canonical intake OCR action while the old legacy control
+# remains hidden compatibility plumbing. The existing Apps Script workflow must
+# continue to read scanned/handwritten forms and require review before
+# conflicting values replace profile data.
 require(
     "waffle-v11.0.5.js",
     "v11190CarePdfOcrVersion",
-    "canonical Care PDF OCR action must remain enabled",
+    "canonical Care intake OCR action must remain enabled",
 )
 require(
     "waffle-v11.0.5.js",
     "Scan Intake PDF",
-    "Care must expose the sitter-facing PDF OCR action",
+    "Care must expose the sitter-facing intake OCR action",
 )
 require(
     "waffle-v11.0.5.js",
@@ -68,7 +79,7 @@ require(
 )
 require(
     "apps-script/LegacyIntake.html",
-    "Apply Selected PDF Values",
+    "Apply Selected Extracted Values",
     "OCR conflicts must remain reviewable before profile replacement",
 )
 
