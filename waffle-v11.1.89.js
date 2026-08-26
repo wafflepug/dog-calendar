@@ -6,6 +6,7 @@
    - makes Potential and Meet & Greet forms viewport-scrollable;
    - routes Reminder into Organiser > Sticky Notes instead of the
      retired standalone Reminder destination;
+   - ensures Organiser assets exist before opening Reminder;
    - validates/labels the four canonical Quick Actions.
    ============================================================ */
 (function () {
@@ -16,6 +17,7 @@
   let observer = null;
   let queued = false;
   let organiserOpenAttempted = false;
+  let organiserScriptRequested = false;
 
   function pageName() {
     return String(window.WAFFLE_PAGE || document.body?.dataset?.wafflePage || 'calendar');
@@ -40,6 +42,7 @@
         #v10QuickAddSheet {
           z-index:2147483100!important;
           box-sizing:border-box!important;
+          max-height:100vh!important;
           max-height:100dvh!important;
           overflow-y:auto!important;
           overscroll-behavior:contain!important;
@@ -47,6 +50,7 @@
         }
 
         #v10QuickAddSheet > * {
+          max-height:calc(100vh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom))!important;
           max-height:calc(100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom))!important;
           overflow-y:auto!important;
           overscroll-behavior:contain!important;
@@ -73,6 +77,7 @@
         #customBookingModal > .modal-content-panel {
           width:min(100%,520px)!important;
           max-width:520px!important;
+          max-height:calc(100vh - 28px - env(safe-area-inset-top) - env(safe-area-inset-bottom))!important;
           max-height:calc(100dvh - 28px - env(safe-area-inset-top) - env(safe-area-inset-bottom))!important;
           margin:auto 0!important;
           padding:18px!important;
@@ -109,6 +114,43 @@
     `;
   }
 
+  function ensureOrganiserAssets() {
+    if (pageName() !== 'reminders') return;
+
+    if (!document.querySelector('link[data-wh89-organiser-css]')) {
+      const existingCss = Array.from(document.styleSheets || []).some(sheet =>
+        String(sheet.href || '').includes('/waffle-v11.1.15.css')
+      );
+      if (!existingCss) {
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = 'waffle-v11.1.15.css?v=11.1.89';
+        link.dataset.wh89OrganiserCss = 'true';
+        document.head.appendChild(link);
+      }
+    }
+
+    if (document.getElementById('v11115OrganiserRoot') || organiserScriptRequested) return;
+    const existingScript = Array.from(document.scripts).find(script =>
+      String(script.src || '').includes('/waffle-v11.1.15.js')
+    );
+    if (existingScript) {
+      organiserScriptRequested = true;
+      return;
+    }
+
+    organiserScriptRequested = true;
+    const script = document.createElement('script');
+    script.src = 'waffle-v11.1.15.js?v=11.1.89';
+    script.async = false;
+    script.dataset.wh89Organiser = 'true';
+    script.addEventListener('load', () => {
+      organiserOpenAttempted = false;
+      setTimeout(reconcile, 0);
+    }, { once:true });
+    document.head.appendChild(script);
+  }
+
   function closeQuickAddSheet() {
     const sheet = document.getElementById('v10QuickAddSheet');
     if (sheet) sheet.hidden = true;
@@ -133,6 +175,7 @@
     closeQuickAddSheet();
 
     if (pageName() === 'reminders') {
+      ensureOrganiserAssets();
       openOrganiserReminderSubflow(true);
       return;
     }
@@ -212,6 +255,7 @@
       params.get('quickAction') === 'reminder';
     if (!requested || organiserOpenAttempted) return false;
 
+    ensureOrganiserAssets();
     if (!revealNotesTab()) return false;
     if (!openStickyNoteComposer()) return false;
 
@@ -221,12 +265,21 @@
   }
 
   function validateQuickActionFunctions() {
+    const sheet = document.getElementById('v10QuickAddSheet');
+    const hasAction = kind => !!sheet?.querySelector(`[data-v10-quick-action="${kind}"]`);
     const report = {
-      boarding: true,
-      potential: typeof window.openNewPotentialModal === 'function',
-      meet: typeof window.openV10MeetGreetModal === 'function' || !!document.getElementById('customBookingModal'),
-      reminder: true
+      boarding: hasAction('boarding'),
+      potential: hasAction('potential') && (
+        typeof window.openNewPotentialModal === 'function' ||
+        !!document.getElementById('potentialStayModal')
+      ),
+      meet: hasAction('meet') && (
+        typeof window.openV10MeetGreetModal === 'function' ||
+        !!document.getElementById('customBookingModal')
+      ),
+      reminder: hasAction('reminder')
     };
+    report.allValid = Object.values(report).every(Boolean);
     window.WAFFLE_QUICK_ACTION_STATUS = report;
     return report;
   }
@@ -234,6 +287,7 @@
   function reconcile() {
     queued = false;
     ensureStyle();
+    if (pageName() === 'reminders') ensureOrganiserAssets();
     labelCanonicalActions();
     validateQuickActionFunctions();
     if (isMobile()) openOrganiserReminderSubflow(false);
@@ -247,6 +301,7 @@
 
   function start() {
     ensureStyle();
+    ensureOrganiserAssets();
     document.addEventListener('click', routeReminderToOrganiser, true);
     reconcile();
 
