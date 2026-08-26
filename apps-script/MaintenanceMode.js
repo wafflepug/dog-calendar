@@ -7,10 +7,10 @@
  * validation. A Script Property can override the code default when
  * an operator needs an emergency switch from Apps Script itself.
  *
- * Deployment note: this direct commit activates the V11.1.91 safety
- * pipeline so the backend lock is live before Waffle House is reopened.
+ * Deployment note: maintenance is disabled after the validated sad-Waffle
+ * maintenance-page rollout. The safety gate remains installed for future work.
  * ============================================================ */
-var WAFFLE_MAINTENANCE_DEFAULT_ = true;
+var WAFFLE_MAINTENANCE_DEFAULT_ = false;
 var WAFFLE_MAINTENANCE_PROPERTY_ = 'WAFFLE_MAINTENANCE_MODE';
 var WAFFLE_MAINTENANCE_MESSAGE_PROPERTY_ = 'WAFFLE_MAINTENANCE_MESSAGE';
 var WAFFLE_MAINTENANCE_UPDATED_PROPERTY_ = 'WAFFLE_MAINTENANCE_UPDATED_AT';
