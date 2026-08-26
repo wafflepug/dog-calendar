@@ -42,6 +42,36 @@ for needle, reason in (
 ):
     require("waffle-v11.0.5.css", needle, reason)
 
+# Care exposes one canonical PDF OCR action while the old legacy control remains
+# hidden compatibility plumbing. The existing Apps Script workflow must continue
+# to read scanned/handwritten forms and require review before conflicting values
+# replace profile data.
+require(
+    "waffle-v11.0.5.js",
+    "v11190CarePdfOcrVersion",
+    "canonical Care PDF OCR action must remain enabled",
+)
+require(
+    "waffle-v11.0.5.js",
+    "Scan Intake PDF",
+    "Care must expose the sitter-facing PDF OCR action",
+)
+require(
+    "waffle-v11.0.5.js",
+    "openLegacyIntakeUploadBtn",
+    "canonical OCR action must retain the established hidden uploader fallback",
+)
+require(
+    "apps-script/Code.js",
+    "Read the entire PDF, including scanned pages, handwriting, tick boxes and printed form labels.",
+    "intake OCR must continue supporting handwritten/scanned forms",
+)
+require(
+    "apps-script/LegacyIntake.html",
+    "Apply Selected PDF Values",
+    "OCR conflicts must remain reviewable before profile replacement",
+)
+
 
 VERSION_RE = re.compile(r"waffle-v(\d+)\.(\d+)\.(\d+)\.js$")
 MIN_GUARDED_VERSION = (11, 1, 46)
