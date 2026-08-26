@@ -13,6 +13,7 @@
    historical desktop drag instruction. V11.1.72 aligns the Meet & Greet 7-day
    outlook to the same vertical rhythm as Capacity Outlook. V11.1.73 replaces
    the four Operations emoji icons with the supplied pug avatar artwork.
+   V11.1.84 makes Calendar day numbers readable on desktop and mobile.
    FullCalendar remains hidden only as the existing data/editing adapter.
    ============================================================ */
 (function () {
@@ -26,13 +27,14 @@
     ['waffle-v11.1.70.js', '11.1.70', () => !!window.v11170PotentialLabelVersion],
     ['waffle-v11.1.71.js', '11.1.71', () => !!window.v11171LegacyCalendarFilterRetirementVersion],
     ['waffle-v11.1.72.js', '11.1.72', () => !!window.v11172MeetOutlookAlignmentVersion],
-    ['waffle-v11.1.73.js', '11.1.73', () => !!window.v11173OperationsAvatarVersion]
+    ['waffle-v11.1.73.js', '11.1.73', () => !!window.v11173OperationsAvatarVersion],
+    ['waffle-v11.1.84.js', '11.1.84', () => !!window.v11184ReadableCalendarDayVersion]
   ];
 
   function markReady() {
-    // Backward-compatible stability marker retained for the existing CI guard:
+    // Backward-compatible stability marker retained for existing CI guards.
     // 11.1.72-outlook-alignment-bridge
-    window.v11161CleanCalendarVersion = '11.1.73-operations-pug-avatar-bridge';
+    window.v11161CleanCalendarVersion = '11.1.84-readable-calendar-day-bridge';
   }
 
   function loadOne(file, version, ready) {
