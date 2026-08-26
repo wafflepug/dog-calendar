@@ -361,3 +361,27 @@
 
   window.v11143LegacyRetirementVersion = VERSION;
 })();
+
+/* V11.1.89 — shared mobile Quick Action completion + Organiser reminder routing. */
+(function () {
+  'use strict';
+
+  function loadQuickActionCompletion() {
+    if (window.v11189MobileQuickActionCompletionVersion) return;
+    const existing = Array.from(document.scripts).find(script =>
+      String(script.src || '').includes('/waffle-v11.1.89.js')
+    );
+    if (existing) return;
+    const script = document.createElement('script');
+    script.src = 'waffle-v11.1.89.js?v=11.1.89';
+    script.async = false;
+    script.dataset.waffleV11189 = 'true';
+    document.head.appendChild(script);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', loadQuickActionCompletion, { once:true });
+  } else {
+    loadQuickActionCompletion();
+  }
+})();
