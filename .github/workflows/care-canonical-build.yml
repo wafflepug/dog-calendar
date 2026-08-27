@@ -58,8 +58,7 @@ jobs:
             directory.html \
             reminders.html \
             audit.html \
-            scripts/check-ui-stability.py \
-            .github/workflows/active-code-contract.yml; then
+            scripts/check-ui-stability.py; then
             echo "Canonical Care runtime is already current."
             exit 0
           fi
@@ -78,7 +77,6 @@ jobs:
             directory.html \
             reminders.html \
             audit.html \
-            scripts/check-ui-stability.py \
-            .github/workflows/active-code-contract.yml
+            scripts/check-ui-stability.py
           git commit -m "Build canonical Care runtime"
           git push origin HEAD:main

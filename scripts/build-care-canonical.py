@@ -4,11 +4,12 @@
 Phase 2 keeps the proven historical Care source in the repository for rollback,
 but it is no longer loaded individually at runtime. This builder moves the
 active desktop Care rebuild into care.js, advances the shared build, and updates
-runtime/CI contracts so the legacy Care entry point cannot silently return.
+runtime guards so the legacy Care entry point cannot silently return.
 
+The Active Code Contract workflow is updated separately through a repository
+commit because GitHub Actions tokens cannot rewrite workflow files here.
 The established intake PDF OCR action intentionally remains in the shared
-V11.0.5 compatibility layer during this slice because it owns shared hidden
-uploader plumbing as well as the sitter-facing Care action.
+V11.0.5 compatibility layer during this slice.
 """
 
 from __future__ import annotations
@@ -56,14 +57,6 @@ def read(path: str) -> str:
 
 def write(path: str, text: str) -> None:
     (ROOT / path).write_text(text, encoding="utf-8")
-
-
-def replace_once(text: str, old: str, new: str, label: str) -> str:
-    if new in text:
-        return text
-    if old not in text:
-        raise SystemExit(f"Could not update {label}: expected source text not found")
-    return text.replace(old, new, 1)
 
 
 def insert_after_once(text: str, anchor: str, addition: str, label: str) -> str:
@@ -188,7 +181,6 @@ def harden_service_worker() -> None:
         if anchor not in text:
             raise SystemExit("Could not find canonical Calendar APP_SHELL entry")
         text = text.replace(anchor, anchor + care_asset, 1)
-
     write(path, text)
 
 
@@ -210,94 +202,6 @@ def update_build_manifest() -> None:
         "legacySourceDeletion": False,
     }
     write("waffle-build.json", json.dumps(manifest, indent=2) + "\n")
-
-
-def update_active_code_contract() -> None:
-    path = ".github/workflows/active-code-contract.yml"
-    text = read(path)
-
-    text = insert_after_once(
-        text,
-        "          node --check calendar.js\n",
-        "          node --check care.js\n",
-        "Active Code Contract JavaScript checks",
-    )
-    text = replace_once(
-        text,
-        "          assert manifest.get('phase') == 'canonical-source-consolidation-2-calendar'\n",
-        "          assert manifest.get('phase') == 'canonical-source-consolidation-2-care'\n",
-        "Active Code Contract phase",
-    )
-    text = insert_after_once(
-        text,
-        "          assert manifest.get('canonicalModules', {}).get('calendar') == 'calendar.js'\n",
-        "          assert manifest.get('canonicalModules', {}).get('care') == 'care.js'\n",
-        "Active Code Contract canonical Care module",
-    )
-
-    calendar_loop = """          for source in expected_calendar_sources:
-              assert Path(source).exists(), f'rollback Calendar source missing: {source}'
-"""
-    care_manifest = """
-
-          expected_care_sources = ['waffle-v11.1.60.js']
-          assert manifest.get('legacyCareSources') == expected_care_sources
-          for source in expected_care_sources:
-              assert Path(source).exists(), f'rollback Care source missing: {source}'
-"""
-    text = insert_after_once(text, calendar_loop, care_manifest, "Active Code Contract Care rollback sources")
-
-    calendar_loader = """          assert \"'waffle-v11.1.61.js'\" not in calendar_loader, 'legacy Calendar bridge is active again'
-"""
-    care_loader = """
-
-          clean_care = re.search(
-              r'async function ensureDesktopCareRebuild\\(\\) \\{(.*?)\\n  \\}',
-              compatibility,
-              re.S,
-          )
-          assert clean_care, 'ensureDesktopCareRebuild() not found'
-          care_loader = clean_care.group(1)
-          assert \"'care.js'\" in care_loader
-          assert 'WAFFLE_CARE_CANONICAL' in care_loader
-          assert \"'waffle-v11.1.60.js'\" not in care_loader, 'legacy Care source is active again'
-"""
-    text = insert_after_once(text, calendar_loader, care_loader, "Active Code Contract Care loader")
-
-    calendar_bundle = """          for source in expected_calendar_sources:
-              assert f'CANONICAL CALENDAR SOURCE · {source}' in calendar, f'canonical Calendar missing {source}'
-"""
-    care_bundle = """
-
-          care = Path('care.js').read_text(encoding='utf-8')
-          assert 'WAFFLE HOUSE — CANONICAL CARE / GUEST DIRECTORY MODULE' in care
-          assert 'WAFFLE_CARE_CANONICAL' in care
-          assert f\"build: '{build}'\" in care
-          for source in expected_care_sources:
-              assert f'CANONICAL CARE SOURCE · {source}' in care, f'canonical Care missing {source}'
-          assert 'v11160DesktopCareRebuildVersion' in care
-"""
-    text = insert_after_once(text, calendar_bundle, care_bundle, "Active Code Contract Care bundle")
-
-    text = replace_once(
-        text,
-        "          assert f'v11.2.1-calendar-{build}' in worker\n",
-        "          assert f'v11.2.2-care-{build}' in worker\n",
-        "Active Code Contract service worker version",
-    )
-    text = insert_after_once(
-        text,
-        "          assert f'calendar.js?build={build}' in shell\n",
-        "          assert f'care.js?build={build}' in shell\n",
-        "Active Code Contract Care app-shell entry",
-    )
-    text = replace_once(
-        text,
-        "          print('Active Waffle runtime contract passed · canonical Calendar · build', build)\n",
-        "          print('Active Waffle runtime contract passed · canonical Calendar + Care · build', build)\n",
-        "Active Code Contract success message",
-    )
-    write(path, text)
 
 
 def update_ui_stability_contract() -> None:
@@ -344,12 +248,16 @@ def validate_result() -> None:
     worker = read("service-worker.js")
     manifest = json.loads(read("waffle-build.json"))
 
-    if "WAFFLE_CARE_CANONICAL" not in care:
-        raise SystemExit("Canonical Care readiness marker missing")
-    if "v11160DesktopCareRebuildVersion" not in care:
-        raise SystemExit("Canonical Care lost V11.1.60 readiness behavior")
-    if "'care.js'" not in active:
-        raise SystemExit("V11.0.5 does not load canonical care.js")
+    required_care = [
+        "WAFFLE HOUSE — CANONICAL CARE / GUEST DIRECTORY MODULE",
+        "WAFFLE_CARE_CANONICAL",
+        "CANONICAL CARE SOURCE · waffle-v11.1.60.js",
+        "v11160DesktopCareRebuildVersion",
+        f"build: '{NEW_BUILD}'",
+    ]
+    for needle in required_care:
+        if needle not in care:
+            raise SystemExit(f"Canonical Care output is missing {needle!r}")
 
     loader_match = re.search(
         r"async function ensureDesktopCareRebuild\(\) \{(.*?)\n  \}",
@@ -358,33 +266,33 @@ def validate_result() -> None:
     )
     if not loader_match:
         raise SystemExit("Could not validate ensureDesktopCareRebuild()")
-    if "waffle-v11.1.60.js" in loader_match.group(1):
+    loader = loader_match.group(1)
+    if "'care.js'" not in loader or "WAFFLE_CARE_CANONICAL" not in loader:
+        raise SystemExit("V11.0.5 does not load canonical care.js")
+    if "waffle-v11.1.60.js" in loader:
         raise SystemExit("V11.0.5 still actively loads the historical Care source")
 
-    if f"Build {NEW_BUILD}" not in care:
-        raise SystemExit("Canonical Care build header missing")
     if f"Build {NEW_BUILD}" not in calendar:
         raise SystemExit("Canonical Calendar was not advanced to the shared build")
     if manifest.get("canonicalModules", {}).get("care") != "care.js":
         raise SystemExit("Build manifest does not declare canonical Care")
     if manifest.get("legacyCareSources") != [name for name, _ in CARE_SOURCES]:
         raise SystemExit("Build manifest Care rollback source list is incorrect")
+    if manifest.get("legacySourceDeletion") is not False:
+        raise SystemExit("Rollback Care source deletion must remain disabled")
 
     if f"v11.2.2-care-{NEW_BUILD}" not in worker:
         raise SystemExit("Service worker Care build version missing")
-    if f"./care.js?build={NEW_BUILD}" not in worker:
-        raise SystemExit("Canonical Care is not in the app shell")
-    if f"./calendar.js?build={NEW_BUILD}" not in worker:
-        raise SystemExit("Canonical Calendar app-shell entry did not advance with the shared build")
+    for asset in [f"./care.js?build={NEW_BUILD}", f"./calendar.js?build={NEW_BUILD}"]:
+        if asset not in worker:
+            raise SystemExit(f"Service worker app shell missing {asset}")
 
     for page in ["index.html", "directory.html", "reminders.html", "audit.html"]:
         text = read(page)
-        if f"waffle-bootstrap.js?v={NEW_BUILD}" not in text:
-            raise SystemExit(f"{page} does not reference the new build")
-        if f"waffle-runtime.css?v={NEW_BUILD}" not in text:
-            raise SystemExit(f"{page} does not reference the new stylesheet build")
+        for ref in [f"waffle-bootstrap.js?v={NEW_BUILD}", f"waffle-runtime.css?v={NEW_BUILD}"]:
+            if ref not in text:
+                raise SystemExit(f"{page} does not reference {ref}")
 
-    # The existing OCR action remains deliberately shared and must survive this slice.
     for needle in ["v11190CarePdfOcrVersion", "Scan Intake PDF", "openLegacyIntakeUploadBtn"]:
         if needle not in active:
             raise SystemExit(f"Shared Care OCR compatibility was lost: {needle}")
@@ -396,7 +304,6 @@ if __name__ == "__main__":
     bump_build_references()
     harden_service_worker()
     update_build_manifest()
-    update_active_code_contract()
     update_ui_stability_contract()
     validate_result()
     print(
