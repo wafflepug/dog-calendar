@@ -24,6 +24,7 @@ jobs:
           node --check service-worker.js
           python3 - <<'PY'
           import json
+          import re
           from pathlib import Path
 
           build=json.loads(Path('waffle-build.json').read_text(encoding='utf-8'))
@@ -31,7 +32,15 @@ jobs:
           assert build.get('releaseHardeningPhase') == 'phase-3d-release-regression-observability'
           assert release.get('release') == 'phase3d-2026.08.28.01'
           assert release.get('runtimeBuild') == build.get('build')
+          assert release.get('status') == 'stable'
+          assert re.fullmatch(r'[0-9a-f]{40}', str(release.get('validatedCandidateSha','')))
+          assert re.fullmatch(r'\d{4}-\d{2}-\d{2}', str(release.get('completedDate','')))
           assert release.get('productionWritesInSmokeTests') is False
+          verification=release.get('verification') or {}
+          for key in ['releaseGateRunId','browserSmokeRunId','pagesRunId']:
+              assert isinstance(verification.get(key), int) and verification.get(key) > 0, f'invalid verification run id: {key}'
+          assert verification.get('maintenanceValidated') is True
+          assert verification.get('productionWritesInSmokeTests') is False
           for path in ['waffle-diagnostics.js','system-status.html','tests/phase3d-smoke.spec.js','docs/phase-3d-release.md']:
               assert Path(path).exists(), f'Phase 3D asset missing: {path}'
           PY
