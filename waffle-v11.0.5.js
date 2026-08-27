@@ -89,10 +89,10 @@
   // Preserve the original V11.0.5 execution order. This loader itself is
   // parser-inserted at the old V11.0.5 script position.
   if (document.readyState === 'loading') {
-    document.write('<script src="waffle-v11.0.5-core.js?v=11.1.40&build=2026.08.27.01"></script>');
+    document.write('<script src="waffle-v11.0.5-core.js?v=11.1.40&build=2026.08.27.02"></script>');
   } else {
     const core = document.createElement('script');
-    core.src = 'waffle-v11.0.5-core.js?v=11.1.40&build=2026.08.27.01';
+    core.src = 'waffle-v11.0.5-core.js?v=11.1.40&build=2026.08.27.02';
     core.async = false;
     document.head.appendChild(core);
   }
@@ -126,7 +126,7 @@
       }
 
       const script = document.createElement('script');
-      script.src = src + '?v=' + encodeURIComponent(version) + '&build=' + encodeURIComponent(String(window.WAFFLE_BUILD || '2026.08.27.01'));
+      script.src = src + '?v=' + encodeURIComponent(version) + '&build=' + encodeURIComponent(String(window.WAFFLE_BUILD || '2026.08.27.02'));
       script.async = false;
       script.dataset.waffleV11161 = 'true';
       script.addEventListener('load', resolve, { once: true });
@@ -213,9 +213,9 @@
   async function ensureCleanCalendar() {
     if (pageName() !== 'calendar') return;
     await loadScript(
-      'waffle-v11.1.61.js',
-      () => !!window.v11161CleanCalendarVersion,
-      '11.1.61'
+      'calendar.js',
+      () => !!window.WAFFLE_CALENDAR_CANONICAL,
+      '2026.08.27.02'
     );
   }
 
@@ -450,7 +450,7 @@
     );
     if (existing) return;
     const script = document.createElement('script');
-    script.src = 'waffle-v11.1.89.js?v=11.1.89&build=2026.08.27.01';
+    script.src = 'waffle-v11.1.89.js?v=11.1.89&build=2026.08.27.02';
     script.async = false;
     script.dataset.waffleV11189 = 'true';
     document.head.appendChild(script);

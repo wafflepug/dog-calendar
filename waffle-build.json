@@ -1,7 +1,21 @@
 {
-  "build": "2026.08.27.01",
+  "build": "2026.08.27.02",
   "runtime": "waffle-bootstrap.js",
   "styles": "waffle-runtime.css",
-  "phase": "runtime-consolidation-1",
+  "phase": "canonical-source-consolidation-2-calendar",
+  "canonicalModules": {
+    "calendar": "calendar.js"
+  },
+  "legacyCalendarSources": [
+    "waffle-v11.1.69.js",
+    "waffle-v11.1.66.js",
+    "waffle-v11.1.67.js",
+    "waffle-v11.1.68.js",
+    "waffle-v11.1.70.js",
+    "waffle-v11.1.71.js",
+    "waffle-v11.1.72.js",
+    "waffle-v11.1.73.js",
+    "waffle-v11.1.84.js"
+  ],
   "legacySourceDeletion": false
 }
