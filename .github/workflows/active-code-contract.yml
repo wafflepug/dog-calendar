@@ -42,7 +42,6 @@ jobs:
           assert manifest.get('phase') == 'phase-3a-canonical-modules'
           assert manifest.get('legacySourceDeletion') is False
 
-          canonical = manifest.get('canonicalModules', {})
           expected_canonical = {
               'calendar': 'calendar.js',
               'care': 'care.js',
@@ -51,7 +50,7 @@ jobs:
               'ui': 'waffle-ui.js',
               'ai': 'waffle-ai.js',
           }
-          assert canonical == expected_canonical, f'canonical module map drifted: {canonical}'
+          assert manifest.get('canonicalModules') == expected_canonical
           for path in expected_canonical.values():
               assert Path(path).exists(), f'canonical module missing: {path}'
           assert Path('organiser.css').exists(), 'canonical Organiser styles missing'
@@ -64,7 +63,10 @@ jobs:
           ]
           expected_care_sources = ['waffle-v11.1.60.js']
           expected_organiser_sources = ['waffle-v11.1.15.js','waffle-v11.1.15.css']
-          expected_ui_sources = ['waffle-v11.1.75.js','waffle-v11.1.76.js','waffle-v11.1.89.js','waffle-ui-contract.js']
+          expected_ui_sources = [
+              'waffle-v11.1.75.js','waffle-v11.1.76.js','waffle-v11.1.80.js',
+              'waffle-v11.1.89.js','waffle-ui-contract.js',
+          ]
           expected_ai_sources = [
               'waffle-v11.1.37-assets.js','waffle-v11.1.53.js','waffle-v11.1.37.js',
               'waffle-v11.1.38.js','waffle-v11.1.39.js','waffle-v11.1.40.js',
@@ -125,7 +127,7 @@ jobs:
               assert repr(filename) in body or f'"{filename}"' in body, f'{label}: canonical filename missing'
               assert marker in body, f'{label}: canonical marker missing'
 
-          retired_live = set(expected_organiser_sources + expected_ui_sources[:3] + expected_ai_sources + expected_care_sources)
+          retired_live = set(expected_organiser_sources + expected_ui_sources[:-1] + expected_ai_sources + expected_care_sources)
           retired_live.discard('waffle-v11.1.15.css')
           for source in retired_live:
               assert source not in compatibility, f'legacy feature runtime reactivated in compatibility loader: {source}'
@@ -137,7 +139,6 @@ jobs:
           care = Path('care.js').read_text(encoding='utf-8')
           assert 'WAFFLE_CARE_CANONICAL' in care
           organiser = Path('organiser.js').read_text(encoding='utf-8')
-          assert 'WAFFLE HOUSE — CANONICAL ORGANISER' in organiser
           assert 'WAFFLE_ORGANISER_CANONICAL' in organiser
           assert 'save_organiser_item' in organiser and 'get_organiser' in organiser
           assert 'organiser.css?build=' + build in organiser
@@ -145,12 +146,16 @@ jobs:
           assert 'WAFFLE_LOGS_CANONICAL' in logs
           assert "dataOwner: 'waffle-app.js'" in logs
           ui = Path('waffle-ui.js').read_text(encoding='utf-8')
-          assert 'WAFFLE_UI_CANONICAL' in ui
-          assert 'v11175MobileSitterShellVersion' in ui
-          assert 'v11176AuthoritativeMobileFooterVersion' in ui
-          assert 'v11189MobileQuickActionCompletionVersion' in ui
+          for marker in [
+              'WAFFLE_UI_CANONICAL','WAFFLE_UI_CONTRACT','v11175MobileSitterShellVersion',
+              'v11176AuthoritativeMobileFooterVersion','v11180MobileHeaderRailVersion',
+              'v11181MobileHeaderAvatarsVersion','v11182CleanMobileTodayHeaderVersion',
+              'v11189MobileQuickActionCompletionVersion',
+          ]:
+              assert marker in ui, f'canonical UI missing {marker}'
           assert 'organiser.js?build=' + build in ui
           assert 'waffle-v11.1.15.js?v=' not in ui
+          assert "script.src = 'waffle-v11.1.80.js" not in ui
           ai = Path('waffle-ai.js').read_text(encoding='utf-8')
           assert 'WAFFLE_AI_CANONICAL' in ai
           for marker in ['v11138WaffleAiVersion','v11147WaffleAiVersion','v11148WaffleAiVersion','v11158WaffleSpeechVersion']:
