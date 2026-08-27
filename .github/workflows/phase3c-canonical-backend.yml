@@ -1,0 +1,109 @@
+name: Phase 3C Canonical Backend
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/phase3c-canonical-backend.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  canonicalise-ai-backend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Commit Waffle AI routes into Code.js
+        run: python3 scripts/patch-waffle-ai-router.py
+
+      - name: Build authoritative backend modules
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          cat \
+            apps-script/WaffleAIProvider.js \
+            apps-script/WaffleAIGeminiRepairV11148.js \
+            apps-script/WaffleAIProviderV11157.js \
+            > /tmp/WaffleAIProvider.js
+          mv /tmp/WaffleAIProvider.js apps-script/WaffleAIProvider.js
+
+          cat \
+            apps-script/WaffleAICalendarFastV11149.js \
+            apps-script/WaffleAICalendarFastV11150.js \
+            > apps-script/WaffleAICalendarFast.js
+
+          cat \
+            apps-script/WaffleAIHealth.js \
+            apps-script/WaffleAIHealthV11157.js \
+            > /tmp/WaffleAIHealth.js
+          mv /tmp/WaffleAIHealth.js apps-script/WaffleAIHealth.js
+
+          rm -f \
+            apps-script/WaffleAIProviderV11148.js \
+            apps-script/WaffleAIProviderV11149.js \
+            apps-script/WaffleAIProviderV11150.js \
+            apps-script/WaffleAIProviderV11157.js \
+            apps-script/WaffleAIGeminiRepairV11148.js \
+            apps-script/WaffleAICalendarFastV11149.js \
+            apps-script/WaffleAICalendarFastV11150.js \
+            apps-script/WaffleAIHealthV11148.js \
+            apps-script/WaffleAIHealthV11149.js \
+            apps-script/WaffleAIHealthV11150.js \
+            apps-script/WaffleAIHealthV11157.js
+
+      - name: Validate canonical backend
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          node --check apps-script/Code.js
+          node --check apps-script/WaffleAIProvider.js
+          node --check apps-script/WaffleAICalendarFast.js
+          node --check apps-script/WaffleAIHealth.js
+
+          grep -F 'WAFFLE_AI_READ_ONLY_ROUTE_V11157' apps-script/Code.js
+          grep -F 'return getWaffleAiHealthResponseV11157_();' apps-script/Code.js
+          grep -F 'return getWaffleAiConversationResponseV11157_(data);' apps-script/Code.js
+          grep -F '  waffle_ai_health: true,' apps-script/Code.js
+          grep -F '  ask_waffle_ai: true,' apps-script/Code.js
+
+          grep -F 'function getWaffleAiConversationResponseV11157_' apps-script/WaffleAIProvider.js
+          grep -F 'function getWaffleAiGroqResponseV11157_' apps-script/WaffleAIProvider.js
+          grep -F 'function getWaffleAiGeminiResponseV11148Fixed_' apps-script/WaffleAIProvider.js
+          grep -F 'function waffleAiTryFastCalendarAnswerV11150_' apps-script/WaffleAICalendarFast.js
+          grep -F 'function getWaffleAiHealthResponseV11157_' apps-script/WaffleAIHealth.js
+          grep -F "calendarFastPathMode: 'targeted-B-L-month-filter'" apps-script/WaffleAIHealth.js
+
+          test ! -e apps-script/WaffleAIProviderV11148.js
+          test ! -e apps-script/WaffleAIProviderV11149.js
+          test ! -e apps-script/WaffleAIProviderV11150.js
+          test ! -e apps-script/WaffleAIProviderV11157.js
+          test ! -e apps-script/WaffleAIGeminiRepairV11148.js
+          test ! -e apps-script/WaffleAICalendarFastV11149.js
+          test ! -e apps-script/WaffleAICalendarFastV11150.js
+          test ! -e apps-script/WaffleAIHealthV11148.js
+          test ! -e apps-script/WaffleAIHealthV11149.js
+          test ! -e apps-script/WaffleAIHealthV11150.js
+          test ! -e apps-script/WaffleAIHealthV11157.js
+
+      - name: Commit canonical backend source
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet; then
+            echo 'Canonical backend already generated.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add apps-script/Code.js apps-script/WaffleAIProvider.js apps-script/WaffleAICalendarFast.js apps-script/WaffleAIHealth.js
+          git add -u apps-script
+          git commit -m 'Phase 3C: canonicalise Waffle AI backend source'
+          git push origin HEAD:main
