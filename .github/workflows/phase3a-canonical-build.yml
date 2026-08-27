@@ -27,8 +27,17 @@ jobs:
 
       - name: Build Phase 3A canonical modules
         run: |
-          python3 scripts/build-phase3a-canonical.py
-          python3 scripts/patch-phase3a-canonical-v2.py
+          if grep -q "WAFFLE_UI_CANONICAL" waffle-v11.0.5.js && grep -q "async function ensureSharedUi" waffle-v11.0.5.js; then
+            echo "Base Phase 3A conversion is already present; preserving canonical runtime."
+          else
+            python3 scripts/build-phase3a-canonical.py
+          fi
+
+          if grep -q "source: waffle-v11.1.80.js" waffle-ui.js && ! grep -q "script.src = 'waffle-v11.1.80.js" waffle-ui.js; then
+            echo "V11.1.80 is already embedded in canonical UI."
+          else
+            python3 scripts/patch-phase3a-canonical-v2.py
+          fi
 
       - name: Validate JavaScript syntax
         run: |
@@ -57,21 +66,11 @@ jobs:
               assert Path(name).exists(), f'{name} missing'
 
           retired_live = [
-              'waffle-v11.1.15.js',
-              'waffle-v11.1.75.js',
-              'waffle-v11.1.76.js',
-              'waffle-v11.1.80.js',
-              'waffle-v11.1.89.js',
-              'waffle-v11.1.37-assets.js',
-              'waffle-v11.1.37.js',
-              'waffle-v11.1.38.js',
-              'waffle-v11.1.39.js',
-              'waffle-v11.1.40.js',
-              'waffle-v11.1.45.js',
-              'waffle-v11.1.47.js',
-              'waffle-v11.1.48.js',
-              'waffle-v11.1.53.js',
-              'waffle-v11.1.58.js'
+              'waffle-v11.1.15.js','waffle-v11.1.75.js','waffle-v11.1.76.js',
+              'waffle-v11.1.80.js','waffle-v11.1.89.js','waffle-v11.1.37-assets.js',
+              'waffle-v11.1.37.js','waffle-v11.1.38.js','waffle-v11.1.39.js',
+              'waffle-v11.1.40.js','waffle-v11.1.45.js','waffle-v11.1.47.js',
+              'waffle-v11.1.48.js','waffle-v11.1.53.js','waffle-v11.1.58.js'
           ]
           for name in retired_live:
               assert name not in loader, f'Legacy runtime source still active in loader: {name}'
@@ -81,17 +80,15 @@ jobs:
           assert manifest.get('build') == '2026.08.27.04'
           for key in ('calendar','care','organiser','logs','ui','ai'):
               assert manifest['canonicalModules'].get(key), f'canonical module missing from manifest: {key}'
-          assert 'waffle-v11.1.80.js' in manifest.get('legacyUiSources', []), 'V11.1.80 must be recorded as rollback-only UI source'
+          assert 'waffle-v11.1.80.js' in manifest.get('legacyUiSources', []), 'V11.1.80 must be rollback-only UI source'
 
-          assert 'v11180MobileHeaderRailVersion' in ui
-          assert 'v11181MobileHeaderAvatarsVersion' in ui
-          assert 'v11182CleanMobileTodayHeaderVersion' in ui
-          assert "script.src = 'waffle-v11.1.80.js" not in ui, 'canonical UI still dynamically activates V11.1.80'
+          for marker in ('v11180MobileHeaderRailVersion','v11181MobileHeaderAvatarsVersion','v11182CleanMobileTodayHeaderVersion'):
+              assert marker in ui, f'canonical UI missing {marker}'
+          assert "script.src = 'waffle-v11.1.80.js" not in ui, 'canonical UI still activates V11.1.80 dynamically'
 
           assert 'v11.3.0-phase3a-2026.08.27.04' in sw
           for name in required:
               assert name in sw, f'{name} not available to service worker shell'
-
           assert Path('docs/runtime-map.md').exists()
           print('Phase 3A canonical runtime validated.')
           PY
