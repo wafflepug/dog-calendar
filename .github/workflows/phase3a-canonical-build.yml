@@ -7,6 +7,7 @@ on:
     paths:
       - 'scripts/build-phase3a-canonical.py'
       - 'scripts/patch-phase3a-canonical-v2.py'
+      - 'scripts/phase3a-finalise.py'
 
 permissions:
   contents: write
@@ -37,6 +38,10 @@ jobs:
             echo "V11.1.80 is already embedded in canonical UI."
           else
             python3 scripts/patch-phase3a-canonical-v2.py
+          fi
+
+          if test -f scripts/phase3a-finalise.py; then
+            python3 scripts/phase3a-finalise.py
           fi
 
       - name: Validate JavaScript syntax
@@ -86,6 +91,11 @@ jobs:
               assert marker in ui, f'canonical UI missing {marker}'
           assert "script.src = 'waffle-v11.1.80.js" not in ui, 'canonical UI still activates V11.1.80 dynamically'
 
+          for page in ('index.html','directory.html','reminders.html','audit.html'):
+              text = Path(page).read_text(encoding='utf-8')
+              assert text.count('waffle-runtime.css?v=2026.08.27.04') == 1, f'{page}: stale runtime CSS build pin'
+              assert text.count('waffle-bootstrap.js?v=2026.08.27.04') == 1, f'{page}: stale runtime JS build pin'
+
           assert 'v11.3.0-phase3a-2026.08.27.04' in sw
           for name in required:
               assert name in sw, f'{name} not available to service worker shell'
@@ -101,6 +111,6 @@ jobs:
           fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add organiser.js organiser.css logs.js waffle-ui.js waffle-ai.js waffle-v11.0.5.js waffle-bootstrap.js waffle-runtime.css waffle-build.json service-worker.js docs/runtime-map.md
-          git commit -m 'Phase 3A: canonicalise organiser logs UI and Ask Waffle'
+          git add organiser.js organiser.css logs.js waffle-ui.js waffle-ai.js waffle-v11.0.5.js waffle-bootstrap.js waffle-runtime.css waffle-build.json service-worker.js docs/runtime-map.md index.html directory.html reminders.html audit.html scripts/check-ui-stability.py .github/workflows/ui-stability.yml .github/workflows/mobile-sitter-shell.yml .github/workflows/active-code-contract.yml
+          git commit -m 'Phase 3A: finalise canonical rollout contracts'
           git push origin HEAD:main
