@@ -22,6 +22,7 @@ jobs:
           node --check waffle-bootstrap.js
           node --check waffle-v11.0.5.js
           node --check calendar.js
+          node --check care.js
           node --check service-worker.js
           python3 - <<'PY'
           import json
@@ -34,8 +35,9 @@ jobs:
           assert build, 'waffle-build.json must contain a build id'
           assert manifest.get('runtime') == 'waffle-bootstrap.js'
           assert manifest.get('styles') == 'waffle-runtime.css'
-          assert manifest.get('phase') == 'canonical-source-consolidation-2-calendar'
+          assert manifest.get('phase') == 'canonical-source-consolidation-2-care'
           assert manifest.get('canonicalModules', {}).get('calendar') == 'calendar.js'
+          assert manifest.get('canonicalModules', {}).get('care') == 'care.js'
           assert manifest.get('legacySourceDeletion') is False
 
           expected_calendar_sources = [
@@ -52,6 +54,11 @@ jobs:
           assert manifest.get('legacyCalendarSources') == expected_calendar_sources
           for source in expected_calendar_sources:
               assert Path(source).exists(), f'rollback Calendar source missing: {source}'
+
+          expected_care_sources = ['waffle-v11.1.60.js']
+          assert manifest.get('legacyCareSources') == expected_care_sources
+          for source in expected_care_sources:
+              assert Path(source).exists(), f'rollback Care source missing: {source}'
 
           script_pattern = re.compile(
               r'<script\b[^>]*\bsrc=["\']((?:waffle-app|waffle-v(?:10|11)\.[^"\']+)\.js)(?:\?[^"\']*)?["\'][^>]*>',
@@ -97,12 +104,31 @@ jobs:
           assert 'WAFFLE_CALENDAR_CANONICAL' in calendar_loader
           assert "'waffle-v11.1.61.js'" not in calendar_loader, 'legacy Calendar bridge is active again'
 
+          clean_care = re.search(
+              r'async function ensureDesktopCareRebuild\(\) \{(.*?)\n  \}',
+              compatibility,
+              re.S,
+          )
+          assert clean_care, 'ensureDesktopCareRebuild() not found'
+          care_loader = clean_care.group(1)
+          assert "'care.js'" in care_loader
+          assert 'WAFFLE_CARE_CANONICAL' in care_loader
+          assert "'waffle-v11.1.60.js'" not in care_loader, 'legacy Care source is active again'
+
           calendar = Path('calendar.js').read_text(encoding='utf-8')
           assert 'WAFFLE HOUSE — CANONICAL CALENDAR MODULE' in calendar
           assert 'WAFFLE_CALENDAR_CANONICAL' in calendar
           assert f"build: '{build}'" in calendar
           for source in expected_calendar_sources:
               assert f'CANONICAL CALENDAR SOURCE · {source}' in calendar, f'canonical Calendar missing {source}'
+
+          care = Path('care.js').read_text(encoding='utf-8')
+          assert 'WAFFLE HOUSE — CANONICAL CARE / GUEST DIRECTORY MODULE' in care
+          assert 'WAFFLE_CARE_CANONICAL' in care
+          assert f"build: '{build}'" in care
+          for source in expected_care_sources:
+              assert f'CANONICAL CARE SOURCE · {source}' in care, f'canonical Care missing {source}'
+          assert 'v11160DesktopCareRebuildVersion' in care
 
           runtime_css = Path('waffle-runtime.css').read_text(encoding='utf-8')
           assert f'Build: {build}' in runtime_css
@@ -111,7 +137,7 @@ jobs:
               assert Path(required).exists(), f'approved stylesheet missing: {required}'
 
           worker = Path('service-worker.js').read_text(encoding='utf-8')
-          assert f'v11.2.1-calendar-{build}' in worker
+          assert f'v11.2.2-care-{build}' in worker
           assert "fetch(request, { cache: 'no-store' })" in worker
           shell_match = re.search(r'const APP_SHELL = \[(.*?)\n\];', worker, re.S)
           assert shell_match, 'service worker APP_SHELL not found'
@@ -120,7 +146,8 @@ jobs:
           assert 'waffle-runtime.css' in shell
           assert 'waffle-build.json' in shell
           assert f'calendar.js?build={build}' in shell
+          assert f'care.js?build={build}' in shell
           assert 'waffle-v10.' not in shell and 'waffle-v11.' not in shell, 'legacy version file remains pre-cached'
 
-          print('Active Waffle runtime contract passed · canonical Calendar · build', build)
+          print('Active Waffle runtime contract passed · canonical Calendar + Care · build', build)
           PY
