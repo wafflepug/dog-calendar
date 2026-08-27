@@ -111,6 +111,6 @@ jobs:
           fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add organiser.js organiser.css logs.js waffle-ui.js waffle-ai.js waffle-v11.0.5.js waffle-bootstrap.js waffle-runtime.css waffle-build.json service-worker.js docs/runtime-map.md index.html directory.html reminders.html audit.html scripts/check-ui-stability.py .github/workflows/ui-stability.yml .github/workflows/mobile-sitter-shell.yml .github/workflows/active-code-contract.yml
-          git commit -m 'Phase 3A: finalise canonical rollout contracts'
+          git add organiser.js organiser.css logs.js waffle-ui.js waffle-ai.js waffle-v11.0.5.js waffle-bootstrap.js waffle-runtime.css waffle-build.json service-worker.js docs/runtime-map.md index.html directory.html reminders.html audit.html scripts/check-ui-stability.py
+          git commit -m 'Phase 3A: finalise canonical rollout runtime'
           git push origin HEAD:main
