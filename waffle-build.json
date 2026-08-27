@@ -1,10 +1,11 @@
 {
-  "build": "2026.08.27.02",
+  "build": "2026.08.27.03",
   "runtime": "waffle-bootstrap.js",
   "styles": "waffle-runtime.css",
-  "phase": "canonical-source-consolidation-2-calendar",
+  "phase": "canonical-source-consolidation-2-care",
   "canonicalModules": {
-    "calendar": "calendar.js"
+    "calendar": "calendar.js",
+    "care": "care.js"
   },
   "legacyCalendarSources": [
     "waffle-v11.1.69.js",
@@ -16,6 +17,12 @@
     "waffle-v11.1.72.js",
     "waffle-v11.1.73.js",
     "waffle-v11.1.84.js"
+  ],
+  "legacyCareSources": [
+    "waffle-v11.1.60.js"
+  ],
+  "sharedCareCompatibility": [
+    "V11.1.90 intake PDF OCR action remains in waffle-v11.0.5.js"
   ],
   "legacySourceDeletion": false
 }

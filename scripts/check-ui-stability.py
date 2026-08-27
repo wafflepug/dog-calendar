@@ -37,6 +37,10 @@ require("waffle-bootstrap.js", '"waffle-v11.0.5.js"', "shared final UI loader mu
 require("waffle-v11.0.5.js", "waffle-ui-contract.js", "Final UI Contract must load last")
 require("waffle-ui-contract.js", "WAFFLE_UI_CONTRACT", "runtime contract marker must exist")
 
+require("care.js", "WAFFLE_CARE_CANONICAL", "Care must run through the canonical Care module")
+require("care.js", "v11160DesktopCareRebuildVersion", "canonical Care must preserve the proven desktop Guest Directory rebuild")
+require("waffle-v11.0.5.js", "'care.js'", "shared loader must enter canonical Care instead of the historical standalone file")
+
 # Installed PWAs must fetch current JS/CSS rather than pinning historical
 # compatibility layers in the app-shell cache.
 require("service-worker.js", "waffle-bootstrap.js", "PWA shell must cache the authoritative bootstrap")
@@ -82,6 +86,18 @@ require(
     "Apply Selected Extracted Values",
     "OCR conflicts must remain reviewable before profile replacement",
 )
+
+
+compatibility_runtime = (ROOT / "waffle-v11.0.5.js").read_text(encoding="utf-8")
+care_loader_match = re.search(
+    r"async function ensureDesktopCareRebuild\(\) \{(.*?)\n  \}",
+    compatibility_runtime,
+    re.S,
+)
+if not care_loader_match:
+    errors.append("waffle-v11.0.5.js: ensureDesktopCareRebuild() missing")
+elif "waffle-v11.1.60.js" in care_loader_match.group(1):
+    errors.append("waffle-v11.0.5.js: historical V11.1.60 Care source is active again")
 
 
 VERSION_RE = re.compile(r"waffle-v(\d+)\.(\d+)\.(\d+)\.js$")

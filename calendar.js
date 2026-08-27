@@ -1,6 +1,6 @@
 /* ============================================================
    WAFFLE HOUSE — CANONICAL CALENDAR MODULE
-   Build 2026.08.27.02 · Canonical Source Consolidation Phase 2
+   Build 2026.08.27.03 · Canonical Source Consolidation Phase 2
    ------------------------------------------------------------
    This is the only active Calendar feature module. It contains the proven
    Calendar behavior formerly executed through nine separate V11.1.x files.
@@ -1771,7 +1771,7 @@
 (function () {
   'use strict';
   const manifest = Object.freeze({
-    build: '2026.08.27.02',
+    build: '2026.08.27.03',
     version: 'calendar-phase2-1',
     sourceCount: 9,
     sources: window.WAFFLE_CALENDAR_CANONICAL_SOURCES

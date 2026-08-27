@@ -1,6 +1,6 @@
 /* ============================================================
    WAFFLE HOUSE — AUTHORITATIVE RUNTIME BOOTSTRAP
-   Build 2026.08.27.02 · Runtime Consolidation Phase 1
+   Build 2026.08.27.03 · Runtime Consolidation Phase 1
    ------------------------------------------------------------
    This is the only local JavaScript entry point app HTML should load.
    The approved compatibility order lives here until old modules are safely
@@ -11,7 +11,7 @@
   'use strict';
   if (window.WAFFLE_RUNTIME_BOOTSTRAP) return;
 
-  const BUILD = '2026.08.27.02';
+  const BUILD = '2026.08.27.03';
   const ENDPOINT = 'https://script.google.com/macros/s/AKfycbwn4HL49K9c3AZbXJRUjPw3UYWxJt8DmqXwMnTytyqdSstj3ZIJwWdDEC2IsBjetOf3pw/exec';
   const RUNTIME = [
       "waffle-firebase-config.js",

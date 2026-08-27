@@ -1,6 +1,6 @@
 /* Waffle House Boarding — recovery service worker */
 
-const WAFFLE_SW_VERSION = 'v11.2.1-calendar-2026.08.27.02';
+const WAFFLE_SW_VERSION = 'v11.2.2-care-2026.08.27.03';
 const WAFFLE_CACHE_PREFIX = 'waffle-house-';
 const APP_SHELL_CACHE = `${WAFFLE_CACHE_PREFIX}shell-${WAFFLE_SW_VERSION}`;
 const RUNTIME_CACHE = `${WAFFLE_CACHE_PREFIX}runtime-${WAFFLE_SW_VERSION}`;
@@ -13,18 +13,19 @@ const APP_SHELL = [
   './audit.html',
   './maintenance.html',
   './waffle-build.json',
-  './waffle-bootstrap.js?v=2026.08.27.02',
-  './calendar.js?build=2026.08.27.02',
-  './waffle-runtime.css?v=2026.08.27.02',
+  './waffle-bootstrap.js?v=2026.08.27.03',
+  './calendar.js?build=2026.08.27.03',
+  './care.js?build=2026.08.27.03',
+  './waffle-runtime.css?v=2026.08.27.03',
   './waffle-maintenance.webp?v=11.1.92',
   './waffle-logo.png',
   './waffle-logo-dark.png',
-  './manifest.webmanifest?v=2026.08.27.02',
-  './pwa-icon-192.png?v=2026.08.27.02',
-  './pwa-icon-512.png?v=2026.08.27.02',
-  './pwa-maskable-512.png?v=2026.08.27.02',
-  './pwa-apple-touch-icon.png?v=2026.08.27.02',
-  './waffle-firebase-config.js?build=2026.08.27.02'
+  './manifest.webmanifest?v=2026.08.27.03',
+  './pwa-icon-192.png?v=2026.08.27.03',
+  './pwa-icon-512.png?v=2026.08.27.03',
+  './pwa-maskable-512.png?v=2026.08.27.03',
+  './pwa-apple-touch-icon.png?v=2026.08.27.03',
+  './waffle-firebase-config.js?build=2026.08.27.03'
 ];
 
 const OPTIONAL_EXTERNAL_ASSETS = [
@@ -44,7 +45,7 @@ function waffleFirebaseConfigReady(config) {
 }
 
 try {
-  importScripts('./waffle-firebase-config.js?build=2026.08.27.02');
+  importScripts('./waffle-firebase-config.js?build=2026.08.27.03');
   const config = self.WAFFLE_FIREBASE_CONFIG || null;
   if (waffleFirebaseConfigReady(config)) {
     importScripts('https://www.gstatic.com/firebasejs/12.17.1/firebase-app-compat.js');
