@@ -12,8 +12,11 @@ const APP_SHELL = [
   './reminders.html',
   './audit.html',
   './maintenance.html',
+  './system-status.html',
   './waffle-build.json',
+  './waffle-release.json',
   './waffle-bootstrap.js?v=2026.08.27.04',
+  './waffle-diagnostics.js?build=2026.08.27.04',
   './calendar.js?build=2026.08.27.04',
   './care.js?build=2026.08.27.04',
   './organiser.js?build=2026.08.27.04',
@@ -145,6 +148,7 @@ function isFirstPaintCriticalAsset(url) {
   return (
     path.endsWith('/waffle-maintenance.webp') ||
     path.endsWith('/waffle-build.json') ||
+    path.endsWith('/waffle-release.json') ||
     path.endsWith('/manifest.webmanifest') ||
     path.endsWith('.js') ||
     path.endsWith('.css')

@@ -1,11 +1,11 @@
 /* ============================================================
    WAFFLE HOUSE — AUTHORITATIVE RUNTIME BOOTSTRAP
-   Build 2026.08.27.04 · Canonical Runtime Phase 3A
+   Build 2026.08.27.04 · Phase 3D Release Hardening
    ------------------------------------------------------------
    This is the only local JavaScript entry point app HTML should load.
-   The approved compatibility order lives here until old modules are safely
-   folded into canonical source. Historical files remain in Git history/repo,
-   but cannot re-enter page execution unless explicitly allow-listed here.
+   Privacy-preserving diagnostics load first, followed by the approved
+   compatibility base. Canonical feature modules remain page-aware behind
+   waffle-v11.0.5.js.
    ============================================================ */
 (function () {
   'use strict';
@@ -14,6 +14,7 @@
   const BUILD = '2026.08.27.04';
   const ENDPOINT = 'https://script.google.com/macros/s/AKfycbwn4HL49K9c3AZbXJRUjPw3UYWxJt8DmqXwMnTytyqdSstj3ZIJwWdDEC2IsBjetOf3pw/exec';
   const RUNTIME = [
+      "waffle-diagnostics.js",
       "waffle-firebase-config.js",
       "waffle-app.js",
       "waffle-v10.8.js",
@@ -33,6 +34,7 @@
   window.WAFFLE_BUILD = BUILD;
   window.WAFFLE_RUNTIME_BOOTSTRAP = Object.freeze({
     build: BUILD,
+    phase: 'phase-3d-release-regression-observability',
     runtime: RUNTIME.slice()
   });
 

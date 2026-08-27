@@ -1,0 +1,64 @@
+name: Phase 3D Rollback Readiness
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_sha:
+        description: 'Known-good commit to inspect for rollback readiness'
+        required: true
+        default: '6812d2f22faa1864291f6d654319895d9ffcd7da'
+
+permissions:
+  contents: read
+
+jobs:
+  rollback-readiness:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out current main
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Require live maintenance before rollback preparation
+        env:
+          APPS_SCRIPT_WEBAPP_URL: https://script.google.com/macros/s/AKfycbwn4HL49K9c3AZbXJRUjPw3UYWxJt8DmqXwMnTytyqdSstj3ZIJwWdDEC2IsBjetOf3pw/exec
+        run: |
+          set -euo pipefail
+          grep -q 'WAFFLE_MAINTENANCE_DEFAULT_ = true' apps-script/MaintenanceMode.js || {
+            echo 'Rollback readiness refuses to run while committed maintenance is off.'
+            exit 1
+          }
+          response="$(curl -fsSLG --max-time 20 "$APPS_SCRIPT_WEBAPP_URL" --data-urlencode 'action=maintenance_status')"
+          RESPONSE="$response" python3 - <<'PY'
+          import json,os
+          payload=json.loads(os.environ['RESPONSE'])
+          assert payload.get('result')=='success' and payload.get('enabled') is True
+          print('Live maintenance lock confirmed for rollback preparation.')
+          PY
+
+      - name: Validate target commit structure
+        env:
+          TARGET_SHA: ${{ inputs.target_sha }}
+        run: |
+          set -euo pipefail
+          git cat-file -e "$TARGET_SHA^{commit}"
+          for path in index.html directory.html reminders.html audit.html waffle-bootstrap.js waffle-build.json service-worker.js apps-script/Code.js apps-script/MaintenanceMode.js; do
+            git cat-file -e "$TARGET_SHA:$path" || { echo "Rollback target missing $path"; exit 1; }
+          done
+          echo "Rollback target $TARGET_SHA contains the required Waffle runtime and backend entry points."
+
+      - name: Print safe rollback procedure
+        env:
+          TARGET_SHA: ${{ inputs.target_sha }}
+        run: |
+          cat <<EOF
+          Rollback readiness PASSED for $TARGET_SHA.
+          This workflow intentionally does not move main or deploy anything.
+          Safe rollback sequence:
+          1. Keep maintenance ON.
+          2. Create a NEW rollback commit restoring the known-good tree from $TARGET_SHA.
+          3. Run all contracts, Pages deployment and Apps Script deployment.
+          4. Run Phase 3D browser smoke while maintenance remains ON.
+          5. Only then commit maintenance OFF and verify live enabled=false.
+          EOF

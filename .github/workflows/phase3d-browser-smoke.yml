@@ -1,0 +1,75 @@
+name: Phase 3D Browser Smoke
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: phase3d-browser-smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  browser-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Validate smoke suite is read-only
+        run: |
+          set -euo pipefail
+          test -f tests/phase3d-smoke.spec.js
+          grep -q "productionWritesInSmokeTests" waffle-release.json
+          if grep -Eq "(save_|delete_|update_|create_|submit_|upload_)" tests/phase3d-smoke.spec.js; then
+            echo "Phase 3D browser smoke must remain read-only."
+            exit 1
+          fi
+
+      - name: Wait for GitHub Pages release assets
+        env:
+          EXPECTED_RELEASE: phase3d-2026.08.28.01
+        run: |
+          set -euo pipefail
+          base="https://wafflepug.github.io/dog-calendar"
+          for attempt in $(seq 1 24); do
+            release="$(curl -fsSL --max-time 20 "$base/waffle-release.json?_=${GITHUB_RUN_ID}-${attempt}" || true)"
+            if RELEASE="$release" EXPECTED_RELEASE="$EXPECTED_RELEASE" python3 - <<'PY'
+          import json, os, sys
+          try:
+              payload=json.loads(os.environ.get('RELEASE',''))
+          except Exception:
+              sys.exit(1)
+          if payload.get('release') != os.environ['EXPECTED_RELEASE']:
+              sys.exit(1)
+          PY
+            then
+              echo "Phase 3D release assets are live on Pages."
+              exit 0
+            fi
+            echo "Pages release assets not current yet ($attempt/24); waiting..."
+            sleep 5
+          done
+          echo "Pages did not expose the expected Phase 3D release metadata."
+          exit 1
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Playwright
+        run: |
+          npm init -y >/dev/null 2>&1
+          npm install --save-dev @playwright/test@1.55.0 >/dev/null
+          npx playwright install --with-deps chromium
+
+      - name: Run read-only Chromium smoke tests
+        env:
+          WAFFLE_BASE_URL: https://wafflepug.github.io/dog-calendar
+          WAFFLE_APPS_SCRIPT_URL: https://script.google.com/macros/s/AKfycbwn4HL49K9c3AZbXJRUjPw3UYWxJt8DmqXwMnTytyqdSstj3ZIJwWdDEC2IsBjetOf3pw/exec
+        run: npx playwright test tests/phase3d-smoke.spec.js --reporter=line --workers=1

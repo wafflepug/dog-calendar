@@ -3,6 +3,7 @@
   "runtime": "waffle-bootstrap.js",
   "styles": "waffle-runtime.css",
   "phase": "phase-3b-historical-source-cleanup",
+  "releaseHardeningPhase": "phase-3d-release-regression-observability",
   "canonicalModules": {
     "calendar": "calendar.js",
     "care": "care.js",
@@ -10,6 +11,19 @@
     "logs": "logs.js",
     "ui": "waffle-ui.js",
     "ai": "waffle-ai.js"
+  },
+  "observability": {
+    "clientDiagnostics": "waffle-diagnostics.js",
+    "systemStatus": "system-status.html",
+    "releaseMetadata": "waffle-release.json",
+    "browserSmoke": "tests/phase3d-smoke.spec.js"
+  },
+  "releaseSafety": {
+    "maintenanceFirst": true,
+    "readOnlyProductionSmoke": true,
+    "rollbackReadinessWorkflow": ".github/workflows/phase3d-rollback-readiness.yml",
+    "releaseGateWorkflow": ".github/workflows/phase3d-release-gate.yml",
+    "browserSmokeWorkflow": ".github/workflows/phase3d-browser-smoke.yml"
   },
   "removedHistoricalSources": [
     "waffle-v11.1.69.js",
