@@ -1,0 +1,68 @@
+name: Phase 3B Dead Source Contract
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dead-source-cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prove migrated sources stay retired
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          manifest = json.loads(Path('waffle-build.json').read_text(encoding='utf-8'))
+          assert manifest.get('phase') == 'phase-3b-historical-source-cleanup'
+          assert manifest.get('legacySourceDeletion') is True
+          assert manifest.get('migrationToolingRetired') is True
+
+          retired = manifest.get('removedHistoricalSources', [])
+          assert len(retired) == 26, f'expected 26 proven retired sources, got {len(retired)}'
+          for path in retired:
+              assert not Path(path).exists(), f'retired source returned: {path}'
+
+          retired_tooling = [
+              '.github/workflows/calendar-canonical-build.yml',
+              '.github/workflows/care-canonical-build.yml',
+              '.github/workflows/phase3a-canonical-build.yml',
+              '.github/workflows/runtime-consolidation.yml',
+              'scripts/build-calendar-canonical.py',
+              'scripts/build-care-canonical.py',
+              'scripts/build-phase3a-canonical.py',
+              'scripts/patch-phase3a-canonical-v2.py',
+              'scripts/phase3a-finalise.py',
+              'scripts/consolidate-runtime.py',
+              'scripts/consolidate-runtime-v2.py',
+          ]
+          for path in retired_tooling:
+              assert not Path(path).exists(), f'retired migration tooling returned: {path}'
+
+          canonical_markers = {
+              'calendar.js': ['WAFFLE_CALENDAR_CANONICAL','v11166MobileMeetVersion','v11168CapacityHealthVersion','v11170PotentialLabelVersion','v11172MeetOutlookAlignmentVersion'],
+              'care.js': ['WAFFLE_CARE_CANONICAL','v11160DesktopCareRebuildVersion'],
+              'organiser.js': ['WAFFLE_ORGANISER_CANONICAL','save_organiser_item','get_organiser'],
+              'waffle-ui.js': ['WAFFLE_UI_CANONICAL','WAFFLE_UI_CONTRACT','v11175MobileSitterShellVersion','v11176AuthoritativeMobileFooterVersion','v11180MobileHeaderRailVersion','v11189MobileQuickActionCompletionVersion'],
+              'waffle-ai.js': ['WAFFLE_AI_CANONICAL','v11138WaffleAiVersion','v11147WaffleAiVersion','v11148WaffleAiVersion','v11158WaffleSpeechVersion'],
+          }
+          for path, markers in canonical_markers.items():
+              text = Path(path).read_text(encoding='utf-8')
+              for marker in markers:
+                  assert marker in text, f'{path}: migrated behavior marker missing: {marker}'
+
+          assert Path('waffle-ui-contract.js').exists(), 'reference UI contract intentionally remains'
+          assert Path('scripts/check-ui-stability.py').exists(), 'active regression contract missing'
+          assert Path('scripts/patch-waffle-ai-router.py').exists(), 'active Apps Script AI router patch missing'
+          print('Phase 3B dead-source contract passed: 26 migrated sources and migration tooling remain retired.')
+          PY

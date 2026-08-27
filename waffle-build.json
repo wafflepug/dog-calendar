@@ -2,7 +2,7 @@
   "build": "2026.08.27.04",
   "runtime": "waffle-bootstrap.js",
   "styles": "waffle-runtime.css",
-  "phase": "phase-3a-canonical-modules",
+  "phase": "phase-3b-historical-source-cleanup",
   "canonicalModules": {
     "calendar": "calendar.js",
     "care": "care.js",
@@ -11,7 +11,7 @@
     "ui": "waffle-ui.js",
     "ai": "waffle-ai.js"
   },
-  "legacyCalendarSources": [
+  "removedHistoricalSources": [
     "waffle-v11.1.69.js",
     "waffle-v11.1.66.js",
     "waffle-v11.1.67.js",
@@ -20,23 +20,14 @@
     "waffle-v11.1.71.js",
     "waffle-v11.1.72.js",
     "waffle-v11.1.73.js",
-    "waffle-v11.1.84.js"
-  ],
-  "legacyCareSources": [
-    "waffle-v11.1.60.js"
-  ],
-  "legacyOrganiserSources": [
+    "waffle-v11.1.84.js",
+    "waffle-v11.1.60.js",
     "waffle-v11.1.15.js",
-    "waffle-v11.1.15.css"
-  ],
-  "legacyUiSources": [
+    "waffle-v11.1.15.css",
     "waffle-v11.1.75.js",
     "waffle-v11.1.76.js",
     "waffle-v11.1.80.js",
     "waffle-v11.1.89.js",
-    "waffle-ui-contract.js"
-  ],
-  "legacyAiSources": [
     "waffle-v11.1.37-assets.js",
     "waffle-v11.1.53.js",
     "waffle-v11.1.37.js",
@@ -48,11 +39,29 @@
     "waffle-v11.1.48.js",
     "waffle-v11.1.58.js"
   ],
+  "retainedCompatibilitySources": [
+    "waffle-firebase-config.js",
+    "waffle-app.js",
+    "waffle-v10.8.js",
+    "waffle-v10.8.2.js",
+    "waffle-v10.8.3.js",
+    "waffle-v10.8.5.js",
+    "waffle-v10.8.6.js",
+    "waffle-v10.8.8.js",
+    "waffle-v10.8.9.js",
+    "waffle-v11.0.js",
+    "waffle-v11.0.4.js",
+    "waffle-v11.0.5.js"
+  ],
+  "uiContractReference": "waffle-ui-contract.js",
   "sharedLogsCompatibility": [
     "waffle-app.js retains canonical shared Audit/Logs data and renderer core; logs.js owns page-level adapter behavior"
   ],
   "sharedCareCompatibility": [
-    "V11.1.90 intake PDF OCR action remains in waffle-v11.0.5.js"
+    "V11.1.90 intake PDF/photo OCR action remains in waffle-v11.0.5.js"
   ],
-  "legacySourceDeletion": false
+  "legacySourceDeletion": true,
+  "migrationToolingRetired": true,
+  "remainingLegacyAuditPending": true,
+  "cleanupScope": "proven sources already embedded in Phase 3A canonical feature modules"
 }

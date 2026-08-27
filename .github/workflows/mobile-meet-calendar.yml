@@ -15,15 +15,9 @@ jobs:
       - uses: actions/checkout@v4
       - name: Validate mobile Meet & Greet formatting in canonical Calendar
         run: |
-          node --check waffle-v11.1.66.js
+          set -euo pipefail
           node --check calendar.js
-          grep -q "max-width:700px" waffle-v11.1.66.js
-          grep -q "width:100% !important" waffle-v11.1.66.js
-          grep -q "height:22px !important" waffle-v11.1.66.js
-          grep -q "copy.textContent = mobile ? labels.time : labels.full" waffle-v11.1.66.js
-          grep -q "Meet & Greet ·" waffle-v11.1.66.js
-          grep -q "window.v11166MobileMeetVersion" waffle-v11.1.66.js
-
+          test ! -e waffle-v11.1.66.js
           grep -q "CANONICAL CALENDAR SOURCE · waffle-v11.1.66.js" calendar.js
           grep -q "max-width:700px" calendar.js
           grep -q "width:100% !important" calendar.js
@@ -32,7 +26,6 @@ jobs:
           grep -q "Meet & Greet ·" calendar.js
           grep -q "window.v11166MobileMeetVersion" calendar.js
           grep -q "WAFFLE_CALENDAR_CANONICAL" calendar.js
-
           python3 - <<'PY'
           import re
           from pathlib import Path
@@ -43,5 +36,5 @@ jobs:
           assert "'calendar.js'" in block
           assert 'WAFFLE_CALENDAR_CANONICAL' in block
           assert "'waffle-v11.1.61.js'" not in block
-          print('Mobile Meet & Greet formatting is active through canonical calendar.js')
+          print('Mobile Meet & Greet formatting is active only through canonical calendar.js')
           PY

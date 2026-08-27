@@ -2,8 +2,7 @@ name: Calendar Capacity Health
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   pull_request:
 
 permissions:
@@ -18,17 +17,9 @@ jobs:
 
       - name: Validate capacity health in canonical Calendar
         run: |
-          node --check waffle-v11.1.68.js
+          set -euo pipefail
           node --check calendar.js
-          grep -q "GREEN  = 0–2 confirmed dogs" waffle-v11.1.68.js
-          grep -q "AMBER  = 3 confirmed dogs" waffle-v11.1.68.js
-          grep -q "RED    = 4+ confirmed dogs" waffle-v11.1.68.js
-          grep -q "props.isMeetGreet !== true && props.isPotential !== true" waffle-v11.1.68.js
-          grep -q "wh68-capacity-health" waffle-v11.1.68.js
-          grep -q "data-tone=\"green\"" waffle-v11.1.68.js
-          grep -q "data-tone=\"amber\"" waffle-v11.1.68.js
-          grep -q "data-tone=\"red\"" waffle-v11.1.68.js
-
+          test ! -e waffle-v11.1.68.js
           grep -q "CANONICAL CALENDAR SOURCE · waffle-v11.1.68.js" calendar.js
           grep -q "GREEN  = 0–2 confirmed dogs" calendar.js
           grep -q "AMBER  = 3 confirmed dogs" calendar.js
@@ -39,7 +30,6 @@ jobs:
           grep -q "data-tone=\"amber\"" calendar.js
           grep -q "data-tone=\"red\"" calendar.js
           grep -q "WAFFLE_CALENDAR_CANONICAL" calendar.js
-
           python3 - <<'PY'
           import re
           from pathlib import Path
@@ -50,5 +40,5 @@ jobs:
           assert "'calendar.js'" in block
           assert 'WAFFLE_CALENDAR_CANONICAL' in block
           assert "'waffle-v11.1.61.js'" not in block
-          print('Confirmed-only capacity health is active through canonical calendar.js')
+          print('Confirmed-only capacity health is active only through canonical calendar.js')
           PY
