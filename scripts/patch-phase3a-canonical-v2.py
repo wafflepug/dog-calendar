@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# Phase 3A v2 is intentionally safe to invoke only when the workflow detects
+# the V11.1.80 dynamic loader; once embedded, the workflow skips this patch.
 from pathlib import Path
 import json
 import re
