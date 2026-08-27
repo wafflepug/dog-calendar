@@ -89,10 +89,10 @@
   // Preserve the original V11.0.5 execution order. This loader itself is
   // parser-inserted at the old V11.0.5 script position.
   if (document.readyState === 'loading') {
-    document.write('<script src="waffle-v11.0.5-core.js?v=11.1.40&build=2026.08.27.03"></script>');
+    document.write('<script src="waffle-v11.0.5-core.js?v=11.1.40&build=2026.08.27.04"></script>');
   } else {
     const core = document.createElement('script');
-    core.src = 'waffle-v11.0.5-core.js?v=11.1.40&build=2026.08.27.03';
+    core.src = 'waffle-v11.0.5-core.js?v=11.1.40&build=2026.08.27.04';
     core.async = false;
     document.head.appendChild(core);
   }
@@ -126,7 +126,7 @@
       }
 
       const script = document.createElement('script');
-      script.src = src + '?v=' + encodeURIComponent(version) + '&build=' + encodeURIComponent(String(window.WAFFLE_BUILD || '2026.08.27.03'));
+      script.src = src + '?v=' + encodeURIComponent(version) + '&build=' + encodeURIComponent(String(window.WAFFLE_BUILD || '2026.08.27.04'));
       script.async = false;
       script.dataset.waffleV11161 = 'true';
       script.addEventListener('load', resolve, { once: true });
@@ -136,77 +136,10 @@
   }
 
   async function ensureAskWaffle() {
-    /* Ask Waffle is a cross-app assistant on Calendar, Care, Organiser and Logs. */
     await loadScript(
-      'waffle-v11.1.37-assets.js',
-      () => !!(window.WAFFLE_AI_ASSETS && window.WAFFLE_AI_ASSETS.icon),
-      '11.1.47'
-    );
-
-    /* Load unified chrome + retired-modal cleanup before the historical launcher
-       creator. Its CSS/observer are ready the instant legacy DOM is inserted. */
-    await loadScript(
-      'waffle-v11.1.53.js',
-      () => !!window.v11153UnifiedActionChromeVersion,
-      '11.1.53'
-    );
-
-    await loadScript(
-      'waffle-v11.1.37.js',
-      () => !!window.v11137AskWaffleVersion,
-      '11.1.47'
-    );
-
-    await loadScript(
-      'waffle-v11.1.38.js',
-      () => !!window.v11138WaffleAiVersion,
-      '11.1.47'
-    );
-
-    /* Historical Calendar/Care layers remain for compatibility. V11.1.53 is
-       the shared authority for action chrome/modal retirement on all pages. */
-    if (FLOATING_PARITY_PAGES.has(pageName())) {
-      await loadScript(
-        'waffle-v11.1.39.js',
-        () => !!window.v11139AskWaffleLayoutVersion,
-        '11.1.47'
-      );
-
-      await loadScript(
-        'waffle-v11.1.40.js',
-        () => !!window.v11140AskWaffleLayoutVersion,
-        '11.1.47'
-      );
-    }
-
-    if (pageName() === 'calendar') {
-      await loadScript(
-        'waffle-v11.1.45.js',
-        () => !!window.v11145CalendarStabilityVersion,
-        '11.1.47'
-      );
-    }
-
-    await loadScript(
-      'waffle-v11.1.47.js',
-      () => !!window.v11147WaffleAiVersion,
-      '11.1.47'
-    );
-
-    /* V11.1.48 owns submit routing, backend diagnostics, provider failover UX
-       and the Thinking icon. */
-    await loadScript(
-      'waffle-v11.1.48.js',
-      () => !!window.v11148WaffleAiVersion,
-      '11.1.48'
-    );
-
-    /* V11.1.58 progressively adds browser speech recognition. Unsupported
-       browsers simply keep the established text-only composer. */
-    await loadScript(
-      'waffle-v11.1.58.js',
-      () => !!window.v11158WaffleSpeechVersion,
-      '11.1.58'
+      'waffle-ai.js',
+      () => !!window.WAFFLE_AI_CANONICAL,
+      '2026.08.27.04'
     );
   }
 
@@ -215,7 +148,7 @@
     await loadScript(
       'calendar.js',
       () => !!window.WAFFLE_CALENDAR_CANONICAL,
-      '2026.08.27.03'
+      '2026.08.27.04'
     );
   }
 
@@ -224,63 +157,71 @@
     await loadScript(
       'care.js',
       () => !!window.WAFFLE_CARE_CANONICAL,
-      '2026.08.27.03'
+      '2026.08.27.04'
     );
   }
 
-  async function ensureMobileSitterShell() {
+  async function ensureSharedUi() {
     await loadScript(
-      'waffle-v11.1.75.js',
-      () => !!window.v11175MobileSitterShellVersion,
-      '11.1.75'
+      'waffle-ui.js',
+      () => !!window.WAFFLE_UI_CANONICAL,
+      '2026.08.27.04'
     );
+  }
 
-    /* V11.1.76 is the final mobile-footer authority. It suppresses late legacy
-       .app-tabs/V11.1.8 footers and restores the V11.1.75 bottom bar if an old
-       enhancement pass removes it after the drawer has already mounted. */
+  async function ensureOrganiser() {
+    if (pageName() !== 'reminders') return;
     await loadScript(
-      'waffle-v11.1.76.js',
-      () => !!window.v11176AuthoritativeMobileFooterVersion,
-      '11.1.76'
+      'organiser.js',
+      () => !!window.WAFFLE_ORGANISER_CANONICAL,
+      '2026.08.27.04'
+    );
+  }
+
+  async function ensureLogs() {
+    if (pageName() !== 'audit') return;
+    await loadScript(
+      'logs.js',
+      () => !!window.WAFFLE_LOGS_CANONICAL,
+      '2026.08.27.04'
     );
   }
 
   async function startFinalUi() {
-    /* The sitter shell is shared app chrome and must not depend on Calendar,
-       Care or AI startup. */
     try {
-      await ensureMobileSitterShell();
+      await ensureSharedUi();
     } catch (error) {
-      console.warn('Mobile sitter shell could not load:', error);
+      console.warn('Canonical shared UI could not load:', error);
     }
 
-    /* Calendar and Care must not depend on AI startup. */
     try {
       await ensureCleanCalendar();
     } catch (error) {
-      console.warn('Clean Calendar could not load:', error);
+      console.warn('Canonical Calendar could not load:', error);
     }
 
     try {
       await ensureDesktopCareRebuild();
     } catch (error) {
-      console.warn('Desktop Care rebuild could not load:', error);
+      console.warn('Canonical Care could not load:', error);
+    }
+
+    try {
+      await ensureOrganiser();
+    } catch (error) {
+      console.warn('Canonical Organiser could not load:', error);
+    }
+
+    try {
+      await ensureLogs();
+    } catch (error) {
+      console.warn('Canonical Logs adapter could not load:', error);
     }
 
     try {
       await ensureAskWaffle();
     } catch (error) {
-      console.warn('Waffle AI feature setup failed:', error);
-    }
-
-    try {
-      await loadScript(
-        'waffle-ui-contract.js',
-        () => !!window.WAFFLE_UI_CONTRACT,
-        '11.1.51'
-      );
-    } catch (error) {
-      console.warn('Waffle Final UI Contract could not load:', error);
+      console.warn('Canonical Ask Waffle could not load:', error);
     }
   }
 
@@ -439,29 +380,7 @@
   window.v11143LegacyRetirementVersion = VERSION;
 })();
 
-/* V11.1.89 — shared mobile Quick Action completion + Organiser reminder routing. */
-(function () {
-  'use strict';
-
-  function loadQuickActionCompletion() {
-    if (window.v11189MobileQuickActionCompletionVersion) return;
-    const existing = Array.from(document.scripts).find(script =>
-      String(script.src || '').includes('/waffle-v11.1.89.js')
-    );
-    if (existing) return;
-    const script = document.createElement('script');
-    script.src = 'waffle-v11.1.89.js?v=11.1.89&build=2026.08.27.03';
-    script.async = false;
-    script.dataset.waffleV11189 = 'true';
-    document.head.appendChild(script);
-  }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', loadQuickActionCompletion, { once:true });
-  } else {
-    loadQuickActionCompletion();
-  }
-})();
+/* V11.1.89 behavior is canonical in waffle-ui.js. */
 
 /* ============================================================
    V11.1.90 — CANONICAL CARE PDF OCR ACTION

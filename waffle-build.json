@@ -1,11 +1,15 @@
 {
-  "build": "2026.08.27.03",
+  "build": "2026.08.27.04",
   "runtime": "waffle-bootstrap.js",
   "styles": "waffle-runtime.css",
-  "phase": "canonical-source-consolidation-2-care",
+  "phase": "phase-3a-canonical-modules",
   "canonicalModules": {
     "calendar": "calendar.js",
-    "care": "care.js"
+    "care": "care.js",
+    "organiser": "organiser.js",
+    "logs": "logs.js",
+    "ui": "waffle-ui.js",
+    "ai": "waffle-ai.js"
   },
   "legacyCalendarSources": [
     "waffle-v11.1.69.js",
@@ -20,6 +24,31 @@
   ],
   "legacyCareSources": [
     "waffle-v11.1.60.js"
+  ],
+  "legacyOrganiserSources": [
+    "waffle-v11.1.15.js",
+    "waffle-v11.1.15.css"
+  ],
+  "legacyUiSources": [
+    "waffle-v11.1.75.js",
+    "waffle-v11.1.76.js",
+    "waffle-v11.1.89.js",
+    "waffle-ui-contract.js"
+  ],
+  "legacyAiSources": [
+    "waffle-v11.1.37-assets.js",
+    "waffle-v11.1.53.js",
+    "waffle-v11.1.37.js",
+    "waffle-v11.1.38.js",
+    "waffle-v11.1.39.js",
+    "waffle-v11.1.40.js",
+    "waffle-v11.1.45.js",
+    "waffle-v11.1.47.js",
+    "waffle-v11.1.48.js",
+    "waffle-v11.1.58.js"
+  ],
+  "sharedLogsCompatibility": [
+    "waffle-app.js retains canonical shared Audit/Logs data and renderer core; logs.js owns page-level adapter behavior"
   ],
   "sharedCareCompatibility": [
     "V11.1.90 intake PDF OCR action remains in waffle-v11.0.5.js"
