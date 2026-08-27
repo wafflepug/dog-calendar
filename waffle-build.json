@@ -32,6 +32,7 @@
   "legacyUiSources": [
     "waffle-v11.1.75.js",
     "waffle-v11.1.76.js",
+    "waffle-v11.1.80.js",
     "waffle-v11.1.89.js",
     "waffle-ui-contract.js"
   ],

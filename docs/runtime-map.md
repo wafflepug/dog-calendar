@@ -34,7 +34,7 @@ waffle-bootstrap.js
 - Care/Guest Directory UI changes belong in `care.js`.
 - Organiser UI/interaction changes belong in `organiser.js` and `organiser.css`.
 - Logs page-specific behavior belongs in `logs.js`; shared Audit data/query rendering remains in `waffle-app.js` until the Phase 3C data-layer split.
-- Shared navigation, mobile shell, Quick Action completion and final UI contract belong in `waffle-ui.js`.
+- Shared navigation, mobile shell, mobile header rail, Quick Action completion and final UI contract belong in `waffle-ui.js`.
 - Ask Waffle browser/UI behavior belongs in `waffle-ai.js`; provider/data routes remain in Apps Script.
 
 ## Legacy policy
