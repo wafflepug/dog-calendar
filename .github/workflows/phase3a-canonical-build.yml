@@ -1,0 +1,98 @@
+name: Phase 3A Canonical Modules
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/build-phase3a-canonical.py'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Build Phase 3A canonical modules
+        run: python3 scripts/build-phase3a-canonical.py
+
+      - name: Validate JavaScript syntax
+        run: |
+          node --check organiser.js
+          node --check logs.js
+          node --check waffle-ui.js
+          node --check waffle-ai.js
+          node --check waffle-v11.0.5.js
+          node --check waffle-bootstrap.js
+          node --check service-worker.js
+
+      - name: Validate canonical runtime contract
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import json
+
+          loader = Path('waffle-v11.0.5.js').read_text(encoding='utf-8')
+          manifest = json.loads(Path('waffle-build.json').read_text(encoding='utf-8'))
+          sw = Path('service-worker.js').read_text(encoding='utf-8')
+
+          required = ['calendar.js','care.js','organiser.js','logs.js','waffle-ui.js','waffle-ai.js']
+          for name in required:
+              assert name in loader or name in ('calendar.js','care.js'), f'{name} not reachable from compatibility loader'
+              assert Path(name).exists(), f'{name} missing'
+
+          retired_live = [
+              'waffle-v11.1.15.js',
+              'waffle-v11.1.75.js',
+              'waffle-v11.1.76.js',
+              'waffle-v11.1.89.js',
+              'waffle-v11.1.37-assets.js',
+              'waffle-v11.1.37.js',
+              'waffle-v11.1.38.js',
+              'waffle-v11.1.39.js',
+              'waffle-v11.1.40.js',
+              'waffle-v11.1.45.js',
+              'waffle-v11.1.47.js',
+              'waffle-v11.1.48.js',
+              'waffle-v11.1.53.js',
+              'waffle-v11.1.58.js'
+          ]
+          for name in retired_live:
+              assert name not in loader, f'Legacy runtime source still active in loader: {name}'
+
+          assert manifest.get('phase') == 'phase-3a-canonical-modules'
+          assert manifest.get('legacySourceDeletion') is False
+          assert manifest.get('build') == '2026.08.27.04'
+          for key in ('calendar','care','organiser','logs','ui','ai'):
+              assert manifest['canonicalModules'].get(key), f'canonical module missing from manifest: {key}'
+
+          assert 'v11.3.0-phase3a-2026.08.27.04' in sw
+          for name in required:
+              assert name in sw, f'{name} not available to service worker shell'
+
+          assert Path('docs/runtime-map.md').exists()
+          print('Phase 3A canonical runtime validated.')
+          PY
+
+      - name: Commit generated canonical runtime
+        run: |
+          if git diff --quiet --exit-code; then
+            echo 'Canonical runtime already current.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add organiser.js organiser.css logs.js waffle-ui.js waffle-ai.js waffle-v11.0.5.js waffle-bootstrap.js waffle-runtime.css waffle-build.json service-worker.js docs/runtime-map.md
+          git commit -m 'Phase 3A: canonicalise organiser logs UI and Ask Waffle'
+          git push origin HEAD:main
