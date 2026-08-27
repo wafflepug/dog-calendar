@@ -2749,6 +2749,8 @@ function invalidateWaffleForAction_(action) {
 
 
 var READ_ONLY_SHEET_ACTIONS_ = {
+  waffle_ai_health: true,
+  ask_waffle_ai: true,
   get_data_versions: true,
   get_push_device: true,
   get_notification_centre: true,
@@ -3003,6 +3005,15 @@ function verifyWaffleHousePotentialStaySync() {
 function processReadOnlySheetAction_(data) {
   var action =
     String(data.action || "");
+
+  /* WAFFLE_AI_READ_ONLY_ROUTE_V11157: Groq-first conversational Waffle AI stays read-only. */
+  if (action === "waffle_ai_health") {
+    return getWaffleAiHealthResponseV11157_();
+  }
+
+  if (action === "ask_waffle_ai") {
+    return getWaffleAiConversationResponseV11157_(data);
+  }
 
   if (
     action ===
