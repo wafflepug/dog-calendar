@@ -42,3 +42,7 @@ waffle-bootstrap.js
 Historical `waffle-v11.1.*` feature files remain in the repository for rollback/reference during Phase 3A, but are not allowed to re-enter the live feature loader. `legacySourceDeletion` remains `false` until Phase 3B proves each source safe to delete.
 
 The Active Code Contract is the enforcement point for this map.
+
+## Release verification
+
+Build `2026.08.27.04` is the Phase 3A release candidate. This direct marker commit exists so the full GitHub Actions contract suite evaluates the generated canonical runtime and its `.04` browser entry-point pins before maintenance is reopened.
