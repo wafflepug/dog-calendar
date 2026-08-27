@@ -22,59 +22,51 @@ jobs:
       - name: Validate JavaScript
         run: |
           node --check waffle-v11.0.5.js
+          node --check calendar.js
           node --check care.js
-          node --check waffle-v11.1.45.js
-          node --check waffle-v11.1.47.js
-          node --check waffle-v11.1.48.js
-          node --check waffle-v11.1.52.js
-          node --check waffle-v11.1.53.js
-          node --check waffle-v11.1.58.js
-          node --check waffle-v11.1.59.js
-          node --check waffle-v11.1.60.js
-          node --check waffle-v11.1.61.js
-          node --check waffle-v11.1.66.js
-          node --check waffle-v11.1.67.js
-          node --check waffle-v11.1.68.js
-          node --check waffle-v11.1.69.js
-          node --check waffle-v11.1.70.js
-          node --check waffle-v11.1.71.js
-          node --check waffle-v11.1.72.js
+          node --check organiser.js
+          node --check logs.js
+          node --check waffle-ui.js
+          node --check waffle-ai.js
           node --check service-worker.js
           node --check apps-script/WaffleAI.js
           node --check apps-script/WaffleAIProvider.js
-          node --check apps-script/WaffleAIProviderV11148.js
-          node --check apps-script/WaffleAIProviderV11149.js
-          node --check apps-script/WaffleAIProviderV11150.js
           node --check apps-script/WaffleAIProviderV11157.js
           node --check apps-script/WaffleAIGeminiRepairV11148.js
-          node --check apps-script/WaffleAICalendarFastV11149.js
           node --check apps-script/WaffleAICalendarFastV11150.js
           node --check apps-script/WaffleAICompat.js
-          node --check apps-script/WaffleAIHealth.js
-          node --check apps-script/WaffleAIHealthV11148.js
-          node --check apps-script/WaffleAIHealthV11149.js
-          node --check apps-script/WaffleAIHealthV11150.js
           node --check apps-script/WaffleAIHealthV11157.js
 
-      - name: Validate unified action chrome
+      - name: Validate canonical shared UI
         run: |
-          grep -q "'calendar', 'directory', 'reminders', 'audit'" waffle-v11.1.53.js
-          grep -q "waffle-v11.1.53.js" waffle-v11.0.5.js
-          grep -q "removeEverythingAfterFooter" waffle-v11.1.53.js
-          grep -q ".aw37-foot ~ \*" waffle-v11.1.53.js
-          grep -q "label.textContent = 'Organiser'" waffle-v11.1.53.js
-          if grep -q "event.stopImmediatePropagation" waffle-v11.1.53.js; then
+          grep -q "WAFFLE_UI_CANONICAL" waffle-ui.js
+          grep -q "WAFFLE_UI_CONTRACT" waffle-ui.js
+          grep -q "v11175MobileSitterShellVersion" waffle-ui.js
+          grep -q "v11176AuthoritativeMobileFooterVersion" waffle-ui.js
+          grep -q "v11180MobileHeaderRailVersion" waffle-ui.js
+          grep -q "v11181MobileHeaderAvatarsVersion" waffle-ui.js
+          grep -q "v11182CleanMobileTodayHeaderVersion" waffle-ui.js
+          grep -q "v11189MobileQuickActionCompletionVersion" waffle-ui.js
+          grep -q "label.textContent = 'Organiser'" waffle-ai.js
+          grep -q "removeEverythingAfterFooter" waffle-ai.js
+          grep -q ".aw37-foot ~ \*" waffle-ai.js
+          if grep -q "style.removeProperty('display')" waffle-ui.js organiser.js care.js waffle-ai.js; then
+            echo "Canonical UI modules must not use the banned display recovery pattern"
+            exit 1
+          fi
+          if grep -q "event.stopImmediatePropagation" waffle-ai.js; then
             echo "Shared chrome must not suppress native profile-tab listeners"
             exit 1
           fi
+          if grep -q "script.src = 'waffle-v11.1.80.js" waffle-ui.js; then
+            echo "Canonical UI must not dynamically reactivate historical V11.1.80"
+            exit 1
+          fi
 
-      - name: Validate canonical desktop Care tabs
+      - name: Validate canonical desktop Care
         run: |
-          test -f waffle-v11.1.60.js
-          grep -q "'care.js'" waffle-v11.0.5.js
-          grep -q "WAFFLE_CARE_CANONICAL" waffle-v11.0.5.js
           grep -q "WAFFLE HOUSE — CANONICAL CARE / GUEST DIRECTORY MODULE" care.js
-          grep -q "CANONICAL CARE SOURCE · waffle-v11.1.60.js" care.js
+          grep -q "WAFFLE_CARE_CANONICAL" care.js
           grep -q "v11160DesktopCareRebuildVersion" care.js
           grep -q "v11160-desktop-tabs" care.js
           grep -q "label: 'Profile'" care.js
@@ -86,94 +78,73 @@ jobs:
           grep -q "v108LoadHistory" care.js
           grep -q "v110LoadMedia" care.js
           grep -q "v110LoadMasterProfile" care.js
-          python3 - <<'PY'
-          import re
-          from pathlib import Path
-          text = Path('waffle-v11.0.5.js').read_text(encoding='utf-8')
-          match = re.search(r"async function ensureDesktopCareRebuild\(\) \{(.*?)\n  \}", text, re.S)
-          assert match, 'ensureDesktopCareRebuild() missing'
-          loader = match.group(1)
-          assert "'care.js'" in loader
-          assert 'WAFFLE_CARE_CANONICAL' in loader
-          assert 'waffle-v11.1.60.js' not in loader, 'historical Care source is active again'
-          PY
+          grep -q "'care.js'" waffle-v11.0.5.js
+          grep -q "WAFFLE_CARE_CANONICAL" waffle-v11.0.5.js
           if grep -q "window.addEventListener('click', handleClick, true)" care.js; then
             echo "Canonical desktop tabs must not use the old window-capture interception architecture"
             exit 1
           fi
-          if grep -q "style.removeProperty('display')" care.js; then
-            echo "Canonical desktop tabs must not use the banned display recovery pattern"
-            exit 1
-          fi
 
-      - name: Validate single unlimited Calendar stack
+      - name: Validate canonical Calendar behavior
         run: |
-          grep -q "waffle-v11.1.69.js" waffle-v11.1.61.js
-          grep -q "waffle-v11.1.66.js" waffle-v11.1.61.js
-          grep -q "waffle-v11.1.67.js" waffle-v11.1.61.js
-          grep -q "waffle-v11.1.68.js" waffle-v11.1.61.js
-          grep -q "waffle-v11.1.70.js" waffle-v11.1.61.js
-          grep -q "waffle-v11.1.71.js" waffle-v11.1.61.js
-          grep -q "waffle-v11.1.72.js" waffle-v11.1.61.js
-          grep -q "11.1.72-outlook-alignment-bridge" waffle-v11.1.61.js
-          if grep -q "waffle-v11.1.63.js" waffle-v11.1.61.js || grep -q "waffle-v11.1.64.js" waffle-v11.1.61.js || grep -q "waffle-v11.1.65.js" waffle-v11.1.61.js; then
-            echo "Retired visible Calendar renderers must not load through the compatibility bridge"
-            exit 1
-          fi
-          grep -q "v11169CalendarViewsVersion" waffle-v11.1.69.js
-          grep -q "FullCalendar is no longer a visible UI" waffle-v11.1.69.js
-          grep -q "pointer-events:none!important" waffle-v11.1.69.js
-          grep -q "let viewMode = 'month'" waffle-v11.1.69.js
-          grep -q "viewButton('month', 'Month')" waffle-v11.1.69.js
-          grep -q "viewButton('fortnight', 'Fortnight')" waffle-v11.1.69.js
-          grep -q "viewButton('week', 'Week')" waffle-v11.1.69.js
-          grep -q "function allocateWeekLanes" waffle-v11.1.69.js
-          grep -q "grid-auto-rows:28px" waffle-v11.1.69.js
-          grep -q "Confirmed Stay" waffle-v11.1.69.js
-          grep -q "Potential Stay" waffle-v11.1.69.js
-          grep -q "Meet &amp; Greet" waffle-v11.1.69.js
-          if grep -q "data-wh65-filter" waffle-v11.1.69.js; then
+          grep -q "WAFFLE_CALENDAR_CANONICAL" calendar.js
+          grep -q "FullCalendar is no longer a visible UI" calendar.js
+          grep -q "pointer-events:none!important" calendar.js
+          grep -q "let viewMode = 'month'" calendar.js
+          grep -q "viewButton('month', 'Month')" calendar.js
+          grep -q "viewButton('fortnight', 'Fortnight')" calendar.js
+          grep -q "viewButton('week', 'Week')" calendar.js
+          grep -q "function allocateWeekLanes" calendar.js
+          grep -q "grid-auto-rows:28px" calendar.js
+          grep -q "Confirmed Stay" calendar.js
+          grep -q "Potential Stay" calendar.js
+          grep -q "Meet &amp; Greet" calendar.js
+          grep -q "GREEN  = 0–2 confirmed dogs" calendar.js
+          grep -q "AMBER  = 3 confirmed dogs" calendar.js
+          grep -q "RED    = 4+ confirmed dogs" calendar.js
+          grep -q "v11170PotentialLabelVersion" calendar.js
+          grep -q "v11171LegacyCalendarFilterRetirementVersion" calendar.js
+          grep -q "v11172MeetOutlookAlignmentVersion" calendar.js
+          grep -q "grid-template-rows:16px minmax(42px,1fr) 14px" calendar.js
+          grep -q "min-height:82px" calendar.js
+          grep -q "v1088DateChoiceModal" calendar.js
+          if grep -q "data-wh65-filter" calendar.js; then
             echo "Single Calendar must not expose event filters"
             exit 1
           fi
 
-      - name: Validate Calendar detail layers
+      - name: Validate canonical Organiser and Logs boundaries
         run: |
-          grep -q "labels.time" waffle-v11.1.66.js
-          grep -q "display:none !important" waffle-v11.1.67.js
-          grep -q "GREEN  = 0–2 confirmed dogs" waffle-v11.1.68.js
-          grep -q "AMBER  = 3 confirmed dogs" waffle-v11.1.68.js
-          grep -q "RED    = 4+ confirmed dogs" waffle-v11.1.68.js
-          grep -q "v11170PotentialLabelVersion" waffle-v11.1.70.js
-          grep -q "petNameFromLabel" waffle-v11.1.70.js
-          grep -q "v11171LegacyCalendarFilterRetirementVersion" waffle-v11.1.71.js
-          grep -q "drag a booking to move dates" waffle-v11.1.71.js
+          grep -q "WAFFLE_ORGANISER_CANONICAL" organiser.js
+          grep -q "save_organiser_item" organiser.js
+          grep -q "get_organiser" organiser.js
+          grep -q "WAFFLE_LOGS_CANONICAL" logs.js
+          grep -q "dataOwner: 'waffle-app.js'" logs.js
+          grep -q "organiser.js?build=" waffle-ui.js
+          if grep -q "waffle-v11.1.15.js?v=" waffle-ui.js; then
+            echo "Canonical UI must not reactivate historical Organiser runtime"
+            exit 1
+          fi
 
-      - name: Validate Meet and Greet outlook alignment
+      - name: Validate intake OCR workflow
         run: |
-          grep -q "v11172MeetOutlookAlignmentVersion" waffle-v11.1.72.js
-          grep -q "grid-template-rows:16px minmax(42px,1fr) 14px" waffle-v11.1.72.js
-          grep -q "wh72-meet-main" waffle-v11.1.72.js
-          grep -q "wh72-meet-events" waffle-v11.1.72.js
-          grep -q "align-items:stretch" waffle-v11.1.72.js
-          grep -q "min-height:82px" waffle-v11.1.72.js
-
-      - name: Validate legacy Calendar date chooser retirement
-        run: |
-          grep -q "v11162CalendarDateClickVersion" waffle-v11.1.45.js
-          grep -q "v1088DateChoiceModal" waffle-v11.1.45.js
-          grep -q "Booking creation remains in the" waffle-v11.1.45.js
-          grep -q "v1088DateChoiceModal" waffle-v11.1.69.js
+          grep -q "v11190CarePdfOcrVersion" waffle-v11.0.5.js
+          grep -q "openLegacyIntakeUploadBtn" waffle-v11.0.5.js
+          grep -q "Read the entire PDF, including scanned pages, handwriting, tick boxes and printed form labels." apps-script/Code.js
+          grep -q "Apply Selected Extracted Values" apps-script/LegacyIntake.html
+          grep -q "saveLegacyIntakeMediaFromHtml" apps-script/V11191LegacyIntakeMedia.js
+          grep -q "capture=\"environment\"" apps-script/LegacyIntake.html
 
       - name: Validate Ask Waffle speech to text
         run: |
-          grep -q "waffle-v11.1.58.js" waffle-v11.0.5.js
-          grep -q "SpeechRecognition" waffle-v11.1.58.js
-          grep -q "webkitSpeechRecognition" waffle-v11.1.58.js
-          grep -q "recognition.lang = 'en-AU'" waffle-v11.1.58.js
-          grep -q "Listening…" waffle-v11.1.58.js
-          grep -q "aw58-listening-avatar" waffle-v11.1.58.js
-          grep -q "window.v11158WaffleSpeechVersion" waffle-v11.1.58.js
+          grep -q "'waffle-ai.js'" waffle-v11.0.5.js
+          grep -q "WAFFLE_AI_CANONICAL" waffle-ai.js
+          grep -q "SpeechRecognition" waffle-ai.js
+          grep -q "webkitSpeechRecognition" waffle-ai.js
+          grep -q "recognition.lang = 'en-AU'" waffle-ai.js
+          grep -q "Listening…" waffle-ai.js
+          grep -q "aw58-listening-avatar" waffle-ai.js
+          grep -q "window.v11158WaffleSpeechVersion" waffle-ai.js
 
       - name: Validate Groq-first Waffle AI architecture
         run: |
@@ -192,3 +163,21 @@ jobs:
           grep -q 'ask_waffle_ai: true' apps-script/Code.js
           grep -q 'getWaffleAiHealthResponseV11157_()' apps-script/Code.js
           grep -q 'getWaffleAiConversationResponseV11157_(data)' apps-script/Code.js
+
+      - name: Validate PWA runtime freshness
+        run: |
+          grep -q "waffle-bootstrap.js" service-worker.js
+          grep -q "waffle-runtime.css" service-worker.js
+          grep -q "calendar.js" service-worker.js
+          grep -q "care.js" service-worker.js
+          grep -q "organiser.js" service-worker.js
+          grep -q "logs.js" service-worker.js
+          grep -q "waffle-ui.js" service-worker.js
+          grep -q "waffle-ai.js" service-worker.js
+          grep -q "path.endsWith('.js')" service-worker.js
+          grep -q "path.endsWith('.css')" service-worker.js
+          grep -q "fetch(request, { cache: 'no-store' })" service-worker.js
+          if grep -Eq "waffle-v11\.1\.(15|37|38|39|40|45|47|48|53|58|60|75|76|80|89)\.js" service-worker.js; then
+            echo "Historical feature patches must not be pinned in the service-worker app shell"
+            exit 1
+          fi
