@@ -16,7 +16,7 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Validate authoritative Phase 3B runtime
+      - name: Validate authoritative Phase 3C runtime
         run: |
           set -euo pipefail
           node --check waffle-bootstrap.js
@@ -162,10 +162,13 @@ jobs:
           assert 'waffle-v10.' not in shell and 'waffle-v11.' not in shell, 'historical version file is pre-cached'
 
           runtime_map = Path('docs/runtime-map.md').read_text(encoding='utf-8')
-          assert 'Phase 3B' in runtime_map
-          assert 'remainingLegacyAuditPending' in runtime_map
+          assert 'Phase 3C' in runtime_map
+          assert 'Canonical Apps Script AI backend' in runtime_map
           for name in canonical.values():
               assert name in runtime_map, f'runtime map missing {name}'
+          for name in ['apps-script/Code.js','apps-script/WaffleAIProvider.js','apps-script/WaffleAICalendarFast.js','apps-script/WaffleAIHealth.js']:
+              assert name in runtime_map, f'runtime map missing backend authority: {name}'
+          assert 'Deployments must push the exact committed Apps Script tree' in runtime_map
 
-          print('Active Waffle runtime contract passed · Phase 3B cleanup · build', build)
+          print('Active Waffle runtime contract passed · Phase 3C backend canonicalisation · build', build)
           PY
