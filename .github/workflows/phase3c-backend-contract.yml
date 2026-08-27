@@ -1,0 +1,75 @@
+name: Phase 3C Backend Contract
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  canonical-backend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate authoritative Apps Script backend
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          node --check apps-script/Code.js
+          node --check apps-script/WaffleAIProvider.js
+          node --check apps-script/WaffleAICalendarFast.js
+          node --check apps-script/WaffleAIHealth.js
+
+          grep -q 'WAFFLE_AI_READ_ONLY_ROUTE_V11157' apps-script/Code.js
+          grep -q 'waffle_ai_health: true' apps-script/Code.js
+          grep -q 'ask_waffle_ai: true' apps-script/Code.js
+          grep -q 'getWaffleAiHealthResponseV11157_()' apps-script/Code.js
+          grep -q 'getWaffleAiConversationResponseV11157_(data)' apps-script/Code.js
+
+          grep -q 'function getWaffleAiConversationResponseV11157_' apps-script/WaffleAIProvider.js
+          grep -q 'function getWaffleAiGroqResponseV11157_' apps-script/WaffleAIProvider.js
+          grep -q 'function getWaffleAiGeminiResponseV11148Fixed_' apps-script/WaffleAIProvider.js
+          grep -q 'https://api.groq.com/openai/v1/chat/completions' apps-script/WaffleAIProvider.js
+          grep -q 'function waffleAiTryFastCalendarAnswerV11150_' apps-script/WaffleAICalendarFast.js
+          grep -q "calendarFastPathMode: 'targeted-B-L-month-filter'" apps-script/WaffleAIHealth.js
+
+          test ! -e scripts/patch-waffle-ai-router.py
+          if grep -q 'patch-waffle-ai-router.py' .github/workflows/deploy-apps-script.yml; then
+            echo 'Apps Script deploy must not mutate source before clasp push.'
+            exit 1
+          fi
+          grep -q 'Push exact committed source to Google Apps Script' .github/workflows/deploy-apps-script.yml
+          grep -q 'clasp push --force' .github/workflows/deploy-apps-script.yml
+
+          for retired in \
+            apps-script/WaffleAIProviderV11148.js \
+            apps-script/WaffleAIProviderV11149.js \
+            apps-script/WaffleAIProviderV11150.js \
+            apps-script/WaffleAIProviderV11157.js \
+            apps-script/WaffleAIGeminiRepairV11148.js \
+            apps-script/WaffleAICalendarFastV11149.js \
+            apps-script/WaffleAICalendarFastV11150.js \
+            apps-script/WaffleAIHealthV11148.js \
+            apps-script/WaffleAIHealthV11149.js \
+            apps-script/WaffleAIHealthV11150.js \
+            apps-script/WaffleAIHealthV11157.js; do
+            if test -e "$retired"; then
+              echo "Retired backend patch returned: $retired"
+              exit 1
+            fi
+          done
+
+          # Profile, request-source and intake persistence are intentionally not
+          # part of this tranche; keep them present until a separate proof exists.
+          test -e apps-script/V1115ProfileLifecycle.js
+          test -e apps-script/V1115ProfileStorage.js
+          test -e apps-script/V1115RequestSourcePersistence.js
+          test -e apps-script/V1117RequestSourceProfile.js
+          test -e apps-script/V11191LegacyIntakeMedia.js
+          test -e apps-script/LegacyIntake.html

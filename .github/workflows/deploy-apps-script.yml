@@ -7,7 +7,6 @@ on:
       - main
     paths:
       - 'apps-script/**'
-      - 'scripts/patch-waffle-ai-router.py'
       - '.github/workflows/deploy-apps-script.yml'
 
 permissions:
@@ -38,10 +37,23 @@ jobs:
           printf '%s' "$CLASPRC_JSON" > "$HOME/.clasprc.json"
           printf '%s' "$CLASP_JSON" > "apps-script/.clasp.json"
 
-      - name: Inject conversational Waffle AI read-only routes
-        run: python3 scripts/patch-waffle-ai-router.py
+      - name: Validate committed Waffle AI backend
+        run: |
+          set -euo pipefail
+          node --check apps-script/Code.js
+          node --check apps-script/WaffleAIProvider.js
+          node --check apps-script/WaffleAICalendarFast.js
+          node --check apps-script/WaffleAIHealth.js
+          grep -q 'WAFFLE_AI_READ_ONLY_ROUTE_V11157' apps-script/Code.js
+          grep -q 'waffle_ai_health: true' apps-script/Code.js
+          grep -q 'ask_waffle_ai: true' apps-script/Code.js
+          grep -q 'getWaffleAiHealthResponseV11157_()' apps-script/Code.js
+          grep -q 'getWaffleAiConversationResponseV11157_(data)' apps-script/Code.js
+          grep -q 'function getWaffleAiConversationResponseV11157_' apps-script/WaffleAIProvider.js
+          grep -q 'function waffleAiTryFastCalendarAnswerV11150_' apps-script/WaffleAICalendarFast.js
+          grep -q 'function getWaffleAiHealthResponseV11157_' apps-script/WaffleAIHealth.js
 
-      - name: Push source to Google Apps Script
+      - name: Push exact committed source to Google Apps Script
         working-directory: apps-script
         run: clasp push --force
 
