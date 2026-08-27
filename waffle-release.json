@@ -2,7 +2,7 @@
   "release": "phase3d-2026.08.28.01",
   "runtimeBuild": "2026.08.27.04",
   "phase": "phase-3d-release-regression-observability",
-  "status": "candidate",
+  "status": "stable",
   "previousStableSha": "6812d2f22faa1864291f6d654319895d9ffcd7da",
   "maintenanceCommit": "0fbd5466a0e660ba23049b0a2c0611ccbcfbab2c",
   "rollbackMode": "maintenance-first-new-commit-from-previous-stable",
@@ -10,5 +10,14 @@
   "systemStatus": "system-status.html",
   "diagnostics": "waffle-diagnostics.js",
   "productionWritesInSmokeTests": false,
-  "preparedDate": "2026-08-28"
+  "preparedDate": "2026-08-28",
+  "validatedCandidateSha": "b57d5d6d5a559d9d397e300dad55d3cdf5908c7d",
+  "completedDate": "2026-08-28",
+  "verification": {
+    "releaseGateRunId": 33124634872,
+    "browserSmokeRunId": 33124634352,
+    "pagesRunId": 33124631898,
+    "maintenanceValidated": true,
+    "productionWritesInSmokeTests": false
+  }
 }
