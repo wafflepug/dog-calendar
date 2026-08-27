@@ -22,6 +22,7 @@ jobs:
       - name: Validate JavaScript
         run: |
           node --check waffle-v11.0.5.js
+          node --check care.js
           node --check waffle-v11.1.45.js
           node --check waffle-v11.1.47.js
           node --check waffle-v11.1.48.js
@@ -67,26 +68,41 @@ jobs:
             exit 1
           fi
 
-      - name: Validate rebuilt desktop Care tabs
+      - name: Validate canonical desktop Care tabs
         run: |
-          grep -q "waffle-v11.1.60.js" waffle-v11.0.5.js
-          grep -q "v11160DesktopCareRebuildVersion" waffle-v11.1.60.js
-          grep -q "v11160-desktop-tabs" waffle-v11.1.60.js
-          grep -q "label: 'Profile'" waffle-v11.1.60.js
-          grep -q "label: 'Belongings'" waffle-v11.1.60.js
-          grep -q "label: 'Media'" waffle-v11.1.60.js
-          grep -q "label: 'History'" waffle-v11.1.60.js
-          grep -q "label: 'Master'" waffle-v11.1.60.js
-          grep -q "switchDirectoryProfileMainTab" waffle-v11.1.60.js
-          grep -q "v108LoadHistory" waffle-v11.1.60.js
-          grep -q "v110LoadMedia" waffle-v11.1.60.js
-          grep -q "v110LoadMasterProfile" waffle-v11.1.60.js
-          if grep -q "window.addEventListener('click', handleClick, true)" waffle-v11.1.60.js; then
-            echo "Rebuilt desktop tabs must not use the old window-capture interception architecture"
+          test -f waffle-v11.1.60.js
+          grep -q "'care.js'" waffle-v11.0.5.js
+          grep -q "WAFFLE_CARE_CANONICAL" waffle-v11.0.5.js
+          grep -q "WAFFLE HOUSE — CANONICAL CARE / GUEST DIRECTORY MODULE" care.js
+          grep -q "CANONICAL CARE SOURCE · waffle-v11.1.60.js" care.js
+          grep -q "v11160DesktopCareRebuildVersion" care.js
+          grep -q "v11160-desktop-tabs" care.js
+          grep -q "label: 'Profile'" care.js
+          grep -q "label: 'Belongings'" care.js
+          grep -q "label: 'Media'" care.js
+          grep -q "label: 'History'" care.js
+          grep -q "label: 'Master'" care.js
+          grep -q "switchDirectoryProfileMainTab" care.js
+          grep -q "v108LoadHistory" care.js
+          grep -q "v110LoadMedia" care.js
+          grep -q "v110LoadMasterProfile" care.js
+          python3 - <<'PY'
+          import re
+          from pathlib import Path
+          text = Path('waffle-v11.0.5.js').read_text(encoding='utf-8')
+          match = re.search(r"async function ensureDesktopCareRebuild\(\) \{(.*?)\n  \}", text, re.S)
+          assert match, 'ensureDesktopCareRebuild() missing'
+          loader = match.group(1)
+          assert "'care.js'" in loader
+          assert 'WAFFLE_CARE_CANONICAL' in loader
+          assert 'waffle-v11.1.60.js' not in loader, 'historical Care source is active again'
+          PY
+          if grep -q "window.addEventListener('click', handleClick, true)" care.js; then
+            echo "Canonical desktop tabs must not use the old window-capture interception architecture"
             exit 1
           fi
-          if grep -q "style.removeProperty('display')" waffle-v11.1.60.js; then
-            echo "Rebuilt desktop tabs must not use the banned display recovery pattern"
+          if grep -q "style.removeProperty('display')" care.js; then
+            echo "Canonical desktop tabs must not use the banned display recovery pattern"
             exit 1
           fi
 
