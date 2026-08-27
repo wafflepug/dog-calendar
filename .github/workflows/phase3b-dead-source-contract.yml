@@ -63,6 +63,6 @@ jobs:
 
           assert Path('waffle-ui-contract.js').exists(), 'reference UI contract intentionally remains'
           assert Path('scripts/check-ui-stability.py').exists(), 'active regression contract missing'
-          assert Path('scripts/patch-waffle-ai-router.py').exists(), 'active Apps Script AI router patch missing'
-          print('Phase 3B dead-source contract passed: 26 migrated sources and migration tooling remain retired.')
+          assert not Path('scripts/patch-waffle-ai-router.py').exists(), 'Phase 3C deploy-time AI router patch must stay retired'
+          print('Phase 3B dead-source contract passed: 26 migrated sources and migration tooling remain retired; Phase 3C patcher stays absent.')
           PY
