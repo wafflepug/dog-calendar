@@ -55,6 +55,19 @@ Stored fields are limited to technical metadata such as timestamp, event type, p
 
 The readiness workflow deliberately does **not** force-move `main` and does not deploy. A rollback must be a new auditable commit that restores the known-good tree, passes all normal deployment checks, and keeps maintenance ON until validation is complete.
 
+## Phase 3D completion record
+
+Phase 3D is released as `phase3d-2026.08.28.01`.
+
+- Validated candidate: `b57d5d6d5a559d9d397e300dad55d3cdf5908c7d`
+- Release Gate: run `33124634872`
+- Read-only browser smoke: run `33124634352`
+- GitHub Pages: run `33124631898`
+- Production smoke writes: none
+- Rollback anchor: `6812d2f22faa1864291f6d654319895d9ffcd7da`
+
+The stable release marker is machine-enforced by the Phase 3D Release Gate. Final maintenance-off deployment still requires the live backend state and the full interactive read-only browser suite to agree with the committed release.
+
 ## Safety principle
 
 A release is not considered healthy because a commit exists. It is healthy only when the committed source, deployed Apps Script revision, Pages assets, canonical UI modules, read-only backend health and maintenance state all agree.
