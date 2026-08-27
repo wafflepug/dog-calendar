@@ -7,9 +7,9 @@
  * validation. A Script Property can override the code default when
  * an operator needs an emergency switch from Apps Script itself.
  *
- * Deployment note: Phase 3B proven-source cleanup tranche validated and released.
+ * Deployment note: Phase 3C backend canonicalisation in progress.
  * ============================================================ */
-var WAFFLE_MAINTENANCE_DEFAULT_ = false;
+var WAFFLE_MAINTENANCE_DEFAULT_ = true;
 var WAFFLE_MAINTENANCE_PROPERTY_ = 'WAFFLE_MAINTENANCE_MODE';
 var WAFFLE_MAINTENANCE_MESSAGE_PROPERTY_ = 'WAFFLE_MAINTENANCE_MESSAGE';
 var WAFFLE_MAINTENANCE_UPDATED_PROPERTY_ = 'WAFFLE_MAINTENANCE_UPDATED_AT';
