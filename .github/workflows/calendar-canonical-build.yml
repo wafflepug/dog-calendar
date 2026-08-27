@@ -1,0 +1,70 @@
+name: Build Canonical Calendar
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - scripts/build-calendar-canonical.py
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-calendar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build canonical Calendar module
+        run: python3 scripts/build-calendar-canonical.py
+
+      - name: Validate canonical Calendar JavaScript
+        run: |
+          node --check calendar.js
+          node --check waffle-v11.0.5.js
+          node --check waffle-bootstrap.js
+          node --check service-worker.js
+          grep -q "WAFFLE_CALENDAR_CANONICAL" calendar.js
+          grep -q "calendar.js" waffle-v11.0.5.js
+          if grep -q "waffle-v11.1.61.js" waffle-v11.0.5.js; then
+            echo "Legacy Calendar bridge is still active in waffle-v11.0.5.js"
+            exit 1
+          fi
+
+      - name: Commit generated canonical runtime
+        run: |
+          if git diff --quiet -- \
+            calendar.js \
+            waffle-v11.0.5.js \
+            waffle-bootstrap.js \
+            waffle-runtime.css \
+            waffle-build.json \
+            service-worker.js \
+            index.html \
+            directory.html \
+            reminders.html \
+            audit.html; then
+            echo "Canonical Calendar runtime is already current."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            calendar.js \
+            waffle-v11.0.5.js \
+            waffle-bootstrap.js \
+            waffle-runtime.css \
+            waffle-build.json \
+            service-worker.js \
+            index.html \
+            directory.html \
+            reminders.html \
+            audit.html
+          git commit -m "Build canonical Calendar runtime"
+          git push origin HEAD:main
