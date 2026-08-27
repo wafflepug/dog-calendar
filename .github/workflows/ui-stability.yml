@@ -54,11 +54,11 @@ jobs:
             echo "Canonical UI modules must not use the banned display recovery pattern"
             exit 1
           fi
-          # Ask Waffle intentionally stops propagation inside its own modal form
-          # handlers to prevent duplicate submissions. The native-listener guard
-          # applies to shared/Care routing, where interception caused tab regressions.
-          if grep -q "event.stopImmediatePropagation" care.js waffle-ui.js organiser.js; then
-            echo "Shared/Care canonical modules must not suppress native profile-tab listeners"
+          # stopImmediatePropagation is intentionally used by Ask Waffle form
+          # handling and by the canonical reminder Quick Action to suppress old
+          # duplicate handlers. It must not exist in Care's rebuilt tab layer.
+          if grep -q "event.stopImmediatePropagation" care.js; then
+            echo "Canonical Care must not suppress native profile-tab listeners"
             exit 1
           fi
           if grep -q "script.src = 'waffle-v11.1.80.js" waffle-ui.js; then
