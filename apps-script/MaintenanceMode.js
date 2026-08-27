@@ -7,9 +7,9 @@
  * validation. A Script Property can override the code default when
  * an operator needs an emergency switch from Apps Script itself.
  *
- * Deployment note: Phase 3C canonical backend validated and released.
+ * Deployment note: Phase 3D deployment, regression and observability hardening in progress.
  * ============================================================ */
-var WAFFLE_MAINTENANCE_DEFAULT_ = false;
+var WAFFLE_MAINTENANCE_DEFAULT_ = true;
 var WAFFLE_MAINTENANCE_PROPERTY_ = 'WAFFLE_MAINTENANCE_MODE';
 var WAFFLE_MAINTENANCE_MESSAGE_PROPERTY_ = 'WAFFLE_MAINTENANCE_MESSAGE';
 var WAFFLE_MAINTENANCE_UPDATED_PROPERTY_ = 'WAFFLE_MAINTENANCE_UPDATED_AT';
@@ -98,7 +98,7 @@ function clearWaffleMaintenanceOverride() {
 
 function buildWaffleMaintenanceRedirectHtml_() {
   var target = WAFFLE_MAINTENANCE_PAGE_URL_;
-  var safeTarget = target.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+  var safeTarget = target.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/\"/g,'&quot;');
   return HtmlService.createHtmlOutput(
     '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
     '<meta http-equiv="refresh" content="0;url=' + safeTarget + '"><title>Waffle House — Maintenance</title></head>' +
