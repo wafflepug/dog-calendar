@@ -34,8 +34,8 @@ for page in ("index.html", "directory.html", "reminders.html", "audit.html"):
 # The consolidated entries must still preserve the proven final UI layer.
 require("waffle-runtime.css", "waffle-v11.0.5.css", "shared first-paint retirement CSS must remain in approved style order")
 require("waffle-bootstrap.js", '"waffle-v11.0.5.js"', "shared final UI loader must remain in approved runtime order")
-require("waffle-v11.0.5.js", "waffle-ui-contract.js", "Final UI Contract must load last")
-require("waffle-ui-contract.js", "WAFFLE_UI_CONTRACT", "runtime contract marker must exist")
+require("waffle-v11.0.5.js", "'waffle-ui.js'", "canonical shared UI module must load")
+require("waffle-ui.js", "WAFFLE_UI_CONTRACT", "runtime contract marker must exist inside canonical shared UI")
 
 require("care.js", "WAFFLE_CARE_CANONICAL", "Care must run through the canonical Care module")
 require("care.js", "v11160DesktopCareRebuildVersion", "canonical Care must preserve the proven desktop Guest Directory rebuild")
