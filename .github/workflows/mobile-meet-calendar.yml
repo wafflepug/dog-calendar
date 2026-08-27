@@ -13,13 +13,35 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate mobile Meet & Greet formatting
+      - name: Validate mobile Meet & Greet formatting in canonical Calendar
         run: |
           node --check waffle-v11.1.66.js
-          grep -q "waffle-v11.1.66.js" waffle-v11.1.61.js
+          node --check calendar.js
           grep -q "max-width:700px" waffle-v11.1.66.js
           grep -q "width:100% !important" waffle-v11.1.66.js
           grep -q "height:22px !important" waffle-v11.1.66.js
           grep -q "copy.textContent = mobile ? labels.time : labels.full" waffle-v11.1.66.js
           grep -q "Meet & Greet ·" waffle-v11.1.66.js
           grep -q "window.v11166MobileMeetVersion" waffle-v11.1.66.js
+
+          grep -q "CANONICAL CALENDAR SOURCE · waffle-v11.1.66.js" calendar.js
+          grep -q "max-width:700px" calendar.js
+          grep -q "width:100% !important" calendar.js
+          grep -q "height:22px !important" calendar.js
+          grep -q "copy.textContent = mobile ? labels.time : labels.full" calendar.js
+          grep -q "Meet & Greet ·" calendar.js
+          grep -q "window.v11166MobileMeetVersion" calendar.js
+          grep -q "WAFFLE_CALENDAR_CANONICAL" calendar.js
+
+          python3 - <<'PY'
+          import re
+          from pathlib import Path
+          text = Path('waffle-v11.0.5.js').read_text(encoding='utf-8')
+          match = re.search(r'async function ensureCleanCalendar\(\) \{(.*?)\n  \}', text, re.S)
+          assert match, 'ensureCleanCalendar() not found'
+          block = match.group(1)
+          assert "'calendar.js'" in block
+          assert 'WAFFLE_CALENDAR_CANONICAL' in block
+          assert "'waffle-v11.1.61.js'" not in block
+          print('Mobile Meet & Greet formatting is active through canonical calendar.js')
+          PY
