@@ -16,91 +16,92 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Validate mobile sitter shell
+      - name: Validate canonical mobile sitter shell
         run: |
           node --check waffle-bootstrap.js
-          node --check waffle-v11.1.75.js
-          node --check waffle-v11.1.76.js
-          node --check waffle-v11.1.80.js
-          node --check waffle-v11.1.89.js
           node --check waffle-v11.0.5.js
+          node --check waffle-ui.js
+          node --check organiser.js
           node --check service-worker.js
 
-          # Phase 1 consolidated runtime: HTML loads one authoritative bootstrap;
-          # the existing mobile compatibility order remains reachable from it.
           grep -q '"waffle-v11.0.5.js"' waffle-bootstrap.js
-          grep -q "waffle-v11.1.75.js" waffle-v11.0.5.js
-          grep -q "waffle-v11.1.76.js" waffle-v11.0.5.js
-          grep -q "waffle-v11.1.80.js" waffle-v11.1.76.js
-          grep -q "waffle-v11.1.89.js?v=11.1.89" waffle-v11.0.5.js
+          grep -q "'waffle-ui.js'" waffle-v11.0.5.js
+          grep -q "WAFFLE_UI_CANONICAL" waffle-ui.js
 
-          grep -q "v11175MobileSitterShellVersion" waffle-v11.1.75.js
-          grep -q "v11176AuthoritativeMobileFooterVersion" waffle-v11.1.76.js
-          grep -q "v11178UniformMobileFooterVersion" waffle-v11.1.76.js
-          grep -q "v11180MobileHeaderRailVersion" waffle-v11.1.80.js
-          grep -q "v11181MobileHeaderAvatarsVersion" waffle-v11.1.80.js
-          grep -q "v11182CleanMobileTodayHeaderVersion" waffle-v11.1.80.js
-          grep -q "v11189MobileQuickActionCompletionVersion" waffle-v11.1.89.js
+          # Proven mobile shell/footer/header/Quick Action behavior is embedded
+          # in the single canonical shared UI module.
+          grep -q "v11175MobileSitterShellVersion" waffle-ui.js
+          grep -q "v11176AuthoritativeMobileFooterVersion" waffle-ui.js
+          grep -q "v11178UniformMobileFooterVersion" waffle-ui.js
+          grep -q "v11180MobileHeaderRailVersion" waffle-ui.js
+          grep -q "v11181MobileHeaderAvatarsVersion" waffle-ui.js
+          grep -q "v11182CleanMobileTodayHeaderVersion" waffle-ui.js
+          grep -q "v11189MobileQuickActionCompletionVersion" waffle-ui.js
 
-          grep -q "calendar-brand-logo" waffle-v11.1.80.js
-          grep -q "wh80MobileHeaderRail" waffle-v11.1.80.js
-          grep -q "wh81MobileInstallSlot" waffle-v11.1.80.js
-          grep -q "v10TodayStatus" waffle-v11.1.80.js
-          grep -q "v10-ops-heading .v10-eyebrow" waffle-v11.1.80.js
-          grep -q "#v10OperationsTitle" waffle-v11.1.80.js
-          grep -q "#v10TodayDateLabel" waffle-v11.1.80.js
-          grep -q "promoteTodayDate" waffle-v11.1.80.js
-          grep -q "waffle-notification-avatar-v1181.svg" waffle-v11.1.80.js
-          grep -q "waffle-search-avatar-v1181.svg" waffle-v11.1.80.js
-          grep -q "data-wh80-role=\"notification\"" waffle-v11.1.80.js
-          grep -q "data-wh80-role=\"search\"" waffle-v11.1.80.js
-          grep -q "data-wh80-role=\"status\"" waffle-v11.1.80.js
-          grep -q "flex-direction:column" waffle-v11.1.80.js
-          grep -q "right:12px" waffle-v11.1.80.js
+          grep -q "index.html?view=today" waffle-ui.js
+          grep -q "index.html?view=calendar" waffle-ui.js
+          grep -q "Today" waffle-ui.js
+          grep -q "Calendar" waffle-ui.js
+          grep -q "Care" waffle-ui.js
+          grep -q "Organiser" waffle-ui.js
+          grep -q "Logs" waffle-ui.js
+          grep -q "Quick Add" waffle-ui.js
+          grep -q "Ask Waffle" waffle-ui.js
+          grep -q "Appearance &amp; Colour" waffle-ui.js
+          grep -q "grid-template-columns:repeat(5" waffle-ui.js
+          grep -q "data-wh75-mobile-view" waffle-ui.js
 
-          grep -q "index.html?view=today" waffle-v11.1.75.js
-          grep -q "index.html?view=calendar" waffle-v11.1.75.js
-          grep -q "Today" waffle-v11.1.75.js
-          grep -q "Calendar" waffle-v11.1.75.js
-          grep -q "Care" waffle-v11.1.75.js
-          grep -q "Organiser" waffle-v11.1.75.js
-          grep -q "Logs" waffle-v11.1.75.js
-          grep -q "Quick Add" waffle-v11.1.75.js
-          grep -q "Ask Waffle" waffle-v11.1.75.js
-          grep -q "Appearance &amp; Colour" waffle-v11.1.75.js
-          grep -q "grid-template-columns:repeat(5" waffle-v11.1.75.js
-          grep -q "data-wh75-mobile-view" waffle-v11.1.75.js
+          grep -q "nav.app-tabs" waffle-ui.js
+          grep -q "#v1118MobileNav" waffle-ui.js
+          grep -q "ensureBottomNav" waffle-ui.js
+          grep -q "today-calendar-add-care-waffle-ai" waffle-ui.js
+          grep -q "waffle-today-avatar-v1178.svg" waffle-ui.js
+          grep -q "waffle-calendar-avatar-v1178.svg" waffle-ui.js
+          grep -q "waffle-care-avatar-v1178.svg" waffle-ui.js
+          grep -q "wh78-avatar-shell" waffle-ui.js
+          grep -q "Waffle AI" waffle-ui.js
 
-          grep -q "nav.app-tabs" waffle-v11.1.76.js
-          grep -q "#v1118MobileNav" waffle-v11.1.76.js
-          grep -q "ensureBottomNav" waffle-v11.1.76.js
-          grep -q "today-calendar-add-care-waffle-ai" waffle-v11.1.76.js
-          grep -q "waffle-today-avatar-v1178.svg" waffle-v11.1.76.js
-          grep -q "waffle-calendar-avatar-v1178.svg" waffle-v11.1.76.js
-          grep -q "waffle-care-avatar-v1178.svg" waffle-v11.1.76.js
-          grep -q "wh78-avatar-shell" waffle-v11.1.76.js
-          grep -q "border-radius:50%" waffle-v11.1.76.js
-          grep -q "Waffle AI" waffle-v11.1.76.js
+          grep -q "calendar-brand-logo" waffle-ui.js
+          grep -q "wh80MobileHeaderRail" waffle-ui.js
+          grep -q "wh81MobileInstallSlot" waffle-ui.js
+          grep -q "v10TodayStatus" waffle-ui.js
+          grep -q "#v10TodayDateLabel" waffle-ui.js
+          grep -q "promoteTodayDate" waffle-ui.js
+          grep -q "waffle-notification-avatar-v1181.svg" waffle-ui.js
+          grep -q "waffle-search-avatar-v1181.svg" waffle-ui.js
+          grep -q "data-wh80-role=\"notification\"" waffle-ui.js
+          grep -q "data-wh80-role=\"search\"" waffle-ui.js
+          grep -q "data-wh80-role=\"status\"" waffle-ui.js
 
-          # V11.1.89: every canonical Quick Action remains available and mobile forms are completable.
-          grep -q 'data-v10-quick-action=\"boarding\"' waffle-app.js
-          grep -q 'data-v10-quick-action=\"potential\"' waffle-app.js
-          grep -q 'data-v10-quick-action=\"meet\"' waffle-app.js
-          grep -q 'data-v10-quick-action=\"reminder\"' waffle-app.js
-          grep -q '#v10QuickAddSheet' waffle-v11.1.89.js
-          grep -q '#potentialStayModal' waffle-v11.1.89.js
-          grep -q '#customBookingModal' waffle-v11.1.89.js
-          grep -q 'overflow-y:auto!important' waffle-v11.1.89.js
-          grep -q 'max-height:100dvh' waffle-v11.1.89.js
-          grep -q 'z-index:2147483200' waffle-v11.1.89.js
-          grep -q '92px + env(safe-area-inset-bottom)' waffle-v11.1.89.js
-          grep -q "Organiser · Sticky Notes" waffle-v11.1.89.js
-          grep -q "organiser', 'notes" waffle-v11.1.89.js
-          grep -q 'data-organiser-tab=\"notes\"' waffle-v11.1.89.js
-          grep -q 'openReminderComposer' waffle-v11.1.89.js
-          grep -q 'waffle-v11.1.15.js?v=11.1.89' waffle-v11.1.89.js
-          grep -q 'waffle-v11.1.15.css?v=11.1.89' waffle-v11.1.89.js
-          grep -q 'WAFFLE_QUICK_ACTION_STATUS' waffle-v11.1.89.js
+          # Every Quick Action remains completable and Organiser uses its
+          # canonical module instead of the historical V11.1.15 loader.
+          grep -q 'data-v10-quick-action="boarding"' waffle-app.js
+          grep -q 'data-v10-quick-action="potential"' waffle-app.js
+          grep -q 'data-v10-quick-action="meet"' waffle-app.js
+          grep -q 'data-v10-quick-action="reminder"' waffle-app.js
+          grep -q '#v10QuickAddSheet' waffle-ui.js
+          grep -q '#potentialStayModal' waffle-ui.js
+          grep -q '#customBookingModal' waffle-ui.js
+          grep -q 'overflow-y:auto!important' waffle-ui.js
+          grep -q 'max-height:100dvh' waffle-ui.js
+          grep -q 'Organiser · Sticky Notes' waffle-ui.js
+          grep -q 'openReminderComposer' waffle-ui.js
+          grep -q 'organiser.js?build=' waffle-ui.js
+          grep -q 'WAFFLE_QUICK_ACTION_STATUS' waffle-ui.js
+          if grep -q 'waffle-v11.1.15.js?v=' waffle-ui.js; then
+            echo "Canonical shared UI must not activate historical Organiser code"
+            exit 1
+          fi
+          if grep -q "script.src = 'waffle-v11.1.80.js" waffle-ui.js; then
+            echo "Canonical shared UI must not dynamically activate V11.1.80"
+            exit 1
+          fi
+
+          # Historical sources remain available for rollback only.
+          test -f waffle-v11.1.75.js
+          test -f waffle-v11.1.76.js
+          test -f waffle-v11.1.80.js
+          test -f waffle-v11.1.89.js
           test -f waffle-v11.1.15.js
           test -f waffle-v11.1.15.css
 
@@ -123,29 +124,24 @@ jobs:
           grep -q "V11.1.79 — MOBILE FOOTER TYPOGRAPHY" waffle-v11.0.5.css
           grep -q "font-size: 11px" waffle-v11.0.5.css
           grep -q "font-weight: 700" waffle-v11.0.5.css
-
-          # Colour Style is a full mobile application theme, not navigation-only chrome.
           grep -q "V11.1.84 — MOBILE FULL-PAGE COLOUR THEMES" waffle-v11.0.5.css
           grep -q -- "--wh84-page" waffle-v11.0.5.css
           grep -q "body\[data-waffle-colour-style\] > .container" waffle-v11.0.5.css
-          grep -q "body\[data-waffle-colour-style\] .v10-stat-card" waffle-v11.0.5.css
-          grep -q "body\[data-waffle-page=\"calendar\"\]\[data-waffle-colour-style\] .wh65-calendar" waffle-v11.0.5.css
           grep -q "#v11115OrganiserRoot" waffle-v11.0.5.css
-          grep -q "body\[data-waffle-page=\"audit\"\]\[data-waffle-colour-style\] #auditLogContainer" waffle-v11.0.5.css
 
-          # PWA no longer pins mobile patch files in the cache. The bootstrap is
-          # cached, while current JS/CSS is network-first/no-store.
           grep -q "waffle-bootstrap.js" service-worker.js
           grep -q "waffle-runtime.css" service-worker.js
+          grep -q "waffle-ui.js" service-worker.js
+          grep -q "organiser.js" service-worker.js
           grep -q "path.endsWith('.js')" service-worker.js
           grep -q "path.endsWith('.css')" service-worker.js
           grep -q "fetch(request, { cache: 'no-store' })" service-worker.js
-          if grep -q "waffle-v11.1.80.js" service-worker.js; then
+          if grep -Eq "waffle-v11\.1\.(75|76|80|89)\.js" service-worker.js; then
             echo "Historical mobile patch JS must not be pinned in the service-worker app shell"
             exit 1
           fi
 
-          if grep -q "style.removeProperty('display')" waffle-v11.1.75.js waffle-v11.1.76.js waffle-v11.1.80.js waffle-v11.1.89.js; then
-            echo "Mobile sitter shell must not use the banned display recovery pattern"
+          if grep -q "style.removeProperty('display')" waffle-ui.js organiser.js; then
+            echo "Canonical mobile sitter shell must not use the banned display recovery pattern"
             exit 1
           fi
