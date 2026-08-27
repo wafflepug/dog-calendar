@@ -23,6 +23,10 @@ jobs:
           node --check waffle-v11.0.5.js
           node --check calendar.js
           node --check care.js
+          node --check organiser.js
+          node --check logs.js
+          node --check waffle-ui.js
+          node --check waffle-ai.js
           node --check service-worker.js
           python3 - <<'PY'
           import json
@@ -32,33 +36,47 @@ jobs:
           pages = ['index.html', 'directory.html', 'reminders.html', 'audit.html']
           manifest = json.loads(Path('waffle-build.json').read_text(encoding='utf-8'))
           build = str(manifest.get('build', '')).strip()
-          assert build, 'waffle-build.json must contain a build id'
+          assert build == '2026.08.27.04', 'unexpected Phase 3A build id'
           assert manifest.get('runtime') == 'waffle-bootstrap.js'
           assert manifest.get('styles') == 'waffle-runtime.css'
-          assert manifest.get('phase') == 'canonical-source-consolidation-2-care'
-          assert manifest.get('canonicalModules', {}).get('calendar') == 'calendar.js'
-          assert manifest.get('canonicalModules', {}).get('care') == 'care.js'
+          assert manifest.get('phase') == 'phase-3a-canonical-modules'
           assert manifest.get('legacySourceDeletion') is False
 
+          canonical = manifest.get('canonicalModules', {})
+          expected_canonical = {
+              'calendar': 'calendar.js',
+              'care': 'care.js',
+              'organiser': 'organiser.js',
+              'logs': 'logs.js',
+              'ui': 'waffle-ui.js',
+              'ai': 'waffle-ai.js',
+          }
+          assert canonical == expected_canonical, f'canonical module map drifted: {canonical}'
+          for path in expected_canonical.values():
+              assert Path(path).exists(), f'canonical module missing: {path}'
+          assert Path('organiser.css').exists(), 'canonical Organiser styles missing'
+          assert Path('docs/runtime-map.md').exists(), 'runtime map missing'
+
           expected_calendar_sources = [
-              'waffle-v11.1.69.js',
-              'waffle-v11.1.66.js',
-              'waffle-v11.1.67.js',
-              'waffle-v11.1.68.js',
-              'waffle-v11.1.70.js',
-              'waffle-v11.1.71.js',
-              'waffle-v11.1.72.js',
-              'waffle-v11.1.73.js',
-              'waffle-v11.1.84.js',
+              'waffle-v11.1.69.js','waffle-v11.1.66.js','waffle-v11.1.67.js',
+              'waffle-v11.1.68.js','waffle-v11.1.70.js','waffle-v11.1.71.js',
+              'waffle-v11.1.72.js','waffle-v11.1.73.js','waffle-v11.1.84.js',
+          ]
+          expected_care_sources = ['waffle-v11.1.60.js']
+          expected_organiser_sources = ['waffle-v11.1.15.js','waffle-v11.1.15.css']
+          expected_ui_sources = ['waffle-v11.1.75.js','waffle-v11.1.76.js','waffle-v11.1.89.js','waffle-ui-contract.js']
+          expected_ai_sources = [
+              'waffle-v11.1.37-assets.js','waffle-v11.1.53.js','waffle-v11.1.37.js',
+              'waffle-v11.1.38.js','waffle-v11.1.39.js','waffle-v11.1.40.js',
+              'waffle-v11.1.45.js','waffle-v11.1.47.js','waffle-v11.1.48.js','waffle-v11.1.58.js',
           ]
           assert manifest.get('legacyCalendarSources') == expected_calendar_sources
-          for source in expected_calendar_sources:
-              assert Path(source).exists(), f'rollback Calendar source missing: {source}'
-
-          expected_care_sources = ['waffle-v11.1.60.js']
           assert manifest.get('legacyCareSources') == expected_care_sources
-          for source in expected_care_sources:
-              assert Path(source).exists(), f'rollback Care source missing: {source}'
+          assert manifest.get('legacyOrganiserSources') == expected_organiser_sources
+          assert manifest.get('legacyUiSources') == expected_ui_sources
+          assert manifest.get('legacyAiSources') == expected_ai_sources
+          for source in expected_calendar_sources + expected_care_sources + expected_organiser_sources + expected_ui_sources + expected_ai_sources:
+              assert Path(source).exists(), f'rollback/reference source missing: {source}'
 
           script_pattern = re.compile(
               r'<script\b[^>]*\bsrc=["\']((?:waffle-app|waffle-v(?:10|11)\.[^"\']+)\.js)(?:\?[^"\']*)?["\'][^>]*>',
@@ -68,7 +86,6 @@ jobs:
               r'<link\b[^>]*\bhref=["\']((?:waffle-app|waffle-v(?:10|11)\.[^"\']+)\.css)(?:\?[^"\']*)?["\'][^>]*>',
               re.I,
           )
-
           for page in pages:
               text = Path(page).read_text(encoding='utf-8')
               expected_js = f'waffle-bootstrap.js?v={build}'
@@ -80,74 +97,85 @@ jobs:
 
           bootstrap = Path('waffle-bootstrap.js').read_text(encoding='utf-8')
           for required in [
-              'waffle-firebase-config.js', 'waffle-app.js', 'waffle-v10.8.js',
-              'waffle-v10.8.2.js', 'waffle-v10.8.3.js', 'waffle-v10.8.5.js',
-              'waffle-v10.8.6.js', 'waffle-v10.8.8.js', 'waffle-v10.8.9.js',
-              'waffle-v11.0.js', 'waffle-v11.0.4.js', 'waffle-v11.0.5.js'
+              'waffle-firebase-config.js','waffle-app.js','waffle-v10.8.js',
+              'waffle-v10.8.2.js','waffle-v10.8.3.js','waffle-v10.8.5.js',
+              'waffle-v10.8.6.js','waffle-v10.8.8.js','waffle-v10.8.9.js',
+              'waffle-v11.0.js','waffle-v11.0.4.js','waffle-v11.0.5.js'
           ]:
-              assert f'"{required}"' in bootstrap, f'bootstrap missing approved runtime module {required}'
-              assert Path(required).exists(), f'approved runtime module missing from repository: {required}'
+              assert f'"{required}"' in bootstrap, f'bootstrap missing approved shared runtime module {required}'
+              assert Path(required).exists(), f'approved shared runtime module missing: {required}'
           assert f"const BUILD = '{build}'" in bootstrap
           assert 'waffle-build.json?_=' in bootstrap
           assert 'A newer Waffle House is ready.' in bootstrap
           assert 'action=maintenance_status' in bootstrap
 
           compatibility = Path('waffle-v11.0.5.js').read_text(encoding='utf-8')
-          clean_calendar = re.search(
-              r'async function ensureCleanCalendar\(\) \{(.*?)\n  \}',
-              compatibility,
-              re.S,
-          )
-          assert clean_calendar, 'ensureCleanCalendar() not found'
-          calendar_loader = clean_calendar.group(1)
-          assert "'calendar.js'" in calendar_loader
-          assert 'WAFFLE_CALENDAR_CANONICAL' in calendar_loader
-          assert "'waffle-v11.1.61.js'" not in calendar_loader, 'legacy Calendar bridge is active again'
+          feature_loaders = {
+              'calendar': ('ensureCleanCalendar', 'calendar.js', 'WAFFLE_CALENDAR_CANONICAL'),
+              'care': ('ensureDesktopCareRebuild', 'care.js', 'WAFFLE_CARE_CANONICAL'),
+              'organiser': ('ensureOrganiser', 'organiser.js', 'WAFFLE_ORGANISER_CANONICAL'),
+              'logs': ('ensureLogs', 'logs.js', 'WAFFLE_LOGS_CANONICAL'),
+              'ui': ('ensureSharedUi', 'waffle-ui.js', 'WAFFLE_UI_CANONICAL'),
+              'ai': ('ensureAskWaffle', 'waffle-ai.js', 'WAFFLE_AI_CANONICAL'),
+          }
+          for label, (function_name, filename, marker) in feature_loaders.items():
+              match = re.search(rf'async function {function_name}\(\) \{{(.*?)\n  \}}', compatibility, re.S)
+              assert match, f'{function_name}() not found'
+              body = match.group(1)
+              assert repr(filename) in body or f'"{filename}"' in body, f'{label}: canonical filename missing'
+              assert marker in body, f'{label}: canonical marker missing'
 
-          clean_care = re.search(
-              r'async function ensureDesktopCareRebuild\(\) \{(.*?)\n  \}',
-              compatibility,
-              re.S,
-          )
-          assert clean_care, 'ensureDesktopCareRebuild() not found'
-          care_loader = clean_care.group(1)
-          assert "'care.js'" in care_loader
-          assert 'WAFFLE_CARE_CANONICAL' in care_loader
-          assert "'waffle-v11.1.60.js'" not in care_loader, 'legacy Care source is active again'
+          retired_live = set(expected_organiser_sources + expected_ui_sources[:3] + expected_ai_sources + expected_care_sources)
+          retired_live.discard('waffle-v11.1.15.css')
+          for source in retired_live:
+              assert source not in compatibility, f'legacy feature runtime reactivated in compatibility loader: {source}'
+          assert 'V11.1.89 behavior is canonical in waffle-ui.js' in compatibility
+          assert 'V11.1.90 — CANONICAL CARE PDF OCR ACTION' in compatibility, 'Care OCR compatibility plumbing was lost'
 
           calendar = Path('calendar.js').read_text(encoding='utf-8')
-          assert 'WAFFLE HOUSE — CANONICAL CALENDAR MODULE' in calendar
           assert 'WAFFLE_CALENDAR_CANONICAL' in calendar
-          assert f"build: '{build}'" in calendar
-          for source in expected_calendar_sources:
-              assert f'CANONICAL CALENDAR SOURCE · {source}' in calendar, f'canonical Calendar missing {source}'
-
           care = Path('care.js').read_text(encoding='utf-8')
-          assert 'WAFFLE HOUSE — CANONICAL CARE / GUEST DIRECTORY MODULE' in care
           assert 'WAFFLE_CARE_CANONICAL' in care
-          assert f"build: '{build}'" in care
-          for source in expected_care_sources:
-              assert f'CANONICAL CARE SOURCE · {source}' in care, f'canonical Care missing {source}'
-          assert 'v11160DesktopCareRebuildVersion' in care
+          organiser = Path('organiser.js').read_text(encoding='utf-8')
+          assert 'WAFFLE HOUSE — CANONICAL ORGANISER' in organiser
+          assert 'WAFFLE_ORGANISER_CANONICAL' in organiser
+          assert 'save_organiser_item' in organiser and 'get_organiser' in organiser
+          assert 'organiser.css?build=' + build in organiser
+          logs = Path('logs.js').read_text(encoding='utf-8')
+          assert 'WAFFLE_LOGS_CANONICAL' in logs
+          assert "dataOwner: 'waffle-app.js'" in logs
+          ui = Path('waffle-ui.js').read_text(encoding='utf-8')
+          assert 'WAFFLE_UI_CANONICAL' in ui
+          assert 'v11175MobileSitterShellVersion' in ui
+          assert 'v11176AuthoritativeMobileFooterVersion' in ui
+          assert 'v11189MobileQuickActionCompletionVersion' in ui
+          assert 'organiser.js?build=' + build in ui
+          assert 'waffle-v11.1.15.js?v=' not in ui
+          ai = Path('waffle-ai.js').read_text(encoding='utf-8')
+          assert 'WAFFLE_AI_CANONICAL' in ai
+          for marker in ['v11138WaffleAiVersion','v11147WaffleAiVersion','v11148WaffleAiVersion','v11158WaffleSpeechVersion']:
+              assert marker in ai, f'Ask Waffle canonical bundle missing {marker}'
 
           runtime_css = Path('waffle-runtime.css').read_text(encoding='utf-8')
           assert f'Build: {build}' in runtime_css
           for required in ['waffle-app.css','waffle-v10.8.css','waffle-v11.0.5.css']:
               assert required in runtime_css
-              assert Path(required).exists(), f'approved stylesheet missing: {required}'
+              assert Path(required).exists(), f'approved base stylesheet missing: {required}'
 
           worker = Path('service-worker.js').read_text(encoding='utf-8')
-          assert f'v11.2.2-care-{build}' in worker
+          assert f'v11.3.0-phase3a-{build}' in worker
           assert "fetch(request, { cache: 'no-store' })" in worker
           shell_match = re.search(r'const APP_SHELL = \[(.*?)\n\];', worker, re.S)
           assert shell_match, 'service worker APP_SHELL not found'
           shell = shell_match.group(1)
-          assert 'waffle-bootstrap.js' in shell
-          assert 'waffle-runtime.css' in shell
-          assert 'waffle-build.json' in shell
-          assert f'calendar.js?build={build}' in shell
-          assert f'care.js?build={build}' in shell
-          assert 'waffle-v10.' not in shell and 'waffle-v11.' not in shell, 'legacy version file remains pre-cached'
+          for name in ['waffle-bootstrap.js','waffle-runtime.css','waffle-build.json','calendar.js','care.js','organiser.js','organiser.css','logs.js','waffle-ui.js','waffle-ai.js']:
+              assert name in shell, f'app shell missing canonical asset {name}'
+          assert 'waffle-v10.' not in shell and 'waffle-v11.' not in shell, 'historical version file remains pre-cached'
 
-          print('Active Waffle runtime contract passed · canonical Calendar + Care · build', build)
+          runtime_map = Path('docs/runtime-map.md').read_text(encoding='utf-8')
+          for name in expected_canonical.values():
+              assert name in runtime_map, f'runtime map missing {name}'
+          assert 'legacySourceDeletion' in runtime_map
+
+          print('Active Waffle runtime contract passed · Phase 3A canonical modules · build', build)
           PY
