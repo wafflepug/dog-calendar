@@ -14,6 +14,8 @@
   const VERSION = '11.1.97';
   const WAIT_TIMEOUT_MS = 10000;
   const POLL_MS = 180;
+  const inFlight = new Map();
+  const completed = new Set();
   const originalTryPastDeepLink =
     typeof window.v1082TryPastDeepLink === 'function'
       ? window.v1082TryPastDeepLink
@@ -93,6 +95,7 @@
           }
         } catch (error) {
           console.error('Future Care profile deep link could not open:', error);
+          return false;
         }
         return true;
       }
@@ -108,6 +111,21 @@
     return false;
   }
 
+  function routeFutureDeepLink(stayKey) {
+    if (completed.has(stayKey)) return Promise.resolve(true);
+    if (inFlight.has(stayKey)) return inFlight.get(stayKey);
+
+    const promise = openFutureDeepLink(stayKey)
+      .then(opened => {
+        if (opened) completed.add(stayKey);
+        return opened;
+      })
+      .finally(() => inFlight.delete(stayKey));
+
+    inFlight.set(stayKey, promise);
+    return promise;
+  }
+
   async function patchedDeepLink() {
     const stayKey = requestedStayKey();
     if (!stayKey || !isFutureStayKey(stayKey)) {
@@ -117,7 +135,7 @@
       return;
     }
 
-    return openFutureDeepLink(stayKey);
+    return routeFutureDeepLink(stayKey);
   }
 
   if (originalTryPastDeepLink) {
@@ -129,7 +147,7 @@
   function proactiveFutureDeepLink() {
     const stayKey = requestedStayKey();
     if (!stayKey || !isFutureStayKey(stayKey)) return;
-    openFutureDeepLink(stayKey).catch(error =>
+    routeFutureDeepLink(stayKey).catch(error =>
       console.error('Future Care proactive deep link failed:', error)
     );
   }
@@ -145,6 +163,6 @@
   window.WAFFLE_V11197_FUTURE_DEEPLINK = Object.freeze({
     version: VERSION,
     isFutureStayKey,
-    openFutureDeepLink
+    openFutureDeepLink: routeFutureDeepLink
   });
 })();
