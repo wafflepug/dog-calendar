@@ -19,6 +19,7 @@ def forbid(path, needle):
 require('waffle-bootstrap.js', '"waffle-v11.1.95.js"')
 require('waffle-bootstrap.js', '"waffle-v11.1.96.js"')
 require('waffle-bootstrap.js', '"waffle-v11.1.97.js"')
+require('waffle-bootstrap.js', '"waffle-v11.2.00.js"')
 require('waffle-bootstrap.js', '"waffle-v11.1.98.js"')
 require('waffle-bootstrap.js', '"waffle-v11.1.99.js"')
 require('waffle-runtime.css', 'waffle-v11.1.95.css')
@@ -56,6 +57,26 @@ require('waffle-v11.1.97.js', 'openDirectoryGuestProfile')
 require('waffle-v11.1.97.js', 'A future booking must never be reclassified as Past')
 require('waffle-v11.1.97.js', 'return originalTryPastDeepLink.apply')
 
+# V11.2.00 owns confirmed-delete consistency before the older V11.1.98 click
+# handler. A deleted row may remain briefly in the published CSV, so a local
+# tombstone suppresses it from Calendar/Care until the public feed catches up.
+require('waffle-v11.2.00.js', 'CONFIRMED DELETE CONSISTENCY')
+require('waffle-v11.2.00.js', "STORAGE_KEY = 'waffleDeletedConfirmedStays'")
+require('waffle-v11.2.00.js', 'TOMBSTONE_TTL_MS = 24 * 60 * 60 * 1000')
+require('waffle-v11.2.00.js', 'recordDeletion(identity)')
+require('waffle-v11.2.00.js', 'removeFromCachedCsv(identity)')
+require('waffle-v11.2.00.js', 'parseCSVToEvents = function')
+require('waffle-v11.2.00.js', 'filterCalendarEvents(events)')
+require('waffle-v11.2.00.js', 'confirmed stay not found')
+require('waffle-v11.2.00.js', 'already deleted. Stale Calendar data has been cleared.')
+require('waffle-v11.2.00.js', "action: 'delete_confirmed_stay'")
+require('waffle-v11.2.00.js', 'event.stopImmediatePropagation()')
+require('waffle-v11.2.00.js', '[250, 1000, 3000, 8000]')
+
+bootstrap = Path('waffle-bootstrap.js').read_text(encoding='utf-8')
+if bootstrap.find('"waffle-v11.2.00.js"') > bootstrap.find('"waffle-v11.1.98.js"'):
+    errors.append('waffle-bootstrap.js: delete consistency guard must load before V11.1.98')
+
 # V11.1.98 makes every confirmed Calendar bar route to Care using a stable
 # dog/start/end identity. This must also work for grouped labels containing &.
 require('waffle-v11.1.98.js', '.wh65-bar.confirmed[data-wh65-event]')
@@ -68,7 +89,6 @@ require('waffle-v11.1.98.js', 'findRequestedCard')
 require('waffle-v11.1.98.js', 'openDirectoryGuestProfile')
 require('waffle-v11.1.98.js', 'Delete Confirmed Stay')
 require('waffle-v11.1.98.js', "action: 'delete_confirmed_stay'")
-require('waffle-v11.1.98.js', "localStorage.removeItem('boardingDataCache')")
 
 # V11.1.99 fixes the remaining source gap on Care itself. Native directory
 # rendering only includes the next seven days, so the full CSV is parsed without

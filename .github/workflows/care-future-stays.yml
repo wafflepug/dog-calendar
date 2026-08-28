@@ -19,6 +19,7 @@ jobs:
           node --check waffle-v11.1.95.js
           node --check waffle-v11.1.96.js
           node --check waffle-v11.1.97.js
+          node --check waffle-v11.2.00.js
           node --check waffle-v11.1.98.js
           node --check waffle-v11.1.99.js
           node --check apps-script/V11198ConfirmedStayDelete.js
