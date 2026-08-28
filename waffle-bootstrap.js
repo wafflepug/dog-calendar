@@ -38,6 +38,9 @@
 ];
   const maintenanceUrl = new URL('maintenance.html', window.location.href);
   let buildBanner = null;
+  let firstPaintSettled = false;
+  let firstPaintObserver = null;
+  let firstPaintTimer = 0;
 
   window.WAFFLE_BUILD = BUILD;
   window.WAFFLE_RUNTIME_BOOTSTRAP = Object.freeze({
@@ -48,6 +51,81 @@
 
   function tagged(file) {
     return file + '?build=' + encodeURIComponent(BUILD);
+  }
+
+  function isMobileViewport() {
+    try { return !!window.matchMedia && window.matchMedia('(max-width: 820px)').matches; }
+    catch (_) { return false; }
+  }
+
+  function mobileShellReady() {
+    if (!isMobileViewport()) return true;
+    if (!document.body) return false;
+
+    const bottomNav = document.getElementById('wh75MobileBottomNav');
+    const menuButton = document.getElementById('wh75MenuButton');
+    const headerRail = document.getElementById('wh80MobileHeaderRail');
+    if (!bottomNav || !menuButton || !headerRail) return false;
+
+    const page = String(window.WAFFLE_PAGE || document.body.dataset?.wafflePage || '');
+    if (page === 'calendar') {
+      const view = String(document.body.dataset?.wh75MobileView || '');
+      if (!view) return false;
+    }
+
+    return true;
+  }
+
+  function revealCanonicalUi(reason) {
+    if (firstPaintSettled) return;
+    firstPaintSettled = true;
+    if (firstPaintObserver) firstPaintObserver.disconnect();
+    if (firstPaintTimer) clearTimeout(firstPaintTimer);
+
+    const reveal = () => {
+      document.documentElement.setAttribute('data-waffle-ui-ready', 'true');
+      document.documentElement.setAttribute('data-waffle-ui-ready-reason', reason || 'canonical-shell');
+      try {
+        window.dispatchEvent(new CustomEvent('waffle:first-paint-ready', {
+          detail: { reason: reason || 'canonical-shell', build: BUILD }
+        }));
+      } catch (_) {}
+    };
+
+    // Two frames guarantee that the canonical shell's injected styles and DOM
+    // have reached layout before the legacy compatibility DOM becomes visible.
+    requestAnimationFrame(() => requestAnimationFrame(reveal));
+  }
+
+  function checkFirstPaintReady() {
+    if (firstPaintSettled) return;
+    if (mobileShellReady()) revealCanonicalUi('canonical-shell');
+  }
+
+  function startFirstPaintGate() {
+    if (!isMobileViewport()) {
+      revealCanonicalUi('desktop');
+      return;
+    }
+
+    document.documentElement.removeAttribute('data-waffle-ui-ready');
+    checkFirstPaintReady();
+    if (firstPaintSettled) return;
+
+    firstPaintObserver = new MutationObserver(checkFirstPaintReady);
+    firstPaintObserver.observe(document.documentElement, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['data-wh75-mobile-view', 'data-waffle-page']
+    });
+
+    // Never leave the application inaccessible if a future UI module fails.
+    // The CSS layer has the same visual fail-safe; this JS fallback records why.
+    firstPaintTimer = window.setTimeout(() => {
+      console.warn('Canonical mobile shell readiness timed out; releasing first-paint gate.');
+      revealCanonicalUi('timeout-fallback');
+    }, 6000);
   }
 
   function startMaintenanceGate() {
@@ -168,18 +246,28 @@
   }
 
   startMaintenanceGate();
+  startFirstPaintGate();
 
   if (document.readyState === 'loading') {
     parserLoadRuntime();
     document.addEventListener('DOMContentLoaded', checkBuild, { once:true });
   } else {
-    dynamicLoadRuntime().catch(error => console.error('Waffle runtime bootstrap failed:', error));
+    dynamicLoadRuntime()
+      .then(checkFirstPaintReady)
+      .catch(error => console.error('Waffle runtime bootstrap failed:', error));
     checkBuild();
   }
 
-  window.addEventListener('pageshow', checkBuild);
+  document.addEventListener('DOMContentLoaded', checkFirstPaintReady, { once:true });
+  window.addEventListener('pageshow', () => {
+    checkBuild();
+    checkFirstPaintReady();
+  });
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') checkBuild();
+    if (document.visibilityState === 'visible') {
+      checkBuild();
+      checkFirstPaintReady();
+    }
   });
   setInterval(checkBuild, 5 * 60 * 1000);
 })();
