@@ -1,0 +1,52 @@
+name: Phase 4 Build Pin
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  align-build-pins:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Align Phase 4 entry-page build pins
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          old='2026.08.27.04'
+          new='2026.08.28.01'
+          paths=['index.html','directory.html','reminders.html','audit.html','system-status.html','manifest.webmanifest']
+          changed=[]
+          for name in paths:
+              p=Path(name)
+              if not p.exists():
+                  continue
+              text=p.read_text(encoding='utf-8')
+              updated=text.replace(old,new)
+              if updated != text:
+                  p.write_text(updated,encoding='utf-8')
+                  changed.append(name)
+          print('Aligned:', ', '.join(changed) if changed else 'already current')
+          PY
+          for page in index.html directory.html reminders.html audit.html; do
+            grep -q 'waffle-bootstrap.js?v=2026.08.28.01' "$page"
+            grep -q 'waffle-runtime.css?v=2026.08.28.01' "$page"
+          done
+      - name: Commit generated build pins
+        run: |
+          set -euo pipefail
+          if git diff --quiet; then
+            echo 'Build pins already aligned.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html directory.html reminders.html audit.html system-status.html manifest.webmanifest
+          git commit -m 'chore: align Phase 4 build pins'
+          git push
