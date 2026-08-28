@@ -14,11 +14,30 @@ jobs:
         run: |
           set -euo pipefail
           test -f maintenance.html
-          test -f waffle-maintenance.webp
+          test -f waffle-maintenance-v2.webp
           test -f apps-script/MaintenanceMode.js
           grep -q 'V11.1.91 — MAINTENANCE GATE' waffle-v11.0.5.js
           grep -q 'maintenance_status' apps-script/Code.js
           grep -q 'assertWaffleActionAllowedDuringMaintenance_' apps-script/Code.js
           grep -q 'WAFFLE_MAINTENANCE_DEFAULT_' apps-script/MaintenanceMode.js
-          grep -q 'waffle-maintenance.webp' service-worker.js
-          echo 'Maintenance redirect, write lock and outage page are present.'
+          grep -q 'waffle-maintenance-v2.webp?v=2026.08.28.02' maintenance.html
+          grep -q 'waffle-maintenance-v2.webp' service-worker.js
+          python3 - <<'PY'
+          from pathlib import Path
+
+          asset = Path('waffle-maintenance-v2.webp')
+          data = asset.read_bytes()
+          assert len(data) > 1000, 'maintenance avatar is unexpectedly small'
+          assert data[:4] == b'RIFF', 'maintenance avatar is not a RIFF/WebP file'
+          assert data[8:12] == b'WEBP', 'maintenance avatar has an invalid WebP signature'
+
+          html = Path('maintenance.html').read_text(encoding='utf-8')
+          assert 'src="waffle-maintenance-v2.webp?v=2026.08.28.02"' in html
+          assert 'waffle-maintenance.webp' not in html, 'maintenance page still references the corrupt legacy avatar'
+
+          worker = Path('service-worker.js').read_text(encoding='utf-8')
+          assert 'waffle-maintenance-v2.webp?v=2026.08.28.02' in worker
+          assert "path.endsWith('/waffle-maintenance-v2.webp')" in worker
+          print('Maintenance avatar is a valid WebP and the live paths use the cache-busted asset.')
+          PY
+          echo 'Maintenance redirect, write lock, outage page and valid pug avatar are present.'
