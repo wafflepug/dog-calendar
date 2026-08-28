@@ -1,0 +1,237 @@
+/* ============================================================
+   WAFFLE HOUSE V11.1.94 — UI MICRO-POLISH
+   ------------------------------------------------------------
+   Small, additive presentation improvements only. This layer does not
+   replace canonical UI, rebuild data views, or restore retired controls.
+   ============================================================ */
+
+/* Readability: operational status pills must remain legible at a glance. */
+.v1105-potential-sync {
+  min-height: 26px !important;
+  padding: 5px 9px !important;
+  font-size: 11px !important;
+  line-height: 1.15 !important;
+  letter-spacing: 0 !important;
+}
+
+/* Consistent keyboard focus and press feedback across canonical controls. */
+:where(
+  button,
+  [role="button"],
+  .app-tab-button,
+  .v10-stat-card,
+  .wh65-btn,
+  .wh69-view-btn,
+  .v1082-stay-tab,
+  .directory-card
+):focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--wh75-accent, #0f79a9) 42%, transparent) !important;
+  outline-offset: 2px !important;
+}
+
+:where(
+  button,
+  .app-tab-button,
+  .v10-stat-card,
+  .wh65-btn,
+  .wh69-view-btn,
+  .v1082-stay-tab
+) {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.v10-stat-card,
+.wh65-btn,
+.wh69-view-btn,
+.v1082-stay-tab,
+.directory-card {
+  transition:
+    transform 140ms ease,
+    box-shadow 140ms ease,
+    border-color 140ms ease,
+    background-color 140ms ease,
+    filter 140ms ease !important;
+}
+
+@media (hover: hover) {
+  .v10-stat-card:hover,
+  .directory-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.09);
+  }
+
+  .wh65-btn:hover,
+  .wh69-view-btn:hover,
+  .v1082-stay-tab:hover {
+    transform: translateY(-1px);
+  }
+}
+
+.v10-stat-card:active,
+.wh65-btn:active,
+.wh69-view-btn:active,
+.v1082-stay-tab:active,
+.directory-card:active {
+  transform: translateY(0) scale(0.985) !important;
+}
+
+:where(button, .wh65-btn, .v10-stat-card):disabled {
+  cursor: wait !important;
+  opacity: 0.68 !important;
+  transform: none !important;
+}
+
+/* Toolbar consistency: one control height/radius/focus treatment. */
+:where(
+  .search-container input,
+  .search-container select,
+  .search-container button,
+  .guest-directory-toolbar input,
+  .audit-toolbar input,
+  .audit-toolbar select,
+  .reminders-toolbar select
+) {
+  min-height: 44px !important;
+  box-sizing: border-box !important;
+  border-radius: 12px !important;
+}
+
+:where(
+  .search-container input,
+  .search-container select,
+  .guest-directory-toolbar input,
+  .audit-toolbar input,
+  .audit-toolbar select,
+  .reminders-toolbar select
+):focus-visible {
+  outline: none !important;
+  border-color: var(--wh75-accent, #0f79a9) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--wh75-accent, #0f79a9) 18%, transparent) !important;
+}
+
+/* Keep native search clear controls easy to hit where supported. */
+input[type="search"]::-webkit-search-cancel-button {
+  cursor: pointer;
+  min-width: 18px;
+  min-height: 18px;
+}
+
+/* Calendar: clearer refresh language + visible last-updated feedback. */
+body[data-waffle-page="calendar"] #wh65Calendar .wh65-toolbar:has(.wh94-last-updated) {
+  padding-bottom: 24px !important;
+}
+
+body[data-waffle-page="calendar"] #wh65Calendar .wh65-toolbar-right {
+  position: relative;
+}
+
+body[data-waffle-page="calendar"] #wh65Calendar .wh65-sync {
+  min-height: 40px !important;
+  padding-inline: 12px !important;
+  font-size: 11px !important;
+}
+
+.wh94-last-updated {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  display: inline-flex;
+  align-items: center;
+  min-height: 15px;
+  white-space: nowrap;
+  color: var(--wh65-muted, #64748b);
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.wh94-last-updated[data-state="ok"] {
+  color: #047857;
+}
+
+.wh94-last-updated[data-state="refreshing"] {
+  color: var(--wh65-accent, #0f79a9);
+}
+
+.wh94-last-updated[data-state="error"] {
+  color: #b91c1c;
+}
+
+body.dark-theme .wh94-last-updated[data-state="ok"] {
+  color: #6ee7b7;
+}
+
+body.dark-theme .wh94-last-updated[data-state="error"] {
+  color: #fca5a5;
+}
+
+/* Today is already canonical; add a subtle surface cue behind the date badge. */
+body[data-waffle-page="calendar"] #wh65Calendar .wh65-date.is-today {
+  background: color-mix(in srgb, var(--wh65-accent) 8%, var(--wh65-surface)) !important;
+  box-shadow:
+    inset 0 -2px 0 var(--wh65-accent),
+    inset 0 0 0 1px color-mix(in srgb, var(--wh65-accent) 18%, transparent) !important;
+}
+
+body[data-waffle-page="calendar"] #wh65Calendar .wh65-date.is-today .wh65-date-number {
+  transform: scale(1.04);
+}
+
+/* Friendlier, easier-to-scan empty states without creating replacement DOM. */
+:where(.no-dogs, .v10-empty, .reminders-empty, .audit-empty, .belongings-empty).wh94-empty-polished {
+  border-radius: 12px;
+  line-height: 1.45;
+}
+
+:where(.no-dogs, .v10-empty, .reminders-empty, .audit-empty, .belongings-empty).wh94-empty-polished::first-letter {
+  font-style: normal;
+}
+
+/* Care profile mode: short motion cue, no layout replacement. */
+.directory-dashboard-fused.is-profile-mode #directoryProfileBackBar:not([hidden]),
+.directory-dashboard-fused.is-profile-mode .directory-card.is-profile-active {
+  animation: wh94-soft-enter 150ms ease-out both;
+}
+
+@keyframes wh94-soft-enter {
+  from {
+    opacity: 0.72;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .v10-stat-card,
+  .wh65-btn,
+  .wh69-view-btn,
+  .v1082-stay-tab,
+  .directory-card,
+  .directory-dashboard-fused.is-profile-mode #directoryProfileBackBar:not([hidden]),
+  .directory-dashboard-fused.is-profile-mode .directory-card.is-profile-active {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+@media (max-width: 640px) {
+  body[data-waffle-page="calendar"] #wh65Calendar .wh65-toolbar:has(.wh94-last-updated) {
+    padding-bottom: 22px !important;
+  }
+
+  .wh94-last-updated {
+    max-width: 92px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 8px;
+  }
+
+  body[data-waffle-page="calendar"] #wh65Calendar .wh65-sync {
+    padding-inline: 8px !important;
+    font-size: 10px !important;
+  }
+}
