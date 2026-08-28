@@ -1,6 +1,6 @@
 /* Waffle House Boarding — recovery service worker */
 
-const WAFFLE_SW_VERSION = 'v11.4.0-phase4-2026.08.28.01';
+const WAFFLE_SW_VERSION = 'v11.4.1-maintenance-avatar-2026.08.28.02';
 const WAFFLE_CACHE_PREFIX = 'waffle-house-';
 const APP_SHELL_CACHE = `${WAFFLE_CACHE_PREFIX}shell-${WAFFLE_SW_VERSION}`;
 const RUNTIME_CACHE = `${WAFFLE_CACHE_PREFIX}runtime-${WAFFLE_SW_VERSION}`;
@@ -30,7 +30,7 @@ const APP_SHELL = [
   './phase4-operations.js?build=2026.08.28.01',
   './phase4-ai-actions.js?build=2026.08.28.01',
   './waffle-runtime.css?v=2026.08.28.01',
-  './waffle-maintenance.webp?v=11.1.92',
+  './waffle-maintenance-v2.webp?v=2026.08.28.02',
   './waffle-logo.png',
   './waffle-logo-dark.png',
   './manifest.webmanifest?v=2026.08.28.01',
@@ -151,7 +151,7 @@ function isFirstPaintCriticalAsset(url) {
   if (url.origin !== self.location.origin) return false;
   const path = url.pathname.toLowerCase();
   return (
-    path.endsWith('/waffle-maintenance.webp') ||
+    path.endsWith('/waffle-maintenance-v2.webp') ||
     path.endsWith('/waffle-build.json') ||
     path.endsWith('/waffle-release.json') ||
     path.endsWith('/manifest.webmanifest') ||
