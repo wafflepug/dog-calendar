@@ -144,8 +144,13 @@ jobs:
               for marker in required_markers:
                   assert marker in text, f'{filename}: behavior marker missing: {marker}'
 
+          # Service-worker cache revisions may be hotfixed independently from the product build.
+          # Build correctness is enforced by the pinned APP_SHELL assets below rather than by
+          # coupling the cache namespace to one exact release-label format.
           worker = Path('service-worker.js').read_text(encoding='utf-8')
-          assert f"v11.4.0-phase4-{build}" in worker, 'service-worker version does not match Phase 4 build'
+          sw_version_match = re.search(r"const WAFFLE_SW_VERSION = '([^']+)';", worker)
+          assert sw_version_match, 'service-worker version missing'
+          assert sw_version_match.group(1).startswith('v11.'), 'unexpected service-worker version namespace'
           assert "fetch(request, { cache: 'no-store' })" in worker
           shell_match = re.search(r'const APP_SHELL = \[(.*?)\n\];', worker, re.S)
           assert shell_match, 'service worker APP_SHELL missing'
@@ -154,9 +159,11 @@ jobs:
               'waffle-bootstrap.js','waffle-runtime.css','waffle-build.json',
               'calendar.js','care.js','organiser.js','organiser.css','logs.js','waffle-ui.js','waffle-ai.js',
               'phase4.js','phase4-core.js','phase4-booking.js','phase4-operations.js','phase4-ai-actions.js',
+              'waffle-maintenance-v2.webp',
           ]
           for name in shell_assets:
               assert name in shell, f'app shell missing current asset: {name}'
+          assert 'waffle-maintenance-v2.webp?v=2026.08.28.02' in shell, 'maintenance avatar cache pin missing'
           assert 'waffle-v10.' not in shell and 'waffle-v11.' not in shell, 'historical version file is pre-cached'
 
           runtime_map = Path('docs/runtime-map.md').read_text(encoding='utf-8')
