@@ -1,0 +1,147 @@
+/* ============================================================
+   WAFFLE HOUSE V11.1.96 — CARE FUTURE RANGE + MONTH GROUPING
+   ============================================================ */
+
+/* Month separators are only part of the Future Stays browsing mode. */
+.v11196-month-heading {
+  display: none;
+  grid-column: 1 / -1;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 12px 0 2px;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, #3b82f6 32%, var(--wh-border, #dbe3ea));
+  border-radius: 12px;
+  background: color-mix(in srgb, #2563eb 8%, var(--wh-surface, #ffffff));
+}
+
+.directory-dashboard-fused[data-v11195-stay-view="future"] .v11196-month-heading:not([hidden]) {
+  display: flex;
+}
+
+.v11196-month-heading > div {
+  min-width: 0;
+}
+
+.v11196-month-kicker,
+.v11196-month-heading strong {
+  display: block;
+}
+
+.v11196-month-kicker {
+  color: var(--wh-text-muted, #64748b);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.v11196-month-heading strong {
+  margin-top: 2px;
+  color: var(--wh-text, #172033);
+  font-size: 15px;
+  font-weight: 950;
+}
+
+.v11196-month-count {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  min-height: 27px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: color-mix(in srgb, #2563eb 14%, transparent);
+  color: #1d4ed8;
+  font-size: 10px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+/* Synthetic six-month cards match the canonical Care tile footprint. */
+.v11196-future-tile {
+  min-height: 155px;
+}
+
+.v11196-future-tile-date {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  left: 10px;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 25px;
+  padding: 4px 7px;
+  border: 1px solid rgba(255,255,255,.28);
+  border-radius: 999px;
+  background: rgba(15,23,42,.72);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 850;
+  backdrop-filter: blur(5px);
+}
+
+.v11196-synthetic-future .directory-guest-tile-name {
+  bottom: 43px !important;
+}
+
+.v11196-synthetic-future {
+  border-color: color-mix(in srgb, #3b82f6 36%, var(--wh-border, #dbe3ea));
+}
+
+/* In Future mode, the six-month range is primary; keep the helper copy readable. */
+.directory-dashboard-fused[data-v11195-stay-view="future"] .guest-directory-toolbar-note {
+  max-width: 520px;
+}
+
+body.dark-theme .v11196-month-heading {
+  border-color: #31558b;
+  background: #172841;
+}
+
+body.dark-theme .v11196-month-heading strong {
+  color: #f8fafc;
+}
+
+body.dark-theme .v11196-month-count {
+  background: #1e3a5f;
+  color: #bfdbfe;
+}
+
+@media (max-width: 768px) {
+  .v11196-month-heading {
+    align-items: center;
+    margin-top: 10px;
+    padding: 9px 10px;
+  }
+
+  .v11196-month-heading strong {
+    font-size: 14px;
+  }
+
+  .v11196-future-tile {
+    min-height: 138px;
+  }
+}
+
+@media (max-width: 430px) {
+  .v11196-month-heading {
+    gap: 8px;
+  }
+
+  .v11196-month-kicker {
+    font-size: 8px;
+  }
+
+  .v11196-month-heading strong {
+    font-size: 13px;
+  }
+
+  .v11196-month-count {
+    min-height: 24px;
+    padding-inline: 7px;
+    font-size: 9px;
+  }
+}

@@ -29,6 +29,7 @@
       "waffle-v11.0.5.js",
       "phase4.js",
       "waffle-v11.1.95.js",
+      "waffle-v11.1.96.js",
       "waffle-v11.1.94.js"
 ];
   const maintenanceUrl = new URL('maintenance.html', window.location.href);
