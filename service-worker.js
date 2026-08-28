@@ -1,6 +1,6 @@
 /* Waffle House Boarding — recovery service worker */
 
-const WAFFLE_SW_VERSION = 'v11.4.1-maintenance-avatar-2026.08.28.02';
+const WAFFLE_SW_VERSION = 'v11.4.2-fast-startup-2026.08.29.01';
 const WAFFLE_CACHE_PREFIX = 'waffle-house-';
 const APP_SHELL_CACHE = `${WAFFLE_CACHE_PREFIX}shell-${WAFFLE_SW_VERSION}`;
 const RUNTIME_CACHE = `${WAFFLE_CACHE_PREFIX}runtime-${WAFFLE_SW_VERSION}`;
@@ -147,14 +147,21 @@ function isRecoveryCriticalAsset(url) {
   return url.origin === self.location.origin && url.pathname.endsWith('/waffle-firebase-config.js');
 }
 
-function isFirstPaintCriticalAsset(url) {
+function isFreshnessCriticalAsset(url) {
+  if (url.origin !== self.location.origin) return false;
+  const path = url.pathname.toLowerCase();
+  return (
+    path.endsWith('/waffle-build.json') ||
+    path.endsWith('/waffle-release.json') ||
+    path.endsWith('/manifest.webmanifest')
+  );
+}
+
+function isFirstPaintStaticAsset(url) {
   if (url.origin !== self.location.origin) return false;
   const path = url.pathname.toLowerCase();
   return (
     path.endsWith('/waffle-maintenance-v2.webp') ||
-    path.endsWith('/waffle-build.json') ||
-    path.endsWith('/waffle-release.json') ||
-    path.endsWith('/manifest.webmanifest') ||
     path.endsWith('.js') ||
     path.endsWith('.css')
   );
@@ -196,7 +203,7 @@ async function networkFirstStatic(request) {
 
 async function staleWhileRevalidate(request) {
   const cache = await caches.open(RUNTIME_CACHE);
-  const cached = await cache.match(request);
+  const cached = await caches.match(request);
   const networkPromise = fetch(request)
     .then(response => {
       if (response && (response.ok || response.type === 'opaque')) {
@@ -228,8 +235,13 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  if (isRecoveryCriticalAsset(url) || isFirstPaintCriticalAsset(url)) {
+  if (isRecoveryCriticalAsset(url) || isFreshnessCriticalAsset(url)) {
     event.respondWith(networkFirstStatic(request));
+    return;
+  }
+
+  if (isFirstPaintStaticAsset(url)) {
+    event.respondWith(staleWhileRevalidate(request));
     return;
   }
 
