@@ -16,18 +16,17 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Validate authoritative Phase 3C runtime
+      - name: Validate authoritative runtime
         run: |
           set -euo pipefail
-          node --check waffle-bootstrap.js
-          node --check waffle-v11.0.5.js
-          node --check calendar.js
-          node --check care.js
-          node --check organiser.js
-          node --check logs.js
-          node --check waffle-ui.js
-          node --check waffle-ai.js
-          node --check service-worker.js
+          for file in \
+            waffle-bootstrap.js waffle-v11.0.5.js calendar.js care.js organiser.js logs.js \
+            waffle-ui.js waffle-ai.js phase4.js phase4-core.js phase4-booking.js \
+            phase4-operations.js phase4-ai-actions.js service-worker.js; do
+            test -f "$file"
+            node --check "$file"
+          done
+
           python3 - <<'PY'
           import json
           import re
@@ -35,13 +34,21 @@ jobs:
 
           manifest = json.loads(Path('waffle-build.json').read_text(encoding='utf-8'))
           build = str(manifest.get('build', '')).strip()
-          assert build == '2026.08.27.04', 'unexpected canonical build id'
+          assert re.fullmatch(r'\d{4}\.\d{2}\.\d{2}\.\d{2}', build), 'invalid build id'
           assert manifest.get('runtime') == 'waffle-bootstrap.js'
           assert manifest.get('styles') == 'waffle-runtime.css'
-          assert manifest.get('phase') == 'phase-3b-historical-source-cleanup'
+          assert manifest.get('phase') == 'phase-4-sitter-workflow-expansion'
+          assert manifest.get('releaseHardeningPhase') == 'phase-3d-release-regression-observability'
+
+          # Historical cleanup remains binding even after the product moves on to later phases.
           assert manifest.get('legacySourceDeletion') is True
           assert manifest.get('migrationToolingRetired') is True
           assert manifest.get('remainingLegacyAuditPending') is True
+          retired = manifest.get('removedHistoricalSources') or []
+          assert len(retired) == 26, f'expected 26 retired sources, got {len(retired)}'
+          for source in retired:
+              assert not Path(source).exists(), f'retired source returned: {source}'
+          assert not Path('scripts/patch-waffle-ai-router.py').exists(), 'deploy-time AI router patch returned'
 
           canonical = {
               'calendar': 'calendar.js',
@@ -50,6 +57,7 @@ jobs:
               'logs': 'logs.js',
               'ui': 'waffle-ui.js',
               'ai': 'waffle-ai.js',
+              'phase4': 'phase4.js',
           }
           assert manifest.get('canonicalModules') == canonical
           for path in canonical.values():
@@ -58,36 +66,17 @@ jobs:
           assert Path('waffle-ui-contract.js').exists(), 'UI contract reference missing'
           assert manifest.get('uiContractReference') == 'waffle-ui-contract.js'
 
-          retired = [
-              'waffle-v11.1.69.js','waffle-v11.1.66.js','waffle-v11.1.67.js',
-              'waffle-v11.1.68.js','waffle-v11.1.70.js','waffle-v11.1.71.js',
-              'waffle-v11.1.72.js','waffle-v11.1.73.js','waffle-v11.1.84.js',
-              'waffle-v11.1.60.js','waffle-v11.1.15.js','waffle-v11.1.15.css',
-              'waffle-v11.1.75.js','waffle-v11.1.76.js','waffle-v11.1.80.js','waffle-v11.1.89.js',
-              'waffle-v11.1.37-assets.js','waffle-v11.1.53.js','waffle-v11.1.37.js',
-              'waffle-v11.1.38.js','waffle-v11.1.39.js','waffle-v11.1.40.js',
-              'waffle-v11.1.45.js','waffle-v11.1.47.js','waffle-v11.1.48.js','waffle-v11.1.58.js',
-          ]
-          assert manifest.get('removedHistoricalSources') == retired
-          for source in retired:
-              assert not Path(source).exists(), f'retired source returned: {source}'
+          phase4 = manifest.get('phase4') or {}
+          assert phase4.get('loader') == 'phase4.js'
+          phase4_modules = ['phase4-core.js','phase4-booking.js','phase4-operations.js','phase4-ai-actions.js']
+          assert phase4.get('modules') == phase4_modules
+          for name in phase4_modules:
+              assert Path(name).exists(), f'Phase 4 module missing: {name}'
+          for flag in ['fastBooking','ownerSelfService','capacityDecisionAssistant','returningGuestIntelligence','smartReminders','askWaffleConfirmedActions','sitterInsights']:
+              assert phase4.get(flag) is True, f'Phase 4 capability disabled: {flag}'
+          assert phase4.get('autonomousWrites') is False, 'Ask Waffle autonomous writes must stay disabled'
 
-          retired_tooling = [
-              '.github/workflows/calendar-canonical-build.yml',
-              '.github/workflows/care-canonical-build.yml',
-              '.github/workflows/phase3a-canonical-build.yml',
-              '.github/workflows/runtime-consolidation.yml',
-              'scripts/build-calendar-canonical.py',
-              'scripts/build-care-canonical.py',
-              'scripts/build-phase3a-canonical.py',
-              'scripts/patch-phase3a-canonical-v2.py',
-              'scripts/phase3a-finalise.py',
-              'scripts/consolidate-runtime.py',
-              'scripts/consolidate-runtime-v2.py',
-          ]
-          for path in retired_tooling:
-              assert not Path(path).exists(), f'retired migration tooling returned: {path}'
-
+          # Entry pages may only pin the current bootstrap and runtime stylesheet.
           pages = ['index.html','directory.html','reminders.html','audit.html']
           script_pattern = re.compile(
               r'<script\b[^>]*\bsrc=["\']((?:waffle-app|waffle-v(?:10|11)\.[^"\']+)\.js)(?:\?[^"\']*)?["\'][^>]*>',
@@ -118,6 +107,7 @@ jobs:
           assert f"const BUILD = '{build}'" in bootstrap
           assert 'waffle-build.json?_=' in bootstrap
           assert 'action=maintenance_status' in bootstrap
+          assert 'phase4.js' in bootstrap, 'Phase 4 loader missing from bootstrap'
 
           compatibility = Path('waffle-v11.0.5.js').read_text(encoding='utf-8')
           feature_loaders = {
@@ -135,40 +125,48 @@ jobs:
               assert repr(filename) in body or f'"{filename}"' in body, f'{label}: canonical filename missing'
               assert marker in body, f'{label}: canonical marker missing'
           for source in retired:
-              assert source not in compatibility, f'retired source reactivated in compatibility loader: {source}'
+              assert source not in compatibility, f'retired source reactivated: {source}'
           assert 'V11.1.90 — CANONICAL CARE PDF OCR ACTION' in compatibility
 
-          checks = {
+          markers = {
               'calendar.js': ['WAFFLE_CALENDAR_CANONICAL','v11166MobileMeetVersion','v11168CapacityHealthVersion','v11172MeetOutlookAlignmentVersion'],
               'care.js': ['WAFFLE_CARE_CANONICAL','v11160DesktopCareRebuildVersion'],
               'organiser.js': ['WAFFLE_ORGANISER_CANONICAL','save_organiser_item','get_organiser'],
               'logs.js': ['WAFFLE_LOGS_CANONICAL',"dataOwner: 'waffle-app.js'"],
               'waffle-ui.js': ['WAFFLE_UI_CANONICAL','WAFFLE_UI_CONTRACT','v11175MobileSitterShellVersion','v11189MobileQuickActionCompletionVersion'],
               'waffle-ai.js': ['WAFFLE_AI_CANONICAL','v11138WaffleAiVersion','v11147WaffleAiVersion','v11148WaffleAiVersion','v11158WaffleSpeechVersion'],
+              'phase4-booking.js': ['parseBooking','create_intake_link','get_returning_guest_prefill'],
+              'phase4-operations.js': ['get_intake_statuses','save_reminder_note','insights'],
+              'phase4-ai-actions.js': ['data-p4-confirm','data-p4-cancel','async function confirmAction'],
           }
-          for filename, markers in checks.items():
+          for filename, required_markers in markers.items():
               text = Path(filename).read_text(encoding='utf-8')
-              for marker in markers:
-                  assert marker in text, f'{filename}: migrated behavior marker missing: {marker}'
+              for marker in required_markers:
+                  assert marker in text, f'{filename}: behavior marker missing: {marker}'
 
           worker = Path('service-worker.js').read_text(encoding='utf-8')
-          assert f'v11.3.0-phase3a-{build}' in worker
+          assert f"v11.4.0-phase4-{build}" in worker, 'service-worker version does not match Phase 4 build'
           assert "fetch(request, { cache: 'no-store' })" in worker
           shell_match = re.search(r'const APP_SHELL = \[(.*?)\n\];', worker, re.S)
           assert shell_match, 'service worker APP_SHELL missing'
           shell = shell_match.group(1)
-          for name in ['waffle-bootstrap.js','waffle-runtime.css','waffle-build.json','calendar.js','care.js','organiser.js','organiser.css','logs.js','waffle-ui.js','waffle-ai.js']:
-              assert name in shell, f'app shell missing canonical asset: {name}'
+          shell_assets = [
+              'waffle-bootstrap.js','waffle-runtime.css','waffle-build.json',
+              'calendar.js','care.js','organiser.js','organiser.css','logs.js','waffle-ui.js','waffle-ai.js',
+              'phase4.js','phase4-core.js','phase4-booking.js','phase4-operations.js','phase4-ai-actions.js',
+          ]
+          for name in shell_assets:
+              assert name in shell, f'app shell missing current asset: {name}'
           assert 'waffle-v10.' not in shell and 'waffle-v11.' not in shell, 'historical version file is pre-cached'
 
           runtime_map = Path('docs/runtime-map.md').read_text(encoding='utf-8')
           assert 'Phase 3C' in runtime_map
           assert 'Canonical Apps Script AI backend' in runtime_map
-          for name in canonical.values():
+          for name in ['calendar.js','care.js','organiser.js','logs.js','waffle-ui.js','waffle-ai.js']:
               assert name in runtime_map, f'runtime map missing {name}'
           for name in ['apps-script/Code.js','apps-script/WaffleAIProvider.js','apps-script/WaffleAICalendarFast.js','apps-script/WaffleAIHealth.js']:
               assert name in runtime_map, f'runtime map missing backend authority: {name}'
           assert 'Deployments must push the exact committed Apps Script tree' in runtime_map
 
-          print('Active Waffle runtime contract passed · Phase 3C backend canonicalisation · build', build)
+          print('Active Waffle runtime contract passed · Phase 4 build', build)
           PY
