@@ -1,10 +1,11 @@
 {
   "release": "phase3d-2026.08.28.01",
-  "runtimeBuild": "2026.08.27.04",
+  "runtimeBuild": "2026.08.28.01",
   "phase": "phase-3d-release-regression-observability",
+  "featurePhase": "phase-4-sitter-workflow-expansion",
   "status": "stable",
   "previousStableSha": "6812d2f22faa1864291f6d654319895d9ffcd7da",
-  "maintenanceCommit": "0fbd5466a0e660ba23049b0a2c0611ccbcfbab2c",
+  "maintenanceCommit": "1589aeb6a9c517c6c165e18eb31f02b5c9c14979",
   "rollbackMode": "maintenance-first-new-commit-from-previous-stable",
   "browserSmoke": true,
   "systemStatus": "system-status.html",
