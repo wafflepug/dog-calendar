@@ -1,6 +1,6 @@
 /* Waffle House Boarding — recovery service worker */
 
-const WAFFLE_SW_VERSION = 'v11.3.0-phase3a-2026.08.27.04';
+const WAFFLE_SW_VERSION = 'v11.4.0-phase4-2026.08.28.01';
 const WAFFLE_CACHE_PREFIX = 'waffle-house-';
 const APP_SHELL_CACHE = `${WAFFLE_CACHE_PREFIX}shell-${WAFFLE_SW_VERSION}`;
 const RUNTIME_CACHE = `${WAFFLE_CACHE_PREFIX}runtime-${WAFFLE_SW_VERSION}`;
@@ -15,25 +15,30 @@ const APP_SHELL = [
   './system-status.html',
   './waffle-build.json',
   './waffle-release.json',
-  './waffle-bootstrap.js?v=2026.08.27.04',
-  './waffle-diagnostics.js?build=2026.08.27.04',
-  './calendar.js?build=2026.08.27.04',
-  './care.js?build=2026.08.27.04',
-  './organiser.js?build=2026.08.27.04',
-  './organiser.css?build=2026.08.27.04',
-  './logs.js?build=2026.08.27.04',
-  './waffle-ui.js?build=2026.08.27.04',
-  './waffle-ai.js?build=2026.08.27.04',
-  './waffle-runtime.css?v=2026.08.27.04',
+  './waffle-bootstrap.js?v=2026.08.28.01',
+  './waffle-diagnostics.js?build=2026.08.28.01',
+  './calendar.js?build=2026.08.28.01',
+  './care.js?build=2026.08.28.01',
+  './organiser.js?build=2026.08.28.01',
+  './organiser.css?build=2026.08.28.01',
+  './logs.js?build=2026.08.28.01',
+  './waffle-ui.js?build=2026.08.28.01',
+  './waffle-ai.js?build=2026.08.28.01',
+  './phase4.js?build=2026.08.28.01',
+  './phase4-core.js?build=2026.08.28.01',
+  './phase4-booking.js?build=2026.08.28.01',
+  './phase4-operations.js?build=2026.08.28.01',
+  './phase4-ai-actions.js?build=2026.08.28.01',
+  './waffle-runtime.css?v=2026.08.28.01',
   './waffle-maintenance.webp?v=11.1.92',
   './waffle-logo.png',
   './waffle-logo-dark.png',
-  './manifest.webmanifest?v=2026.08.27.04',
-  './pwa-icon-192.png?v=2026.08.27.04',
-  './pwa-icon-512.png?v=2026.08.27.04',
-  './pwa-maskable-512.png?v=2026.08.27.04',
-  './pwa-apple-touch-icon.png?v=2026.08.27.04',
-  './waffle-firebase-config.js?build=2026.08.27.04'
+  './manifest.webmanifest?v=2026.08.28.01',
+  './pwa-icon-192.png?v=2026.08.28.01',
+  './pwa-icon-512.png?v=2026.08.28.01',
+  './pwa-maskable-512.png?v=2026.08.28.01',
+  './pwa-apple-touch-icon.png?v=2026.08.28.01',
+  './waffle-firebase-config.js?build=2026.08.28.01'
 ];
 
 const OPTIONAL_EXTERNAL_ASSETS = [
@@ -53,7 +58,7 @@ function waffleFirebaseConfigReady(config) {
 }
 
 try {
-  importScripts('./waffle-firebase-config.js?build=2026.08.27.04');
+  importScripts('./waffle-firebase-config.js?build=2026.08.28.01');
   const config = self.WAFFLE_FIREBASE_CONFIG || null;
   if (waffleFirebaseConfigReady(config)) {
     importScripts('https://www.gstatic.com/firebasejs/12.17.1/firebase-app-compat.js');
