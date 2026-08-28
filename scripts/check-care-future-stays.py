@@ -10,10 +10,17 @@ def require(path, needle):
         errors.append(f'{path}: missing {needle}')
 
 
+def forbid(path, needle):
+    text = Path(path).read_text(encoding='utf-8')
+    if needle in text:
+        errors.append(f'{path}: must not contain {needle}')
+
+
 require('waffle-bootstrap.js', '"waffle-v11.1.95.js"')
 require('waffle-bootstrap.js', '"waffle-v11.1.96.js"')
 require('waffle-bootstrap.js', '"waffle-v11.1.97.js"')
 require('waffle-bootstrap.js', '"waffle-v11.1.98.js"')
+require('waffle-bootstrap.js', '"waffle-v11.1.99.js"')
 require('waffle-runtime.css', 'waffle-v11.1.95.css')
 require('waffle-runtime.css', 'waffle-v11.1.96.css')
 require('waffle-v11.1.95.js', 'Future Stays')
@@ -62,6 +69,20 @@ require('waffle-v11.1.98.js', 'openDirectoryGuestProfile')
 require('waffle-v11.1.98.js', 'Delete Confirmed Stay')
 require('waffle-v11.1.98.js', "action: 'delete_confirmed_stay'")
 require('waffle-v11.1.98.js', "localStorage.removeItem('boardingDataCache')")
+
+# V11.1.99 fixes the remaining source gap on Care itself. Native directory
+# rendering only includes the next seven days, so the full CSV is parsed without
+# calling parseCSVToEvents (which mutates the directory) and is temporarily fed
+# through V11.1.96's adapter contract.
+require('waffle-v11.1.99.js', 'CARE FUTURE STAY DATA BRIDGE')
+require('waffle-v11.1.99.js', "localStorage.getItem('boardingDataCache')")
+require('waffle-v11.1.99.js', 'confirmedEventsFromCsv')
+require('waffle-v11.1.99.js', "lowerType === 'meet & greet'")
+require('waffle-v11.1.99.js', "lowerType === 'potential stay'")
+require('waffle-v11.1.99.js', 'WAFFLE_V11196_FUTURE_RANGE')
+require('waffle-v11.1.99.js', 'globalCalendar = bridge')
+require('waffle-v11.1.99.js', 'REFRESH_MS = 15000')
+forbid('waffle-v11.1.99.js', 'parseCSVToEvents(')
 
 # Confirmed-stay deletion is booking-scoped. It must remove the exact confirmed
 # boarding row, audit it, invalidate Calendar/Care and retain master profile data.
