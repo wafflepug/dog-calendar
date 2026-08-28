@@ -15,6 +15,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Validate Future Stays JavaScript
-        run: node --check waffle-v11.1.95.js
+        run: |
+          node --check waffle-v11.1.95.js
+          node --check waffle-v11.1.96.js
       - name: Validate Future Stays contract
         run: python3 scripts/check-care-future-stays.py
