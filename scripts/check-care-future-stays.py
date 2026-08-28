@@ -12,6 +12,7 @@ def require(path, needle):
 
 require('waffle-bootstrap.js', '"waffle-v11.1.95.js"')
 require('waffle-bootstrap.js', '"waffle-v11.1.96.js"')
+require('waffle-bootstrap.js', '"waffle-v11.1.97.js"')
 require('waffle-runtime.css', 'waffle-v11.1.95.css')
 require('waffle-runtime.css', 'waffle-v11.1.96.css')
 require('waffle-v11.1.95.js', 'Future Stays')
@@ -35,6 +36,17 @@ require('waffle-v11.1.96.js', 'groupFutureCardsByMonth')
 require('waffle-v11.1.96.js', 'Next 6+ months · grouped by month')
 require('waffle-v11.1.96.css', '.v11196-month-heading')
 require('waffle-v11.1.96.css', 'grid-column: 1 / -1')
+
+# V11.1.97 prevents a future stayKey from falling through to the historical
+# V10.8.2 "not in current grid => Past Stays" deep-link assumption.
+require('waffle-v11.1.97.js', 'originalTryPastDeepLink')
+require('waffle-v11.1.97.js', 'isFutureStayKey')
+require('waffle-v11.1.97.js', "window.v1082SwitchStayView('future'")
+require('waffle-v11.1.97.js', 'WAFFLE_V11196_FUTURE_RANGE?.maintain?.()')
+require('waffle-v11.1.97.js', '#directory-grid .directory-card[data-directory-stay-key]')
+require('waffle-v11.1.97.js', 'openDirectoryGuestProfile')
+require('waffle-v11.1.97.js', 'A future booking must never be reclassified as Past')
+require('waffle-v11.1.97.js', 'return originalTryPastDeepLink.apply')
 
 if errors:
     raise SystemExit('\n'.join(errors))
