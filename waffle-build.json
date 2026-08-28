@@ -1,8 +1,8 @@
 {
-  "build": "2026.08.27.04",
+  "build": "2026.08.28.01",
   "runtime": "waffle-bootstrap.js",
   "styles": "waffle-runtime.css",
-  "phase": "phase-3b-historical-source-cleanup",
+  "phase": "phase-4-sitter-workflow-expansion",
   "releaseHardeningPhase": "phase-3d-release-regression-observability",
   "canonicalModules": {
     "calendar": "calendar.js",
@@ -10,7 +10,21 @@
     "organiser": "organiser.js",
     "logs": "logs.js",
     "ui": "waffle-ui.js",
-    "ai": "waffle-ai.js"
+    "ai": "waffle-ai.js",
+    "phase4": "phase4.js"
+  },
+  "phase4": {
+    "loader": "phase4.js",
+    "modules": ["phase4-core.js", "phase4-booking.js", "phase4-operations.js", "phase4-ai-actions.js"],
+    "fastBooking": true,
+    "ownerSelfService": true,
+    "capacityDecisionAssistant": true,
+    "returningGuestIntelligence": true,
+    "smartReminders": true,
+    "askWaffleConfirmedActions": true,
+    "sitterInsights": true,
+    "screenshotCapture": "on-device TextDetector when browser-supported; manual paste fallback",
+    "autonomousWrites": false
   },
   "observability": {
     "clientDiagnostics": "waffle-diagnostics.js",
@@ -26,46 +40,18 @@
     "browserSmokeWorkflow": ".github/workflows/phase3d-browser-smoke.yml"
   },
   "removedHistoricalSources": [
-    "waffle-v11.1.69.js",
-    "waffle-v11.1.66.js",
-    "waffle-v11.1.67.js",
-    "waffle-v11.1.68.js",
-    "waffle-v11.1.70.js",
-    "waffle-v11.1.71.js",
-    "waffle-v11.1.72.js",
-    "waffle-v11.1.73.js",
-    "waffle-v11.1.84.js",
-    "waffle-v11.1.60.js",
-    "waffle-v11.1.15.js",
-    "waffle-v11.1.15.css",
-    "waffle-v11.1.75.js",
-    "waffle-v11.1.76.js",
-    "waffle-v11.1.80.js",
-    "waffle-v11.1.89.js",
-    "waffle-v11.1.37-assets.js",
-    "waffle-v11.1.53.js",
-    "waffle-v11.1.37.js",
-    "waffle-v11.1.38.js",
-    "waffle-v11.1.39.js",
-    "waffle-v11.1.40.js",
-    "waffle-v11.1.45.js",
-    "waffle-v11.1.47.js",
-    "waffle-v11.1.48.js",
-    "waffle-v11.1.58.js"
+    "waffle-v11.1.69.js", "waffle-v11.1.66.js", "waffle-v11.1.67.js", "waffle-v11.1.68.js",
+    "waffle-v11.1.70.js", "waffle-v11.1.71.js", "waffle-v11.1.72.js", "waffle-v11.1.73.js",
+    "waffle-v11.1.84.js", "waffle-v11.1.60.js", "waffle-v11.1.15.js", "waffle-v11.1.15.css",
+    "waffle-v11.1.75.js", "waffle-v11.1.76.js", "waffle-v11.1.80.js", "waffle-v11.1.89.js",
+    "waffle-v11.1.37-assets.js", "waffle-v11.1.53.js", "waffle-v11.1.37.js", "waffle-v11.1.38.js",
+    "waffle-v11.1.39.js", "waffle-v11.1.40.js", "waffle-v11.1.45.js", "waffle-v11.1.47.js",
+    "waffle-v11.1.48.js", "waffle-v11.1.58.js"
   ],
   "retainedCompatibilitySources": [
-    "waffle-firebase-config.js",
-    "waffle-app.js",
-    "waffle-v10.8.js",
-    "waffle-v10.8.2.js",
-    "waffle-v10.8.3.js",
-    "waffle-v10.8.5.js",
-    "waffle-v10.8.6.js",
-    "waffle-v10.8.8.js",
-    "waffle-v10.8.9.js",
-    "waffle-v11.0.js",
-    "waffle-v11.0.4.js",
-    "waffle-v11.0.5.js"
+    "waffle-firebase-config.js", "waffle-app.js", "waffle-v10.8.js", "waffle-v10.8.2.js",
+    "waffle-v10.8.3.js", "waffle-v10.8.5.js", "waffle-v10.8.6.js", "waffle-v10.8.8.js",
+    "waffle-v10.8.9.js", "waffle-v11.0.js", "waffle-v11.0.4.js", "waffle-v11.0.5.js"
   ],
   "uiContractReference": "waffle-ui-contract.js",
   "sharedLogsCompatibility": [
