@@ -18,5 +18,6 @@ jobs:
         run: |
           node --check waffle-v11.1.95.js
           node --check waffle-v11.1.96.js
+          node --check waffle-v11.1.97.js
       - name: Validate Future Stays contract
         run: python3 scripts/check-care-future-stays.py
