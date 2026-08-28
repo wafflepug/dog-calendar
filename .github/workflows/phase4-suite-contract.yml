@@ -64,7 +64,7 @@ jobs:
       - name: Validate 4B Owner Self-Service
         run: |
           set -euo pipefail
-          grep -q 'create_intake_link' phase4-operations.js
+          grep -q 'create_intake_link' phase4-booking.js
           grep -q 'get_intake_statuses' phase4-operations.js
           grep -q 'function makeIntakeToken_' apps-script/Code.js
           grep -q 'Utilities.getUuid().replace' apps-script/Code.js
@@ -82,8 +82,8 @@ jobs:
       - name: Validate 4E Returning Guest Intelligence
         run: |
           set -euo pipefail
-          grep -q 'get_returning_guest_prefill' phase4-operations.js
-          grep -Ei 'book again|returning guest' phase4-operations.js >/dev/null
+          grep -q 'get_returning_guest_prefill' phase4-booking.js
+          grep -Ei 'book again|returning guest' phase4-booking.js >/dev/null
           grep -q 'copyPreviousProfile' phase4-ai-actions.js
           grep -q 'get_returning_guest_prefill' apps-script/Code.js
 
