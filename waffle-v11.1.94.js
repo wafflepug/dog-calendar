@@ -13,6 +13,7 @@
   let observedLegacySyncButton = null;
   let legacySyncObserver = null;
   let refreshFailureAt = 0;
+  let refreshInProgress = false;
   let refreshTimer = 0;
   let maintenanceScheduled = false;
 
@@ -69,7 +70,7 @@
 
   function renderStoredRefreshStatus() {
     const status = refreshStatusElement();
-    if (!status) return;
+    if (!status || refreshInProgress) return;
     if (refreshFailureAt && Date.now() - refreshFailureAt < 120000) return;
 
     const lastSync = readLastSync();
@@ -100,7 +101,11 @@
       toolbar.appendChild(status);
     }
 
-    renderStoredRefreshStatus();
+    if (refreshInProgress) {
+      setRefreshStatus('refreshing', 'Refreshing…');
+    } else {
+      renderStoredRefreshStatus();
+    }
   }
 
   function watchLegacySyncButton() {
@@ -116,12 +121,14 @@
       const text = String(button.textContent || button.innerText || '').trim();
 
       if (/syncing/i.test(text)) {
+        refreshInProgress = true;
         setRefreshStatus('refreshing', 'Refreshing…');
         return;
       }
 
       if (/synced/i.test(text)) {
         const now = Date.now();
+        refreshInProgress = false;
         refreshFailureAt = 0;
         writeLastSync(now);
         setRefreshStatus('ok', 'Updated just now');
@@ -129,6 +136,7 @@
       }
 
       if (/failed/i.test(text)) {
+        refreshInProgress = false;
         refreshFailureAt = Date.now();
         setRefreshStatus('error', 'Refresh failed');
       }
@@ -228,6 +236,7 @@
     document.addEventListener('click', event => {
       const sync = event.target?.closest?.('[data-wh69-sync]');
       if (!sync) return;
+      refreshInProgress = true;
       setRefreshStatus('refreshing', 'Refreshing…');
     }, true);
 
