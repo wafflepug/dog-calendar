@@ -1,17 +1,17 @@
 /* ============================================================
    WAFFLE HOUSE — AUTHORITATIVE RUNTIME BOOTSTRAP
-   Build 2026.08.27.04 · Phase 3D Release Hardening
+   Build 2026.08.28.01 · Phase 4 Sitter Workflow Expansion
    ------------------------------------------------------------
    This is the only local JavaScript entry point app HTML should load.
    Privacy-preserving diagnostics load first, followed by the approved
    compatibility base. Canonical feature modules remain page-aware behind
-   waffle-v11.0.5.js.
+   waffle-v11.0.5.js. Phase 4 loads last and reuses those trusted services.
    ============================================================ */
 (function () {
   'use strict';
   if (window.WAFFLE_RUNTIME_BOOTSTRAP) return;
 
-  const BUILD = '2026.08.27.04';
+  const BUILD = '2026.08.28.01';
   const ENDPOINT = 'https://script.google.com/macros/s/AKfycbwn4HL49K9c3AZbXJRUjPw3UYWxJt8DmqXwMnTytyqdSstj3ZIJwWdDEC2IsBjetOf3pw/exec';
   const RUNTIME = [
       "waffle-diagnostics.js",
@@ -26,7 +26,8 @@
       "waffle-v10.8.9.js",
       "waffle-v11.0.js",
       "waffle-v11.0.4.js",
-      "waffle-v11.0.5.js"
+      "waffle-v11.0.5.js",
+      "phase4.js"
 ];
   const maintenanceUrl = new URL('maintenance.html', window.location.href);
   let buildBanner = null;
@@ -34,7 +35,7 @@
   window.WAFFLE_BUILD = BUILD;
   window.WAFFLE_RUNTIME_BOOTSTRAP = Object.freeze({
     build: BUILD,
-    phase: 'phase-3d-release-regression-observability',
+    phase: 'phase-4-sitter-workflow-expansion',
     runtime: RUNTIME.slice()
   });
 
