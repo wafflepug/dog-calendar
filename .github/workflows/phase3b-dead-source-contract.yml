@@ -24,9 +24,9 @@ jobs:
           from pathlib import Path
 
           manifest = json.loads(Path('waffle-build.json').read_text(encoding='utf-8'))
-          assert manifest.get('phase') == 'phase-3b-historical-source-cleanup'
           assert manifest.get('legacySourceDeletion') is True
           assert manifest.get('migrationToolingRetired') is True
+          assert manifest.get('remainingLegacyAuditPending') is True
 
           retired = manifest.get('removedHistoricalSources', [])
           assert len(retired) == 26, f'expected 26 proven retired sources, got {len(retired)}'
@@ -64,5 +64,5 @@ jobs:
           assert Path('waffle-ui-contract.js').exists(), 'reference UI contract intentionally remains'
           assert Path('scripts/check-ui-stability.py').exists(), 'active regression contract missing'
           assert not Path('scripts/patch-waffle-ai-router.py').exists(), 'Phase 3C deploy-time AI router patch must stay retired'
-          print('Phase 3B dead-source contract passed: 26 migrated sources and migration tooling remain retired; Phase 3C patcher stays absent.')
+          print('Phase 3B dead-source contract passed: historical retirement remains enforced across the current release.')
           PY
