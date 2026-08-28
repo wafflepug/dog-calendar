@@ -5,7 +5,7 @@
    This is the only local JavaScript entry point app HTML should load.
    Privacy-preserving diagnostics load first, followed by the approved
    compatibility base. Canonical feature modules remain page-aware behind
-   waffle-v11.0.5.js. Phase 4 loads before the final additive UI polish layer.
+   waffle-v11.0.5.js. Phase 4 loads before additive product/UI feature layers.
    ============================================================ */
 (function () {
   'use strict';
@@ -28,6 +28,7 @@
       "waffle-v11.0.4.js",
       "waffle-v11.0.5.js",
       "phase4.js",
+      "waffle-v11.1.95.js",
       "waffle-v11.1.94.js"
 ];
   const maintenanceUrl = new URL('maintenance.html', window.location.href);

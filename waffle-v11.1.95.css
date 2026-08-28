@@ -1,0 +1,107 @@
+/* ============================================================
+   WAFFLE HOUSE V11.1.95 — CARE FUTURE STAYS
+   ============================================================ */
+
+/* The existing two-column selector remains unchanged until the Future tab is
+   synchronously installed by the runtime layer. This avoids a blank third slot
+   during first paint. */
+.v1082-stay-tabs[data-v11195-future-ready="true"] {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.v11195-future-heading {
+    display: none;
+}
+
+.directory-dashboard-fused[data-v11195-stay-view="future"]
+.v11195-future-heading {
+    display: flex;
+}
+
+/* Current and Future share the same canonical #directory-grid so all existing
+   delegated profile/edit/photo behavior remains intact. Only visibility changes. */
+.directory-dashboard-fused[data-v11195-stay-view="current"]
+#directory-grid
+.directory-card[data-v1082-stay-kind="future"] {
+    display: none !important;
+}
+
+.directory-dashboard-fused[data-v11195-stay-view="future"]
+#directory-grid
+.directory-card:not([data-v1082-stay-kind="future"]) {
+    display: none !important;
+}
+
+.directory-dashboard-fused[data-v11195-stay-view="future"]
+#directory-grid > .no-dogs:not(.v11195-stay-empty) {
+    display: none !important;
+}
+
+.v11195-stay-empty[hidden] {
+    display: none !important;
+}
+
+.directory-dashboard-fused[data-v11195-stay-view="current"]
+.v11195-future-empty,
+.directory-dashboard-fused[data-v11195-stay-view="future"]
+.v11195-current-empty,
+.directory-dashboard-fused[data-v11195-stay-view="past"]
+.v11195-stay-empty {
+    display: none !important;
+}
+
+.v11195-future-stay .directory-status-tag.tag-upcoming {
+    border: 1px solid #bfdbfe;
+    background: #eff6ff;
+    color: #1d4ed8;
+}
+
+.v11195-future-tab.is-active {
+    border-color: #93c5fd;
+}
+
+.directory-dashboard-fused.is-profile-mode
+.v11195-future-heading {
+    display: none !important;
+}
+
+body.dark-theme .v11195-future-stay .directory-status-tag.tag-upcoming {
+    border-color: #3b82f6;
+    background: #1e3a5f;
+    color: #bfdbfe;
+}
+
+@media (max-width: 768px) {
+    .v1082-stay-tabs[data-v11195-future-ready="true"] {
+        gap: 5px;
+        padding: 4px;
+    }
+
+    .v1082-stay-tabs[data-v11195-future-ready="true"] .v1082-stay-tab {
+        min-width: 0;
+        min-height: 49px;
+        padding: 7px 5px;
+        gap: 5px;
+        font-size: 10px;
+    }
+
+    .v1082-stay-tabs[data-v11195-future-ready="true"] .v1082-stay-tab strong {
+        min-width: 22px;
+        padding-inline: 5px;
+        font-size: 8px;
+    }
+
+    .v11195-future-heading {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 3px;
+    }
+}
+
+@media (max-width: 390px) {
+    .v1082-stay-tabs[data-v11195-future-ready="true"] .v1082-stay-tab span {
+        font-size: 9px;
+        line-height: 1.15;
+        text-align: center;
+    }
+}
