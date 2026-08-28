@@ -1,0 +1,124 @@
+name: Phase 4 Sitter Workflow Contract
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  phase4-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Validate Phase 4 JavaScript syntax
+        run: |
+          set -euo pipefail
+          for file in phase4.js phase4-core.js phase4-booking.js phase4-operations.js phase4-ai-actions.js; do
+            test -f "$file"
+            node --check "$file"
+          done
+
+      - name: Validate Phase 4 manifest and loader
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          build=json.loads(Path('waffle-build.json').read_text(encoding='utf-8'))
+          assert build.get('phase') == 'phase-4-sitter-workflow-expansion'
+          phase4=build.get('phase4') or {}
+          required={
+            'fastBooking': True,
+            'ownerSelfService': True,
+            'capacityDecisionAssistant': True,
+            'returningGuestIntelligence': True,
+            'smartReminders': True,
+            'askWaffleConfirmedActions': True,
+            'sitterInsights': True,
+            'autonomousWrites': False,
+          }
+          for key,value in required.items():
+              assert phase4.get(key) is value, f'{key} contract mismatch'
+          assert phase4.get('loader') == 'phase4.js'
+          assert set(phase4.get('modules') or []) == {
+            'phase4-core.js','phase4-booking.js','phase4-operations.js','phase4-ai-actions.js'
+          }
+          PY
+          grep -q 'phase4.js' waffle-bootstrap.js
+
+      - name: Validate 4A Fast Booking Intake
+        run: |
+          set -euo pipefail
+          grep -q 'parseBooking' phase4-booking.js
+          grep -q 'duplicate' phase4-booking.js
+          grep -q 'capacity' phase4-booking.js
+          grep -q 'TextDetector' phase4-booking.js
+          grep -Eq 'Pawshake|Mad Paws|marketplace|source' phase4-booking.js
+
+      - name: Validate 4B Owner Self-Service
+        run: |
+          set -euo pipefail
+          grep -q 'create_intake_link' phase4-operations.js
+          grep -q 'get_intake_statuses' phase4-operations.js
+          grep -q 'function makeIntakeToken_' apps-script/Code.js
+          grep -q 'Utilities.getUuid().replace' apps-script/Code.js
+          grep -q 'action=intake&token=' apps-script/Code.js
+          grep -q 'submit_intake' apps-script/Code.js
+          grep -q 'assertWaffleActionAllowedDuringMaintenance_' apps-script/Code.js
+
+      - name: Validate 4D Capacity Decision Assistant
+        run: |
+          set -euo pipefail
+          grep -q 'capacity(' phase4-booking.js
+          grep -Eq 'peak|amber|green|red' phase4-booking.js
+          grep -q 'capacity(' phase4-ai-actions.js
+
+      - name: Validate 4E Returning Guest Intelligence
+        run: |
+          set -euo pipefail
+          grep -q 'get_returning_guest_prefill' phase4-operations.js
+          grep -Ei 'book again|returning guest' phase4-operations.js >/dev/null
+          grep -q 'copyPreviousProfile' phase4-ai-actions.js
+          grep -q 'get_returning_guest_prefill' apps-script/Code.js
+
+      - name: Validate 4G Smart Reminders
+        run: |
+          set -euo pipefail
+          grep -Ei 'arrival.*tomorrow|departure.*tomorrow|care form|intake' phase4-operations.js >/dev/null
+          grep -q 'save_reminder_note' phase4-ai-actions.js
+
+      - name: Validate 4H confirmed Ask Waffle actions
+        run: |
+          set -euo pipefail
+          grep -q 'data-p4-confirm' phase4-ai-actions.js
+          grep -q 'data-p4-cancel' phase4-ai-actions.js
+          grep -q 'Waffle will not change anything until you confirm' phase4-ai-actions.js
+          grep -q 'async function confirmAction' phase4-ai-actions.js
+          grep -q 'await C().write(payload)' phase4-ai-actions.js
+          grep -q "Cancelled — nothing was changed" phase4-ai-actions.js
+          python3 - <<'PY'
+          from pathlib import Path
+          text=Path('phase4-ai-actions.js').read_text(encoding='utf-8')
+          write=text.index('await C().write(payload)')
+          confirm=text.index('async function confirmAction')
+          proposal=text.index('function proposal')
+          assert write > confirm > proposal, 'write must remain inside explicit confirmAction path'
+          PY
+
+      - name: Validate 4J Lightweight Insights
+        run: |
+          set -euo pipefail
+          grep -Ei 'insight|stays this month|repeat|busiest|nights' phase4-operations.js >/dev/null
+
+      - name: Validate Phase 4 remains maintenance-safe
+        run: |
+          set -euo pipefail
+          grep -q 'WAFFLE_MAINTENANCE_DEFAULT_' apps-script/MaintenanceMode.js
+          grep -q 'assertWaffleActionAllowedDuringMaintenance_' apps-script/Code.js
+          echo 'Phase 4 sitter workflow contract passed.'
