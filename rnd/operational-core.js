@@ -153,6 +153,7 @@
   }
 
   async function init() {
+    if (state.client) return;
     if (config.environment !== 'rnd' || !window.supabase?.createClient) return;
     state.client = window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey, {
       auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
@@ -163,5 +164,5 @@
     await handleSession(data.session);
   }
 
-  document.addEventListener('DOMContentLoaded', () => init().catch(error => console.error('R&D operational core failed', error)), { once: true });
+  state.start = () => init().catch(error => console.error('R&D operational core failed', error));
 })();
