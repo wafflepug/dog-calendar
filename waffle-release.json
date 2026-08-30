@@ -1,6 +1,6 @@
 {
   "release": "phase3d-2026.08.28.01",
-  "runtimeBuild": "2026.08.30.01",
+  "runtimeBuild": "2026.08.28.01",
   "phase": "phase-3d-release-regression-observability",
   "featurePhase": "phase-4-sitter-workflow-expansion",
   "status": "stable",
