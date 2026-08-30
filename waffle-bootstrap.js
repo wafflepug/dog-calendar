@@ -34,7 +34,8 @@
       "waffle-v11.2.00.js",
       "waffle-v11.1.98.js",
       "waffle-v11.1.99.js",
-      "waffle-v11.1.94.js"
+      "waffle-v11.1.94.js",
+      "waffle-v11.2.01.js"
 ];
   const maintenanceUrl = new URL('maintenance.html', window.location.href);
   let buildBanner = null;
