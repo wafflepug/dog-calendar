@@ -1,0 +1,96 @@
+#rndOperationalShell { padding-bottom: 30px; }
+.ops-toolbar { display:flex;align-items:center;justify-content:space-between;gap:16px; }
+.ops-toolbar select { min-width:min(380px,70vw);font-weight:900; }
+.ops-nav { position:sticky;top:31px;z-index:35;display:grid;grid-template-columns:repeat(5,1fr);gap:8px;background:rgba(255,255,255,.95);backdrop-filter:blur(14px); }
+.ops-nav button { background:transparent;color:#6f587a;padding:11px 12px; }
+.ops-nav button:hover,.ops-nav button.is-active { background:#f1e8f6;color:#64347d; }
+.ops-nav .ops-add { background:#7b3f98;color:#fff; }
+.ops-hero { display:grid;grid-template-columns:minmax(280px,.9fr) 1.4fr;gap:24px;align-items:center; }
+.ops-date { margin:0 0 7px;font-weight:800; }
+.ops-metrics { display:grid;grid-template-columns:repeat(5,1fr);gap:10px; }
+.ops-metrics article { padding:16px 10px;border-radius:16px;background:#f6eff9;text-align:center; }
+.ops-metrics strong { display:block;font-size:28px;color:#64347d; }
+.ops-metrics span { display:block;margin-top:4px;color:#75657d;font-size:11px;font-weight:800; }
+.ops-capacity { font-weight:800; }
+.ops-capacity[data-state="ok"] { background:#f5fbf5;border-color:#dbead9;color:#466b48; }
+.ops-capacity[data-state="warn"] { background:#fff8eb;border-color:#f1dfb8;color:#7e5c1d; }
+.ops-capacity[data-state="full"] { background:#fff1f4;border-color:#f1ccd5;color:#8c2f48; }
+.ops-today-grid { display:grid;grid-template-columns:1.1fr 1fr 1fr;gap:18px; }
+.ops-card-list { display:grid;gap:9px; }
+.ops-mini-card { display:grid;grid-template-columns:1fr auto;gap:10px;padding:12px 13px;border-radius:14px;background:#f8f4fa;align-items:center; }
+.ops-mini-card > div { display:grid;gap:3px; }
+.ops-mini-card span { color:#786a7e;font-size:12px; }
+.ops-mini-card button { padding:8px 10px; }
+.ops-calendar-toolbar { display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:18px; }
+.ops-calendar-toolbar h2 { margin-bottom:0; }
+.ops-weekdays,.ops-calendar-grid { display:grid;grid-template-columns:repeat(7,minmax(0,1fr)); }
+.ops-weekdays { color:#76677e;font-size:11px;font-weight:900;text-align:center;text-transform:uppercase; }
+.ops-weekdays span { padding:8px; }
+.ops-calendar-grid { border:1px solid #e7dced;border-radius:18px;overflow:hidden;background:#e7dced;gap:1px; }
+.ops-calendar-day { min-height:126px;padding:9px;background:#fff;overflow:hidden; }
+.ops-calendar-day.is-other { background:#faf8fb;color:#ab9cb2; }
+.ops-calendar-day.is-today { box-shadow:inset 0 0 0 2px #8a4fa7; }
+.ops-calendar-date { display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;font-size:12px;font-weight:900; }
+.ops-calendar-date small { color:#8b7c92;font-size:10px; }
+.ops-calendar-events { display:grid;gap:4px; }
+.ops-calendar-event { width:100%;text-align:left;padding:6px 7px;border-radius:8px;font-size:10px;font-weight:900;line-height:1.15;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+.ops-calendar-event.confirmed,.ops-legend .confirmed { background:#efe4f5;color:#62327a; }
+.ops-calendar-event.potential,.ops-legend .potential { background:#fff1ca;color:#765817; }
+.ops-calendar-event.meet_greet,.ops-legend .meet_greet { background:#e8f3ff;color:#285d89; }
+.ops-calendar-event.completed,.ops-legend .completed { background:#edf1ed;color:#526452; }
+.ops-calendar-event.cancelled { background:#f3f0f2;color:#8a7d85;text-decoration:line-through; }
+.ops-legend { display:flex;flex-wrap:wrap;gap:8px;margin-top:14px; }
+.ops-legend span { padding:6px 9px;border-radius:999px;font-size:11px;font-weight:900; }
+.ops-nested { padding:16px;border:1px dashed #d9cbe1;border-radius:16px;background:#fcfaff; }
+.ops-booking-actions { justify-content:flex-start; }
+.ops-care-tabs { display:flex;gap:8px;overflow-x:auto;padding-bottom:10px;margin:16px 0 12px; }
+.ops-care-tabs button { flex:0 0 auto;background:#f5eff8;color:#765384; }
+.ops-care-tabs button.is-active { background:#7b3f98;color:#fff; }
+.ops-care-tabs span { margin-left:5px;opacity:.8; }
+.ops-care-grid { display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px; }
+.ops-care-card { display:grid;gap:10px;padding:16px;border:1px solid #eadff0;border-radius:17px;background:linear-gradient(180deg,#fff,#fcf9fd); }
+.ops-care-card h3 { margin:0; }
+.ops-care-card > small,.ops-care-card p { margin:0;color:#695872;font-size:12px; }
+.ops-care-head { display:flex;justify-content:space-between;gap:12px;align-items:flex-start; }
+.ops-care-head > div { display:grid;gap:3px; }
+.ops-care-head small { color:#88758f;font-size:12px;font-weight:800; }
+.ops-status { padding:5px 8px;border-radius:999px;font-size:10px;font-weight:900;text-transform:uppercase; }
+.ops-status.current { background:#e4f4e5;color:#3f7044; }
+.ops-status.future { background:#efe4f5;color:#62327a; }
+.ops-status.past { background:#eef0ef;color:#617063; }
+.ops-history { margin-top:22px;padding-top:18px;border-top:1px solid #eadff0; }
+
+@media (max-width:980px) {
+  .ops-today-grid { grid-template-columns:1fr 1fr; }
+  .ops-today-grid .panel:first-child { grid-column:1/-1; }
+  .ops-care-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .ops-metrics { grid-template-columns:repeat(5,minmax(78px,1fr));overflow-x:auto; }
+}
+@media (max-width:760px) {
+  #rndOperationalShell { padding-bottom:95px; }
+  .ops-toolbar { align-items:flex-start;flex-direction:column; }
+  .ops-toolbar select { min-width:100%; }
+  .ops-nav { position:fixed;left:10px;right:10px;bottom:max(10px,env(safe-area-inset-bottom));top:auto;border-radius:19px;margin:0;padding:8px;z-index:70;box-shadow:0 16px 40px rgba(42,22,51,.2); }
+  .ops-nav button { padding:10px 5px;font-size:11px; }
+  .ops-nav .ops-add { border-radius:14px; }
+  .ops-hero,.ops-today-grid { grid-template-columns:1fr; }
+  .ops-today-grid .panel:first-child { grid-column:auto; }
+  .ops-calendar { padding:15px;overflow:hidden; }
+  .ops-calendar-toolbar { align-items:flex-start;flex-direction:column; }
+  .ops-calendar-toolbar .button-row { width:100%;display:grid;grid-template-columns:auto 1fr auto; }
+  .ops-calendar-toolbar .button-row button:last-child { grid-column:1/-1; }
+  .ops-calendar-day { min-height:90px;padding:6px; }
+  .ops-weekdays span { font-size:9px;padding-inline:2px; }
+  .ops-calendar-event { padding:5px 4px;font-size:9px; }
+  .ops-calendar-date small { display:none; }
+  .ops-care-grid { grid-template-columns:1fr; }
+}
+@media (max-width:500px) {
+  .ops-metrics { grid-template-columns:repeat(5,88px); }
+  .ops-metrics article { padding:12px 6px; }
+  .ops-metrics strong { font-size:23px; }
+  .ops-calendar-day { min-height:78px; }
+  .ops-calendar-date { margin-bottom:4px; }
+  .ops-booking-actions { flex-direction:column;align-items:stretch; }
+  .ops-booking-actions button { width:100%; }
+}
