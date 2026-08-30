@@ -104,3 +104,40 @@ if ('serviceWorker' in navigator && /\/rnd-preview\//.test(location.pathname)) {
     console.warn('R&D preview isolation worker could not be registered:', error);
   });
 }
+
+// Release A operational runtime. Keep these assets on release-a-rnd so the
+// commercial R&D application can evolve without changing the live Waffle House
+// runtime on main. The Pages wrapper only loads this browser-safe R&D config.
+(function loadRndOperationalRuntime() {
+  const base = 'https://cdn.jsdelivr.net/gh/wafflepug/dog-calendar@release-a-rnd/rnd/';
+  const version = '20260830-ops1';
+  const loadStyle = href => {
+    if (document.querySelector(`link[data-rnd-ops="${href}"]`)) return;
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = `${base}${href}?v=${version}`;
+    link.dataset.rndOps = href;
+    document.head.appendChild(link);
+  };
+  const loadScript = src => new Promise((resolve, reject) => {
+    if (document.querySelector(`script[data-rnd-ops="${src}"]`)) { resolve(); return; }
+    const script = document.createElement('script');
+    script.src = `${base}${src}?v=${version}`;
+    script.dataset.rndOps = src;
+    script.onload = resolve;
+    script.onerror = () => reject(new Error(`Could not load R&D operational module: ${src}`));
+    document.head.appendChild(script);
+  });
+  const start = async () => {
+    loadStyle('operational.css');
+    try {
+      await loadScript('operational-core.js');
+      await loadScript('operational-render.js');
+      await loadScript('operational-actions.js');
+    } catch (error) {
+      console.error(error);
+    }
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true });
+  else start();
+})();
