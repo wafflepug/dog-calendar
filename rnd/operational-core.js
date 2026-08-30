@@ -126,6 +126,7 @@
 
   async function activate() {
     buildShell();
+    document.body.dataset.rndOpsActive = 'true';
     const legacy = $('workspaceState');
     if (legacy) legacy.hidden = true;
     $('rndOperationalShell').hidden = false;
@@ -141,6 +142,7 @@
   async function handleSession(session) {
     state.user = session?.user || null;
     if (!state.user) {
+      delete document.body.dataset.rndOpsActive;
       const shell = $('rndOperationalShell');
       if (shell) shell.hidden = true;
       return;
