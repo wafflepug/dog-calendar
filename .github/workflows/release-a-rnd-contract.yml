@@ -1,0 +1,71 @@
+name: Release A R&D Contract
+
+on:
+  push:
+    branches:
+      - release-a-rnd
+    paths:
+      - 'rnd/**'
+      - 'supabase/**'
+      - 'docs/release-a-rnd.md'
+      - '.github/workflows/release-a-rnd-contract.yml'
+  pull_request:
+    paths:
+      - 'rnd/**'
+      - 'supabase/**'
+      - 'docs/release-a-rnd.md'
+      - '.github/workflows/release-a-rnd-contract.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Syntax check R&D client
+        run: node --check rnd/app.js
+
+      - name: Verify R&D environment guard
+        run: |
+          set -euo pipefail
+          grep -q "environment: 'rnd'" rnd/config.js
+          grep -q "config.environment === 'rnd'" rnd/app.js
+          grep -q "R&D ENVIRONMENT" rnd/index.html
+          ! grep -R "service_role\|service-role" rnd --include='*.js' --include='*.html'
+
+      - name: Verify tenant security schema
+        run: |
+          set -euo pipefail
+          schema='supabase/migrations/20260830_release_a_foundation.sql'
+          grep -q 'business_id uuid not null' "$schema"
+          grep -q 'alter table public.businesses enable row level security' "$schema"
+          grep -q 'alter table public.business_members enable row level security' "$schema"
+          grep -q 'alter table public.business_settings enable row level security' "$schema"
+          grep -q 'alter table public.dogs enable row level security' "$schema"
+          grep -q 'alter table public.stays enable row level security' "$schema"
+          grep -q 'public.is_business_member' "$schema"
+          grep -q 'public.is_business_owner' "$schema"
+          grep -q 'stays_dog_same_tenant' "$schema"
+          grep -q 'No anonymous tenant access' "$schema"
+
+      - name: Verify production Apps Script remains main-only
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          text = Path('.github/workflows/deploy-apps-script.yml').read_text()
+          marker = "branches:\n      - main"
+          if marker not in text:
+              raise SystemExit('Production Apps Script workflow is no longer main-only')
+          if 'release-a-rnd' in text:
+              raise SystemExit('R&D branch must never appear in production Apps Script deployment workflow')
+          print('Production Apps Script deployment remains isolated to main.')
+          PY
+
+      - name: R&D contract summary
+        run: |
+          echo 'Release A R&D is isolated from Waffle House production.'
+          echo 'No deployment step is defined in this workflow.'
