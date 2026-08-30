@@ -10,6 +10,16 @@ Release A is developed on the long-lived `release-a-rnd` branch and is intention
 - The R&D app uses a separate Supabase project and a separate tenant named `Waffle R&D Lab`.
 - No Release A change is merged to `main` until tenant isolation, authentication, migration and regression tests are complete.
 
+## R&D preview
+
+The R&D shell is hosted separately from the Waffle House production site at:
+
+`https://bzlmqsvueoctrfnjmosq.supabase.co/functions/v1/release-a-rnd-preview/`
+
+This preview is served by the dedicated `Waffle Release A R&D` Supabase project. The preview function is intentionally public because it only serves the sign-in/onboarding HTML, CSS, JavaScript and browser-safe publishable Supabase configuration. It contains no service-role key and performs no privileged database operations. Actual tenant data access requires Supabase Auth and remains subject to PostgreSQL Row Level Security.
+
+The preview proxies its static assets from the `release-a-rnd/rnd` branch so R&D UI changes remain separate from the production GitHub Pages deployment.
+
 ## Release A scope
 
 1. Authentication and session handling.
@@ -25,15 +35,17 @@ Release A is developed on the long-lived `release-a-rnd` branch and is intention
 ```text
 release-a-rnd branch
         |
-        v
-R&D frontend (/rnd)
-        |
-        v
-Dedicated Supabase Free project
-        |
-        +-- Auth
-        +-- Postgres + RLS
-        +-- private tenant data
+        +--> R&D frontend source (/rnd)
+        |        |
+        |        v
+        |   R&D preview Edge Function
+        |        |
+        |        v
+        +--> Dedicated Supabase Free project
+                 |
+                 +-- Auth
+                 +-- Postgres + RLS
+                 +-- private tenant data
 
 Production remains:
 main -> GitHub Pages -> existing Apps Script -> existing Waffle House Sheets/Drive
@@ -49,13 +61,14 @@ The browser is never trusted to enforce tenant isolation.
 
 ## R&D acceptance criteria
 
-- A user can sign up/sign in.
+- A user can sign up/sign in through the separate preview URL.
 - A user with no business sees onboarding.
 - Onboarding creates `Waffle R&D Lab` and grants the user the owner role.
 - The owner can update business settings.
 - A brand-new business sees empty Calendar/Care-style states rather than Waffle House data.
 - A user from Business A cannot read or change Business B records even by modifying requests manually.
 - No R&D push can deploy the production Apps Script backend.
+- The R&D preview contains no Supabase secret/service-role credential.
 
 ## Production migration later
 
