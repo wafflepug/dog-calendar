@@ -8,17 +8,21 @@ Release A is developed on the long-lived `release-a-rnd` branch and is intention
 - The existing Google Apps Script deploy workflow deploys only from `main`.
 - Release A R&D must not point at the production Apps Script project, production Google Sheet, or production Drive folders.
 - The R&D app uses a separate Supabase project and a separate tenant named `Waffle R&D Lab`.
-- No Release A change is merged to `main` until tenant isolation, authentication, migration and regression tests are complete.
+- No Release A application change is merged to `main` until tenant isolation, authentication, migration and regression tests are complete.
 
 ## R&D preview
 
-The R&D shell is hosted separately from the Waffle House production site at:
+The supported browser preview is:
 
-`https://bzlmqsvueoctrfnjmosq.supabase.co/functions/v1/release-a-rnd-preview/`
+`https://wafflepug.github.io/dog-calendar/rnd-preview/`
 
-This preview is served by the dedicated `Waffle Release A R&D` Supabase project. The preview function is intentionally public because it only serves the sign-in/onboarding HTML, CSS, JavaScript and browser-safe publishable Supabase configuration. It contains no service-role key and performs no privileged database operations. Actual tenant data access requires Supabase Auth and remains subject to PostgreSQL Row Level Security.
+GitHub Pages serves only the small R&D preview wrapper. The Release A CSS, configuration and application JavaScript remain sourced from `release-a-rnd`, while authentication and tenant data live exclusively in the dedicated `Waffle Release A R&D` Supabase project.
 
-The preview proxies its static assets from the `release-a-rnd/rnd` branch so R&D UI changes remain separate from the production GitHub Pages deployment.
+The preview contains only a browser-safe Supabase publishable key. Actual tenant data access requires Supabase Auth and PostgreSQL Row Level Security.
+
+A nested pass-through service worker owns `/rnd-preview/` and caches nothing, preventing the production Waffle PWA service worker from offline-fallbacking or caching the R&D lab after the preview has claimed its scope.
+
+The legacy Supabase Edge Function URL remains only as a compatibility redirect to the Pages preview. Supabase Edge Functions are not used to host HTML because their GET HTML responses are rewritten to plain text.
 
 ## Release A scope
 
@@ -35,33 +39,31 @@ The preview proxies its static assets from the `release-a-rnd/rnd` branch so R&D
 ```text
 release-a-rnd branch
         |
-        +--> R&D frontend source (/rnd)
-        |        |
-        |        v
-        |   R&D preview Edge Function
-        |        |
-        |        v
-        +--> Dedicated Supabase Free project
-                 |
-                 +-- Auth
-                 +-- Postgres + RLS
-                 +-- private tenant data
+        +--> R&D CSS / config / app JS
+        |             |
+        |             v
+main --> /rnd-preview/ static wrapper on GitHub Pages
+                      |
+                      v
+             Dedicated Supabase Free project
+                      |
+                      +-- Auth
+                      +-- Postgres + RLS
+                      +-- private tenant data
 
-Production remains:
-main -> GitHub Pages -> existing Apps Script -> existing Waffle House Sheets/Drive
+Production Waffle remains:
+main -> existing Pages app -> existing Apps Script -> existing Waffle House Sheets/Drive
 ```
 
 ## Tenant model
 
 A signed-in person is represented by `auth.users`. Businesses are represented by `businesses`. Membership is explicit in `business_members`.
 
-Every operational row includes `business_id`. Database policies verify the authenticated user is an active member of that business before any row can be read or changed.
-
-The browser is never trusted to enforce tenant isolation.
+Every operational row includes `business_id`. Database policies verify the authenticated user is an active member of that business before any row can be read or changed. The browser is never trusted to enforce tenant isolation.
 
 ## R&D acceptance criteria
 
-- A user can sign up/sign in through the separate preview URL.
+- A user can sign up/sign in through the supported preview URL.
 - A user with no business sees onboarding.
 - Onboarding creates `Waffle R&D Lab` and grants the user the owner role.
 - The owner can update business settings.
