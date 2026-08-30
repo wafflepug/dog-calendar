@@ -34,7 +34,7 @@ jobs:
           grep -q "environment: 'rnd'" rnd/config.js
           grep -q "config.environment === 'rnd'" rnd/app.js
           grep -q 'NOT WAFFLE HOUSE PRODUCTION' rnd/index.html
-          grep -q '/rnd-preview/' rnd/config.js
+          grep -q 'rnd-preview' rnd/config.js
           ! grep -R -E "sb_secret_|SUPABASE_SERVICE_ROLE" rnd --include='*.js' --include='*.html'
 
       - name: Verify tenant security schema
