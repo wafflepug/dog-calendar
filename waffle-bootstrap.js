@@ -1,6 +1,6 @@
 /* ============================================================
    WAFFLE HOUSE — AUTHORITATIVE RUNTIME BOOTSTRAP
-   Build 2026.08.28.01 · Phase 4 Sitter Workflow Expansion
+   Build 2026.08.30.01 · Phase 4 Sitter Workflow Expansion
    ------------------------------------------------------------
    This is the only local JavaScript entry point app HTML should load.
    Privacy-preserving diagnostics load first, followed by the approved
@@ -11,7 +11,7 @@
   'use strict';
   if (window.WAFFLE_RUNTIME_BOOTSTRAP) return;
 
-  const BUILD = '2026.08.28.01';
+  const BUILD = '2026.08.30.01';
   const ENDPOINT = 'https://script.google.com/macros/s/AKfycbwn4HL49K9c3AZbXJRUjPw3UYWxJt8DmqXwMnTytyqdSstj3ZIJwWdDEC2IsBjetOf3pw/exec';
   const RUNTIME = [
       "waffle-diagnostics.js",
@@ -34,7 +34,8 @@
       "waffle-v11.2.00.js",
       "waffle-v11.1.98.js",
       "waffle-v11.1.99.js",
-      "waffle-v11.1.94.js"
+      "waffle-v11.1.94.js",
+      "waffle-v11.2.01.js"
 ];
   const maintenanceUrl = new URL('maintenance.html', window.location.href);
   let buildBanner = null;
