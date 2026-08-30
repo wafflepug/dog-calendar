@@ -110,12 +110,13 @@ forbid('waffle-v11.1.99.js', 'parseCSVToEvents(')
 # with independently scoped Current/Future counts after all future-card layers.
 require('waffle-v11.2.01.js', 'CARE STAY COUNT CONSISTENCY')
 require('waffle-v11.2.01.js', "card?.dataset?.v1082StayKind === 'future'")
+require('waffle-v11.2.01.js', 'if (start) return start > todayKey();')
 require('waffle-v11.2.01.js', "writeCounter('v1082CurrentStayCount', current)")
 require('waffle-v11.2.01.js', "writeCounter('v1082FutureStayCount', future)")
 require('waffle-v11.2.01.js', 'v1082UpdateCurrentCount = replacement')
 require('waffle-v11.2.01.js', 'new MutationObserver')
 require('waffle-v11.2.01.js', '#directory-grid, #v1082CurrentStayCount, #v1082FutureStayCount')
-require('waffle-v11.2.01.js', 'window.WAFFLE_V11195_FUTURE_STAYS?.classifyAndCount?.()')
+forbid('waffle-v11.2.01.js', 'WAFFLE_V11195_FUTURE_STAYS?.classifyAndCount?.()')
 if bootstrap.find('"waffle-v11.2.01.js"') < bootstrap.find('"waffle-v11.1.99.js"'):
     errors.append('waffle-bootstrap.js: Care count consistency guard must load after Future Stays data bridge')
 
