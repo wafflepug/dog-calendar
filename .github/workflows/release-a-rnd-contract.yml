@@ -59,6 +59,7 @@ jobs:
           grep -q 'public.is_business_member' "$schema"
           grep -q 'public.is_business_owner' "$schema"
           grep -q 'stays_dog_same_tenant' "$schema"
+          grep -q 'stays_business_dates_idx' "$schema"
           grep -q 'No anonymous tenant access' "$schema"
 
       - name: Verify operational booking schema
@@ -68,8 +69,8 @@ jobs:
           test -f "$schema"
           grep -q 'arrival_time time' "$schema"
           grep -q 'departure_time time' "$schema"
-          grep -q 'stays_business_date_idx' "$schema"
           grep -q 'stays_business_status_idx' "$schema"
+          ! grep -q 'stays_business_date_idx' "$schema"
           grep -q "from('stays')" rnd/operational-actions.js
           grep -q "from('dogs')" rnd/operational-actions.js
           grep -q 'business_id:api.businessId' rnd/operational-actions.js
