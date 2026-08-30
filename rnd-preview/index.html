@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' https://cdn.jsdelivr.net; connect-src 'self' https://bzlmqsvueoctrfnjmosq.supabase.co wss://bzlmqsvueoctrfnjmosq.supabase.co; img-src 'self' data:; font-src 'self' data:; base-uri 'none'; form-action 'self'">
+  <title>Waffle Release A · R&amp;D</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/wafflepug/dog-calendar@release-a-rnd/rnd/styles.css">
+</head>
+<body>
+  <div class="rnd-banner">R&amp;D ENVIRONMENT · NOT WAFFLE HOUSE PRODUCTION</div>
+
+  <main class="shell">
+    <header class="brand-row">
+      <div>
+        <p class="eyebrow">Waffle Release A</p>
+        <h1>Independent sitter workspace</h1>
+      </div>
+      <button id="signOutButton" class="ghost" type="button" hidden>Sign out</button>
+    </header>
+
+    <section id="setupState" class="panel" hidden>
+      <span class="status-dot warning"></span>
+      <h2>R&amp;D backend not connected yet</h2>
+      <p>The Release A frontend is connected only to the dedicated R&amp;D Supabase project.</p>
+      <p class="muted">Production Waffle House remains untouched.</p>
+    </section>
+
+    <section id="authState" class="panel" hidden>
+      <div class="split-heading">
+        <div><p class="eyebrow">Account</p><h2>Sign in to R&amp;D</h2></div>
+        <span class="pill">Isolated</span>
+      </div>
+      <form id="authForm" class="stack">
+        <label>Email<input id="authEmail" type="email" autocomplete="email" required></label>
+        <label>Password<input id="authPassword" type="password" minlength="8" autocomplete="current-password" required></label>
+        <div class="button-row">
+          <button type="submit">Sign in</button>
+          <button id="signUpButton" class="secondary" type="button">Create account</button>
+        </div>
+      </form>
+      <p id="authMessage" class="message" role="status"></p>
+    </section>
+
+    <section id="onboardingState" class="panel" hidden>
+      <p class="eyebrow">Business onboarding</p>
+      <h2>Create the R&amp;D tenant</h2>
+      <p>This creates a private business workspace. It does not copy or connect to Waffle House production data.</p>
+      <form id="onboardingForm" class="grid-form">
+        <label>Business name<input id="businessName" value="Waffle R&D Lab" required></label>
+        <label>Workspace slug<input id="businessSlug" value="waffle-rnd" pattern="[a-z0-9][a-z0-9-]{1,62}[a-z0-9]" required></label>
+        <label>Timezone<input id="businessTimezone" value="Australia/Sydney" required></label>
+        <label>Normal dog capacity<input id="businessCapacity" type="number" min="1" max="100" value="6" required></label>
+        <label>Contact name<input id="contactName" autocomplete="name"></label>
+        <label>Contact phone<input id="contactPhone" autocomplete="tel"></label>
+        <div class="full button-row"><button type="submit">Create R&amp;D workspace</button></div>
+      </form>
+      <p id="onboardingMessage" class="message" role="status"></p>
+    </section>
+
+    <section id="workspaceState" hidden>
+      <div class="workspace-toolbar panel compact">
+        <div><p class="eyebrow">Active business</p><select id="businessPicker" aria-label="Active business"></select></div>
+        <div class="toolbar-meta"><span id="planBadge" class="pill"></span><span id="roleBadge" class="pill soft"></span></div>
+      </div>
+
+      <section class="hero panel">
+        <div><p class="eyebrow">Today</p><h2 id="workspaceTitle">Your sitter workspace</h2><p id="workspaceSubtitle" class="muted"></p></div>
+        <div class="metric-grid">
+          <article><strong id="dogCount">0</strong><span>Active dogs</span></article>
+          <article><strong id="stayCount">0</strong><span>Stays</span></article>
+          <article><strong id="capacityCount">0</strong><span>Capacity</span></article>
+        </div>
+      </section>
+
+      <div class="two-column">
+        <section class="panel">
+          <p class="eyebrow">Care</p><h3>Client dogs</h3>
+          <div id="dogsEmpty" class="empty-state"><span class="empty-icon">🐾</span><strong>No dogs yet</strong><p>Add your first client dog to begin building the Care directory.</p></div>
+          <ul id="dogList" class="item-list"></ul>
+          <form id="dogForm" class="inline-form">
+            <input id="dogName" placeholder="Dog name" required>
+            <input id="dogBreed" placeholder="Breed">
+            <button type="submit">Add dog</button>
+          </form>
+          <p id="dogMessage" class="message" role="status"></p>
+        </section>
+
+        <section class="panel">
+          <p class="eyebrow">Calendar</p><h3>Bookings</h3>
+          <div id="staysEmpty" class="empty-state"><span class="empty-icon">📅</span><strong>Your calendar is ready</strong><p>Confirmed and potential stays will appear here once bookings are added.</p></div>
+          <ul id="stayList" class="item-list"></ul>
+        </section>
+      </div>
+
+      <section class="panel">
+        <div class="split-heading"><div><p class="eyebrow">Business settings</p><h3>Workspace configuration</h3></div><span class="pill soft">Owner controlled</span></div>
+        <form id="settingsForm" class="grid-form">
+          <label>Business name<input id="settingsName" required></label>
+          <label>Timezone<input id="settingsTimezone" required></label>
+          <label>Normal capacity<input id="settingsCapacity" type="number" min="1" max="100" required></label>
+          <label>Contact name<input id="settingsContactName"></label>
+          <label>Contact email<input id="settingsContactEmail" type="email"></label>
+          <label>Contact phone<input id="settingsContactPhone"></label>
+          <label class="full">Address<textarea id="settingsAddress" rows="3"></textarea></label>
+          <div class="full button-row"><button type="submit">Save business settings</button></div>
+        </form>
+        <p id="settingsMessage" class="message" role="status"></p>
+      </section>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/gh/wafflepug/dog-calendar@release-a-rnd/rnd/config.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/wafflepug/dog-calendar@release-a-rnd/rnd/app.js"></script>
+</body>
+</html>
