@@ -56,13 +56,13 @@
   }
 
   function isFutureCard(card) {
-    if (card?.dataset?.v1082StayKind === 'future') return true;
     const start = dateKey(
       card?.dataset?.directoryStartDate ||
       card?.dataset?.startDate ||
       ''
     );
-    return !!start && start > todayKey();
+    if (start) return start > todayKey();
+    return card?.dataset?.v1082StayKind === 'future';
   }
 
   function writeCounter(id, value) {
@@ -76,13 +76,9 @@
     scheduled = false;
     if (!isCarePage()) return { current: 0, future: 0, total: 0 };
 
-    /* Let the Future Stays owner classify cards first when available. The
-       independent calculation below is still authoritative for these badges,
-       so a later legacy cards.length write cannot collapse the split again. */
-    try {
-      window.WAFFLE_V11195_FUTURE_STAYS?.classifyAndCount?.();
-    } catch (_) {}
-
+    /* Do not invoke the older classifier from here. It writes counter text
+       unconditionally, which can recursively retrigger a counter observer.
+       Arrival dates are authoritative; data-v1082-stay-kind is only fallback. */
     const cards = careCards();
     let current = 0;
     let future = 0;
