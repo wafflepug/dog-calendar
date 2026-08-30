@@ -34,7 +34,7 @@ jobs:
           grep -q "environment: 'rnd'" rnd/config.js
           grep -q "config.environment === 'rnd'" rnd/app.js
           grep -q "R&D ENVIRONMENT" rnd/index.html
-          ! grep -R "service_role\|service-role" rnd --include='*.js' --include='*.html'
+          ! grep -R -E "sb_secret_|SUPABASE_SERVICE_ROLE|serviceRoleKey" rnd --include='*.js' --include='*.html'
 
       - name: Verify tenant security schema
         run: |
