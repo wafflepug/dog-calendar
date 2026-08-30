@@ -107,10 +107,15 @@ if ('serviceWorker' in navigator && /\/rnd-preview\//.test(location.pathname)) {
 
 // Release A operational runtime. Keep these assets on release-a-rnd so the
 // commercial R&D application can evolve without changing the live Waffle House
-// runtime on main. The Pages wrapper only loads this browser-safe R&D config.
+// runtime on main. When this config file is loaded from an immutable commit URL,
+// derive the module base from that exact URL so every operational asset comes
+// from the same tested commit instead of a mutable branch alias.
 (function loadRndOperationalRuntime() {
-  const base = 'https://cdn.jsdelivr.net/gh/wafflepug/dog-calendar@release-a-rnd/rnd/';
-  const version = '20260830-ops2';
+  const loaderSrc = document.currentScript && document.currentScript.src ? document.currentScript.src : '';
+  const base = loaderSrc
+    ? new URL('./', loaderSrc).href
+    : 'https://cdn.jsdelivr.net/gh/wafflepug/dog-calendar@release-a-rnd/rnd/';
+  const version = '20260830-ops3';
   const loadStyle = href => {
     if (document.querySelector(`link[data-rnd-ops="${href}"]`)) return;
     const link = document.createElement('link');
