@@ -22,6 +22,7 @@ require('waffle-bootstrap.js', '"waffle-v11.1.97.js"')
 require('waffle-bootstrap.js', '"waffle-v11.2.00.js"')
 require('waffle-bootstrap.js', '"waffle-v11.1.98.js"')
 require('waffle-bootstrap.js', '"waffle-v11.1.99.js"')
+require('waffle-bootstrap.js', '"waffle-v11.2.01.js"')
 require('waffle-runtime.css', 'waffle-v11.1.95.css')
 require('waffle-runtime.css', 'waffle-v11.1.96.css')
 require('waffle-v11.1.95.js', 'Future Stays')
@@ -103,6 +104,20 @@ require('waffle-v11.1.99.js', 'WAFFLE_V11196_FUTURE_RANGE')
 require('waffle-v11.1.99.js', 'globalCalendar = bridge')
 require('waffle-v11.1.99.js', 'REFRESH_MS = 15000')
 forbid('waffle-v11.1.99.js', 'parseCSVToEvents(')
+
+# V11.2.01 is the final count-consistency guard. Current and Future share the
+# same DOM grid, so any legacy cards.length write must be replaced/reconciled
+# with independently scoped Current/Future counts after all future-card layers.
+require('waffle-v11.2.01.js', 'CARE STAY COUNT CONSISTENCY')
+require('waffle-v11.2.01.js', "card?.dataset?.v1082StayKind === 'future'")
+require('waffle-v11.2.01.js', "writeCounter('v1082CurrentStayCount', current)")
+require('waffle-v11.2.01.js', "writeCounter('v1082FutureStayCount', future)")
+require('waffle-v11.2.01.js', 'v1082UpdateCurrentCount = replacement')
+require('waffle-v11.2.01.js', 'new MutationObserver')
+require('waffle-v11.2.01.js', '#directory-grid, #v1082CurrentStayCount, #v1082FutureStayCount')
+require('waffle-v11.2.01.js', 'window.WAFFLE_V11195_FUTURE_STAYS?.classifyAndCount?.()')
+if bootstrap.find('"waffle-v11.2.01.js"') < bootstrap.find('"waffle-v11.1.99.js"'):
+    errors.append('waffle-bootstrap.js: Care count consistency guard must load after Future Stays data bridge')
 
 # Confirmed-stay deletion is booking-scoped. It must remove the exact confirmed
 # boarding row, audit it, invalidate Calendar/Care and retain master profile data.
