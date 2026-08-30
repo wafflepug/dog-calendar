@@ -25,8 +25,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Syntax check R&D client
-        run: node --check rnd/app.js
+      - name: Syntax check R&D clients
+        run: |
+          set -euo pipefail
+          node --check rnd/app.js
+          node --check rnd/config.js
+          node --check rnd/operational-core.js
+          node --check rnd/operational-render.js
+          node --check rnd/operational-actions.js
 
       - name: Verify R&D environment guard
         run: |
@@ -35,6 +41,9 @@ jobs:
           grep -q "config.environment === 'rnd'" rnd/app.js
           grep -q 'NOT WAFFLE HOUSE PRODUCTION' rnd/index.html
           grep -q 'rnd-preview' rnd/config.js
+          grep -q 'operational-core.js' rnd/config.js
+          grep -q 'operational-render.js' rnd/config.js
+          grep -q 'operational-actions.js' rnd/config.js
           ! grep -R -E "sb_secret_|SUPABASE_SERVICE_ROLE" rnd --include='*.js' --include='*.html'
 
       - name: Verify tenant security schema
@@ -51,6 +60,19 @@ jobs:
           grep -q 'public.is_business_owner' "$schema"
           grep -q 'stays_dog_same_tenant' "$schema"
           grep -q 'No anonymous tenant access' "$schema"
+
+      - name: Verify operational booking schema
+        run: |
+          set -euo pipefail
+          schema='supabase/migrations/20260830_operational_booking_times.sql'
+          test -f "$schema"
+          grep -q 'arrival_time time' "$schema"
+          grep -q 'departure_time time' "$schema"
+          grep -q 'stays_business_date_idx' "$schema"
+          grep -q 'stays_business_status_idx' "$schema"
+          grep -q "from('stays')" rnd/operational-actions.js
+          grep -q "from('dogs')" rnd/operational-actions.js
+          grep -q 'business_id:api.businessId' rnd/operational-actions.js
 
       - name: Verify preview hosting contract
         run: |
@@ -82,5 +104,6 @@ jobs:
       - name: R&D contract summary
         run: |
           echo 'Release A R&D is isolated from Waffle House production.'
+          echo 'Operational Today, Calendar, Add, Care and Settings modules are syntax checked.'
           echo 'GitHub Pages hosts the static R&D wrapper; Supabase Edge Function is redirect-only.'
           echo 'No production Apps Script deployment step is defined in this workflow.'
