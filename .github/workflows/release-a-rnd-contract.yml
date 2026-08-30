@@ -51,6 +51,18 @@ jobs:
           grep -q 'stays_dog_same_tenant' "$schema"
           grep -q 'No anonymous tenant access' "$schema"
 
+      - name: Verify isolated preview contract
+        run: |
+          set -euo pipefail
+          preview='supabase/functions/release-a-rnd-preview/index.ts'
+          test -f "$preview"
+          grep -q "release-a-rnd/rnd/" "$preview"
+          grep -q "release-a-rnd-preview" "$preview"
+          grep -q "X-Robots-Tag" "$preview"
+          grep -q "frame-ancestors 'none'" "$preview"
+          ! grep -E "sb_secret_|SUPABASE_SERVICE_ROLE|serviceRoleKey" "$preview"
+          grep -q 'https://bzlmqsvueoctrfnjmosq.supabase.co/functions/v1/release-a-rnd-preview/' docs/release-a-rnd.md
+
       - name: Verify production Apps Script remains main-only
         run: |
           set -euo pipefail
@@ -68,4 +80,5 @@ jobs:
       - name: R&D contract summary
         run: |
           echo 'Release A R&D is isolated from Waffle House production.'
-          echo 'No deployment step is defined in this workflow.'
+          echo 'The preview serves only browser-safe R&D assets.'
+          echo 'No production deployment step is defined in this workflow.'
