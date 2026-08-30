@@ -33,7 +33,7 @@ jobs:
           set -euo pipefail
           grep -q "environment: 'rnd'" rnd/config.js
           grep -q "config.environment === 'rnd'" rnd/app.js
-          grep -q "R&D ENVIRONMENT" rnd/index.html
+          grep -q 'NOT WAFFLE HOUSE PRODUCTION' rnd/index.html
           ! grep -R -E "sb_secret_|SUPABASE_SERVICE_ROLE|serviceRoleKey" rnd --include='*.js' --include='*.html'
 
       - name: Verify tenant security schema
