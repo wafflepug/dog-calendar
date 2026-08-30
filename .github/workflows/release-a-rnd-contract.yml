@@ -34,6 +34,7 @@ jobs:
           grep -q "environment: 'rnd'" rnd/config.js
           grep -q "config.environment === 'rnd'" rnd/app.js
           grep -q 'NOT WAFFLE HOUSE PRODUCTION' rnd/index.html
+          grep -q '/rnd-preview/' rnd/config.js
           ! grep -R -E "sb_secret_|SUPABASE_SERVICE_ROLE|serviceRoleKey" rnd --include='*.js' --include='*.html'
 
       - name: Verify tenant security schema
@@ -51,17 +52,18 @@ jobs:
           grep -q 'stays_dog_same_tenant' "$schema"
           grep -q 'No anonymous tenant access' "$schema"
 
-      - name: Verify isolated preview contract
+      - name: Verify preview hosting contract
         run: |
           set -euo pipefail
-          preview='supabase/functions/release-a-rnd-preview/index.ts'
-          test -f "$preview"
-          grep -q "release-a-rnd/rnd/" "$preview"
-          grep -q "release-a-rnd-preview" "$preview"
-          grep -q "X-Robots-Tag" "$preview"
-          grep -q "frame-ancestors 'none'" "$preview"
-          ! grep -E "sb_secret_|SUPABASE_SERVICE_ROLE|serviceRoleKey" "$preview"
-          grep -q 'https://bzlmqsvueoctrfnjmosq.supabase.co/functions/v1/release-a-rnd-preview/' docs/release-a-rnd.md
+          redirect='supabase/functions/release-a-rnd-preview/index.ts'
+          test -f "$redirect"
+          grep -q 'https://wafflepug.github.io/dog-calendar/rnd-preview/' "$redirect"
+          grep -q 'status: 302' "$redirect"
+          grep -q 'X-Robots-Tag' "$redirect"
+          ! grep -q "text/html" "$redirect"
+          ! grep -E "sb_secret_|SUPABASE_SERVICE_ROLE|serviceRoleKey" "$redirect"
+          grep -q 'https://wafflepug.github.io/dog-calendar/rnd-preview/' docs/release-a-rnd.md
+          grep -q 'Supabase Edge Functions are not used to host HTML' docs/release-a-rnd.md
 
       - name: Verify production Apps Script remains main-only
         run: |
@@ -80,5 +82,5 @@ jobs:
       - name: R&D contract summary
         run: |
           echo 'Release A R&D is isolated from Waffle House production.'
-          echo 'The preview serves only browser-safe R&D assets.'
-          echo 'No production deployment step is defined in this workflow.'
+          echo 'GitHub Pages hosts the static R&D wrapper; Supabase Edge Function is redirect-only.'
+          echo 'No production Apps Script deployment step is defined in this workflow.'
