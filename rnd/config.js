@@ -110,7 +110,7 @@ if ('serviceWorker' in navigator && /\/rnd-preview\//.test(location.pathname)) {
 // runtime on main. The Pages wrapper only loads this browser-safe R&D config.
 (function loadRndOperationalRuntime() {
   const base = 'https://cdn.jsdelivr.net/gh/wafflepug/dog-calendar@release-a-rnd/rnd/';
-  const version = '20260830-ops1';
+  const version = '20260830-ops2';
   const loadStyle = href => {
     if (document.querySelector(`link[data-rnd-ops="${href}"]`)) return;
     const link = document.createElement('link');
@@ -134,6 +134,7 @@ if ('serviceWorker' in navigator && /\/rnd-preview\//.test(location.pathname)) {
       await loadScript('operational-core.js');
       await loadScript('operational-render.js');
       await loadScript('operational-actions.js');
+      window.WaffleRndOps?.start?.();
     } catch (error) {
       console.error(error);
     }
