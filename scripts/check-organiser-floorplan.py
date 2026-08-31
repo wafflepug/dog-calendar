@@ -5,6 +5,7 @@ import re
 errors = []
 
 floorplan = Path('floorplan.js').read_text(encoding='utf-8')
+area_labels = Path('floorplan-area-labels.js').read_text(encoding='utf-8')
 css = Path('floorplan.css').read_text(encoding='utf-8')
 backend = Path('apps-script/V11115Organiser.js').read_text(encoding='utf-8')
 bootstrap = Path('waffle-bootstrap.js').read_text(encoding='utf-8')
@@ -63,6 +64,21 @@ for section in ['living','dining','kitchen','overflow','quiet','entry']:
         errors.append(f'floorplan.js: missing section preset {section}')
 
 for needle in [
+    'FLOORPLAN CUSTOM AREA LABELS',
+    '.floorplan-room-label{display:none!important}',
+    'data-floorplan-custom-area-input',
+    'Type any area name',
+    'data-floorplan-custom-area-tool',
+    'markPending',
+    'applyPendingRename',
+    'ensureLayerOrder',
+    'const desired = [sections,zones,artefacts,selection]',
+    "presetNames = new Set(['Living','Dining','Kitchen','Overflow','Quiet Area','Entry'])",
+]:
+    if needle not in area_labels:
+        errors.append(f'floorplan-area-labels.js: missing {needle}')
+
+for needle in [
     '@media(max-width:760px)',
     '@media(max-width:460px)',
     '.floorplan-template-grid',
@@ -89,11 +105,15 @@ if '"floorplan.js"' not in bootstrap:
     errors.append('waffle-bootstrap.js: floorplan.js is not loaded')
 if bootstrap.find('"floorplan.js"') < bootstrap.find('"phase4.js"'):
     errors.append('waffle-bootstrap.js: floorplan should load after phase4 base runtime')
+if '"floorplan-area-labels.js"' not in bootstrap:
+    errors.append('waffle-bootstrap.js: floorplan-area-labels.js is not loaded')
+if bootstrap.find('"floorplan-area-labels.js"') < bootstrap.find('"floorplan.js"'):
+    errors.append('waffle-bootstrap.js: custom area labels should load after floorplan.js')
 
 if errors:
     raise SystemExit('\n'.join(errors))
 
 print(
     f'Organiser Floorplan contract passed · {len(template_ids)} templates · '
-    'movable/resizable items · room sections · furniture/POIs · profile photos'
+    'movable/resizable items · typed custom areas · POIs on top · profile photos'
 )
