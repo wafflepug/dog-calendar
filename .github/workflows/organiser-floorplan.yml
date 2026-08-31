@@ -21,7 +21,10 @@ jobs:
           set -euo pipefail
           node --check floorplan.js
           node --check floorplan-area-labels.js
+          node --check floorplan-first-drag-fix.js
           node --check apps-script/V11115Organiser.js
 
       - name: Validate Floorplan product contract
-        run: python3 scripts/check-organiser-floorplan.py
+        run: |
+          python3 scripts/check-organiser-floorplan.py
+          python3 scripts/check-floorplan-first-drag.py
