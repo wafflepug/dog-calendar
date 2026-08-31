@@ -20,11 +20,19 @@ for needle in [
     'data-floorplan-mode="tonight"',
     'data-floorplan-mode="layout"',
     "dataTransfer.setData('text/waffle-dog'",
-    "dataTransfer.setData('text/waffle-floorplan-kind'",
+    "dataTransfer.setData('text/waffle-floorplan-tool'",
     'data-floorplan-tool=',
     'pointerdown',
     'clientToPlanPoint',
-    'addZoneAtPoint',
+    'addToolAtPoint',
+    'bindItemMoveResize',
+    'data-floorplan-resize=',
+    'boxFitsRoom',
+    'SECTION_PRESETS',
+    'ARTEFACTS',
+    'sections: plan.sections',
+    'artefacts: plan.artefacts',
+    'data-floorplan-item-type=',
     "query({ action:'save_organiser_item'",
     "query({ action:'delete_organiser_item'",
     'floorplan.css?build=',
@@ -46,6 +54,14 @@ for required in [
     if required not in template_ids:
         errors.append(f'floorplan.js: missing template {required}')
 
+for artefact in ['couch','table','chair','crate','dogbed','food','water','gate','door']:
+    if f"{artefact}:" not in floorplan:
+        errors.append(f'floorplan.js: missing artefact {artefact}')
+
+for section in ['living','dining','kitchen','overflow','quiet','entry']:
+    if f"{section}:" not in floorplan:
+        errors.append(f'floorplan.js: missing section preset {section}')
+
 for needle in [
     '@media(max-width:760px)',
     '@media(max-width:460px)',
@@ -57,6 +73,10 @@ for needle in [
     '.floorplan-drag-ghost',
     '.floorplan-dog-avatar.has-photo',
     '.floorplan-summary-avatar.has-photo',
+    '.floorplan-section',
+    '.floorplan-artefact',
+    '.floorplan-resize-handles',
+    '.floorplan-item-edit',
     'touch-action:none',
 ]:
     if needle not in css:
@@ -73,4 +93,7 @@ if bootstrap.find('"floorplan.js"') < bootstrap.find('"phase4.js"'):
 if errors:
     raise SystemExit('\n'.join(errors))
 
-print(f'Organiser Floorplan contract passed · {len(template_ids)} templates · drag/drop tools · profile photos')
+print(
+    f'Organiser Floorplan contract passed · {len(template_ids)} templates · '
+    'movable/resizable items · room sections · furniture/POIs · profile photos'
+)
