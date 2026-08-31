@@ -22,9 +22,11 @@ jobs:
           node --check floorplan.js
           node --check floorplan-area-labels.js
           node --check floorplan-first-drag-fix.js
+          node --check floorplan-outdoors-dark.js
           node --check apps-script/V11115Organiser.js
 
       - name: Validate Floorplan product contract
         run: |
           python3 scripts/check-organiser-floorplan.py
           python3 scripts/check-floorplan-first-drag.py
+          python3 scripts/check-floorplan-outdoors-dark.py

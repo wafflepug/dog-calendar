@@ -1,0 +1,380 @@
+/* Waffle House — Floorplan Outdoors + high-contrast dark mode */
+
+/* ---------- Outdoors: light mode ---------- */
+.floorplan-outdoor-group .floorplan-toolbox{grid-template-columns:1fr}
+.floorplan-outdoor-note{font:650 9px/1.4 system-ui;color:#64748b;margin-top:1px}
+.floorplan-tool[data-floorplan-outdoor-tool]{border-color:#86b89a;background:#f0fdf4;color:#14532d}
+.floorplan-tool[data-floorplan-outdoor-tool]:hover{border-color:#16a34a;box-shadow:0 5px 14px rgba(22,163,74,.14)}
+.floorplan-tool[data-floorplan-outdoor-tool] .floorplan-tool-icon{background:#dcfce7}
+.floorplan-section.kind-outdoor rect{fill:rgba(187,247,208,.34);stroke:#4d9b69;stroke-width:4;stroke-dasharray:9 6}
+.floorplan-section.kind-outdoor .floorplan-section-label{fill:#166534}
+.floorplan-section.kind-outdoor.is-selected rect{fill:rgba(187,247,208,.48);stroke:#15803d;stroke-width:6}
+
+/* ---------- Floorplan dark mode ---------- */
+body.dark-theme .floorplan-shell{
+  color:#f8fafc;
+  color-scheme:dark;
+  --fp-bg:#08111f;
+  --fp-surface:#0f1b2d;
+  --fp-surface-2:#142238;
+  --fp-surface-3:#1b2c45;
+  --fp-border:#52647d;
+  --fp-border-soft:#34465f;
+  --fp-text:#f8fafc;
+  --fp-muted:#c7d2e3;
+  --fp-subtle:#aebdd0;
+  --fp-focus:#67e8f9;
+}
+
+body.dark-theme .floorplan-head,
+body.dark-theme .floorplan-toolbar,
+body.dark-theme .floorplan-progress,
+body.dark-theme .floorplan-planrail,
+body.dark-theme .floorplan-picker,
+body.dark-theme .floorplan-workspace{
+  background:var(--fp-surface)!important;
+  border-color:var(--fp-border)!important;
+  color:var(--fp-text)!important;
+  box-shadow:0 12px 30px rgba(0,0,0,.32)!important;
+}
+
+body.dark-theme .floorplan-head h1,
+body.dark-theme .floorplan-section-head h2,
+body.dark-theme .floorplan-panel-title strong,
+body.dark-theme .floorplan-toolgroup-head strong,
+body.dark-theme .floorplan-item-edit-title>strong,
+body.dark-theme .floorplan-summary-person>strong,
+body.dark-theme .floorplan-dog-copy strong,
+body.dark-theme .floorplan-template-copy strong{
+  color:var(--fp-text)!important;
+}
+
+body.dark-theme .floorplan-head p,
+body.dark-theme .floorplan-section-head p,
+body.dark-theme .floorplan-panel-title small,
+body.dark-theme .floorplan-toolgroup-head small,
+body.dark-theme .floorplan-title-edit label,
+body.dark-theme .floorplan-item-edit label,
+body.dark-theme .floorplan-item-edit>small,
+body.dark-theme .floorplan-template-copy small,
+body.dark-theme .floorplan-dog-copy small,
+body.dark-theme .floorplan-summary-dog small,
+body.dark-theme .floorplan-outdoor-note,
+body.dark-theme .floorplan-custom-area-note,
+body.dark-theme .floorplan-structure-note{
+  color:var(--fp-muted)!important;
+}
+
+body.dark-theme .floorplan-kicker{color:#c4b5fd!important}
+
+/* Buttons, rails and editable fields */
+body.dark-theme .floorplan-head>button,
+body.dark-theme .floorplan-actions button,
+body.dark-theme .floorplan-filter button,
+body.dark-theme .floorplan-mode button,
+body.dark-theme .floorplan-item-edit button,
+body.dark-theme .floorplan-custom-area-centre,
+body.dark-theme .floorplan-structure-mode{
+  background:var(--fp-surface-2)!important;
+  border-color:#60738e!important;
+  color:var(--fp-text)!important;
+}
+body.dark-theme .floorplan-head>button:hover,
+body.dark-theme .floorplan-actions button:hover,
+body.dark-theme .floorplan-filter button:hover,
+body.dark-theme .floorplan-custom-area-centre:hover,
+body.dark-theme .floorplan-structure-mode:hover{
+  background:var(--fp-surface-3)!important;
+  border-color:#8da2bd!important;
+}
+body.dark-theme .floorplan-filter button.is-active,
+body.dark-theme .floorplan-mode button.is-active,
+body.dark-theme .floorplan-structure-mode.is-active{
+  background:#e2e8f0!important;
+  border-color:#ffffff!important;
+  color:#07111f!important;
+  box-shadow:0 0 0 2px rgba(103,232,249,.28)!important;
+}
+body.dark-theme .floorplan-title-edit input,
+body.dark-theme .floorplan-item-edit input,
+body.dark-theme .floorplan-custom-area-builder input{
+  background:#07111f!important;
+  border-color:#637994!important;
+  color:#ffffff!important;
+  caret-color:#67e8f9!important;
+}
+body.dark-theme .floorplan-title-edit input::placeholder,
+body.dark-theme .floorplan-item-edit input::placeholder,
+body.dark-theme .floorplan-custom-area-builder input::placeholder{
+  color:#94a8c1!important;
+  opacity:1;
+}
+body.dark-theme .floorplan-title-edit input:focus,
+body.dark-theme .floorplan-item-edit input:focus,
+body.dark-theme .floorplan-custom-area-builder input:focus{
+  border-color:var(--fp-focus)!important;
+  box-shadow:0 0 0 3px rgba(103,232,249,.22)!important;
+  outline:none!important;
+}
+body.dark-theme .floorplan-actions .is-danger,
+body.dark-theme .floorplan-item-edit .is-danger{
+  color:#fecaca!important;
+  border-color:#ef4444!important;
+  background:#3a1118!important;
+}
+
+body.dark-theme .floorplan-planrail button{
+  background:var(--fp-surface-2)!important;
+  border-color:var(--fp-border-soft)!important;
+  color:var(--fp-text)!important;
+}
+body.dark-theme .floorplan-planrail button.is-active{
+  background:#28204b!important;
+  border-color:#c4b5fd!important;
+  box-shadow:inset 0 0 0 1px #8b5cf6!important;
+}
+body.dark-theme .floorplan-planrail small{color:var(--fp-muted)!important}
+body.dark-theme .floorplan-planrail em{color:#fcd34d!important}
+
+body.dark-theme .floorplan-default{
+  background:#3d2b08!important;
+  border:1px solid #d69e2e!important;
+  color:#fde68a!important;
+}
+body.dark-theme .floorplan-mode{background:#07111f!important;border:1px solid var(--fp-border-soft)}
+body.dark-theme .floorplan-progress span{
+  background:var(--fp-surface-2)!important;
+  border:1px solid #405571!important;
+  color:#dbe7f5!important;
+}
+body.dark-theme .floorplan-progress .is-complete{
+  background:#0c3025!important;
+  border-color:#34d399!important;
+  color:#a7f3d0!important;
+}
+
+/* Templates */
+body.dark-theme .floorplan-template{
+  background:var(--fp-surface-2)!important;
+  border-color:#4a5f7a!important;
+  color:var(--fp-text)!important;
+}
+body.dark-theme .floorplan-template:hover{border-color:#c4b5fd!important;box-shadow:0 10px 24px rgba(0,0,0,.36)!important}
+body.dark-theme .floorplan-template-art{background:#07111f!important;border:1px solid #405571}
+body.dark-theme .floorplan-template-art polygon{fill:#17233b!important;stroke:#b4c2d6!important}
+
+/* Sidebars, dogs and inspector */
+body.dark-theme .floorplan-sidebar{
+  background:#101d30!important;
+  border:1px solid #3f536e!important;
+  color:var(--fp-text)!important;
+}
+body.dark-theme .floorplan-dog{
+  background:#142238!important;
+  border-color:#516781!important;
+  color:#ffffff!important;
+}
+body.dark-theme .floorplan-dog:hover{background:#1a2b44!important;border-color:#8094ad!important}
+body.dark-theme .floorplan-dog.is-selected{
+  background:#28204b!important;
+  border-color:#c4b5fd!important;
+  box-shadow:0 0 0 3px rgba(196,181,253,.20)!important;
+}
+body.dark-theme .floorplan-dog-avatar,
+body.dark-theme .floorplan-summary-avatar{background:#33275f!important;color:#ede9fe!important;border:1px solid #8b7ec0}
+body.dark-theme .floorplan-empty-mini,
+body.dark-theme .floorplan-hint{
+  background:#0b1728!important;
+  border-color:#6a7e98!important;
+  color:#d7e1ee!important;
+}
+body.dark-theme .floorplan-toolgroup,
+body.dark-theme .floorplan-item-edit,
+body.dark-theme .floorplan-summary-dog{border-color:#40536c!important}
+body.dark-theme .floorplan-summary-dog>span{
+  background:#142238!important;
+  border:1px solid #405571!important;
+  color:#f8fafc!important;
+}
+body.dark-theme .floorplan-summary-dog button{color:#e2e8f0!important}
+
+/* Tool cards */
+body.dark-theme .floorplan-tool{
+  background:#142238!important;
+  border-color:#526984!important;
+  color:#ffffff!important;
+}
+body.dark-theme .floorplan-tool:hover{
+  background:#1b2c45!important;
+  border-color:#c4b5fd!important;
+  box-shadow:0 5px 16px rgba(0,0,0,.30)!important;
+}
+body.dark-theme .floorplan-tool strong{color:#ffffff!important}
+body.dark-theme .floorplan-tool small{color:#c4d0df!important}
+body.dark-theme .floorplan-tool-grip{color:#cbd5e1!important}
+body.dark-theme .floorplan-tool-icon{background:#24344c!important;color:#ffffff!important;border:1px solid #4b607b}
+body.dark-theme .floorplan-tool.tool-section .floorplan-tool-icon{background:#27374d!important}
+body.dark-theme .floorplan-tool.tool-zone.kind-sleep .floorplan-tool-icon{background:#292b5b!important}
+body.dark-theme .floorplan-tool.tool-zone.kind-eat .floorplan-tool-icon{background:#512b12!important}
+body.dark-theme .floorplan-tool.tool-zone.kind-play .floorplan-tool-icon{background:#123c31!important}
+body.dark-theme .floorplan-tool.tool-zone.kind-safe .floorplan-tool-icon{background:#4a1937!important}
+body.dark-theme .floorplan-tool[data-floorplan-outdoor-tool]{
+  background:#0f3427!important;
+  border-color:#5ee59a!important;
+  color:#ecfdf5!important;
+}
+body.dark-theme .floorplan-tool[data-floorplan-outdoor-tool] .floorplan-tool-icon{background:#155b3c!important;border-color:#6ee7b7!important}
+
+/* Canvas and underlying room footprint */
+body.dark-theme .floorplan-canvas-toolbar{color:#f1f5f9!important}
+body.dark-theme .floorplan-canvas-toolbar small{color:#bdc9d9!important}
+body.dark-theme .floorplan-canvas{
+  background-color:#07111f!important;
+  background-image:
+    linear-gradient(45deg,#0d1a2b 25%,transparent 25%),
+    linear-gradient(-45deg,#0d1a2b 25%,transparent 25%),
+    linear-gradient(45deg,transparent 75%,#0d1a2b 75%),
+    linear-gradient(-45deg,transparent 75%,#0d1a2b 75%)!important;
+  border-color:#60738d!important;
+}
+body.dark-theme .floorplan-canvas.is-tool-drop{
+  border-color:#67e8f9!important;
+  box-shadow:inset 0 0 0 4px rgba(103,232,249,.22),0 0 0 2px rgba(103,232,249,.28)!important;
+}
+body.dark-theme .floorplan-rooms polygon{
+  fill:#101c2d!important;
+  stroke:#b8c6d8!important;
+  stroke-width:10!important;
+}
+body.dark-theme .floorplan-room-label{fill:#dbe7f5!important}
+body.dark-theme .floorplan-canvas-empty{
+  background:rgba(7,17,31,.96)!important;
+  border-color:#8296af!important;
+  color:#f1f5f9!important;
+}
+
+/* Sections, including Outdoors */
+body.dark-theme .floorplan-section rect{
+  fill:rgba(99,116,139,.12)!important;
+  stroke:#9fb0c6!important;
+  stroke-width:4!important;
+}
+body.dark-theme .floorplan-section-label{fill:#f8fafc!important}
+body.dark-theme .floorplan-section.is-selected rect{
+  fill:rgba(8,145,178,.14)!important;
+  stroke:#67e8f9!important;
+  stroke-width:6!important;
+}
+body.dark-theme .floorplan-section.kind-outdoor rect{
+  fill:rgba(21,128,61,.20)!important;
+  stroke:#6ee7b7!important;
+  stroke-width:5!important;
+  stroke-dasharray:10 6!important;
+}
+body.dark-theme .floorplan-section.kind-outdoor .floorplan-section-label{fill:#ecfdf5!important}
+body.dark-theme .floorplan-section.kind-outdoor.is-selected rect{stroke:#a7f3d0!important;stroke-width:7!important}
+
+/* Furniture and POIs */
+body.dark-theme .floorplan-artefact rect{fill:#1a293e!important;stroke:#b3c1d3!important;stroke-width:4!important}
+body.dark-theme .floorplan-artefact-label{fill:#ffffff!important}
+body.dark-theme .floorplan-artefact.kind-table rect{fill:#3c2617!important;stroke:#fdba74!important}
+body.dark-theme .floorplan-artefact.kind-couch rect,
+body.dark-theme .floorplan-artefact.kind-chair rect{fill:#302653!important;stroke:#c4b5fd!important}
+body.dark-theme .floorplan-artefact.kind-crate rect,
+body.dark-theme .floorplan-artefact.kind-dogbed rect{fill:#173420!important;stroke:#bef264!important}
+body.dark-theme .floorplan-artefact.kind-food rect,
+body.dark-theme .floorplan-artefact.kind-water rect{fill:#142e4a!important;stroke:#7dd3fc!important}
+body.dark-theme .floorplan-artefact.kind-gate rect,
+body.dark-theme .floorplan-artefact.kind-door rect{fill:#1a293e!important;stroke:#cbd5e1!important}
+body.dark-theme .floorplan-artefact.is-selected rect{stroke:#67e8f9!important;stroke-width:7!important}
+
+/* Walls/dividers injected by floorplan-area-labels.js */
+body.dark-theme .floorplan-artefact.kind-wall-h rect,
+body.dark-theme .floorplan-artefact.kind-wall-v rect{
+  fill:#e2e8f0!important;
+  stroke:#ffffff!important;
+}
+body.dark-theme .floorplan-artefact.kind-divider rect{
+  fill:rgba(148,163,184,.08)!important;
+  stroke:#dbeafe!important;
+}
+body.dark-theme .floorplan-artefact.kind-wall-h.is-selected rect,
+body.dark-theme .floorplan-artefact.kind-wall-v.is-selected rect,
+body.dark-theme .floorplan-artefact.kind-divider.is-selected rect{stroke:#67e8f9!important}
+
+/* Dog-care zones: dark fills + bright category borders */
+body.dark-theme .floorplan-zone.kind-sleep rect{fill:#232750!important;stroke:#a5b4fc!important}
+body.dark-theme .floorplan-zone.kind-eat rect{fill:#4b2915!important;stroke:#fdba74!important}
+body.dark-theme .floorplan-zone.kind-play rect{fill:#12382e!important;stroke:#6ee7b7!important}
+body.dark-theme .floorplan-zone.kind-safe rect{fill:#451b36!important;stroke:#f9a8d4!important}
+body.dark-theme .floorplan-zone-label{fill:#ffffff!important}
+body.dark-theme .floorplan-zone-dogs{fill:#e2e8f0!important}
+body.dark-theme .floorplan-zone.is-selected rect,
+body.dark-theme .floorplan-zone.is-drop-target rect,
+body.dark-theme .floorplan-canvas.is-editing .floorplan-zone.is-selected rect{stroke:#67e8f9!important;stroke-width:7!important}
+
+/* Resize and focus affordances */
+body.dark-theme .floorplan-resize-handles circle{
+  fill:#07111f!important;
+  stroke:#67e8f9!important;
+  stroke-width:5!important;
+}
+body.dark-theme .floorplan-resize-handles{filter:drop-shadow(0 0 4px rgba(103,232,249,.45))!important}
+body.dark-theme .floorplan-shell button:focus-visible,
+body.dark-theme .floorplan-shell input:focus-visible,
+body.dark-theme .floorplan-zone:focus-visible{
+  outline:3px solid #67e8f9!important;
+  outline-offset:2px!important;
+}
+
+/* Explicit Save layout controls injected by floorplan-area-labels.js */
+body.dark-theme .floorplan-layout-save-note{
+  background:#102a43!important;
+  border-color:#60a5fa!important;
+  color:#dbeafe!important;
+}
+body.dark-theme .floorplan-draft-status{
+  background:#142238!important;
+  border:1px solid #526984!important;
+  color:#e2e8f0!important;
+}
+body.dark-theme .floorplan-draft-status.is-dirty{
+  background:#44280f!important;
+  border-color:#fb923c!important;
+  color:#fed7aa!important;
+}
+body.dark-theme .floorplan-draft-status.is-saving{
+  background:#10363b!important;
+  border-color:#67e8f9!important;
+  color:#cffafe!important;
+}
+body.dark-theme .floorplan-draft-discard{
+  background:#142238!important;
+  border-color:#71849c!important;
+  color:#ffffff!important;
+}
+body.dark-theme .floorplan-draft-save{
+  background:#08705f!important;
+  border-color:#5eead4!important;
+  color:#ffffff!important;
+}
+body.dark-theme .floorplan-draft-save:not(:disabled):hover{background:#0f8a74!important}
+
+/* OS high-contrast / forced-colors compatibility */
+@media (forced-colors:active){
+  .floorplan-head,.floorplan-toolbar,.floorplan-progress,.floorplan-planrail,.floorplan-picker,.floorplan-workspace,
+  .floorplan-sidebar,.floorplan-tool,.floorplan-dog,.floorplan-template,.floorplan-canvas{
+    forced-color-adjust:auto;
+    border:1px solid CanvasText!important;
+    background:Canvas!important;
+    color:CanvasText!important;
+  }
+  .floorplan-rooms polygon,.floorplan-section rect,.floorplan-zone rect,.floorplan-artefact rect{
+    fill:Canvas!important;
+    stroke:CanvasText!important;
+  }
+  .floorplan-section-label,.floorplan-zone-label,.floorplan-zone-dogs,.floorplan-artefact-label{fill:CanvasText!important}
+  .floorplan-section.is-selected rect,.floorplan-zone.is-selected rect,.floorplan-artefact.is-selected rect,
+  .floorplan-resize-handles circle{stroke:Highlight!important}
+  .floorplan-shell button:focus-visible,.floorplan-shell input:focus-visible{outline:3px solid Highlight!important}
+}
