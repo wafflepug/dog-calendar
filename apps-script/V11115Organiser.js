@@ -52,7 +52,8 @@ function v11115OrganiserAllowedType_(value) {
     sleep_assignment: true,
     arrival_checklist: true,
     checkout_checklist: true,
-    task: true
+    task: true,
+    floorplan: true
   };
 
   return allowed[type] ? type : "";
