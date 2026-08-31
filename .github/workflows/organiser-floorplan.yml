@@ -1,0 +1,26 @@
+name: Organiser Floorplan
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  floorplan-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Validate Floorplan runtime syntax
+        run: |
+          set -euo pipefail
+          node --check floorplan.js
+          node --check apps-script/V11115Organiser.js
+
+      - name: Validate Floorplan product contract
+        run: python3 scripts/check-organiser-floorplan.py
