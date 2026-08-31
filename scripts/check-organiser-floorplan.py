@@ -9,6 +9,7 @@ area_labels = Path('floorplan-area-labels.js').read_text(encoding='utf-8')
 css = Path('floorplan.css').read_text(encoding='utf-8')
 backend = Path('apps-script/V11115Organiser.js').read_text(encoding='utf-8')
 bootstrap = Path('waffle-bootstrap.js').read_text(encoding='utf-8')
+worker = Path('service-worker.js').read_text(encoding='utf-8')
 
 for needle in [
     'ORGANISER FLOORPLAN STUDIO',
@@ -74,6 +75,13 @@ for needle in [
     'ensureLayerOrder',
     'const desired = [sections,zones,artefacts,selection]',
     "presetNames = new Set(['Living','Dining','Kitchen','Overflow','Quiet Area','Entry'])",
+    'ensureFloorplanRegistration',
+    'activateFloorplanFromGuard',
+    'data-organiser-tab="floorplan"',
+    'data-organiser-view="floorplan"',
+    'floorplanAreaGuardBound',
+    'WAFFLE_ORGANISER_FLOORPLAN',
+    "window.addEventListener('pageshow', scheduleApply)",
 ]:
     if needle not in area_labels:
         errors.append(f'floorplan-area-labels.js: missing {needle}')
@@ -98,6 +106,17 @@ for needle in [
     if needle not in css:
         errors.append(f'floorplan.css: missing {needle}')
 
+for needle in [
+    "path.endsWith('/waffle-bootstrap.js')",
+    "path.endsWith('/floorplan.js')",
+    "path.endsWith('/floorplan.css')",
+    "path.endsWith('/floorplan-area-labels.js')",
+    "'./floorplan.js?build=2026.08.28.01'",
+    "'./floorplan-area-labels.js?build=2026.08.28.01'",
+]:
+    if needle not in worker:
+        errors.append(f'service-worker.js: missing Floorplan freshness marker {needle}')
+
 if 'floorplan: true' not in backend:
     errors.append('apps-script/V11115Organiser.js: floorplan organiser type is not enabled')
 
@@ -115,5 +134,6 @@ if errors:
 
 print(
     f'Organiser Floorplan contract passed · {len(template_ids)} templates · '
-    'movable/resizable items · typed custom areas · POIs on top · profile photos'
+    'persistent initial-load tab · movable/resizable items · typed custom areas · '
+    'POIs on top · profile photos'
 )

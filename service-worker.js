@@ -1,6 +1,6 @@
 /* Waffle House Boarding — recovery service worker */
 
-const WAFFLE_SW_VERSION = 'v11.4.2-fast-startup-2026.08.29.01';
+const WAFFLE_SW_VERSION = 'v11.4.3-floorplan-initial-load-2026.08.31.01';
 const WAFFLE_CACHE_PREFIX = 'waffle-house-';
 const APP_SHELL_CACHE = `${WAFFLE_CACHE_PREFIX}shell-${WAFFLE_SW_VERSION}`;
 const RUNTIME_CACHE = `${WAFFLE_CACHE_PREFIX}runtime-${WAFFLE_SW_VERSION}`;
@@ -21,6 +21,9 @@ const APP_SHELL = [
   './care.js?build=2026.08.28.01',
   './organiser.js?build=2026.08.28.01',
   './organiser.css?build=2026.08.28.01',
+  './floorplan.js?build=2026.08.28.01',
+  './floorplan.css?build=2026.08.28.01',
+  './floorplan-area-labels.js?build=2026.08.28.01',
   './logs.js?build=2026.08.28.01',
   './waffle-ui.js?build=2026.08.28.01',
   './waffle-ai.js?build=2026.08.28.01',
@@ -153,7 +156,11 @@ function isFreshnessCriticalAsset(url) {
   return (
     path.endsWith('/waffle-build.json') ||
     path.endsWith('/waffle-release.json') ||
-    path.endsWith('/manifest.webmanifest')
+    path.endsWith('/manifest.webmanifest') ||
+    path.endsWith('/waffle-bootstrap.js') ||
+    path.endsWith('/floorplan.js') ||
+    path.endsWith('/floorplan.css') ||
+    path.endsWith('/floorplan-area-labels.js')
   );
 }
 

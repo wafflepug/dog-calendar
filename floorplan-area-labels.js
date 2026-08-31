@@ -2,14 +2,15 @@
    WAFFLE HOUSE — FLOORPLAN CUSTOM AREA LABELS
    ------------------------------------------------------------
    Hides baked-in room titles, turns the section toolbox into a
-   user-named draggable area tool, and keeps POIs visually above
-   room sections and dog-care areas.
+   user-named draggable area tool, keeps POIs visually above
+   room sections and dog-care areas, and self-heals the Floorplan
+   tab when the Organiser shell is created or rebuilt.
    ============================================================ */
 (function () {
   'use strict';
   if (window.WAFFLE_FLOORPLAN_AREA_LABELS) return;
 
-  const VERSION = '1.0.0';
+  const VERSION = '1.1.0';
   const PAGE = String(window.WAFFLE_PAGE || document.body?.dataset?.wafflePage || '');
   if (PAGE && PAGE !== 'reminders') return;
 
@@ -50,6 +51,55 @@
   function floorplanVisible() {
     const view = document.querySelector('[data-organiser-view="floorplan"]');
     return !!view && !view.hidden;
+  }
+
+  function activateFloorplanFromGuard() {
+    document.querySelectorAll('[data-organiser-tab]').forEach(button => {
+      const active = button.dataset.organiserTab === 'floorplan';
+      button.classList.toggle('is-active', active);
+      button.setAttribute('aria-selected', active ? 'true' : 'false');
+    });
+    document.querySelectorAll('[data-organiser-view]').forEach(view => {
+      view.hidden = view.dataset.organiserView !== 'floorplan';
+    });
+
+    const api = window.WAFFLE_ORGANISER_FLOORPLAN;
+    if (api && typeof api.refresh === 'function') {
+      try { api.refresh(); } catch (_) {}
+    }
+    scheduleApply();
+  }
+
+  function ensureFloorplanRegistration() {
+    const root = document.getElementById('v11115OrganiserRoot');
+    if (!root) return false;
+    const tabs = root.querySelector('.v11115-organiser-tabs');
+    const body = root.querySelector('.v11115-organiser-body');
+    if (!tabs || !body) return false;
+
+    let button = tabs.querySelector('[data-organiser-tab="floorplan"]');
+    if (!button) {
+      button = document.createElement('button');
+      button.type = 'button';
+      button.dataset.organiserTab = 'floorplan';
+      button.textContent = '🏠 Floorplan';
+      const sleep = tabs.querySelector('[data-organiser-tab="sleep"]');
+      tabs.insertBefore(button, sleep || tabs.lastElementChild);
+    }
+
+    if (button.dataset.floorplanAreaGuardBound !== 'true') {
+      button.dataset.floorplanAreaGuardBound = 'true';
+      button.addEventListener('click', activateFloorplanFromGuard);
+    }
+
+    let view = body.querySelector('[data-organiser-view="floorplan"]');
+    if (!view) {
+      view = document.createElement('div');
+      view.dataset.organiserView = 'floorplan';
+      view.hidden = true;
+      body.appendChild(view);
+    }
+    return true;
   }
 
   function sectionToolgroup() {
@@ -223,6 +273,7 @@
 
   function apply() {
     state.scheduled = false;
+    ensureFloorplanRegistration();
     if (!floorplanVisible()) return;
     installStyle();
     removeBakedRoomTitles();
@@ -242,11 +293,14 @@
     scheduleApply();
     state.observer = new MutationObserver(scheduleApply);
     state.observer.observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['hidden','class']});
+    window.addEventListener('pageshow', scheduleApply);
+    window.addEventListener('waffle:first-paint-ready', scheduleApply);
   }
 
   window.WAFFLE_FLOORPLAN_AREA_LABELS = Object.freeze({
     version: VERSION,
-    refresh: scheduleApply
+    refresh: scheduleApply,
+    ensureRegistered: ensureFloorplanRegistration
   });
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded',start,{once:true});
