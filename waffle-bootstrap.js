@@ -28,6 +28,7 @@
       "waffle-v11.0.4.js",
       "waffle-v11.0.5.js",
       "phase4.js",
+      "floorplan.js",
       "waffle-v11.1.95.js",
       "waffle-v11.1.96.js",
       "waffle-v11.1.97.js",
@@ -93,8 +94,6 @@
       } catch (_) {}
     };
 
-    // Two frames guarantee that the canonical shell's injected styles and DOM
-    // have reached layout before the legacy compatibility DOM becomes visible.
     requestAnimationFrame(() => requestAnimationFrame(reveal));
   }
 
@@ -121,8 +120,6 @@
       attributeFilter: ['data-wh75-mobile-view', 'data-waffle-page']
     });
 
-    // Never leave the application inaccessible if a future UI module fails.
-    // The CSS layer has the same visual fail-safe; this JS fallback records why.
     firstPaintTimer = window.setTimeout(() => {
       console.warn('Canonical mobile shell readiness timed out; releasing first-paint gate.');
       revealCanonicalUi('timeout-fallback');
