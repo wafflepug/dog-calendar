@@ -65,7 +65,7 @@ for section in ['living','dining','kitchen','overflow','quiet','entry']:
         errors.append(f'floorplan.js: missing section preset {section}')
 
 for needle in [
-    'FLOORPLAN CUSTOM AREA LABELS',
+    'FLOORPLAN LAYOUT ENHANCEMENTS',
     '.floorplan-room-label{display:none!important}',
     'data-floorplan-custom-area-input',
     'Type any area name',
@@ -82,6 +82,24 @@ for needle in [
     'floorplanAreaGuardBound',
     'WAFFLE_ORGANISER_FLOORPLAN',
     "window.addEventListener('pageshow', scheduleApply)",
+    'installSaveInterceptor',
+    'captureDraft',
+    'data-floorplan-save-layout',
+    'data-floorplan-discard-layout',
+    'Unsaved changes',
+    'Save layout',
+    'saveDraft',
+    'discardDraft',
+    'guardUnsavedNavigation',
+    'allowRealSave',
+    'ensureStructureTools',
+    'data-floorplan-structure-mode="wall-h"',
+    'data-floorplan-structure-mode="wall-v"',
+    'data-floorplan-structure-mode="divider"',
+    "item.kind = mode",
+    '.floorplan-artefact.kind-wall-h',
+    '.floorplan-artefact.kind-wall-v',
+    '.floorplan-artefact.kind-divider',
 ]:
     if needle not in area_labels:
         errors.append(f'floorplan-area-labels.js: missing {needle}')
@@ -134,6 +152,6 @@ if errors:
 
 print(
     f'Organiser Floorplan contract passed · {len(template_ids)} templates · '
-    'persistent initial-load tab · movable/resizable items · typed custom areas · '
-    'POIs on top · profile photos'
+    'persistent initial-load tab · manual batch save · walls/dividers · '
+    'movable/resizable items · typed custom areas · POIs on top · profile photos'
 )
