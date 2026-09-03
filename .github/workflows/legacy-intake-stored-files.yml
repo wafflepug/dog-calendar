@@ -1,0 +1,56 @@
+name: Legacy Intake Stored Files
+
+on:
+  pull_request:
+    paths:
+      - 'apps-script/V11205LegacyIntakeStoredFiles.js'
+      - 'apps-script/LegacyIntake.html'
+      - '.github/workflows/legacy-intake-stored-files.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'apps-script/V11205LegacyIntakeStoredFiles.js'
+      - 'apps-script/LegacyIntake.html'
+      - '.github/workflows/legacy-intake-stored-files.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  stored-file-ocr:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate stored-file Apps Script helper
+        run: |
+          set -euo pipefail
+          node --check apps-script/V11205LegacyIntakeStoredFiles.js
+          grep -q "function getLegacyIntakeStoredDocumentsForHtmlV11205" apps-script/V11205LegacyIntakeStoredFiles.js
+          grep -q "legacyIntakeRowToObject_" apps-script/V11205LegacyIntakeStoredFiles.js
+          grep -q "record.stayKey" apps-script/V11205LegacyIntakeStoredFiles.js
+          grep -q "documents.sort" apps-script/V11205LegacyIntakeStoredFiles.js
+
+      - name: Validate stored-file scanner flow
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require('fs');
+          const html = fs.readFileSync('apps-script/LegacyIntake.html', 'utf8');
+          const matches = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/gi)];
+          const inline = matches.map(match => match[1]).find(code => code.includes('INITIAL_STAY_KEY'));
+          if (!inline) throw new Error('LegacyIntake.html application script not found');
+          const js = inline
+            .replace(/<\?!=\s*JSON\.stringify\(initialStayKey\)\s*\?>/g, '""')
+            .replace(/<\?!=\s*JSON\.stringify\(initialDocumentId\)\s*\?>/g, '""');
+          fs.writeFileSync('/tmp/legacy-intake-inline.js', js);
+          NODE
+          node --check /tmp/legacy-intake-inline.js
+          grep -q "storedFileSelect" apps-script/LegacyIntake.html
+          grep -q "Previously uploaded legacy intake" apps-script/LegacyIntake.html
+          grep -q "Run OCR on Stored File" apps-script/LegacyIntake.html
+          grep -q "getLegacyIntakeStoredDocumentsForHtmlV11205" apps-script/LegacyIntake.html
+          grep -q "switchStoredDocument" apps-script/LegacyIntake.html
+          grep -q "retryLegacyIntakeAiGroqFirstV11203(documentId)" apps-script/LegacyIntake.html
+          grep -q "finalizeLegacyIntakeForSelectedBookingV11204" apps-script/LegacyIntake.html
