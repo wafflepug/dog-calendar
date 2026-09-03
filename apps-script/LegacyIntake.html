@@ -112,6 +112,7 @@ function formatDate(value){if(!value)return'';const date=new Date(String(value).
 function showStatus(message,type='info'){const box=document.getElementById('uploadStatus');box.textContent=message;box.className=`status show ${type}`}
 function clearStatus(){const box=document.getElementById('uploadStatus');box.textContent='';box.className='status'}
 function providerName(result){if(result?.provider==='groq')return'Groq Vision';if(result?.provider==='gemini')return'Gemini fallback';return'AI'}
+function hasIdentityConflict(result){return Array.isArray(result?.conflicts)&&result.conflicts.some(conflict=>conflict?.type==='identity'&&conflict?.key==='dogName')}
 
 function populateCandidates(){
   const select=document.getElementById('staySelect');
@@ -159,6 +160,10 @@ function renderResult(result){
   const retryable=result.retryable===true||result.aiStatus==='Retry Needed';
   const failed=!retryable&&(result.result==='partial_success'||result.aiStatus==='AI Failed');
   const conflicts=Array.isArray(result.conflicts)?result.conflicts:[];
+  const identityBlocked=hasIdentityConflict(result);
+  const doneButton=document.getElementById('doneBtn');
+  doneButton.disabled=false;
+  doneButton.textContent=identityBlocked?`Apply to ${result.dogName||'selected guest'} & Done`:'Done';
   if(retryable){
     hero.className='result-hero warning';
     document.getElementById('resultIcon').textContent='⏳';
@@ -171,6 +176,12 @@ function renderResult(result){
     document.getElementById('resultTitle').textContent='Intake saved — AI read needs attention';
     document.getElementById('resultSub').textContent=result.errorMessage||'The intake record is safe in Drive, but OCR did not complete.';
     document.getElementById('retryBtn').hidden=false;
+  }else if(identityBlocked){
+    hero.className='result-hero warning';
+    document.getElementById('resultIcon').textContent='⚠️';
+    document.getElementById('resultTitle').textContent='Confirm the selected guest';
+    document.getElementById('resultSub').textContent=`The form name differs from ${result.dogName||'the selected guest'}. If this intake belongs to the selected guest, press “${doneButton.textContent}”. Waffle will keep the selected guest name and save the other supported intake details.`;
+    document.getElementById('retryBtn').hidden=true;
   }else if(conflicts.length){
     hero.className='result-hero warning';
     document.getElementById('resultIcon').textContent='⚠️';
@@ -295,6 +306,23 @@ function applyConflictSelections(){
   google.script.run.withSuccessHandler(result=>{button.disabled=false;button.textContent='Apply Selected Extracted Values';activeResult.conflicts=result.conflicts||[];activeResult.aiStatus=result.aiStatus||activeResult.aiStatus;activeResult.changedFields=[...(activeResult.changedFields||[]),...(result.changedFields||[])].filter((v,i,a)=>v&&a.indexOf(v)===i);renderResult(activeResult)}).withFailureHandler(error=>{button.disabled=false;button.textContent='Apply Selected Extracted Values';alert(serverError(error))}).applyLegacyIntakeConflictResolutionsFromHtml({documentId,useExtractedKeys:keys});
 }
 
+function finalizeOrClose(){
+  if(!hasIdentityConflict(activeResult)){closeOrReturn();return}
+  const documentId=activeResult?.documentId||context.document?.documentId||INITIAL_DOCUMENT_ID;
+  if(!documentId){alert('No legacy intake record is available to apply.');return}
+  const button=document.getElementById('doneBtn');
+  const guest=activeResult?.dogName||'selected guest';
+  button.disabled=true;button.textContent=`⏳ Applying to ${guest}...`;
+  google.script.run.withSuccessHandler(result=>{
+    activeResult={...activeResult,...result,extraction:result?.extraction||activeResult?.extraction,conflicts:result?.conflicts||[],changedFields:[...(activeResult?.changedFields||[]),...(result?.changedFields||[])].filter((v,i,a)=>v&&a.indexOf(v)===i)};
+    if(activeResult.conflicts.length){renderResult(activeResult);return}
+    notifyParent();closeOrReturn();
+  }).withFailureHandler(error=>{
+    button.disabled=false;button.textContent=`Apply to ${guest} & Done`;
+    const hero=document.getElementById('resultHero');hero.className='result-hero error';document.getElementById('resultIcon').textContent='⚠️';document.getElementById('resultTitle').textContent='Profile update could not be completed';document.getElementById('resultSub').textContent=serverError(error);
+  }).finalizeLegacyIntakeForSelectedBookingV11204({documentId});
+}
+
 function reassignExisting(){
   const stayKey=document.getElementById('staySelect').value;if(!stayKey){showStatus('Choose the new dog/stay.','error');return}
   const button=document.getElementById('reassignBtn');button.disabled=true;button.textContent='⏳ Reassigning...';
@@ -321,7 +349,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   document.getElementById('applyConflictsBtn').addEventListener('click',applyConflictSelections);
   document.getElementById('reassignBtn').addEventListener('click',reassignExisting);
   document.getElementById('closeBtn').addEventListener('click',closeOrReturn);
-  document.getElementById('doneBtn').addEventListener('click',closeOrReturn);
+  document.getElementById('doneBtn').addEventListener('click',finalizeOrClose);
   loadContext();
 });
 </script>
