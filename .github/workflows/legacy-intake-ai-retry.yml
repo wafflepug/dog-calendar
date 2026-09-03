@@ -4,12 +4,14 @@ on:
   pull_request:
     paths:
       - 'apps-script/V11191LegacyIntakeMedia.js'
+      - 'apps-script/V11203LegacyIntakeGroq.js'
       - 'apps-script/LegacyIntake.html'
       - '.github/workflows/legacy-intake-ai-retry.yml'
   push:
     branches: [main]
     paths:
       - 'apps-script/V11191LegacyIntakeMedia.js'
+      - 'apps-script/V11203LegacyIntakeGroq.js'
       - 'apps-script/LegacyIntake.html'
       - '.github/workflows/legacy-intake-ai-retry.yml'
 
@@ -23,15 +25,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Validate Apps Script retry module
+      - name: Validate Legacy Intake OCR modules
         run: |
           set -euo pipefail
           node --check apps-script/V11191LegacyIntakeMedia.js
-          grep -q "isTransientLegacyIntakeAiErrorV11202_" apps-script/V11191LegacyIntakeMedia.js
-          grep -q "LEGACY_INTAKE_AI_RETRY_DELAYS_V11202_" apps-script/V11191LegacyIntakeMedia.js
-          grep -q "Retry Needed" apps-script/V11191LegacyIntakeMedia.js
-          grep -q "retryGeminiLegacyIntakeWithTransientRetryV11202" apps-script/V11191LegacyIntakeMedia.js
-          grep -q "high demand" apps-script/V11191LegacyIntakeMedia.js
+          node --check apps-script/V11203LegacyIntakeGroq.js
+          grep -q "GROQ_API_KEY" apps-script/V11203LegacyIntakeGroq.js
+          grep -q "qwen/qwen3.6-27b" apps-script/V11203LegacyIntakeGroq.js
+          grep -q "api.groq.com/openai/v1/chat/completions" apps-script/V11203LegacyIntakeGroq.js
+          grep -q "callGroqLegacyIntakeExtractionV11203_" apps-script/V11203LegacyIntakeGroq.js
+          grep -q "retryLegacyIntakeAiGroqFirstV11203" apps-script/V11203LegacyIntakeGroq.js
+          grep -q "retryGeminiLegacyIntakeWithTransientRetryV11202" apps-script/V11203LegacyIntakeGroq.js
+          grep -q "providerOrder: \['groq', 'gemini'\]" apps-script/V11203LegacyIntakeGroq.js
 
       - name: Validate Legacy Intake scanner JavaScript
         run: |
@@ -39,14 +44,18 @@ jobs:
           node <<'NODE'
           const fs = require('fs');
           const html = fs.readFileSync('apps-script/LegacyIntake.html', 'utf8');
-          const match = html.match(/<script>([\s\S]*?)<\/script>/i);
-          if (!match) throw new Error('LegacyIntake.html inline script not found');
-          const js = match[1]
+          const matches = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/gi)];
+          const inline = matches.map(match => match[1]).find(code => code.includes('INITIAL_STAY_KEY'));
+          if (!inline) throw new Error('LegacyIntake.html application script not found');
+          const js = inline
             .replace(/<\?!=\s*JSON\.stringify\(initialStayKey\)\s*\?>/g, '""')
             .replace(/<\?!=\s*JSON\.stringify\(initialDocumentId\)\s*\?>/g, '""');
           fs.writeFileSync('/tmp/legacy-intake-inline.js', js);
           NODE
           node --check /tmp/legacy-intake-inline.js
-          grep -q "Intake saved — AI temporarily busy" apps-script/LegacyIntake.html
-          grep -q "retryGeminiLegacyIntakeWithTransientRetryV11202" apps-script/LegacyIntake.html
+          grep -q "pdf.js/3.11.174/pdf.min.js" apps-script/LegacyIntake.html
+          grep -q "Groq-first document reading" apps-script/LegacyIntake.html
+          grep -q "renderPdfPagesForGroq" apps-script/LegacyIntake.html
+          grep -q "saveLegacyIntakeMediaGroqFirstV11203" apps-script/LegacyIntake.html
+          grep -q "retryLegacyIntakeAiGroqFirstV11203" apps-script/LegacyIntake.html
           grep -q "result.retryable===true" apps-script/LegacyIntake.html

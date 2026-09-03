@@ -17,7 +17,7 @@
     <div><h1>Legacy Intake Scanner</h1><p>Upload a PDF or clear photo of an older handwritten intake form and review what Waffle reads before profile updates.</p></div>
   </header>
 
-  <div class="notice"><strong>✨ Gemini document reading</strong><br>PDFs and prepared photos are sent to the existing Gemini intake reader. Photos are converted into a private PDF record first, then use the same extraction, matching, conflict review and Audit workflow as PDFs. Always review handwritten results before replacing existing profile values.</div>
+  <div class="notice"><strong>⚡ Groq-first document reading</strong><br>Waffle prepares page images locally and uses Groq Vision for OCR first. If Groq cannot complete the read, Gemini is used automatically as the fallback. The original intake is still saved privately in Google Drive before any AI processing.</div>
 
   <section id="uploadPanel" class="panel">
     <h2>1. Choose the guest &amp; intake form</h2>
@@ -37,7 +37,7 @@
         <label class="pick camera">📷 Take Photo<input id="cameraFile" type="file" accept="image/*" capture="environment"></label>
       </div>
       <div id="fileCard" class="file-card"></div>
-      <div class="privacy-note">Supported directly: PDF, JPG/JPEG, PNG and WebP. Phone photos are resized and normalised to JPEG before upload. HEIC works only when the browser can decode it; otherwise export/share the photo as JPG first.</div>
+      <div class="privacy-note">Supported directly: PDF, JPG/JPEG, PNG and WebP. PDFs up to five pages are prepared for Groq OCR in your browser; longer PDFs automatically use Gemini fallback so the full document is still read. HEIC works only when the browser can decode it; otherwise export/share the photo as JPG first.</div>
     </div>
 
     <div id="uploadStatus" class="status"></div>
@@ -45,7 +45,7 @@
     <div class="actions">
       <button id="closeBtn" type="button" class="secondary">Close</button>
       <button id="reassignBtn" type="button" class="secondary" hidden>↻ Reassign Intake</button>
-      <button id="retryExistingBtn" type="button" class="ai-btn" hidden>✨ Read Existing Intake with Gemini</button>
+      <button id="retryExistingBtn" type="button" class="ai-btn" hidden>✨ Read Existing Intake with AI</button>
       <button id="processBtn" type="button" class="primary">✨ Scan &amp; Process</button>
     </div>
   </section>
@@ -55,7 +55,7 @@
     <p class="desc">Keep this window open while Waffle prepares, saves and reads the intake form.</p>
     <div class="progress">
       <div id="stepSave" class="progress-row active">📁 Saving a private intake record to Google Drive</div>
-      <div id="stepRead" class="progress-row">✨ Gemini reading printed text, handwriting and tick boxes</div>
+      <div id="stepRead" class="progress-row">⚡ AI reading printed text, handwriting and tick boxes</div>
       <div id="stepApply" class="progress-row">🐾 Matching supported fields to Care &amp; Profile</div>
       <div id="stepAudit" class="progress-row">🧾 Recording changes in Audit Log</div>
     </div>
@@ -79,7 +79,7 @@
     </div>
 
     <ul id="warningList" class="warning-list" hidden></ul>
-    <details id="extractionDetails" class="raw-details" hidden><summary>View structured Gemini extraction</summary><pre id="extractionJson" class="raw-json"></pre></details>
+    <details id="extractionDetails" class="raw-details" hidden><summary>View structured AI extraction</summary><pre id="extractionJson" class="raw-json"></pre></details>
 
     <div class="actions">
       <a id="viewPdfBtn" class="button-link secondary" target="_blank" rel="noopener" hidden>📄 View Stored Intake</a>
@@ -89,20 +89,29 @@
   </section>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
 const INITIAL_STAY_KEY = <?!= JSON.stringify(initialStayKey) ?>;
 const INITIAL_DOCUMENT_ID = <?!= JSON.stringify(initialDocumentId) ?>;
+const GROQ_PDF_PAGE_LIMIT = 5;
 let context = { candidates: [] };
 let selectedFile = null;
 let fileDataUrl = '';
 let sourceKind = '';
 let activeResult = null;
+let ocrImages = [];
+let ocrPageCount = 0;
+
+if(window.pdfjsLib){
+  try{window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'}catch(_){}
+}
 
 function escapeHtml(value){return String(value??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;')}
 function serverError(error){return !error?'Unknown error':(error.message||String(error))}
 function formatDate(value){if(!value)return'';const date=new Date(String(value).slice(0,10)+'T00:00:00');return Number.isNaN(date.getTime())?String(value):date.toLocaleDateString('en-AU',{day:'numeric',month:'short',year:'numeric'})}
 function showStatus(message,type='info'){const box=document.getElementById('uploadStatus');box.textContent=message;box.className=`status show ${type}`}
 function clearStatus(){const box=document.getElementById('uploadStatus');box.textContent='';box.className='status'}
+function providerName(result){if(result?.provider==='groq')return'Groq Vision';if(result?.provider==='gemini')return'Gemini fallback';return'AI'}
 
 function populateCandidates(){
   const select=document.getElementById('staySelect');
@@ -150,10 +159,31 @@ function renderResult(result){
   const retryable=result.retryable===true||result.aiStatus==='Retry Needed';
   const failed=!retryable&&(result.result==='partial_success'||result.aiStatus==='AI Failed');
   const conflicts=Array.isArray(result.conflicts)?result.conflicts:[];
-  if(retryable){hero.className='result-hero warning';document.getElementById('resultIcon').textContent='⏳';document.getElementById('resultTitle').textContent='Intake saved — AI temporarily busy';document.getElementById('resultSub').textContent=result.errorMessage||'Gemini is temporarily busy. Your intake is safe in Drive and can be retried without uploading it again.';document.getElementById('retryBtn').hidden=false}
-  else if(failed){hero.className='result-hero error';document.getElementById('resultIcon').textContent='⚠️';document.getElementById('resultTitle').textContent='Intake saved — AI read needs retry';document.getElementById('resultSub').textContent=result.errorMessage||'The intake record is safe in Drive, but Gemini did not complete.';document.getElementById('retryBtn').hidden=false}
-  else if(conflicts.length){hero.className='result-hero warning';document.getElementById('resultIcon').textContent='⚠️';document.getElementById('resultTitle').textContent='Intake processed — review differences';document.getElementById('resultSub').textContent='Safe additions were applied automatically. Existing conflicting values were kept until you choose otherwise.';document.getElementById('retryBtn').hidden=true}
-  else{hero.className='result-hero';document.getElementById('resultIcon').textContent='✅';document.getElementById('resultTitle').textContent='Legacy intake processed';document.getElementById('resultSub').textContent='The intake record is in Drive and supported profile attributes have been applied.';document.getElementById('retryBtn').hidden=true}
+  if(retryable){
+    hero.className='result-hero warning';
+    document.getElementById('resultIcon').textContent='⏳';
+    document.getElementById('resultTitle').textContent='Intake saved — OCR temporarily unavailable';
+    document.getElementById('resultSub').textContent=result.errorMessage||'Your intake is safe in Drive. Retry the AI read shortly; you do not need to upload it again.';
+    document.getElementById('retryBtn').hidden=false;
+  }else if(failed){
+    hero.className='result-hero error';
+    document.getElementById('resultIcon').textContent='⚠️';
+    document.getElementById('resultTitle').textContent='Intake saved — AI read needs attention';
+    document.getElementById('resultSub').textContent=result.errorMessage||'The intake record is safe in Drive, but OCR did not complete.';
+    document.getElementById('retryBtn').hidden=false;
+  }else if(conflicts.length){
+    hero.className='result-hero warning';
+    document.getElementById('resultIcon').textContent='⚠️';
+    document.getElementById('resultTitle').textContent='Intake processed — review differences';
+    document.getElementById('resultSub').textContent=`${providerName(result)} completed the read. Safe additions were applied automatically; conflicting existing values were kept for review.`;
+    document.getElementById('retryBtn').hidden=true;
+  }else{
+    hero.className='result-hero';
+    document.getElementById('resultIcon').textContent='✅';
+    document.getElementById('resultTitle').textContent='Legacy intake processed';
+    document.getElementById('resultSub').textContent=`Processed with ${providerName(result)}. The intake is in Drive and supported profile attributes have been applied.`;
+    document.getElementById('retryBtn').hidden=true;
+  }
   document.getElementById('summaryGuest').textContent=result.dogName||'—';
   document.getElementById('summaryStatus').textContent=result.aiStatus||'—';
   const confidence=result.extraction&&Number.isFinite(Number(result.extraction.extractionConfidence))?Math.round(Number(result.extraction.extractionConfidence)*100)+'%':'—';
@@ -178,11 +208,40 @@ async function imageToJpeg(file){
     try{image=new Image();await new Promise((resolve,reject)=>{image.onload=resolve;image.onerror=()=>reject(new Error('This photo format cannot be opened by this browser. Try exporting it as JPG or PNG.'));image.src=url});width=image.naturalWidth||image.width;height=image.naturalHeight||image.height}finally{URL.revokeObjectURL(url)}
   }
   if(!width||!height)throw new Error('The selected photo has no readable image dimensions.');
-  const maxDimension=2400;const scale=Math.min(1,maxDimension/Math.max(width,height));const canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(width*scale));canvas.height=Math.max(1,Math.round(height*scale));const ctx=canvas.getContext('2d',{alpha:false});ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(bitmap||image,0,0,canvas.width,canvas.height);if(bitmap&&bitmap.close)bitmap.close();return canvas.toDataURL('image/jpeg',.9);
+  const maxDimension=2200;const scale=Math.min(1,maxDimension/Math.max(width,height));const canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(width*scale));canvas.height=Math.max(1,Math.round(height*scale));const ctx=canvas.getContext('2d',{alpha:false});ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(bitmap||image,0,0,canvas.width,canvas.height);if(bitmap&&bitmap.close)bitmap.close();return canvas.toDataURL('image/jpeg',.88);
+}
+
+async function renderPdfPagesForGroq(file){
+  if(!window.pdfjsLib)throw new Error('PDF page preparation is unavailable in this browser.');
+  const bytes=await file.arrayBuffer();
+  const pdf=await window.pdfjsLib.getDocument({data:new Uint8Array(bytes)}).promise;
+  const pageCount=Number(pdf.numPages||0);
+  if(!pageCount)return{images:[],pageCount:0};
+  if(pageCount>GROQ_PDF_PAGE_LIMIT)return{images:[],pageCount};
+
+  const images=[];
+  for(let pageNumber=1;pageNumber<=pageCount;pageNumber+=1){
+    const page=await pdf.getPage(pageNumber);
+    const baseViewport=page.getViewport({scale:1});
+    const maxSide=Math.max(baseViewport.width,baseViewport.height)||1;
+    const scale=Math.max(1.5,Math.min(2.2,1700/maxSide));
+    const viewport=page.getViewport({scale});
+    const canvas=document.createElement('canvas');
+    canvas.width=Math.max(1,Math.round(viewport.width));
+    canvas.height=Math.max(1,Math.round(viewport.height));
+    const ctx=canvas.getContext('2d',{alpha:false});
+    ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);
+    await page.render({canvasContext:ctx,viewport}).promise;
+    images.push(canvas.toDataURL('image/jpeg',.82));
+    try{page.cleanup()}catch(_){}
+  }
+  try{pdf.cleanup()}catch(_){}
+  try{pdf.destroy()}catch(_){}
+  return{images,pageCount};
 }
 
 async function prepareSelectedFile(file,kind){
-  selectedFile=null;fileDataUrl='';sourceKind=kind||'';clearStatus();
+  selectedFile=null;fileDataUrl='';sourceKind=kind||'';ocrImages=[];ocrPageCount=0;clearStatus();
   const card=document.getElementById('fileCard');card.classList.remove('show');card.textContent='';
   if(!file)return;
   if(file.size>10*1024*1024){showStatus('Please keep the selected intake file at 10 MB or less.','error');return}
@@ -191,12 +250,28 @@ async function prepareSelectedFile(file,kind){
   if(!isPdf&&!isImage){showStatus('Please choose a PDF or photo of the intake form.','error');return}
   try{
     card.classList.add('show');card.textContent=`⏳ Preparing ${file.name}...`;
-    fileDataUrl=isPdf?await fileToDataUrl(file):await imageToJpeg(file);
+    if(isPdf){
+      fileDataUrl=await fileToDataUrl(file);
+      try{
+        const prepared=await renderPdfPagesForGroq(file);
+        ocrImages=prepared.images||[];
+        ocrPageCount=Number(prepared.pageCount||0);
+      }catch(error){
+        ocrImages=[];ocrPageCount=0;
+      }
+    }else{
+      fileDataUrl=await imageToJpeg(file);
+      ocrImages=[fileDataUrl];ocrPageCount=1;
+    }
     selectedFile=file;sourceKind=isPdf?'pdf':(kind==='camera'?'camera':'image');
-    const icon=isPdf?'📄':'🖼️';const note=isPdf?'PDF ready':'Photo normalised to JPEG for reliable OCR';
+    const icon=isPdf?'📄':'🖼️';
+    let note='Photo prepared for Groq Vision OCR';
+    if(isPdf&&ocrPageCount>GROQ_PDF_PAGE_LIMIT)note=`${ocrPageCount}-page PDF · Gemini fallback will read the full document`;
+    else if(isPdf&&ocrImages.length)note=`${ocrImages.length} page${ocrImages.length===1?'':'s'} prepared for Groq Vision OCR`;
+    else if(isPdf)note='PDF ready · Gemini fallback will be used if Groq page preparation is unavailable';
     card.textContent=`${icon} ${file.name} · ${(file.size/1024/1024).toFixed(2)} MB · ${note}`;
     clearStatus();
-  }catch(error){selectedFile=null;fileDataUrl='';card.classList.remove('show');showStatus(serverError(error),'error')}
+  }catch(error){selectedFile=null;fileDataUrl='';ocrImages=[];ocrPageCount=0;card.classList.remove('show');showStatus(serverError(error),'error')}
 }
 
 function processUpload(){
@@ -205,13 +280,13 @@ function processUpload(){
   if(!selectedFile||!fileDataUrl){showStatus('Choose a PDF or photo of the legacy intake form first.','error');return}
   clearStatus();
   const button=document.getElementById('processBtn');button.disabled=true;button.textContent='⏳ Processing...';document.getElementById('progressPanel').hidden=false;setProgressState('uploading');setTimeout(()=>setProgressState('reading'),600);
-  google.script.run.withSuccessHandler(result=>{button.disabled=false;button.textContent='✨ Scan & Process';const retryable=result?.retryable===true||result?.aiStatus==='Retry Needed';setProgressState(retryable?'reading':(result.result==='partial_success'?'failed':'complete'));renderResult(result)}).withFailureHandler(error=>{button.disabled=false;button.textContent='✨ Scan & Process';setProgressState('failed');document.getElementById('progressPanel').hidden=true;showStatus(serverError(error),'error')}).saveLegacyIntakeMediaFromHtml({stayKey,fileName:selectedFile.name,fileData:fileDataUrl,sourceKind});
+  google.script.run.withSuccessHandler(result=>{button.disabled=false;button.textContent='✨ Scan & Process';const retryable=result?.retryable===true||result?.aiStatus==='Retry Needed';setProgressState(retryable?'reading':(result.result==='partial_success'?'failed':'complete'));renderResult(result)}).withFailureHandler(error=>{button.disabled=false;button.textContent='✨ Scan & Process';setProgressState('failed');document.getElementById('progressPanel').hidden=true;showStatus(serverError(error),'error')}).saveLegacyIntakeMediaGroqFirstV11203({stayKey,fileName:selectedFile.name,fileData:fileDataUrl,sourceKind,ocrImages,ocrPageCount});
 }
 
 function retryAiRead(){
   const documentId=activeResult?.documentId||context.document?.documentId||INITIAL_DOCUMENT_ID;if(!documentId){showStatus('No legacy intake record is available to retry.','error');return}
   const buttons=[document.getElementById('retryBtn'),document.getElementById('retryExistingBtn')];buttons.forEach(b=>{if(b)b.disabled=true});document.getElementById('resultPanel').classList.remove('show');document.getElementById('progressPanel').hidden=false;setProgressState('reading');
-  google.script.run.withSuccessHandler(result=>{buttons.forEach(b=>{if(b)b.disabled=false});const retryable=result?.retryable===true||result?.aiStatus==='Retry Needed';setProgressState(retryable?'reading':(result.result==='partial_success'?'failed':'complete'));renderResult(result)}).withFailureHandler(error=>{buttons.forEach(b=>{if(b)b.disabled=false});document.getElementById('progressPanel').hidden=true;showStatus(serverError(error),'error')}).retryGeminiLegacyIntakeWithTransientRetryV11202(documentId);
+  google.script.run.withSuccessHandler(result=>{buttons.forEach(b=>{if(b)b.disabled=false});const retryable=result?.retryable===true||result?.aiStatus==='Retry Needed';setProgressState(retryable?'reading':(result.result==='partial_success'?'failed':'complete'));renderResult(result)}).withFailureHandler(error=>{buttons.forEach(b=>{if(b)b.disabled=false});document.getElementById('progressPanel').hidden=true;showStatus(serverError(error),'error')}).retryLegacyIntakeAiGroqFirstV11203(documentId);
 }
 
 function applyConflictSelections(){
@@ -223,7 +298,7 @@ function applyConflictSelections(){
 function reassignExisting(){
   const stayKey=document.getElementById('staySelect').value;if(!stayKey){showStatus('Choose the new dog/stay.','error');return}
   const button=document.getElementById('reassignBtn');button.disabled=true;button.textContent='⏳ Reassigning...';
-  google.script.run.withSuccessHandler(result=>{button.disabled=false;button.textContent='↻ Reassign Intake';context.document.stayKey=result.stayKey;context.document.dogName=result.dogName;showStatus('Intake reassigned. Press “Read Existing Intake with Gemini” to apply attributes to the new booking.','success');notifyParent()}).withFailureHandler(error=>{button.disabled=false;button.textContent='↻ Reassign Intake';showStatus(serverError(error),'error')}).reassignLegacyIntakeFromHtml({documentId:context.document.documentId,stayKey});
+  google.script.run.withSuccessHandler(result=>{button.disabled=false;button.textContent='↻ Reassign Intake';context.document.stayKey=result.stayKey;context.document.dogName=result.dogName;showStatus('Intake reassigned. Press “Read Existing Intake with AI” to apply attributes to the new booking.','success');notifyParent()}).withFailureHandler(error=>{button.disabled=false;button.textContent='↻ Reassign Intake';showStatus(serverError(error),'error')}).reassignLegacyIntakeFromHtml({documentId:context.document.documentId,stayKey});
 }
 
 function loadContext(){
