@@ -5,6 +5,7 @@ on:
     paths:
       - 'apps-script/V11205LegacyIntakeStoredFiles.js'
       - 'apps-script/V11206LegacyIntakeFreeOcr.js'
+      - 'apps-script/V11207LegacyIntakePriority.js'
       - 'apps-script/LegacyIntake.html'
       - '.github/workflows/legacy-intake-stored-files.yml'
   push:
@@ -12,6 +13,7 @@ on:
     paths:
       - 'apps-script/V11205LegacyIntakeStoredFiles.js'
       - 'apps-script/V11206LegacyIntakeFreeOcr.js'
+      - 'apps-script/V11207LegacyIntakePriority.js'
       - 'apps-script/LegacyIntake.html'
       - '.github/workflows/legacy-intake-stored-files.yml'
 
@@ -30,13 +32,16 @@ jobs:
           set -euo pipefail
           node --check apps-script/V11205LegacyIntakeStoredFiles.js
           node --check apps-script/V11206LegacyIntakeFreeOcr.js
+          node --check apps-script/V11207LegacyIntakePriority.js
           grep -q "function getLegacyIntakeStoredDocumentsForHtmlV11205" apps-script/V11205LegacyIntakeStoredFiles.js
           grep -q "documents.sort" apps-script/V11205LegacyIntakeStoredFiles.js
           grep -q "function getLegacyIntakeOcrSourceForHtmlV11206" apps-script/V11206LegacyIntakeFreeOcr.js
           grep -q "DriveApp.getFileById" apps-script/V11206LegacyIntakeFreeOcr.js
           grep -q "data:application/pdf;base64" apps-script/V11206LegacyIntakeFreeOcr.js
+          grep -q "function retryLegacyIntakeAiPriorityV11207" apps-script/V11207LegacyIntakePriority.js
+          grep -Fq "providerOrder = ['groq', 'gemini', 'tesseract']" apps-script/V11207LegacyIntakePriority.js
 
-      - name: Validate stored-file free OCR flow
+      - name: Validate stored-file priority OCR flow
         run: |
           set -euo pipefail
           node <<'NODE'
@@ -49,14 +54,26 @@ jobs:
             .replace(/<\?!=\s*JSON\.stringify\(initialStayKey\)\s*\?>/g, '""')
             .replace(/<\?!=\s*JSON\.stringify\(initialDocumentId\)\s*\?>/g, '""');
           fs.writeFileSync('/tmp/legacy-intake-inline.js', js);
+          if (!html.includes('OCR priority: 1. Groq → 2. Gemini → 3. Tesseract')) {
+            throw new Error('Expected Groq -> Gemini -> Tesseract priority label');
+          }
+          if (!js.includes("serverCall('retryLegacyIntakeAiPriorityV11207'")) {
+            throw new Error('Stored scanner must call the priority cloud bridge');
+          }
+          if (!js.includes('const prepared=await storedPrepared(documentId)')) {
+            throw new Error('Stored PDF must be prepared for the cloud priority route');
+          }
+          if (!js.includes('return applyTesseract(documentId,prepared,reason)')) {
+            throw new Error('Tesseract fallback must remain available after cloud failure');
+          }
           NODE
           node --check /tmp/legacy-intake-inline.js
           grep -q "storedFileSelect" apps-script/LegacyIntake.html
           grep -q "Previously uploaded legacy intake" apps-script/LegacyIntake.html
-          grep -q "Run Free OCR on Stored File" apps-script/LegacyIntake.html
+          grep -q "Run OCR Again" apps-script/LegacyIntake.html
           grep -q "getLegacyIntakeStoredDocumentsForHtmlV11205" apps-script/LegacyIntake.html
-          grep -q "switchStoredDocument" apps-script/LegacyIntake.html
+          grep -q "switchStored" apps-script/LegacyIntake.html
           grep -q "getLegacyIntakeOcrSourceForHtmlV11206" apps-script/LegacyIntake.html
-          grep -q "renderPdfPagesForFreeOcr" apps-script/LegacyIntake.html
-          grep -q "runTesseractPages" apps-script/LegacyIntake.html
+          grep -q "storedPrepared" apps-script/LegacyIntake.html
+          grep -q "tesseractRead" apps-script/LegacyIntake.html
           grep -q "finalizeLegacyIntakeForSelectedBookingV11204" apps-script/LegacyIntake.html

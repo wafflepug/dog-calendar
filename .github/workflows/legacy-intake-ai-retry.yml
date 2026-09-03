@@ -6,6 +6,7 @@ on:
       - 'apps-script/V11203LegacyIntakeGroq.js'
       - 'apps-script/V11204LegacyIntakeFinalize.js'
       - 'apps-script/V11206LegacyIntakeFreeOcr.js'
+      - 'apps-script/V11207LegacyIntakePriority.js'
       - 'apps-script/LegacyIntake.html'
       - '.github/workflows/legacy-intake-ai-retry.yml'
   push:
@@ -14,6 +15,7 @@ on:
       - 'apps-script/V11203LegacyIntakeGroq.js'
       - 'apps-script/V11204LegacyIntakeFinalize.js'
       - 'apps-script/V11206LegacyIntakeFreeOcr.js'
+      - 'apps-script/V11207LegacyIntakePriority.js'
       - 'apps-script/LegacyIntake.html'
       - '.github/workflows/legacy-intake-ai-retry.yml'
 
@@ -27,23 +29,27 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Validate free OCR backend
+      - name: Validate provider priority backend
         run: |
           set -euo pipefail
+          node --check apps-script/V11203LegacyIntakeGroq.js
           node --check apps-script/V11206LegacyIntakeFreeOcr.js
+          node --check apps-script/V11207LegacyIntakePriority.js
           node --check apps-script/V11204LegacyIntakeFinalize.js
-          grep -q "apiKeyRequired: false" apps-script/V11206LegacyIntakeFreeOcr.js
-          grep -q "providerRequired: false" apps-script/V11206LegacyIntakeFreeOcr.js
-          grep -q "Tesseract.js + PDF.js" apps-script/V11206LegacyIntakeFreeOcr.js
-          grep -q "getLegacyIntakeOcrSourceForHtmlV11206" apps-script/V11206LegacyIntakeFreeOcr.js
-          grep -q "saveLegacyIntakeMediaForFreeOcrV11206" apps-script/V11206LegacyIntakeFreeOcr.js
+          grep -q "function processLegacyIntakeWithProvidersV11203_" apps-script/V11203LegacyIntakeGroq.js
+          grep -q "provider: 'groq'" apps-script/V11203LegacyIntakeGroq.js
+          grep -q "provider: 'gemini'" apps-script/V11203LegacyIntakeGroq.js
+          grep -q "geminiFallbackEnabled" apps-script/V11203LegacyIntakeGroq.js
+          grep -q "function retryLegacyIntakeAiPriorityV11207" apps-script/V11207LegacyIntakePriority.js
+          grep -Fq "providerOrder = ['groq', 'gemini', 'tesseract']" apps-script/V11207LegacyIntakePriority.js
+          grep -q "processLegacyIntakeWithProvidersV11203_" apps-script/V11207LegacyIntakePriority.js
           grep -q "processLegacyIntakeFreeOcrTextV11206" apps-script/V11206LegacyIntakeFreeOcr.js
           grep -q "buildGeminiLegacyAutoApplyPlan_" apps-script/V11206LegacyIntakeFreeOcr.js
           grep -q "applyLegacyIntakeProfileUpdates_" apps-script/V11206LegacyIntakeFreeOcr.js
           grep -q "finalizeLegacyIntakeForSelectedBookingV11204" apps-script/V11204LegacyIntakeFinalize.js
           grep -q "extraction.profile.dogName = selectedDogName" apps-script/V11204LegacyIntakeFinalize.js
 
-      - name: Validate Legacy Intake scanner JavaScript
+      - name: Validate Legacy Intake scanner priority
         run: |
           set -euo pipefail
           node <<'NODE'
@@ -56,18 +62,32 @@ jobs:
             .replace(/<\?!=\s*JSON\.stringify\(initialStayKey\)\s*\?>/g, '""')
             .replace(/<\?!=\s*JSON\.stringify\(initialDocumentId\)\s*\?>/g, '""');
           fs.writeFileSync('/tmp/legacy-intake-inline.js', js);
+
+          const priorityLabel = 'OCR priority: 1. Groq → 2. Gemini → 3. Tesseract';
+          if (!html.includes(priorityLabel)) throw new Error('Provider priority label is missing');
+          if (!html.includes('tesseract.js@5.1.1')) throw new Error('Tesseract fallback library is missing');
+          if (!js.includes("serverCall('retryLegacyIntakeAiPriorityV11207'")) {
+            throw new Error('Scanner must invoke Groq/Gemini priority bridge first');
+          }
+          const runPriority = js.match(/async function runPriority\([\s\S]*?\nasync function processUpload/);
+          if (!runPriority) throw new Error('runPriority function not found');
+          const body = runPriority[0];
+          const cloudIndex = body.indexOf("retryLegacyIntakeAiPriorityV11207");
+          const fallbackIndex = body.indexOf('applyTesseract');
+          if (cloudIndex < 0 || fallbackIndex < 0 || cloudIndex >= fallbackIndex) {
+            throw new Error('Tesseract must occur only after Groq/Gemini priority attempt');
+          }
+          if (!body.includes('if(!cloudFailed(cloud))return cloud')) {
+            throw new Error('Successful Groq/Gemini result must bypass Tesseract');
+          }
           NODE
           node --check /tmp/legacy-intake-inline.js
           grep -Fq "[hidden]{display:none!important}" apps-script/LegacyIntake.html
-          grep -q "tesseract.js@5.1.1" apps-script/LegacyIntake.html
-          grep -q "Free OCR — no API key or paid AI provider" apps-script/LegacyIntake.html
-          grep -q "renderPdfPagesForFreeOcr" apps-script/LegacyIntake.html
-          grep -q "runTesseractPages" apps-script/LegacyIntake.html
           grep -q "saveLegacyIntakeMediaForFreeOcrV11206" apps-script/LegacyIntake.html
           grep -q "getLegacyIntakeOcrSourceForHtmlV11206" apps-script/LegacyIntake.html
           grep -q "processLegacyIntakeFreeOcrTextV11206" apps-script/LegacyIntake.html
-          grep -q "reprocessCorrectedOcrText" apps-script/LegacyIntake.html
-          grep -q "hasIdentityConflict" apps-script/LegacyIntake.html
+          grep -q "reprocessCorrected" apps-script/LegacyIntake.html
+          grep -q "identityConflict" apps-script/LegacyIntake.html
           grep -q "finalizeLegacyIntakeForSelectedBookingV11204" apps-script/LegacyIntake.html
           grep -q "Apply to .* & Done" apps-script/LegacyIntake.html
-          grep -q "addEventListener('click',finalizeOrClose)" apps-script/LegacyIntake.html
+          grep -q "addEventListener('click',finalize)" apps-script/LegacyIntake.html
