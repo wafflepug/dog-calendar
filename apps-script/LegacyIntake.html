@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Waffle House — Legacy Intake Scanner</title>
 <style>
-:root{--navy:#0d3550;--navy2:#174d6d;--bg:#edf3f7;--surface:#fff;--soft:#f8fafc;--line:#dbe3ea;--text:#172033;--muted:#64748b;--green:#15803d;--green-soft:#dcfce7;--amber:#b45309;--amber-soft:#fef3c7;--red:#b91c1c;--red-soft:#fee2e2;--blue:#2563eb;--blue-soft:#e0f2fe}
-*{box-sizing:border-box}[hidden]{display:none!important}body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.shell{width:min(780px,calc(100% - 20px));margin:16px auto 40px}.hero{display:flex;align-items:center;gap:12px;padding:15px 16px;border:1px solid var(--line);border-radius:15px;background:var(--surface);box-shadow:0 5px 18px rgba(15,23,42,.07)}.hero-mark{width:54px;height:54px;flex:0 0 54px;display:flex;align-items:center;justify-content:center;border-radius:16px;background:#f3e8ff;font-size:27px}.hero h1{margin:0;color:var(--navy);font-size:21px;line-height:1.12}.hero p{margin:4px 0 0;color:var(--muted);font-size:11px;line-height:1.45}.notice{margin-top:10px;padding:10px 11px;border:1px solid #bae6fd;border-radius:10px;background:#f0f9ff;color:#075985;font-size:10px;line-height:1.5}.panel{margin-top:10px;padding:14px;border:1px solid var(--line);border-radius:13px;background:var(--surface);box-shadow:0 3px 12px rgba(15,23,42,.04)}.panel h2{margin:0 0 5px;color:var(--navy);font-size:15px}.desc{margin:0 0 12px;color:var(--muted);font-size:10.5px;line-height:1.5}.field{margin-top:11px}label.field-label{display:block;margin:0 0 5px;color:#475569;font-size:10px;font-weight:850}select{width:100%;border:1px solid #cbd5e1;border-radius:9px;background:#fff;color:#172033;padding:10px;font:inherit;font-size:12px}.pick-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}.pick{min-height:48px;display:flex;align-items:center;justify-content:center;gap:8px;border:1px solid #cbd5e1;border-radius:10px;background:#fff;color:#334155;font-size:11px;font-weight:900;cursor:pointer;text-align:center}.pick.camera{border-color:#c4b5fd;background:#f5f3ff;color:#5b21b6}.pick input{display:none}.file-card{display:none;margin-top:10px;padding:10px;border:1px solid #bbf7d0;border-radius:9px;background:#f0fdf4;color:#166534;font-size:10.5px;line-height:1.45}.file-card.show{display:block}.existing{padding:10px;border:1px solid var(--line);border-radius:9px;background:var(--soft);color:#475569;font-size:10.5px;line-height:1.5}.stored-file-note{margin-top:6px;padding:8px 9px;border:1px solid #bae6fd;border-radius:8px;background:#f0f9ff;color:#075985;font-size:9.5px;line-height:1.45}.actions{display:flex;align-items:center;justify-content:flex-end;gap:7px;flex-wrap:wrap;margin-top:12px}button,.button-link{min-height:40px;border-radius:9px;padding:8px 11px;font:inherit;font-size:10.5px;font-weight:850;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center}.primary{border:0;background:var(--navy);color:#fff}.primary:hover{background:var(--navy2)}.secondary{border:1px solid #cbd5e1;background:#fff;color:#334155}.ai-btn{border:0;background:var(--blue);color:#fff}button:disabled,select:disabled{opacity:.55;cursor:wait}.status{display:none;margin-top:10px;padding:10px 11px;border-radius:9px;font-size:10.5px;line-height:1.5}.status.show{display:block}.status.info{background:var(--blue-soft);color:#075985}.status.success{background:var(--green-soft);color:#166534}.status.warning{background:var(--amber-soft);color:#92400e}.status.error{background:var(--red-soft);color:#991b1b}.progress{overflow:hidden;border:1px solid var(--line);border-radius:9px;background:var(--soft)}.progress-row{display:flex;align-items:center;gap:9px;padding:9px 10px;border-bottom:1px solid var(--line);color:#64748b;font-size:10px;font-weight:750}.progress-row:last-child{border-bottom:0}.progress-row.active{color:#075985;background:#f0f9ff}.progress-row.done{color:#166534;background:#f0fdf4}.progress-row.failed{color:#991b1b;background:#fef2f2}.result{display:none}.result.show{display:block}.result-hero{display:flex;align-items:center;gap:9px;padding:11px;border-radius:9px;background:var(--green-soft);color:#166534}.result-hero.warning{background:var(--amber-soft);color:#92400e}.result-hero.error{background:var(--red-soft);color:#991b1b}.result-icon{font-size:24px}.result-title{font-size:12px;font-weight:900}.result-sub{margin-top:2px;font-size:9.5px;line-height:1.4}.summary-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-top:10px}.summary-box{padding:9px;border:1px solid var(--line);border-radius:8px;background:var(--soft)}.summary-label{color:#64748b;font-size:8px;font-weight:900;letter-spacing:.05em;text-transform:uppercase}.summary-value{margin-top:3px;color:var(--navy);font-size:11px;font-weight:900;overflow-wrap:anywhere}.changes{margin-top:10px;border:1px solid var(--line);border-radius:9px;overflow:hidden}.changes-title{padding:8px 10px;background:#eef4f8;color:var(--navy);font-size:9px;font-weight:900;text-transform:uppercase}.change-row{padding:8px 10px;border-top:1px solid #edf1f4;color:#475569;font-size:10px;line-height:1.4}.conflicts{margin-top:10px;border:1px solid #fcd34d;border-radius:9px;overflow:hidden}.conflicts-title{padding:9px 10px;background:#fef3c7;color:#92400e;font-size:10px;font-weight:900}.conflict-row{display:grid;grid-template-columns:24px 125px minmax(0,1fr);gap:7px;align-items:start;padding:9px 10px;border-top:1px solid #fde68a}.conflict-check{width:18px;height:18px;margin-top:2px;accent-color:var(--navy)}.conflict-label{color:#713f12;font-size:10px;font-weight:850}.conflict-values{color:#92400e;font-size:9.5px;line-height:1.45}.conflict-values strong{color:#713f12}.warning-list{margin:10px 0 0;padding:9px 10px 9px 28px;border:1px solid #fde68a;border-radius:8px;background:#fffbeb;color:#92400e;font-size:9.5px;line-height:1.5}.raw-details{margin-top:10px;border:1px solid var(--line);border-radius:8px;background:var(--soft)}.raw-details summary{cursor:pointer;padding:9px 10px;color:#475569;font-size:9.5px;font-weight:850}.raw-json{max-height:250px;overflow:auto;margin:0;padding:0 10px 10px;color:#64748b;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:8px;line-height:1.45;white-space:pre-wrap}.privacy-note{margin-top:8px;color:var(--muted);font-size:9px;line-height:1.4}
+:root{--navy:#0d3550;--navy2:#174d6d;--bg:#edf3f7;--surface:#fff;--soft:#f8fafc;--line:#dbe3ea;--text:#172033;--muted:#64748b;--green:#15803d;--green-soft:#dcfce7;--amber:#b45309;--amber-soft:#fef3c7;--red:#b91c1c;--red-soft:#fee2e2;--blue:#2563eb;--blue-soft:#e0f2fe;--purple:#6d28d9;--purple-soft:#f3e8ff}
+*{box-sizing:border-box}[hidden]{display:none!important}body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.shell{width:min(820px,calc(100% - 20px));margin:16px auto 40px}.hero{display:flex;align-items:center;gap:12px;padding:15px 16px;border:1px solid var(--line);border-radius:15px;background:var(--surface);box-shadow:0 5px 18px rgba(15,23,42,.07)}.hero-mark{width:54px;height:54px;flex:0 0 54px;display:flex;align-items:center;justify-content:center;border-radius:16px;background:var(--purple-soft);font-size:27px}.hero h1{margin:0;color:var(--navy);font-size:21px;line-height:1.12}.hero p{margin:4px 0 0;color:var(--muted);font-size:11px;line-height:1.45}.notice{margin-top:10px;padding:11px 12px;border:1px solid #c4b5fd;border-radius:10px;background:#faf5ff;color:#5b21b6;font-size:10px;line-height:1.55}.panel{margin-top:10px;padding:14px;border:1px solid var(--line);border-radius:13px;background:var(--surface);box-shadow:0 3px 12px rgba(15,23,42,.04)}.panel h2{margin:0 0 5px;color:var(--navy);font-size:15px}.desc{margin:0 0 12px;color:var(--muted);font-size:10.5px;line-height:1.5}.field{margin-top:11px}label.field-label{display:block;margin:0 0 5px;color:#475569;font-size:10px;font-weight:850}select{width:100%;border:1px solid #cbd5e1;border-radius:9px;background:#fff;color:#172033;padding:10px;font:inherit;font-size:12px}.pick-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}.pick{min-height:48px;display:flex;align-items:center;justify-content:center;gap:8px;border:1px solid #cbd5e1;border-radius:10px;background:#fff;color:#334155;font-size:11px;font-weight:900;cursor:pointer;text-align:center}.pick.camera{border-color:#c4b5fd;background:#f5f3ff;color:#5b21b6}.pick input{display:none}.file-card{display:none;margin-top:10px;padding:10px;border:1px solid #bbf7d0;border-radius:9px;background:#f0fdf4;color:#166534;font-size:10.5px;line-height:1.45}.file-card.show{display:block}.existing{padding:10px;border:1px solid var(--line);border-radius:9px;background:var(--soft);color:#475569;font-size:10.5px;line-height:1.5}.stored-file-note{margin-top:6px;padding:8px 9px;border:1px solid #bae6fd;border-radius:8px;background:#f0f9ff;color:#075985;font-size:9.5px;line-height:1.45}.actions{display:flex;align-items:center;justify-content:flex-end;gap:7px;flex-wrap:wrap;margin-top:12px}button,.button-link{min-height:40px;border-radius:9px;padding:8px 11px;font:inherit;font-size:10.5px;font-weight:850;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center}.primary{border:0;background:var(--navy);color:#fff}.primary:hover{background:var(--navy2)}.secondary{border:1px solid #cbd5e1;background:#fff;color:#334155}.free-btn{border:0;background:var(--purple);color:#fff}.free-btn:hover{background:#5b21b6}button:disabled,select:disabled{opacity:.55;cursor:wait}.status{display:none;margin-top:10px;padding:10px 11px;border-radius:9px;font-size:10.5px;line-height:1.5}.status.show{display:block}.status.info{background:var(--blue-soft);color:#075985}.status.success{background:var(--green-soft);color:#166534}.status.warning{background:var(--amber-soft);color:#92400e}.status.error{background:var(--red-soft);color:#991b1b}.progress{overflow:hidden;border:1px solid var(--line);border-radius:9px;background:var(--soft)}.progress-row{display:flex;align-items:center;gap:9px;padding:9px 10px;border-bottom:1px solid var(--line);color:#64748b;font-size:10px;font-weight:750}.progress-row:last-child{border-bottom:0}.progress-row.active{color:#5b21b6;background:#faf5ff}.progress-row.done{color:#166534;background:#f0fdf4}.progress-row.failed{color:#991b1b;background:#fef2f2}.result{display:none}.result.show{display:block}.result-hero{display:flex;align-items:center;gap:9px;padding:11px;border-radius:9px;background:var(--green-soft);color:#166534}.result-hero.warning{background:var(--amber-soft);color:#92400e}.result-hero.error{background:var(--red-soft);color:#991b1b}.result-icon{font-size:24px}.result-title{font-size:12px;font-weight:900}.result-sub{margin-top:2px;font-size:9.5px;line-height:1.4}.summary-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-top:10px}.summary-box{padding:9px;border:1px solid var(--line);border-radius:8px;background:var(--soft)}.summary-label{color:#64748b;font-size:8px;font-weight:900;letter-spacing:.05em;text-transform:uppercase}.summary-value{margin-top:3px;color:var(--navy);font-size:11px;font-weight:900;overflow-wrap:anywhere}.changes{margin-top:10px;border:1px solid var(--line);border-radius:9px;overflow:hidden}.changes-title{padding:8px 10px;background:#eef4f8;color:var(--navy);font-size:9px;font-weight:900;text-transform:uppercase}.change-row{padding:8px 10px;border-top:1px solid #edf1f4;color:#475569;font-size:10px;line-height:1.4}.conflicts{margin-top:10px;border:1px solid #fcd34d;border-radius:9px;overflow:hidden}.conflicts-title{padding:9px 10px;background:#fef3c7;color:#92400e;font-size:10px;font-weight:900}.conflict-row{display:grid;grid-template-columns:24px 125px minmax(0,1fr);gap:7px;align-items:start;padding:9px 10px;border-top:1px solid #fde68a}.conflict-check{width:18px;height:18px;margin-top:2px;accent-color:var(--navy)}.conflict-label{color:#713f12;font-size:10px;font-weight:850}.conflict-values{color:#92400e;font-size:9.5px;line-height:1.45}.conflict-values strong{color:#713f12}.warning-list{margin:10px 0 0;padding:9px 10px 9px 28px;border:1px solid #fde68a;border-radius:8px;background:#fffbeb;color:#92400e;font-size:9.5px;line-height:1.5}.raw-details{margin-top:10px;border:1px solid var(--line);border-radius:8px;background:var(--soft)}.raw-details summary{cursor:pointer;padding:9px 10px;color:#475569;font-size:9.5px;font-weight:850}.raw-json{max-height:250px;overflow:auto;margin:0;padding:0 10px 10px;color:#64748b;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:8px;line-height:1.45;white-space:pre-wrap}.ocr-editor{padding:0 10px 10px}.ocr-editor textarea{width:100%;min-height:210px;resize:vertical;border:1px solid #cbd5e1;border-radius:8px;padding:9px;background:#fff;color:#172033;font:10px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace}.ocr-editor-note{margin:0 0 7px;color:#64748b;font-size:9px;line-height:1.45}.privacy-note{margin-top:8px;color:var(--muted);font-size:9px;line-height:1.4}
 @media(max-width:600px){.shell{width:calc(100% - 12px);margin-top:7px}.hero{padding:11px}.hero-mark{width:48px;height:48px;flex-basis:48px}.hero h1{font-size:18px}.panel{padding:12px}select{font-size:16px;min-height:48px}.pick-grid{grid-template-columns:1fr}.pick{min-height:50px}button,.button-link{min-height:44px;font-size:11px}.actions{align-items:stretch;flex-direction:column-reverse}.actions>*{width:100%}.summary-grid{grid-template-columns:1fr}.conflict-row{grid-template-columns:24px minmax(0,1fr)}.conflict-label,.conflict-values{grid-column:2}}
 </style>
 </head>
@@ -14,14 +14,14 @@
 <div class="shell">
   <header class="hero">
     <div class="hero-mark" aria-hidden="true">🐶</div>
-    <div><h1>Legacy Intake Scanner</h1><p>Reuse a previously uploaded intake or upload a new PDF/photo, then review what Waffle reads before profile updates.</p></div>
+    <div><h1>Legacy Intake Scanner</h1><p>Reuse a stored intake or upload a new PDF/photo, read it for free in this browser, then review the values before they update Waffle.</p></div>
   </header>
 
-  <div class="notice"><strong>⚡ Groq-first document reading</strong><br>Waffle uses the stored OCR page images with Groq Vision when available. Existing PDFs can be re-read directly from private Google Drive without uploading a duplicate; Gemini remains the automatic fallback when needed.</div>
+  <div class="notice"><strong>🆓 Free OCR — no API key or paid AI provider</strong><br>Waffle first reads any real PDF text with PDF.js, then uses Tesseract.js locally in this browser for scanned pages and photos. The OCR text is mapped by Waffle's own rules into the existing Care/Profile review workflow. Nothing needs Groq, Gemini or another paid OCR account.</div>
 
   <section id="uploadPanel" class="panel">
     <h2>1. Choose the guest &amp; intake form</h2>
-    <p class="desc">When opened from a Care profile, the matching stay is preselected. If legacy files already exist for this stay, choose the exact stored file you want Waffle to OCR.</p>
+    <p class="desc">When opened from a Care profile, the matching stay is preselected. If legacy files already exist, choose the exact stored file and run the free OCR reader without uploading it again.</p>
 
     <div id="existingDocument" class="existing" hidden></div>
 
@@ -43,7 +43,7 @@
         <label class="pick camera">📷 Take Photo<input id="cameraFile" type="file" accept="image/*" capture="environment"></label>
       </div>
       <div id="fileCard" class="file-card"></div>
-      <div class="privacy-note">Supported directly: PDF, JPG/JPEG, PNG and WebP. PDFs up to five pages are prepared for Groq OCR in your browser; longer PDFs automatically use Gemini fallback so the full document is still read. HEIC works only when the browser can decode it; otherwise export/share the photo as JPG first.</div>
+      <div class="privacy-note">PDF, JPG/JPEG, PNG and WebP are supported. The free browser reader handles up to 20 PDF pages per intake. Clear, straight photos give the best handwriting OCR. If a handwritten answer is imperfect, you can correct the OCR text before reprocessing it.</div>
     </div>
 
     <div id="uploadStatus" class="status"></div>
@@ -51,17 +51,17 @@
     <div class="actions">
       <button id="closeBtn" type="button" class="secondary">Close</button>
       <button id="reassignBtn" type="button" class="secondary" hidden>↻ Reassign Intake</button>
-      <button id="retryExistingBtn" type="button" class="ai-btn" hidden>✨ Run OCR on Stored File</button>
-      <button id="processBtn" type="button" class="primary">✨ Scan &amp; Process</button>
+      <button id="retryExistingBtn" type="button" class="free-btn" hidden>🆓 Run Free OCR on Stored File</button>
+      <button id="processBtn" type="button" class="free-btn">🆓 Free OCR &amp; Process</button>
     </div>
   </section>
 
   <section id="progressPanel" class="panel" hidden>
     <h2>2. Processing</h2>
-    <p class="desc">Keep this window open while Waffle reads the stored or newly uploaded intake form.</p>
+    <p class="desc">Keep this window open. OCR runs on this device; larger scanned PDFs can take a minute or two.</p>
     <div class="progress">
       <div id="stepSave" class="progress-row active">📁 Confirming the private intake record in Google Drive</div>
-      <div id="stepRead" class="progress-row">⚡ AI reading printed text, handwriting and tick boxes</div>
+      <div id="stepRead" class="progress-row">🆓 Reading PDF text / scanned pages locally in this browser</div>
       <div id="stepApply" class="progress-row">🐾 Matching supported fields to Care &amp; Profile</div>
       <div id="stepAudit" class="progress-row">🧾 Recording changes in Audit Log</div>
     </div>
@@ -72,7 +72,7 @@
 
     <div class="summary-grid">
       <div class="summary-box"><div class="summary-label">Guest</div><div id="summaryGuest" class="summary-value">—</div></div>
-      <div class="summary-box"><div class="summary-label">AI Status</div><div id="summaryStatus" class="summary-value">—</div></div>
+      <div class="summary-box"><div class="summary-label">OCR Status</div><div id="summaryStatus" class="summary-value">—</div></div>
       <div class="summary-box"><div class="summary-label">Confidence</div><div id="summaryConfidence" class="summary-value">—</div></div>
     </div>
 
@@ -85,33 +85,44 @@
     </div>
 
     <ul id="warningList" class="warning-list" hidden></ul>
-    <details id="extractionDetails" class="raw-details" hidden><summary>View structured AI extraction</summary><pre id="extractionJson" class="raw-json"></pre></details>
+    <details id="extractionDetails" class="raw-details" hidden><summary>View structured OCR extraction</summary><pre id="extractionJson" class="raw-json"></pre></details>
+
+    <details id="rawOcrDetails" class="raw-details" hidden>
+      <summary>Review / correct free OCR text</summary>
+      <div class="ocr-editor">
+        <p class="ocr-editor-note">If handwriting or a label was read incorrectly, edit the text here and reprocess it. This does not upload another file or call an AI provider.</p>
+        <textarea id="rawOcrText" spellcheck="false" aria-label="Raw OCR text"></textarea>
+        <div class="actions"><button id="reprocessOcrTextBtn" type="button" class="free-btn">↻ Reprocess Corrected OCR Text</button></div>
+      </div>
+    </details>
 
     <div class="actions">
       <a id="viewPdfBtn" class="button-link secondary" target="_blank" rel="noopener" hidden>📄 View Stored Intake</a>
-      <button id="retryBtn" type="button" class="ai-btn" hidden>✨ Retry AI Read</button>
+      <button id="retryBtn" type="button" class="free-btn" hidden>🆓 Run Free OCR Again</button>
       <button id="doneBtn" type="button" class="primary">Done</button>
     </div>
   </section>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
 <script>
 const INITIAL_STAY_KEY = <?!= JSON.stringify(initialStayKey) ?>;
 const INITIAL_DOCUMENT_ID = <?!= JSON.stringify(initialDocumentId) ?>;
-const GROQ_PDF_PAGE_LIMIT = 5;
+const FREE_OCR_MAX_PAGES = 20;
 let context = { candidates: [] };
 let selectedFile = null;
 let fileDataUrl = '';
 let sourceKind = '';
 let activeResult = null;
 let ocrImages = [];
+let embeddedPdfText = [];
 let ocrPageCount = 0;
 let storedDocuments = [];
+let lastRawOcrText = '';
+let lastOcrConfidence = 0;
 
-if(window.pdfjsLib){
-  try{window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'}catch(_){}
-}
+if(window.pdfjsLib){try{window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'}catch(_){}}
 
 function escapeHtml(value){return String(value??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;')}
 function serverError(error){return !error?'Unknown error':(error.message||String(error))}
@@ -119,277 +130,57 @@ function formatDate(value){if(!value)return'';const date=new Date(String(value).
 function formatTimestamp(value){if(!value)return'';const date=new Date(value);return Number.isNaN(date.getTime())?String(value):date.toLocaleString('en-AU',{day:'2-digit',month:'short',year:'numeric',hour:'numeric',minute:'2-digit'})}
 function showStatus(message,type='info'){const box=document.getElementById('uploadStatus');box.textContent=message;box.className=`status show ${type}`}
 function clearStatus(){const box=document.getElementById('uploadStatus');box.textContent='';box.className='status'}
-function providerName(result){if(result?.provider==='groq')return'Groq Vision';if(result?.provider==='gemini')return'Gemini fallback';return'AI'}
+function providerName(result){if(result?.provider==='free-browser')return'Free Browser OCR';if(result?.provider==='groq')return'Groq Vision';if(result?.provider==='gemini')return'Gemini';return'OCR'}
 function hasIdentityConflict(result){return Array.isArray(result?.conflicts)&&result.conflicts.some(conflict=>conflict?.type==='identity'&&conflict?.key==='dogName')}
+function freeOcrButtons(){return [document.getElementById('retryBtn'),document.getElementById('retryExistingBtn'),document.getElementById('processBtn')]}
+function setOcrButtonsDisabled(disabled){freeOcrButtons().forEach(button=>{if(button)button.disabled=!!disabled})}
 
-function populateCandidates(){
-  const select=document.getElementById('staySelect');
-  const candidates=Array.isArray(context.candidates)?context.candidates:[];
-  select.innerHTML='<option value="">Choose a dog/stay...</option>'+candidates.map(candidate=>{
-    const dates=`${formatDate(candidate.startDate)} – ${formatDate(candidate.endDate)}`;
-    const owner=candidate.ownerName?` · ${candidate.ownerName}`:'';
-    return `<option value="${escapeHtml(candidate.stayKey)}">${escapeHtml(candidate.dogName)} · ${escapeHtml(dates)}${escapeHtml(owner)}</option>`;
-  }).join('');
-  const preferred=context.document?.stayKey||context.initialStayKey||INITIAL_STAY_KEY||'';
-  if(preferred)select.value=preferred;
-}
+function populateCandidates(){const select=document.getElementById('staySelect');const candidates=Array.isArray(context.candidates)?context.candidates:[];select.innerHTML='<option value="">Choose a dog/stay...</option>'+candidates.map(candidate=>{const dates=`${formatDate(candidate.startDate)} – ${formatDate(candidate.endDate)}`;const owner=candidate.ownerName?` · ${candidate.ownerName}`:'';return `<option value="${escapeHtml(candidate.stayKey)}">${escapeHtml(candidate.dogName)} · ${escapeHtml(dates)}${escapeHtml(owner)}</option>`}).join('');const preferred=context.document?.stayKey||context.initialStayKey||INITIAL_STAY_KEY||'';if(preferred)select.value=preferred}
 
-function setProgressState(mode){
-  const ids=['stepSave','stepRead','stepApply','stepAudit'];
-  ids.forEach(id=>document.getElementById(id).className='progress-row');
-  if(mode==='uploading'){document.getElementById('stepSave').className='progress-row active';return}
-  if(mode==='reading'){document.getElementById('stepSave').className='progress-row done';document.getElementById('stepRead').className='progress-row active';return}
-  if(mode==='failed'){document.getElementById('stepSave').className='progress-row done';document.getElementById('stepRead').className='progress-row failed';return}
-  if(mode==='complete')ids.forEach(id=>document.getElementById(id).className='progress-row done');
-}
-
+function setProgressState(mode){const ids=['stepSave','stepRead','stepApply','stepAudit'];ids.forEach(id=>document.getElementById(id).className='progress-row');if(mode==='uploading'){document.getElementById('stepSave').className='progress-row active';return}if(mode==='reading'){document.getElementById('stepSave').className='progress-row done';document.getElementById('stepRead').className='progress-row active';return}if(mode==='applying'){document.getElementById('stepSave').className='progress-row done';document.getElementById('stepRead').className='progress-row done';document.getElementById('stepApply').className='progress-row active';return}if(mode==='failed'){document.getElementById('stepSave').className='progress-row done';document.getElementById('stepRead').className='progress-row failed';return}if(mode==='complete')ids.forEach(id=>document.getElementById(id).className='progress-row done')}
 function notifyParent(){try{if(window.opener&&!window.opener.closed){window.opener.postMessage({type:'waffle-legacy-intake-updated',documentId:activeResult?.documentId||context.document?.documentId||'',stayKey:activeResult?.stayKey||context.document?.stayKey||''},'*')}}catch(_){} }
 
-function renderConflicts(conflicts){
-  const box=document.getElementById('conflictsBox');
-  const list=document.getElementById('conflictsList');
-  const applicable=conflicts.filter(c=>c.type==='directory'||c.type==='care');
-  if(!conflicts.length){box.hidden=true;list.innerHTML='';return}
-  box.hidden=false;
-  list.innerHTML=conflicts.map(conflict=>{
-    const resolvable=conflict.type==='directory'||conflict.type==='care';
-    const current=typeof conflict.current==='boolean'?(conflict.current?'Yes':'No'):String(conflict.current??'');
-    const extracted=typeof conflict.extracted==='boolean'?(conflict.extracted?'Yes':'No'):String(conflict.extracted??'');
-    return `<div class="conflict-row">${resolvable?`<input type="checkbox" class="conflict-check" data-conflict-key="${escapeHtml(conflict.type+':'+conflict.key)}" aria-label="Use extracted value for ${escapeHtml(conflict.label||conflict.key)}">`:'<span>⚠️</span>'}<div class="conflict-label">${escapeHtml(conflict.label||conflict.key||'Review')}</div><div class="conflict-values"><strong>Waffle:</strong> ${escapeHtml(current||'blank')}<br><strong>Extracted:</strong> ${escapeHtml(extracted||'blank')}<br>${escapeHtml(conflict.message||'')}</div></div>`;
-  }).join('');
-  document.getElementById('applyConflictsBtn').hidden=!applicable.length;
-}
+function renderConflicts(conflicts){const box=document.getElementById('conflictsBox');const list=document.getElementById('conflictsList');const rows=Array.isArray(conflicts)?conflicts:[];const applicable=rows.filter(c=>c.type==='directory'||c.type==='care');if(!rows.length){box.hidden=true;list.innerHTML='';return}box.hidden=false;list.innerHTML=rows.map(conflict=>{const resolvable=conflict.type==='directory'||conflict.type==='care';const current=typeof conflict.current==='boolean'?(conflict.current?'Yes':'No'):String(conflict.current??'');const extracted=typeof conflict.extracted==='boolean'?(conflict.extracted?'Yes':'No'):String(conflict.extracted??'');return `<div class="conflict-row">${resolvable?`<input type="checkbox" class="conflict-check" data-conflict-key="${escapeHtml(conflict.type+':'+conflict.key)}" aria-label="Use extracted value for ${escapeHtml(conflict.label||conflict.key)}">`:'<span>⚠️</span>'}<div class="conflict-label">${escapeHtml(conflict.label||conflict.key||'Review')}</div><div class="conflict-values"><strong>Waffle:</strong> ${escapeHtml(current||'blank')}<br><strong>Extracted:</strong> ${escapeHtml(extracted||'blank')}<br>${escapeHtml(conflict.message||'')}</div></div>`}).join('');document.getElementById('applyConflictsBtn').hidden=!applicable.length}
 
-function renderResult(result){
-  activeResult=result||{};
-  document.getElementById('progressPanel').hidden=true;
-  document.getElementById('resultPanel').classList.add('show');
-  const hero=document.getElementById('resultHero');
-  const retryable=result.retryable===true||result.aiStatus==='Retry Needed';
-  const failed=!retryable&&(result.result==='partial_success'||result.aiStatus==='AI Failed');
-  const conflicts=Array.isArray(result.conflicts)?result.conflicts:[];
-  const identityBlocked=hasIdentityConflict(result);
-  const doneButton=document.getElementById('doneBtn');
-  doneButton.disabled=false;
-  doneButton.textContent=identityBlocked?`Apply to ${result.dogName||'selected guest'} & Done`:'Done';
-  if(retryable){
-    hero.className='result-hero warning';
-    document.getElementById('resultIcon').textContent='⏳';
-    document.getElementById('resultTitle').textContent='Intake saved — OCR temporarily unavailable';
-    document.getElementById('resultSub').textContent=result.errorMessage||'Your intake is safe in Drive. Retry the AI read shortly; you do not need to upload it again.';
-    document.getElementById('retryBtn').hidden=false;
-  }else if(failed){
-    hero.className='result-hero error';
-    document.getElementById('resultIcon').textContent='⚠️';
-    document.getElementById('resultTitle').textContent='Intake saved — AI read needs attention';
-    document.getElementById('resultSub').textContent=result.errorMessage||'The intake record is safe in Drive, but OCR did not complete.';
-    document.getElementById('retryBtn').hidden=false;
-  }else if(identityBlocked){
-    hero.className='result-hero warning';
-    document.getElementById('resultIcon').textContent='⚠️';
-    document.getElementById('resultTitle').textContent='Confirm the selected guest';
-    document.getElementById('resultSub').textContent=`The form name differs from ${result.dogName||'the selected guest'}. If this intake belongs to the selected guest, press “${doneButton.textContent}”. Waffle will keep the selected guest name and save the other supported intake details.`;
-    document.getElementById('retryBtn').hidden=true;
-  }else if(conflicts.length){
-    hero.className='result-hero warning';
-    document.getElementById('resultIcon').textContent='⚠️';
-    document.getElementById('resultTitle').textContent='Intake processed — review differences';
-    document.getElementById('resultSub').textContent=`${providerName(result)} completed the read. Safe additions were applied automatically; conflicting existing values were kept for review.`;
-    document.getElementById('retryBtn').hidden=true;
-  }else{
-    hero.className='result-hero';
-    document.getElementById('resultIcon').textContent='✅';
-    document.getElementById('resultTitle').textContent='Legacy intake processed';
-    document.getElementById('resultSub').textContent=`Processed with ${providerName(result)}. The intake is in Drive and supported profile attributes have been applied.`;
-    document.getElementById('retryBtn').hidden=true;
-  }
-  document.getElementById('summaryGuest').textContent=result.dogName||'—';
-  document.getElementById('summaryStatus').textContent=result.aiStatus||'—';
-  const confidence=result.extraction&&Number.isFinite(Number(result.extraction.extractionConfidence))?Math.round(Number(result.extraction.extractionConfidence)*100)+'%':'—';
-  document.getElementById('summaryConfidence').textContent=confidence;
-  const pdfButton=document.getElementById('viewPdfBtn');if(result.pdfUrl){pdfButton.href=result.pdfUrl;pdfButton.hidden=false}else pdfButton.hidden=true;
-  const changed=Array.isArray(result.changedFields)?result.changedFields:[];document.getElementById('changesBox').hidden=!changed.length;document.getElementById('changesList').innerHTML=changed.map(field=>`<div class="change-row">✅ ${escapeHtml(field)} updated</div>`).join('');
-  renderConflicts(conflicts);
-  const warnings=Array.isArray(result.extraction?.warnings)?result.extraction.warnings:[];const warningList=document.getElementById('warningList');warningList.hidden=!warnings.length;warningList.innerHTML=warnings.map(item=>`<li>${escapeHtml(item)}</li>`).join('');
-  const details=document.getElementById('extractionDetails');if(result.extraction){details.hidden=false;document.getElementById('extractionJson').textContent=JSON.stringify(result.extraction,null,2)}else details.hidden=true;
-  notifyParent();
-}
+function showRawOcrEditor(text){lastRawOcrText=String(text||'');const details=document.getElementById('rawOcrDetails');const textarea=document.getElementById('rawOcrText');details.hidden=false;textarea.value=lastRawOcrText}
+function hideRawOcrEditor(){document.getElementById('rawOcrDetails').hidden=true;document.getElementById('rawOcrText').value=''}
 
-function storedDocumentLabel(document,index){
-  const name=String(document?.originalFilename||`Legacy intake ${index+1}`);
-  const stamp=formatTimestamp(document?.uploadedAt||document?.updatedAt||'');
-  const status=String(document?.aiStatus||'Not processed yet');
-  return `${name}${stamp?` · ${stamp}`:''} · ${status}`;
-}
+function renderResult(result){activeResult=result||{};document.getElementById('progressPanel').hidden=true;document.getElementById('resultPanel').classList.add('show');const hero=document.getElementById('resultHero');const conflicts=Array.isArray(result.conflicts)?result.conflicts:[];const identityBlocked=hasIdentityConflict(result);const doneButton=document.getElementById('doneBtn');doneButton.disabled=false;doneButton.textContent=identityBlocked?`Apply to ${result.dogName||'selected guest'} & Done`:'Done';if(result.result==='partial_success'||result.aiStatus==='AI Failed'){hero.className='result-hero error';document.getElementById('resultIcon').textContent='⚠️';document.getElementById('resultTitle').textContent='OCR needs attention';document.getElementById('resultSub').textContent=result.errorMessage||'The stored intake is safe, but this read did not complete.';document.getElementById('retryBtn').hidden=false}else if(identityBlocked){hero.className='result-hero warning';document.getElementById('resultIcon').textContent='⚠️';document.getElementById('resultTitle').textContent='Confirm the selected guest';document.getElementById('resultSub').textContent=`The OCR name differs from ${result.dogName||'the selected guest'}. If this intake belongs to the selected guest, press “${doneButton.textContent}”. Waffle keeps the selected guest name and applies the other supported values.`;document.getElementById('retryBtn').hidden=false}else if(conflicts.length){hero.className='result-hero warning';document.getElementById('resultIcon').textContent='⚠️';document.getElementById('resultTitle').textContent='OCR processed — review differences';document.getElementById('resultSub').textContent=`${providerName(result)} completed the read. Safe additions were applied; existing conflicting values were kept for review.`;document.getElementById('retryBtn').hidden=false}else{hero.className='result-hero';document.getElementById('resultIcon').textContent='✅';document.getElementById('resultTitle').textContent='Legacy intake processed';document.getElementById('resultSub').textContent=`Processed with ${providerName(result)}. Supported profile attributes have been applied.`;document.getElementById('retryBtn').hidden=false}document.getElementById('summaryGuest').textContent=result.dogName||'—';document.getElementById('summaryStatus').textContent=result.aiStatus||'—';const confidence=result.extraction&&Number.isFinite(Number(result.extraction.extractionConfidence))?Math.round(Number(result.extraction.extractionConfidence)*100)+'%':'—';document.getElementById('summaryConfidence').textContent=confidence;const pdfButton=document.getElementById('viewPdfBtn');if(result.pdfUrl){pdfButton.href=result.pdfUrl;pdfButton.hidden=false}else pdfButton.hidden=true;const changed=Array.isArray(result.changedFields)?result.changedFields:[];document.getElementById('changesBox').hidden=!changed.length;document.getElementById('changesList').innerHTML=changed.map(field=>`<div class="change-row">✅ ${escapeHtml(field)} updated</div>`).join('');renderConflicts(conflicts);const warnings=Array.isArray(result.extraction?.warnings)?result.extraction.warnings:[];const warningList=document.getElementById('warningList');warningList.hidden=!warnings.length;warningList.innerHTML=warnings.map(item=>`<li>${escapeHtml(item)}</li>`).join('');const details=document.getElementById('extractionDetails');if(result.extraction){details.hidden=false;document.getElementById('extractionJson').textContent=JSON.stringify(result.extraction,null,2)}else details.hidden=true;if(result.rawOcrText!==undefined)showRawOcrEditor(result.rawOcrText);notifyParent()}
 
-function renderStoredFilePicker(selectedDocumentId){
-  const field=document.getElementById('storedFilesField');
-  const select=document.getElementById('storedFileSelect');
-  const meta=document.getElementById('storedFileMeta');
-  if(!storedDocuments.length){field.hidden=true;select.innerHTML='';meta.textContent='';return}
-  field.hidden=false;
-  select.innerHTML=storedDocuments.map((document,index)=>`<option value="${escapeHtml(document.documentId||'')}">${escapeHtml(storedDocumentLabel(document,index))}</option>`).join('');
-  const preferred=selectedDocumentId||context.document?.documentId||storedDocuments[0]?.documentId||'';
-  if(preferred)select.value=preferred;
-  const selected=storedDocuments.find(document=>document.documentId===select.value)||storedDocuments[0];
-  const count=storedDocuments.length;
-  meta.textContent=`${count} stored legacy intake file${count===1?'':'s'} for this stay. ${selected?.hasExtraction?'This file already has an AI extraction; running OCR again will refresh it.':'This file can be read directly from Drive.'}`;
-}
-
-function loadStoredFileChoices(existing){
-  if(!existing?.documentId&&!existing?.stayKey)return;
-  const select=document.getElementById('storedFileSelect');
-  select.disabled=true;
-  google.script.run.withSuccessHandler(result=>{
-    storedDocuments=Array.isArray(result?.documents)?result.documents:[];
-    select.disabled=false;
-    renderStoredFilePicker(existing.documentId);
-  }).withFailureHandler(error=>{
-    select.disabled=false;
-    storedDocuments=[];
-    document.getElementById('storedFilesField').hidden=true;
-    showStatus(`Stored files could not be listed: ${serverError(error)}`,'warning');
-  }).getLegacyIntakeStoredDocumentsForHtmlV11205({documentId:existing.documentId,stayKey:existing.stayKey});
-}
-
-function configureExistingDocument(existing,{loadChoices=false}={}){
-  if(!existing)return;
-  document.getElementById('fileField').hidden=true;
-  document.getElementById('processBtn').hidden=true;
-  document.getElementById('retryExistingBtn').hidden=false;
-  document.getElementById('reassignBtn').hidden=false;
-  const box=document.getElementById('existingDocument');
-  box.hidden=false;
-  box.innerHTML=`<strong>Selected stored intake:</strong> ${escapeHtml(existing.originalFilename||'Legacy intake')}<br><strong>Assigned to:</strong> ${escapeHtml(existing.dogName||'')} · ${escapeHtml(formatDate(existing.startDate))} – ${escapeHtml(formatDate(existing.endDate))}<br><strong>AI status:</strong> ${escapeHtml(existing.aiStatus||'Not processed yet')}`;
-  document.getElementById('resultPanel').classList.remove('show');
-  activeResult=null;
-  if(existing.parsedFields&&Object.keys(existing.parsedFields).length){
-    activeResult={result:'success',documentId:existing.documentId,stayKey:existing.stayKey,dogName:existing.dogName,pdfUrl:existing.pdfUrl,aiStatus:existing.aiStatus||'Complete',extraction:existing.parsedFields,applied:existing.appliedFields||{},changedFields:existing.appliedFields?.changedFields||[],conflicts:existing.reviewConflicts||[]};
-    renderResult(activeResult);
-  }
-  if(loadChoices)loadStoredFileChoices(existing);
-}
-
-function switchStoredDocument(documentId){
-  documentId=String(documentId||'').trim();
-  if(!documentId||documentId===context.document?.documentId)return;
-  const select=document.getElementById('storedFileSelect');
-  select.disabled=true;
-  showStatus('Loading the selected stored intake…','info');
-  google.script.run.withSuccessHandler(result=>{
-    select.disabled=false;
-    context=result||context;
-    populateCandidates();
-    configureExistingDocument(context.document,{loadChoices:false});
-    renderStoredFilePicker(documentId);
-    clearStatus();
-  }).withFailureHandler(error=>{
-    select.disabled=false;
-    renderStoredFilePicker(context.document?.documentId||'');
-    showStatus(serverError(error),'error');
-  }).getLegacyIntakeContextForHtml({stayKey:context.document?.stayKey||INITIAL_STAY_KEY,documentId});
-}
+function storedDocumentLabel(document,index){const name=String(document?.originalFilename||`Legacy intake ${index+1}`);const stamp=formatTimestamp(document?.uploadedAt||document?.updatedAt||'');const status=String(document?.aiStatus||'Not processed yet');return `${name}${stamp?` · ${stamp}`:''} · ${status}`}
+function renderStoredFilePicker(selectedDocumentId){const field=document.getElementById('storedFilesField');const select=document.getElementById('storedFileSelect');const meta=document.getElementById('storedFileMeta');if(!storedDocuments.length){field.hidden=true;select.innerHTML='';meta.textContent='';return}field.hidden=false;select.innerHTML=storedDocuments.map((document,index)=>`<option value="${escapeHtml(document.documentId||'')}">${escapeHtml(storedDocumentLabel(document,index))}</option>`).join('');const preferred=selectedDocumentId||context.document?.documentId||storedDocuments[0]?.documentId||'';if(preferred)select.value=preferred;const selected=storedDocuments.find(document=>document.documentId===select.value)||storedDocuments[0];const count=storedDocuments.length;meta.textContent=`${count} stored legacy intake file${count===1?'':'s'} for this stay. ${selected?.hasExtraction?'This file already has an extraction; free OCR can refresh it.':'This file can be read directly from Drive with free OCR.'}`}
+function loadStoredFileChoices(existing){if(!existing?.documentId&&!existing?.stayKey)return;const select=document.getElementById('storedFileSelect');select.disabled=true;google.script.run.withSuccessHandler(result=>{storedDocuments=Array.isArray(result?.documents)?result.documents:[];select.disabled=false;renderStoredFilePicker(existing.documentId)}).withFailureHandler(error=>{select.disabled=false;storedDocuments=[];document.getElementById('storedFilesField').hidden=true;showStatus(`Stored files could not be listed: ${serverError(error)}`,'warning')}).getLegacyIntakeStoredDocumentsForHtmlV11205({documentId:existing.documentId,stayKey:existing.stayKey})}
+function configureExistingDocument(existing,{loadChoices=false}={}){if(!existing)return;document.getElementById('fileField').hidden=true;document.getElementById('processBtn').hidden=true;document.getElementById('retryExistingBtn').hidden=false;document.getElementById('reassignBtn').hidden=false;const box=document.getElementById('existingDocument');box.hidden=false;box.innerHTML=`<strong>Selected stored intake:</strong> ${escapeHtml(existing.originalFilename||'Legacy intake')}<br><strong>Assigned to:</strong> ${escapeHtml(existing.dogName||'')} · ${escapeHtml(formatDate(existing.startDate))} – ${escapeHtml(formatDate(existing.endDate))}<br><strong>OCR status:</strong> ${escapeHtml(existing.aiStatus||'Not processed yet')}`;document.getElementById('resultPanel').classList.remove('show');activeResult=null;hideRawOcrEditor();if(existing.parsedFields&&Object.keys(existing.parsedFields).length){activeResult={result:'success',documentId:existing.documentId,stayKey:existing.stayKey,dogName:existing.dogName,pdfUrl:existing.pdfUrl,aiStatus:existing.aiStatus||'Complete',extraction:existing.parsedFields,applied:existing.appliedFields||{},changedFields:existing.appliedFields?.changedFields||[],conflicts:existing.reviewConflicts||[]};renderResult(activeResult)}if(loadChoices)loadStoredFileChoices(existing)}
+function switchStoredDocument(documentId){documentId=String(documentId||'').trim();if(!documentId||documentId===context.document?.documentId)return;const select=document.getElementById('storedFileSelect');select.disabled=true;showStatus('Loading the selected stored intake…','info');google.script.run.withSuccessHandler(result=>{select.disabled=false;context=result||context;populateCandidates();configureExistingDocument(context.document,{loadChoices:false});renderStoredFilePicker(documentId);clearStatus()}).withFailureHandler(error=>{select.disabled=false;renderStoredFilePicker(context.document?.documentId||'');showStatus(serverError(error),'error')}).getLegacyIntakeContextForHtml({stayKey:context.document?.stayKey||INITIAL_STAY_KEY,documentId})}
 
 function fileToDataUrl(file){return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result||''));reader.onerror=()=>reject(new Error('The selected file could not be read.'));reader.readAsDataURL(file)})}
+async function imageToJpeg(file){let bitmap=null;let image=null;let width=0;let height=0;try{if('createImageBitmap' in window){bitmap=await createImageBitmap(file,{imageOrientation:'from-image'});width=bitmap.width;height=bitmap.height}}catch(_){}if(!bitmap){const url=URL.createObjectURL(file);try{image=new Image();await new Promise((resolve,reject)=>{image.onload=resolve;image.onerror=()=>reject(new Error('This photo format cannot be opened by this browser. Try exporting it as JPG or PNG.'));image.src=url});width=image.naturalWidth||image.width;height=image.naturalHeight||image.height}finally{URL.revokeObjectURL(url)}}if(!width||!height)throw new Error('The selected photo has no readable image dimensions.');const maxDimension=2200;const scale=Math.min(1,maxDimension/Math.max(width,height));const canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(width*scale));canvas.height=Math.max(1,Math.round(height*scale));const ctx=canvas.getContext('2d',{alpha:false});ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(bitmap||image,0,0,canvas.width,canvas.height);if(bitmap&&bitmap.close)bitmap.close();return canvas.toDataURL('image/jpeg',.9)}
+function dataUrlToBytes(dataUrl){const comma=String(dataUrl||'').indexOf(',');if(comma<0)throw new Error('The stored PDF data could not be decoded.');const binary=atob(String(dataUrl).slice(comma+1));const bytes=new Uint8Array(binary.length);for(let i=0;i<binary.length;i+=1)bytes[i]=binary.charCodeAt(i);return bytes}
 
-async function imageToJpeg(file){
-  let bitmap=null;let image=null;let width=0;let height=0;
-  try{if('createImageBitmap' in window){bitmap=await createImageBitmap(file,{imageOrientation:'from-image'});width=bitmap.width;height=bitmap.height}}catch(_){}
-  if(!bitmap){
-    const url=URL.createObjectURL(file);
-    try{image=new Image();await new Promise((resolve,reject)=>{image.onload=resolve;image.onerror=()=>reject(new Error('This photo format cannot be opened by this browser. Try exporting it as JPG or PNG.'));image.src=url});width=image.naturalWidth||image.width;height=image.naturalHeight||image.height}finally{URL.revokeObjectURL(url)}
-  }
-  if(!width||!height)throw new Error('The selected photo has no readable image dimensions.');
-  const maxDimension=2200;const scale=Math.min(1,maxDimension/Math.max(width,height));const canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(width*scale));canvas.height=Math.max(1,Math.round(height*scale));const ctx=canvas.getContext('2d',{alpha:false});ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(bitmap||image,0,0,canvas.width,canvas.height);if(bitmap&&bitmap.close)bitmap.close();return canvas.toDataURL('image/jpeg',.88);
-}
+async function renderPdfPagesForFreeOcr(dataUrl){if(!window.pdfjsLib)throw new Error('PDF.js did not load. Refresh this scanner and try again.');const bytes=dataUrlToBytes(dataUrl);const pdf=await window.pdfjsLib.getDocument({data:bytes}).promise;const pageCount=Number(pdf.numPages||0);if(!pageCount)throw new Error('The PDF has no readable pages.');if(pageCount>FREE_OCR_MAX_PAGES)throw new Error(`This intake has ${pageCount} pages. Free browser OCR currently supports up to ${FREE_OCR_MAX_PAGES} pages per intake.`);const images=[];const textPages=[];for(let pageNumber=1;pageNumber<=pageCount;pageNumber+=1){showStatus(`Preparing page ${pageNumber} of ${pageCount} for free OCR…`,'info');const page=await pdf.getPage(pageNumber);let embedded='';try{const textContent=await page.getTextContent();embedded=(textContent.items||[]).map(item=>String(item?.str||'')).join(' ').replace(/\s+/g,' ').trim()}catch(_){}textPages.push(embedded);const baseViewport=page.getViewport({scale:1});const maxSide=Math.max(baseViewport.width,baseViewport.height)||1;const scale=Math.max(1.65,Math.min(2.4,1900/maxSide));const viewport=page.getViewport({scale});const canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(viewport.width));canvas.height=Math.max(1,Math.round(viewport.height));const ctx=canvas.getContext('2d',{alpha:false});ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);await page.render({canvasContext:ctx,viewport}).promise;images.push(canvas.toDataURL('image/jpeg',.88));try{page.cleanup()}catch(_){}}try{pdf.cleanup()}catch(_){}try{pdf.destroy()}catch(_){}return{images,textPages,pageCount}}
 
-async function renderPdfPagesForGroq(file){
-  if(!window.pdfjsLib)throw new Error('PDF page preparation is unavailable in this browser.');
-  const bytes=await file.arrayBuffer();
-  const pdf=await window.pdfjsLib.getDocument({data:new Uint8Array(bytes)}).promise;
-  const pageCount=Number(pdf.numPages||0);
-  if(!pageCount)return{images:[],pageCount:0};
-  if(pageCount>GROQ_PDF_PAGE_LIMIT)return{images:[],pageCount};
-  const images=[];
-  for(let pageNumber=1;pageNumber<=pageCount;pageNumber+=1){
-    const page=await pdf.getPage(pageNumber);const baseViewport=page.getViewport({scale:1});const maxSide=Math.max(baseViewport.width,baseViewport.height)||1;const scale=Math.max(1.5,Math.min(2.2,1700/maxSide));const viewport=page.getViewport({scale});const canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(viewport.width));canvas.height=Math.max(1,Math.round(viewport.height));const ctx=canvas.getContext('2d',{alpha:false});ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);await page.render({canvasContext:ctx,viewport}).promise;images.push(canvas.toDataURL('image/jpeg',.82));try{page.cleanup()}catch(_){}
-  }
-  try{pdf.cleanup()}catch(_){}try{pdf.destroy()}catch(_){}return{images,pageCount};
-}
+async function prepareSelectedFile(file,kind){selectedFile=null;fileDataUrl='';sourceKind=kind||'';ocrImages=[];embeddedPdfText=[];ocrPageCount=0;clearStatus();const card=document.getElementById('fileCard');card.classList.remove('show');card.textContent='';if(!file)return;if(file.size>10*1024*1024){showStatus('Please keep the selected intake file at 10 MB or less.','error');return}const isPdf=file.type==='application/pdf'||/\.pdf$/i.test(file.name);const isImage=String(file.type||'').startsWith('image/')||/\.(jpe?g|png|webp|heic|heif)$/i.test(file.name);if(!isPdf&&!isImage){showStatus('Please choose a PDF or photo of the intake form.','error');return}try{card.classList.add('show');card.textContent=`⏳ Preparing ${file.name}...`;if(isPdf){fileDataUrl=await fileToDataUrl(file);const prepared=await renderPdfPagesForFreeOcr(fileDataUrl);ocrImages=prepared.images;embeddedPdfText=prepared.textPages;ocrPageCount=prepared.pageCount}else{fileDataUrl=await imageToJpeg(file);ocrImages=[fileDataUrl];embeddedPdfText=[''];ocrPageCount=1}selectedFile=file;sourceKind=isPdf?'pdf':(kind==='camera'?'camera':'image');const icon=isPdf?'📄':'🖼️';card.textContent=`${icon} ${file.name} · ${(file.size/1024/1024).toFixed(2)} MB · ${ocrPageCount} page${ocrPageCount===1?'':'s'} ready for free browser OCR`;clearStatus()}catch(error){selectedFile=null;fileDataUrl='';ocrImages=[];embeddedPdfText=[];ocrPageCount=0;card.classList.remove('show');showStatus(serverError(error),'error')}}
 
-async function prepareSelectedFile(file,kind){
-  selectedFile=null;fileDataUrl='';sourceKind=kind||'';ocrImages=[];ocrPageCount=0;clearStatus();
-  const card=document.getElementById('fileCard');card.classList.remove('show');card.textContent='';
-  if(!file)return;
-  if(file.size>10*1024*1024){showStatus('Please keep the selected intake file at 10 MB or less.','error');return}
-  const isPdf=file.type==='application/pdf'||/\.pdf$/i.test(file.name);const isImage=String(file.type||'').startsWith('image/')||/\.(jpe?g|png|webp|heic|heif)$/i.test(file.name);
-  if(!isPdf&&!isImage){showStatus('Please choose a PDF or photo of the intake form.','error');return}
-  try{
-    card.classList.add('show');card.textContent=`⏳ Preparing ${file.name}...`;
-    if(isPdf){fileDataUrl=await fileToDataUrl(file);try{const prepared=await renderPdfPagesForGroq(file);ocrImages=prepared.images||[];ocrPageCount=Number(prepared.pageCount||0)}catch(error){ocrImages=[];ocrPageCount=0}}
-    else{fileDataUrl=await imageToJpeg(file);ocrImages=[fileDataUrl];ocrPageCount=1}
-    selectedFile=file;sourceKind=isPdf?'pdf':(kind==='camera'?'camera':'image');const icon=isPdf?'📄':'🖼️';let note='Photo prepared for Groq Vision OCR';if(isPdf&&ocrPageCount>GROQ_PDF_PAGE_LIMIT)note=`${ocrPageCount}-page PDF · Gemini fallback will read the full document`;else if(isPdf&&ocrImages.length)note=`${ocrImages.length} page${ocrImages.length===1?'':'s'} prepared for Groq Vision OCR`;else if(isPdf)note='PDF ready · Gemini fallback will be used if Groq page preparation is unavailable';card.textContent=`${icon} ${file.name} · ${(file.size/1024/1024).toFixed(2)} MB · ${note}`;clearStatus();
-  }catch(error){selectedFile=null;fileDataUrl='';ocrImages=[];ocrPageCount=0;card.classList.remove('show');showStatus(serverError(error),'error')}
-}
+async function runTesseractPages(images,textPages){const pictures=Array.isArray(images)?images:[];const embedded=Array.isArray(textPages)?textPages:[];if(!pictures.length&&embedded.some(Boolean)){const text=embedded.filter(Boolean).join('\n\n');return{rawText:text,confidence:95,pageCount:embedded.length,usedTesseract:false}}if(!pictures.length)throw new Error('No page images are available for free OCR.');if(!window.Tesseract){const text=embedded.filter(Boolean).join('\n\n');if(text.trim())return{rawText:text,confidence:90,pageCount:embedded.length,usedTesseract:false};throw new Error('The free Tesseract OCR library did not load. Check your internet connection, then reopen the scanner.')}let pageIndex=0;let worker=null;const texts=[];const confidences=[];try{worker=await window.Tesseract.createWorker('eng',1,{logger:message=>{if(message?.status==='recognizing text'){const percent=Math.round(Number(message.progress||0)*100);showStatus(`Free OCR · page ${Math.min(pageIndex+1,pictures.length)} of ${pictures.length} · ${percent}%`,'info')}}});for(pageIndex=0;pageIndex<pictures.length;pageIndex+=1){showStatus(`Free OCR · reading page ${pageIndex+1} of ${pictures.length}…`,'info');const result=await worker.recognize(pictures[pageIndex]);const ocrText=String(result?.data?.text||'').trim();const pdfText=String(embedded[pageIndex]||'').trim();const pageText=[ocrText,pdfText&&pdfText!==ocrText?`PDF TEXT:\n${pdfText}`:''].filter(Boolean).join('\n');texts.push(pageText);const confidence=Number(result?.data?.confidence);if(Number.isFinite(confidence))confidences.push(confidence)}}finally{if(worker)try{await worker.terminate()}catch(_){}}const rawText=texts.filter(Boolean).join('\n\n--- PAGE ---\n\n').trim();const confidence=confidences.length?confidences.reduce((sum,value)=>sum+value,0)/confidences.length:(embedded.some(Boolean)?90:0);return{rawText,confidence,pageCount:pictures.length,usedTesseract:true}}
 
-function processUpload(){
-  const stayKey=document.getElementById('staySelect').value;if(!stayKey){showStatus('Choose the dog/stay first.','error');return}if(!selectedFile||!fileDataUrl){showStatus('Choose a PDF or photo of the legacy intake form first.','error');return}
-  clearStatus();const button=document.getElementById('processBtn');button.disabled=true;button.textContent='⏳ Processing...';document.getElementById('progressPanel').hidden=false;setProgressState('uploading');setTimeout(()=>setProgressState('reading'),600);
-  google.script.run.withSuccessHandler(result=>{button.disabled=false;button.textContent='✨ Scan & Process';const retryable=result?.retryable===true||result?.aiStatus==='Retry Needed';setProgressState(retryable?'reading':(result.result==='partial_success'?'failed':'complete'));renderResult(result)}).withFailureHandler(error=>{button.disabled=false;button.textContent='✨ Scan & Process';setProgressState('failed');document.getElementById('progressPanel').hidden=true;showStatus(serverError(error),'error')}).saveLegacyIntakeMediaGroqFirstV11203({stayKey,fileName:selectedFile.name,fileData:fileDataUrl,sourceKind,ocrImages,ocrPageCount});
-}
+function processFreeOcrTextOnServer(documentId,rawText,confidence,pageCount){return new Promise((resolve,reject)=>{google.script.run.withSuccessHandler(resolve).withFailureHandler(reject).processLegacyIntakeFreeOcrTextV11206({documentId,rawText,ocrConfidence:confidence,pageCount})})}
+async function runFreeOcrAndApply(documentId,prepared){setOcrButtonsDisabled(true);document.getElementById('resultPanel').classList.remove('show');document.getElementById('progressPanel').hidden=false;setProgressState('reading');try{const read=await runTesseractPages(prepared.images,prepared.textPages);lastRawOcrText=read.rawText;lastOcrConfidence=read.confidence;if(!read.rawText.trim()){throw new Error('Free OCR could not detect readable text. Open the stored intake and enter/correct the text manually in the OCR editor.')}setProgressState('applying');showStatus('OCR complete. Matching supported fields to Waffle…','info');const result=await processFreeOcrTextOnServer(documentId,read.rawText,read.confidence,read.pageCount);result.rawOcrText=read.rawText;result.ocrConfidence=read.confidence;setProgressState('complete');clearStatus();renderResult(result);loadContextForDocument(documentId,true)}catch(error){setProgressState('failed');document.getElementById('progressPanel').hidden=true;document.getElementById('resultPanel').classList.add('show');showRawOcrEditor(lastRawOcrText);const hero=document.getElementById('resultHero');hero.className='result-hero error';document.getElementById('resultIcon').textContent='⚠️';document.getElementById('resultTitle').textContent='Free OCR needs help';document.getElementById('resultSub').textContent=serverError(error);document.getElementById('retryBtn').hidden=false;showStatus(`${serverError(error)} You can correct/type the OCR text below and reprocess it for free.`,'warning')}finally{setOcrButtonsDisabled(false)}}
 
-function retryAiRead(){
-  const documentId=context.document?.documentId||activeResult?.documentId||INITIAL_DOCUMENT_ID;if(!documentId){showStatus('No legacy intake record is available to retry.','error');return}
-  const buttons=[document.getElementById('retryBtn'),document.getElementById('retryExistingBtn')];buttons.forEach(b=>{if(b)b.disabled=true});document.getElementById('resultPanel').classList.remove('show');document.getElementById('progressPanel').hidden=false;setProgressState('reading');
-  google.script.run.withSuccessHandler(result=>{buttons.forEach(b=>{if(b)b.disabled=false});const retryable=result?.retryable===true||result?.aiStatus==='Retry Needed';setProgressState(retryable?'reading':(result.result==='partial_success'?'failed':'complete'));activeResult=result;renderResult(result);loadContextForDocument(documentId,false)}).withFailureHandler(error=>{buttons.forEach(b=>{if(b)b.disabled=false});document.getElementById('progressPanel').hidden=true;showStatus(serverError(error),'error')}).retryLegacyIntakeAiGroqFirstV11203(documentId);
-}
+function processUpload(){const stayKey=document.getElementById('staySelect').value;if(!stayKey){showStatus('Choose the dog/stay first.','error');return}if(!selectedFile||!fileDataUrl){showStatus('Choose a PDF or photo of the legacy intake form first.','error');return}setOcrButtonsDisabled(true);clearStatus();document.getElementById('progressPanel').hidden=false;setProgressState('uploading');google.script.run.withSuccessHandler(async saved=>{try{const documentId=String(saved?.documentId||'');if(!documentId)throw new Error('The intake was saved but no document ID was returned.');context.document={documentId,stayKey:saved.stayKey,dogName:saved.dogName,pdfUrl:saved.pdfUrl,originalFilename:saved.originalFilename,aiStatus:saved.aiStatus};await runFreeOcrAndApply(documentId,{images:ocrImages,textPages:embeddedPdfText,pageCount:ocrPageCount})}catch(error){document.getElementById('progressPanel').hidden=true;showStatus(serverError(error),'error')}finally{setOcrButtonsDisabled(false)}}).withFailureHandler(error=>{setOcrButtonsDisabled(false);document.getElementById('progressPanel').hidden=true;showStatus(serverError(error),'error')}).saveLegacyIntakeMediaForFreeOcrV11206({stayKey,fileName:selectedFile.name,fileData:fileDataUrl,sourceKind})}
 
-function applyConflictSelections(){
-  const documentId=activeResult?.documentId||context.document?.documentId;if(!documentId)return;const keys=Array.from(document.querySelectorAll('[data-conflict-key]:checked')).map(input=>input.dataset.conflictKey);if(!keys.length){alert('Select at least one extracted value to apply.');return}
-  const button=document.getElementById('applyConflictsBtn');button.disabled=true;button.textContent='⏳ Applying...';
-  google.script.run.withSuccessHandler(result=>{button.disabled=false;button.textContent='Apply Selected Extracted Values';activeResult.conflicts=result.conflicts||[];activeResult.aiStatus=result.aiStatus||activeResult.aiStatus;activeResult.changedFields=[...(activeResult.changedFields||[]),...(result.changedFields||[])].filter((v,i,a)=>v&&a.indexOf(v)===i);renderResult(activeResult)}).withFailureHandler(error=>{button.disabled=false;button.textContent='Apply Selected Extracted Values';alert(serverError(error))}).applyLegacyIntakeConflictResolutionsFromHtml({documentId,useExtractedKeys:keys});
-}
+function fetchStoredPdfSource(documentId){return new Promise((resolve,reject)=>{google.script.run.withSuccessHandler(resolve).withFailureHandler(reject).getLegacyIntakeOcrSourceForHtmlV11206({documentId})})}
+async function retryAiRead(){const documentId=context.document?.documentId||activeResult?.documentId||INITIAL_DOCUMENT_ID;if(!documentId){showStatus('Choose a stored legacy intake first.','error');return}setOcrButtonsDisabled(true);document.getElementById('progressPanel').hidden=false;setProgressState('reading');try{showStatus('Loading the stored PDF from private Drive for free OCR…','info');const source=await fetchStoredPdfSource(documentId);const prepared=await renderPdfPagesForFreeOcr(source.fileData);await runFreeOcrAndApply(documentId,{images:prepared.images,textPages:prepared.textPages,pageCount:prepared.pageCount})}catch(error){document.getElementById('progressPanel').hidden=true;showRawOcrEditor(lastRawOcrText);showStatus(`${serverError(error)} You can also type/correct OCR text below and reprocess it.`,'warning')}finally{setOcrButtonsDisabled(false)}}
 
-function finalizeOrClose(){
-  if(!hasIdentityConflict(activeResult)){closeOrReturn();return}
-  const documentId=activeResult?.documentId||context.document?.documentId||INITIAL_DOCUMENT_ID;if(!documentId){alert('No legacy intake record is available to apply.');return}
-  const button=document.getElementById('doneBtn');const guest=activeResult?.dogName||'selected guest';button.disabled=true;button.textContent=`⏳ Applying to ${guest}...`;
-  google.script.run.withSuccessHandler(result=>{activeResult={...activeResult,...result,extraction:result?.extraction||activeResult?.extraction,conflicts:result?.conflicts||[],changedFields:[...(activeResult?.changedFields||[]),...(result?.changedFields||[])].filter((v,i,a)=>v&&a.indexOf(v)===i)};if(activeResult.conflicts.length){renderResult(activeResult);return}notifyParent();closeOrReturn()}).withFailureHandler(error=>{button.disabled=false;button.textContent=`Apply to ${guest} & Done`;const hero=document.getElementById('resultHero');hero.className='result-hero error';document.getElementById('resultIcon').textContent='⚠️';document.getElementById('resultTitle').textContent='Profile update could not be completed';document.getElementById('resultSub').textContent=serverError(error)}).finalizeLegacyIntakeForSelectedBookingV11204({documentId});
-}
+async function reprocessCorrectedOcrText(){const documentId=activeResult?.documentId||context.document?.documentId||INITIAL_DOCUMENT_ID;const rawText=String(document.getElementById('rawOcrText').value||'').trim();if(!documentId){showStatus('Choose a stored intake first.','error');return}if(!rawText){showStatus('Enter or correct some OCR text first.','error');return}const button=document.getElementById('reprocessOcrTextBtn');button.disabled=true;button.textContent='⏳ Reprocessing...';document.getElementById('progressPanel').hidden=false;setProgressState('applying');try{const result=await processFreeOcrTextOnServer(documentId,rawText,lastOcrConfidence||0,ocrPageCount||0);result.rawOcrText=rawText;setProgressState('complete');renderResult(result);clearStatus();loadContextForDocument(documentId,true)}catch(error){document.getElementById('progressPanel').hidden=true;showStatus(serverError(error),'error')}finally{button.disabled=false;button.textContent='↻ Reprocess Corrected OCR Text'}}
 
-function reassignExisting(){
-  const stayKey=document.getElementById('staySelect').value;if(!stayKey){showStatus('Choose the new dog/stay.','error');return}const documentId=context.document?.documentId||activeResult?.documentId;if(!documentId){showStatus('Choose a stored intake first.','error');return}
-  const button=document.getElementById('reassignBtn');button.disabled=true;button.textContent='⏳ Reassigning...';
-  google.script.run.withSuccessHandler(result=>{button.disabled=false;button.textContent='↻ Reassign Intake';showStatus('Intake reassigned. Press “Run OCR on Stored File” to apply attributes to the new booking.','success');notifyParent();loadContextForDocument(documentId,true)}).withFailureHandler(error=>{button.disabled=false;button.textContent='↻ Reassign Intake';showStatus(serverError(error),'error')}).reassignLegacyIntakeFromHtml({documentId,stayKey});
-}
-
-function loadContextForDocument(documentId,refreshChoices){
-  google.script.run.withSuccessHandler(result=>{context=result||context;populateCandidates();if(context.document)configureExistingDocument(context.document,{loadChoices:refreshChoices===true})}).withFailureHandler(error=>showStatus(serverError(error),'error')).getLegacyIntakeContextForHtml({stayKey:context.document?.stayKey||INITIAL_STAY_KEY,documentId});
-}
-
-function loadContext(){
-  google.script.run.withSuccessHandler(result=>{
-    context=result||{candidates:[]};populateCandidates();const existing=context.document;
-    if(existing){configureExistingDocument(existing,{loadChoices:true});return}
-    document.getElementById('fileField').hidden=false;document.getElementById('processBtn').hidden=false;document.getElementById('storedFilesField').hidden=true;
-  }).withFailureHandler(error=>showStatus(serverError(error),'error')).getLegacyIntakeContextForHtml({stayKey:INITIAL_STAY_KEY,documentId:INITIAL_DOCUMENT_ID});
-}
-
+function applyConflictSelections(){const documentId=activeResult?.documentId||context.document?.documentId;if(!documentId)return;const keys=Array.from(document.querySelectorAll('[data-conflict-key]:checked')).map(input=>input.dataset.conflictKey);if(!keys.length){alert('Select at least one extracted value to apply.');return}const button=document.getElementById('applyConflictsBtn');button.disabled=true;button.textContent='⏳ Applying...';google.script.run.withSuccessHandler(result=>{button.disabled=false;button.textContent='Apply Selected Extracted Values';activeResult.conflicts=result.conflicts||[];activeResult.aiStatus=result.aiStatus||activeResult.aiStatus;activeResult.changedFields=[...(activeResult.changedFields||[]),...(result.changedFields||[])].filter((v,i,a)=>v&&a.indexOf(v)===i);renderResult(activeResult)}).withFailureHandler(error=>{button.disabled=false;button.textContent='Apply Selected Extracted Values';alert(serverError(error))}).applyLegacyIntakeConflictResolutionsFromHtml({documentId,useExtractedKeys:keys})}
+function finalizeOrClose(){if(!hasIdentityConflict(activeResult)){closeOrReturn();return}const documentId=activeResult?.documentId||context.document?.documentId||INITIAL_DOCUMENT_ID;if(!documentId){alert('No legacy intake record is available to apply.');return}const button=document.getElementById('doneBtn');const guest=activeResult?.dogName||'selected guest';button.disabled=true;button.textContent=`⏳ Applying to ${guest}...`;google.script.run.withSuccessHandler(result=>{activeResult={...activeResult,...result,extraction:result?.extraction||activeResult?.extraction,conflicts:result?.conflicts||[],changedFields:[...(activeResult?.changedFields||[]),...(result?.changedFields||[])].filter((v,i,a)=>v&&a.indexOf(v)===i)};if(activeResult.conflicts.length){renderResult(activeResult);return}notifyParent();closeOrReturn()}).withFailureHandler(error=>{button.disabled=false;button.textContent=`Apply to ${guest} & Done`;const hero=document.getElementById('resultHero');hero.className='result-hero error';document.getElementById('resultIcon').textContent='⚠️';document.getElementById('resultTitle').textContent='Profile update could not be completed';document.getElementById('resultSub').textContent=serverError(error)}).finalizeLegacyIntakeForSelectedBookingV11204({documentId})}
+function reassignExisting(){const stayKey=document.getElementById('staySelect').value;if(!stayKey){showStatus('Choose the new dog/stay.','error');return}const documentId=context.document?.documentId||activeResult?.documentId;if(!documentId){showStatus('Choose a stored intake first.','error');return}const button=document.getElementById('reassignBtn');button.disabled=true;button.textContent='⏳ Reassigning...';google.script.run.withSuccessHandler(()=>{button.disabled=false;button.textContent='↻ Reassign Intake';showStatus('Intake reassigned. Press “Run Free OCR on Stored File” to apply values to the new booking.','success');notifyParent();loadContextForDocument(documentId,true)}).withFailureHandler(error=>{button.disabled=false;button.textContent='↻ Reassign Intake';showStatus(serverError(error),'error')}).reassignLegacyIntakeFromHtml({documentId,stayKey})}
+function loadContextForDocument(documentId,refreshChoices){google.script.run.withSuccessHandler(result=>{context=result||context;populateCandidates();if(context.document)configureExistingDocument(context.document,{loadChoices:refreshChoices===true})}).withFailureHandler(error=>showStatus(serverError(error),'error')).getLegacyIntakeContextForHtml({stayKey:context.document?.stayKey||INITIAL_STAY_KEY,documentId})}
+function loadContext(){google.script.run.withSuccessHandler(result=>{context=result||{candidates:[]};populateCandidates();const existing=context.document;if(existing){configureExistingDocument(existing,{loadChoices:true});return}document.getElementById('fileField').hidden=false;document.getElementById('processBtn').hidden=false;document.getElementById('storedFilesField').hidden=true}).withFailureHandler(error=>showStatus(serverError(error),'error')).getLegacyIntakeContextForHtml({stayKey:INITIAL_STAY_KEY,documentId:INITIAL_DOCUMENT_ID})}
 function closeOrReturn(){notifyParent();try{if(window.opener&&!window.opener.closed)window.opener.focus()}catch(_){}try{window.close()}catch(_){}setTimeout(()=>{if(document.visibilityState!=='hidden'&&window.history.length>1)window.history.back()},250)}
 
-document.addEventListener('DOMContentLoaded',()=>{
-  document.getElementById('mediaFile').addEventListener('change',event=>prepareSelectedFile(event.target.files?.[0]||null,'library'));
-  document.getElementById('cameraFile').addEventListener('change',event=>prepareSelectedFile(event.target.files?.[0]||null,'camera'));
-  document.getElementById('storedFileSelect').addEventListener('change',event=>switchStoredDocument(event.target.value));
-  document.getElementById('processBtn').addEventListener('click',processUpload);
-  document.getElementById('retryBtn').addEventListener('click',retryAiRead);
-  document.getElementById('retryExistingBtn').addEventListener('click',retryAiRead);
-  document.getElementById('applyConflictsBtn').addEventListener('click',applyConflictSelections);
-  document.getElementById('reassignBtn').addEventListener('click',reassignExisting);
-  document.getElementById('closeBtn').addEventListener('click',closeOrReturn);
-  document.getElementById('doneBtn').addEventListener('click',finalizeOrClose);
-  loadContext();
-});
+document.addEventListener('DOMContentLoaded',()=>{document.getElementById('mediaFile').addEventListener('change',event=>prepareSelectedFile(event.target.files?.[0]||null,'library'));document.getElementById('cameraFile').addEventListener('change',event=>prepareSelectedFile(event.target.files?.[0]||null,'camera'));document.getElementById('storedFileSelect').addEventListener('change',event=>switchStoredDocument(event.target.value));document.getElementById('processBtn').addEventListener('click',processUpload);document.getElementById('retryBtn').addEventListener('click',retryAiRead);document.getElementById('retryExistingBtn').addEventListener('click',retryAiRead);document.getElementById('reprocessOcrTextBtn').addEventListener('click',reprocessCorrectedOcrText);document.getElementById('applyConflictsBtn').addEventListener('click',applyConflictSelections);document.getElementById('reassignBtn').addEventListener('click',reassignExisting);document.getElementById('closeBtn').addEventListener('click',closeOrReturn);document.getElementById('doneBtn').addEventListener('click',finalizeOrClose);loadContext()});
 </script>
 </body>
 </html>

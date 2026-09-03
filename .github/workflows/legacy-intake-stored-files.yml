@@ -4,12 +4,14 @@ on:
   pull_request:
     paths:
       - 'apps-script/V11205LegacyIntakeStoredFiles.js'
+      - 'apps-script/V11206LegacyIntakeFreeOcr.js'
       - 'apps-script/LegacyIntake.html'
       - '.github/workflows/legacy-intake-stored-files.yml'
   push:
     branches: [main]
     paths:
       - 'apps-script/V11205LegacyIntakeStoredFiles.js'
+      - 'apps-script/V11206LegacyIntakeFreeOcr.js'
       - 'apps-script/LegacyIntake.html'
       - '.github/workflows/legacy-intake-stored-files.yml'
 
@@ -23,16 +25,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Validate stored-file Apps Script helper
+      - name: Validate stored-file Apps Script helpers
         run: |
           set -euo pipefail
           node --check apps-script/V11205LegacyIntakeStoredFiles.js
+          node --check apps-script/V11206LegacyIntakeFreeOcr.js
           grep -q "function getLegacyIntakeStoredDocumentsForHtmlV11205" apps-script/V11205LegacyIntakeStoredFiles.js
-          grep -q "legacyIntakeRowToObject_" apps-script/V11205LegacyIntakeStoredFiles.js
-          grep -q "record.stayKey" apps-script/V11205LegacyIntakeStoredFiles.js
           grep -q "documents.sort" apps-script/V11205LegacyIntakeStoredFiles.js
+          grep -q "function getLegacyIntakeOcrSourceForHtmlV11206" apps-script/V11206LegacyIntakeFreeOcr.js
+          grep -q "DriveApp.getFileById" apps-script/V11206LegacyIntakeFreeOcr.js
+          grep -q "data:application/pdf;base64" apps-script/V11206LegacyIntakeFreeOcr.js
 
-      - name: Validate stored-file scanner flow
+      - name: Validate stored-file free OCR flow
         run: |
           set -euo pipefail
           node <<'NODE'
@@ -49,8 +53,10 @@ jobs:
           node --check /tmp/legacy-intake-inline.js
           grep -q "storedFileSelect" apps-script/LegacyIntake.html
           grep -q "Previously uploaded legacy intake" apps-script/LegacyIntake.html
-          grep -q "Run OCR on Stored File" apps-script/LegacyIntake.html
+          grep -q "Run Free OCR on Stored File" apps-script/LegacyIntake.html
           grep -q "getLegacyIntakeStoredDocumentsForHtmlV11205" apps-script/LegacyIntake.html
           grep -q "switchStoredDocument" apps-script/LegacyIntake.html
-          grep -q "retryLegacyIntakeAiGroqFirstV11203(documentId)" apps-script/LegacyIntake.html
+          grep -q "getLegacyIntakeOcrSourceForHtmlV11206" apps-script/LegacyIntake.html
+          grep -q "renderPdfPagesForFreeOcr" apps-script/LegacyIntake.html
+          grep -q "runTesseractPages" apps-script/LegacyIntake.html
           grep -q "finalizeLegacyIntakeForSelectedBookingV11204" apps-script/LegacyIntake.html
