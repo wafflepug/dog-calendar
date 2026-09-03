@@ -53,6 +53,8 @@ jobs:
           fs.writeFileSync('/tmp/legacy-intake-inline.js', js);
           NODE
           node --check /tmp/legacy-intake-inline.js
+          grep -Fq "[hidden]{display:none!important}" apps-script/LegacyIntake.html
+          grep -q "document.getElementById('applyConflictsBtn').hidden=!applicable.length" apps-script/LegacyIntake.html
           grep -q "pdf.js/3.11.174/pdf.min.js" apps-script/LegacyIntake.html
           grep -q "Groq-first document reading" apps-script/LegacyIntake.html
           grep -q "renderPdfPagesForGroq" apps-script/LegacyIntake.html
