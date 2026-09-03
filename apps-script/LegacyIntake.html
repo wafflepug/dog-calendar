@@ -147,9 +147,11 @@ function renderResult(result){
   document.getElementById('progressPanel').hidden=true;
   document.getElementById('resultPanel').classList.add('show');
   const hero=document.getElementById('resultHero');
-  const failed=result.result==='partial_success'||result.aiStatus==='AI Failed';
+  const retryable=result.retryable===true||result.aiStatus==='Retry Needed';
+  const failed=!retryable&&(result.result==='partial_success'||result.aiStatus==='AI Failed');
   const conflicts=Array.isArray(result.conflicts)?result.conflicts:[];
-  if(failed){hero.className='result-hero error';document.getElementById('resultIcon').textContent='⚠️';document.getElementById('resultTitle').textContent='Intake saved — AI read needs retry';document.getElementById('resultSub').textContent=result.errorMessage||'The intake record is safe in Drive, but Gemini did not complete.';document.getElementById('retryBtn').hidden=false}
+  if(retryable){hero.className='result-hero warning';document.getElementById('resultIcon').textContent='⏳';document.getElementById('resultTitle').textContent='Intake saved — AI temporarily busy';document.getElementById('resultSub').textContent=result.errorMessage||'Gemini is temporarily busy. Your intake is safe in Drive and can be retried without uploading it again.';document.getElementById('retryBtn').hidden=false}
+  else if(failed){hero.className='result-hero error';document.getElementById('resultIcon').textContent='⚠️';document.getElementById('resultTitle').textContent='Intake saved — AI read needs retry';document.getElementById('resultSub').textContent=result.errorMessage||'The intake record is safe in Drive, but Gemini did not complete.';document.getElementById('retryBtn').hidden=false}
   else if(conflicts.length){hero.className='result-hero warning';document.getElementById('resultIcon').textContent='⚠️';document.getElementById('resultTitle').textContent='Intake processed — review differences';document.getElementById('resultSub').textContent='Safe additions were applied automatically. Existing conflicting values were kept until you choose otherwise.';document.getElementById('retryBtn').hidden=true}
   else{hero.className='result-hero';document.getElementById('resultIcon').textContent='✅';document.getElementById('resultTitle').textContent='Legacy intake processed';document.getElementById('resultSub').textContent='The intake record is in Drive and supported profile attributes have been applied.';document.getElementById('retryBtn').hidden=true}
   document.getElementById('summaryGuest').textContent=result.dogName||'—';
@@ -203,13 +205,13 @@ function processUpload(){
   if(!selectedFile||!fileDataUrl){showStatus('Choose a PDF or photo of the legacy intake form first.','error');return}
   clearStatus();
   const button=document.getElementById('processBtn');button.disabled=true;button.textContent='⏳ Processing...';document.getElementById('progressPanel').hidden=false;setProgressState('uploading');setTimeout(()=>setProgressState('reading'),600);
-  google.script.run.withSuccessHandler(result=>{button.disabled=false;button.textContent='✨ Scan & Process';setProgressState(result.result==='partial_success'?'failed':'complete');renderResult(result)}).withFailureHandler(error=>{button.disabled=false;button.textContent='✨ Scan & Process';setProgressState('failed');document.getElementById('progressPanel').hidden=true;showStatus(serverError(error),'error')}).saveLegacyIntakeMediaFromHtml({stayKey,fileName:selectedFile.name,fileData:fileDataUrl,sourceKind});
+  google.script.run.withSuccessHandler(result=>{button.disabled=false;button.textContent='✨ Scan & Process';const retryable=result?.retryable===true||result?.aiStatus==='Retry Needed';setProgressState(retryable?'reading':(result.result==='partial_success'?'failed':'complete'));renderResult(result)}).withFailureHandler(error=>{button.disabled=false;button.textContent='✨ Scan & Process';setProgressState('failed');document.getElementById('progressPanel').hidden=true;showStatus(serverError(error),'error')}).saveLegacyIntakeMediaFromHtml({stayKey,fileName:selectedFile.name,fileData:fileDataUrl,sourceKind});
 }
 
 function retryAiRead(){
   const documentId=activeResult?.documentId||context.document?.documentId||INITIAL_DOCUMENT_ID;if(!documentId){showStatus('No legacy intake record is available to retry.','error');return}
   const buttons=[document.getElementById('retryBtn'),document.getElementById('retryExistingBtn')];buttons.forEach(b=>{if(b)b.disabled=true});document.getElementById('resultPanel').classList.remove('show');document.getElementById('progressPanel').hidden=false;setProgressState('reading');
-  google.script.run.withSuccessHandler(result=>{buttons.forEach(b=>{if(b)b.disabled=false});setProgressState('complete');renderResult(result)}).withFailureHandler(error=>{buttons.forEach(b=>{if(b)b.disabled=false});document.getElementById('progressPanel').hidden=true;showStatus(serverError(error),'error')}).retryGeminiLegacyIntakeFromHtml(documentId);
+  google.script.run.withSuccessHandler(result=>{buttons.forEach(b=>{if(b)b.disabled=false});const retryable=result?.retryable===true||result?.aiStatus==='Retry Needed';setProgressState(retryable?'reading':(result.result==='partial_success'?'failed':'complete'));renderResult(result)}).withFailureHandler(error=>{buttons.forEach(b=>{if(b)b.disabled=false});document.getElementById('progressPanel').hidden=true;showStatus(serverError(error),'error')}).retryGeminiLegacyIntakeWithTransientRetryV11202(documentId);
 }
 
 function applyConflictSelections(){
