@@ -1,19 +1,19 @@
-name: Legacy Intake AI Retry
+name: Legacy Intake OCR
 
 on:
   pull_request:
     paths:
-      - 'apps-script/V11191LegacyIntakeMedia.js'
       - 'apps-script/V11203LegacyIntakeGroq.js'
       - 'apps-script/V11204LegacyIntakeFinalize.js'
+      - 'apps-script/V11206LegacyIntakeFreeOcr.js'
       - 'apps-script/LegacyIntake.html'
       - '.github/workflows/legacy-intake-ai-retry.yml'
   push:
     branches: [main]
     paths:
-      - 'apps-script/V11191LegacyIntakeMedia.js'
       - 'apps-script/V11203LegacyIntakeGroq.js'
       - 'apps-script/V11204LegacyIntakeFinalize.js'
+      - 'apps-script/V11206LegacyIntakeFreeOcr.js'
       - 'apps-script/LegacyIntake.html'
       - '.github/workflows/legacy-intake-ai-retry.yml'
 
@@ -21,27 +21,26 @@ permissions:
   contents: read
 
 jobs:
-  legacy-intake-ai-retry:
+  legacy-intake-ocr:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Validate Legacy Intake OCR modules
+      - name: Validate free OCR backend
         run: |
           set -euo pipefail
-          node --check apps-script/V11191LegacyIntakeMedia.js
-          node --check apps-script/V11203LegacyIntakeGroq.js
+          node --check apps-script/V11206LegacyIntakeFreeOcr.js
           node --check apps-script/V11204LegacyIntakeFinalize.js
-          grep -q "GROQ_API_KEY" apps-script/V11203LegacyIntakeGroq.js
-          grep -q "qwen/qwen3.6-27b" apps-script/V11203LegacyIntakeGroq.js
-          grep -q "api.groq.com/openai/v1/chat/completions" apps-script/V11203LegacyIntakeGroq.js
-          grep -q "callGroqLegacyIntakeExtractionV11203_" apps-script/V11203LegacyIntakeGroq.js
-          grep -q "retryLegacyIntakeAiGroqFirstV11203" apps-script/V11203LegacyIntakeGroq.js
-          grep -q "retryGeminiLegacyIntakeWithTransientRetryV11202" apps-script/V11203LegacyIntakeGroq.js
-          grep -q "providerOrder: \['groq', 'gemini'\]" apps-script/V11203LegacyIntakeGroq.js
+          grep -q "apiKeyRequired: false" apps-script/V11206LegacyIntakeFreeOcr.js
+          grep -q "providerRequired: false" apps-script/V11206LegacyIntakeFreeOcr.js
+          grep -q "Tesseract.js + PDF.js" apps-script/V11206LegacyIntakeFreeOcr.js
+          grep -q "getLegacyIntakeOcrSourceForHtmlV11206" apps-script/V11206LegacyIntakeFreeOcr.js
+          grep -q "saveLegacyIntakeMediaForFreeOcrV11206" apps-script/V11206LegacyIntakeFreeOcr.js
+          grep -q "processLegacyIntakeFreeOcrTextV11206" apps-script/V11206LegacyIntakeFreeOcr.js
+          grep -q "buildGeminiLegacyAutoApplyPlan_" apps-script/V11206LegacyIntakeFreeOcr.js
+          grep -q "applyLegacyIntakeProfileUpdates_" apps-script/V11206LegacyIntakeFreeOcr.js
           grep -q "finalizeLegacyIntakeForSelectedBookingV11204" apps-script/V11204LegacyIntakeFinalize.js
-          grep -q "Legacy Intake · Confirmed" apps-script/V11204LegacyIntakeFinalize.js
           grep -q "extraction.profile.dogName = selectedDogName" apps-script/V11204LegacyIntakeFinalize.js
 
       - name: Validate Legacy Intake scanner JavaScript
@@ -60,13 +59,14 @@ jobs:
           NODE
           node --check /tmp/legacy-intake-inline.js
           grep -Fq "[hidden]{display:none!important}" apps-script/LegacyIntake.html
-          grep -q "document.getElementById('applyConflictsBtn').hidden=!applicable.length" apps-script/LegacyIntake.html
-          grep -q "pdf.js/3.11.174/pdf.min.js" apps-script/LegacyIntake.html
-          grep -q "Groq-first document reading" apps-script/LegacyIntake.html
-          grep -q "renderPdfPagesForGroq" apps-script/LegacyIntake.html
-          grep -q "saveLegacyIntakeMediaGroqFirstV11203" apps-script/LegacyIntake.html
-          grep -q "retryLegacyIntakeAiGroqFirstV11203" apps-script/LegacyIntake.html
-          grep -q "result.retryable===true" apps-script/LegacyIntake.html
+          grep -q "tesseract.js@5.1.1" apps-script/LegacyIntake.html
+          grep -q "Free OCR — no API key or paid AI provider" apps-script/LegacyIntake.html
+          grep -q "renderPdfPagesForFreeOcr" apps-script/LegacyIntake.html
+          grep -q "runTesseractPages" apps-script/LegacyIntake.html
+          grep -q "saveLegacyIntakeMediaForFreeOcrV11206" apps-script/LegacyIntake.html
+          grep -q "getLegacyIntakeOcrSourceForHtmlV11206" apps-script/LegacyIntake.html
+          grep -q "processLegacyIntakeFreeOcrTextV11206" apps-script/LegacyIntake.html
+          grep -q "reprocessCorrectedOcrText" apps-script/LegacyIntake.html
           grep -q "hasIdentityConflict" apps-script/LegacyIntake.html
           grep -q "finalizeLegacyIntakeForSelectedBookingV11204" apps-script/LegacyIntake.html
           grep -q "Apply to .* & Done" apps-script/LegacyIntake.html
