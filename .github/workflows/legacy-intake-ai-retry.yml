@@ -1,0 +1,52 @@
+name: Legacy Intake AI Retry
+
+on:
+  pull_request:
+    paths:
+      - 'apps-script/V11191LegacyIntakeMedia.js'
+      - 'apps-script/LegacyIntake.html'
+      - '.github/workflows/legacy-intake-ai-retry.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'apps-script/V11191LegacyIntakeMedia.js'
+      - 'apps-script/LegacyIntake.html'
+      - '.github/workflows/legacy-intake-ai-retry.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  legacy-intake-ai-retry:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate Apps Script retry module
+        run: |
+          set -euo pipefail
+          node --check apps-script/V11191LegacyIntakeMedia.js
+          grep -q "isTransientLegacyIntakeAiErrorV11202_" apps-script/V11191LegacyIntakeMedia.js
+          grep -q "LEGACY_INTAKE_AI_RETRY_DELAYS_V11202_" apps-script/V11191LegacyIntakeMedia.js
+          grep -q "Retry Needed" apps-script/V11191LegacyIntakeMedia.js
+          grep -q "retryGeminiLegacyIntakeWithTransientRetryV11202" apps-script/V11191LegacyIntakeMedia.js
+          grep -q "high demand" apps-script/V11191LegacyIntakeMedia.js
+
+      - name: Validate Legacy Intake scanner JavaScript
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require('fs');
+          const html = fs.readFileSync('apps-script/LegacyIntake.html', 'utf8');
+          const match = html.match(/<script>([\s\S]*?)<\/script>/i);
+          if (!match) throw new Error('LegacyIntake.html inline script not found');
+          const js = match[1]
+            .replace(/<\?!=\s*JSON\.stringify\(initialStayKey\)\s*\?>/g, '""')
+            .replace(/<\?!=\s*JSON\.stringify\(initialDocumentId\)\s*\?>/g, '""');
+          fs.writeFileSync('/tmp/legacy-intake-inline.js', js);
+          NODE
+          node --check /tmp/legacy-intake-inline.js
+          grep -q "Intake saved — AI temporarily busy" apps-script/LegacyIntake.html
+          grep -q "retryGeminiLegacyIntakeWithTransientRetryV11202" apps-script/LegacyIntake.html
+          grep -q "result.retryable===true" apps-script/LegacyIntake.html

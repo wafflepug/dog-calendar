@@ -1,11 +1,20 @@
 /* ============================================================
- * WAFFLE HOUSE V11.1.91 — LEGACY INTAKE MEDIA UPLOAD
+ * WAFFLE HOUSE V11.1.91 / V11.2.02 — LEGACY INTAKE MEDIA UPLOAD
  * ------------------------------------------------------------
  * Adds photo/image intake support without creating a second profile-write path.
  * PDFs delegate directly to the established Legacy Intake workflow. Images are
  * converted into a private PDF record first, then handed to the exact same
  * Gemini extraction, field mapping, conflict review and Audit workflow.
+ *
+ * V11.2.02 resilience:
+ * - transient Gemini capacity/high-demand failures are retried automatically;
+ * - retries reuse the already-saved private PDF (never duplicate the upload);
+ * - exhausted transient failures become "Retry Needed" instead of a hard
+ *   "AI Failed" state, with a short user-safe message and manual retry support.
  * ============================================================ */
+
+var LEGACY_INTAKE_AI_RETRY_DELAYS_V11202_ = [1200, 3500];
+
 
 function decodeLegacyIntakeImageV11191_(fileData, fileName) {
   var match = String(fileData || '').match(
@@ -105,6 +114,171 @@ function legacyIntakeImageToPdfV11191_(imageBlob, fileName) {
 }
 
 
+function legacyIntakeAiErrorTextV11202_(value) {
+  if (value && typeof value === 'object') {
+    if (value.errorMessage) return String(value.errorMessage);
+    if (value.message) return String(value.message);
+  }
+  return String(value || '');
+}
+
+
+function isTransientLegacyIntakeAiErrorV11202_(value) {
+  var text = legacyIntakeAiErrorTextV11202_(value).toLowerCase();
+  if (!text) return false;
+
+  return [
+    'high demand',
+    'temporarily unavailable',
+    'temporarily busy',
+    'try again later',
+    'overloaded',
+    'service unavailable',
+    'backend error',
+    'internal server error',
+    'deadline exceeded',
+    'resource exhausted',
+    'http 500',
+    'http 502',
+    'http 503',
+    'http 504'
+  ].some(function(marker) {
+    return text.indexOf(marker) !== -1;
+  });
+}
+
+
+function setLegacyIntakeAiStatusV11202_(documentId, status) {
+  try {
+    var legacySheet = getLegacyIntakeSheet_();
+    var record = findLegacyIntakeDocumentById_(legacySheet, documentId);
+    if (!record) return;
+
+    legacySheet.getRange(record.row, 2).setValue(new Date());
+    legacySheet.getRange(record.row, 22).setValue(status);
+  } catch (_) {}
+}
+
+
+function buildLegacyIntakeRetryNeededResultV11202_(documentId, retryCount) {
+  var record = null;
+
+  try {
+    var legacySheet = getLegacyIntakeSheet_();
+    record = findLegacyIntakeDocumentById_(legacySheet, documentId);
+  } catch (_) {}
+
+  setLegacyIntakeAiStatusV11202_(documentId, 'Retry Needed');
+
+  try {
+    logAuditEvent_({
+      category: 'Intake',
+      action: 'Legacy Intake AI Deferred',
+      dogName: record && record.dogName ? record.dogName : '',
+      reference: documentId,
+      summary:
+        'Gemini was temporarily at capacity after automatic retries. The intake PDF remains saved and can be retried without re-uploading.',
+      changedFields: ['AI Status'],
+      after: {
+        aiStatus: 'Retry Needed',
+        retryable: true,
+        automaticRetryCount: Number(retryCount || 0)
+      },
+      source: 'Gemini Legacy Intake'
+    });
+  } catch (_) {}
+
+  return {
+    result: 'partial_success',
+    action: 'legacy_intake_saved_ai_retry_needed',
+    documentId: documentId,
+    stayKey: record && record.stayKey ? record.stayKey : '',
+    dogName: record && record.dogName ? record.dogName : '',
+    pdfUrl: record && record.pdfUrl ? record.pdfUrl : '',
+    aiStatus: 'Retry Needed',
+    retryable: true,
+    autoRetryAttempted: true,
+    retryCount: Number(retryCount || 0),
+    errorMessage:
+      'Gemini is temporarily busy. Your intake is saved safely in Drive. Use Retry AI Read again shortly — you do not need to upload the file again.',
+    conflicts: [],
+    changedFields: []
+  };
+}
+
+
+function runLegacyIntakeAiRetriesV11202_(documentId, initialError, delays) {
+  var retryDelays = Array.isArray(delays) ? delays : [];
+  var lastError = initialError;
+  var attempted = 0;
+
+  for (var index = 0; index < retryDelays.length; index += 1) {
+    var delayMs = Math.max(0, Number(retryDelays[index] || 0));
+    if (delayMs) Utilities.sleep(delayMs);
+
+    attempted += 1;
+    setLegacyIntakeAiStatusV11202_(documentId, 'AI Busy · Retrying');
+
+    try {
+      var result = retryGeminiLegacyIntakeFromHtml(documentId);
+      if (result && typeof result === 'object') {
+        result.autoRetried = true;
+        result.retryCount = attempted;
+      }
+      return result;
+    } catch (error) {
+      lastError = error;
+      if (!isTransientLegacyIntakeAiErrorV11202_(error)) {
+        setLegacyIntakeAiStatusV11202_(documentId, 'AI Failed');
+        throw error;
+      }
+    }
+  }
+
+  if (isTransientLegacyIntakeAiErrorV11202_(lastError)) {
+    return buildLegacyIntakeRetryNeededResultV11202_(documentId, attempted);
+  }
+
+  throw lastError || new Error('Gemini intake extraction did not complete.');
+}
+
+
+function recoverTransientLegacyIntakeAiV11202_(result) {
+  if (
+    !result ||
+    result.result !== 'partial_success' ||
+    !result.documentId ||
+    !isTransientLegacyIntakeAiErrorV11202_(result)
+  ) {
+    return result;
+  }
+
+  return runLegacyIntakeAiRetriesV11202_(
+    String(result.documentId),
+    result.errorMessage || '',
+    LEGACY_INTAKE_AI_RETRY_DELAYS_V11202_
+  );
+}
+
+
+function retryGeminiLegacyIntakeWithTransientRetryV11202(documentId) {
+  assertWaffleActionAllowedDuringMaintenance_(
+    'retryGeminiLegacyIntakeWithTransientRetryV11202'
+  );
+
+  documentId = String(documentId || '').trim();
+  if (!documentId) {
+    throw new Error('Legacy document ID is required.');
+  }
+
+  return runLegacyIntakeAiRetriesV11202_(
+    documentId,
+    '',
+    [0, 1500, 3500]
+  );
+}
+
+
 function saveLegacyIntakeMediaFromHtml(payload) {
   payload = payload && typeof payload === 'object' ? payload : {};
 
@@ -113,11 +287,13 @@ function saveLegacyIntakeMediaFromHtml(payload) {
   var sourceKind = String(payload.sourceKind || '').toLowerCase();
 
   if (/^data:application\/pdf;base64,/i.test(fileData)) {
-    return saveLegacyIntakeFromHtml({
-      stayKey: payload.stayKey,
-      fileName: fileName,
-      fileData: fileData
-    });
+    return recoverTransientLegacyIntakeAiV11202_(
+      saveLegacyIntakeFromHtml({
+        stayKey: payload.stayKey,
+        fileName: fileName,
+        fileData: fileData
+      })
+    );
   }
 
   if (!/^data:image\//i.test(fileData)) {
@@ -137,6 +313,8 @@ function saveLegacyIntakeMediaFromHtml(payload) {
     fileName: pdfName,
     fileData: pdfData
   });
+
+  result = recoverTransientLegacyIntakeAiV11202_(result);
 
   var documentId = String(result && result.documentId || '').trim();
 
@@ -184,8 +362,13 @@ function saveLegacyIntakeMediaFromHtml(payload) {
 function verifyWaffleHouseLegacyIntakeMediaV11191() {
   return {
     result: 'success',
-    version: '11.1.91',
+    version: '11.2.02',
     supported: ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'],
-    imageFlow: 'image -> private PDF -> existing Gemini OCR -> review -> profile'
+    imageFlow: 'image -> private PDF -> existing Gemini OCR -> review -> profile',
+    transientAiRetry: {
+      automaticRetryDelaysMs: LEGACY_INTAKE_AI_RETRY_DELAYS_V11202_.slice(),
+      exhaustedStatus: 'Retry Needed',
+      manualRetryFunction: 'retryGeminiLegacyIntakeWithTransientRetryV11202'
+    }
   };
 }
