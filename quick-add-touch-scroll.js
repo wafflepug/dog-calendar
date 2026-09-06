@@ -124,11 +124,14 @@
 
   function prepareModal(modal) {
     if (!(modal instanceof HTMLElement) || !isMobile()) return;
-    modal.setAttribute('data-quick-add-modal', 'true');
-    modal.style.setProperty(
-      '--waffle-quick-add-scroll-clearance',
-      `${navClearance()}px`
-    );
+    if (modal.getAttribute('data-quick-add-modal') !== 'true') {
+      modal.setAttribute('data-quick-add-modal', 'true');
+    }
+
+    const clearance = `${navClearance()}px`;
+    if (modal.style.getPropertyValue('--waffle-quick-add-scroll-clearance') !== clearance) {
+      modal.style.setProperty('--waffle-quick-add-scroll-clearance', clearance);
+    }
     ensureSpacer(modal);
   }
 
