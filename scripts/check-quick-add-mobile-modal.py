@@ -6,6 +6,8 @@ ROOT = Path(__file__).resolve().parents[1]
 index = (ROOT / 'index.html').read_text(encoding='utf-8')
 runtime_css = (ROOT / 'waffle-runtime.css').read_text(encoding='utf-8')
 ui_js = (ROOT / 'waffle-ui.js').read_text(encoding='utf-8')
+bootstrap = (ROOT / 'waffle-bootstrap.js').read_text(encoding='utf-8')
+touch_scroll = (ROOT / 'quick-add-touch-scroll.js').read_text(encoding='utf-8')
 
 required_index = [
     'id="customBookingModal"',
@@ -30,6 +32,25 @@ for marker in required_css:
     if marker not in runtime_css:
         raise SystemExit(f'Missing mobile modal safety marker in waffle-runtime.css: {marker}')
 
+required_touch_scroll = [
+    'QUICK ADD TOUCH SCROLL',
+    '#customBookingModal',
+    '#potentialStayModal',
+    '[data-quick-add-modal]',
+    'overflow-y: auto !important',
+    '-webkit-overflow-scrolling: touch !important',
+    'touch-action: pan-y !important',
+    'padding-bottom: calc(104px + env(safe-area-inset-bottom)) !important',
+    'max-height: none !important',
+    'overflow: visible !important',
+]
+for marker in required_touch_scroll:
+    if marker not in touch_scroll:
+        raise SystemExit(f'Missing Quick Add touch-scroll marker: {marker}')
+
+if '"quick-add-touch-scroll.js"' not in bootstrap:
+    raise SystemExit('Quick Add touch-scroll module is not loaded by waffle-bootstrap.js')
+
 nav_match = re.search(r'#wh75MobileBottomNav\s*\{[^}]*?z-index:(\d+)', ui_js, re.S)
 if not nav_match:
     raise SystemExit('Could not resolve mobile bottom-nav z-index from waffle-ui.js')
@@ -43,4 +64,4 @@ modal_z = int(modal_match.group(1))
 if modal_z <= nav_z:
     raise SystemExit(f'Quick Add modal z-index ({modal_z}) must stay above mobile nav ({nav_z})')
 
-print(f'Quick Add mobile modal clearance OK: modal z={modal_z} > nav z={nav_z}')
+print(f'Quick Add mobile modal clearance + touch scroll OK: modal z={modal_z} > nav z={nav_z}')
