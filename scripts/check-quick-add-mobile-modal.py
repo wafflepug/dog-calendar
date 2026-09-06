@@ -59,7 +59,10 @@ required_touch_scroll = [
     'data-quick-add-scroll-spacer',
     '--waffle-quick-add-scroll-clearance',
     "document.getElementById('wh75MobileBottomNav')",
-    'Math.max(150, navHeight + 72)',
+    'const MIN_CLEARANCE = 180',
+    'visualViewportBottomGap',
+    'navHeight + browserGap + 64',
+    "window.addEventListener('orientationchange'",
 ]
 for marker in required_touch_scroll:
     if marker not in touch_scroll:
@@ -90,5 +93,5 @@ if runtime_modal_z <= nav_z:
 
 print(
     'Quick Add mobile modal clearance + touch scroll OK: '
-    f'New Boarding covered; runtime z={runtime_modal_z} > nav z={nav_z}'
+    f'New Boarding covered with measured >=180px spacer; runtime z={runtime_modal_z} > nav z={nav_z}'
 )
