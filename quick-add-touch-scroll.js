@@ -15,7 +15,7 @@
   'use strict';
   if (window.WAFFLE_QUICK_ADD_TOUCH_SCROLL) return;
 
-  const VERSION = '1.1.0';
+  const VERSION = '1.2.0';
   const STYLE_ID = 'waffleQuickAddTouchScrollStyle';
   const MODAL_SELECTOR = [
     '#customBookingModal',
@@ -25,6 +25,7 @@
   ].join(',');
   const PANEL_SELECTOR = ':scope > .modal-content-panel, :scope > .v108-modal-card';
   const SPACER_ATTR = 'data-quick-add-scroll-spacer';
+  const MIN_CLEARANCE = 180;
   let observer = null;
   let frame = 0;
 
@@ -36,10 +37,17 @@
     }
   }
 
+  function visualViewportBottomGap() {
+    const vv = window.visualViewport;
+    if (!vv) return 0;
+    return Math.max(0, window.innerHeight - (vv.height + vv.offsetTop));
+  }
+
   function navClearance() {
     const nav = document.getElementById('wh75MobileBottomNav');
     const navHeight = nav ? Math.ceil(nav.getBoundingClientRect().height || 0) : 0;
-    return Math.max(150, navHeight + 72);
+    const browserGap = Math.ceil(visualViewportBottomGap());
+    return Math.max(MIN_CLEARANCE, navHeight + browserGap + 64);
   }
 
   function installStyle() {
@@ -163,6 +171,7 @@
     prepareAll();
     startObserver();
     window.addEventListener('resize', schedulePrepare, { passive: true });
+    window.addEventListener('orientationchange', schedulePrepare, { passive: true });
     window.visualViewport?.addEventListener('resize', schedulePrepare, { passive: true });
     window.visualViewport?.addEventListener('scroll', schedulePrepare, { passive: true });
     window.addEventListener('pageshow', schedulePrepare);
