@@ -1,0 +1,33 @@
+name: Quick Add Mobile Modal
+
+on:
+  pull_request:
+    paths:
+      - 'index.html'
+      - 'waffle-runtime.css'
+      - 'waffle-ui.js'
+      - 'scripts/check-quick-add-mobile-modal.py'
+      - '.github/workflows/quick-add-mobile-modal.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'index.html'
+      - 'waffle-runtime.css'
+      - 'waffle-ui.js'
+      - 'scripts/check-quick-add-mobile-modal.py'
+      - '.github/workflows/quick-add-mobile-modal.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  mobile-modal-clearance:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate Quick Add mobile modal clearance
+        run: |
+          set -euo pipefail
+          python3 scripts/check-quick-add-mobile-modal.py
