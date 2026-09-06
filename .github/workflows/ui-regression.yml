@@ -1,0 +1,80 @@
+name: Cross-device UI Regression
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'playwright.ui.config.js'
+      - 'tests/ui-regression.spec.js'
+      - 'scripts/summarize-ui-regression.js'
+      - '.github/workflows/ui-regression.yml'
+  push:
+    branches: [main]
+    paths:
+      - '*.html'
+      - '*.css'
+      - '*.js'
+      - 'playwright.ui.config.js'
+      - 'tests/ui-regression.spec.js'
+      - 'scripts/summarize-ui-regression.js'
+      - '.github/workflows/ui-regression.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cross-device-ui-regression-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ui-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Playwright and browser engines
+        run: |
+          set -euo pipefail
+          npm init -y >/dev/null 2>&1
+          npm install --save-dev @playwright/test@1.55.0 >/dev/null
+          npx playwright install --with-deps chromium firefox webkit
+
+      - name: Run cross-device UI placement regression
+        id: ui
+        env:
+          WAFFLE_BASE_URL: https://wafflepug.github.io/dog-calendar
+        run: |
+          set +e
+          npx playwright test --config=playwright.ui.config.js
+          test_exit=$?
+          set -e
+          echo "test_exit=$test_exit" >> "$GITHUB_OUTPUT"
+          node scripts/summarize-ui-regression.js
+          exit 0
+
+      - name: Upload UI regression report and failure evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cross-device-ui-regression-${{ github.run_id }}
+          if-no-files-found: warn
+          retention-days: 14
+          path: |
+            ui-regression-report.json
+            ui-regression-summary.md
+            playwright-report/
+            test-results/
+
+      - name: Fail workflow when UI regression fails
+        if: steps.ui.outputs.test_exit != '0'
+        run: |
+          echo "One or more cross-device UI regression checks failed. See ui-regression-summary.md and the Playwright artifact for explanations, screenshots, traces and video."
+          exit 1
