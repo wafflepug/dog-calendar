@@ -40,7 +40,8 @@
       "waffle-v11.1.99.js",
       "waffle-v11.1.94.js",
       "waffle-v11.2.01.js",
-      "waffle-sitter-navigation.js"
+      "waffle-sitter-navigation.js",
+      "quick-add-touch-scroll.js"
 ];
   const maintenanceUrl = new URL('maintenance.html', window.location.href);
   let buildBanner = null;
