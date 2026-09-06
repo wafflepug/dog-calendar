@@ -6,6 +6,8 @@ on:
       - 'index.html'
       - 'waffle-runtime.css'
       - 'waffle-ui.js'
+      - 'waffle-bootstrap.js'
+      - 'quick-add-touch-scroll.js'
       - 'scripts/check-quick-add-mobile-modal.py'
       - '.github/workflows/quick-add-mobile-modal.yml'
   push:
@@ -14,6 +16,8 @@ on:
       - 'index.html'
       - 'waffle-runtime.css'
       - 'waffle-ui.js'
+      - 'waffle-bootstrap.js'
+      - 'quick-add-touch-scroll.js'
       - 'scripts/check-quick-add-mobile-modal.py'
       - '.github/workflows/quick-add-mobile-modal.yml'
 
@@ -27,7 +31,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Validate Quick Add mobile modal clearance
+      - name: Validate Quick Add mobile modal clearance and touch scroll
         run: |
           set -euo pipefail
+          node --check quick-add-touch-scroll.js
           python3 scripts/check-quick-add-mobile-modal.py
