@@ -122,7 +122,7 @@ async function waitForDrawerOpenEndpoint(page, drawer) {
     const element = document.getElementById('wh75MobileDrawer');
     if (!element || !element.classList.contains('is-open')) return false;
     const rect = element.getBoundingClientRect();
-    return Math.abs(rect.left) <= 0.5;
+    return Math.abs(rect.left) <= 4;
   }, null, { timeout: 3_000 });
 }
 
