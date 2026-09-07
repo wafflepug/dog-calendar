@@ -40,6 +40,7 @@
       "waffle-v11.1.99.js",
       "waffle-v11.1.94.js",
       "waffle-v11.2.01.js",
+      "waffle-responsive-layout.js",
       "waffle-sitter-navigation.js",
       "quick-add-touch-scroll.js"
 ];
@@ -148,7 +149,11 @@
 
     function clean() {
       if (timer) clearTimeout(timer);
-      try { delete window[callbackName]; } catch (_) { window[callbackName] = undefined; }
+      // Keep a harmless callback alive for the lifetime of this page. WebKit can
+      // still execute a queued JSONP response after the script element has been
+      // removed; deleting the callback here turns that benign late response into
+      // an uncaught ReferenceError.
+      window[callbackName] = () => {};
       script.remove();
     }
 
