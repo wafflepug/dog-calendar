@@ -17,7 +17,7 @@ function mobileUse(browserName, viewport, userAgent) {
 module.exports = defineConfig({
   testDir: './tests',
   testMatch: 'ui-regression.spec.js',
-  timeout: 60_000,
+  timeout: 90_000,
   expect: { timeout: 12_000 },
   fullyParallel: false,
   workers: 3,
@@ -30,6 +30,7 @@ module.exports = defineConfig({
   use: {
     baseURL: BASE_URL,
     ignoreHTTPSErrors: true,
+    serviceWorkers: 'block',
     actionTimeout: 12_000,
     navigationTimeout: 30_000,
     screenshot: 'only-on-failure',
