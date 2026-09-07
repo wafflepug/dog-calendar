@@ -121,19 +121,8 @@ async function waitForDrawerOpenEndpoint(page, drawer) {
   await page.waitForFunction(() => {
     const element = document.getElementById('wh75MobileDrawer');
     if (!element || !element.classList.contains('is-open')) return false;
-    const transform = getComputedStyle(element).transform;
-    if (!transform || transform === 'none') return true;
-
-    try {
-      const matrix = new DOMMatrixReadOnly(transform);
-      return Math.abs(Number(matrix.m41 || 0)) <= 0.5;
-    } catch (_) {
-      const match = transform.match(/^matrix\(([^)]+)\)$/);
-      if (!match) return false;
-      const parts = match[1].split(',').map(value => Number(value.trim()));
-      const translateX = parts[4];
-      return Number.isFinite(translateX) && Math.abs(translateX) <= 0.5;
-    }
+    const rect = element.getBoundingClientRect();
+    return Math.abs(rect.left) <= 0.5;
   }, null, { timeout: 3_000 });
 }
 
