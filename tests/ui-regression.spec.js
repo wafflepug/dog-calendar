@@ -1,10 +1,10 @@
 const { test, expect } = require('@playwright/test');
 
 const PAGES = [
-  ['index.html', 'WAFFLE_CALENDAR_CANONICAL', 'Calendar / Today'],
-  ['directory.html', 'WAFFLE_CARE_CANONICAL', 'Care'],
-  ['reminders.html', 'WAFFLE_ORGANISER_CANONICAL', 'Organiser / Reminders'],
-  ['audit.html', 'WAFFLE_LOGS_CANONICAL', 'Logs / Audit']
+  ['index.html', 'calendar', 'Calendar / Today'],
+  ['directory.html', 'directory', 'Care'],
+  ['reminders.html', 'reminders', 'Organiser / Reminders'],
+  ['audit.html', 'audit', 'Logs / Audit']
 ];
 
 function record(failures, condition, message) {
@@ -21,15 +21,45 @@ function collectPageErrors(page) {
   return errors;
 }
 
-async function gotoCanonical(page, path, marker) {
-  await page.goto(`${path}${path.includes('?') ? '&' : '?'}uiRegression=${Date.now()}`, { waitUntil: 'domcontentloaded' });
+async function gotoCanonical(page, path, expectedPage) {
+  const separator = path.includes('?') ? '&' : '?';
+  const response = await page.goto(`${path}${separator}uiRegression=${Date.now()}`, { waitUntil: 'domcontentloaded' });
+
   if (/maintenance\.html/i.test(page.url())) {
-    test.skip(true, 'Production is in maintenance mode; placement assertions are intentionally skipped.');
+    test.skip(true, 'The tested build redirected to maintenance mode; placement assertions are intentionally skipped.');
   }
-  await page.waitForFunction(name => Boolean(window[name]), marker, { timeout: 20_000 });
-  await page.waitForFunction(() => Boolean(window.WAFFLE_UI_CANONICAL), null, { timeout: 20_000 });
-  await page.waitForFunction(() => Boolean(window.WAFFLE_AI_CANONICAL), null, { timeout: 20_000 });
-  await page.waitForTimeout(500);
+
+  if (!response || !response.ok()) {
+    throw new Error(`Unable to load ${path}: HTTP ${response ? response.status() : 'no response'} at ${page.url()}.`);
+  }
+
+  try {
+    await page.waitForFunction(
+      pageName => Boolean(
+        document.body
+        && document.body.dataset.wafflePage === pageName
+        && window.WAFFLE_UI_CANONICAL
+        && window.WAFFLE_AI_CANONICAL
+        && document.querySelector('.container')
+      ),
+      expectedPage,
+      { timeout: 20_000 }
+    );
+  } catch (error) {
+    const diagnostics = await page.evaluate(() => ({
+      url: location.href,
+      readyState: document.readyState,
+      bodyPage: document.body?.dataset?.wafflePage || null,
+      hasContainer: Boolean(document.querySelector('.container')),
+      hasUiCanonical: Boolean(window.WAFFLE_UI_CANONICAL),
+      hasAiCanonical: Boolean(window.WAFFLE_AI_CANONICAL),
+      bootstrapLoaded: Array.from(document.scripts).some(script => /waffle-bootstrap\.js/i.test(script.src)),
+      loadedScripts: Array.from(document.scripts).map(script => script.src).filter(Boolean).slice(-12)
+    }));
+    throw new Error(`Canonical UI did not become ready for ${expectedPage}: ${JSON.stringify(diagnostics)}. ${error.message}`);
+  }
+
+  await page.waitForTimeout(350);
 }
 
 async function box(locator) {
@@ -63,8 +93,8 @@ test('canonical pages keep the primary UI inside the viewport', async ({ page },
   const viewport = page.viewportSize();
   const mobileShell = testInfo.project.metadata.mobileShell === true;
 
-  for (const [path, marker, label] of PAGES) {
-    await gotoCanonical(page, path, marker);
+  for (const [path, expectedPage, label] of PAGES) {
+    await gotoCanonical(page, path, expectedPage);
 
     const overflow = await horizontalOverflow(page);
     record(
@@ -125,7 +155,7 @@ test('mobile shell navigation, drawer and Add sheet are placed without clipping 
   const failures = [];
   const errors = collectPageErrors(page);
   const viewport = page.viewportSize();
-  await gotoCanonical(page, 'index.html', 'WAFFLE_CALENDAR_CANONICAL');
+  await gotoCanonical(page, 'index.html', 'calendar');
 
   const nav = page.locator('#wh75MobileBottomNav');
   const navBox = await box(nav);
@@ -201,7 +231,7 @@ test('New Boarding action can always be scrolled fully above fixed mobile naviga
   const failures = [];
   const errors = collectPageErrors(page);
   const viewport = page.viewportSize();
-  await gotoCanonical(page, 'index.html?action=boarding', 'WAFFLE_CALENDAR_CANONICAL');
+  await gotoCanonical(page, 'index.html?action=boarding', 'calendar');
 
   const modal = page.locator('#v108BoardingModal');
   await expect(modal).toBeVisible({ timeout: 12_000 });
