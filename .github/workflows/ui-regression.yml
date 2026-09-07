@@ -4,6 +4,9 @@ on:
   workflow_dispatch:
   pull_request:
     paths:
+      - '*.html'
+      - '*.css'
+      - '*.js'
       - 'playwright.ui.config.js'
       - 'tests/ui-regression.spec.js'
       - 'scripts/summarize-ui-regression.js'
@@ -50,8 +53,27 @@ jobs:
       - name: Run cross-device UI placement regression
         id: ui
         env:
-          WAFFLE_BASE_URL: https://wafflepug.github.io/dog-calendar
+          WAFFLE_BASE_URL: http://127.0.0.1:4173
         run: |
+          set -euo pipefail
+          python3 -m http.server 4173 --bind 127.0.0.1 > /tmp/waffle-ui-server.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+
+          ready=0
+          for attempt in {1..30}; do
+            if curl --fail --silent --show-error http://127.0.0.1:4173/index.html >/dev/null; then
+              ready=1
+              break
+            fi
+            sleep 1
+          done
+          if [ "$ready" -ne 1 ]; then
+            echo "Local UI server did not become ready."
+            cat /tmp/waffle-ui-server.log || true
+            exit 1
+          fi
+
           set +e
           npx playwright test --config=playwright.ui.config.js
           test_exit=$?
