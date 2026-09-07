@@ -11,6 +11,15 @@ const LOCAL_BUILD = /^https?:\/\/(?:127\.0\.0\.1|localhost)(?::|\/)/i.test(
   String(process.env.WAFFLE_BASE_URL || '')
 );
 
+test.beforeEach(async ({ page }) => {
+  if (!LOCAL_BUILD) return;
+  await page.route('**/waffle-build.json*', route => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: '{"build":""}'
+  }));
+});
+
 function record(failures, condition, message) {
   if (!condition) failures.push(message);
 }
@@ -105,6 +114,27 @@ async function horizontalOverflow(page) {
     htmlWidth: document.documentElement.scrollWidth,
     viewportWidth: document.documentElement.clientWidth
   }));
+}
+
+async function waitForDrawerOpenEndpoint(page, drawer) {
+  await expect(drawer).toHaveClass(/is-open/);
+  await page.waitForFunction(() => {
+    const element = document.getElementById('wh75MobileDrawer');
+    if (!element || !element.classList.contains('is-open')) return false;
+    const transform = getComputedStyle(element).transform;
+    if (!transform || transform === 'none') return true;
+
+    try {
+      const matrix = new DOMMatrixReadOnly(transform);
+      return Math.abs(Number(matrix.m41 || 0)) <= 0.5;
+    } catch (_) {
+      const match = transform.match(/^matrix\(([^)]+)\)$/);
+      if (!match) return false;
+      const parts = match[1].split(',').map(value => Number(value.trim()));
+      const translateX = parts[4];
+      return Number.isFinite(translateX) && Math.abs(translateX) <= 0.5;
+    }
+  }, null, { timeout: 3_000 });
 }
 
 test('canonical pages keep the primary UI inside the viewport', async ({ page }, testInfo) => {
@@ -225,12 +255,15 @@ test('mobile shell navigation, drawer and Add sheet are placed without clipping 
   const menu = page.locator('#wh75MenuButton');
   await menu.click();
   const drawer = page.locator('#wh75MobileDrawer');
-  await expect(drawer).toHaveClass(/is-open/);
-  await page.waitForTimeout(200);
+  await waitForDrawerOpenEndpoint(page, drawer);
   const drawerBox = await box(drawer);
   record(failures, !!drawerBox, 'Mobile drawer did not become visible after tapping the menu button.');
   if (drawerBox) {
-    record(failures, withinViewport(drawerBox, viewport, 4), 'Open mobile drawer extends outside the viewport.');
+    record(
+      failures,
+      withinViewport(drawerBox, viewport, 4),
+      `Open mobile drawer extends outside the viewport (x=${drawerBox.x.toFixed(1)}, y=${drawerBox.y.toFixed(1)}, width=${drawerBox.width.toFixed(1)}, height=${drawerBox.height.toFixed(1)}, viewport=${viewport.width}x${viewport.height}).`
+    );
   }
 
   const closeDrawer = drawer.locator('.wh75-drawer-close');
