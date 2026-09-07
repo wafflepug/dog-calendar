@@ -42,6 +42,7 @@
       "waffle-v11.2.01.js",
       "waffle-responsive-layout.js",
       "waffle-sitter-navigation.js",
+      "desktop-home-sidebar.js",
       "quick-add-touch-scroll.js"
 ];
   const maintenanceUrl = new URL('maintenance.html', window.location.href);
