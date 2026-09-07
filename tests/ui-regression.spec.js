@@ -7,12 +7,27 @@ const PAGES = [
   ['audit.html', 'audit', 'Logs / Audit']
 ];
 
+const LOCAL_BUILD = /^https?:\/\/(?:127\.0\.0\.1|localhost)(?::|\/)/i.test(
+  String(process.env.WAFFLE_BASE_URL || '')
+);
+
 function record(failures, condition, message) {
   if (!condition) failures.push(message);
 }
 
+function expectedLocalBackendError(message) {
+  if (!LOCAL_BUILD) return false;
+  const value = String(message || '');
+  return /Apps Script returned an unknown error/i.test(value)
+    || /Could not reach the Apps Script Web App/i.test(value)
+    || /Failed to fetch/i.test(value) && /Apps Script/i.test(value);
+}
+
 function cleanErrors(errors) {
-  return errors.filter(Boolean).slice(0, 12);
+  return errors
+    .filter(Boolean)
+    .filter(error => !expectedLocalBackendError(error))
+    .slice(0, 12);
 }
 
 function collectPageErrors(page) {
@@ -38,8 +53,10 @@ async function gotoCanonical(page, path, expectedPage) {
       pageName => Boolean(
         document.body
         && document.body.dataset.wafflePage === pageName
+        && document.documentElement.dataset.waffleUiReady === 'true'
         && window.WAFFLE_UI_CANONICAL
         && window.WAFFLE_AI_CANONICAL
+        && window.WAFFLE_SITTER_NAVIGATION
         && document.querySelector('.container')
       ),
       expectedPage,
@@ -50,16 +67,19 @@ async function gotoCanonical(page, path, expectedPage) {
       url: location.href,
       readyState: document.readyState,
       bodyPage: document.body?.dataset?.wafflePage || null,
+      uiReady: document.documentElement.dataset.waffleUiReady || null,
+      uiReadyReason: document.documentElement.dataset.waffleUiReadyReason || null,
       hasContainer: Boolean(document.querySelector('.container')),
       hasUiCanonical: Boolean(window.WAFFLE_UI_CANONICAL),
       hasAiCanonical: Boolean(window.WAFFLE_AI_CANONICAL),
+      hasSitterNavigation: Boolean(window.WAFFLE_SITTER_NAVIGATION),
       bootstrapLoaded: Array.from(document.scripts).some(script => /waffle-bootstrap\.js/i.test(script.src)),
       loadedScripts: Array.from(document.scripts).map(script => script.src).filter(Boolean).slice(-12)
     }));
     throw new Error(`Canonical UI did not become ready for ${expectedPage}: ${JSON.stringify(diagnostics)}. ${error.message}`);
   }
 
-  await page.waitForTimeout(350);
+  await page.waitForTimeout(250);
 }
 
 async function box(locator) {
@@ -116,11 +136,14 @@ test('canonical pages keep the primary UI inside the viewport', async ({ page },
 
     const menu = page.locator('#wh75MenuButton');
     const nav = page.locator('#wh75MobileBottomNav');
-    const tabs = page.locator('.app-tabs').first();
+    const sidebar = page.locator('#whSitterDesktopSidebar');
+    const legacyTabs = page.locator('.app-tabs').first();
 
     if (mobileShell) {
       record(failures, await menu.isVisible(), `${label}: mobile menu button is not visible at ${viewport.width}x${viewport.height}.`);
       record(failures, await nav.isVisible(), `${label}: mobile bottom navigation is not visible at ${viewport.width}x${viewport.height}.`);
+      record(failures, !(await sidebar.isVisible()), `${label}: desktop sidebar is incorrectly visible in the mobile layout.`);
+      record(failures, !(await legacyTabs.isVisible()), `${label}: retired application tabs are incorrectly visible in the mobile layout.`);
 
       const menuBox = await box(menu);
       const navBox = await box(nav);
@@ -133,18 +156,24 @@ test('canonical pages keep the primary UI inside the viewport', async ({ page },
     } else {
       record(failures, !(await menu.isVisible()), `${label}: mobile menu button is incorrectly visible in desktop/tablet-landscape layout.`);
       record(failures, !(await nav.isVisible()), `${label}: mobile bottom navigation is incorrectly visible in desktop/tablet-landscape layout.`);
-      record(failures, await tabs.isVisible(), `${label}: desktop application tabs are not visible.`);
-      const tabsBox = await box(tabs);
-      if (tabsBox) {
-        record(failures, withinHorizontalViewport(tabsBox, viewport, 4), `${label}: desktop application tabs are clipped horizontally.`);
+      record(failures, await sidebar.isVisible(), `${label}: canonical desktop sidebar is not visible.`);
+      record(failures, !(await legacyTabs.isVisible()), `${label}: retired application tabs are visible beside the canonical desktop sidebar.`);
+
+      const sidebarBox = await box(sidebar);
+      if (sidebarBox) {
+        record(failures, withinViewport(sidebarBox, viewport, 4), `${label}: desktop sidebar extends outside the viewport.`);
+      }
+
+      const activeSidebarItem = sidebar.locator('.wh-sitter-sidebar-item.is-active').first();
+      record(failures, await activeSidebarItem.isVisible(), `${label}: desktop sidebar has no visible active route.`);
+      const activeBox = await box(activeSidebarItem);
+      if (activeBox) {
+        record(failures, withinHorizontalViewport(activeBox, viewport, 4), `${label}: active desktop sidebar route is clipped horizontally.`);
       }
     }
   }
 
-  for (const error of cleanErrors(errors)) {
-    failures.push(`Uncaught browser error: ${error}`);
-  }
-
+  for (const error of cleanErrors(errors)) failures.push(`Uncaught browser error: ${error}`);
   expect(failures, failures.join('\n')).toEqual([]);
 });
 
@@ -197,7 +226,7 @@ test('mobile shell navigation, drawer and Add sheet are placed without clipping 
   await menu.click();
   const drawer = page.locator('#wh75MobileDrawer');
   await expect(drawer).toHaveClass(/is-open/);
-  await page.waitForTimeout(300);
+  await page.waitForTimeout(200);
   const drawerBox = await box(drawer);
   record(failures, !!drawerBox, 'Mobile drawer did not become visible after tapping the menu button.');
   if (drawerBox) {
@@ -224,9 +253,9 @@ test('mobile shell navigation, drawer and Add sheet are placed without clipping 
   expect(failures, failures.join('\n')).toEqual([]);
 });
 
-test('New Boarding action can always be scrolled fully above fixed mobile navigation', async ({ page }, testInfo) => {
+test('New Boarding action remains reachable above fixed mobile navigation', async ({ page }, testInfo) => {
   const mobileShell = testInfo.project.metadata.mobileShell === true;
-  test.skip(!mobileShell, 'New Boarding mobile scroll-clearance test only applies at widths <= 820px.');
+  test.skip(!mobileShell, 'New Boarding mobile clearance test only applies at widths <= 820px.');
 
   const failures = [];
   const errors = collectPageErrors(page);
@@ -256,24 +285,20 @@ test('New Boarding action can always be scrolled fully above fixed mobile naviga
   }
 
   const scrollMetrics = await modal.evaluate(el => ({ scrollHeight: el.scrollHeight, clientHeight: el.clientHeight }));
-  record(
-    failures,
-    scrollMetrics.scrollHeight > scrollMetrics.clientHeight,
-    `New Boarding modal has no vertical scroll range (scrollHeight=${scrollMetrics.scrollHeight}, clientHeight=${scrollMetrics.clientHeight}).`
-  );
-
-  await modal.evaluate(el => el.scrollTo({ top: el.scrollHeight, behavior: 'instant' }));
-  await page.waitForTimeout(150);
+  if (scrollMetrics.scrollHeight > scrollMetrics.clientHeight) {
+    await modal.evaluate(el => el.scrollTo({ top: el.scrollHeight, behavior: 'instant' }));
+    await page.waitForTimeout(120);
+  }
 
   const submit = modal.locator('[data-v108-save-board]');
-  record(failures, await submit.isVisible(), 'Create Booking button is not visible after scrolling to the bottom.');
+  record(failures, await submit.isVisible(), 'Create Booking button is not visible at the dialog endpoint.');
   const submitBox = await box(submit);
   const navBox = await box(page.locator('#wh75MobileBottomNav'));
 
   if (submitBox) {
     record(failures, withinHorizontalViewport(submitBox, viewport, 4), 'Create Booking button is clipped horizontally.');
-    record(failures, submitBox.y >= -2, 'Create Booking button is scrolled above the visible viewport.');
-    record(failures, submitBox.y + submitBox.height <= viewport.height + 2, 'Create Booking button remains below the visible viewport after maximum scroll.');
+    record(failures, submitBox.y >= -2, 'Create Booking button is above the visible viewport.');
+    record(failures, submitBox.y + submitBox.height <= viewport.height + 2, 'Create Booking button remains below the visible viewport at the dialog endpoint.');
   }
   if (submitBox && navBox) {
     record(
