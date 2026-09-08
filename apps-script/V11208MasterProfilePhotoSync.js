@@ -1,15 +1,19 @@
 /* ============================================================
- * WAFFLE HOUSE V11.2.09 — MASTER PROFILE PHOTO SYNC
+ * WAFFLE HOUSE V11.2.10 — MASTER PROFILE PHOTO SYNC
  * ------------------------------------------------------------
- * Keeps the stay/master photo lifecycle in sync in both directions:
+ * Keeps the stay/master photo lifecycle in sync without adding a second
+ * expensive post-save pass:
  *   1) an empty upcoming stay can inherit the matching persisted master photo;
- *   2) a stay-specific photo still wins and can be synced back to the master.
+ *   2) the existing V11 master save then persists that exact stay photo back
+ *      to the master as part of its normal single save pass;
+ *   3) a stay-specific photo still wins and is never overwritten.
  *
  * The same Google Drive photo references are reused; no duplicate image is
- * created and an existing stay profile photo is never overwritten.
+ * created. The single-pass flow avoids the frontend POST timeout caused by the
+ * redundant V11.2.09 rescan/write/audit/reload cycle.
  * ============================================================ */
 
-var MASTER_PROFILE_PHOTO_SYNC_VERSION_V11208_ = '11.2.09';
+var MASTER_PROFILE_PHOTO_SYNC_VERSION_V11208_ = '11.2.10';
 var waffleSaveDogMasterProfileBaseV11208_ = saveDogMasterProfile_;
 
 function dogMasterPhotoCandidateV11208_(record) {
@@ -111,24 +115,6 @@ function seedDogStayPhotoFromMasterV11208_(data, persistedMaster) {
 
   touchWaffleDataVersion_('directory');
 
-  logAuditEvent_({
-    category: 'Care',
-    action: 'Master Dog Photo Applied to Stay',
-    dogName: String(data.dogName || persistedMaster.dogName || '').trim(),
-    bookingType: 'Dog Master',
-    reference: stayKey,
-    summary: 'The saved master profile photo was applied to the photo-empty stay for ' +
-      String(data.dogName || persistedMaster.dogName || 'this dog').trim() + '.',
-    changedFields: ['Stay Profile Photo', 'Stay Profile Photo Gallery'],
-    after: {
-      stayKey: stayKey,
-      masterKey: String(persistedMaster.masterKey || '').trim(),
-      photoId: String(primary.id || ''),
-      galleryCount: gallery.length
-    },
-    source: 'Web App'
-  });
-
   return {
     applied: true,
     reason: 'master-photo-applied',
@@ -137,6 +123,11 @@ function seedDogStayPhotoFromMasterV11208_(data, persistedMaster) {
   };
 }
 
+/*
+ * Retained for backwards-compatible diagnostics/manual repair only.
+ * The normal save path no longer calls this function: the base V11 save
+ * already reads the exact stay record and persists its primary/gallery photo.
+ */
 function resolveDogMasterPhotoSourceV11208_(data) {
   data = data && typeof data === 'object' ? data : {};
 
@@ -260,9 +251,13 @@ function syncDogMasterPhotoFromStayV11208_(data, savedMaster) {
  * Wrap the existing master-save function rather than replacing its profile,
  * risk-flag, owner/contact, history or audit behavior.
  *
- * For an already-saved master profile, seed a photo-empty upcoming stay first.
- * The existing stay -> master pass then sees the exact stay photo and keeps
- * both sides on the same image reference. Existing stay photos are untouched.
+ * If a matching persisted master already exists, first seed a photo-empty stay
+ * from that master. The base V11 save then reads that exact stay record and
+ * writes the same photo/gallery to Dog_Master in its normal save pass.
+ *
+ * V11.2.09 called syncDogMasterPhotoFromStayV11208_() after the base save,
+ * causing a second full belongings scan plus another master write, audit and
+ * reload. That redundant work could exceed the client's 15-second POST window.
  */
 saveDogMasterProfile_ = function(data) {
   data = data && typeof data === 'object' ? data : {};
@@ -279,21 +274,23 @@ saveDogMasterProfile_ = function(data) {
 
   var stayPhotoSync = seedDogStayPhotoFromMasterV11208_(data, persistedMaster);
   var savedMaster = waffleSaveDogMasterProfileBaseV11208_(data);
-  var refreshedMaster = syncDogMasterPhotoFromStayV11208_(data, savedMaster);
 
-  if (refreshedMaster && typeof refreshedMaster === 'object') {
-    refreshedMaster.stayPhotoSync = stayPhotoSync;
+  if (savedMaster && typeof savedMaster === 'object') {
+    savedMaster.stayPhotoSync = stayPhotoSync;
+    savedMaster.photoSyncVersion = MASTER_PROFILE_PHOTO_SYNC_VERSION_V11208_;
+    savedMaster.photoSourceStayKey = String(data.stayKey || '').trim();
   }
 
-  return refreshedMaster;
+  return savedMaster;
 };
 
 function getMasterProfilePhotoSyncHealthV11208() {
   return {
     result: 'success',
     version: MASTER_PROFILE_PHOTO_SYNC_VERSION_V11208_,
-    behavior: 'round-trip-photo-sync-master-seeds-empty-stay',
+    behavior: 'single-pass-master-seeds-empty-stay',
     preservesExistingStayPhoto: true,
+    avoidsRedundantPostSaveResync: true,
     duplicatesDriveFile: false
   };
 }
