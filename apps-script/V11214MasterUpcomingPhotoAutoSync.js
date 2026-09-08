@@ -1,16 +1,17 @@
 /* ============================================================
- * WAFFLE HOUSE V11.2.14 — MASTER PHOTO -> UPCOMING STAYS
+ * WAFFLE HOUSE V11.2.15 — MASTER PHOTO -> UPCOMING STAYS
  * ------------------------------------------------------------
  * Makes the persisted Dog Master photo the automatic photo source for
  * matching upcoming stays when those stays do not already have a usable
  * stay-specific photo.
  *
  * Matching uses the canonical Dog Master identity (dog name + breed).
- * Existing usable stay photos always win. Google Drive references are reused;
- * no image file is copied or duplicated.
+ * Stay discovery uses the same Form_Responses schema and generated stay key
+ * as the live Guest Directory. Existing usable stay photos always win.
+ * Google Drive references are reused; no image file is copied or duplicated.
  * ============================================================ */
 
-var MASTER_UPCOMING_PHOTO_AUTO_SYNC_VERSION_V11214_ = '11.2.14';
+var MASTER_UPCOMING_PHOTO_AUTO_SYNC_VERSION_V11214_ = '11.2.15';
 var waffleProcessSheetActionBaseV11214_ = processSheetAction_;
 var waffleSaveDogMasterProfileBaseV11214_ = saveDogMasterProfile_;
 
@@ -52,6 +53,7 @@ function isUpcomingMasterPhotoStayV11214_(startDate, bookingType) {
   var type = String(bookingType || '').trim().toLowerCase();
   if (
     type === 'potential' ||
+    type === 'potential stay' ||
     type === 'meet & greet' ||
     type === 'meet and greet'
   ) {
@@ -160,18 +162,26 @@ function syncDogMasterPhotosToUpcomingStaysV11214_(data) {
   }
 
   /*
-   * Form_Responses columns used here:
-   * 2 dog name, 3 breed, 4 start, 5 end, 6 type, 15 stay key.
+   * Keep this aligned with getGuestDirectoryPayload_ in Code.js:
+   * Form_Responses columns 2 dog name, 3 breed, 4 start, 5 end,
+   * and 12 booking type. A stay key is generated from dog name + dates;
+   * there is no authoritative stored stay-key column on Form_Responses.
    */
-  var rows = boardingSheet.getRange(2, 1, lastRow - 1, 15).getValues();
+  var rows = boardingSheet.getRange(2, 1, lastRow - 1, 12).getValues();
   var stays = [];
 
   rows.forEach(function(row) {
     var dogName = String(row[1] || '').trim();
     var breed = String(row[2] || '').trim();
-    var stayKey = String(row[14] || '').trim();
-    if (!dogName || !stayKey) return;
-    if (!isUpcomingMasterPhotoStayV11214_(row[3], row[5])) return;
+    var startDate = normalizeDateValue_(row[3]);
+    var endDate = normalizeDateValue_(row[4] || row[3]);
+    var bookingType = String(row[11] || 'Boarding').trim();
+
+    if (!dogName || !startDate || !endDate) return;
+    if (!isUpcomingMasterPhotoStayV11214_(startDate, bookingType)) return;
+
+    var stayKey = makeGuestStayKey_(dogName, startDate, endDate);
+    if (!stayKey) return;
 
     var masterKey = makeDogMasterKey_(dogName, breed);
     if (filterEnabled && !masterFilter[masterKey]) return;
@@ -181,8 +191,8 @@ function syncDogMasterPhotosToUpcomingStaysV11214_(data) {
       dogName: dogName,
       breed: breed,
       masterKey: masterKey,
-      startDate: normalizeDateValue_(row[3]),
-      endDate: normalizeDateValue_(row[4])
+      startDate: startDate,
+      endDate: endDate
     });
   });
 
@@ -238,6 +248,9 @@ function syncDogMasterPhotosToUpcomingStaysV11214_(data) {
     result: 'success',
     version: MASTER_UPCOMING_PHOTO_AUTO_SYNC_VERSION_V11214_,
     behavior: 'master-photo-auto-inherits-to-photo-empty-upcoming-stays',
+    stayKeySource: 'makeGuestStayKey_(dogName,startDate,endDate)',
+    boardingSchema: 'guest-directory-canonical',
+    eligibleStayCount: stays.length,
     updatedCount: updates.length,
     skippedExistingCount: skippedExistingCount,
     missingMasterPhotoCount: missingMasterPhotoCount,
@@ -286,6 +299,8 @@ function getMasterUpcomingPhotoAutoSyncHealthV11214() {
     result: 'success',
     version: MASTER_UPCOMING_PHOTO_AUTO_SYNC_VERSION_V11214_,
     matchIdentity: 'dog-name-and-breed',
+    stayKeySource: 'makeGuestStayKey_(dogName,startDate,endDate)',
+    boardingSchema: 'guest-directory-canonical',
     upcomingOnly: true,
     sameDayIncluded: true,
     preservesExistingStayPhoto: true,
