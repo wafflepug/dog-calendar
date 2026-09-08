@@ -1,38 +1,99 @@
 /* ============================================================
- * WAFFLE HOUSE V11.2.12 — MASTER PROFILE PHOTO SYNC
+ * WAFFLE HOUSE V11.2.13 — MASTER PROFILE PHOTO SYNC
  * ------------------------------------------------------------
  * Keeps the stay/master photo lifecycle in sync while repairing the case
- * where the newest stay is photo-empty but an older matching stay has a
- * valid profile photo:
- *   1) run the existing V11 master save once;
- *   2) if that save still has no master photo, recover the newest
- *      photo-bearing stay for the same dog and patch only the master photo
- *      columns (no second full master-save pass);
- *   3) seed the selected/upcoming stay only when it is photo-empty;
- *   4) preserve any stay-specific photo that already exists.
+ * where stored photo JSON exists but does not contain a usable image URL.
+ *
+ * A photo now counts as present only when it can actually be rendered by the
+ * web UI. Legacy records that contain only a Google Drive file id are repaired
+ * in memory with a Drive thumbnail URL, and stale/empty placeholder objects no
+ * longer prevent recovery from an older photo-bearing stay.
  *
  * The same Google Drive photo references are reused; no duplicate image is
- * created. This fixes the V11.2.11 logic hole where base master derivation
- * selected the newest matching stay even when that stay had no photo.
+ * created.
  * ============================================================ */
 
-var MASTER_PROFILE_PHOTO_SYNC_VERSION_V11208_ = '11.2.12';
+var MASTER_PROFILE_PHOTO_SYNC_VERSION_V11208_ = '11.2.13';
 var waffleSaveDogMasterProfileBaseV11208_ = saveDogMasterProfile_;
+
+function extractDogPhotoDriveIdV11208_(photo) {
+  photo = photo && typeof photo === 'object' ? photo : null;
+  if (!photo) return '';
+
+  var direct = String(
+    photo.id || photo.fileId || photo.driveFileId || photo.driveId || ''
+  ).trim();
+  if (direct) return direct;
+
+  var urls = [photo.previewUrl, photo.url, photo.driveUrl];
+  for (var i = 0; i < urls.length; i++) {
+    var value = String(urls[i] || '').trim();
+    if (!value) continue;
+
+    var byPath = value.match(/\/d\/([A-Za-z0-9_-]+)/);
+    if (byPath && byPath[1]) return byPath[1];
+
+    var byQuery = value.match(/[?&]id=([A-Za-z0-9_-]+)/);
+    if (byQuery && byQuery[1]) return byQuery[1];
+  }
+
+  return '';
+}
+
+function usableDogPhotoV11208_(photo) {
+  var parsed = parseDogPhotoJson_(photo);
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    return null;
+  }
+
+  var normalized = {};
+  Object.keys(parsed).forEach(function(key) {
+    normalized[key] = parsed[key];
+  });
+
+  var driveId = extractDogPhotoDriveIdV11208_(normalized);
+  var existingUrl = String(
+    normalized.previewUrl || normalized.url || normalized.driveUrl || ''
+  ).trim();
+
+  /*
+   * Older Waffle records sometimes retained the Drive id but lost the
+   * thumbnail URL. Reconstruct the exact kind of URL the current uploader
+   * writes so the frontend has a renderable src without copying the file.
+   */
+  if (driveId) {
+    normalized.id = String(normalized.id || driveId).trim();
+    normalized.previewUrl =
+      'https://drive.google.com/thumbnail?id=' +
+      encodeURIComponent(driveId) +
+      '&sz=w1600';
+    normalized.photoReferenceRepaired = !String(parsed.previewUrl || '').trim();
+    existingUrl = normalized.previewUrl;
+  }
+
+  return existingUrl ? normalized : null;
+}
+
+function usableDogPhotoGalleryV11208_(gallery) {
+  return Array.isArray(gallery)
+    ? gallery
+        .map(function(photo) {
+          return usableDogPhotoV11208_(photo);
+        })
+        .filter(function(photo) {
+          return !!photo;
+        })
+    : [];
+}
 
 function dogMasterPhotoCandidateV11208_(record) {
   record = record && typeof record === 'object' ? record : null;
   if (!record) return null;
 
-  if (record.dogPhoto && typeof record.dogPhoto === 'object') {
-    return record.dogPhoto;
-  }
+  var primary = usableDogPhotoV11208_(record.dogPhoto);
+  if (primary) return primary;
 
-  var gallery = Array.isArray(record.dogPhotoGallery)
-    ? record.dogPhotoGallery.filter(function(photo) {
-        return photo && typeof photo === 'object';
-      })
-    : [];
-
+  var gallery = usableDogPhotoGalleryV11208_(record.dogPhotoGallery);
   return gallery.length ? gallery[gallery.length - 1] : null;
 }
 
@@ -40,19 +101,10 @@ function persistedMasterPhotoCandidateV11208_(master) {
   master = master && typeof master === 'object' ? master : null;
   if (!master) return null;
 
-  var primary = parseDogPhotoJson_(master.primaryPhoto);
+  var primary = usableDogPhotoV11208_(master.primaryPhoto);
   if (primary) return primary;
 
-  var gallery = Array.isArray(master.photoGallery)
-    ? master.photoGallery
-        .map(function(photo) {
-          return parseDogPhotoJson_(photo);
-        })
-        .filter(function(photo) {
-          return !!photo;
-        })
-    : [];
-
+  var gallery = usableDogPhotoGalleryV11208_(master.photoGallery);
   return gallery.length ? gallery[gallery.length - 1] : null;
 }
 
@@ -91,7 +143,10 @@ function seedDogStayPhotoFromMasterV11208_(data, persistedMaster) {
     };
   }
 
-  var existingPrimary = parseDogPhotoJson_(sheet.getRange(row, 30).getValue());
+  var rawExistingPrimary = parseDogPhotoJson_(
+    sheet.getRange(row, 30).getValue()
+  );
+  var existingPrimary = usableDogPhotoV11208_(rawExistingPrimary);
   if (existingPrimary) {
     return {
       applied: false,
@@ -100,12 +155,12 @@ function seedDogStayPhotoFromMasterV11208_(data, persistedMaster) {
     };
   }
 
-  var existingGallery = parseV108DogPhotoGalleryJson_(
-    sheet.getRange(row, 33).getValue()
+  var existingGallery = usableDogPhotoGalleryV11208_(
+    parseV108DogPhotoGalleryJson_(sheet.getRange(row, 33).getValue())
   );
-  var masterGallery = Array.isArray(persistedMaster.photoGallery)
-    ? persistedMaster.photoGallery
-    : [];
+  var masterGallery = usableDogPhotoGalleryV11208_(
+    persistedMaster.photoGallery
+  );
   var gallery = normalizeV108DogPhotoGallery_(
     existingGallery.concat(masterGallery),
     primary
@@ -120,7 +175,9 @@ function seedDogStayPhotoFromMasterV11208_(data, persistedMaster) {
 
   return {
     applied: true,
-    reason: 'master-photo-applied',
+    reason: rawExistingPrimary
+      ? 'unusable-stay-photo-replaced'
+      : 'master-photo-applied',
     primaryPhoto: primary,
     photoGallery: gallery
   };
@@ -129,15 +186,12 @@ function seedDogStayPhotoFromMasterV11208_(data, persistedMaster) {
 function resolveDogMasterPhotoSourceV11208_(data) {
   data = data && typeof data === 'object' ? data : {};
 
-  var supplied = data.primaryPhoto && typeof data.primaryPhoto === 'object'
-    ? data.primaryPhoto
-    : null;
-
+  var supplied = usableDogPhotoV11208_(data.primaryPhoto);
   if (supplied) {
     return {
       stayKey: String(data.stayKey || '').trim(),
       dogPhoto: supplied,
-      dogPhotoGallery: Array.isArray(data.photoGallery) ? data.photoGallery : []
+      dogPhotoGallery: usableDogPhotoGalleryV11208_(data.photoGallery)
     };
   }
 
@@ -155,9 +209,9 @@ function resolveDogMasterPhotoSourceV11208_(data) {
   if (dogMasterPhotoCandidateV11208_(exact)) return exact;
 
   /*
-   * Deliberately filter to photo-bearing records before sorting. The base V11
-   * derivation sorts all matching stays first and therefore selects a newer
-   * empty upcoming stay over an older stay that actually has Coco's photo.
+   * Filter to genuinely renderable photo-bearing records before sorting. A
+   * stale JSON placeholder on a newer/upcoming stay must not outrank an older
+   * stay that actually contains Coco's Drive image.
    */
   var candidates = records
     .filter(function(record) {
@@ -175,9 +229,9 @@ function resolveDogMasterPhotoSourceV11208_(data) {
 }
 
 /*
- * Lightweight recovery used only when the base master save still returns no
- * photo. It patches the two Dog_Master photo columns in place instead of
- * running saveDogMasterProfile_ a second time, preserving the timeout fix.
+ * Lightweight recovery used only when the base master save still has no
+ * usable photo. It patches the two Dog_Master photo columns in place instead
+ * of running saveDogMasterProfile_ a second time, preserving the timeout fix.
  */
 function recoverMissingDogMasterPhotoV11208_(data, savedMaster) {
   data = data && typeof data === 'object' ? data : {};
@@ -185,12 +239,39 @@ function recoverMissingDogMasterPhotoV11208_(data, savedMaster) {
     ? savedMaster
     : {};
 
-  if (persistedMasterPhotoCandidateV11208_(savedMaster)) {
+  var existingMasterPhoto = persistedMasterPhotoCandidateV11208_(savedMaster);
+  if (existingMasterPhoto) {
+    /* Persist a reconstructed preview URL if this was a legacy id-only record. */
+    if (existingMasterPhoto.photoReferenceRepaired) {
+      var existingDogName = String(savedMaster.dogName || data.dogName || '').trim();
+      var existingBreed = String(savedMaster.breed || data.breed || '').trim();
+      var existingMasterKey = String(
+        savedMaster.masterKey || makeDogMasterKey_(existingDogName, existingBreed)
+      ).trim();
+      var existingSheet = getDogMasterSheet_();
+      var existingRow = findDogMasterRow_(existingSheet, existingMasterKey);
+      if (existingRow !== -1 && existingRow) {
+        var repairedGallery = normalizeV108DogPhotoGallery_(
+          usableDogPhotoGalleryV11208_(savedMaster.photoGallery),
+          existingMasterPhoto
+        );
+        existingSheet.getRange(existingRow, 10).setValue(JSON.stringify(existingMasterPhoto));
+        existingSheet.getRange(existingRow, 11).setValue(JSON.stringify(repairedGallery));
+        existingSheet.getRange(existingRow, 1).setValue(new Date());
+        savedMaster.primaryPhoto = existingMasterPhoto;
+        savedMaster.photoGallery = repairedGallery;
+        touchWaffleDataVersion_('directory');
+      }
+    }
+
     return {
       master: savedMaster,
-      applied: false,
-      reason: 'master-photo-present',
-      sourceStayKey: String(savedMaster.photoSourceStayKey || '').trim()
+      applied: !!existingMasterPhoto.photoReferenceRepaired,
+      reason: existingMasterPhoto.photoReferenceRepaired
+        ? 'master-photo-reference-repaired'
+        : 'master-photo-present',
+      sourceStayKey: String(savedMaster.photoSourceStayKey || '').trim(),
+      primaryPhoto: existingMasterPhoto
     };
   }
 
@@ -201,15 +282,17 @@ function recoverMissingDogMasterPhotoV11208_(data, savedMaster) {
     return {
       master: savedMaster,
       applied: false,
-      reason: 'no-photo-bearing-stay',
+      reason: 'no-usable-photo-bearing-stay',
       sourceStayKey: ''
     };
   }
 
   var gallery = normalizeV108DogPhotoGallery_(
-    source && Array.isArray(source.dogPhotoGallery)
-      ? source.dogPhotoGallery
-      : [],
+    usableDogPhotoGalleryV11208_(
+      source && Array.isArray(source.dogPhotoGallery)
+        ? source.dogPhotoGallery
+        : []
+    ),
     primary
   );
 
@@ -245,7 +328,9 @@ function recoverMissingDogMasterPhotoV11208_(data, savedMaster) {
   return {
     master: savedMaster,
     applied: true,
-    reason: 'photo-bearing-stay-recovered',
+    reason: primary.photoReferenceRepaired
+      ? 'photo-bearing-stay-reference-recovered'
+      : 'photo-bearing-stay-recovered',
     sourceStayKey: sourceStayKey,
     primaryPhoto: primary,
     photoGallery: gallery
@@ -264,9 +349,11 @@ function syncDogMasterPhotoFromStayV11208_(data, savedMaster) {
   if (!primary) return savedMaster;
 
   var gallery = normalizeV108DogPhotoGallery_(
-    source && Array.isArray(source.dogPhotoGallery)
-      ? source.dogPhotoGallery
-      : [],
+    usableDogPhotoGalleryV11208_(
+      source && Array.isArray(source.dogPhotoGallery)
+        ? source.dogPhotoGallery
+        : []
+    ),
     primary
   );
 
@@ -336,16 +423,12 @@ function syncDogMasterPhotoFromStayV11208_(data, savedMaster) {
 /*
  * Wrap the existing master-save function rather than replacing its profile,
  * risk-flag, owner/contact, history or audit behavior.
- *
- * The base V11 save runs once. If its chosen newest stay is photo-empty, the
- * recovery step explicitly finds the newest matching photo-bearing stay and
- * patches only the Dog_Master photo fields. The selected/upcoming stay then
- * inherits that recovered photo only when it is still empty.
  */
 saveDogMasterProfile_ = function(data) {
   data = data && typeof data === 'object' ? data : {};
 
   var savedMaster = waffleSaveDogMasterProfileBaseV11208_(data);
+  var priorMasterPhotoUsable = !!persistedMasterPhotoCandidateV11208_(savedMaster);
   var recovery = recoverMissingDogMasterPhotoV11208_(data, savedMaster);
   savedMaster = recovery && recovery.master ? recovery.master : savedMaster;
 
@@ -355,7 +438,8 @@ saveDogMasterProfile_ = function(data) {
     savedMaster.masterPhotoRecovery = {
       applied: !!(recovery && recovery.applied),
       reason: String((recovery && recovery.reason) || ''),
-      sourceStayKey: String((recovery && recovery.sourceStayKey) || '')
+      sourceStayKey: String((recovery && recovery.sourceStayKey) || ''),
+      priorMasterPhotoUsable: priorMasterPhotoUsable
     };
     savedMaster.stayPhotoSync = stayPhotoSync;
     savedMaster.photoSyncVersion = MASTER_PROFILE_PHOTO_SYNC_VERSION_V11208_;
@@ -374,9 +458,12 @@ function getMasterProfilePhotoSyncHealthV11208() {
   return {
     result: 'success',
     version: MASTER_PROFILE_PHOTO_SYNC_VERSION_V11208_,
-    behavior: 'single-save-recover-photo-bearing-stay-then-seed-empty-stay',
-    preservesExistingStayPhoto: true,
+    behavior: 'validate-renderable-photo-repair-drive-id-recover-history-seed-empty-stay',
+    preservesExistingUsableStayPhoto: true,
+    replacesUnusableStayPlaceholder: true,
     recoversOlderPhotoBearingStay: true,
+    repairsPreviewUrlFromDriveId: true,
+    requiresRenderablePhotoReference: true,
     avoidsSecondFullMasterSave: true,
     duplicatesDriveFile: false
   };
