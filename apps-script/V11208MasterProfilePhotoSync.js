@@ -1,19 +1,20 @@
 /* ============================================================
- * WAFFLE HOUSE V11.2.10 — MASTER PROFILE PHOTO SYNC
+ * WAFFLE HOUSE V11.2.11 — MASTER PROFILE PHOTO SYNC
  * ------------------------------------------------------------
  * Keeps the stay/master photo lifecycle in sync without adding a second
- * expensive post-save pass:
- *   1) an empty upcoming stay can inherit the matching persisted master photo;
- *   2) the existing V11 master save then persists that exact stay photo back
- *      to the master as part of its normal single save pass;
+ * expensive post-save master pass:
+ *   1) the existing V11 master save first resolves/persists the canonical
+ *      master photo, including a photo derived from another matching stay;
+ *   2) a photo-empty selected/upcoming stay then inherits that saved master
+ *      photo immediately;
  *   3) a stay-specific photo still wins and is never overwritten.
  *
  * The same Google Drive photo references are reused; no duplicate image is
- * created. The single-pass flow avoids the frontend POST timeout caused by the
- * redundant V11.2.09 rescan/write/audit/reload cycle.
+ * created. This order fixes the V11.2.10 edge case where a master photo was
+ * established only after the empty stay had already tried to inherit it.
  * ============================================================ */
 
-var MASTER_PROFILE_PHOTO_SYNC_VERSION_V11208_ = '11.2.10';
+var MASTER_PROFILE_PHOTO_SYNC_VERSION_V11208_ = '11.2.11';
 var waffleSaveDogMasterProfileBaseV11208_ = saveDogMasterProfile_;
 
 function dogMasterPhotoCandidateV11208_(record) {
@@ -251,29 +252,20 @@ function syncDogMasterPhotoFromStayV11208_(data, savedMaster) {
  * Wrap the existing master-save function rather than replacing its profile,
  * risk-flag, owner/contact, history or audit behavior.
  *
- * If a matching persisted master already exists, first seed a photo-empty stay
- * from that master. The base V11 save then reads that exact stay record and
- * writes the same photo/gallery to Dog_Master in its normal save pass.
+ * The base V11 save runs first so it can resolve and persist the canonical
+ * master photo, including a photo derived from another matching stay when the
+ * selected/upcoming stay is empty. We then seed only that photo-empty selected
+ * stay from the just-saved master. Existing stay-specific photos are preserved.
  *
- * V11.2.09 called syncDogMasterPhotoFromStayV11208_() after the base save,
- * causing a second full belongings scan plus another master write, audit and
- * reload. That redundant work could exceed the client's 15-second POST window.
+ * This remains a single master-save pass: unlike V11.2.09 it does not perform
+ * a second full belongings scan, master write, audit and reload, so the timeout
+ * fix introduced in V11.2.10 is preserved.
  */
 saveDogMasterProfile_ = function(data) {
   data = data && typeof data === 'object' ? data : {};
 
-  var dogName = String(data.dogName || '').trim();
-  var breed = String(data.breed || '').trim();
-  var persistedMaster = null;
-
-  if (dogName) {
-    persistedMaster = readPersistedDogMaster_(
-      makeDogMasterKey_(dogName, breed)
-    );
-  }
-
-  var stayPhotoSync = seedDogStayPhotoFromMasterV11208_(data, persistedMaster);
   var savedMaster = waffleSaveDogMasterProfileBaseV11208_(data);
+  var stayPhotoSync = seedDogStayPhotoFromMasterV11208_(data, savedMaster);
 
   if (savedMaster && typeof savedMaster === 'object') {
     savedMaster.stayPhotoSync = stayPhotoSync;
@@ -288,7 +280,7 @@ function getMasterProfilePhotoSyncHealthV11208() {
   return {
     result: 'success',
     version: MASTER_PROFILE_PHOTO_SYNC_VERSION_V11208_,
-    behavior: 'single-pass-master-seeds-empty-stay',
+    behavior: 'single-pass-save-master-then-seed-empty-stay',
     preservesExistingStayPhoto: true,
     avoidsRedundantPostSaveResync: true,
     duplicatesDriveFile: false
