@@ -7196,7 +7196,7 @@ textarea.intake-profile-control:disabled {
     }
 
     .v10-next-card {
-        display: none;
+        display: block;
     }
 
     .v10-capacity-strip {
