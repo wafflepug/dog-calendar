@@ -126,7 +126,7 @@
       }
 
       const script = document.createElement('script');
-      script.src = src + '?v=' + encodeURIComponent(version) + '&build=' + encodeURIComponent(String(window.WAFFLE_BUILD || '2026.08.27.04'));
+      script.src = src + '?v=' + encodeURIComponent(version) + '&build=' + encodeURIComponent(String(window.WAFFLE_BUILD || '2026.08.27.04')) + '&rev=' + encodeURIComponent(String(window.WAFFLE_ASSET_REVISION || 'legacy'));
       script.async = false;
       script.dataset.waffleV11161 = 'true';
       script.addEventListener('load', resolve, { once: true });

@@ -16,3 +16,4 @@ jobs:
       - run: npm install --no-save --package-lock=false @playwright/test@1.55.0
       - run: npx playwright install --with-deps chromium
       - run: npx playwright test --config=playwright.home.config.js
+      - run: npx playwright test --config=playwright.first-open.config.js
