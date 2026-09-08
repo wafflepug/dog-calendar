@@ -12,6 +12,9 @@
   if (window.WAFFLE_RUNTIME_BOOTSTRAP) return;
 
   const BUILD = '2026.08.28.01';
+  // Increment with frontend releases so an older service worker cannot mix assets.
+  const ASSET_REVISION = '2026.09.09.01';
+  window.WAFFLE_ASSET_REVISION = ASSET_REVISION;
   const ENDPOINT = 'https://script.google.com/macros/s/AKfycbwn4HL49K9c3AZbXJRUjPw3UYWxJt8DmqXwMnTytyqdSstj3ZIJwWdDEC2IsBjetOf3pw/exec';
   const RUNTIME = [
       "waffle-diagnostics.js",
@@ -60,7 +63,7 @@
   });
 
   function tagged(file) {
-    return file + '?build=' + encodeURIComponent(BUILD);
+    return file + '?build=' + encodeURIComponent(BUILD) + '&rev=' + encodeURIComponent(ASSET_REVISION);
   }
 
   function isMobileViewport() {
