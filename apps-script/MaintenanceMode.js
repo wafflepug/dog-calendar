@@ -9,7 +9,7 @@
  *
  * Deployment note: Phase 4 sitter workflow expansion released.
  * ============================================================ */
-var WAFFLE_MAINTENANCE_DEFAULT_ = true;
+var WAFFLE_MAINTENANCE_DEFAULT_ = false;
 var WAFFLE_MAINTENANCE_PROPERTY_ = 'WAFFLE_MAINTENANCE_MODE';
 var WAFFLE_MAINTENANCE_MESSAGE_PROPERTY_ = 'WAFFLE_MAINTENANCE_MESSAGE';
 var WAFFLE_MAINTENANCE_UPDATED_PROPERTY_ = 'WAFFLE_MAINTENANCE_UPDATED_AT';
