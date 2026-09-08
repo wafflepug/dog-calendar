@@ -60,8 +60,18 @@
                 <h1 id="v10OperationsTitle">Today at Waffle House</h1>
                 <p id="v10TodayDateLabel">Loading today…</p>
             </div>
-            <span class="v10-today-status" id="v10TodayStatus">All clear</span>
+            <span class="v10-today-status" id="v10TodayStatus">Loading schedule…</span>
         </div>
+
+        <section class="wh-home-guests" aria-labelledby="whHomeGuestsTitle">
+            <div class="wh-home-section-heading">
+                <div><span class="v10-card-kicker">Your guests</span><h2 id="whHomeGuestsTitle">Staying with you</h2></div>
+                <a class="wh-home-link" href="directory.html">All care profiles <span aria-hidden="true">↗</span></a>
+            </div>
+            <p id="whHomeGuestsStatus" class="wh-home-muted" role="status">Loading current guests…</p>
+            <div id="whHomeGuests" class="wh-home-guest-row" aria-label="Current guests" aria-busy="true"></div>
+            <div class="wh-home-shortcuts"><span>Open a guest for their stay and care details.</span><a class="wh-home-link" href="index.html?view=calendar">Full calendar <span aria-hidden="true">→</span></a></div>
+        </section>
 
         <div class="v10-stat-grid" aria-label="Today's operations summary">
             <button type="button" class="v10-stat-card" data-v10-jump="home">

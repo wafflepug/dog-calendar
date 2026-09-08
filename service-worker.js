@@ -1,6 +1,6 @@
 /* Waffle House Boarding — recovery service worker */
 
-const WAFFLE_SW_VERSION = 'v11.4.3-floorplan-initial-load-2026.08.31.01';
+const WAFFLE_SW_VERSION = 'v11.4.4-sitter-home-2026.09.08.01';
 const WAFFLE_CACHE_PREFIX = 'waffle-house-';
 const APP_SHELL_CACHE = `${WAFFLE_CACHE_PREFIX}shell-${WAFFLE_SW_VERSION}`;
 const RUNTIME_CACHE = `${WAFFLE_CACHE_PREFIX}runtime-${WAFFLE_SW_VERSION}`;

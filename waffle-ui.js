@@ -7,6 +7,131 @@
    ============================================================ */
 
 
+/* Current guest portraits. Home uses the same selector and photo records as
+   At Home / Care. Reconcile by stay identity so refresh preserves focus. */
+(function () {
+  'use strict';
+  if (window.WAFFLE_HOME_GUESTS) return;
+  const photos = new Map();
+  let pending = false;
+  let photoError = false;
+  let generation = 0;
+
+  function safePhoto(value) {
+    try {
+      const url = new URL(String(value || ''), location.href);
+      return ['https:', 'http:'].includes(url.protocol) && value ? url.href : '';
+    } catch (_) { return ''; }
+  }
+
+  function applyPhoto(link, url) {
+    const shell = link.querySelector('.wh-home-portrait');
+    const previous = shell.querySelector('img');
+    if (previous?.getAttribute('src') === url) return;
+    previous?.remove();
+    if (!url) return;
+    const image = document.createElement('img');
+    image.alt = '';
+    image.decoding = 'async';
+    image.addEventListener('error', () => {
+      image.remove();
+      shell.title = 'Profile photo unavailable';
+    }, { once: true });
+    image.src = url;
+    shell.appendChild(image);
+  }
+
+  async function loadPhotos(keys, token) {
+    const missing = keys.filter(key => !photos.has(key));
+    if (!missing.length || typeof queryAppsScript !== 'function') return;
+    try {
+      const response = await queryAppsScript({ action: 'get_belongings', stayKeys: missing }, {
+        maxAttempts: 2, timeoutMs: 30000
+      });
+      if (!Array.isArray(response?.records)) throw new Error('Photo records unavailable');
+      const records = new Map(response.records.map(record => [String(record.stayKey), record]));
+      missing.forEach(key => {
+        const photo = records.get(key)?.dogPhoto;
+        photos.set(key, safePhoto(photo?.previewUrl || photo?.url || photo?.driveUrl));
+      });
+      photoError = false;
+    } catch (_) {
+      photoError = true;
+    }
+    if (token !== generation) return;
+    const host = document.getElementById('whHomeGuests');
+    host?.querySelectorAll('[data-home-stay]').forEach(link => applyPhoto(link, photos.get(link.dataset.homeStay) || ''));
+    const status = document.getElementById('whHomeGuestsStatus');
+    if (photoError && status) status.textContent = 'Profile photos could not load. You can still open every guest’s care details.';
+  }
+
+  function render() {
+    const host = document.getElementById('whHomeGuests');
+    const status = document.getElementById('whHomeGuestsStatus');
+    if (!host || !status) return;
+    if (typeof v111CurrentDogEvents !== 'function') return;
+    let hasData = false;
+    try { hasData = localStorage.getItem('boardingDataCache') !== null; } catch (_) {}
+    const guests = v111CurrentDogEvents();
+    if (!hasData && !guests.length) {
+      status.textContent = navigator.onLine
+        ? 'Waiting for guest data. Use Sync or open Care if this continues.'
+        : 'You’re offline. Connect to load your current guests.';
+      host.setAttribute('aria-busy', 'true');
+      return;
+    }
+    const token = ++generation;
+    const today = getLocalTodayDateString();
+    const retained = new Set();
+    const keys = [];
+    guests.forEach((event, index) => {
+      const key = v110StayKeyForEvent(event);
+      retained.add(key);
+      keys.push(key);
+      const name = String(event.extendedProps?.dogName || event.title || 'Guest').trim();
+      const dates = v10EventRawDates(event);
+      let link = Array.from(host.children).find(child => child.dataset.homeStay === key);
+      if (!link) {
+        link = document.createElement('a');
+        link.className = 'wh-home-guest';
+        link.dataset.homeStay = key;
+        link.innerHTML = '<span class="wh-home-portrait" aria-hidden="true"><span class="wh-home-initials"></span></span><strong class="wh-home-guest-name"></strong><span class="wh-home-guest-label"></span>';
+        link.href = 'directory.html?stayKey=' + encodeURIComponent(key);
+      }
+      const label = dates.end === today ? 'Leaving today' : 'At home';
+      link.setAttribute('aria-label', `Open ${name} stay and care details, ${label.toLowerCase()}`);
+      link.querySelector('.wh-home-initials').textContent = name.split(/\s+/).map(part => Array.from(part).find(char => /[\p{L}\p{N}]/u.test(char))).filter(Boolean).slice(0, 2).join('').toUpperCase() || '?';
+      link.querySelector('.wh-home-guest-name').textContent = name;
+      link.querySelector('.wh-home-guest-label').textContent = label;
+      link.classList.toggle('is-leaving', dates.end === today);
+      applyPhoto(link, photos.get(key) || '');
+      if (host.children[index] !== link) host.insertBefore(link, host.children[index] || null);
+    });
+    Array.from(host.children).forEach(link => { if (!retained.has(link.dataset.homeStay)) link.remove(); });
+    host.setAttribute('aria-busy', 'false');
+    status.textContent = guests.length
+      ? `${guests.length} current ${guests.length === 1 ? 'stay' : 'stays'} · Your home, at a glance`
+      : 'No guests are staying with you right now. Upcoming arrivals are below.';
+    loadPhotos(keys, token);
+  }
+
+  function schedule() {
+    if (pending) return;
+    pending = true;
+    queueMicrotask(() => { pending = false; render(); });
+  }
+  window.addEventListener('waffle:operations-rendered', schedule);
+  window.addEventListener('online', schedule);
+  window.addEventListener('offline', schedule);
+  // The compatibility selector may arrive after the canonical UI module.
+  document.addEventListener('load', event => {
+    if (event.target?.tagName === 'SCRIPT' && /waffle-v11\.1\.js/.test(event.target.src || '')) schedule();
+  }, true);
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', schedule, { once: true });
+  else schedule();
+  window.WAFFLE_HOME_GUESTS = Object.freeze({ version: '1.0.0', refresh: schedule });
+})();
+
 /* ---- source: waffle-v11.1.75.js ---- */
 /* ============================================================
    WAFFLE HOUSE V11.1.75 — INDEPENDENT SITTER MOBILE SHELL

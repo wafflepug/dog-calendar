@@ -1623,6 +1623,9 @@ function renderV10OperationsHome(events) {
 
     renderV10CapacityStrip();
     renderV10PotentialPipeline(events);
+    // Shared UI consumes the completed data render, after Calendar has installed
+    // its event source. This is not a second operational data renderer.
+    queueMicrotask(() => window.dispatchEvent(new CustomEvent('waffle:operations-rendered')));
 }
 
 
