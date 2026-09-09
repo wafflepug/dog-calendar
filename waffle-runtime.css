@@ -2,7 +2,7 @@
    Build: 2026.08.27.04
    Historical base styles remain compatibility sources during Phase 3A, but pages no longer
    reference them individually. Preserve this import order until modules are folded in. */
-@import url("waffle-app.css?build=2026.08.27.04&rev=2026.09.09.01");
+@import url("waffle-app.css?build=2026.08.27.04&rev=2026.09.09.02");
 @import url("waffle-v10.8.css?build=2026.08.27.04");
 @import url("waffle-v10.8.2.css?build=2026.08.27.04");
 @import url("waffle-v10.8.3.css?build=2026.08.27.04");
@@ -252,3 +252,6 @@ body[data-waffle-page="directory"] .directory-main-profile-tab { border-radius: 
   .wh-home-portrait { width: 74px; height: 74px; }
   .wh-home-shortcuts > span { max-width: 58%; font-size: 12px; }
 }
+
+/* The arrival portrait module replaces the former seven-day arrival list. */
+.v10-ops-grid > .v10-agenda-card:only-child { grid-column: 1 / -1; }
