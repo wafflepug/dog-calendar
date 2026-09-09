@@ -13,7 +13,7 @@
     <link rel="apple-touch-icon" sizes="180x180" href="pwa-apple-touch-icon.png?v=2026.08.28.01">
     <title>Waffle House — Calendar & Dashboard</title>
     <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="waffle-runtime.css?v=2026.08.28.01&amp;rev=2026.09.09.01">
+    <link rel="stylesheet" href="waffle-runtime.css?v=2026.08.28.01&amp;rev=2026.09.09.02">
     </head>
 <body data-waffle-page="calendar">
 
@@ -73,6 +73,16 @@
             <div class="wh-home-shortcuts"><span>Open a guest for their stay and care details.</span><a class="wh-home-link" href="index.html?view=calendar">Full calendar <span aria-hidden="true">→</span></a></div>
         </section>
 
+        <section class="wh-home-guests" aria-labelledby="whHomeArrivalsTitle">
+            <div class="wh-home-section-heading">
+                <div><span class="v10-card-kicker">Next 30 days</span><h2 id="whHomeArrivalsTitle">Upcoming arrivals</h2></div>
+                <a class="wh-home-link" href="directory.html">All care profiles <span aria-hidden="true">↗</span></a>
+            </div>
+            <p id="whHomeArrivalsStatus" class="wh-home-muted" role="status">Loading upcoming arrivals…</p>
+            <div id="whHomeArrivals" class="wh-home-guest-row" aria-label="Upcoming arrivals" aria-busy="true"></div>
+            <div class="wh-home-shortcuts"><span>Open a guest to prepare for their stay.</span><a class="wh-home-link" href="index.html?view=calendar">Full calendar <span aria-hidden="true">→</span></a></div>
+        </section>
+
         <div class="v10-stat-grid" aria-label="Today's operations summary">
             <button type="button" class="v10-stat-card" data-v10-jump="home">
                 <span class="v10-stat-icon">🏡</span>
@@ -113,21 +123,7 @@
                 </div>
             </article>
 
-            <article class="v10-ops-card v10-next-card">
-                <div class="v10-card-heading">
-                    <div>
-                        <span class="v10-card-kicker">Next 7 days</span>
-                        <h2>Coming up</h2>
-                    </div>
-                </div>
-                <div id="v10NextUp" class="v10-next-list">
-                    <div class="v101-skeleton-stack" aria-label="Loading upcoming activity">
-                        <div class="v101-skeleton-line medium"></div>
-                        <div class="v101-skeleton-line wide"></div>
-                        <div class="v101-skeleton-line short"></div>
-                    </div>
-                </div>
-            </article>
+
         </div>
 
         <article class="v10-ops-card v10-capacity-card">
@@ -571,5 +567,5 @@
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
-    <script src="waffle-bootstrap.js?v=2026.08.28.01&amp;rev=2026.09.09.01"></script>
+    <script src="waffle-bootstrap.js?v=2026.08.28.01&amp;rev=2026.09.09.02"></script>
     </html>

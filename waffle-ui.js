@@ -7,15 +7,14 @@
    ============================================================ */
 
 
-/* Current guest portraits. Home uses the same selector and photo records as
-   At Home / Care. Reconcile by stay identity so refresh preserves focus. */
+/* Home portraits share canonical stay identities, local dates and Care photos.
+   Reconcile by stay identity so background refresh preserves keyboard focus. */
 (function () {
   'use strict';
   if (window.WAFFLE_HOME_GUESTS) return;
   const photos = new Map();
+  const photoRequests = new Map();
   let pending = false;
-  let photoError = false;
-  let generation = 0;
 
   function safePhoto(value) {
     try {
@@ -23,7 +22,11 @@
       return ['https:', 'http:'].includes(url.protocol) && value ? url.href : '';
     } catch (_) { return ''; }
   }
-
+  function photoUrl(record) {
+    const gallery = record?.dogPhotoGallery || record?.photoGallery || [];
+    const photo = record?.dogPhoto || record?.primaryPhoto || gallery[gallery.length - 1];
+    return safePhoto(photo?.previewUrl || photo?.url || photo?.driveUrl);
+  }
   function applyPhoto(link, url) {
     const shell = link.querySelector('.wh-home-portrait');
     const previous = shell.querySelector('img');
@@ -40,81 +43,144 @@
     image.src = url;
     shell.appendChild(image);
   }
-
-  async function loadPhotos(keys, token) {
-    const missing = keys.filter(key => !photos.has(key));
-    if (!missing.length || typeof queryAppsScript !== 'function') return;
-    try {
-      const response = await queryAppsScript({ action: 'get_belongings', stayKeys: missing }, {
-        maxAttempts: 2, timeoutMs: 30000
-      });
-      if (!Array.isArray(response?.records)) throw new Error('Photo records unavailable');
-      const records = new Map(response.records.map(record => [String(record.stayKey), record]));
-      missing.forEach(key => {
-        const photo = records.get(key)?.dogPhoto;
-        photos.set(key, safePhoto(photo?.previewUrl || photo?.url || photo?.driveUrl));
-      });
-      photoError = false;
-    } catch (_) {
-      photoError = true;
-    }
-    if (token !== generation) return;
-    const host = document.getElementById('whHomeGuests');
-    host?.querySelectorAll('[data-home-stay]').forEach(link => applyPhoto(link, photos.get(link.dataset.homeStay) || ''));
-    const status = document.getElementById('whHomeGuestsStatus');
-    if (photoError && status) status.textContent = 'Profile photos could not load. You can still open every guest’s care details.';
+  async function fallbackPhoto(event) {
+    const key = v110StayKeyForEvent(event);
+    // Care's single-stay record also exposes the stay gallery and inherited photo.
+    const response = await queryAppsScript({ action: 'get_guest_profile', stayKey: key }, { maxAttempts: 1, timeoutMs: 20000 });
+    const url = photoUrl(response?.record);
+    if (url) return url;
+    const props = event.extendedProps || {};
+    const master = await queryAppsScript({ action: 'get_dog_master_profile', dogName: props.dogName || event.title, breed: props.breed || '' }, { maxAttempts: 1, timeoutMs: 20000 });
+    return photoUrl(master?.record);
   }
-
-  function render() {
-    const host = document.getElementById('whHomeGuests');
-    const status = document.getElementById('whHomeGuestsStatus');
-    if (!host || !status) return;
-    if (typeof v111CurrentDogEvents !== 'function') return;
-    let hasData = false;
-    try { hasData = localStorage.getItem('boardingDataCache') !== null; } catch (_) {}
-    const guests = v111CurrentDogEvents();
-    if (!hasData && !guests.length) {
-      status.textContent = navigator.onLine
-        ? 'Waiting for guest data. Use Sync or open Care if this continues.'
-        : 'You’re offline. Connect to load your current guests.';
-      host.setAttribute('aria-busy', 'true');
-      return;
-    }
-    const token = ++generation;
-    const today = getLocalTodayDateString();
-    const retained = new Set();
-    const keys = [];
-    guests.forEach((event, index) => {
+  async function loadPhotos(events) {
+    const missing = events.filter(event => {
       const key = v110StayKeyForEvent(event);
-      retained.add(key);
-      keys.push(key);
-      const name = String(event.extendedProps?.dogName || event.title || 'Guest').trim();
-      const dates = v10EventRawDates(event);
-      let link = Array.from(host.children).find(child => child.dataset.homeStay === key);
-      if (!link) {
-        link = document.createElement('a');
-        link.className = 'wh-home-guest';
-        link.dataset.homeStay = key;
-        link.innerHTML = '<span class="wh-home-portrait" aria-hidden="true"><span class="wh-home-initials"></span></span><strong class="wh-home-guest-name"></strong><span class="wh-home-guest-label"></span>';
-        link.href = 'directory.html?stayKey=' + encodeURIComponent(key);
-      }
-      const label = dates.end === today ? 'Leaving today' : 'At home';
-      link.setAttribute('aria-label', `Open ${name} stay and care details, ${label.toLowerCase()}`);
-      link.querySelector('.wh-home-initials').textContent = name.split(/\s+/).map(part => Array.from(part).find(char => /[\p{L}\p{N}]/u.test(char))).filter(Boolean).slice(0, 2).join('').toUpperCase() || '?';
-      link.querySelector('.wh-home-guest-name').textContent = name;
-      link.querySelector('.wh-home-guest-label').textContent = label;
-      link.classList.toggle('is-leaving', dates.end === today);
-      applyPhoto(link, photos.get(key) || '');
-      if (host.children[index] !== link) host.insertBefore(link, host.children[index] || null);
+      return !photos.has(key) && !photoRequests.has(key);
     });
-    Array.from(host.children).forEach(link => { if (!retained.has(link.dataset.homeStay)) link.remove(); });
-    host.setAttribute('aria-busy', 'false');
-    status.textContent = guests.length
-      ? `${guests.length} current ${guests.length === 1 ? 'stay' : 'stays'} · Your home, at a glance`
-      : 'No guests are staying with you right now. Upcoming arrivals are below.';
-    loadPhotos(keys, token);
+    if (missing.length && typeof queryAppsScript === 'function') {
+      const task = (async () => {
+        const response = await queryAppsScript({ action: 'get_belongings', stayKeys: missing.map(v110StayKeyForEvent) }, { maxAttempts: 2, timeoutMs: 30000 });
+        if (!Array.isArray(response?.records)) throw new Error('Photo records unavailable');
+        const records = new Map(response.records.map(record => [String(record.stayKey), record]));
+        const results = await Promise.allSettled(missing.map(async event => {
+          const key = v110StayKeyForEvent(event);
+          const url = photoUrl(records.get(key)) || await fallbackPhoto(event);
+          photos.set(key, url);
+        }));
+        if (results.some(result => result.status === 'rejected')) throw new Error('Some profile photos could not load');
+      })();
+      missing.forEach(event => photoRequests.set(v110StayKeyForEvent(event), task));
+      // Every consumer awaits the task below; always release settled requests.
+      task.then(() => {}, () => {}).then(() => missing.forEach(event => photoRequests.delete(v110StayKeyForEvent(event))));
+    }
+    await Promise.all(events.map(event => photoRequests.get(v110StayKeyForEvent(event))).filter(Boolean));
   }
-
+  function statusFor(event) {
+    const props = event.extendedProps || {};
+    return String(v110OperationForStay(v110StayKeyForEvent(event))?.status || props.status || props.bookingStatus || '').toLowerCase();
+  }
+  function isBoarding(event) {
+    const props = event?.extendedProps || {};
+    const type = String(props.bookingType || '').toLowerCase();
+    return !props.isPotential && !props.isMeetGreet && !props.isCancelled && !props.isCanceled
+      && ['', 'boarding', 'confirmed boarding'].includes(type)
+      && ![statusFor(event), String(props.status || '').toLowerCase(), String(props.bookingStatus || '').toLowerCase()].some(status => ['checked_out', 'cancelled', 'canceled', 'completed', 'tentative', 'pending'].includes(status));
+  }
+  function windowEnd(today) {
+    // Inclusive [today, today + 29] is exactly 30 local calendar dates, even at DST.
+    const date = new Date(today + 'T12:00:00');
+    date.setDate(date.getDate() + 29);
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  }
+  function upcomingEvents(today) {
+    const latest = typeof v110LatestCalendarEvents !== 'undefined' ? v110LatestCalendarEvents : [];
+    const source = typeof globalCalendar !== 'undefined' && globalCalendar?.getEvents ? globalCalendar.getEvents() : latest;
+    const end = windowEnd(today);
+    const unique = new Map();
+    (source || []).forEach(event => {
+      if (!isBoarding(event) || statusFor(event) === 'checked_in') return;
+      const dates = v10EventRawDates(event);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(dates.start || '') || !dates.end || dates.end < dates.start || dates.start < today || dates.start > end) return;
+      // Mirrors Arriving Today: today's boarding stays remain expected until check-in.
+      unique.set(v110StayKeyForEvent(event), event);
+    });
+    return Array.from(unique.values()).sort((a, b) => v10EventRawDates(a).start.localeCompare(v10EventRawDates(b).start)
+      || String(a.extendedProps?.dogName || a.title).localeCompare(String(b.extendedProps?.dogName || b.title))
+      || v110StayKeyForEvent(a).localeCompare(v110StayKeyForEvent(b)));
+  }
+  function arrivalLabel(event, today) {
+    const start = v10EventRawDates(event).start;
+    return start === today ? 'Arriving today' : new Date(start + 'T12:00:00').toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short' });
+  }
+  function row(hostId, upcoming) {
+    let generation = 0;
+    return async (events, today, hasData) => {
+      const host = document.getElementById(hostId);
+      const status = document.getElementById(hostId + 'Status');
+      if (!host || !status) return;
+      const token = ++generation;
+      if (!hasData && !events.length) {
+        status.textContent = navigator.onLine ? 'Waiting for guest data. Use Sync or open Care if this continues.' : 'You’re offline. Connect to load your guests.';
+        host.setAttribute('aria-busy', 'true');
+        return;
+      }
+      const focused = host.contains(document.activeElement) ? document.activeElement : null;
+      const retained = new Set(events.map(v110StayKeyForEvent));
+      Array.from(host.children).forEach(link => { if (!retained.has(link.dataset.homeStay)) link.remove(); });
+      events.forEach((event, index) => {
+        const key = v110StayKeyForEvent(event);
+        retained.add(key);
+        const name = String(event.extendedProps?.dogName || event.title || 'Guest').trim();
+        let link = Array.from(host.children).find(child => child.dataset.homeStay === key);
+        if (!link) {
+          link = document.createElement('a');
+          link.className = 'wh-home-guest';
+          link.dataset.homeStay = key;
+          link.innerHTML = '<span class="wh-home-portrait" aria-hidden="true"><span class="wh-home-initials"></span></span><strong class="wh-home-guest-name"></strong><span class="wh-home-guest-label"></span>';
+          link.href = 'directory.html?stayKey=' + encodeURIComponent(key);
+        }
+        const label = upcoming ? arrivalLabel(event, today) : v10EventRawDates(event).end === today ? 'Leaving today' : 'At home';
+        link.setAttribute('aria-label', `Open ${name} stay and care details, ${label.toLowerCase()}`);
+        link.querySelector('.wh-home-initials').textContent = name.split(/\s+/).map(part => Array.from(part).find(char => /[\p{L}\p{N}]/u.test(char))).filter(Boolean).slice(0, 2).join('').toUpperCase() || '?';
+        link.querySelector('.wh-home-guest-name').textContent = name;
+        link.querySelector('.wh-home-guest-label').textContent = label;
+        link.classList.toggle('is-leaving', !upcoming && label === 'Leaving today');
+        applyPhoto(link, photos.get(key) || '');
+        if (host.children[index] !== link) host.insertBefore(link, host.children[index] || null);
+      });
+      if (focused && host.contains(focused) && document.activeElement !== focused) focused.focus({ preventScroll: true });
+      host.setAttribute('aria-busy', 'false');
+      status.textContent = upcoming
+        ? events.length ? `${events.length} upcoming ${events.length === 1 ? 'stay' : 'stays'} · Today through ${new Date(windowEnd(today) + 'T12:00:00').toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })}` : 'No boarding arrivals in the next 30 days.'
+        : events.length ? `${events.length} current ${events.length === 1 ? 'stay' : 'stays'} · Your home, at a glance` : 'No guests are staying with you right now. Upcoming arrivals are below.';
+      let photoError = false;
+      try { await loadPhotos(events); } catch (_) { photoError = true; }
+      if (token !== generation) return;
+      host.querySelectorAll('[data-home-stay]').forEach(link => applyPhoto(link, photos.get(link.dataset.homeStay) || ''));
+      if (photoError) status.textContent += ' Profile photos could not load. You can still open every guest’s care details.';
+    };
+  }
+  const currentRow = row('whHomeGuests', false);
+  const arrivalsRow = row('whHomeArrivals', true);
+  function render() {
+    if (typeof v111CurrentDogEvents !== 'function') return;
+    try {
+      const today = getLocalTodayDateString();
+      const arrivals = upcomingEvents(today);
+      const arrivingKeys = new Set(arrivals.map(v110StayKeyForEvent));
+      const current = v111CurrentDogEvents().filter(event => isBoarding(event) && !arrivingKeys.has(v110StayKeyForEvent(event)));
+      let hasData = current.length + arrivals.length > 0;
+      try { hasData ||= localStorage.getItem('boardingDataCache') !== null; } catch (_) {}
+      currentRow(current, today, hasData);
+      arrivalsRow(arrivals, today, hasData);
+    } catch (_) {
+      ['whHomeGuests', 'whHomeArrivals'].forEach(id => {
+        const status = document.getElementById(id + 'Status');
+        if (status) status.textContent = 'Guest data could not load. Open Care or try Sync again.';
+      });
+    }
+  }
   function schedule() {
     if (pending) return;
     pending = true;
@@ -123,13 +189,12 @@
   window.addEventListener('waffle:operations-rendered', schedule);
   window.addEventListener('online', schedule);
   window.addEventListener('offline', schedule);
-  // The compatibility selector may arrive after the canonical UI module.
   document.addEventListener('load', event => {
     if (event.target?.tagName === 'SCRIPT' && /waffle-v11\.1\.js/.test(event.target.src || '')) schedule();
   }, true);
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', schedule, { once: true });
   else schedule();
-  window.WAFFLE_HOME_GUESTS = Object.freeze({ version: '1.0.0', refresh: schedule });
+  window.WAFFLE_HOME_GUESTS = Object.freeze({ version: '1.1.0', refresh: schedule });
 })();
 
 /* ---- source: waffle-v11.1.75.js ---- */
