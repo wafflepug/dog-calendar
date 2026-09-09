@@ -53,7 +53,7 @@ async function setup(page, options = {}) {
 test('current guests only, canonical identities, labels, photos and keyboard destination', async ({ page }) => {
   await setup(page, { events: [...guests, guests[0], event('Future', '2026-09-09'), event('Past', '2026-08-01', '2026-08-31'), event('Meet', undefined, undefined, { isMeetGreet: true }), event('Potential', undefined, undefined, { isPotential: true }), event('Departed')], checkedOut: 'departed|2026-09-01|2026-09-10' });
   await expect(page.locator('[data-home-stay]')).toHaveCount(4);
-  await expect(page.getByRole('link', { name: 'Open Ralph stay and care details, leaving today' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Open Ralph stay and care details, leaves 8 sept' })).toBeVisible();
   await expect(page.locator('.wh-home-initials').nth(1)).toHaveText('LM');
   await expect(page.locator('.wh-home-portrait img')).toHaveCount(1);
   expect(await page.locator('.wh-home-portrait img').evaluate(img => img.complete && img.naturalWidth > 0)).toBeTruthy();
@@ -167,6 +167,25 @@ test('both portrait modules match and arrival scrolling stays inside the page', 
   expect(geometry.width).toBe(geometry.height);
   expect(geometry.overflow).toBe(false);
   if(testInfo.project.name.startsWith('mobile'))expect(geometry.scrolls).toBe(true);
+});
+
+test('departure flag and leave date cover the inclusive seven-day local window', async ({ page }) => {
+  await setup(page, { events: [
+    event('Today', '2026-09-01', today),
+    event('Seven Days', '2026-09-01', '2026-09-15'),
+    event('Eight Days', '2026-09-01', '2026-09-16'),
+    event('Later', '2026-09-01', '2026-09-20')
+  ] });
+  const cards = page.locator('#whHomeGuests [data-home-stay]');
+  await expect(cards).toHaveCount(4);
+  await expect(cards.filter({ hasText: 'Today' }).locator('.wh-home-guest-label')).toHaveText('Leaves 8 Sept');
+  await expect(cards.filter({ hasText: 'Seven Days' }).locator('.wh-home-guest-label')).toHaveText('Leaves 15 Sept');
+  await expect(cards.filter({ hasText: 'Eight Days' }).locator('.wh-home-guest-label')).toHaveText('At home');
+  await expect(cards.filter({ hasText: 'Later' }).locator('.wh-home-guest-label')).toHaveText('At home');
+  await expect(cards.filter({ hasText: 'Today' }).locator('.wh-home-departure-flag')).toBeVisible();
+  await expect(cards.filter({ hasText: 'Seven Days' }).locator('.wh-home-departure-flag')).toBeVisible();
+  await expect(cards.filter({ hasText: 'Eight Days' }).locator('.wh-home-departure-flag')).toBeHidden();
+  await expect(cards.filter({ hasText: 'Later' }).locator('.wh-home-departure-flag')).toBeHidden();
 });
 
 test('Home summary statistics remain available to the runtime but are visually suppressed', async ({ page }) => {
