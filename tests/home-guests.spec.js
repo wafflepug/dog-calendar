@@ -168,3 +168,15 @@ test('both portrait modules match and arrival scrolling stays inside the page', 
   expect(geometry.overflow).toBe(false);
   if(testInfo.project.name.startsWith('mobile'))expect(geometry.scrolls).toBe(true);
 });
+
+test('Home summary statistics remain available to the runtime but are visually suppressed', async ({ page }) => {
+  await setup(page, { includeArrivals: true });
+  expect(await page.evaluate(() => {
+    const selectors = ['.v10-stat-grid', '#p4Home'];
+    return selectors.every(selector => {
+      const element = document.querySelector(selector);
+      return !element || getComputedStyle(element).display === 'none';
+    });
+  })).toBeTruthy();
+});
+
