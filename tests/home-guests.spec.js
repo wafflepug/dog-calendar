@@ -183,9 +183,24 @@ test('departure flag and leave date cover the inclusive seven-day local window',
   await expect(cards.filter({ hasText: 'Eight Days' }).locator('.wh-home-guest-label')).toHaveText('At home');
   await expect(cards.filter({ hasText: 'Later' }).locator('.wh-home-guest-label')).toHaveText('At home');
   await expect(cards.filter({ hasText: 'Today' }).locator('.wh-home-departure-flag')).toBeVisible();
+  await expect(cards.filter({ hasText: 'Today' }).locator('.wh-home-departure-flag')).toHaveAttribute('data-tone', 'urgent');
   await expect(cards.filter({ hasText: 'Seven Days' }).locator('.wh-home-departure-flag')).toBeVisible();
+  await expect(cards.filter({ hasText: 'Seven Days' }).locator('.wh-home-departure-flag')).toHaveAttribute('data-tone', 'soon');
   await expect(cards.filter({ hasText: 'Eight Days' }).locator('.wh-home-departure-flag')).toBeHidden();
   await expect(cards.filter({ hasText: 'Later' }).locator('.wh-home-departure-flag')).toBeHidden();
+});
+
+test('departure badge urgency covers day three and day four boundaries', async ({ page }) => {
+  await setup(page, { events: [event('Three', '2026-09-01', '2026-09-11'), event('Four', '2026-09-01', '2026-09-12')] });
+  await expect(page.locator('[data-home-stay]').filter({ hasText: 'Three' }).locator('.wh-home-departure-flag')).toHaveAttribute('data-tone', 'urgent');
+  await expect(page.locator('[data-home-stay]').filter({ hasText: 'Four' }).locator('.wh-home-departure-flag')).toHaveAttribute('data-tone', 'soon');
+});
+
+test('flagged and unflagged wrapped names keep their name tops aligned', async ({ page }) => {
+  await setup(page, { events: [event('A very long flagged guest name', '2026-09-01', '2026-09-11'), event('Short', '2026-09-01', '2026-09-20')] });
+  const geometry = await page.evaluate(() => [...document.querySelectorAll('#whHomeGuests [data-home-stay]')].map(card => ({ nameTop: card.querySelector('.wh-home-guest-name').getBoundingClientRect().top, flag: !card.querySelector('.wh-home-departure-flag').hidden })));
+  expect(geometry.every(item => item.nameTop === geometry[0].nameTop)).toBeTruthy();
+  expect(geometry.map(item => item.flag)).toEqual([true, false]);
 });
 
 test('Home summary statistics remain available to the runtime but are visually suppressed', async ({ page }) => {

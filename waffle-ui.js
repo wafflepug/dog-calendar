@@ -118,10 +118,12 @@
     date.setDate(date.getDate() + 7);
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
   }
-  function departureLabel(event, today) {
+  function departureMeta(event, today) {
     const end = v10EventRawDates(event).end;
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(end || '') || end < today || end > departureWindowEnd(today)) return '';
-    return `Leaves ${new Date(end + 'T12:00:00').toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })}`;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(end || '') || end < today || end > departureWindowEnd(today)) return null;
+    const date = new Date(end + 'T12:00:00');
+    const days = Math.round((date - new Date(today + 'T12:00:00')) / 86400000);
+    return { label: `Leaves ${date.toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })}`, tone: days <= 3 ? 'urgent' : 'soon' };
   }
   function row(hostId, upcoming) {
     let generation = 0;
@@ -147,18 +149,19 @@
           link = document.createElement('a');
           link.className = 'wh-home-guest';
           link.dataset.homeStay = key;
-          link.innerHTML = '<span class="wh-home-portrait" aria-hidden="true"><span class="wh-home-initials"></span></span><span class="wh-home-departure-flag" aria-hidden="true">⚑</span><strong class="wh-home-guest-name"></strong><span class="wh-home-guest-label"></span>';
+          link.innerHTML = '<span class="wh-home-portrait" aria-hidden="true"><span class="wh-home-initials"></span></span><span class="wh-home-departure-flag" aria-hidden="true"><span>🧳</span></span><strong class="wh-home-guest-name"></strong><span class="wh-home-guest-label"></span>';
           link.href = 'directory.html?stayKey=' + encodeURIComponent(key);
         }
-        const departure = !upcoming && departureLabel(event, today);
-        const label = upcoming ? arrivalLabel(event, today) : departure || 'At home';
+        const departure = !upcoming && departureMeta(event, today);
+        const label = upcoming ? arrivalLabel(event, today) : departure?.label || 'At home';
         link.setAttribute('aria-label', `Open ${name} stay and care details, ${label.toLowerCase()}`);
         link.querySelector('.wh-home-initials').textContent = name.split(/\s+/).map(part => Array.from(part).find(char => /[\p{L}\p{N}]/u.test(char))).filter(Boolean).slice(0, 2).join('').toUpperCase() || '?';
         link.querySelector('.wh-home-guest-name').textContent = name;
         link.querySelector('.wh-home-guest-label').textContent = label;
         const flag = link.querySelector('.wh-home-departure-flag');
         flag.hidden = !departure;
-        flag.title = departure ? `${name} ${departure.toLowerCase()}` : '';
+        flag.dataset.tone = departure?.tone || '';
+        flag.title = departure ? `${name} ${departure.label.toLowerCase()}` : '';
         link.classList.toggle('is-leaving', !!departure);
         applyPhoto(link, photos.get(key) || '');
         if (host.children[index] !== link) host.insertBefore(link, host.children[index] || null);
