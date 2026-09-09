@@ -2,7 +2,7 @@
    Build: 2026.08.27.04
    Historical base styles remain compatibility sources during Phase 3A, but pages no longer
    reference them individually. Preserve this import order until modules are folded in. */
-@import url("waffle-app.css?build=2026.08.27.04&rev=2026.09.09.02");
+@import url("waffle-app.css?build=2026.08.27.04&rev=2026.09.10.01");
 @import url("waffle-v10.8.css?build=2026.08.27.04");
 @import url("waffle-v10.8.2.css?build=2026.08.27.04");
 @import url("waffle-v10.8.3.css?build=2026.08.27.04");
@@ -236,6 +236,14 @@ body[data-waffle-page="calendar"] .v10-operations-home { font-family: Inter, ui-
 body[data-waffle-page="calendar"] .v10-ops-card { border-radius: 20px !important; box-shadow: none !important; }
 body[data-waffle-page="calendar"] .v10-ops-heading h1 { letter-spacing: -.8px; }
 body[data-waffle-page="calendar"] .v10-stat-card { border-radius: 16px !important; box-shadow: none !important; }
+
+/* Home keeps the underlying counts/actions for navigation and accessibility
+   consumers, but the summary strip is intentionally not part of the visible
+   operations surface. Hide it at first paint so legacy markup cannot flash. */
+body[data-waffle-page="calendar"] .v10-stat-grid,
+body[data-waffle-page="calendar"] #p4Home {
+  display: none !important;
+}
 body[data-waffle-page="calendar"] .v10-card-heading h2 { letter-spacing: -.35px; }
 body[data-waffle-page="directory"] .directory-guest-tile-open { border-radius: 20px !important; }
 body[data-waffle-page="directory"] .directory-main-profile-tab { border-radius: 12px !important; }
@@ -255,3 +263,4 @@ body[data-waffle-page="directory"] .directory-main-profile-tab { border-radius: 
 
 /* The arrival portrait module replaces the former seven-day arrival list. */
 .v10-ops-grid > .v10-agenda-card:only-child { grid-column: 1 / -1; }
+
