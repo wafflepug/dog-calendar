@@ -1721,93 +1721,30 @@ function v10PotentialKeyFromEvent(event) {
 
 
 function renderV10PotentialPipeline(events) {
-    const host =
-        document.getElementById(
-            'v10PotentialCards'
-        );
-
-    if (!host) return;
-
-    const unique =
-        new Map();
-
-    (Array.isArray(events) ? events : [])
-        .filter(event =>
-            event?.extendedProps?.isPotential === true
-        )
-        .forEach(event => {
-            const key =
-                v10PotentialKeyFromEvent(event);
-
-            if (!key) return;
-
-            unique.set(
-                key,
-                event
-            );
-        });
-
-    const potentials =
-        Array.from(
-            unique.values()
-        )
-            .sort((a, b) => {
-                const ad =
-                    v10EventRawDates(a);
-                const bd =
-                    v10EventRawDates(b);
-
-                return ad.start.localeCompare(
-                    bd.start
-                );
-            });
-
+    const hosts = [document.getElementById('v10PotentialCards'), document.getElementById('whHomePotentials')].filter(Boolean);
+    if (!hosts.length) return;
+    const unique = new Map();
+    (Array.isArray(events) ? events : []).filter(event => event?.extendedProps?.isPotential === true).forEach(event => {
+        const key = v10PotentialKeyFromEvent(event);
+        if (key) unique.set(key, event);
+    });
+    const potentials = Array.from(unique.values()).sort((x, y) => v10EventRawDates(x).start.localeCompare(v10EventRawDates(y).start));
     if (!potentials.length) {
-        host.innerHTML = `
-            <div class="v10-empty v10-all-clear">
-                <span>✓</span>
-                <div>
-                    <strong>No Potential Stays waiting</strong>
-                    <small>New requests will appear here on every device after they sync.</small>
-                </div>
-            </div>
-        `;
+        hosts.forEach(host => { host.innerHTML = '<div class="v10-empty v10-all-clear"><span>✓</span><div><strong>No Potential Stays waiting</strong><small>New requests will appear here on every device after they sync.</small></div></div>'; host.setAttribute('aria-busy','false'); });
+        const status = document.getElementById('whHomePotentialsStatus');
+        if (status) status.textContent = 'No Potential Stays waiting. New requests will appear here after sync.';
         return;
     }
-
-    host.innerHTML =
-        potentials
-            .map(event => {
-                const props =
-                    event.extendedProps ||
-                    {};
-
-                const dates =
-                    v10EventRawDates(event);
-
-                const key =
-                    v10PotentialKeyFromEvent(event);
-
-                return `
-                    <article class="v10-potential-item" data-v10-potential-key="${escapeDashboardHtml(key)}">
-                        <div class="v10-potential-main">
-                            <span class="v10-potential-icon">❓</span>
-                            <div>
-                                <strong>${escapeDashboardHtml(props.dogName || 'Potential guest')}</strong>
-                                <span>${escapeDashboardHtml(v10FormatDateLabel(dates.start))} → ${escapeDashboardHtml(v10FormatDateLabel(dates.end))}</span>
-                                ${props.owner ? `<small>${escapeDashboardHtml(props.owner)}</small>` : ''}
-                            </div>
-                        </div>
-                        <div class="v10-potential-actions">
-                            <button type="button" data-v10-potential-action="edit">Edit</button>
-                            <button type="button" class="is-primary" data-v10-potential-action="confirm">Review / Confirm</button>
-                        </div>
-                    </article>
-                `;
-            })
-            .join('');
+    const markup = potentials.map(event => {
+        const props = event.extendedProps || {}, dates = v10EventRawDates(event), key = v10PotentialKeyFromEvent(event);
+        const photo = props.dogPhoto?.previewUrl || props.dogPhoto?.url || props.photoUrl || '';
+        const initials = String(props.dogName || 'Potential guest').trim().split(/\s+/).map(part => part[0]).join('').slice(0, 2).toUpperCase();
+        return `<article class="v10-potential-item wh-home-potential-item" data-v10-potential-key="${escapeDashboardHtml(key)}"><button type="button" class="wh-home-potential-open" data-v10-potential-action="edit" aria-label="Open ${escapeDashboardHtml(props.dogName || 'Potential guest')} potential stay"><span class="wh-home-portrait">${photo ? `<img src="${escapeDashboardHtml(photo)}" alt="">` : `<span class="wh-home-initials">${escapeDashboardHtml(initials)}</span>`}</span><span class="wh-home-potential-copy"><strong>${escapeDashboardHtml(props.dogName || 'Potential guest')}</strong><span>${escapeDashboardHtml(v10FormatDateLabel(dates.start))} → ${escapeDashboardHtml(v10FormatDateLabel(dates.end))}</span></span></button><div class="v10-potential-main"><div>${props.owner ? `<small>${escapeDashboardHtml(props.owner)}</small>` : ''}</div></div><div class="v10-potential-actions"><button type="button" data-v10-potential-action="edit">Edit stay details</button><button type="button" class="is-primary" data-v10-potential-action="confirm">Confirm stay</button></div></article>`;
+    }).join('');
+    hosts.forEach(host => { host.innerHTML = markup; host.setAttribute('aria-busy','false'); });
+    const status = document.getElementById('whHomePotentialsStatus');
+    if (status) status.textContent = `${potentials.length} potential ${potentials.length === 1 ? 'stay' : 'stays'} awaiting review`;
 }
-
 
 function findV10PotentialEvent(key) {
     if (!globalCalendar) {
