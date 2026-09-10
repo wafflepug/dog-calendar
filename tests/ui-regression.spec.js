@@ -13,6 +13,21 @@ const LOCAL_BUILD = /^https?:\/\/(?:127\.0\.0\.1|localhost)(?::|\/)/i.test(
 
 test.beforeEach(async ({ page }) => {
   if (!LOCAL_BUILD) return;
+  await page.route(/^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec(?:\?.*)?$/, route => {
+    const url = new URL(route.request().url());
+    if (url.searchParams.get('action') !== 'maintenance_status') return route.continue();
+
+    const callback = String(url.searchParams.get('callback') || '');
+    if (!/^[A-Za-z_$][\w$]*$/.test(callback)) {
+      return route.fulfill({ status: 400, body: 'Invalid JSONP callback' });
+    }
+
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/javascript',
+      body: `${callback}({"result":"success","enabled":false});`
+    });
+  });
   await page.route('**/waffle-build.json*', route => route.fulfill({
     status: 200,
     contentType: 'application/json',
