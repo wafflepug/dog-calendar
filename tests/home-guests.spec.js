@@ -214,3 +214,19 @@ test('Home summary statistics remain available to the runtime but are visually s
   })).toBeTruthy();
 });
 
+
+
+test('Potential stays sit directly below arrivals while legacy agenda stays hidden', async ({ page }) => {
+  await setup(page, { includeArrivals: true });
+  const layout = await page.evaluate(() => ({
+    headings: [...document.querySelectorAll('.wh-home-guests h2')].map(el => el.textContent),
+    adjacent: document.querySelector('#whHomeArrivals')?.closest('section')?.nextElementSibling?.querySelector('#whHomePotentials') !== null,
+    agenda: document.querySelector('.v10-agenda-card') ? getComputedStyle(document.querySelector('.v10-agenda-card')).display : 'none',
+    legacyPotential: document.querySelector('.v10-potential-card') ? getComputedStyle(document.querySelector('.v10-potential-card')).display : 'none'
+  }));
+  expect(layout.headings).toEqual(['Staying with you', 'Upcoming arrivals', 'Potential stays']);
+  expect(layout.adjacent).toBeTruthy();
+  expect(layout.agenda).toBe('none');
+  expect(layout.legacyPotential).toBe('none');
+  await expect(page.getByRole('button', { name: /New Potential/ })).toBeVisible();
+});
