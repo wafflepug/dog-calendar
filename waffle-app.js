@@ -1720,6 +1720,25 @@ function v10PotentialKeyFromEvent(event) {
 }
 
 
+function v10HomeThumbnailUrl(value) {
+    try {
+        const url = new URL(String(value || ''), location.href);
+        if (!value || !['https:', 'http:'].includes(url.protocol)) return '';
+        const hostname = url.hostname.toLowerCase();
+        if (hostname === 'drive.google.com' && url.pathname === '/thumbnail' && url.searchParams.has('id')) {
+            url.searchParams.set('sz', 'w180');
+        } else if (hostname === 'lh3.googleusercontent.com' || hostname.endsWith('.googleusercontent.com')) {
+            if (url.searchParams.has('sz')) url.searchParams.set('sz', 'w180');
+            else if (/=(?:w|s)\d+(?:-[^/]*)?$/.test(url.pathname)) url.pathname = url.pathname.replace(/=((?:w|s))\d+((?:-[^/]*)?)$/, (_, mode, suffix) => `=${mode}180${suffix}`);
+            else if (hostname === 'lh3.googleusercontent.com' && /^\/d\/[^/]+$/.test(url.pathname)) url.pathname += '=w180';
+        }
+        return url.href;
+    } catch (_) {
+        return '';
+    }
+}
+
+
 function renderV10PotentialPipeline(events) {
     const hosts = [document.getElementById('v10PotentialCards'), document.getElementById('whHomePotentials')].filter(Boolean);
     if (!hosts.length) return;
@@ -1737,9 +1756,9 @@ function renderV10PotentialPipeline(events) {
     }
     const markup = potentials.map(event => {
         const props = event.extendedProps || {}, dates = v10EventRawDates(event), key = v10PotentialKeyFromEvent(event);
-        const photo = props.dogPhoto?.previewUrl || props.dogPhoto?.url || props.photoUrl || '';
+        const photo = v10HomeThumbnailUrl(props.dogPhoto?.previewUrl || props.dogPhoto?.url || props.photoUrl || '');
         const initials = String(props.dogName || 'Potential guest').trim().split(/\s+/).map(part => part[0]).join('').slice(0, 2).toUpperCase();
-        return `<article class="v10-potential-item wh-home-potential-item" data-v10-potential-key="${escapeDashboardHtml(key)}"><button type="button" class="wh-home-potential-open" data-v10-potential-action="edit" aria-label="Open ${escapeDashboardHtml(props.dogName || 'Potential guest')} potential stay"><span class="wh-home-portrait">${photo ? `<img src="${escapeDashboardHtml(photo)}" alt="">` : `<span class="wh-home-initials">${escapeDashboardHtml(initials)}</span>`}</span><span class="wh-home-potential-copy"><strong>${escapeDashboardHtml(props.dogName || 'Potential guest')}</strong><span>${escapeDashboardHtml(v10FormatDateLabel(dates.start))} → ${escapeDashboardHtml(v10FormatDateLabel(dates.end))}</span></span></button><div class="v10-potential-main"><div>${props.owner ? `<small>${escapeDashboardHtml(props.owner)}</small>` : ''}</div></div><div class="v10-potential-actions"><button type="button" data-v10-potential-action="edit">Edit stay details</button><button type="button" class="is-primary" data-v10-potential-action="confirm">Confirm stay</button></div></article>`;
+        return `<article class="v10-potential-item wh-home-potential-item" data-v10-potential-key="${escapeDashboardHtml(key)}"><button type="button" class="wh-home-potential-open" data-v10-potential-action="edit" aria-label="Open ${escapeDashboardHtml(props.dogName || 'Potential guest')} potential stay"><span class="wh-home-portrait">${photo ? `<img src="${escapeDashboardHtml(photo)}" alt="" loading="lazy" decoding="async">` : `<span class="wh-home-initials">${escapeDashboardHtml(initials)}</span>`}</span><span class="wh-home-potential-copy"><strong>${escapeDashboardHtml(props.dogName || 'Potential guest')}</strong><span>${escapeDashboardHtml(v10FormatDateLabel(dates.start))} → ${escapeDashboardHtml(v10FormatDateLabel(dates.end))}</span></span></button><div class="v10-potential-main"><div>${props.owner ? `<small>${escapeDashboardHtml(props.owner)}</small>` : ''}</div></div><div class="v10-potential-actions"><button type="button" data-v10-potential-action="edit">Edit stay details</button><button type="button" class="is-primary" data-v10-potential-action="confirm">Confirm stay</button></div></article>`;
     }).join('');
     hosts.forEach(host => { host.innerHTML = markup; host.setAttribute('aria-busy','false'); });
     const status = document.getElementById('whHomePotentialsStatus');

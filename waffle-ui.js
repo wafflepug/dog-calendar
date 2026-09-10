@@ -22,6 +22,25 @@
       return ['https:', 'http:'].includes(url.protocol) && value ? url.href : '';
     } catch (_) { return ''; }
   }
+  function homeThumbnailUrl(value) {
+    const source = safePhoto(value);
+    if (!source) return '';
+    try {
+      const url = new URL(source);
+      const hostname = url.hostname.toLowerCase();
+      if (hostname === 'drive.google.com' && url.pathname === '/thumbnail' && url.searchParams.has('id')) {
+        url.searchParams.set('sz', 'w180');
+        return url.href;
+      }
+      if (hostname === 'lh3.googleusercontent.com' || hostname.endsWith('.googleusercontent.com')) {
+        if (url.searchParams.has('sz')) url.searchParams.set('sz', 'w180');
+        else if (/=(?:w|s)\d+(?:-[^/]*)?$/.test(url.pathname)) url.pathname = url.pathname.replace(/=((?:w|s))\d+((?:-[^/]*)?)$/, (_, mode, suffix) => `=${mode}180${suffix}`);
+        else if (hostname === 'lh3.googleusercontent.com' && /^\/d\/[^/]+$/.test(url.pathname)) url.pathname += '=w180';
+        return url.href;
+      }
+    } catch (_) {}
+    return source;
+  }
   function photoUrl(record) {
     const gallery = record?.dogPhotoGallery || record?.photoGallery || [];
     const photo = record?.dogPhoto || record?.primaryPhoto || gallery[gallery.length - 1];
@@ -29,18 +48,20 @@
   }
   function applyPhoto(link, url) {
     const shell = link.querySelector('.wh-home-portrait');
+    const thumbnail = homeThumbnailUrl(url);
     const previous = shell.querySelector('img');
-    if (previous?.getAttribute('src') === url) return;
+    if (previous?.src === thumbnail) return;
     previous?.remove();
-    if (!url) return;
+    if (!thumbnail) return;
     const image = document.createElement('img');
     image.alt = '';
     image.decoding = 'async';
+    image.loading = 'lazy';
     image.addEventListener('error', () => {
       image.remove();
       shell.title = 'Profile photo unavailable';
     }, { once: true });
-    image.src = url;
+    image.src = thumbnail;
     shell.appendChild(image);
   }
   async function fallbackPhoto(event) {
@@ -53,28 +74,30 @@
     const master = await queryAppsScript({ action: 'get_dog_master_profile', dogName: props.dogName || event.title, breed: props.breed || '' }, { maxAttempts: 1, timeoutMs: 20000 });
     return photoUrl(master?.record);
   }
-  async function loadPhotos(events) {
+  async function loadPhotos(events, onPhoto) {
     const missing = events.filter(event => {
       const key = v110StayKeyForEvent(event);
       return !photos.has(key) && !photoRequests.has(key);
     });
     if (missing.length && typeof queryAppsScript === 'function') {
-      const task = (async () => {
-        const response = await queryAppsScript({ action: 'get_belongings', stayKeys: missing.map(v110StayKeyForEvent) }, { maxAttempts: 2, timeoutMs: 30000 });
+      const recordsTask = queryAppsScript({ action: 'get_belongings', stayKeys: missing.map(v110StayKeyForEvent) }, { maxAttempts: 2, timeoutMs: 30000 }).then(response => {
         if (!Array.isArray(response?.records)) throw new Error('Photo records unavailable');
-        const records = new Map(response.records.map(record => [String(record.stayKey), record]));
-        const results = await Promise.allSettled(missing.map(async event => {
+        return new Map(response.records.map(record => [String(record.stayKey), record]));
+      });
+      missing.forEach(event => {
+        const key = v110StayKeyForEvent(event);
+        const request = recordsTask.then(async records => {
           const key = v110StayKeyForEvent(event);
           const url = photoUrl(records.get(key)) || await fallbackPhoto(event);
           photos.set(key, url);
-        }));
-        if (results.some(result => result.status === 'rejected')) throw new Error('Some profile photos could not load');
-      })();
-      missing.forEach(event => photoRequests.set(v110StayKeyForEvent(event), task));
-      // Every consumer awaits the task below; always release settled requests.
-      task.then(() => {}, () => {}).then(() => missing.forEach(event => photoRequests.delete(v110StayKeyForEvent(event))));
+          onPhoto(key, url);
+        });
+        photoRequests.set(key, request);
+        request.then(() => {}, () => {}).then(() => photoRequests.delete(key));
+      });
     }
-    await Promise.all(events.map(event => photoRequests.get(v110StayKeyForEvent(event))).filter(Boolean));
+    const results = await Promise.allSettled(events.map(event => photoRequests.get(v110StayKeyForEvent(event))).filter(Boolean));
+    if (results.some(result => result.status === 'rejected')) throw new Error('Some profile photos could not load');
   }
   function statusFor(event) {
     const props = event.extendedProps || {};
@@ -172,7 +195,13 @@
         ? events.length ? `${events.length} upcoming ${events.length === 1 ? 'stay' : 'stays'} · Today through ${new Date(windowEnd(today) + 'T12:00:00').toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })}` : 'No boarding arrivals in the next 30 days.'
         : events.length ? `${events.length} current ${events.length === 1 ? 'stay' : 'stays'} · Your home, at a glance` : 'No guests are staying with you right now. Upcoming arrivals are below.';
       let photoError = false;
-      try { await loadPhotos(events); } catch (_) { photoError = true; }
+      try {
+        await loadPhotos(events, (key, url) => {
+          if (token !== generation) return;
+          const link = Array.from(host.querySelectorAll('[data-home-stay]')).find(item => item.dataset.homeStay === key);
+          if (link) applyPhoto(link, url);
+        });
+      } catch (_) { photoError = true; }
       if (token !== generation) return;
       host.querySelectorAll('[data-home-stay]').forEach(link => applyPhoto(link, photos.get(link.dataset.homeStay) || ''));
       if (photoError) status.textContent += ' Profile photos could not load. You can still open every guest’s care details.';
@@ -211,7 +240,7 @@
   }, true);
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', schedule, { once: true });
   else schedule();
-  window.WAFFLE_HOME_GUESTS = Object.freeze({ version: '1.1.0', refresh: schedule });
+  window.WAFFLE_HOME_GUESTS = Object.freeze({ version: '1.2.0', refresh: schedule });
 })();
 
 /* ---- source: waffle-v11.1.75.js ---- */
