@@ -2,7 +2,7 @@
    Build: 2026.08.27.04
    Historical base styles remain compatibility sources during Phase 3A, but pages no longer
    reference them individually. Preserve this import order until modules are folded in. */
-@import url("waffle-app.css?build=2026.08.27.04&rev=2026.09.10.05");
+@import url("waffle-app.css?build=2026.08.27.04&rev=2026.09.10.06");
 @import url("waffle-v10.8.css?build=2026.08.27.04");
 @import url("waffle-v10.8.2.css?build=2026.08.27.04");
 @import url("waffle-v10.8.3.css?build=2026.08.27.04");
@@ -252,14 +252,16 @@ body[data-waffle-page="calendar"] .v10-agenda-card,
 body[data-waffle-page="calendar"] .v10-potential-card { display: none !important; }
 .wh-home-button-link { border: 0; background: transparent; cursor: pointer; }
 .wh-home-potential-row { align-items: flex-start; }
-.wh-home-potential-item { flex: 0 0 170px; position: relative; align-items: stretch; gap: 8px; }
+.wh-home-potential-item { flex: 0 0 170px; position: relative; display: flex !important; flex-direction: column !important; align-items: center !important; gap: 8px; box-sizing: border-box; }
 .wh-home-potential-open { display: flex; flex-direction: column; align-items: center; gap: 7px; width: 100%; padding: 0; border: 0; background: none; color: inherit; cursor: pointer; font: inherit; }
 .wh-home-potential-open .wh-home-portrait { flex: 0 0 auto; }
 .wh-home-potential-copy { display: flex; flex-direction: column; align-items: center; gap: 3px; text-align: center; }
 .wh-home-potential-copy strong { min-height: 36.4px; display: flex; align-items: flex-start; justify-content: center; line-height: 1.3; overflow-wrap: anywhere; }
 .wh-home-potential-copy span { color: var(--wh75-muted, #526174); font-size: 11px; }
 .wh-home-potential-item .v10-potential-main { min-height: 18px; justify-content: center; }
-.wh-home-potential-item .v10-potential-actions { justify-content: center; }
+.wh-home-potential-item .v10-potential-main { width: 100%; display: block; text-align: center; }
+.wh-home-potential-item .v10-potential-actions { width: 100%; justify-content: center; flex: 0 0 auto; }
+.wh-home-potential-item .v10-potential-actions button { min-height: 34px; height: auto; flex: 0 1 auto; }
 body[data-waffle-page="calendar"] .v10-card-heading h2 { letter-spacing: -.35px; }
 
 /* Capacity outlook uses a high-contrast semantic palette in both themes. */
