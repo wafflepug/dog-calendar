@@ -13,7 +13,7 @@
     <link rel="apple-touch-icon" sizes="180x180" href="pwa-apple-touch-icon.png?v=2026.08.28.01">
     <title>Waffle House — Calendar & Dashboard</title>
     <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="waffle-runtime.css?v=2026.08.28.01&amp;rev=2026.09.10.03">
+    <link rel="stylesheet" href="waffle-runtime.css?v=2026.08.28.01&amp;rev=2026.09.10.04">
     </head>
 <body data-waffle-page="calendar">
 
@@ -83,6 +83,15 @@
             <div class="wh-home-shortcuts"><span>Open a guest to prepare for their stay.</span><a class="wh-home-link" href="index.html?view=calendar">Full calendar <span aria-hidden="true">→</span></a></div>
         </section>
 
+        <section class="wh-home-guests" aria-labelledby="whHomePotentialsTitle">
+            <div class="wh-home-section-heading">
+                <div><span class="v10-card-kicker">Pending decisions</span><h2 id="whHomePotentialsTitle">Potential stays</h2></div>
+                <button type="button" class="wh-home-link wh-home-button-link" id="whHomeAddPotentialBtn">＋ New Potential</button>
+            </div>
+            <p id="whHomePotentialsStatus" class="wh-home-muted" role="status">Loading potential stays…</p>
+            <div id="whHomePotentials" class="wh-home-guest-row wh-home-potential-row" aria-label="Potential stays" aria-busy="true"></div>
+            <div class="wh-home-shortcuts"><span>Review requests before confirming a stay.</span></div>
+        </section>
         <div class="v10-stat-grid" aria-label="Today's operations summary">
             <button type="button" class="v10-stat-card" data-v10-jump="home">
                 <span class="v10-stat-icon">🏡</span>
@@ -521,7 +530,7 @@
         <input type="text" id="potNotes" style="width: 100%; padding: 10px; margin-bottom: 20px; border: 2px solid #e2e8f0; border-radius: 6px; box-sizing: border-box;" placeholder="e.g. Awaiting owner confirmation">
 
         <div style="display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap;" id="potentialActionControls">
-            <button id="deletePotentialBtn" style="background: #e74c3c; color: white; border: none; padding: 10px 14px; border-radius: 6px; cursor: pointer; font-weight: bold; margin-right: auto; display: none;">🗑️ Delete Request</button>
+            <button id="deletePotentialBtn" style="background: #e74c3c; color: white; border: none; padding: 10px 14px; border-radius: 6px; cursor: pointer; font-weight: bold; margin-right: auto; display: none;">🗑️ Cancel potential stay</button>
             <button id="confirmStayBtn" style="background: #27ae60; color: white; border: none; padding: 10px 14px; border-radius: 6px; cursor: pointer; font-weight: bold; display: none;">✅ Confirm Stay</button>
             <button id="potentialIntakeLinkBtn" style="background: #1f3a5f; color: white; border: none; padding: 10px 14px; border-radius: 6px; cursor: pointer; font-weight: bold; display: none;">📝 Copy Intake Link</button>
             <button id="closePotentialModalBtn" style="background: #94a3b8; color: white; border: none; padding: 10px 14px; border-radius: 6px; cursor: pointer; font-weight: bold;">Cancel</button>
@@ -567,6 +576,6 @@
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
-    <script src="waffle-bootstrap.js?v=2026.08.28.01&amp;rev=2026.09.10.03"></script>
+    <script src="waffle-bootstrap.js?v=2026.08.28.01&amp;rev=2026.09.10.04"></script>
     </html>
 
