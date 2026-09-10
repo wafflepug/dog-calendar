@@ -4636,8 +4636,8 @@ registerWaffleServiceWorker();
         document.getElementById('v10AddPotentialBtn')
             ?.addEventListener('click', openNewPotentialModal);
 
-        document.getElementById('v10PotentialCards')
-            ?.addEventListener('click', function(event) {
+        document.querySelectorAll('#v10PotentialCards, #whHomePotentials')
+            .forEach(host => host.addEventListener('click', function(event) {
                 const button = event.target.closest('[data-v10-potential-action]');
                 if (!button) return;
 
@@ -4656,7 +4656,8 @@ registerWaffleServiceWorker();
                         setTimeout(() => confirmButton?.classList.remove('v10-confirm-highlight'), 1600);
                     }, 50);
                 }
-            });
+            }));
+        document.getElementById('whHomeAddPotentialBtn')?.addEventListener('click', openNewPotentialModal);
 
         document.querySelector('.v10-stat-grid')
             ?.addEventListener('click', function() {
