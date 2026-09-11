@@ -88,7 +88,7 @@ test('Home requests 180px thumbnails and paints available photos before a delaye
   await expect(available).toHaveAttribute('src', /drive\.google\.com\/thumbnail\?id=fixture-photo&sz=w180/);
   await expect(available).toHaveAttribute('loading', 'lazy');
   await expect(available).toHaveAttribute('decoding', 'async');
-  expect(requests).toContain('https://drive.google.com/thumbnail?id=fixture-photo&sz=w180');
+  await expect.poll(() => requests).toContain('https://drive.google.com/thumbnail?id=fixture-photo&sz=w180');
   expect(await page.evaluate(() => typeof window.releaseDelayedHomePhoto)).toBe('function');
   await expect(page.locator('[data-home-stay^="delayed|"] img')).toHaveCount(0);
   await page.evaluate(() => window.releaseDelayedHomePhoto());
