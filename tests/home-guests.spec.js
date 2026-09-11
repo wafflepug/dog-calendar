@@ -6,6 +6,7 @@ const { test, expect } = require('@playwright/test');
 const root = path.resolve(__dirname, '..');
 const read = name => fs.readFileSync(path.join(root, name), 'utf8');
 const ui = read('waffle-ui.js').split('/* ---- source: waffle-v11.1.75.js ---- */')[0];
+const app = read('waffle-app.js');
 const source = read('waffle-v11.1.js');
 const selector = source.slice(source.indexOf('function v111CurrentDogEvents()'), source.indexOf('function v111EnsureQuickPhotoModal()'));
 const operations = read('waffle-v11.0.js');
@@ -19,6 +20,7 @@ function event(name, start = '2026-09-01', end = '2026-09-10', props = {}) {
 }
 const guests = [event('Coco'), event('Leo - Maltese Cross'), event('Ralph', '2026-09-01', today), event('Waffle')];
 async function setup(page, options = {}) {
+  await page.route('https://drive.google.com/**', route => route.fulfill({ contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="180" height="180"><rect width="180" height="180" fill="#987"/></svg>' }));
   await page.route('http://home.test/**', async route => {
     const url = new URL(route.request().url());
     if (url.pathname === '/photo.svg') return route.fulfill({ contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="#987"/></svg>' });
@@ -27,7 +29,7 @@ async function setup(page, options = {}) {
     return route.fulfill({ contentType: 'text/html', body: `<!doctype html><html><head><style>body{font-family:system-ui;margin:20px;--v10-card:#fff;--v10-border:#ddd;--wh75-text:#172033;--wh75-muted:#526174;}@media(prefers-color-scheme:dark){body{background:#111827;--v10-card:#192236;--v10-border:#38435a;--wh75-text:#edf2ff;--wh75-muted:#b9c5db;--wh75-accent-ink:#d9c9ff;--wh75-accent-soft:#36254e;}}/* Sitter Home:${css}</style></head><body>${options.includeArrivals ? sections.join('') : html}</body></html>` });
   });
   await page.goto('http://home.test/');
-  await page.evaluate(({ events, loaded, failure, localToday, operations, fallback }) => {
+  await page.evaluate(({ events, loaded, failure, localToday, operations, fallback, progressive }) => {
     window.fixtureEvents = events;
     window.fixtureFailure = failure;
     window.fixtureCalls = [];
@@ -39,16 +41,51 @@ async function setup(page, options = {}) {
     window.queryAppsScript = async payload => {
       window.fixtureCalls.push(payload);
       if (window.fixtureFailure) throw new Error('fixture unavailable');
+      if (progressive && payload.action === 'get_guest_profile') {
+        return await new Promise(resolve => {
+          window.releaseDelayedHomePhoto = () => resolve({ record: { dogPhotoGallery: [{ url: 'http://home.test/photo.svg' }] } });
+        });
+      }
       if (payload.action === 'get_guest_profile') return { record: fallback && payload.stayKey.startsWith('gallery|') ? { dogPhotoGallery: [{url:'http://home.test/photo.svg'}] } : {} };
       if (payload.action === 'get_dog_master_profile') return { record: fallback && ['Master','Broken'].includes(payload.dogName) ? { primaryPhoto:{url:payload.dogName === 'Broken' ? 'http://home.test/broken.jpg' : 'http://home.test/photo.svg'} } : {} };
-      return { records: payload.stayKeys.map((stayKey, i) => ({ stayKey, dogPhoto: fallback ? null : i === 0 ? { previewUrl: 'http://home.test/photo.svg' } : i === 2 ? { previewUrl: 'http://home.test/broken.jpg' } : null })) };
+      return { records: payload.stayKeys.map((stayKey, i) => ({ stayKey, dogPhoto: progressive && i === 0 ? { previewUrl: 'https://drive.google.com/thumbnail?id=fixture-photo&sz=w1600' } : fallback ? null : i === 0 ? { previewUrl: 'http://home.test/photo.svg' } : i === 2 ? { previewUrl: 'http://home.test/broken.jpg' } : null })) };
     };
     if (loaded) localStorage.setItem('boardingDataCache', 'fixture');
-  }, { events: options.events || guests, loaded: options.loaded !== false, failure: !!options.failure, localToday: options.today || today, operations: options.operations, fallback: !!options.fallback });
+  }, { events: options.events || guests, loaded: options.loaded !== false, failure: !!options.failure, localToday: options.today || today, operations: options.operations, fallback: !!options.fallback, progressive: !!options.progressive });
   await page.addScriptTag({ content: identity + '\n' + selector });
   if (options.checkedOut) await page.evaluate(key => { v110OperationsMap[key] = { status: 'checked_out' }; }, options.checkedOut);
   await page.addScriptTag({ content: ui });
 }
+
+test('Home requests 180px thumbnails and paints available photos before a delayed fallback settles', async ({ page }) => {
+  const requests = [];
+  page.on('request', request => { if (request.url().includes('drive.google.com/thumbnail')) requests.push(request.url()); });
+  await setup(page, { progressive: true, events: [event('Available'), event('Delayed')] });
+  const available = page.locator('[data-home-stay^="available|"] img');
+  await expect(available).toHaveAttribute('src', /drive\.google\.com\/thumbnail\?id=fixture-photo&sz=w180/);
+  await expect(available).toHaveAttribute('loading', 'lazy');
+  await expect(available).toHaveAttribute('decoding', 'async');
+  expect(requests).toContain('https://drive.google.com/thumbnail?id=fixture-photo&sz=w180');
+  expect(await page.evaluate(() => typeof window.releaseDelayedHomePhoto)).toBe('function');
+  await expect(page.locator('[data-home-stay^="delayed|"] img')).toHaveCount(0);
+  await page.evaluate(() => window.releaseDelayedHomePhoto());
+  await expect(page.locator('[data-home-stay^="delayed|"] img')).toHaveAttribute('src', 'http://home.test/photo.svg');
+});
+
+test('Potential Home photos use the same bounded Google thumbnail request and lazy decoding', async ({ page }) => {
+  const helper = app.slice(app.indexOf('function v10HomeThumbnailUrl'), app.indexOf('function renderV10PotentialPipeline'));
+  await page.setContent('<!doctype html><title>Potential thumbnail contract</title>');
+  await page.addScriptTag({ content: helper });
+  expect(await page.evaluate(() => [
+    v10HomeThumbnailUrl('https://drive.google.com/thumbnail?id=potential-photo&sz=w1600'),
+    v10HomeThumbnailUrl('https://lh3.googleusercontent.com/d/potential-photo=w1600')
+  ])).toEqual([
+    'https://drive.google.com/thumbnail?id=potential-photo&sz=w180',
+    'https://lh3.googleusercontent.com/d/potential-photo=w180'
+  ]);
+  const potentialRenderer = app.slice(app.indexOf('function renderV10PotentialPipeline'), app.indexOf('function findV10PotentialEvent'));
+  expect(potentialRenderer).toContain('loading="lazy" decoding="async"');
+});
 
 test('current guests only, canonical identities, labels, photos and keyboard destination', async ({ page }) => {
   await setup(page, { events: [...guests, guests[0], event('Future', '2026-09-09'), event('Past', '2026-08-01', '2026-08-31'), event('Meet', undefined, undefined, { isMeetGreet: true }), event('Potential', undefined, undefined, { isPotential: true }), event('Departed')], checkedOut: 'departed|2026-09-01|2026-09-10' });
