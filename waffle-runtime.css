@@ -2,7 +2,7 @@
    Build: 2026.08.27.04
    Historical base styles remain compatibility sources during Phase 3A, but pages no longer
    reference them individually. Preserve this import order until modules are folded in. */
-@import url("waffle-app.css?build=2026.08.27.04&rev=2026.09.11.01");
+@import url("waffle-app.css?build=2026.08.27.04&rev=2026.09.11.02");
 @import url("waffle-v10.8.css?build=2026.08.27.04");
 @import url("waffle-v10.8.2.css?build=2026.08.27.04");
 @import url("waffle-v10.8.3.css?build=2026.08.27.04");
@@ -305,3 +305,21 @@ body[data-waffle-page="directory"] .directory-main-profile-tab { border-radius: 
 /* The arrival portrait module replaces the former seven-day arrival list. */
 .v10-ops-grid > .v10-agenda-card:only-child { grid-column: 1 / -1; }
 
+
+/* Keep mobile scrolling on the compositor. Backdrop blurs force the browser
+   to repaint the page behind the fixed navigation on every scroll frame. */
+@media (max-width: 820px) {
+  #wh75MobileBottomNav {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    background: var(--wh75-shell, var(--v10-card, #fff)) !important;
+  }
+
+  /* Defer paint and layout for modules below the first viewport. The intrinsic
+     size keeps the page geometry stable while those sections are off-screen. */
+  body[data-waffle-page="calendar"] .v10-ops-grid,
+  body[data-waffle-page="calendar"] .v10-capacity-card {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 360px;
+  }
+}
