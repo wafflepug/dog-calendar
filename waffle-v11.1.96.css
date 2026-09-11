@@ -145,3 +145,26 @@ body.dark-theme .v11196-month-count {
     font-size: 9px;
   }
 }
+
+/* ============================================================
+   MEET & GREET OUTLOOK — HIGH-CONTRAST BUSY-DAY ATTRIBUTES
+   ------------------------------------------------------------
+   Busy cards use the dark Waffle indigo surface in the consolidated
+   runtime. Keep every operational attribute legible on that surface,
+   including the nested time/dog-name rows and date footer that were
+   previously inheriting the light-card muted colour.
+   ============================================================ */
+body[data-waffle-page="calendar"] .v108-meet-day.busy small,
+body[data-waffle-page="calendar"] .v108-meet-day.busy i,
+body[data-waffle-page="calendar"] .v108-meet-day.busy > div span {
+  color: #ffffff !important;
+  opacity: 1 !important;
+}
+
+body[data-waffle-page="calendar"] .v108-meet-day.busy > div span {
+  font-weight: 800;
+}
+
+body[data-waffle-page="calendar"] .v108-meet-day.busy strong {
+  color: #fef08a !important;
+}
