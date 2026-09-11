@@ -1593,9 +1593,14 @@
     if (notification) ensureAvatar(notification, 'notification', NOTIFICATION_AVATAR, 'Notifications');
     if (search) ensureAvatar(search, 'search', SEARCH_AVATAR, 'Search');
 
-    ['notification', 'search', 'status'].forEach(role => {
-      const node = rail.querySelector(`[data-wh80-role="${role}"]`);
-      if (node) rail.appendChild(node);
+    // Only move actions when their order changes. Unconditional appendChild
+    // wakes our subtree observer again, keeping the mobile page busy at idle.
+    const actions = ['notification', 'search', 'status']
+      .map(role => rail.querySelector(`[data-wh80-role="${role}"]`))
+      .filter(Boolean);
+    actions.forEach((node, index) => {
+      const current = rail.children[index];
+      if (current !== node) rail.insertBefore(node, current || null);
     });
     syncTodayFooterAvatar();
   }
