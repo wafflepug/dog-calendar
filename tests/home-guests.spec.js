@@ -15,6 +15,29 @@ const sections = read('index.html').match(/<section class="wh-home-guests"[\s\S]
 const html = sections[0];
 const css = read('waffle-runtime.css').split('/* Sitter Home:')[1];
 const today = '2026-09-08';
+test('mobile header settles without a self-triggering DOM loop and repairs reordered actions', async ({ page }) => {
+  test.skip(page.viewportSize().width > 820, 'Mobile header only');
+  await page.route('https://home.test/**', route => route.fulfill({ body: '' }));
+  await page.setContent('<base href="https://home.test/"><body data-waffle-page="calendar"><button>Notifications</button><button>Search</button><span id="waffleConnectionStatus">Live</span></body>');
+  const header = read('waffle-ui.js').split('/* ---- source: waffle-v11.1.80.js ---- */')[1].split('/* ---- source: waffle-v11.1.89.js ---- */')[0];
+  await page.addScriptTag({ content: header });
+  await expect(page.locator('#wh80MobileHeaderRail > *')).toHaveCount(3);
+  const mutations = await page.evaluate(async () => {
+    const rail = document.getElementById('wh80MobileHeaderRail');
+    let count = 0;
+    const observer = new MutationObserver(records => { count += records.length; });
+    observer.observe(rail, { childList: true });
+    await new Promise(resolve => setTimeout(resolve, 400));
+    observer.disconnect();
+    return count;
+  });
+  expect(mutations).toBe(0);
+  await page.evaluate(() => {
+    const rail = document.getElementById('wh80MobileHeaderRail');
+    rail.prepend(rail.lastElementChild);
+  });
+  await expect.poll(() => page.locator('#wh80MobileHeaderRail > *').evaluateAll(nodes => nodes.map(node => node.dataset.wh80Role))).toEqual(['notification', 'search', 'status']);
+});
 function event(name, start = '2026-09-01', end = '2026-09-10', props = {}) {
   return { title: name, extendedProps: { dogName: name, rawStartDate: start, rawEndDate: end, ...props } };
 }
@@ -65,7 +88,7 @@ test('Home requests 180px thumbnails and paints available photos before a delaye
   await expect(available).toHaveAttribute('src', /drive\.google\.com\/thumbnail\?id=fixture-photo&sz=w180/);
   await expect(available).toHaveAttribute('loading', 'lazy');
   await expect(available).toHaveAttribute('decoding', 'async');
-  expect(requests).toContain('https://drive.google.com/thumbnail?id=fixture-photo&sz=w180');
+  await expect.poll(() => requests).toContain('https://drive.google.com/thumbnail?id=fixture-photo&sz=w180');
   expect(await page.evaluate(() => typeof window.releaseDelayedHomePhoto)).toBe('function');
   await expect(page.locator('[data-home-stay^="delayed|"] img')).toHaveCount(0);
   await page.evaluate(() => window.releaseDelayedHomePhoto());
