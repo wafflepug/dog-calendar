@@ -5,9 +5,11 @@
   'use strict';
   if (window.WAFFLE_SITTER_NAVIGATION) return;
 
-  const VERSION = '1.0.1';
+  const VERSION = '1.0.2';
   const DESKTOP_QUERY = '(min-width: 821px)';
   const DEFAULT_TOOLS_HREF = 'reminders.html';
+  const MOBILE_SEARCH_AVATAR = 'waffle-search-avatar-v1181.svg?v=1.0.2';
+  const MOBILE_NOTIFICATION_AVATAR = 'waffle-notification-avatar-v1181.svg?v=1.0.2';
   let originalToolsLauncher = null;
   let originalToolsHref = '';
   let observer = null;
@@ -49,6 +51,11 @@
       .wh-sitter-settings-action:focus-visible{outline:3px solid var(--wh75-ring,rgba(124,58,237,.22));outline-offset:2px}
       .wh-sitter-settings-action-icon{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;background:var(--wh75-accent-soft,#f3e8ff);color:var(--wh75-accent-ink,#4c1d95);font-size:18px}
       .wh-sitter-settings-action strong{display:block;font-size:12px;font-weight:900}.wh-sitter-settings-action small{display:block;margin-top:2px;color:var(--wh75-muted,#64748b);font-size:9px;font-weight:700;line-height:1.35}.wh-sitter-settings-chevron{color:var(--wh75-muted,#64748b);font-size:18px;font-weight:900}
+      @media(max-width:820px){
+        body #wh80MobileHeaderRail{display:none!important;visibility:hidden!important;pointer-events:none!important}
+        #wh75MobileDrawer .wh-sitter-mobile-tool-icon{overflow:hidden!important;padding:0!important}
+        #wh75MobileDrawer .wh-sitter-mobile-tool-icon img{display:block;width:100%;height:100%;max-width:none;object-fit:cover;border-radius:inherit}
+      }
       @media(min-width:821px){
         body.wh-sitter-desktop-sidebar-ready{box-sizing:border-box;padding-left:244px!important}
         body.wh-sitter-desktop-sidebar-ready>.container{max-width:min(1180px,calc(100vw - 285px))}
@@ -113,6 +120,55 @@
     syncSidebar();
   }
 
+  function closeMobileDrawer() {
+    const close = document.querySelector('#wh75MobileDrawer [data-wh75-close-drawer]');
+    if (close instanceof HTMLElement) {
+      close.click();
+      return;
+    }
+    document.getElementById('wh75MobileDrawer')?.classList.remove('is-open');
+    document.getElementById('wh75DrawerBackdrop')?.classList.remove('is-open');
+    document.getElementById('wh75MenuButton')?.setAttribute('aria-expanded', 'false');
+  }
+
+  function mobileHeaderAction(kind) {
+    return document.querySelector(`#wh80MobileHeaderRail [data-wh80-role="${kind}"]`) ||
+      document.querySelector(`[data-wh80-role="${kind}"]`);
+  }
+
+  function triggerMobileHeaderAction(kind) {
+    const source = mobileHeaderAction(kind);
+    closeMobileDrawer();
+    if (!(source instanceof HTMLElement)) return false;
+    window.setTimeout(() => source.click(), 0);
+    return true;
+  }
+
+  function mobileToolButton(kind, avatar, label, meta) {
+    return `<button class="wh75-nav-item" type="button" data-wh-sitter-mobile-action="${esc(kind)}" aria-label="${esc(label)}"><span class="wh75-nav-icon wh-sitter-mobile-tool-icon" aria-hidden="true"><img src="${esc(avatar)}" alt=""></span><span>${esc(label)}</span><span class="wh75-nav-meta">${esc(meta)}</span></button>`;
+  }
+
+  function ensureMobileSidebarTools() {
+    if (isDesktop()) return;
+    const drawer = document.getElementById('wh75MobileDrawer');
+    if (!drawer || document.getElementById('whSitterMobileHeaderTools')) return;
+
+    const section = document.createElement('div');
+    section.id = 'whSitterMobileHeaderTools';
+    section.className = 'wh75-nav-section';
+    section.innerHTML = `<div class="wh75-nav-heading">Tools</div><div class="wh75-nav-list">${mobileToolButton('search', MOBILE_SEARCH_AVATAR, 'Search', 'Find')}${mobileToolButton('notification', MOBILE_NOTIFICATION_AVATAR, 'Notifications', 'Alerts')}</div>`;
+
+    const accountHeading = Array.from(drawer.querySelectorAll('.wh75-nav-heading'))
+      .find(node => String(node.textContent || '').trim().toLowerCase() === 'account');
+    const accountSection = accountHeading?.closest('.wh75-nav-section');
+    if (accountSection) drawer.insertBefore(section, accountSection);
+    else drawer.querySelector('.wh75-drawer-footer')?.before(section) || drawer.appendChild(section);
+
+    section.querySelectorAll('[data-wh-sitter-mobile-action]').forEach(button => {
+      button.addEventListener('click', () => triggerMobileHeaderAction(button.dataset.whSitterMobileAction));
+    });
+  }
+
   function signature(node) {
     return [node.textContent, node.getAttribute?.('aria-label'), node.getAttribute?.('title'), node.dataset?.label]
       .filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
@@ -166,6 +222,7 @@
     if (!document.body) return;
     ensureStyle();
     ensureSidebar();
+    ensureMobileSidebarTools();
     ensureToolsInSettings();
     suppressToolsLaunchers();
     syncSidebar();
