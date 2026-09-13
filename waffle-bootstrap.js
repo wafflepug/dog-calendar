@@ -13,7 +13,7 @@
 
   const BUILD = '2026.08.28.01';
   // Increment with frontend releases so an older service worker cannot mix assets.
-const ASSET_REVISION = '2026.09.11.03';
+  const ASSET_REVISION = '2026.09.13.01';
   window.WAFFLE_ASSET_REVISION = ASSET_REVISION;
   const ENDPOINT = 'https://script.google.com/macros/s/AKfycbwn4HL49K9c3AZbXJRUjPw3UYWxJt8DmqXwMnTytyqdSstj3ZIJwWdDEC2IsBjetOf3pw/exec';
   const RUNTIME = [
@@ -48,7 +48,7 @@ const ASSET_REVISION = '2026.09.11.03';
       "waffle-sitter-navigation.js",
       "desktop-home-sidebar.js",
       "quick-add-touch-scroll.js"
-];
+  ];
   const maintenanceUrl = new URL('maintenance.html', window.location.href);
   let buildBanner = null;
   let firstPaintSettled = false;
@@ -172,27 +172,53 @@ const ASSET_REVISION = '2026.09.11.03';
       window.location.replace(maintenanceUrl.href);
     }
 
-    function unlock() {
+    function unlock(reason) {
       if (settled) return;
       settled = true;
       clean();
       document.documentElement.removeAttribute('data-waffle-maintenance-check');
       style.remove();
-      window.dispatchEvent(new CustomEvent('waffle:maintenance-clear'));
+      if (reason) {
+        document.documentElement.setAttribute('data-waffle-maintenance-warning', reason);
+        console.warn('Waffle maintenance status could not be confirmed; allowing the app to load because only an explicit enabled=true response may enter maintenance mode.', reason);
+        try {
+          window.dispatchEvent(new CustomEvent('waffle:maintenance-status-warning', {
+            detail: { reason, endpoint: ENDPOINT, failOpen: true }
+          }));
+        } catch (_) {}
+      } else {
+        document.documentElement.removeAttribute('data-waffle-maintenance-warning');
+      }
+      window.dispatchEvent(new CustomEvent('waffle:maintenance-clear', {
+        detail: { reason: reason || 'confirmed-off', failOpen: !!reason }
+      }));
     }
 
     window[callbackName] = status => {
-      if (status && status.enabled === true) return redirect('maintenance');
-      if (status && status.result === 'success') return unlock();
-      redirect('status-unconfirmed');
+      // Maintenance is entered only when the live endpoint explicitly confirms it.
+      // A malformed/unavailable/slow status check must not strand an otherwise
+      // healthy sitter dashboard on the maintenance page. Server-side mutation
+      // guards remain authoritative while maintenance is genuinely enabled.
+      if (status && status.result === 'success' && status.enabled === true) {
+        return redirect('maintenance');
+      }
+      if (status && status.result === 'success' && status.enabled === false) {
+        return unlock();
+      }
+      unlock('status-unconfirmed');
     };
 
-    script.onerror = () => redirect('status-unavailable');
+    script.onerror = () => unlock('status-unavailable');
     script.src = ENDPOINT + '?action=maintenance_status&callback=' + encodeURIComponent(callbackName) + '&_=' + Date.now();
     (document.head || document.documentElement).appendChild(script);
-    timer = setTimeout(() => redirect('status-timeout'), 6500);
+    timer = setTimeout(() => unlock('status-timeout'), 6500);
 
-    window.WAFFLE_MAINTENANCE_GATE = Object.freeze({ version: BUILD, endpoint: ENDPOINT });
+    window.WAFFLE_MAINTENANCE_GATE = Object.freeze({
+      version: BUILD,
+      revision: ASSET_REVISION,
+      endpoint: ENDPOINT,
+      policy: 'redirect-only-on-explicit-enabled'
+    });
   }
 
   function parserLoadRuntime() {
@@ -284,4 +310,3 @@ const ASSET_REVISION = '2026.09.11.03';
   });
   setInterval(checkBuild, 5 * 60 * 1000);
 })();
-
