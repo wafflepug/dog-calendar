@@ -133,7 +133,7 @@
   function eventDates(event) {
     const props = event?.extendedProps || {};
     const start = String(props.rawStartDate || props.startDate || event?.startStr || '').slice(0, 10) || isoDate(event?.start);
-    let end = String(props.rawEndDate || props.endDate || '').slice(0, 10);
+    let end = String(props.effectiveCheckoutDate || props.rawEndDate || props.endDate || '').slice(0, 10);
     if (!end && event?.end) {
       const raw = String(event.endStr || '').slice(0, 10) || isoDate(event.end);
       end = event.allDay === false ? raw : shiftIso(raw, -1);
@@ -938,7 +938,7 @@
   function eventDates(event) {
     const props = event?.extendedProps || {};
     const start = String(props.rawStartDate || props.startDate || event?.startStr || '').slice(0, 10) || isoDate(event?.start);
-    let end = String(props.rawEndDate || props.endDate || '').slice(0, 10);
+    let end = String(props.effectiveCheckoutDate || props.rawEndDate || props.endDate || '').slice(0, 10);
     if (!end && event?.end) {
       const rawEnd = String(event.endStr || '').slice(0, 10) || isoDate(event.end);
       end = event.allDay === false ? rawEnd : shiftIso(rawEnd, -1);
