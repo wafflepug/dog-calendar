@@ -22,14 +22,7 @@ test('early checkout shortens the calendar event while preserving the booked end
     window.renderV10OperationsHome = () => {};
     window.applyGuestDirectoryResponse = () => {};
     window.v10EventRawDates = event => ({ start:event.extendedProps.rawStartDate, end:event.extendedProps.rawEndDate });
-    const event = {
-      title: 'Coco',
-      extendedProps: { dogName:'Coco', rawStartDate:'2026-09-10', rawEndDate:'2026-09-20' },
-      setExtendedProp(name, value) { this.extendedProps[name] = value; },
-      setEnd(value) { this.displayEnd = value; }
-    };
-    window.checkoutFixtureEvent = event;
-    window.globalCalendar = { getEvents: () => [event] };
+    window.globalCalendar = { getEvents: () => [] };
   });
   await page.addScriptTag({ content: read('waffle-v11.0.js') });
   const result = await page.evaluate(() => {
@@ -37,8 +30,13 @@ test('early checkout shortens the calendar event while preserving the booked end
       stayKey:'coco|2026-09-10|2026-09-20', status:'checked_out', checkoutType:'early',
       isEarlyCheckout:true, actualCheckoutDate:'2026-09-14', checkedOutAt:'2026-09-14T01:30:00.000Z'
     }]);
+    window.checkoutFixtureEvent = {
+      title:'Coco',
+      extendedProps: { dogName:'Coco', rawStartDate:'2026-09-10', rawEndDate:'2026-09-20' }
+    };
+    v110ApplyEffectiveCheckoutDates([checkoutFixtureEvent]);
     return {
-      displayEnd:checkoutFixtureEvent.displayEnd,
+      displayEnd:checkoutFixtureEvent.end,
       rawEndDate:checkoutFixtureEvent.extendedProps.rawEndDate,
       bookedEndDate:checkoutFixtureEvent.extendedProps.bookedEndDate,
       effectiveCheckoutDate:checkoutFixtureEvent.extendedProps.effectiveCheckoutDate

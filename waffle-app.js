@@ -4594,6 +4594,10 @@ registerWaffleServiceWorker();
                             localConfirmed
                           );
 
+                if (typeof v110ApplyEffectiveCheckoutDates === 'function') {
+                    v110ApplyEffectiveCheckoutDates(allCalendarEvents);
+                }
+
                 updateFullyBookedPanel();
                 updateTodayMeetGreetPanel(allCalendarEvents);
                 updateUpcomingSevenDaysPanel(allCalendarEvents);

@@ -51,17 +51,24 @@ function v110CheckoutDisplayEnd(checkoutDate){
 }
 function v110ApplyEffectiveCheckoutDates(events){
   (Array.isArray(events)?events:[]).forEach(event=>{
-    if(typeof event?.setEnd!=='function')return;
     const operation=v110OperationForStay(v110StayKeyForEvent(event));
     const isEarly=operation?.isEarlyCheckout===true||String(operation?.checkoutType||'').toLowerCase()==='early';
     if(operation?.status!=='checked_out'||!isEarly)return;
     const booked=v10EventRawDates(event);
     const checkoutDate=v110NormaliseStayDate(operation.actualCheckoutDate||operation.checkedOutAt);
     if(!checkoutDate||!booked.end||checkoutDate>=booked.end)return;
-    if(event.extendedProps?.effectiveCheckoutDate===checkoutDate)return;
-    event.setExtendedProp('effectiveCheckoutDate',checkoutDate);
-    event.setExtendedProp('bookedEndDate',booked.end);
-    event.setEnd(v110CheckoutDisplayEnd(checkoutDate));
+    const props=event.extendedProps||(event.extendedProps={});
+    if(props.effectiveCheckoutDate===checkoutDate)return;
+    if(typeof event.setExtendedProp==='function'){
+      event.setExtendedProp('effectiveCheckoutDate',checkoutDate);
+      event.setExtendedProp('bookedEndDate',booked.end);
+    }else{
+      props.effectiveCheckoutDate=checkoutDate;
+      props.bookedEndDate=booked.end;
+    }
+    const displayEnd=v110CheckoutDisplayEnd(checkoutDate);
+    if(typeof event.setEnd==='function')event.setEnd(displayEnd);
+    else event.end=displayEnd;
   });
 }
 function v110IndexOperations(records){
