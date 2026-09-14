@@ -45,6 +45,7 @@
       "waffle-v11.2.01.js",
       "waffle-v11.2.14.js",
       "waffle-v11.2.17.js",
+      "waffle-v11.2.18.js",
       "waffle-responsive-layout.js",
       "waffle-sitter-navigation.js",
       "desktop-home-sidebar.js",
