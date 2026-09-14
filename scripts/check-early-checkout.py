@@ -20,6 +20,7 @@ backend = 'apps-script/V11217EarlyCheckout.js'
 frontend = 'waffle-v11.2.17.js'
 mobile_fix = 'waffle-v11.2.19.js'
 bootstrap = 'waffle-bootstrap.js'
+service_worker = 'service-worker.js'
 
 # Backend: early checkout is operational metadata, not a booking-date mutation.
 require(backend, "'early_checkout_stay'")
@@ -82,6 +83,14 @@ if text.find('"waffle-v11.2.19.js"') < text.find('"waffle-v11.2.17.js"'):
     errors.append('waffle-bootstrap.js: mobile early-checkout fix must load after V11.2.17')
 if text.find('"waffle-v11.2.19.js"') < text.find('"waffle-v11.2.18.js"'):
     errors.append('waffle-bootstrap.js: mobile early-checkout fix must load after V11.2.18')
+
+# The service worker must not serve a stale copy of the early-checkout runtime.
+# This guards installed/PWA clients that may have opened before the mobile fix
+# was added to the bootstrap runtime list.
+require(service_worker, "path.endsWith('/waffle-v11.2.17.js')")
+require(service_worker, "path.endsWith('/waffle-v11.2.19.js')")
+require(service_worker, "fetch(request, { cache: 'no-store' })")
+require(service_worker, "v11.4.8-early-checkout-reachability-2026.09.14.01")
 
 if errors:
     raise SystemExit('\n'.join(errors))
