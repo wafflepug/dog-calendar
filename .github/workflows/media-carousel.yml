@@ -1,0 +1,26 @@
+name: Media Carousel Contract
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'waffle-v11.2.18.js'
+      - 'waffle-bootstrap.js'
+      - 'scripts/check-media-carousel.py'
+      - '.github/workflows/media-carousel.yml'
+  pull_request:
+    paths:
+      - 'waffle-v11.2.18.js'
+      - 'waffle-bootstrap.js'
+      - 'scripts/check-media-carousel.py'
+      - '.github/workflows/media-carousel.yml'
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check carousel JavaScript syntax
+        run: node --check waffle-v11.2.18.js
+      - name: Check media carousel contract
+        run: python3 scripts/check-media-carousel.py
