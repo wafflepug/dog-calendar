@@ -1,6 +1,6 @@
 /* Waffle House Boarding — recovery service worker */
 
-const WAFFLE_SW_VERSION = 'v11.4.7-home-thumbnails-2026.09.11.03';
+const WAFFLE_SW_VERSION = 'v11.4.8-early-checkout-reachability-2026.09.14.01';
 const WAFFLE_CACHE_PREFIX = 'waffle-house-';
 const APP_SHELL_CACHE = `${WAFFLE_CACHE_PREFIX}shell-${WAFFLE_SW_VERSION}`;
 const RUNTIME_CACHE = `${WAFFLE_CACHE_PREFIX}runtime-${WAFFLE_SW_VERSION}`;
@@ -158,6 +158,8 @@ function isFreshnessCriticalAsset(url) {
     path.endsWith('/waffle-release.json') ||
     path.endsWith('/manifest.webmanifest') ||
     path.endsWith('/waffle-bootstrap.js') ||
+    path.endsWith('/waffle-v11.2.17.js') ||
+    path.endsWith('/waffle-v11.2.19.js') ||
     path.endsWith('/floorplan.js') ||
     path.endsWith('/floorplan.css') ||
     path.endsWith('/floorplan-area-labels.js')
@@ -258,10 +260,3 @@ self.addEventListener('fetch', event => {
     event.respondWith(staleWhileRevalidate(request));
   }
 });
-
-self.addEventListener('message', event => {
-  if (event.data && event.data.type === 'SKIP_WAITING') {
-    self.skipWaiting();
-  }
-});
-
