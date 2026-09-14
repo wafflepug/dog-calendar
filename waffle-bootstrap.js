@@ -12,8 +12,8 @@
   if (window.WAFFLE_RUNTIME_BOOTSTRAP) return;
 
   const BUILD = '2026.08.28.01';
-  // Increment with frontend releases so an older service worker cannot mix assets.
-  const ASSET_REVISION = '2026.09.14.01';
+  // Increment with coordinated shell releases so entry pages and SW stay aligned.
+  const ASSET_REVISION = '2026.09.11.03';
   window.WAFFLE_ASSET_REVISION = ASSET_REVISION;
   const ENDPOINT = 'https://script.google.com/macros/s/AKfycbwn4HL49K9c3AZbXJRUjPw3UYWxJt8DmqXwMnTytyqdSstj3ZIJwWdDEC2IsBjetOf3pw/exec';
   const RUNTIME = [
