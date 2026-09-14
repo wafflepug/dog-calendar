@@ -43,7 +43,32 @@ function v110StayKeyForEvent(event){
   return v110MakeStayKey(dogName,d.start,d.end);
 }
 function v110OperationForStay(k){return v110OperationsMap[String(k||'')]||null;}
-function v110IndexOperations(records){v110OperationsMap={};(Array.isArray(records)?records:[]).forEach(r=>{if(r?.stayKey)v110OperationsMap[String(r.stayKey)]=r;});}
+function v110CheckoutDisplayEnd(checkoutDate){
+  const date=new Date(`${checkoutDate}T00:00:00`);
+  if(Number.isNaN(date.getTime()))return'';
+  date.setDate(date.getDate()+1);
+  return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+}
+function v110ApplyEffectiveCheckoutDates(events){
+  (Array.isArray(events)?events:[]).forEach(event=>{
+    if(typeof event?.setEnd!=='function')return;
+    const operation=v110OperationForStay(v110StayKeyForEvent(event));
+    const isEarly=operation?.isEarlyCheckout===true||String(operation?.checkoutType||'').toLowerCase()==='early';
+    if(operation?.status!=='checked_out'||!isEarly)return;
+    const booked=v10EventRawDates(event);
+    const checkoutDate=v110NormaliseStayDate(operation.actualCheckoutDate||operation.checkedOutAt);
+    if(!checkoutDate||!booked.end||checkoutDate>=booked.end)return;
+    if(event.extendedProps?.effectiveCheckoutDate===checkoutDate)return;
+    event.setExtendedProp('effectiveCheckoutDate',checkoutDate);
+    event.setExtendedProp('bookedEndDate',booked.end);
+    event.setEnd(v110CheckoutDisplayEnd(checkoutDate));
+  });
+}
+function v110IndexOperations(records){
+  v110OperationsMap={};
+  (Array.isArray(records)?records:[]).forEach(r=>{if(r?.stayKey)v110OperationsMap[String(r.stayKey)]=r;});
+  if(WAFFLE_PAGE==='calendar')v110ApplyEffectiveCheckoutDates(globalCalendar?.getEvents()?.slice()||v110LatestCalendarEvents);
+}
 function v110IsCheckedOutEvent(event){return v110OperationForStay(v110StayKeyForEvent(event))?.status==='checked_out';}
 function v110FormatTime(v){if(!v)return'';const d=new Date(v);return Number.isNaN(d.getTime())?'':d.toLocaleTimeString('en-AU',{hour:'numeric',minute:'2-digit'});}
 
