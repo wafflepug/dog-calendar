@@ -13,7 +13,7 @@
 
   const BUILD = '2026.08.28.01';
   // Increment with coordinated shell releases so entry pages and SW stay aligned.
-  const ASSET_REVISION = '2026.09.11.03';
+  const ASSET_REVISION = '2026.09.14.01';
   window.WAFFLE_ASSET_REVISION = ASSET_REVISION;
   const ENDPOINT = 'https://script.google.com/macros/s/AKfycbwn4HL49K9c3AZbXJRUjPw3UYWxJt8DmqXwMnTytyqdSstj3ZIJwWdDEC2IsBjetOf3pw/exec';
   const RUNTIME = [
@@ -45,6 +45,7 @@
       "waffle-v11.2.01.js",
       "waffle-v11.2.14.js",
       "waffle-v11.2.17.js",
+      "waffle-v11.2.18.js",
       "waffle-responsive-layout.js",
       "waffle-sitter-navigation.js",
       "desktop-home-sidebar.js",
