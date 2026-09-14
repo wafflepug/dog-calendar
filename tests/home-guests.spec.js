@@ -15,7 +15,7 @@ const sections = read('index.html').match(/<section class="wh-home-guests"[\s\S]
 const html = sections[0];
 const css = read('waffle-runtime.css').split('/* Sitter Home:')[1];
 const today = '2026-09-08';
-test('early checkout shortens the calendar event while preserving the booked end date', async ({ page }) => {
+test('checked-out timestamp keeps the shortened calendar date when fresh data omits early-checkout fields', async ({ page }) => {
   await page.setContent('<body></body>');
   await page.evaluate(() => {
     window.WAFFLE_PAGE = 'calendar';
@@ -27,8 +27,8 @@ test('early checkout shortens the calendar event while preserving the booked end
   await page.addScriptTag({ content: read('waffle-v11.0.js') });
   const result = await page.evaluate(() => {
     v110IndexOperations([{
-      stayKey:'coco|2026-09-10|2026-09-20', status:'checked_out', checkoutType:'early',
-      isEarlyCheckout:true, actualCheckoutDate:'2026-09-14', checkedOutAt:'2026-09-14T01:30:00.000Z'
+      stayKey:'coco|2026-09-10|2026-09-20', status:'checked_out',
+      checkedOutAt:'2026-09-14T01:30:00.000Z'
     }]);
     window.checkoutFixtureEvent = {
       title:'Coco',

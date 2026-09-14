@@ -52,8 +52,7 @@ function v110CheckoutDisplayEnd(checkoutDate){
 function v110ApplyEffectiveCheckoutDates(events){
   (Array.isArray(events)?events:[]).forEach(event=>{
     const operation=v110OperationForStay(v110StayKeyForEvent(event));
-    const isEarly=operation?.isEarlyCheckout===true||String(operation?.checkoutType||'').toLowerCase()==='early';
-    if(operation?.status!=='checked_out'||!isEarly)return;
+    if(operation?.status!=='checked_out')return;
     const booked=v10EventRawDates(event);
     const checkoutDate=v110NormaliseStayDate(operation.actualCheckoutDate||operation.checkedOutAt);
     if(!checkoutDate||!booked.end||checkoutDate>=booked.end)return;
