@@ -1,0 +1,35 @@
+name: Early Checkout Contract
+
+on:
+  push:
+    paths:
+      - 'apps-script/V11217EarlyCheckout.js'
+      - 'waffle-v11.2.17.js'
+      - 'waffle-bootstrap.js'
+      - 'scripts/check-early-checkout.py'
+      - '.github/workflows/early-checkout.yml'
+  pull_request:
+    paths:
+      - 'apps-script/V11217EarlyCheckout.js'
+      - 'waffle-v11.2.17.js'
+      - 'waffle-bootstrap.js'
+      - 'scripts/check-early-checkout.py'
+      - '.github/workflows/early-checkout.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check frontend syntax
+        run: node --check waffle-v11.2.17.js
+      - name: Check Apps Script syntax
+        run: node --check apps-script/V11217EarlyCheckout.js
+      - name: Check early checkout contract
+        run: python3 scripts/check-early-checkout.py
