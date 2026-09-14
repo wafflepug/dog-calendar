@@ -53,10 +53,11 @@ require(frontend, 'REQUESTED BY')
 require(frontend, 'The original booking dates will be preserved.')
 require(frontend, "p.endDate <= today")
 
-# Runtime: load the additive feature after the current V11.2.14 layer and bump
-# the asset revision without changing the canonical build pin.
+# Runtime: load the additive feature after the current V11.2.14 layer. This is
+# a new runtime filename, so it can ship without moving the coordinated shell
+# revision shared by entry pages, runtime CSS and the service worker.
 require(bootstrap, '"waffle-v11.2.17.js"')
-require(bootstrap, "const ASSET_REVISION = '2026.09.14.01';")
+require(bootstrap, "const ASSET_REVISION = '2026.09.11.03';")
 require(bootstrap, "const BUILD = '2026.08.28.01';")
 text = Path(bootstrap).read_text(encoding='utf-8')
 if text.find('"waffle-v11.2.17.js"') < text.find('"waffle-v11.2.14.js"'):
