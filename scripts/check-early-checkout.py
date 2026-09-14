@@ -18,6 +18,7 @@ def forbid(path, needle):
 
 backend = 'apps-script/V11217EarlyCheckout.js'
 frontend = 'waffle-v11.2.17.js'
+mobile_fix = 'waffle-v11.2.19.js'
 bootstrap = 'waffle-bootstrap.js'
 
 # Backend: early checkout is operational metadata, not a booking-date mutation.
@@ -53,15 +54,34 @@ require(frontend, 'REQUESTED BY')
 require(frontend, 'The original booking dates will be preserved.')
 require(frontend, "p.endDate <= today")
 
-# Runtime: load the additive feature after V11.2.14. Later additive releases may
-# legitimately advance ASSET_REVISION, so this contract checks that a revision
-# exists rather than pinning the early-checkout release's historical value.
+# Mobile reachability: the fixed sitter navigation is z-index 2147481795, so the
+# dialog must own a higher layer and a real touch-scroll region. The action row
+# stays pinned inside the dialog and accounts for phone safe areas.
+require(mobile_fix, "VERSION = '11.2.19'")
+require(mobile_fix, "MODAL_ID = 'v11217EarlyCheckoutModal'")
+require(mobile_fix, 'z-index: 2147482500 !important')
+require(mobile_fix, 'overflow-y: auto !important')
+require(mobile_fix, '-webkit-overflow-scrolling: touch !important')
+require(mobile_fix, 'touch-action: pan-y !important')
+require(mobile_fix, 'position: sticky !important')
+require(mobile_fix, 'env(safe-area-inset-bottom)')
+require(mobile_fix, 'window.visualViewport?.addEventListener')
+require(mobile_fix, "modal.dataset.v11219MobileScrollReady = 'true'")
+
+# Runtime: V11.2.19 is presentation-only and must load after both the original
+# early-checkout flow and the current media layer so its mobile overrides win.
 require(bootstrap, '"waffle-v11.2.17.js"')
+require(bootstrap, '"waffle-v11.2.18.js"')
+require(bootstrap, '"waffle-v11.2.19.js"')
 require(bootstrap, 'const ASSET_REVISION = ')
 require(bootstrap, "const BUILD = '2026.08.28.01';")
 text = Path(bootstrap).read_text(encoding='utf-8')
 if text.find('"waffle-v11.2.17.js"') < text.find('"waffle-v11.2.14.js"'):
     errors.append('waffle-bootstrap.js: early checkout must load after V11.2.14')
+if text.find('"waffle-v11.2.19.js"') < text.find('"waffle-v11.2.17.js"'):
+    errors.append('waffle-bootstrap.js: mobile early-checkout fix must load after V11.2.17')
+if text.find('"waffle-v11.2.19.js"') < text.find('"waffle-v11.2.18.js"'):
+    errors.append('waffle-bootstrap.js: mobile early-checkout fix must load after V11.2.18')
 
 if errors:
     raise SystemExit('\n'.join(errors))
