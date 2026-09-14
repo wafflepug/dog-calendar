@@ -46,6 +46,25 @@ test('early checkout shortens the calendar event while preserving the booked end
     displayEnd:'2026-09-15', rawEndDate:'2026-09-20', bookedEndDate:'2026-09-20', effectiveCheckoutDate:'2026-09-14'
   });
 });
+test('custom month renderer prefers effective checkout over the original booking end', async ({ page }) => {
+  const calendarSource = read('calendar.js');
+  const start = calendarSource.indexOf('function eventDates(event)');
+  const end = calendarSource.indexOf('function formatTime(value)', start);
+  const eventDatesSource = calendarSource.slice(start, end).trim().replace(/^function eventDates/, 'function');
+  await page.evaluate(sourceText => {
+    window.isoDate = value => String(value || '').slice(0, 10);
+    window.shiftIso = value => value;
+    window.rendererEventDates = (0, eval)(`(${sourceText})`);
+  }, eventDatesSource);
+  const dates = await page.evaluate(() => rendererEventDates({
+    extendedProps: {
+      rawStartDate:'2026-09-05',
+      rawEndDate:'2026-09-20',
+      effectiveCheckoutDate:'2026-09-14'
+    }
+  }));
+  expect(dates).toEqual({ start:'2026-09-05', end:'2026-09-14' });
+});
 test('mobile header settles without a self-triggering DOM loop and repairs reordered actions', async ({ page }) => {
   test.skip(page.viewportSize().width > 820, 'Mobile header only');
   await page.route('https://home.test/**', route => route.fulfill({ body: '' }));
