@@ -211,6 +211,25 @@ test('canonical pages keep the primary UI inside the viewport', async ({ page },
   expect(failures, failures.join('\n')).toEqual([]);
 });
 
+test('desktop shell keeps header actions in the sidebar and appearance in Settings', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.metadata.mobileShell === true, 'Desktop shell test only applies above 820px.');
+
+  await gotoCanonical(page, 'index.html', 'calendar');
+  const tools = page.locator('#whSitterDesktopTools');
+  const notification = tools.locator('#waffleNotificationButton');
+  const search = tools.locator('[data-v1118-search-open]');
+
+  await expect(notification).toBeVisible();
+  await expect(search).toBeVisible();
+  await expect(page.locator('.calendar-header-branding')).toBeHidden();
+  await expect(page.locator('#waffleConnectionStatus')).toBeHidden();
+
+  await page.locator('[data-wh-sitter-settings]').click();
+  await expect(page.locator('#wh75SettingsPanel')).toHaveClass(/is-open/);
+  await expect(page.locator('#wh75SettingsPanel .wh75-mode-grid')).toBeVisible();
+  await expect(page.locator('#wh75SettingsPanel .wh75-mode-btn')).toHaveCount(2);
+});
+
 test('mobile shell navigation, drawer and Add sheet are placed without clipping or overlap', async ({ page }, testInfo) => {
   const mobileShell = testInfo.project.metadata.mobileShell === true;
   test.skip(!mobileShell, 'Mobile-shell placement test only applies at widths <= 820px.');

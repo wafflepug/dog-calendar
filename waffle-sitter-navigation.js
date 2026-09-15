@@ -5,13 +5,14 @@
   'use strict';
   if (window.WAFFLE_SITTER_NAVIGATION) return;
 
-  const VERSION = '1.0.2';
+  const VERSION = '1.1.0';
   const DESKTOP_QUERY = '(min-width: 821px)';
   const DEFAULT_TOOLS_HREF = 'reminders.html';
   const MOBILE_SEARCH_AVATAR = 'waffle-search-avatar-v1181.svg?v=1.0.2';
   const MOBILE_NOTIFICATION_AVATAR = 'waffle-notification-avatar-v1181.svg?v=1.0.2';
   let originalToolsLauncher = null;
   let originalToolsHref = '';
+  const desktopActionLocations = new Map();
   let observer = null;
   let scheduled = false;
 
@@ -45,6 +46,7 @@
     style.id = 'whSitterNavigationStyle';
     style.textContent = `
       .wh-sitter-tools-relocated{display:none!important;visibility:hidden!important;pointer-events:none!important}
+      #waffleConnectionStatus,.waffle-connection-status{display:none!important;visibility:hidden!important;pointer-events:none!important}
       #whSitterDesktopSidebar{display:none}
       .wh-sitter-settings-action{width:100%;min-height:54px;box-sizing:border-box;display:grid;grid-template-columns:38px minmax(0,1fr) auto;align-items:center;gap:10px;border:1px solid var(--wh75-line,#dbe3ef);border-radius:14px;padding:9px 11px;background:var(--wh75-shell-2,#f8fafc);color:var(--wh75-text,#172033);font:inherit;text-align:left;cursor:pointer}
       .wh-sitter-settings-action:hover{border-color:var(--wh75-accent,#7c3aed);box-shadow:0 0 0 3px var(--wh75-ring,rgba(124,58,237,.15))}
@@ -61,11 +63,18 @@
         body.wh-sitter-desktop-sidebar-ready>.container{max-width:min(1180px,calc(100vw - 285px))}
         body.wh-sitter-desktop-sidebar-ready .app-tabs{display:none!important}
         #whSitterDesktopSidebar{position:fixed;display:flex;left:0;top:0;bottom:0;z-index:2147481500;width:224px;box-sizing:border-box;flex-direction:column;gap:16px;padding:20px 14px;background:var(--wh75-shell,#fff);color:var(--wh75-text,#172033);border-right:1px solid var(--wh75-line,#e2e8f0);box-shadow:8px 0 28px rgba(15,23,42,.07);overflow-y:auto}
-        .wh-sitter-sidebar-brand{display:grid;grid-template-columns:44px minmax(0,1fr);gap:10px;align-items:center;padding:2px 6px 15px;border-bottom:1px solid var(--wh75-line,#e2e8f0)}
-        .wh-sitter-sidebar-brand img{width:44px;height:44px;border-radius:13px;object-fit:cover}.wh-sitter-sidebar-brand strong{display:block;font-size:15px;font-weight:950;letter-spacing:-.02em}.wh-sitter-sidebar-brand small{display:block;margin-top:2px;color:var(--wh75-muted,#64748b);font-size:9px;font-weight:700}
+        body.wh-sitter-desktop-sidebar-ready .calendar-header-branding{display:none!important;visibility:hidden!important;pointer-events:none!important}
+        .wh-sitter-sidebar-brand{display:block;padding:4px 9px 17px;border-bottom:1px solid var(--wh75-line,#e2e8f0)}
+        .wh-sitter-sidebar-brand strong{display:block;font-size:15px;font-weight:950;letter-spacing:-.02em}.wh-sitter-sidebar-brand small{display:block;margin-top:2px;color:var(--wh75-muted,#64748b);font-size:9px;font-weight:700}
         .wh-sitter-sidebar-heading{padding:0 9px 5px;color:var(--wh75-muted,#64748b);font-size:9px;font-weight:950;letter-spacing:.11em;text-transform:uppercase}.wh-sitter-sidebar-nav{display:grid;gap:4px}
         .wh-sitter-sidebar-item{min-height:46px;display:grid;grid-template-columns:32px minmax(0,1fr);gap:9px;align-items:center;padding:7px 9px;border:0;border-radius:12px;background:transparent;color:var(--wh75-text,#172033);text-decoration:none;text-align:left;font:inherit;font-size:12px;font-weight:850;cursor:pointer}.wh-sitter-sidebar-item:hover{background:var(--wh75-shell-2,#f8fafc)}.wh-sitter-sidebar-item.is-active{background:var(--wh75-accent-soft,#f3e8ff);color:var(--wh75-accent-ink,#4c1d95);box-shadow:inset 3px 0 0 var(--wh75-accent,#7c3aed)}.wh-sitter-sidebar-item:focus-visible{outline:3px solid var(--wh75-ring,rgba(124,58,237,.22));outline-offset:2px}
         .wh-sitter-sidebar-icon{width:32px;height:32px;display:grid;place-items:center;border-radius:10px;background:var(--wh75-shell-2,#f8fafc);font-size:16px}.wh-sitter-sidebar-item.is-active .wh-sitter-sidebar-icon{background:color-mix(in srgb,var(--wh75-accent,#7c3aed) 16%,var(--wh75-shell,#fff))}.wh-sitter-sidebar-account{margin-top:auto;padding-top:14px;border-top:1px solid var(--wh75-line,#e2e8f0)}
+        #whSitterDesktopTools{display:grid;gap:4px}
+        #whSitterDesktopTools>button{width:100%!important;min-width:0!important;min-height:46px!important;height:auto!important;margin:0!important;padding:7px 9px!important;display:grid!important;grid-template-columns:32px minmax(0,1fr)!important;gap:9px!important;align-items:center!important;justify-content:stretch!important;border:0!important;border-radius:12px!important;background:transparent!important;color:var(--wh75-text,#172033)!important;box-shadow:none!important;text-align:left!important;font:inherit!important;font-size:12px!important;font-weight:850!important;cursor:pointer!important}
+        #whSitterDesktopTools>button:hover{background:var(--wh75-shell-2,#f8fafc)!important}#whSitterDesktopTools>button:focus-visible{outline:3px solid var(--wh75-ring,rgba(124,58,237,.22))!important;outline-offset:2px!important}
+        #whSitterDesktopTools>button .waffle-notification-button-icon,#whSitterDesktopTools>button>span:first-child{width:32px;height:32px;display:grid!important;place-items:center;border-radius:10px;background:var(--wh75-shell-2,#f8fafc);font-size:16px!important;color:var(--wh75-text,#172033)!important;line-height:1!important}
+        #whSitterDesktopTools>button .waffle-notification-button-label,#whSitterDesktopTools>button .v1118-search-button-label{display:block!important;color:inherit!important;font-size:12px!important;line-height:1.2!important}
+        #whSitterDesktopTools>button .waffle-notification-button-dot,#whSitterDesktopTools>button .wh81-header-avatar{display:none!important}
         #wh75SettingsBackdrop{position:fixed!important;inset:0!important;z-index:2147481825!important;background:var(--wh75-page-overlay,rgba(15,23,42,.42))!important;backdrop-filter:blur(3px);display:none!important}#wh75SettingsBackdrop.is-open{display:block!important}
         #wh75SettingsPanel{display:block!important;position:fixed!important;left:50%!important;top:50%!important;bottom:auto!important;z-index:2147481830!important;width:min(560px,calc(100vw - 80px))!important;max-height:min(82vh,760px)!important;overflow:auto!important;box-sizing:border-box!important;padding:20px!important;border:1px solid var(--wh75-line,#e2e8f0)!important;border-radius:22px!important;background:var(--wh75-shell,#fff)!important;color:var(--wh75-text,#172033)!important;box-shadow:0 28px 80px rgba(15,23,42,.32)!important;opacity:0!important;pointer-events:none!important;transform:translate(-50%,calc(-50% + 18px))!important;transition:opacity .18s ease,transform .18s ease!important}#wh75SettingsPanel.is-open{opacity:1!important;pointer-events:auto!important;transform:translate(-50%,-50%)!important}
         #wh75SettingsPanel .wh75-settings-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:18px}#wh75SettingsPanel .wh75-settings-head h2{margin:0;font-size:22px;line-height:1.15;font-weight:950;color:var(--wh75-text,#172033)}#wh75SettingsPanel .wh75-settings-head p{margin:5px 0 0;color:var(--wh75-muted,#64748b);font-size:12px;line-height:1.45;font-weight:650}#wh75SettingsPanel .wh75-settings-close{flex:0 0 38px;width:38px;height:38px;border:0;border-radius:11px;background:var(--wh75-shell-2,#f8fafc);color:var(--wh75-text,#172033);font-size:20px;cursor:pointer}
@@ -112,12 +121,48 @@
       sidebar = document.createElement('aside');
       sidebar.id = 'whSitterDesktopSidebar';
       sidebar.setAttribute('aria-label', 'Waffle House navigation');
-      sidebar.innerHTML = `<div class="wh-sitter-sidebar-brand"><img src="waffle-logo.png" alt=""><span><strong>Waffle House</strong><small>Dog sitting, organised.</small></span></div><div><div class="wh-sitter-sidebar-heading">Workspace</div><nav class="wh-sitter-sidebar-nav" aria-label="Primary">${sidebarItem('index.html?view=today','⌂','Today','today')}${sidebarItem('index.html?view=calendar','▦','Calendar','calendar')}${sidebarItem('directory.html','🐾','Care','directory')}${sidebarItem('reminders.html','✓','Organiser','reminders')}${sidebarItem('audit.html','≡','Logs','audit')}</nav></div><div class="wh-sitter-sidebar-account"><div class="wh-sitter-sidebar-heading">Account</div><button type="button" class="wh-sitter-sidebar-item" data-wh-sitter-settings><span class="wh-sitter-sidebar-icon" aria-hidden="true">⚙</span><span>Settings</span></button></div>`;
+      sidebar.innerHTML = `<div class="wh-sitter-sidebar-brand"><strong>Waffle House</strong><small>Dog sitting, organised.</small></div><div><div class="wh-sitter-sidebar-heading">Workspace</div><nav class="wh-sitter-sidebar-nav" aria-label="Primary">${sidebarItem('index.html?view=today','⌂','Today','today')}${sidebarItem('index.html?view=calendar','▦','Calendar','calendar')}${sidebarItem('directory.html','🐾','Care','directory')}${sidebarItem('reminders.html','✓','Organiser','reminders')}${sidebarItem('audit.html','≡','Logs','audit')}</nav></div><div><div class="wh-sitter-sidebar-heading">Tools</div><div id="whSitterDesktopTools" aria-label="Tools"></div></div><div class="wh-sitter-sidebar-account"><div class="wh-sitter-sidebar-heading">Account</div><button type="button" class="wh-sitter-sidebar-item" data-wh-sitter-settings><span class="wh-sitter-sidebar-icon" aria-hidden="true">⚙</span><span>Settings</span></button></div>`;
       document.body.appendChild(sidebar);
       sidebar.querySelector('[data-wh-sitter-settings]')?.addEventListener('click', openSettings);
     }
     document.body.classList.toggle('wh-sitter-desktop-sidebar-ready', isDesktop());
     syncSidebar();
+  }
+
+  function rememberDesktopAction(node) {
+    if (!node || desktopActionLocations.has(node)) return;
+    desktopActionLocations.set(node, { parent:node.parentNode, next:node.nextSibling });
+  }
+
+  function restoreDesktopActions() {
+    desktopActionLocations.forEach((location, node) => {
+      if (!(node instanceof HTMLElement)) return;
+      delete node.dataset.whSitterDesktopAction;
+      const parent = location.parent;
+      if (!(parent instanceof Node) || !parent.isConnected) return;
+      if (location.next && location.next.parentNode === parent) parent.insertBefore(node, location.next);
+      else parent.appendChild(node);
+    });
+    desktopActionLocations.clear();
+  }
+
+  function ensureDesktopSidebarTools() {
+    if (!isDesktop()) {
+      restoreDesktopActions();
+      return;
+    }
+    const tools = document.getElementById('whSitterDesktopTools');
+    if (!tools) return;
+    const actions = [
+      ['notification', document.getElementById('waffleNotificationButton')],
+      ['search', document.querySelector('[data-v1118-search-open]')]
+    ];
+    actions.forEach(([kind, node]) => {
+      if (!(node instanceof HTMLElement) || node.closest('#wh75SettingsPanel,#wh75MobileDrawer')) return;
+      rememberDesktopAction(node);
+      node.dataset.whSitterDesktopAction = kind;
+      if (node.parentNode !== tools) tools.appendChild(node);
+    });
   }
 
   function closeMobileDrawer() {
@@ -222,6 +267,7 @@
     if (!document.body) return;
     ensureStyle();
     ensureSidebar();
+    ensureDesktopSidebarTools();
     ensureMobileSidebarTools();
     ensureToolsInSettings();
     suppressToolsLaunchers();
