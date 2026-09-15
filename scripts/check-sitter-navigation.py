@@ -19,6 +19,7 @@ required = {
     'mobile Palz Stay brand': 'whPalzStayMobileBrand',
     'mobile shell Palz Stay brand': 'whPalzStayMobileShellBrand',
     'Care mobile header actions removed': 'body[data-waffle-page="directory"] .calendar-header-branding #waffleNotificationButton',
+    'mobile home helper content removed': 'section[aria-labelledby="whHomeGuestsTitle"] .wh-home-shortcuts',
     'Palz accent binding': 'background:var(--wh75-accent,#7c3aed)',
     'mobile bracket removal': '.v10-ops-heading::before',
     'menu-side accent removal': '.v10-ops-heading{box-shadow:0 8px 22px',

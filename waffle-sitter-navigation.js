@@ -5,7 +5,7 @@
   'use strict';
   if (window.WAFFLE_SITTER_NAVIGATION) return;
 
-  const VERSION = '1.3.1';
+  const VERSION = '1.3.2';
   const DESKTOP_QUERY = '(min-width: 821px)';
   const DEFAULT_TOOLS_HREF = 'reminders.html';
   const MOBILE_SEARCH_AVATAR = 'waffle-search-avatar-v1181.svg?v=1.0.2';
@@ -69,6 +69,12 @@
         body[data-waffle-page="directory"] #whPalzStayMobileShellBrand{display:flex}
         body[data-waffle-page="directory"] .calendar-header-branding #waffleNotificationButton,
         body[data-waffle-page="directory"] .calendar-header-branding [data-v1118-search-open]{display:none!important;visibility:hidden!important;pointer-events:none!important}
+        body[data-waffle-page="calendar"][data-wh75-mobile-view="today"] section[aria-labelledby="whHomeGuestsTitle"] .v10-card-kicker,
+        body[data-waffle-page="calendar"][data-wh75-mobile-view="today"] section[aria-labelledby="whHomeGuestsTitle"] #whHomeGuestsStatus,
+        body[data-waffle-page="calendar"][data-wh75-mobile-view="today"] section[aria-labelledby="whHomeGuestsTitle"] .wh-home-shortcuts,
+        body[data-waffle-page="calendar"][data-wh75-mobile-view="today"] section[aria-labelledby="whHomeArrivalsTitle"] .v10-card-kicker,
+        body[data-waffle-page="calendar"][data-wh75-mobile-view="today"] section[aria-labelledby="whHomeArrivalsTitle"] #whHomeArrivalsStatus,
+        body[data-waffle-page="calendar"][data-wh75-mobile-view="today"] section[aria-labelledby="whHomeArrivalsTitle"] .wh-home-shortcuts{display:none!important;visibility:hidden!important;pointer-events:none!important}
         body[data-waffle-page="calendar"][data-wh75-mobile-view="calendar"] .calendar-header-branding,
         body[data-waffle-page="directory"] .calendar-header-branding{position:relative!important;min-height:76px!important}
         #whPalzStayMobileBrand,.calendar-header-branding #whPalzStayMobileShellBrand{align-items:center;justify-content:center;width:min(226px,calc(100vw - 164px));height:52px;margin:0 auto;overflow:visible}
