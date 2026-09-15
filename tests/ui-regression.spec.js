@@ -255,6 +255,16 @@ test('responsive brand uses Palz Stay on mobile Today and concise Waffle House b
       await expect(section.locator('h2')).toBeVisible();
       await expect(section.locator('.wh-home-guest-row')).not.toHaveCSS('display', 'none');
     }
+    const potentials = page.locator('section[aria-labelledby="whHomePotentialsTitle"]');
+    await expect(potentials.locator('.v10-card-kicker')).toBeHidden();
+    await expect(potentials.locator('#whHomeAddPotentialBtn')).toBeHidden();
+    await expect(potentials.locator('#whHomePotentialsStatus')).toBeHidden();
+    await expect(potentials.locator('.wh-home-shortcuts')).toBeHidden();
+    await expect(page.locator('.v10-capacity-card h2')).toHaveText('Capacity Tracker');
+    await expect(page.locator('.v108-meet-card h2')).toHaveText('Meet & Greet Tracker');
+    await expect(page.locator('.v10-capacity-card .v10-card-kicker')).toHaveCount(0);
+    await expect(page.locator('.v108-meet-card .v10-card-kicker')).toHaveCount(0);
+    await expect(page.locator('#v1083OutlookPopover')).toBeHidden();
 
     for (const [path, expectedPage] of [['index.html?view=calendar', 'calendar'], ['directory.html', 'directory']]) {
       await gotoCanonical(page, path, expectedPage);
