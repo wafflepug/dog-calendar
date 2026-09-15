@@ -247,6 +247,15 @@ test('responsive brand uses Palz Stay on mobile Today and concise Waffle House b
     expect(await page.locator('.v10-ops-heading').evaluate(node => getComputedStyle(node, '::before').content)).toBe('none');
     expect(await page.locator('.v10-ops-heading').evaluate(node => getComputedStyle(node, '::after').content)).toBe('none');
     expect(await page.locator('.v10-ops-heading').evaluate(node => getComputedStyle(node).boxShadow)).not.toContain('inset');
+
+    for (const [path, expectedPage] of [['index.html?view=calendar', 'calendar'], ['directory.html', 'directory']]) {
+      await gotoCanonical(page, path, expectedPage);
+      const shellBrand = page.locator('#whPalzStayMobileShellBrand');
+      await expect(shellBrand).toBeVisible();
+      const shellMenuBox = await box(page.locator('#wh75MenuButton'));
+      const shellBrandBox = await box(shellBrand);
+      expect(shellMenuBox && shellBrandBox && shellMenuBox.x + shellMenuBox.width <= shellBrandBox.x).toBeTruthy();
+    }
   } else {
     await expect(palzStay).toBeHidden();
     await expect(desktopBrand).toHaveText('Waffle House');
