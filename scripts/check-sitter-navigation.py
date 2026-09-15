@@ -11,6 +11,11 @@ required = {
     'desktop breakpoint': '@media(min-width:821px)',
     'sidebar body state': 'wh-sitter-desktop-sidebar-ready',
     'settings section': 'whSitterToolsSettingsSection',
+    'sidebar tools section': 'whSitterDesktopTools',
+    'notification relocation': "document.getElementById('waffleNotificationButton')",
+    'search relocation': "document.querySelector('[data-v1118-search-open]')",
+    'desktop header removal': 'body.wh-sitter-desktop-sidebar-ready .calendar-header-branding',
+    'live ticker removal': '#waffleConnectionStatus,.waffle-connection-status',
     'settings action': 'Open Sitter Tools',
     'direct launcher suppression': 'wh-sitter-tools-relocated',
     'launcher matcher': r'\bsitter\s+tools\b',
@@ -55,6 +60,8 @@ if 'Sitter Tools' in sidebar_block:
     raise SystemExit('Desktop sidebar must not expose Sitter Tools directly')
 if 'Settings' not in sidebar_block:
     raise SystemExit('Desktop sidebar must retain Settings access')
+if 'waffle-logo.png' in sidebar_block or '<img' in sidebar_block:
+    raise SystemExit('Desktop sidebar brand must not render the retired logo')
 
 # The refinement is web/desktop-only and must not rewrite mobile navigation.
 for mobile_marker in ('wh75MobileBottomNav', 'wh75MobileDrawer', 'wh75MenuButton'):
