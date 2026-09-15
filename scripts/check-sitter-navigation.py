@@ -18,6 +18,7 @@ required = {
     'live ticker removal': '#waffleConnectionStatus,.waffle-connection-status',
     'mobile Palz Stay brand': 'whPalzStayMobileBrand',
     'Palz accent binding': 'background:var(--wh75-accent,#7c3aed)',
+    'mobile bracket removal': '.v10-ops-heading::before',
     'settings action': 'Open Sitter Tools',
     'direct launcher suppression': 'wh-sitter-tools-relocated',
     'launcher matcher': r'\bsitter\s+tools\b',
