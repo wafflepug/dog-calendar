@@ -230,6 +230,26 @@ test('desktop shell keeps header actions in the sidebar and appearance in Settin
   await expect(page.locator('#wh75SettingsPanel .wh75-mode-btn')).toHaveCount(2);
 });
 
+test('responsive brand uses Palz Stay on mobile Today and concise Waffle House branding on desktop', async ({ page }, testInfo) => {
+  await gotoCanonical(page, 'index.html?view=today', 'calendar');
+  const mobileShell = testInfo.project.metadata.mobileShell === true;
+  const palzStay = page.locator('#whPalzStayMobileBrand');
+  const date = page.locator('#v10TodayDateLabel');
+  const desktopBrand = page.locator('#whSitterDesktopSidebar .wh-sitter-sidebar-brand');
+
+  if (mobileShell) {
+    await expect(palzStay).toBeVisible();
+    await expect(date).toBeHidden();
+    await expect(page.locator('#whPalzStayMobileBrand .wh-palz-word')).toHaveCSS('background-color', /.+/);
+    const menuBox = await box(page.locator('#wh75MenuButton'));
+    const brandBox = await box(palzStay);
+    expect(menuBox && brandBox && menuBox.x + menuBox.width <= brandBox.x).toBeTruthy();
+  } else {
+    await expect(palzStay).toBeHidden();
+    await expect(desktopBrand).toHaveText('Waffle House');
+  }
+});
+
 test('mobile shell navigation, drawer and Add sheet are placed without clipping or overlap', async ({ page }, testInfo) => {
   const mobileShell = testInfo.project.metadata.mobileShell === true;
   test.skip(!mobileShell, 'Mobile-shell placement test only applies at widths <= 820px.');
