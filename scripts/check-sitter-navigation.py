@@ -16,6 +16,8 @@ required = {
     'search relocation': "document.querySelector('[data-v1118-search-open]')",
     'desktop header removal': 'body.wh-sitter-desktop-sidebar-ready .calendar-header-branding',
     'live ticker removal': '#waffleConnectionStatus,.waffle-connection-status',
+    'mobile Palz Stay brand': 'whPalzStayMobileBrand',
+    'Palz accent binding': 'background:var(--wh75-accent,#7c3aed)',
     'settings action': 'Open Sitter Tools',
     'direct launcher suppression': 'wh-sitter-tools-relocated',
     'launcher matcher': r'\bsitter\s+tools\b',
@@ -62,6 +64,8 @@ if 'Settings' not in sidebar_block:
     raise SystemExit('Desktop sidebar must retain Settings access')
 if 'waffle-logo.png' in sidebar_block or '<img' in sidebar_block:
     raise SystemExit('Desktop sidebar brand must not render the retired logo')
+if 'Dog sitting, organised.' in sidebar_block:
+    raise SystemExit('Desktop sidebar brand must not retain the retired strapline')
 
 # The refinement is web/desktop-only and must not rewrite mobile navigation.
 for mobile_marker in ('wh75MobileBottomNav', 'wh75MobileDrawer', 'wh75MenuButton'):

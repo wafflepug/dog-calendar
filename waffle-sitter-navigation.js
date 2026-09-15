@@ -5,7 +5,7 @@
   'use strict';
   if (window.WAFFLE_SITTER_NAVIGATION) return;
 
-  const VERSION = '1.1.0';
+  const VERSION = '1.2.0';
   const DESKTOP_QUERY = '(min-width: 821px)';
   const DEFAULT_TOOLS_HREF = 'reminders.html';
   const MOBILE_SEARCH_AVATAR = 'waffle-search-avatar-v1181.svg?v=1.0.2';
@@ -57,6 +57,13 @@
         body #wh80MobileHeaderRail{display:none!important;visibility:hidden!important;pointer-events:none!important}
         #wh75MobileDrawer .wh-sitter-mobile-tool-icon{overflow:hidden!important;padding:0!important}
         #wh75MobileDrawer .wh-sitter-mobile-tool-icon img{display:block;width:100%;height:100%;max-width:none;object-fit:cover;border-radius:inherit}
+        #whPalzStayMobileBrand{display:none}
+        body[data-waffle-page="calendar"][data-wh75-mobile-view="today"] #v10TodayDateLabel{display:none!important}
+        body[data-waffle-page="calendar"][data-wh75-mobile-view="today"] #whPalzStayMobileBrand{display:flex;align-items:center;justify-content:center;width:min(226px,calc(100vw - 136px));height:52px;margin:0 auto;overflow:visible}
+        #whPalzStayMobileBrand .wh-palz-word,#whPalzStayMobileBrand .wh-stay-word{display:block;height:48px;flex:1 1 50%;background:var(--wh75-accent,#7c3aed);-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:center;mask-position:center;-webkit-mask-size:contain;mask-size:contain}
+        #whPalzStayMobileBrand .wh-palz-word{-webkit-mask-position:right center;mask-position:right center;-webkit-mask-image:url('assets/palz-word-mask.png');mask-image:url('assets/palz-word-mask.png')}
+        #whPalzStayMobileBrand .wh-stay-word{margin-left:-5px;background:#111638;-webkit-mask-position:left center;mask-position:left center;-webkit-mask-image:url('assets/stay-word-mask.png');mask-image:url('assets/stay-word-mask.png')}
+        body.dark-theme #whPalzStayMobileBrand .wh-stay-word{background:#fff}
       }
       @media(min-width:821px){
         body.wh-sitter-desktop-sidebar-ready{box-sizing:border-box;padding-left:244px!important}
@@ -121,12 +128,24 @@
       sidebar = document.createElement('aside');
       sidebar.id = 'whSitterDesktopSidebar';
       sidebar.setAttribute('aria-label', 'Waffle House navigation');
-      sidebar.innerHTML = `<div class="wh-sitter-sidebar-brand"><strong>Waffle House</strong><small>Dog sitting, organised.</small></div><div><div class="wh-sitter-sidebar-heading">Workspace</div><nav class="wh-sitter-sidebar-nav" aria-label="Primary">${sidebarItem('index.html?view=today','⌂','Today','today')}${sidebarItem('index.html?view=calendar','▦','Calendar','calendar')}${sidebarItem('directory.html','🐾','Care','directory')}${sidebarItem('reminders.html','✓','Organiser','reminders')}${sidebarItem('audit.html','≡','Logs','audit')}</nav></div><div><div class="wh-sitter-sidebar-heading">Tools</div><div id="whSitterDesktopTools" aria-label="Tools"></div></div><div class="wh-sitter-sidebar-account"><div class="wh-sitter-sidebar-heading">Account</div><button type="button" class="wh-sitter-sidebar-item" data-wh-sitter-settings><span class="wh-sitter-sidebar-icon" aria-hidden="true">⚙</span><span>Settings</span></button></div>`;
+      sidebar.innerHTML = `<div class="wh-sitter-sidebar-brand"><strong>Waffle House</strong></div><div><div class="wh-sitter-sidebar-heading">Workspace</div><nav class="wh-sitter-sidebar-nav" aria-label="Primary">${sidebarItem('index.html?view=today','⌂','Today','today')}${sidebarItem('index.html?view=calendar','▦','Calendar','calendar')}${sidebarItem('directory.html','🐾','Care','directory')}${sidebarItem('reminders.html','✓','Organiser','reminders')}${sidebarItem('audit.html','≡','Logs','audit')}</nav></div><div><div class="wh-sitter-sidebar-heading">Tools</div><div id="whSitterDesktopTools" aria-label="Tools"></div></div><div class="wh-sitter-sidebar-account"><div class="wh-sitter-sidebar-heading">Account</div><button type="button" class="wh-sitter-sidebar-item" data-wh-sitter-settings><span class="wh-sitter-sidebar-icon" aria-hidden="true">⚙</span><span>Settings</span></button></div>`;
       document.body.appendChild(sidebar);
       sidebar.querySelector('[data-wh-sitter-settings]')?.addEventListener('click', openSettings);
     }
     document.body.classList.toggle('wh-sitter-desktop-sidebar-ready', isDesktop());
     syncSidebar();
+  }
+
+  function ensureMobileTodayBrand() {
+    if (pageName() !== 'calendar') return;
+    const heading = document.querySelector('.v10-ops-heading');
+    if (!heading || document.getElementById('whPalzStayMobileBrand')) return;
+    const brand = document.createElement('div');
+    brand.id = 'whPalzStayMobileBrand';
+    brand.setAttribute('role', 'img');
+    brand.setAttribute('aria-label', 'Palz Stay');
+    brand.innerHTML = '<span class="wh-palz-word" aria-hidden="true"></span><span class="wh-stay-word" aria-hidden="true"></span>';
+    heading.appendChild(brand);
   }
 
   function rememberDesktopAction(node) {
@@ -267,6 +286,7 @@
     if (!document.body) return;
     ensureStyle();
     ensureSidebar();
+    ensureMobileTodayBrand();
     ensureDesktopSidebarTools();
     ensureMobileSidebarTools();
     ensureToolsInSettings();
