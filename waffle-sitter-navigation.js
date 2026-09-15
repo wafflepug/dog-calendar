@@ -5,7 +5,7 @@
   'use strict';
   if (window.WAFFLE_SITTER_NAVIGATION) return;
 
-  const VERSION = '1.2.1';
+  const VERSION = '1.2.2';
   const DESKTOP_QUERY = '(min-width: 821px)';
   const DEFAULT_TOOLS_HREF = 'reminders.html';
   const MOBILE_SEARCH_AVATAR = 'waffle-search-avatar-v1181.svg?v=1.0.2';
@@ -63,6 +63,7 @@
         body[data-waffle-page="calendar"][data-wh75-mobile-view="today"] .v10-ops-heading::after,
         body[data-waffle-page="calendar"][data-wh75-mobile-view="today"] .v10-operations-home::before,
         body[data-waffle-page="calendar"][data-wh75-mobile-view="today"] .v10-operations-home::after{content:none!important;display:none!important;border:0!important;box-shadow:none!important;background:none!important}
+        body[data-waffle-page="calendar"][data-wh75-mobile-view="today"] .v10-ops-heading{box-shadow:0 8px 22px rgba(15,23,42,.10)!important}
         body[data-waffle-page="calendar"][data-wh75-mobile-view="today"] #whPalzStayMobileBrand{display:flex;align-items:center;justify-content:center;width:min(226px,calc(100vw - 136px));height:52px;margin:0 auto;overflow:visible}
         #whPalzStayMobileBrand .wh-palz-word,#whPalzStayMobileBrand .wh-stay-word{display:block;height:48px;flex:1 1 50%;background:var(--wh75-accent,#7c3aed);-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:center;mask-position:center;-webkit-mask-size:contain;mask-size:contain}
         #whPalzStayMobileBrand .wh-palz-word{-webkit-mask-position:right center;mask-position:right center;-webkit-mask-image:url('assets/palz-word-mask.png');mask-image:url('assets/palz-word-mask.png')}
