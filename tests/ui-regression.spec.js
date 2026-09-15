@@ -247,6 +247,14 @@ test('responsive brand uses Palz Stay on mobile Today and concise Waffle House b
     expect(await page.locator('.v10-ops-heading').evaluate(node => getComputedStyle(node, '::before').content)).toBe('none');
     expect(await page.locator('.v10-ops-heading').evaluate(node => getComputedStyle(node, '::after').content)).toBe('none');
     expect(await page.locator('.v10-ops-heading').evaluate(node => getComputedStyle(node).boxShadow)).not.toContain('inset');
+    for (const sectionTitle of ['whHomeGuestsTitle', 'whHomeArrivalsTitle']) {
+      const section = page.locator(`section[aria-labelledby="${sectionTitle}"]`);
+      await expect(section.locator('.v10-card-kicker')).toBeHidden();
+      await expect(section.locator('.wh-home-muted')).toBeHidden();
+      await expect(section.locator('.wh-home-shortcuts')).toBeHidden();
+      await expect(section.locator('h2')).toBeVisible();
+      await expect(section.locator('.wh-home-guest-row')).not.toHaveCSS('display', 'none');
+    }
 
     for (const [path, expectedPage] of [['index.html?view=calendar', 'calendar'], ['directory.html', 'directory']]) {
       await gotoCanonical(page, path, expectedPage);
