@@ -19,6 +19,7 @@ required = {
     'mobile Palz Stay brand': 'whPalzStayMobileBrand',
     'Palz accent binding': 'background:var(--wh75-accent,#7c3aed)',
     'mobile bracket removal': '.v10-ops-heading::before',
+    'menu-side accent removal': '.v10-ops-heading{box-shadow:0 8px 22px',
     'settings action': 'Open Sitter Tools',
     'direct launcher suppression': 'wh-sitter-tools-relocated',
     'launcher matcher': r'\bsitter\s+tools\b',
