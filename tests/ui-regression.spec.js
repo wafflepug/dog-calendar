@@ -265,6 +265,9 @@ test('responsive brand uses Palz Stay on mobile Today and concise Waffle House b
     await expect(page.locator('.v10-capacity-card .v10-card-kicker')).toHaveCount(0);
     await expect(page.locator('.v108-meet-card .v10-card-kicker')).toHaveCount(0);
     await expect(page.locator('#v1083OutlookPopover')).toBeHidden();
+    const capacityBox = await box(page.locator('.v10-capacity-card'));
+    const meetBox = await box(page.locator('.v108-meet-card'));
+    expect(capacityBox && meetBox && meetBox.y >= capacityBox.y + capacityBox.height + 10).toBeTruthy();
 
     for (const [path, expectedPage] of [['index.html?view=calendar', 'calendar'], ['directory.html', 'directory']]) {
       await gotoCanonical(page, path, expectedPage);
