@@ -255,6 +255,11 @@ test('responsive brand uses Palz Stay on mobile Today and concise Waffle House b
       const shellMenuBox = await box(page.locator('#wh75MenuButton'));
       const shellBrandBox = await box(shellBrand);
       expect(shellMenuBox && shellBrandBox && shellMenuBox.x + shellMenuBox.width <= shellBrandBox.x).toBeTruthy();
+      if (expectedPage === 'directory') {
+        await expect(page.locator('.calendar-header-branding #waffleNotificationButton')).toBeHidden();
+        await expect(page.locator('.calendar-header-branding [data-v1118-search-open]')).toBeHidden();
+        await expect(page.locator('.guest-directory-search')).toBeVisible();
+      }
     }
   } else {
     await expect(palzStay).toBeHidden();
