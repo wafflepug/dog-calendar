@@ -272,7 +272,7 @@ function v108EnsureMeetOutlook() {
     const capacity=document.querySelector('.v10-capacity-card'); if(!capacity)return null;
     let wrap=document.querySelector('.v108-outlook-wrap');
     if(!wrap){wrap=document.createElement('div');wrap.className='v108-outlook-wrap';capacity.parentNode.insertBefore(wrap,capacity);wrap.appendChild(capacity);}
-    const card=document.createElement('article');card.className='v10-ops-card v108-meet-card';card.innerHTML=`<div class="v10-card-heading"><div><span class="v10-card-kicker">MEET & GREET</span><h2>7-day outlook</h2></div><small>teal = scheduled visit</small></div><div id="v108MeetOutlook" class="v108-meet-strip"></div>`;wrap.appendChild(card);return card.querySelector('#v108MeetOutlook');
+    const card=document.createElement('article');card.className='v10-ops-card v108-meet-card';card.innerHTML=`<div class="v10-card-heading"><div><h2>Meet &amp; Greet Tracker</h2></div></div><div id="v108MeetOutlook" class="v108-meet-strip"></div>`;wrap.appendChild(card);return card.querySelector('#v108MeetOutlook');
 }
 
 function v108RenderMeetOutlook(events) {

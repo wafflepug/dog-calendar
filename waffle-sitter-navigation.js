@@ -5,7 +5,7 @@
   'use strict';
   if (window.WAFFLE_SITTER_NAVIGATION) return;
 
-  const VERSION = '1.3.2';
+  const VERSION = '1.4.0';
   const DESKTOP_QUERY = '(min-width: 821px)';
   const DEFAULT_TOOLS_HREF = 'reminders.html';
   const MOBILE_SEARCH_AVATAR = 'waffle-search-avatar-v1181.svg?v=1.0.2';
@@ -47,6 +47,9 @@
     style.textContent = `
       .wh-sitter-tools-relocated{display:none!important;visibility:hidden!important;pointer-events:none!important}
       #waffleConnectionStatus,.waffle-connection-status{display:none!important;visibility:hidden!important;pointer-events:none!important}
+      #v1083OutlookPopover{display:none!important;visibility:hidden!important;pointer-events:none!important}
+      .v10-capacity-day[data-v1083-outlook-key]::after,.v108-meet-day[data-v1083-outlook-key]::after{content:none!important;display:none!important}
+      .v10-capacity-day[data-v1083-outlook-key],.v108-meet-day[data-v1083-outlook-key]{cursor:default!important}
       #whSitterDesktopSidebar{display:none}
       .wh-sitter-settings-action{width:100%;min-height:54px;box-sizing:border-box;display:grid;grid-template-columns:38px minmax(0,1fr) auto;align-items:center;gap:10px;border:1px solid var(--wh75-line,#dbe3ef);border-radius:14px;padding:9px 11px;background:var(--wh75-shell-2,#f8fafc);color:var(--wh75-text,#172033);font:inherit;text-align:left;cursor:pointer}
       .wh-sitter-settings-action:hover{border-color:var(--wh75-accent,#7c3aed);box-shadow:0 0 0 3px var(--wh75-ring,rgba(124,58,237,.15))}
@@ -63,7 +66,7 @@
         body[data-waffle-page="calendar"][data-wh75-mobile-view="today"] .v10-ops-heading::after,
         body[data-waffle-page="calendar"][data-wh75-mobile-view="today"] .v10-operations-home::before,
         body[data-waffle-page="calendar"][data-wh75-mobile-view="today"] .v10-operations-home::after{content:none!important;display:none!important;border:0!important;box-shadow:none!important;background:none!important}
-        body[data-waffle-page="calendar"][data-wh75-mobile-view="today"] .v10-ops-heading{box-shadow:0 8px 22px rgba(15,23,42,.10)!important}
+        body[data-waffle-page="calendar"][data-wh75-mobile-view="today"] .v10-ops-heading{background:transparent!important;box-shadow:none!important}
         body[data-waffle-page="calendar"][data-wh75-mobile-view="today"] #whPalzStayMobileBrand{display:flex}
         body[data-waffle-page="calendar"][data-wh75-mobile-view="calendar"] #whPalzStayMobileShellBrand,
         body[data-waffle-page="directory"] #whPalzStayMobileShellBrand{display:flex}
@@ -75,6 +78,14 @@
         body[data-waffle-page="calendar"][data-wh75-mobile-view="today"] section[aria-labelledby="whHomeArrivalsTitle"] .v10-card-kicker,
         body[data-waffle-page="calendar"][data-wh75-mobile-view="today"] section[aria-labelledby="whHomeArrivalsTitle"] #whHomeArrivalsStatus,
         body[data-waffle-page="calendar"][data-wh75-mobile-view="today"] section[aria-labelledby="whHomeArrivalsTitle"] .wh-home-shortcuts{display:none!important;visibility:hidden!important;pointer-events:none!important}
+        body[data-waffle-page="calendar"][data-wh75-mobile-view="today"] section[aria-labelledby="whHomePotentialsTitle"] .v10-card-kicker,
+        body[data-waffle-page="calendar"][data-wh75-mobile-view="today"] section[aria-labelledby="whHomePotentialsTitle"] #whHomeAddPotentialBtn,
+        body[data-waffle-page="calendar"][data-wh75-mobile-view="today"] section[aria-labelledby="whHomePotentialsTitle"] #whHomePotentialsStatus,
+        body[data-waffle-page="calendar"][data-wh75-mobile-view="today"] section[aria-labelledby="whHomePotentialsTitle"] .wh-home-shortcuts{display:none!important;visibility:hidden!important;pointer-events:none!important}
+        body[data-waffle-page="calendar"][data-wh75-mobile-view="today"] .v108-outlook-wrap{gap:14px!important}
+        body[data-waffle-page="calendar"][data-wh75-mobile-view="today"] .v108-outlook-wrap>.v10-ops-card{padding:18px 16px 12px!important;border:1px solid var(--v10-border,#dce3eb)!important;border-radius:20px!important;background:var(--v10-card,var(--wh75-shell,#fff))!important;box-shadow:none!important}
+        body[data-waffle-page="calendar"][data-wh75-mobile-view="today"] .v108-outlook-wrap>.v10-ops-card>.v10-card-heading{margin-bottom:10px!important;padding:0!important;border:0!important}
+        body[data-waffle-page="calendar"][data-wh75-mobile-view="today"] .v108-outlook-wrap>.v10-ops-card>.v10-card-heading h2{margin:0!important;font-size:22px!important;line-height:1.25!important;color:var(--wh75-text,#172033)!important}
         body[data-waffle-page="calendar"][data-wh75-mobile-view="calendar"] .calendar-header-branding,
         body[data-waffle-page="directory"] .calendar-header-branding{position:relative!important;min-height:76px!important}
         #whPalzStayMobileBrand,.calendar-header-branding #whPalzStayMobileShellBrand{align-items:center;justify-content:center;width:min(226px,calc(100vw - 164px));height:52px;margin:0 auto;overflow:visible}
@@ -306,10 +317,20 @@
     section.querySelector('[data-wh-sitter-tools-settings]')?.addEventListener('click', openTools);
   }
 
+  function suppressOutlookPopover() {
+    if (window.__whOutlookPopoverSuppressed) return;
+    window.__whOutlookPopoverSuppressed = true;
+    const stop = event => {
+      if (event.target?.closest?.('[data-v1083-outlook-key]')) event.stopImmediatePropagation();
+    };
+    ['pointerover','pointerout','focusin','focusout','click'].forEach(type => window.addEventListener(type, stop, true));
+  }
+
   function maintain() {
     scheduled = false;
     if (!document.body) return;
     ensureStyle();
+    suppressOutlookPopover();
     ensureSidebar();
     ensureMobileBranding();
     ensureDesktopSidebarTools();
