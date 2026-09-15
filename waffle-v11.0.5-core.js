@@ -136,6 +136,28 @@ v1104ApplyPotentialResponse =
  * before the direct endpoint is available, but they are NEVER allowed to hide a
  * valid shared Potential Stay returned by Apps Script.
  */
+function v1105ConfirmedStayIdentity(event) {
+    const props = event?.extendedProps || {};
+    if (props.isMeetGreet === true || props.isPotential === true) return '';
+
+    const dogName = String(props.dogName || event?.title || '').trim().toLowerCase();
+    const startDate = String(props.rawStartDate || props.startDate || event?.start || '').slice(0, 10);
+    const endDate = String(props.rawEndDate || props.endDate || event?.end || startDate).slice(0, 10);
+    if (!dogName || !startDate) return '';
+    return [dogName, startDate, endDate].join('|');
+}
+
+function v1105DedupeConfirmedStays(events) {
+    const seen = new Set();
+    return events.filter(event => {
+        const key = v1105ConfirmedStayIdentity(event);
+        if (!key) return true;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+    });
+}
+
 v1104ComposeCalendarEvents =
     function(
         spreadsheetEvents,
@@ -283,13 +305,13 @@ v1104ComposeCalendarEvents =
             );
 
         const allEvents =
-            baseSheet.concat(
+            v1105DedupeConfirmedStays(baseSheet.concat(
                 meets,
                 Array.from(
                     potentialMap.values()
                 ),
                 confirmed
-            );
+            ));
 
         dailyCapacityCounts =
             {};
