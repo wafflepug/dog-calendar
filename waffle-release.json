@@ -1,5 +1,10 @@
 {
   "release": "phase3d-2026.08.28.01",
+  "currentRelease": "2026.09.16.06",
+  "currentReleaseName": "Mobile Today and calendar improvements",
+  "latestMergedSha": "4f147a818f8e2219fcb935ba5a3f381217ff2e1a",
+  "latestReleaseDate": "2026-09-16",
+  "recentChanges": ["Consistent Today tile headings and tracker layout", "Confirmed-stay calendar deduplication", "Early checkout calendar dates", "Mobile Palz Stay branding and sidebar tools", "Faster Home images and mobile scrolling"],
   "runtimeBuild": "2026.08.28.01",
   "phase": "phase-3d-release-regression-observability",
   "featurePhase": "phase-4-sitter-workflow-expansion",

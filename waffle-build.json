@@ -1,5 +1,7 @@
 {
   "build": "2026.08.28.01",
+  "assetRevision": "2026.09.16.06",
+  "releaseName": "Mobile Today and calendar improvements",
   "runtime": "waffle-bootstrap.js",
   "styles": "waffle-runtime.css",
   "phase": "phase-4-sitter-workflow-expansion",
