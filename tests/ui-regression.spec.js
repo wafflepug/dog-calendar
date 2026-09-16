@@ -265,6 +265,12 @@ test('responsive brand uses Palz Stay on mobile Today and concise Waffle House b
     await expect(page.locator('.v10-capacity-card .v10-card-kicker')).toHaveCount(0);
     await expect(page.locator('.v108-meet-card .v10-card-kicker')).toHaveCount(0);
     await expect(page.locator('#v1083OutlookPopover')).toBeHidden();
+    const tileHeadings = page.locator('.wh-home-guests .wh-home-section-heading h2, .v108-outlook-wrap > .v10-ops-card > .v10-card-heading h2');
+    const headingStyles = await tileHeadings.evaluateAll(nodes => nodes.map(node => {
+      const style = getComputedStyle(node);
+      return [style.fontFamily, style.fontSize, style.fontWeight, style.lineHeight, style.letterSpacing].join('|');
+    }));
+    expect(new Set(headingStyles).size).toBe(1);
     const capacityBox = await box(page.locator('.v10-capacity-card'));
     const meetBox = await box(page.locator('.v108-meet-card'));
     expect(capacityBox && meetBox && meetBox.y >= capacityBox.y + capacityBox.height + 10).toBeTruthy();

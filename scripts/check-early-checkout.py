@@ -90,7 +90,7 @@ if text.find('"waffle-v11.2.19.js"') < text.find('"waffle-v11.2.18.js"'):
 require(service_worker, "path.endsWith('/waffle-v11.2.17.js')")
 require(service_worker, "path.endsWith('/waffle-v11.2.19.js')")
 require(service_worker, "fetch(request, { cache: 'no-store' })")
-require(service_worker, "v11.4.22-calendar-stay-deduplication-2026.09.16.05")
+require(service_worker, "v11.4.23-mobile-today-heading-type-2026.09.16.06")
 
 if errors:
     raise SystemExit('\n'.join(errors))
