@@ -65,11 +65,11 @@ test('different owner/contact identities remain separate, including conflicting 
     assert.equal(sandbox.dedupe([ownerA, samePhoneDifferentOwner]).length, 2);
 });
 
-test('phone-only identities dedupe only when the contact is identical', () => {
+test('phone-only records remain separate even when households share contact details', () => {
     const phoneA = stay({ ownerName: '', phone: '0400 123 456' });
     const phoneB = stay({ ownerName: '', phone: '0400 123 456' });
     const phoneC = stay({ ownerName: '', phone: '0400 654 321' });
-    assert.equal(sandbox.dedupe([phoneA, phoneB]).length, 1);
+    assert.equal(sandbox.dedupe([phoneA, phoneB]).length, 2);
     assert.equal(sandbox.dedupe([phoneA, phoneC]).length, 2);
 });
 
@@ -122,6 +122,18 @@ test('deduped confirmed events count capacity once per dog and twice for two own
 
 test('a partial identity is retained separately from a more complete booking', () => {
     assert.equal(sandbox.dedupe([stay(), stay({ phone: '' })]).length, 2);
+    assert.equal(sandbox.dedupe([stay({ phone: '' }), stay({ phone: '' })]).length, 2);
+});
+
+test('conflicting aliases and different partial source identities are preserved in composition', () => {
+    for (const partial of [{ owner: 'Another owner' }, { contact: '0400 000 000' }, { ownerPhone: '0400 000 000' }]) {
+        const conflicted = stay(partial);
+        assert.equal(sandbox.identity(conflicted), '');
+        assert.equal(sandbox.v1104ComposeCalendarEvents([stay()], [], [], [conflicted]).length, 2);
+    }
+    const ownerOnly = stay({ phone: '' });
+    const phoneOnly = stay({ ownerName: '' });
+    assert.equal(sandbox.v1104ComposeCalendarEvents([ownerOnly], [], [], [phoneOnly]).length, 2);
 });
 
 test('delimiters in identity fields cannot produce a false collision', () => {

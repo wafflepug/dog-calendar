@@ -147,18 +147,21 @@ function v1105ConfirmedStayIdentity(event) {
             ? token
             : '';
     };
-    const firstMeaningful = (...values) => values.map(meaningful).find(Boolean) || '';
+    const consistentValue = (...values) => {
+        const tokens = [...new Set(values.map(meaningful).filter(Boolean))];
+        return tokens.length === 1 ? tokens[0] : '';
+    };
     const dogName = normalize(props.dogName || event?.title || '');
     const startDate = String(props.rawStartDate || props.startDate || event?.start || '').slice(0, 10);
     const endDate = String(props.rawEndDate || props.endDate || event?.end || startDate).slice(0, 10);
     const breed = meaningful(props.breed);
-    const owner = firstMeaningful(props.ownerName, props.owner);
-    const phone = firstMeaningful(props.phone, props.contact, props.ownerPhone);
+    const owner = consistentValue(props.ownerName, props.owner);
+    const phone = consistentValue(props.phone, props.contact, props.ownerPhone);
 
-    // A dog/date pair alone is ambiguous. Missing/sentinel owner and contact
+    // A dog/date pair alone is ambiguous. Missing/sentinel owner or contact
     // values therefore never create a dedupe key. Operational stay keys keep
     // their existing schema; this is only a bounded Calendar merge identity.
-    if (!dogName || !startDate || (!owner && !phone)) return '';
+    if (!dogName || !startDate || !owner || !phone) return '';
     return JSON.stringify([dogName, startDate, endDate, breed, owner, phone]);
 }
 
