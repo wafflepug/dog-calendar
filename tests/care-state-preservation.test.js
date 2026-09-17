@@ -14,7 +14,9 @@ const identityStart = source.indexOf('    function getDirectoryEditorIdentity');
 const identityEnd = source.indexOf('    function restoreDirectoryGuestDetailDraft', identityStart);
 const openStart = source.indexOf('    async function openDirectoryGuestProfile');
 const closeStart = source.indexOf('    function closeDirectoryGuestProfile', openStart);
-assert(captureStart >= 0 && captureEnd > captureStart && restoreStart > captureEnd && restoreEnd > restoreStart && saveStart > 0 && saveEnd > saveStart && identityStart > 0 && identityEnd > identityStart && openStart > 0 && closeStart > openStart);
+const editorStart = source.indexOf('    function openGuestDetailEditor');
+const editorEnd = source.indexOf('    function decodeDirectoryCsvCell', editorStart);
+assert(captureStart >= 0 && captureEnd > captureStart && restoreStart > captureEnd && restoreEnd > restoreStart && saveStart > 0 && saveEnd > saveStart && identityStart > 0 && identityEnd > identityStart && openStart > 0 && closeStart > openStart && editorStart > 0 && editorEnd > editorStart);
 
 function makeCard(stayKey, { mainTab = 'profile', secondaryTab = 'overview', desktopTab = 'profile', editing = false } = {}) {
   const card = {
@@ -79,7 +81,7 @@ function saveHarness({ unmatched = false, identityConflict = false, failing = fa
     DIRECTORY_EDIT_FIELD_CONFIG: { ownerName: { label: 'Owner', multiline: false } },
     directoryIdentityConflicts: (expected, actual) => identityConflict || (expected?.ownerName && actual?.ownerName && expected.ownerName !== actual.ownerName),
     getDirectoryEditorIdentity: () => ({ ownerName: 'owner', breed: '', phone: '' }),
-    document: { getElementById(id) { return id === 'guestDetailEditInput' ? input : id === 'guestDetailEditTextarea' ? textarea : id === 'saveGuestDetailEdit' ? saveButton : id === 'cancelGuestDetailEdit' || id === 'closeGuestDetailEditModal' ? { disabled: false } : id === 'guestDetailEditStatus' ? status : null; } },
+    document: { getElementById(id) { return id === 'guestDetailEditInput' ? input : id === 'guestDetailEditTextarea' ? textarea : id === 'saveGuestDetailEdit' ? saveButton : id === 'cancelGuestDetailEdit' || id === 'closeGuestDetailEditModal' ? { disabled: false } : id === 'guestDetailEditStatus' ? status : null; }, querySelectorAll(selector) { return selector.includes('directory-stay-key') ? [card] : []; } },
     sendPayloadToAppsScript: async payload => { sends++; if (failing) throw new Error('fixture save failed'); return { record: { dogName: 'Milo', startDate: '2026-09-20', endDate: '2026-09-22', ownerName: input.value }, fieldLabel: 'Owner' }; },
     patchGuestRecordInCachedCsv() {}, migrateDirectoryClientStayKey() {}, refreshCalendarData() {}, loadCareRiskDashboard: async () => {}, makePotentialKey: () => card.dataset.directoryStayKey,
     localStorage: { getItem: () => '' }, getLocalArray: () => [], setLocalArray() {}, console: { error() {} }, setTimeout: fn => { fn(); return 1; }
@@ -112,6 +114,30 @@ function openHarness({ active = false } = {}) {
   };
   vm.runInNewContext(`${source.slice(openStart, closeStart)}\nthis.open = openDirectoryGuestProfile;`, sandbox);
   return { sandbox, card, calls };
+}
+
+function editorHarness() {
+  const key = 'same-name|2026-09-20|2026-09-22';
+  const card = makeCard(key);
+  const duplicate = makeCard(key);
+  const trigger = { dataset: { directoryEditField: 'ownerName', directoryCurrentValue: 'Draft owner' }, closest: () => card };
+  const modal = { classList: { add() {} }, setAttribute() {} };
+  const elements = {
+    guestDetailEditTitle: { textContent: '' }, guestDetailEditDog: { textContent: '' }, guestDetailEditLabel: { textContent: '' },
+    guestDetailEditInput: { style: {}, focus() {}, select() {} }, guestDetailEditTextarea: { style: {}, focus() {} },
+    guestDetailEditStatus: { textContent: '', className: '' }, guestDetailEditModal: modal, saveGuestDetailEdit: { disabled: false }
+  };
+  const sandbox = {
+    activeDirectoryEditContext: null,
+    DIRECTORY_EDIT_FIELD_CONFIG: { ownerName: { label: 'Owner', placeholder: 'Owner name', multiline: false } },
+    directoryCardsForStayKey: () => [card, duplicate],
+    getDirectoryEditorIdentity: () => ({ breed: '', ownerName: 'owner', phone: '' }),
+    formatStayDateShort: value => value,
+    document: { getElementById: id => elements[id] || null, querySelectorAll: selector => selector.includes('directory-stay-key') ? [card, duplicate] : [] },
+    setTimeout: () => 1
+  };
+  vm.runInNewContext(`${source.slice(identityStart, identityEnd)}\n${source.slice(editorStart, editorEnd)}\nthis.openEditor = openGuestDetailEditor;`, sandbox);
+  return { sandbox, trigger, save: elements.saveGuestDetailEdit, status: elements.guestDetailEditStatus };
 }
 
 test('captures exact selected stay and all Care tab/edit state', () => {
@@ -173,6 +199,54 @@ test('production open path defaults new dogs and preserves an already visited ca
   const reopened = openHarness({ active: true });
   await reopened.sandbox.open(reopened.card, { instant: true });
   assert.deepEqual(reopened.calls.slice(0, 3), [['edit', true], ['main', 'belongings'], ['secondary', 'overview']]);
+
+  const visited = openHarness();
+  visited.card.dataset.profileVisited = 'true';
+  visited.card.dataset.mainProfileTab = 'belongings';
+  visited.card.dataset.profileEditing = 'true';
+  await visited.sandbox.open(visited.card, { instant: true });
+  assert.deepEqual(visited.calls.slice(0, 3), [['edit', true], ['main', 'belongings'], ['secondary', 'overview']]);
+});
+
+test('restored desktop lazy panel load flag is consumed once', () => {
+  const care = fs.readFileSync('care.js', 'utf8');
+  const start = care.indexOf('function consumeRestoredDesktopTabLoad');
+  const end = care.indexOf('\n  function ', start + 10);
+  const sandbox = { card: { dataset: { v11160RestoreLoad: 'true' } } };
+  vm.runInNewContext(`${care.slice(start, end)}\nthis.consume = consumeRestoredDesktopTabLoad;`, sandbox);
+  assert.equal(sandbox.consume(sandbox.card), true);
+  assert.equal(sandbox.card.dataset.v11160RestoreLoad, undefined);
+  assert.equal(sandbox.consume(sandbox.card), false);
+});
+
+test('direct editor opening on duplicate legacy keys disables Save', () => {
+  const h = editorHarness();
+  h.sandbox.openEditor(h.trigger);
+  assert.equal(h.sandbox.activeDirectoryEditContext.unmatched, true);
+  assert.equal(h.save.disabled, true);
+  assert.match(h.status.textContent, /ambiguous/);
+});
+
+test('repeated refresh cannot rebind a draft to conflicting owner evidence', () => {
+  const key = 'milo|2026-09-20|2026-09-22';
+  const original = makeCard(key);
+  original.querySelector = selector => selector.includes('directory-edit-field="ownerName"')
+    ? { dataset: { directoryCurrentValue: 'Alice' } }
+    : null;
+  const h = harness(original, { fieldKey: 'ownerName', stayKey: key, oldStayKey: key, identity: { breed: '', ownerName: 'alice', phone: '' } });
+  const replacement = makeCard(key);
+  replacement.querySelector = selector => selector.includes('directory-edit-field')
+    ? { dataset: { directoryEditField: 'ownerName', directoryCurrentValue: 'Bob' } }
+    : null;
+  replacement.querySelectorAll = selector => selector.includes('directory-edit-field')
+    ? [{ dataset: { directoryEditField: 'ownerName', directoryCurrentValue: 'Bob' } }]
+    : [];
+  h.sandbox.document.querySelectorAll = selector => selector.includes('directory-stay-key') ? [replacement] : [];
+  const state = { stayKey: key, editor: { fieldKey: 'ownerName', stayKey: key, oldStayKey: key, identity: { breed: '', ownerName: 'alice', phone: '' } } };
+  h.sandbox.restore(state, replacement);
+  assert.equal(h.sandbox.activeDirectoryEditContext.unmatched, true);
+  assert.equal(h.save.disabled, true);
+  assert.match(h.status.textContent, /different owner/);
 });
 
 test('pre-save guard blocks an unmatched draft before any mutation', async () => {

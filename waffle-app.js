@@ -9077,6 +9077,13 @@ registerWaffleServiceWorker();
     }
 
 
+    function directoryCardsForStayKey(stayKey) {
+        const key = String(stayKey || '').trim();
+        return Array.from(document.querySelectorAll('.directory-card[data-directory-stay-key]'))
+            .filter(card => String(card.dataset.directoryStayKey || '').trim() === key);
+    }
+
+
     function restoreDirectoryGuestDetailDraft(state, card) {
         const editor = state?.editor;
         if (!editor) return;
@@ -9603,6 +9610,7 @@ registerWaffleServiceWorker();
             );
 
         const wasActive = card.classList.contains('is-profile-active');
+        const wasVisited = card.dataset.profileVisited === 'true';
 
         document
             .querySelectorAll(
@@ -9619,6 +9627,7 @@ registerWaffleServiceWorker();
         card.classList.add(
             'is-profile-active'
         );
+        card.dataset.profileVisited = 'true';
 
         dashboard?.classList.add(
             'is-profile-mode'
@@ -9637,7 +9646,7 @@ registerWaffleServiceWorker();
             options.preserveState.stayKey === stayKey
             ? options.preserveState
             : null;
-        const reopening = wasActive;
+        const reopening = wasActive || wasVisited;
 
         /* V8.4.1 opens new profiles into Profile; an existing profile keeps
          * its own tab/edit state when harmlessly reopened or restored. */
@@ -9660,6 +9669,7 @@ registerWaffleServiceWorker();
 
         if (preserved?.desktopTab) {
             card.dataset.v11160ActiveTab = preserved.desktopTab;
+            card.dataset.v11160RestoreLoad = 'true';
         }
 
         const profileSection =
@@ -9765,10 +9775,8 @@ registerWaffleServiceWorker();
             return;
         }
 
-        const card =
-            getDirectoryProfileCard(
-                directorySelectedProfileStayKey
-            );
+        const selectedCards = directoryCardsForStayKey(directorySelectedProfileStayKey);
+        const card = selectedCards.length === 1 ? selectedCards[0] : null;
 
         if (!card) {
             restoreDirectoryGuestDetailDraft(options.state, null);
@@ -12198,6 +12206,7 @@ registerWaffleServiceWorker();
             endDate,
             stayKey: String(card.dataset.directoryStayKey || '').trim(),
             identity: getDirectoryEditorIdentity(card),
+            unmatched: directoryCardsForStayKey(card.dataset.directoryStayKey).length !== 1,
             oldStayKey: String(
                 card.dataset.directoryStayKey || ''
             ).trim()
@@ -12231,6 +12240,13 @@ registerWaffleServiceWorker();
         status.textContent =
             'Changes are saved directly to the shared Google Sheet.';
         status.className = 'guest-detail-edit-status';
+
+        if (activeDirectoryEditContext.unmatched) {
+            const saveButton = document.getElementById('saveGuestDetailEdit');
+            if (saveButton) saveButton.disabled = true;
+            status.textContent = 'This stay is ambiguous. Cancel this draft before editing another stay.';
+            status.className = 'guest-detail-edit-status is-error';
+        }
 
         modal.classList.add('open');
         modal.setAttribute('aria-hidden', 'false');
@@ -12402,6 +12418,7 @@ registerWaffleServiceWorker();
             context.identity,
             getDirectoryEditorIdentity(context.card)
         );
+        const stayCards = directoryCardsForStayKey(currentStayKey);
         if (
             context.unmatched ||
             !context.card?.isConnected ||
@@ -12410,7 +12427,8 @@ registerWaffleServiceWorker();
             currentStayKey !== String(context.stayKey || context.oldStayKey || '').trim() ||
             triggerCard !== context.card ||
             triggerField !== String(context.fieldKey || '').trim() ||
-            identityConflict
+            identityConflict ||
+            stayCards.length !== 1
         ) {
             const status = document.getElementById('guestDetailEditStatus');
             const saveButton = document.getElementById('saveGuestDetailEdit');

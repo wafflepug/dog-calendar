@@ -8,12 +8,17 @@ is placed on the replacement card before the existing scheduled `care.js`
 preparation runs, so only that selected lazy panel can load.
 
 An open guest detail modal keeps its DOM draft. Its mutation context is rebound
-only when exactly one replacement card has the same stay key, field key, and
-compatible breed/owner/contact evidence. Missing or conflicting evidence is
-ambiguous: the draft remains visible, Save is disabled, and the user must
-cancel it explicitly. The final save guard repeats the connected-card, exact
-stay key, field, and identity checks immediately before sending the existing
+only when exactly one replacement card has the same stay key and field key.
+Conflicting available breed/owner/contact evidence blocks the rebind; missing
+evidence alone does not prove a conflict. Ambiguous or conflicting states keep
+the draft visible, disable Save, and require explicit cancellation. The final
+save guard repeats the connected-card, exact stay key, field, unique card-count,
+and identity checks immediately before sending the existing
 `update_guest_detail` payload.
+
+When a rebuilt card has a restored desktop tab, a one-shot restore flag lets
+the existing Care preparation load only that selected lazy panel once; other
+secondary panels remain lazy.
 
 This preserves the current booking, media, and mutation schemas. Belongings
 upload drafts, broader cache invalidation, and backend identity migration remain

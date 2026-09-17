@@ -146,6 +146,12 @@
     return TABS.find(item => text.includes(item.key === 'belongings' ? 'belong' : item.key))?.key || 'profile';
   }
 
+  function consumeRestoredDesktopTabLoad(card) {
+    const shouldLoad = card?.dataset?.v11160RestoreLoad === 'true';
+    if (shouldLoad) delete card.dataset.v11160RestoreLoad;
+    return shouldLoad;
+  }
+
   function newNav(card) {
     return card?.querySelector(':scope .v11160-desktop-tabs') || null;
   }
@@ -376,10 +382,11 @@
     }
 
     buildNav(card);
+    const restoreLoad = consumeRestoredDesktopTabLoad(card);
     const wanted = TAB_KEYS.has(card.dataset.v11160ActiveTab)
       ? card.dataset.v11160ActiveTab
       : selectedFromLegacy(card);
-    select(card, wanted, { load: false, focus: false });
+    select(card, wanted, { load: restoreLoad, focus: false });
   }
 
   function teardownCard(card) {
