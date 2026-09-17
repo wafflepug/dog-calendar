@@ -4,6 +4,8 @@ Priority set by the owner: after checkout safety and the mobile baseline, focus 
 
 ## Care 1: Open profiles promptly and show useful progress
 
+First bounded implementation: profile-only refresh uses one 15-second attempt, preserves saved attributes, offers scoped Retry, and rejects stale DOM updates after profile changes. Seven Node fixtures and two isolated Chromium fixtures verify these states. Backend latency and real-device click-to-shell/detail timings remain unmeasured; the reported minutes are not yet explained. This refinement does not establish a faster backend response.
+
 User story: Selecting a dog immediately opens its available identity and stay information; slow details do not leave me waiting without feedback.
 
 Luna prompt: Trace the actual `directory.html` startup and `openDirectoryGuestProfile`, `loadGuestDirectoryConsolidated`, `loadDirectoryProfileDetail`, `queryAppsScriptRaw`, and `queryAppsScriptSWR` in `waffle-app.js`. Verify where the reported minutes accumulate with read-only instrumentation. Directory currently allows two 45-second attempts and Profile two 30-second attempts, with retry delay; those are configured limits, not measured delays. Separate shell readiness, directory availability, click-to-profile shell, and click-to-fresh details. Preserve available dog/stay information during background reads. Add scoped loading/error/retry states and a bounded interactive read policy rather than globally shortening mutation timeouts. Preserve visible cached care information if refresh fails, label its freshness, and never imply unknown safety attributes are clear. Keep Back and tabs usable during requests. Prevent responses for a prior dog from modifying the selected profile. No backend schema change or broad visual redesign.

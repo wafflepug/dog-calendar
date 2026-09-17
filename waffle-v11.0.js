@@ -84,7 +84,7 @@ function v110IndexCheckoutEvidence(events,options={}){
 function v110CheckoutGuard(payload){
   const key=String(payload?.stayKey||'');
   const evidence=v110CheckoutCollisionMap[key];
-  if(evidence?.state==='collision')throw new Error('Checkout is paused: this dog has more than one confirmed owner for the same dates. Refresh the booking data and choose the correct stay.');
+  if(evidence?.state==='collision')throw new Error('Checkout is paused: conflicting confirmed bookings share these dates. Review duplicate bookings, correct the booking records, then reload the page before checking out.');
   return true;
 }
 function v110IsCheckoutCollision(key){return v110CheckoutCollisionMap[String(key||'')]?.state==='collision';}
@@ -179,7 +179,7 @@ function v110CollectCareCheckoutEvidence(){
 
 function v110OperationDisplayState(card){
   const p=v110OperationalPayloadFromCard(card),op=v110OperationForStay(p.stayKey),today=getLocalTodayDateString();
-  if(v110IsCheckoutCollision(p.stayKey))return{code:'collision',label:'Checkout Paused',icon:'⚠️',meta:'Multiple confirmed owners share these dates. Refresh booking data.'};
+  if(v110IsCheckoutCollision(p.stayKey))return{code:'collision',label:'Checkout Paused',icon:'⚠️',meta:'Conflicting bookings share these dates. Review the bookings before checkout.'};
   if(op?.status==='checked_out')return{code:'checked_out',label:'Checked Out',icon:'✅',meta:op.checkedOutAt?`Completed ${v110FormatTime(op.checkedOutAt)}`:'Stay completed'};
   if(op?.status==='checked_in')return{code:'checked_in',label:'Checked In',icon:'🏡',meta:op.checkedInAt?`Arrived ${v110FormatTime(op.checkedInAt)}`:'Currently at home'};
   if(p.startDate>today)return{code:'expected',label:'Expected',icon:'🛬',meta:`Arriving ${formatStayDateShort(p.startDate)}`};

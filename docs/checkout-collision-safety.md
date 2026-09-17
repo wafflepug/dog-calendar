@@ -7,7 +7,7 @@ The calendar's confirmed events provide collision evidence before any
 operational checkout shortens the display range. A key is **unambiguous** when
 all proven source copies have the same normalized breed, owner and phone. A
 key is a **known collision** when two confirmed events on the same raw dates
-have different complete identities; Care, calendar status readers and the
+have conflicting complete identities; Care, calendar status readers and the
 shared operational write guard quarantine it. A key with missing identity is
 **incomplete evidence**. It is retained as evidence but does not freeze a
 unique legacy stay, preserving historical behavior such as Ralph's checkout.

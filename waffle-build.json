@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.09.17.01",
-  "releaseName": "Safe confirmed-stay calendar identity",
+  "assetRevision": "2026.09.17.02",
+  "releaseName": "Care profile readiness and checkout safety",
   "runtime": "waffle-bootstrap.js",
   "styles": "waffle-runtime.css",
   "phase": "phase-4-sitter-workflow-expansion",

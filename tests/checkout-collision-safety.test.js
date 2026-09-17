@@ -43,7 +43,7 @@ test('same-name/date bookings with different confirmed identities are a collisio
   const second = event('Jordan Smith', '0400 222 222');
   sandbox.api.evidence([first, second], { replace: true });
   const key = sandbox.api.eventKey(first);
-  assert.throws(() => sandbox.api.guard({ stayKey: key }), /Checkout is paused/);
+  assert.throws(() => sandbox.api.guard({ stayKey: key }), /Review duplicate bookings/);
   assert.equal(sandbox.api.checkedOut(first), false);
 });
 
@@ -52,7 +52,7 @@ test('the shared write path rejects a collision before Apps Script is called', a
   const second = event('Jordan Smith', '0400 222 222');
   sandbox.api.evidence([first, second], { replace: true });
   const before = sandbox.sendCalls;
-  await assert.rejects(() => sandbox.api.save({ stayKey: sandbox.api.eventKey(first) }, 'checked_out'), /Checkout is paused/);
+  await assert.rejects(() => sandbox.api.save({ stayKey: sandbox.api.eventKey(first) }, 'checked_out'), /Review duplicate bookings/);
   assert.equal(sandbox.sendCalls, before);
 });
 
@@ -112,7 +112,7 @@ test('Care cards provide collision evidence without a calendar instance', async 
   sandbox.api.evidence([event('Only Owner', '0400 999 999')], { replace: true });
   sandbox.document = { querySelectorAll: () => [card('Alex Smith', '0400 111 111'), card('Jordan Smith', '0400 222 222')] };
   sandbox.api.captureCare();
-  assert.throws(() => sandbox.api.guard({ stayKey: 'milo|2026-09-20|2026-09-22' }), /Checkout is paused/);
+  assert.throws(() => sandbox.api.guard({ stayKey: 'milo|2026-09-20|2026-09-22' }), /Review duplicate bookings/);
   const before = sandbox.sendCalls;
   await assert.rejects(sandbox.api.save({ stayKey: 'milo|2026-09-20|2026-09-22' }, 'checked_out'), /Checkout is paused/);
   assert.equal(sandbox.sendCalls, before);
@@ -124,5 +124,5 @@ test('a later incomplete Care snapshot cannot erase a known collision', () => {
   const other = event('Jordan Smith', '0400 222 222');
   sandbox.api.evidence([complete, other], { replace: true });
   sandbox.api.evidence([complete, event('', '')]);
-  assert.throws(() => sandbox.api.guard({ stayKey: sandbox.api.eventKey(complete) }), /Checkout is paused/);
+  assert.throws(() => sandbox.api.guard({ stayKey: sandbox.api.eventKey(complete) }), /Review duplicate bookings/);
 });
