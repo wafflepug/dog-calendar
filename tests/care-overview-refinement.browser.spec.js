@@ -17,7 +17,7 @@ function fixture(theme = '') {
   return `<!doctype html><html><head><style>
     ${css}
   </style></head><body class="${theme}"><main class="directory-card is-profile-active"><div class="directory-profile-content">
-    <header class="directory-card-header"><div class="directory-card-identity"><button class="directory-dog-name-btn">A very long dog name that must wrap without clipping</button><button class="directory-primary-breed">Border Collie</button><div class="directory-stay-dates">📅 20 Sep 2026 – 22 Sep 2026</div></div></header>
+    <header class="directory-card-header"><div class="directory-photo-shell"><div class="directory-photo-media">🐶</div></div><div class="directory-card-identity"><button class="directory-dog-name-btn">A very long dog name that must wrap without clipping</button><button class="directory-primary-breed">Border Collie</button><div class="directory-stay-dates">📅 20 Sep 2026 – 22 Sep 2026</div></div></header>
     <div class="directory-attributes-grid directory-core-attributes"><button class="directory-attribute"><span class="directory-field-label">Owner</span><span class="directory-field-value">Alexandria Peterson-Smith with a very long family name</span></button><button class="directory-attribute"><span class="directory-field-label">Contact</span><span class="directory-field-value">0400 123 456</span></button><button class="directory-attribute directory-attribute-wide"><span class="directory-field-label">Notes</span><span class="directory-field-value">Long care notes wrap here and remain discoverable for the sitter.</span></button></div>
     <section class="directory-profile-section"><div class="directory-profile-section-heading"><div><span class="directory-profile-section-kicker">Guest profile</span><h4>📋 Profile &amp; Care</h4></div><div class="directory-profile-section-tools"><button class="directory-profile-edit-toggle">✏️ Edit</button></div></div><div data-directory-detail="profile"><div data-intake-profile-summary></div><div data-directory-intake-attributes><div>Loading profile…</div></div></div></section>
   </div></main></body></html>`;
@@ -33,7 +33,15 @@ test('Care overview wraps long values and keeps controls usable at phone widths'
     await expect(page.locator('.directory-field-value').first()).toHaveCSS('font-size', '14px');
     await expect(page.locator('.intake-profile-control').first()).toHaveAttribute('placeholder', 'Not provided');
     await expect(page.locator('.directory-profile-subtab')).toHaveCount(5);
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
+    const identityLayout = await page.evaluate(() => {
+      if (document.documentElement.scrollWidth > innerWidth) return false;
+      return ['.directory-dog-name-btn', '.directory-primary-breed', '.directory-stay-dates'].map(selector => {
+        const el = document.querySelector(selector);
+        const style = getComputedStyle(el);
+        return { selector, width: el.clientWidth, scrollWidth: el.scrollWidth, height: el.clientHeight, scrollHeight: el.scrollHeight, overflow: style.overflow, textOverflow: style.textOverflow, whiteSpace: style.whiteSpace };
+      });
+    });
+    expect(identityLayout.every(item => item.scrollWidth <= item.width + 1 && item.scrollHeight <= item.height + 2 && item.textOverflow !== 'ellipsis' && item.whiteSpace !== 'nowrap')).toBeTruthy();
     await page.locator('button').first().focus();
     expect(await page.locator('button').first().evaluate(el => getComputedStyle(el).outlineStyle)).toBe('solid');
     await page.screenshot({ path: `test-results/care-overview-${width}.png`, fullPage: true });

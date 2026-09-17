@@ -5785,6 +5785,16 @@ body.dark-theme .directory-profile-read-status[data-state="error"] {
     min-width: 0;
 }
 
+.directory-card.is-profile-active .directory-card-header {
+    grid-template-columns: clamp(68px, 18vw, 92px) minmax(0, 1fr);
+    align-items: start;
+}
+
+.directory-card.is-profile-active .directory-photo-shell {
+    width: clamp(68px, 18vw, 92px);
+    height: clamp(68px, 18vw, 92px);
+}
+
 .directory-card.is-profile-active .directory-dog-name-btn,
 .directory-card.is-profile-active .directory-primary-breed,
 .directory-card.is-profile-active .directory-stay-dates,
@@ -5794,6 +5804,26 @@ body.dark-theme .directory-profile-read-status[data-state="error"] {
 .directory-card.is-profile-active .care-risk-section-heading span {
     overflow-wrap: anywhere;
     word-break: normal;
+}
+
+.directory-card.is-profile-active .directory-dog-name-btn {
+    display: block;
+    width: 100%;
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+    font-size: 22px;
+    line-height: 1.2;
+}
+
+.directory-card.is-profile-active .directory-primary-breed,
+.directory-card.is-profile-active .directory-stay-dates {
+    width: 100%;
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+    font-size: 14px;
+    line-height: 1.35;
 }
 
 .directory-card.is-profile-active .directory-profile-section-heading h4,
@@ -5843,7 +5873,13 @@ body.dark-theme .directory-profile-read-status[data-state="error"] {
 
 @media (max-width: 520px) {
     .directory-card.is-profile-active .directory-card-header {
+        grid-template-columns: 68px minmax(0, 1fr);
         align-items: flex-start;
+    }
+
+    .directory-card.is-profile-active .directory-photo-shell {
+        width: 68px;
+        height: 68px;
     }
 
     .directory-card.is-profile-active .directory-profile-section-tools {
