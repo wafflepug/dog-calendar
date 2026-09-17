@@ -13,7 +13,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - run: npm install --no-save --package-lock=false @playwright/test@1.55.0
-      - run: npx playwright install --with-deps chromium
-      - run: npx playwright test --config=playwright.home.config.js
-      - run: npx playwright test --config=playwright.first-open.config.js
+      - run: npm ci
+      - run: node node_modules/@playwright/test/cli.js install --with-deps chromium
+      - run: node node_modules/@playwright/test/cli.js test --config=playwright.home.config.js
+      - run: node node_modules/@playwright/test/cli.js test --config=playwright.first-open.config.js

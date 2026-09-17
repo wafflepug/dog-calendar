@@ -2,7 +2,7 @@
 
 Reviewed 17 September 2026. Repository: `wafflepug/dog-calendar`; always start implementation from current `origin/main` in an isolated worktree. Stack: static HTML/CSS, browser JavaScript, FullCalendar, Apps Script backend, Python contracts, Playwright. Keep production smoke checks read-only. Preserve existing theme settings, offline work, and early checkout behavior. Use Luna for bounded implementation; lead agent reviews design and integration. Complete relevant CI before merging.
 
-## P0 — Safe confirmed-stay identity
+## Completed — Safe confirmed-stay identity (#139)
 
 User story: As a sitter, I can trust that each real booking appears once without hiding another owner's similarly named dog.
 
@@ -22,7 +22,7 @@ Acceptance: repeated unrelated calendar mutations do not trigger navigation scan
 
 ### Ready measurement prompt (before optimizing)
 
-Use test-only Playwright instrumentation injected before navigation, without production runtime edits. Measure observer callback counts/durations, mutation records, RAF execution, and long tasks with fixed booking fixtures. Run Today and Calendar on `iphone-pro-390x844` and `android-large-412x915`, five repetitions each (20 runs total), with workers=1 for measurement isolation. Separate initial six-second hydration from a scripted scroll after hydration. Preserve native callback semantics and quantify instrumentation overhead; use the identical harness before and after optimization. Emit every raw run plus median/p95 by page/project. Require complete records for all 20 runs, no instrumentation errors, and unchanged UI regression behavior. No speedup claim or runtime edit belongs in the baseline task. Existing runner: Node 20, `@playwright/test@1.55.0`, `playwright.ui.config.js`, local server port 4173, explicit `WAFFLE_BASE_URL=http://127.0.0.1:4173`. Physical iPhone and Samsung Fold verification is still required for device-level performance claims.
+Use test-only Playwright instrumentation injected before navigation, without production runtime edits. Measure observer callback counts/durations, mutation records, RAF execution, and long tasks with fixed booking fixtures. Run Today and Calendar on `iphone-pro-390x844` and `android-large-412x915`, five repetitions each (20 runs total), with workers=1 for measurement isolation. Separate initial six-second hydration from a scripted scroll after hydration. Preserve native callback semantics and quantify instrumentation overhead; use the identical harness before and after optimization. Emit every raw run plus median/p95 by page/project. Require complete records for all 20 runs, no instrumentation errors, and unchanged UI regression behavior. No speedup claim or runtime edit belongs in the baseline task. Existing runner: Node 20, `@playwright/test@1.55.1`, `playwright.ui.config.js`, local server port 4173, explicit `WAFFLE_BASE_URL=http://127.0.0.1:4173`. Physical iPhone and Samsung Fold verification is still required for device-level performance claims.
 
 ## P1 — Generate release metadata from deployment
 
@@ -34,7 +34,9 @@ Acceptance: deployed commit equals workflow commit; asset revision matches boots
 
 ## Next ready tasks — operational identity rollout
 
-### P0.2 — Collision-safe operation lookup (frontend first)
+### P0.2 — Collision-safe operation lookup (design gate, then frontend)
+
+Ready bounded prompt: [next-operation-lookup-prompt.md](next-operation-lookup-prompt.md). Review cached date restoration, complete CSV evidence, and all mutation entry points before execution.
 
 Delegation prompt: Inspect `waffle-v11.0.js` operation indexing, `v110StayKeyForEvent`, checkout readers, and `waffle-v11.2.17.js` early-checkout enhancements. Inventory all readers before editing. Introduce an identity-aware lookup that accepts the full event/payload, detects multiple current confirmed bookings sharing a legacy name/date key, and never applies one ambiguous legacy operation to every booking. Preserve the legacy key contract for unambiguous historical stays. Deliver a migration design note before changing persisted keys; the existing Apps Script operations sheet stores no owner/contact fields. Avoid fabricating ownership for historical rows. Acceptance: Ralph's existing early checkout stays effective; a same-name/date collision cannot cause both owners' dogs to disappear; ambiguous historical status is explicitly reported; refresh/offline states remain consistent. Focused fixtures must cover unique legacy data, collisions, stale cached records, and real checkout dates. Backend migration follows as its own task.
 
@@ -44,9 +46,15 @@ Architecture constraints from review: `makeGuestStayKey_` is shared by Care/medi
 
 Delegation prompt: Inventory CSV identifiers, Apps Script guest directory fields, confirmation mutation receipts, and local confirmed event creation/reconciliation in `waffle-app.js`. Propose a stable identity propagated from mutation through authoritative reads; do not use spreadsheet row numbers as permanent IDs. Specify backward-compatible rollout and handling for old clients/offline queues before schema work. Deliver a design plus fixture plan first. Acceptance: mutation retries create one stay; a persisted authoritative row removes only its matching optimistic event; another owner's same-name/date record remains; edited dates preserve identity; deleted rows and offline retries do not resurrect bookings.
 
-### P1.0 — Reproducible local browser verification
+### P1.0 — Reproducible local browser verification (implemented this iteration)
 
 Delegation prompt: Add a small documented local UI test setup pinned to the CI Playwright version. Current repository has no checked-in package manifest; CI initializes one at runtime. Inspect existing runner configs and workflows before choosing the minimum tooling. Make local fixture tests use the local URL explicitly, never the production default. Acceptance: a clean checkout can run the targeted phone regression with one documented setup and one test command; dependency versions match CI; production writes are intercepted/blocked; a failed test leaves trace artifacts; generated reports are ignored. Keep this separate from performance optimization.
+
+### P1.4 — Explain cached data and pending sync in System Status
+
+User story: As the owner, I can tell whether a booking change has reached the server before relying on the calendar after a refresh.
+
+Delegation prompt: Inventory existing response-cache timestamps and any actual offline mutation queue API. Add a read-only System Status view of last successful boarding/operations sync without reintroducing the removed Home live ticker. Display pending mutation counts only if a real queue exists; current `queued` response branches do not establish one. Do not expose guest names, contact details, or mutation payloads in diagnostics. A network connection alone must not imply a successful data sync. Acceptance: synced, cached/offline, failed and unavailable-storage states are distinct; refresh never sends a mutation; absent timestamps show unknown rather than fabricated recency. Deliver small adapters and fixtures retaining user themes.
 
 ## Completion report template
 

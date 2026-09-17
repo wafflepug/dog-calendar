@@ -64,12 +64,11 @@ jobs:
 
       - name: Install Playwright
         run: |
-          npm init -y >/dev/null 2>&1
-          npm install --save-dev @playwright/test@1.55.0 >/dev/null
-          npx playwright install --with-deps chromium
+          npm ci
+          node node_modules/@playwright/test/cli.js install --with-deps chromium
 
       - name: Run read-only Chromium smoke tests
         env:
           WAFFLE_BASE_URL: https://wafflepug.github.io/dog-calendar
           WAFFLE_APPS_SCRIPT_URL: https://script.google.com/macros/s/AKfycbwn4HL49K9c3AZbXJRUjPw3UYWxJt8DmqXwMnTytyqdSstj3ZIJwWdDEC2IsBjetOf3pw/exec
-        run: npx playwright test tests/phase3d-smoke.spec.js --reporter=line --workers=1
+        run: node node_modules/@playwright/test/cli.js test tests/phase3d-smoke.spec.js --reporter=line --workers=1
