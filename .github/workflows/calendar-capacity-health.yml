@@ -19,6 +19,8 @@ jobs:
         run: |
           set -euo pipefail
           node --check calendar.js
+          node --check waffle-v11.0.5-core.js
+          node --test tests/confirmed-stay-identity.test.js
           test ! -e waffle-v11.1.68.js
           grep -q "CANONICAL CALENDAR SOURCE · waffle-v11.1.68.js" calendar.js
           grep -q "GREEN  = 0–2 confirmed dogs" calendar.js

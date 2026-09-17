@@ -140,20 +140,47 @@ function v1105ConfirmedStayIdentity(event) {
     const props = event?.extendedProps || {};
     if (props.isMeetGreet === true || props.isPotential === true) return '';
 
-    const dogName = String(props.dogName || event?.title || '').trim().toLowerCase();
+    const normalize = value => String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+    const meaningful = value => {
+        const token = normalize(value);
+        return token && !['n/a', 'na', 'unknown', 'none', '-', '—'].includes(token)
+            ? token
+            : '';
+    };
+    const consistentValue = (...values) => {
+        const tokens = [...new Set(values.map(meaningful).filter(Boolean))];
+        return tokens.length === 1 ? tokens[0] : '';
+    };
+    const dogName = normalize(props.dogName || event?.title || '');
     const startDate = String(props.rawStartDate || props.startDate || event?.start || '').slice(0, 10);
     const endDate = String(props.rawEndDate || props.endDate || event?.end || startDate).slice(0, 10);
-    if (!dogName || !startDate) return '';
-    return [dogName, startDate, endDate].join('|');
+    const breed = meaningful(props.breed);
+    const owner = consistentValue(props.ownerName, props.owner);
+    const phone = consistentValue(props.phone, props.contact, props.ownerPhone);
+
+    // A dog/date pair alone is ambiguous. Missing/sentinel owner or contact
+    // values therefore never create a dedupe key. Operational stay keys keep
+    // their existing schema; this is only a bounded Calendar merge identity.
+    if (!dogName || !startDate || !owner || !phone) return '';
+    return JSON.stringify([dogName, startDate, endDate, breed, owner, phone]);
 }
 
 function v1105DedupeConfirmedStays(events) {
-    const seen = new Set();
+    const seen = new Map();
     return events.filter(event => {
         const key = v1105ConfirmedStayIdentity(event);
         if (!key) return true;
-        if (seen.has(key)) return false;
-        seen.add(key);
+        if (seen.has(key)) {
+            // Keep the first event (the sheet is composed first and is thus
+            // authoritative), but retain a usable edit link if it was only
+            // present on a later local copy.
+            const retained = seen.get(key);
+            const retainedProps = retained?.extendedProps;
+            const duplicateLink = event?.extendedProps?.editLink;
+            if (retainedProps && !retainedProps.editLink && duplicateLink) retainedProps.editLink = duplicateLink;
+            return false;
+        }
+        seen.set(key, event);
         return true;
     });
 }
