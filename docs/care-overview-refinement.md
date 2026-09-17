@@ -20,3 +20,11 @@ labels wrap within the profile card. Missing values continue to use the current
 empty/unavailable text and are not treated as safe defaults. The CSS uses the
 existing surface, border, text, muted-text, and accent tokens; no backend,
 identity, saved-value, timeout, or eager-fetch behavior changes.
+
+Full-runtime verification also opens the actual directory page with read-only
+synthetic responses at 390px in both saved theme modes and 1440px in light mode.
+These three checks verify the final compatibility CSS cascade, including 22px
+wrapped names, 14px breed/dates and values, and 16px section headings. Scoped
+important declarations override older compatibility rules only inside the
+selected profile. The isolated layout/contrast suite passes nine checks across
+Chromium and WebKit; neither suite measures live backend latency.
