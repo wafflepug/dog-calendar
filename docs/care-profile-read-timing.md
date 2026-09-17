@@ -1,0 +1,5 @@
+# Care profile read timing slice
+
+This bounded browser slice measures the directory page in a fresh context (cold) and after returning to the guest list and reopening the same profile (warm). It records only `performance.now()` phase times, resolved backend action names, per-action attempt counts, and local fixture response durations. It does not record URLs, keys, names, phone numbers, notes, or raw payloads.
+
+`cacheStatus` is deliberately reported as `unavailable`: the application cache layer is not wrapped, so the warm pass is a repeat-read observation rather than a cache hit claim. Fixture response duration is transport/fixture handling time; callback application and client rendering are not separately instrumented (`null`). This slice is diagnostic evidence only and cannot support backend optimization decisions until no-cache and warm-cache behavior are measured with an instrumented cache boundary.
