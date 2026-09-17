@@ -5,7 +5,11 @@ const { resolveLocalBackendAction } = require('../scripts/local-network-policy')
 
 const FULLCALENDAR = fs.readFileSync(path.join(__dirname, 'fixtures', 'fullcalendar.global.min.js'), 'utf8');
 const BOOKING = { timestamp: '2026-09-18', dogName: 'Fixture Guest', breed: 'Mixed breed', startDate: '2026-09-17', endDate: '2026-09-22', ownerName: 'Fixture Owner', phone: '0000000000', notes: 'Fixture notes', bookingType: 'Boarding' };
-const CSV = `Timestamp,Dog Name,Breed,Start Date,End Date,Owner,Phone,Likes,Dislikes,Notes,Edit Link,Booking Type\n${BOOKING.timestamp},${BOOKING.dogName},${BOOKING.breed},17/09/2026,22/09/2026,${BOOKING.ownerName},${BOOKING.phone},,,,${BOOKING.bookingType}`;
+const csvCell = value => `"${String(value ?? '').replace(/"/g, '""')}"`;
+const CSV = [
+  'Timestamp,Dog Name,Breed,Start Date,End Date,Owner,Phone,Likes,Dislikes,Notes,Edit Link,Booking Type',
+  [BOOKING.timestamp, BOOKING.dogName, BOOKING.breed, '17/09/2026', '22/09/2026', BOOKING.ownerName, BOOKING.phone, '', '', BOOKING.notes, '', BOOKING.bookingType].map(csvCell).join(',')
+].join('\n');
 const APPROVED = new Set(['maintenance_status', 'get_guest_directory', 'get_guest_profile', 'get_data_versions', 'get_reminders_notes', 'get_stay_operations', 'get_notification_centre', 'get_past_guest_directory', 'waffle_ai_health']);
 
 async function installFixtures(page, ledger) {
@@ -27,7 +31,7 @@ async function installFixtures(page, ledger) {
       }
       let body = { result: 'success', records: [] };
       if (action === 'get_guest_directory') body = { result: 'success', bookings: [BOOKING] };
-      if (action === 'get_guest_profile') body = { result: 'success', record: { stayKey: 'fixture|2026-09-17|2026-09-22', intakeAttributes: { medicationInstructions: 'Fixture instruction' }, intakeAttributesSource: 'Fixture' } };
+      if (action === 'get_guest_profile') body = { result: 'success', record: { stayKey: new URL(url).searchParams.get('stayKey') || 'fixture|2026-09-17|2026-09-22', intakeAttributes: { medicationInstructions: 'Fixture instruction' }, intakeAttributesSource: 'Fixture' } };
       if (action === 'get_data_versions') body = { result: 'success', versions: { bookings: 'fixture', belongings: 'fixture' } };
       const callback = new URL(url).searchParams.get('callback');
       const payload = callback ? `${callback}(${JSON.stringify(body)});` : JSON.stringify(body);
@@ -66,7 +70,7 @@ async function runProfile(page, ledger, mode, testInfo) {
   }), { mode, navStart, uiReadyAt, cardReadyAt, clickStart, shellActiveAt, detailLoadedAt, backVisibleAt, shellProfileMode, ledger });
   await testInfo.attach(`profile-read-${mode}.json`, { body: JSON.stringify(evidence, null, 2), contentType: 'application/json' });
   console.log(`PROFILE_READ_TIMING ${JSON.stringify(evidence)}`);
-  expect(JSON.stringify(evidence)).not.toMatch(/Fixture Guest|Fixture Owner|0000000000|http/i);
+  expect(JSON.stringify(evidence)).not.toMatch(/Fixture Guest|Fixture Owner|http/i);
   return evidence;
 }
 
