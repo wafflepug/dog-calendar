@@ -5142,6 +5142,35 @@ body.dark-theme .directory-lazy-placeholder.is-error {
     display: none !important;
 }
 
+/* Keep the selected profile's opening screen focused on its stay identity.
+ * Directory-wide introduction, status tabs and refresh/import controls return
+ * with the guest list after Back. Stay-specific warnings and tabs remain in
+ * the active card below. */
+.directory-dashboard-fused.is-profile-mode
+.v1082-stay-tabs {
+    display: none !important;
+}
+
+.directory-dashboard-fused.is-profile-mode
+.directory-dashboard-header > div:first-child,
+.directory-dashboard-fused.is-profile-mode
+.directory-header-actions-fused > #openLegacyIntakeUploadBtn,
+.directory-dashboard-fused.is-profile-mode
+.directory-header-actions-fused > .directory-legacy-global-btn,
+.directory-dashboard-fused.is-profile-mode
+.directory-header-actions-fused > #refreshGuestDirectoryBtn,
+.directory-dashboard-fused.is-profile-mode
+.directory-header-actions-fused > .belongings-refresh-btn {
+    display: none !important;
+}
+
+.directory-dashboard-fused.is-profile-mode
+#v11190ScanIntakePdfBtn,
+.directory-dashboard-fused.is-profile-mode
+#v11190PdfOcrReviewNote {
+    display: none !important;
+}
+
 .directory-dashboard-fused.is-profile-mode
 .directory-grid-fused {
     display: block;
