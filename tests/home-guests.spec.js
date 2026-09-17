@@ -10,7 +10,10 @@ const app = read('waffle-app.js');
 const source = read('waffle-v11.1.js');
 const selector = source.slice(source.indexOf('function v111CurrentDogEvents()'), source.indexOf('function v111EnsureQuickPhotoModal()'));
 const operations = read('waffle-v11.0.js');
-const identity = operations.slice(operations.indexOf('function v110NormaliseStayDate'), operations.indexOf('function v110FormatTime'));
+// The isolated Home fixture starts at the helper boundary rather than loading
+// the full V11.0 script. Seed the collision evidence dependency introduced by
+// the checkout guard so operation lookup exercises the same runtime path.
+const identity = 'let v110CheckoutCollisionMap = {};\n' + operations.slice(operations.indexOf('function v110NormaliseStayDate'), operations.indexOf('function v110FormatTime'));
 const sections = read('index.html').match(/<section class="wh-home-guests"[\s\S]*?<\/section>/g);
 const html = sections[0];
 const css = read('waffle-runtime.css').split('/* Sitter Home:')[1];
