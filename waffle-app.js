@@ -7930,21 +7930,40 @@ registerWaffleServiceWorker();
 
                 const script = document.createElement('script');
                 let finished = false;
+                let lateCallbackTimer = null;
 
-                const cleanup = () => {
+                const cleanup = (retainLateCallback = false) => {
                     if (finished) return;
                     finished = true;
                     clearTimeout(timeoutId);
-                    try {
-                        delete window[callbackName];
-                    } catch (_) {
-                        window[callbackName] = undefined;
+                    if (!retainLateCallback) {
+                        try {
+                            delete window[callbackName];
+                        } catch (_) {
+                            window[callbackName] = undefined;
+                        }
                     }
                     if (script.parentNode) script.parentNode.removeChild(script);
                 };
 
                 const retryOrReject = (message) => {
-                    cleanup();
+                    const isFinalTimeout =
+                        attempt >= maxAttempts &&
+                        message.indexOf('did not respond in time') !== -1;
+
+                    if (isFinalTimeout && Number(options.lateCallbackGraceMs || 0) > 0) {
+                        const graceMs = Number(options.lateCallbackGraceMs);
+                        window[callbackName] = () => {
+                            if (lateCallbackTimer) clearTimeout(lateCallbackTimer);
+                            try { delete window[callbackName]; } catch (_) { window[callbackName] = undefined; }
+                        };
+                        cleanup(true);
+                        lateCallbackTimer = setTimeout(() => {
+                            try { delete window[callbackName]; } catch (_) { window[callbackName] = undefined; }
+                        }, graceMs);
+                    } else {
+                        cleanup();
+                    }
 
                     if (attempt < maxAttempts) {
                         setTimeout(runAttempt, 1200);
@@ -8034,7 +8053,8 @@ registerWaffleServiceWorker();
                 options
             );
 
-        request.finally(
+        request.then(
+            endWaffleNetworkActivity,
             endWaffleNetworkActivity
         );
 
@@ -8540,6 +8560,24 @@ registerWaffleServiceWorker();
         `;
     }
 
+    function setDirectoryProfileReadStatus(details, state, message, onRetry) {
+        if (!details) return;
+        let status = details.querySelector('[data-directory-profile-read-status]');
+        if (!status) {
+            status = document.createElement('div');
+            status.className = 'directory-profile-read-status';
+            status.setAttribute('data-directory-profile-read-status', '');
+            const host = details.querySelector('[data-directory-intake-attributes]');
+            if (host) host.parentNode.insertBefore(status, host);
+            else details.prepend(status);
+        }
+        status.dataset.state = state;
+        details.dataset.profileReadState = state;
+        status.innerHTML = `<span class="directory-profile-read-status-message">${escapeDashboardHtml(message || '')}</span>${state === 'error' ? '<button type="button" class="directory-intake-action directory-profile-read-retry" data-retry-directory-profile-read>↻ Retry</button>' : ''}`;
+        const retry = status.querySelector('[data-retry-directory-profile-read]');
+        if (retry && typeof onRetry === 'function') retry.addEventListener('click', onRetry, { once: true });
+    }
+
     async function loadDirectoryProfileDetail(
         card,
         details,
@@ -8570,6 +8608,14 @@ registerWaffleServiceWorker();
             details.dataset.detailLoaded =
                 'true';
 
+            if (details.dataset.profileReadState !== 'error') {
+                setDirectoryProfileReadStatus(
+                    details,
+                    'saved',
+                    'Saved details shown'
+                );
+            }
+
             return;
         }
 
@@ -8583,16 +8629,49 @@ registerWaffleServiceWorker();
         details.dataset.detailLoading =
             'true';
 
-        setDirectoryDetailLoading(
-            details,
-            'profile'
-        );
+        const cachedRecord =
+            directoryProfileDetailCache[stayKey] ||
+            null;
+        const profileIsCurrent = () =>
+            card?.isConnected === false ? false :
+            ((card?.dataset?.directoryStayKey || card?.dataset?.stayKey) &&
+                (card.dataset.directoryStayKey || card.dataset.stayKey) !== stayKey) ? false :
+            typeof directorySelectedProfileStayKey === 'undefined' ||
+            !directorySelectedProfileStayKey ||
+            directorySelectedProfileStayKey === stayKey;
+
+        if (cachedRecord) {
+            renderDirectoryIntakeAttributes(
+                card,
+                cachedRecord
+            );
+            setDirectoryProfileReadStatus(
+                details,
+                'refreshing',
+                'Saved details shown · refreshing'
+            );
+        } else {
+            setDirectoryProfileReadStatus(
+                details,
+                'loading',
+                'Loading care details…'
+            );
+        }
+
+        if (!cachedRecord) {
+            setDirectoryDetailLoading(
+                details,
+                'profile'
+            );
+        }
 
         const applyRecord =
             record => {
                 directoryProfileDetailCache[
                     stayKey
                 ] = record;
+
+                if (!profileIsCurrent()) return;
 
                 renderDirectoryIntakeAttributes(
                     card,
@@ -8608,8 +8687,8 @@ registerWaffleServiceWorker();
                 );
             };
 
+        let cachedRendered = false;
         try {
-            let cachedRendered = false;
 
             const swr =
                 await queryAppsScriptSWR(
@@ -8622,8 +8701,9 @@ registerWaffleServiceWorker();
                         cacheKey:
                             'directory:profile:' +
                             stayKey,
-                        maxAttempts: 2,
-                        timeoutMs: 30000,
+                        maxAttempts: 1,
+                        timeoutMs: 15000,
+                        lateCallbackGraceMs: 5 * 60 * 1000,
                         maxStaleMs:
                             6 * 60 * 60 * 1000,
                         onCached:
@@ -8639,6 +8719,7 @@ registerWaffleServiceWorker();
                                         intakeAttributesSource: ''
                                     }
                                 );
+                                if (profileIsCurrent()) setDirectoryProfileReadStatus(details, 'refreshing', 'Saved details shown · refreshing');
                             }
                     }
                 );
@@ -8655,6 +8736,13 @@ registerWaffleServiceWorker();
                         intakeAttributesSource: ''
                     }
                 );
+                if (profileIsCurrent()) setDirectoryProfileReadStatus(details, 'fresh', 'Care details updated');
+            } else if (profileIsCurrent() && swr.offlineFallback && typeof navigator !== 'undefined' && navigator.onLine === false) {
+                setDirectoryProfileReadStatus(details, 'error', 'Saved details shown · offline refresh unavailable', () => loadDirectoryProfileDetail(card, details, { force: true }));
+            } else if (profileIsCurrent() && swr.offlineFallback) {
+                setDirectoryProfileReadStatus(details, 'error', 'Unable to refresh saved details', () => loadDirectoryProfileDetail(card, details, { force: true }));
+            } else if (profileIsCurrent()) {
+                setDirectoryProfileReadStatus(details, 'fresh', 'Saved details current');
             }
 
         } catch (error) {
@@ -8663,11 +8751,35 @@ registerWaffleServiceWorker();
                 error
             );
 
-            setDirectoryDetailError(
-                details,
-                'profile',
-                error
-            );
+            if (!profileIsCurrent()) return;
+            if (cachedRendered || cachedRecord) {
+                setDirectoryProfileReadStatus(
+                    details,
+                    'error',
+                    'Unable to refresh saved details',
+                    () => loadDirectoryProfileDetail(
+                        card,
+                        details,
+                        { force: true }
+                    )
+                );
+            } else {
+                setDirectoryDetailError(
+                    details,
+                    'profile',
+                    error
+                );
+                setDirectoryProfileReadStatus(
+                    details,
+                    'error',
+                    'Unable to load care details',
+                    () => loadDirectoryProfileDetail(
+                        card,
+                        details,
+                        { force: true }
+                    )
+                );
+            }
 
         } finally {
             details.dataset.detailLoading =

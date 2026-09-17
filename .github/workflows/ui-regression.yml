@@ -11,6 +11,9 @@ on:
       - 'tests/ui-regression.spec.js'
       - 'tests/local-ui-runner.test.js'
       - 'tests/local-network-policy.test.js'
+      - 'tests/care-profile-readiness.test.js'
+      - 'tests/care-profile-readiness.browser.spec.js'
+      - 'playwright.care-profile.config.js'
       - 'scripts/local-network-policy.js'
       - 'scripts/run-local-ui.js'
       - 'package.json'
@@ -27,6 +30,9 @@ on:
       - 'tests/ui-regression.spec.js'
       - 'tests/local-ui-runner.test.js'
       - 'tests/local-network-policy.test.js'
+      - 'tests/care-profile-readiness.test.js'
+      - 'tests/care-profile-readiness.browser.spec.js'
+      - 'playwright.care-profile.config.js'
       - 'scripts/local-network-policy.js'
       - 'scripts/run-local-ui.js'
       - 'package.json'
@@ -61,7 +67,9 @@ jobs:
           npm ci
           node --test tests/local-ui-runner.test.js
           node --test tests/local-network-policy.test.js
+          node --test tests/care-profile-readiness.test.js
           node node_modules/@playwright/test/cli.js install --with-deps chromium firefox webkit
+          node node_modules/@playwright/test/cli.js test --config=playwright.care-profile.config.js
 
       - name: Run cross-device UI placement regression
         id: ui

@@ -2,6 +2,11 @@
 
 Reviewed 17 September 2026. Repository: `wafflepug/dog-calendar`; always start implementation from current `origin/main` in an isolated worktree. Stack: static HTML/CSS, browser JavaScript, FullCalendar, Apps Script backend, Python contracts, Playwright. Keep production smoke checks read-only. Preserve existing theme settings, offline work, and early checkout behavior. Use Luna for bounded implementation; lead agent reviews design and integration. Complete relevant CI before merging.
 
+
+## Owner priority: Care UI refinements next
+
+Care profile readiness is implemented in this release: saved attributes remain visible, profile reads have scoped timeout/retry, and responses cannot update a different selected dog. Next prioritize [Care UI refinements](care-ui-refinement-backlog.md): readable overview hierarchy, then lazy tabs and preserved work. Investigate reported 3–5 minute profile access with actual request timings; configured timeout limits alone do not prove the cause. Deployment metadata and general diagnostics move below these Care tasks.
+
 ## Completed — Safe confirmed-stay identity (#139)
 
 User story: As a sitter, I can trust that each real booking appears once without hiding another owner's similarly named dog.
@@ -35,6 +40,8 @@ Acceptance: deployed commit equals workflow commit; asset revision matches boots
 ## Next ready tasks — operational identity rollout
 
 ### P0.2 — Collision-safe operation lookup (design gate, then frontend)
+
+Bounded frontend guard implemented: known name/date collisions quarantine operational status and block checkout writes. See `checkout-collision-safety.md`. Evidence survives partial refreshes. Incomplete identity alone retains historical compatibility; stable booking IDs and authoritative freshness remain prerequisites for universal ambiguity protection.
 
 Ready bounded prompt: [next-operation-lookup-prompt.md](next-operation-lookup-prompt.md). Review cached date restoration, complete CSV evidence, and all mutation entry points before execution.
 

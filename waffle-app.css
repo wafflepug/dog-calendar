@@ -5738,6 +5738,45 @@ html.waffle-standalone
     min-width: 190px;
 }
 
+.directory-profile-read-status {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin: 0 0 8px;
+    padding: 7px 9px;
+    border: 1px solid var(--wh-border, #dbe3ea);
+    border-radius: 8px;
+    background: var(--wh-surface-muted, #f8fafc);
+    color: var(--wh-text-muted, #64748b);
+    font-size: 10px;
+    line-height: 1.35;
+}
+
+.directory-profile-read-status[data-state="loading"],
+.directory-profile-read-status[data-state="refreshing"] {
+    color: var(--wh-text, #172033);
+}
+
+.directory-profile-read-status[data-state="fresh"] {
+    border-color: color-mix(in srgb, #15803d 28%, var(--wh-border, #dbe3ea));
+    color: #166534;
+}
+
+.directory-profile-read-status[data-state="error"] {
+    border-color: color-mix(in srgb, #b91c1c 35%, var(--wh-border, #dbe3ea));
+    background: color-mix(in srgb, #fee2e2 42%, var(--wh-surface-muted, #f8fafc));
+    color: #991b1b;
+}
+
+body.dark-theme .directory-profile-read-status[data-state="fresh"] {
+    color: #86efac;
+}
+
+body.dark-theme .directory-profile-read-status[data-state="error"] {
+    color: #fca5a5;
+}
+
 .care-profile-compact {
     padding: 3px 0;
 }
