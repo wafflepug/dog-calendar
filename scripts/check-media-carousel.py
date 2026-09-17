@@ -34,7 +34,7 @@ require(frontend, 'object-fit:contain')
 # Runtime: this release adds a brand-new runtime filename, so it can ship on the
 # existing coordinated shell revision without repinning every entry page/CSS/SW.
 require(bootstrap, '"waffle-v11.2.18.js"')
-require(bootstrap, "const ASSET_REVISION = '2026.09.17.02';")
+require(bootstrap, "const ASSET_REVISION = '2026.09.18.01';")
 require(bootstrap, "const BUILD = '2026.08.28.01';")
 text = Path(bootstrap).read_text(encoding='utf-8')
 if text.find('"waffle-v11.2.18.js"') < text.find('"waffle-v11.2.17.js"'):

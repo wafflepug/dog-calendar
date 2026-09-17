@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.09.17.02",
-  "releaseName": "Care profile readiness and checkout safety",
+  "assetRevision": "2026.09.18.01",
+  "releaseName": "Care profile readability and preserved work",
   "runtime": "waffle-bootstrap.js",
   "styles": "waffle-runtime.css",
   "phase": "phase-4-sitter-workflow-expansion",
