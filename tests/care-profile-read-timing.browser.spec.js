@@ -51,18 +51,19 @@ async function runProfile(page, ledger, mode, testInfo) {
   await card.locator('[data-open-directory-profile]').click();
   await expect(card).toHaveClass(/is-profile-active/);
   const shellActiveAt = await page.evaluate(() => performance.now());
-  const backVisibleAt = await page.locator('#directoryBackToGuestsBtn').isVisible()
-    ? await page.evaluate(() => performance.now())
-    : null;
+  const shellProfileMode = await page.locator('.directory-dashboard-fused.is-profile-mode').count() > 0;
+  expect(shellProfileMode).toBe(true);
+  await expect(page.locator('#directoryBackToGuestsBtn')).toBeVisible();
+  const backVisibleAt = await page.evaluate(() => performance.now());
   await expect(card.locator('[data-directory-detail="profile"]')).toHaveAttribute('data-detail-loaded', 'true', { timeout: 30000 });
   const detailLoadedAt = await page.evaluate(() => performance.now());
-  const evidence = await page.evaluate(({ mode, navStart, uiReadyAt, cardReadyAt, clickStart, shellActiveAt, detailLoadedAt, backVisibleAt, ledger }) => ({
-    mode, navigationPhase: mode === 'warm-reopen' ? 'same-document reopen; navigation phases unavailable' : 'document load', shellProfileMode: 'actual directory runtime', navStart, uiReadyAt, cardReadyAt, clickStart, shellActiveAt, detailsAvailableAt: detailLoadedAt, backVisibleAt,
+  const evidence = await page.evaluate(({ mode, navStart, uiReadyAt, cardReadyAt, clickStart, shellActiveAt, detailLoadedAt, backVisibleAt, shellProfileMode, ledger }) => ({
+    mode, navigationPhase: mode === 'warm-reopen' ? 'same-document reopen; navigation phases unavailable' : 'document load', shellProfileMode, navStart: mode === 'warm-reopen' ? null : navStart, uiReadyAt: mode === 'warm-reopen' ? null : uiReadyAt, cardReadyAt: mode === 'warm-reopen' ? null : cardReadyAt, clickStart, shellActiveAt, detailsAvailableAt: detailLoadedAt, backVisibleAt,
     actionAttempts: ledger.reduce((out, item) => { out[item.action] = (out[item.action] || 0) + 1; return out; }, {}),
     fixtureResponses: ledger.map(item => ({ action: item.action, fulfillmentDurationMs: item.fulfillmentEnd == null ? null : item.fulfillmentEnd - item.start })),
     profileAttemptCount: ledger.filter(item => item.action === 'get_guest_profile').length,
     cacheStatus: 'unavailable', callbackApplicationTiming: null
-  }), { mode, navStart, uiReadyAt, cardReadyAt, clickStart, shellActiveAt, detailLoadedAt, backVisibleAt, ledger });
+  }), { mode, navStart, uiReadyAt, cardReadyAt, clickStart, shellActiveAt, detailLoadedAt, backVisibleAt, shellProfileMode, ledger });
   await testInfo.attach(`profile-read-${mode}.json`, { body: JSON.stringify(evidence, null, 2), contentType: 'application/json' });
   console.log(`PROFILE_READ_TIMING ${JSON.stringify(evidence)}`);
   expect(JSON.stringify(evidence)).not.toMatch(/Fixture Guest|Fixture Owner|0000000000|http/i);
