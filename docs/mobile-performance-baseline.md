@@ -8,7 +8,7 @@ bundle. It does not change production runtime behavior or claim physical-device
 performance.
 
 Run `npm run test:perf:mobile` to regenerate the evidence. The runner requires
-the loopback server and refuses an occupied port or a non-loopback backend. It
+the loopback server, forces the loopback test URL, and refuses an occupied port. It
 produces four raw group files and a merged summary with 20 measured runs and 4
 matched calibration runs (Today and Calendar on the iPhone/WebKit and Android/
 Chromium emulations). Calibration values are shown beside measured medians;
