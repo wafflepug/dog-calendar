@@ -1,0 +1,58 @@
+name: Care profile read timing
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'directory.html'
+      - '*.js'
+      - '*.css'
+      - 'tests/care-profile-read-timing.browser.spec.js'
+      - 'playwright.care-profile-timing.config.js'
+      - 'scripts/local-network-policy.js'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/care-profile-read-timing.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'directory.html'
+      - '*.js'
+      - '*.css'
+      - 'tests/care-profile-read-timing.browser.spec.js'
+      - 'playwright.care-profile-timing.config.js'
+      - 'scripts/local-network-policy.js'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/care-profile-read-timing.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  timing:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - name: Install pinned Playwright and Chromium
+        run: |
+          npm ci
+          node node_modules/@playwright/test/cli.js install --with-deps chromium
+      - name: Run bounded cold and warm checks
+        run: node node_modules/@playwright/test/cli.js test --config=playwright.care-profile-timing.config.js
+      - name: Upload JSON evidence and Playwright artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: care-profile-read-timing-${{ github.run_id }}
+          if-no-files-found: warn
+          retention-days: 14
+          path: |
+            evidence/care-profile-read-timing-report.json
+            test-results/
+            playwright-report/
