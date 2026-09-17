@@ -1,5 +1,9 @@
+const fs = require('node:fs');
+const path = require('node:path');
 const { test, expect } = require('@playwright/test');
 const { resolveLocalBackendAction } = require('../scripts/local-network-policy');
+
+const FULLCALENDAR_BUNDLE = fs.readFileSync(path.join(__dirname, 'fixtures', 'fullcalendar.global.min.js'), 'utf8');
 
 const PAGES = [
   ['index.html', 'calendar', 'Calendar / Today'],
@@ -14,7 +18,23 @@ const LOCAL_BUILD = /^https?:\/\/(?:127\.0\.0\.1|localhost)(?::|\/)/i.test(
 
 test.beforeEach(async ({ page }) => {
   if (!LOCAL_BUILD) return;
-  page.__waffleBuildProbe = { seen: false, settled: null, resolve: null };
+  page.__waffleBuildProbe = createBuildProbe();
+  const isBuildProbeRequest = request => /\/waffle-build\.json(?:\?|$)/i.test(request.url());
+  page.on('request', request => {
+    if (!isBuildProbeRequest(request)) return;
+    const state = page.__waffleBuildProbe;
+    state.seen = true;
+    state.inFlight.add(request);
+    state.resolveObserved();
+  });
+  const settleRequest = request => {
+    if (!isBuildProbeRequest(request)) return;
+    const state = page.__waffleBuildProbe;
+    state.inFlight.delete(request);
+    if (state.seen && state.inFlight.size === 0) state.resolveSettled();
+  };
+  page.on('requestfinished', settleRequest);
+  page.on('requestfailed', settleRequest);
   await page.route(/^https:\/\/script\.google(?:usercontent)?\.com\//, route => {
     const url = new URL(route.request().url());
     const resolved = resolveLocalBackendAction({
@@ -37,24 +57,42 @@ test.beforeEach(async ({ page }) => {
       body: `${callback}({"result":"success","enabled":false});`
     });
   });
-  await page.route('**/waffle-build.json*', async route => {
-    const state = page.__waffleBuildProbe;
-    let resolve;
-    if (state && !state.seen) {
-      state.seen = true;
-      resolve = state.resolve;
-    }
-    try {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: '{"build":""}'
-      });
-    } finally {
-      resolve?.();
-    }
-  });
+  await page.route('**/cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js', route => route.fulfill({
+    status: 200, contentType: 'application/javascript', body: FULLCALENDAR_BUNDLE
+  }));
+  await page.route('**/cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css', route => route.fulfill({
+    status: 200, contentType: 'text/css', body: ''
+  }));
+  await page.route('**/waffle-build.json*', route => route.fulfill({
+    status: 200, contentType: 'application/json', body: '{"build":""}'
+  }));
 });
+
+function createBuildProbe() {
+  let resolveObserved;
+  let resolveSettled;
+  return {
+    seen: false,
+    inFlight: new Set(),
+    observed: new Promise(resolve => { resolveObserved = resolve; }),
+    settled: new Promise(resolve => { resolveSettled = resolve; }),
+    resolveObserved: () => resolveObserved(),
+    resolveSettled: () => resolveSettled()
+  };
+}
+
+async function awaitBuildProbe(page) {
+  const state = page.__waffleBuildProbe;
+  await Promise.race([
+    state.observed,
+    new Promise((_, reject) => setTimeout(() => reject(new Error('Build manifest request was not observed for the current navigation.')), 5_000))
+  ]);
+  await Promise.race([
+    state.settled,
+    new Promise((_, reject) => setTimeout(() => reject(new Error(`Build manifest request did not settle before navigation (in flight: ${state.inFlight.size}).`)), 5_000))
+  ]);
+  if (state.inFlight.size !== 0) throw new Error(`Build manifest request remains in flight before navigation (in flight: ${state.inFlight.size}).`);
+}
 
 function record(failures, condition, message) {
   if (!condition) failures.push(message);
@@ -83,12 +121,7 @@ function collectPageErrors(page) {
 
 async function gotoCanonical(page, path, expectedPage) {
   if (LOCAL_BUILD) {
-    let resolveProbe;
-    page.__waffleBuildProbe = {
-      seen: false,
-      settled: new Promise(done => { resolveProbe = done; }),
-      resolve: resolveProbe
-    };
+    page.__waffleBuildProbe = createBuildProbe();
   }
   const separator = path.includes('?') ? '&' : '?';
   const response = await page.goto(`${path}${separator}uiRegression=${Date.now()}`, { waitUntil: 'domcontentloaded' });
@@ -133,11 +166,7 @@ async function gotoCanonical(page, path, expectedPage) {
   }
 
   if (LOCAL_BUILD) {
-    await page.waitForTimeout(0);
-    await Promise.race([
-      page.__waffleBuildProbe.settled,
-      page.waitForTimeout(5_000)
-    ]);
+    await awaitBuildProbe(page);
   }
   await page.waitForTimeout(250);
 }
