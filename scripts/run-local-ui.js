@@ -80,6 +80,7 @@ async function runLocalUi(options = {}) {
   const resolveCli = options.resolveCli || (() => require.resolve('@playwright/test/cli'));
   const register = options.registerSignals || installSignals;
   const cliArgs = options.args || process.argv.slice(2);
+  const config = options.config || process.env.WAFFLE_PLAYWRIGHT_CONFIG || 'playwright.ui.config.js';
   const cli = resolveCli();
 
   if (!(await portFreeImpl())) {
@@ -117,7 +118,7 @@ async function runLocalUi(options = {}) {
     });
     if (!ready || abortCode !== null) return abortCode || 1;
 
-    testProcess = spawnImpl(process.execPath, [cli, 'test', '--config=playwright.ui.config.js', ...cliArgs], {
+    testProcess = spawnImpl(process.execPath, [cli, 'test', `--config=${config}`, ...cliArgs], {
       cwd: ROOT,
       env: { ...process.env, WAFFLE_BASE_URL: BASE_URL },
       stdio: 'inherit'

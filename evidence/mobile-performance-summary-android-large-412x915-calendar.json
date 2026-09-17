@@ -1,0 +1,50 @@
+{
+  "schema": "mobile-performance-baseline/v1",
+  "generatedAt": "2026-09-17T10:06:31.309Z",
+  "fixedApplicationDate": "2026-09-17T12:00:00.000Z",
+  "measuredRuns": 5,
+  "calibrationRuns": 1,
+  "calibrationPurpose": "matched counters-disabled harness runs; overhead is reported and never subtracted",
+  "unsupportedMetrics": [
+    "longtask is unavailable in WebKit when absent",
+    "layout-shift is not collected"
+  ],
+  "groups": [
+    {
+      "page": "calendar",
+      "project": "android-large-412x915",
+      "repetitions": 5,
+      "readyMs": {
+        "median": 683.2000000476837,
+        "p95": 792.3000000715256
+      },
+      "hydrationMs": {
+        "median": 6037.699999928474,
+        "p95": 6058.5
+      },
+      "totalMs": {
+        "median": 8452.899999976158,
+        "p95": 9268.800000071526
+      },
+      "mutationRecords": {
+        "median": 443341,
+        "p95": 590808
+      },
+      "rafCallbacks": {
+        "median": 4534,
+        "p95": 5739
+      }
+    }
+  ],
+  "calibrations": [
+    {
+      "page": "calendar",
+      "project": "android-large-412x915",
+      "readyMs": 610.7999999523163,
+      "hydrationMs": 6032.399999976158,
+      "totalMs": 7896.399999976158,
+      "mutationRecords": 0,
+      "rafCallbacks": 0
+    }
+  ]
+}
