@@ -24,6 +24,7 @@ test.beforeEach(async ({ page }) => {
     if (!isBuildProbeRequest(request)) return;
     const state = page.__waffleBuildProbe;
     state.seen = true;
+    state.activity += 1;
     state.inFlight.add(request);
     state.resolveObserved();
   });
@@ -73,6 +74,7 @@ function createBuildProbe() {
   let resolveSettled;
   return {
     seen: false,
+    activity: 0,
     inFlight: new Set(),
     observed: new Promise(resolve => { resolveObserved = resolve; }),
     settled: new Promise(resolve => { resolveSettled = resolve; }),
@@ -87,11 +89,17 @@ async function awaitBuildProbe(page) {
     state.observed,
     new Promise((_, reject) => setTimeout(() => reject(new Error('Build manifest request was not observed for the current navigation.')), 5_000))
   ]);
-  await Promise.race([
-    state.settled,
-    new Promise((_, reject) => setTimeout(() => reject(new Error(`Build manifest request did not settle before navigation (in flight: ${state.inFlight.size}).`)), 5_000))
-  ]);
-  if (state.inFlight.size !== 0) throw new Error(`Build manifest request remains in flight before navigation (in flight: ${state.inFlight.size}).`);
+  const deadline = Date.now() + 5_000;
+  while (true) {
+    await Promise.race([
+      state.settled,
+      new Promise((_, reject) => setTimeout(() => reject(new Error(`Build manifest request did not settle before navigation (in flight: ${state.inFlight.size}).`)), Math.max(1, deadline - Date.now())))
+    ]);
+    const activity = state.activity;
+    await new Promise(resolve => setTimeout(resolve, 300));
+    if (state.inFlight.size === 0 && state.activity === activity) return;
+    if (Date.now() >= deadline) throw new Error(`Build manifest request did not remain settled before navigation (in flight: ${state.inFlight.size}).`);
+  }
 }
 
 function record(failures, condition, message) {
