@@ -5836,10 +5836,11 @@ body.dark-theme .directory-profile-read-status[data-state="error"] {
 
 .directory-card.is-profile-active .directory-profile-section-kicker,
 .directory-card.is-profile-active .directory-field-label,
+.directory-card.is-profile-active:not(.is-profile-editing) [data-directory-main-panel="profile"] .intake-profile-field label,
 .directory-card.is-profile-active .intake-profile-field label,
 .directory-card.is-profile-active .care-risk-section-heading span,
 .directory-card.is-profile-active .belongings-item-section-heading span {
-    font-size: 12px;
+    font-size: 12px !important;
     line-height: 1.35;
 }
 
@@ -5848,7 +5849,7 @@ body.dark-theme .directory-profile-read-status[data-state="error"] {
 .directory-card.is-profile-active .care-risk-label,
 .directory-card.is-profile-active .belongings-item-label span,
 .directory-card.is-profile-active .belongings-photo-upload-copy span {
-    font-size: 14px;
+    font-size: 14px !important;
     line-height: 1.45;
 }
 
