@@ -5777,6 +5777,94 @@ body.dark-theme .directory-profile-read-status[data-state="error"] {
     color: #fca5a5;
 }
 
+/* Care profile overview refinement: keep the identity and stay context easy
+   to scan, then give saved care fields enough room to wrap at phone widths. */
+.directory-card.is-profile-active .directory-card-identity,
+.directory-card.is-profile-active .directory-profile-section,
+.directory-card.is-profile-active .directory-attributes-grid {
+    min-width: 0;
+}
+
+.directory-card.is-profile-active .directory-dog-name-btn,
+.directory-card.is-profile-active .directory-primary-breed,
+.directory-card.is-profile-active .directory-stay-dates,
+.directory-card.is-profile-active .directory-field-value,
+.directory-card.is-profile-active .intake-profile-control,
+.directory-card.is-profile-active .care-risk-label,
+.directory-card.is-profile-active .care-risk-section-heading span {
+    overflow-wrap: anywhere;
+    word-break: normal;
+}
+
+.directory-card.is-profile-active .directory-profile-section-heading h4,
+.directory-card.is-profile-active .care-risk-section-heading strong,
+.directory-card.is-profile-active .belongings-item-section-heading strong {
+    font-size: 16px;
+    line-height: 1.25;
+}
+
+.directory-card.is-profile-active .directory-profile-section-kicker,
+.directory-card.is-profile-active .directory-field-label,
+.directory-card.is-profile-active .intake-profile-field label,
+.directory-card.is-profile-active .care-risk-section-heading span,
+.directory-card.is-profile-active .belongings-item-section-heading span {
+    font-size: 12px;
+    line-height: 1.35;
+}
+
+.directory-card.is-profile-active .directory-field-value,
+.directory-card.is-profile-active .intake-profile-control,
+.directory-card.is-profile-active .care-risk-label,
+.directory-card.is-profile-active .belongings-item-label span,
+.directory-card.is-profile-active .belongings-photo-upload-copy span {
+    font-size: 14px;
+    line-height: 1.45;
+}
+
+.directory-card.is-profile-active .directory-core-attributes {
+    align-items: stretch;
+}
+
+.directory-card.is-profile-active .directory-core-attributes .directory-attribute {
+    min-height: 68px;
+    align-content: start;
+}
+
+.directory-card.is-profile-active .directory-profile-section-heading,
+.directory-card.is-profile-active .care-risk-section-heading,
+.directory-card.is-profile-active .belongings-item-section-heading {
+    align-items: flex-start;
+}
+
+.directory-card.is-profile-active :is(button, input, textarea, [tabindex]):focus-visible {
+    outline: 3px solid var(--wh-accent, #2563eb);
+    outline-offset: 2px;
+}
+
+@media (max-width: 520px) {
+    .directory-card.is-profile-active .directory-card-header {
+        align-items: flex-start;
+    }
+
+    .directory-card.is-profile-active .directory-profile-section-tools {
+        max-width: none;
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    .directory-card.is-profile-active .directory-profile-section-heading {
+        flex-wrap: wrap;
+    }
+
+    .directory-card.is-profile-active .directory-core-attributes {
+        grid-template-columns: 1fr;
+    }
+
+    .directory-card.is-profile-active .directory-profile-subtabs {
+        gap: 8px;
+    }
+}
+
 .care-profile-compact {
     padding: 3px 0;
 }
