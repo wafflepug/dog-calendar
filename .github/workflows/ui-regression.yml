@@ -69,26 +69,8 @@ jobs:
           WAFFLE_BASE_URL: http://127.0.0.1:4173
         run: |
           set -euo pipefail
-          python3 -m http.server 4173 --bind 127.0.0.1 > /tmp/waffle-ui-server.log 2>&1 &
-          server_pid=$!
-          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
-
-          ready=0
-          for attempt in {1..30}; do
-            if curl --fail --silent --show-error http://127.0.0.1:4173/index.html >/dev/null; then
-              ready=1
-              break
-            fi
-            sleep 1
-          done
-          if [ "$ready" -ne 1 ]; then
-            echo "Local UI server did not become ready."
-            cat /tmp/waffle-ui-server.log || true
-            exit 1
-          fi
-
           set +e
-          node node_modules/@playwright/test/cli.js test --config=playwright.ui.config.js
+          npm run test:ui:local
           test_exit=$?
           set -e
           echo "test_exit=$test_exit" >> "$GITHUB_OUTPUT"
