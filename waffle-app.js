@@ -9155,6 +9155,8 @@ registerWaffleServiceWorker();
             directoryBookingStateSignature !==
                 nextSignature;
 
+        if (preservedUiState) preservedUiState.rebuiltCards = shouldRebuildCards;
+
         directorySummaryRecordsCache = {};
         directoryPhotoRecordsCache = {};
         careRiskRecordsCache = {};
@@ -9669,7 +9671,7 @@ registerWaffleServiceWorker();
 
         if (preserved?.desktopTab) {
             card.dataset.v11160ActiveTab = preserved.desktopTab;
-            card.dataset.v11160RestoreLoad = 'true';
+            if (preserved.rebuiltCards) card.dataset.v11160RestoreLoad = 'true';
         }
 
         const profileSection =
@@ -12241,9 +12243,9 @@ registerWaffleServiceWorker();
             'Changes are saved directly to the shared Google Sheet.';
         status.className = 'guest-detail-edit-status';
 
+        const saveButton = document.getElementById('saveGuestDetailEdit');
+        if (saveButton) saveButton.disabled = activeDirectoryEditContext.unmatched;
         if (activeDirectoryEditContext.unmatched) {
-            const saveButton = document.getElementById('saveGuestDetailEdit');
-            if (saveButton) saveButton.disabled = true;
             status.textContent = 'This stay is ambiguous. Cancel this draft before editing another stay.';
             status.className = 'guest-detail-edit-status is-error';
         }

@@ -219,12 +219,43 @@ test('restored desktop lazy panel load flag is consumed once', () => {
   assert.equal(sandbox.consume(sandbox.card), false);
 });
 
+test('desktop preparation loads the restored selected panel once and no other panel', () => {
+  const care = fs.readFileSync('care.js', 'utf8');
+  const consumeStart = care.indexOf('function consumeRestoredDesktopTabLoad');
+  const consumeEnd = care.indexOf('\n  function ', consumeStart + 10);
+  const prepareStart = care.indexOf('function prepareCard');
+  const prepareEnd = care.indexOf('function teardownCard', prepareStart);
+  const calls = [];
+  const card = { dataset: { v11160ActiveTab: 'media', v11160RestoreLoad: 'true' }, classList: { add() {} } };
+  const sandbox = {
+    TAB_KEYS: new Set(['profile', 'belongings', 'history', 'media', 'master']),
+    isDesktopCare: () => true, contentHost: () => ({}), ensurePanels: () => true,
+    oldTabs: () => null, buildNav() {}, selectedFromLegacy: () => 'profile',
+    select: (_card, key, options) => calls.push({ key, load: options.load })
+  };
+  vm.runInNewContext(`${care.slice(consumeStart, consumeEnd)}\n${care.slice(prepareStart, prepareEnd)}\nthis.prepare = prepareCard;`, sandbox);
+  sandbox.prepare(card);
+  sandbox.prepare(card);
+  assert.deepEqual(calls, [{ key: 'media', load: true }, { key: 'media', load: false }]);
+});
+
 test('direct editor opening on duplicate legacy keys disables Save', () => {
   const h = editorHarness();
   h.sandbox.openEditor(h.trigger);
   assert.equal(h.sandbox.activeDirectoryEditContext.unmatched, true);
   assert.equal(h.save.disabled, true);
   assert.match(h.status.textContent, /ambiguous/);
+});
+
+test('opening a valid editor after a blocked draft enables Save again', () => {
+  const h = editorHarness();
+  h.sandbox.openEditor(h.trigger);
+  assert.equal(h.save.disabled, true);
+  const card = h.trigger.closest('.directory-card');
+  h.sandbox.document.querySelectorAll = () => [card];
+  h.sandbox.openEditor(h.trigger);
+  assert.equal(h.sandbox.activeDirectoryEditContext.unmatched, false);
+  assert.equal(h.save.disabled, false);
 });
 
 test('repeated refresh cannot rebind a draft to conflicting owner evidence', () => {

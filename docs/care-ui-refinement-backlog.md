@@ -26,6 +26,8 @@ Acceptance: light/dark and each configured accent remain readable; long names, m
 
 First bounded slice: [profile tab and field-draft preservation](next-care-state-preservation-prompt.md). Belongings upload drafts and broader cache invalidation remain separate follow-ups. Complete the [read-only timing diagnosis](next-care-read-timing-prompt.md) before choosing a performance optimization; fixture timings cannot establish the reported deployment delay.
 
+Implemented slice: [state preservation policy](care-state-preservation-policy.md). Main/secondary/desktop tabs and edit mode survive matching refreshes, field modal drafts retain their DOM values, and missing/ambiguous/conflicting stays block saves. Rebuilt desktop panels load only the restored selection once. Twelve state fixtures and seven readiness fixtures cover this bounded behavior.
+
 User story: Visiting one profile does not load every guest's media or repeatedly reload panels I already opened.
 
 Luna prompt: Use Care 1 timings to inventory actual repeated/eager requests across `care.js`, `waffle-v11.0.js`, `waffle-v10.8.8.js`, and directory observers. Coalesce same-identity reads, keep secondary tabs lazy, and preserve selected profile/tab during harmless directory refreshes. Apply precise invalidation after edits and photo uploads; do not serve stale safety updates indefinitely. Use thumbnails for grids, loading full images only when opened. Separate backend scan optimization into its own task if client evidence shows server work dominates.
