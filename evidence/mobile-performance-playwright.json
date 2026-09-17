@@ -1,0 +1,241 @@
+{
+  "config": {
+    "configFile": "C:\\Users\\Raymark\\Documents\\Codex\\2026-09-08\\waffle-house-modernization\\work\\mobile-performance-baseline\\playwright.mobile-performance.config.js",
+    "rootDir": "C:/Users/Raymark/Documents/Codex/2026-09-08/waffle-house-modernization/work/mobile-performance-baseline/tests",
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "reporter": [
+      [
+        "line",
+        null
+      ],
+      [
+        "json",
+        {
+          "outputFile": "evidence/mobile-performance-playwright.json"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "quiet": false,
+    "projects": [
+      {
+        "outputDir": "C:/Users/Raymark/Documents/Codex/2026-09-08/waffle-house-modernization/work/mobile-performance-baseline/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "browser": "webkit",
+          "viewport": "390x844"
+        },
+        "id": "iphone-pro-390x844",
+        "name": "iphone-pro-390x844",
+        "testDir": "C:/Users/Raymark/Documents/Codex/2026-09-08/waffle-house-modernization/work/mobile-performance-baseline/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "mobile-performance-baseline.spec.js"
+        ],
+        "timeout": 300000
+      },
+      {
+        "outputDir": "C:/Users/Raymark/Documents/Codex/2026-09-08/waffle-house-modernization/work/mobile-performance-baseline/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "browser": "chromium",
+          "viewport": "412x915"
+        },
+        "id": "android-large-412x915",
+        "name": "android-large-412x915",
+        "testDir": "C:/Users/Raymark/Documents/Codex/2026-09-08/waffle-house-modernization/work/mobile-performance-baseline/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "mobile-performance-baseline.spec.js"
+        ],
+        "timeout": 300000
+      }
+    ],
+    "shard": null,
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.55.1",
+    "workers": 1,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "mobile-performance-baseline.spec.js",
+      "file": "mobile-performance-baseline.spec.js",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "actual-app mobile performance baseline",
+          "file": "mobile-performance-baseline.spec.js",
+          "line": 160,
+          "column": 6,
+          "specs": [
+            {
+              "title": "today: five measured runs plus matched calibration",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 300000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "iphone-pro-390x844",
+                  "projectName": "iphone-pro-390x844",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 140068,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-17T09:59:54.574Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "dd2a7c09b196612a7ce4-4e4574df70dfed4514a6",
+              "file": "mobile-performance-baseline.spec.js",
+              "line": 162,
+              "column": 5
+            },
+            {
+              "title": "calendar: five measured runs plus matched calibration",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 300000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "iphone-pro-390x844",
+                  "projectName": "iphone-pro-390x844",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 151439,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-17T10:02:14.721Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "dd2a7c09b196612a7ce4-4ac178c135edf6d859d6",
+              "file": "mobile-performance-baseline.spec.js",
+              "line": 162,
+              "column": 5
+            },
+            {
+              "title": "today: five measured runs plus matched calibration",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 300000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "android-large-412x915",
+                  "projectName": "android-large-412x915",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 52526,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-17T10:04:47.522Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "dd2a7c09b196612a7ce4-ca8834a86f08ddbd80b9",
+              "file": "mobile-performance-baseline.spec.js",
+              "line": 162,
+              "column": 5
+            },
+            {
+              "title": "calendar: five measured runs plus matched calibration",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 300000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "android-large-412x915",
+                  "projectName": "android-large-412x915",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 50783,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-17T10:05:40.521Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "dd2a7c09b196612a7ce4-9672d4727de7ece4feb4",
+              "file": "mobile-performance-baseline.spec.js",
+              "line": 162,
+              "column": 5
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-09-17T09:59:53.672Z",
+    "duration": 397730.173,
+    "expected": 4,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

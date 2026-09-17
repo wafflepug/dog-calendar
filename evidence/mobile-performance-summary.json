@@ -1,0 +1,175 @@
+{
+  "schema": "mobile-performance-baseline/v1",
+  "fixedApplicationDate": "2026-09-17T12:00:00.000Z",
+  "measuredRuns": 20,
+  "calibrationRuns": 4,
+  "calibrationPurpose": "matched counters-disabled harness runs; overhead is reported and never subtracted",
+  "unsupportedMetrics": [
+    "longtask is unavailable in WebKit when absent",
+    "layout-shift is not collected"
+  ],
+  "groups": [
+    {
+      "page": "calendar",
+      "project": "android-large-412x915",
+      "repetitions": 5,
+      "readyMs": {
+        "median": 683.2000000476837,
+        "p95": 792.3000000715256
+      },
+      "hydrationMs": {
+        "median": 6037.699999928474,
+        "p95": 6058.5
+      },
+      "totalMs": {
+        "median": 8452.899999976158,
+        "p95": 9268.800000071526
+      },
+      "mutationRecords": {
+        "median": 443341,
+        "p95": 590808
+      },
+      "rafCallbacks": {
+        "median": 4534,
+        "p95": 5739
+      }
+    },
+    {
+      "page": "today",
+      "project": "android-large-412x915",
+      "repetitions": 5,
+      "readyMs": {
+        "median": 698.2000000476837,
+        "p95": 861.5
+      },
+      "hydrationMs": {
+        "median": 6034.100000023842,
+        "p95": 6047.200000047684
+      },
+      "totalMs": {
+        "median": 8601.599999904633,
+        "p95": 9027.899999976158
+      },
+      "mutationRecords": {
+        "median": 431362,
+        "p95": 502159
+      },
+      "rafCallbacks": {
+        "median": 4457,
+        "p95": 5031
+      }
+    },
+    {
+      "page": "calendar",
+      "project": "iphone-pro-390x844",
+      "repetitions": 5,
+      "readyMs": {
+        "median": 1076,
+        "p95": 2184
+      },
+      "hydrationMs": {
+        "median": 6101,
+        "p95": 6105
+      },
+      "totalMs": {
+        "median": 23599,
+        "p95": 24924
+      },
+      "mutationRecords": {
+        "median": 208100,
+        "p95": 218368
+      },
+      "rafCallbacks": {
+        "median": 1975,
+        "p95": 1999
+      }
+    },
+    {
+      "page": "today",
+      "project": "iphone-pro-390x844",
+      "repetitions": 5,
+      "readyMs": {
+        "median": 2131,
+        "p95": 2440
+      },
+      "hydrationMs": {
+        "median": 6078,
+        "p95": 6125
+      },
+      "totalMs": {
+        "median": 22839.000000000004,
+        "p95": 23380
+      },
+      "mutationRecords": {
+        "median": 211769,
+        "p95": 227593
+      },
+      "rafCallbacks": {
+        "median": 2083,
+        "p95": 2150
+      }
+    }
+  ],
+  "calibrationComparison": [
+    {
+      "page": "calendar",
+      "project": "android-large-412x915",
+      "calibration": {
+        "readyMs": 610.7999999523163,
+        "hydrationMs": 6032.399999976158,
+        "scrollDurationMs": 1229.2999999523163
+      },
+      "measuredMedian": {
+        "readyMs": 683.2000000476837,
+        "hydrationMs": 6037.699999928474,
+        "scrollDurationMs": 1653
+      },
+      "harnessOverhead": "Displayed side-by-side; no subtraction or device-level improvement claim."
+    },
+    {
+      "page": "today",
+      "project": "android-large-412x915",
+      "calibration": {
+        "readyMs": 1036,
+        "hydrationMs": 6036.399999976158,
+        "scrollDurationMs": 1567
+      },
+      "measuredMedian": {
+        "readyMs": 698.2000000476837,
+        "hydrationMs": 6034.100000023842,
+        "scrollDurationMs": 1799.2999999523163
+      },
+      "harnessOverhead": "Displayed side-by-side; no subtraction or device-level improvement claim."
+    },
+    {
+      "page": "calendar",
+      "project": "iphone-pro-390x844",
+      "calibration": {
+        "readyMs": 976,
+        "hydrationMs": 6011,
+        "scrollDurationMs": 12045
+      },
+      "measuredMedian": {
+        "readyMs": 1076,
+        "hydrationMs": 6101,
+        "scrollDurationMs": 16410
+      },
+      "harnessOverhead": "Displayed side-by-side; no subtraction or device-level improvement claim."
+    },
+    {
+      "page": "today",
+      "project": "iphone-pro-390x844",
+      "calibration": {
+        "readyMs": 1772,
+        "hydrationMs": 6077,
+        "scrollDurationMs": 14427
+      },
+      "measuredMedian": {
+        "readyMs": 2131,
+        "hydrationMs": 6078,
+        "scrollDurationMs": 14273.000000000004
+      },
+      "harnessOverhead": "Displayed side-by-side; no subtraction or device-level improvement claim."
+    }
+  ]
+}

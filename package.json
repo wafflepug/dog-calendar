@@ -2,7 +2,8 @@
   "name": "waffle-house-local-ui-test-runner",
   "private": true,
   "scripts": {
-    "test:ui:local": "node scripts/run-local-ui.js"
+    "test:ui:local": "node scripts/run-local-ui.js",
+    "test:perf:mobile": "node scripts/run-mobile-performance.js"
   },
   "devDependencies": {
     "@playwright/test": "1.55.1"

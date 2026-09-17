@@ -74,6 +74,13 @@ test('runs direct CLI, forces loopback URL, forwards args, and preserves failing
   assert.equal(BASE_URL, 'http://127.0.0.1:4173');
 });
 
+test('uses an explicit performance config when requested', async () => {
+  const h = harness({ probes: [false, true], spawnPlan: [{}, { autoExit: { code: 0 } }] });
+  assert.equal(await runLocalUi({ ...h, config: 'playwright.mobile-performance.config.js', resolveCli: () => '/fake/cli.js' }), 0);
+  assert.equal(h.calls[1].args[2], '--config=playwright.mobile-performance.config.js');
+  assert.match(h.calls[1].options.env.WAFFLE_BASE_URL, /^http:\/\/127\.0\.0\.1:4173$/);
+});
+
 test('returns zero for a successful Playwright child', async () => {
   const h = harness({ probes: [false, true], spawnPlan: [{}, { autoExit: { code: 0 } }] });
   assert.equal(await runLocalUi({ ...h, resolveCli: () => '/fake/cli.js' }), 0);
