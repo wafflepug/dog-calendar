@@ -9010,10 +9010,130 @@ registerWaffleServiceWorker();
     }
 
 
+    function captureDirectoryProfileUiState() {
+        const stayKey = String(directorySelectedProfileStayKey || '').trim();
+        if (!stayKey) return null;
+
+        const modal = document.getElementById('guestDetailEditModal');
+        const candidates = Array.from(document.querySelectorAll('.directory-card[data-directory-stay-key]'))
+            .filter(item => String(item.dataset.directoryStayKey || '').trim() === stayKey);
+        const card = candidates.length === 1
+            ? candidates[0]
+            : getDirectoryProfileCard(stayKey) || document.querySelector('.directory-card.is-profile-active');
+        const editorStayKey = String(
+            activeDirectoryEditContext?.stayKey ||
+            activeDirectoryEditContext?.oldStayKey ||
+            ''
+        ).trim();
+        const editor = activeDirectoryEditContext && modal?.classList.contains('open')
+            ? {
+                stayKey: editorStayKey,
+                fieldKey: String(activeDirectoryEditContext.fieldKey || '').trim(),
+                originalDogName: activeDirectoryEditContext.originalDogName || '',
+                startDate: activeDirectoryEditContext.startDate || '',
+                endDate: activeDirectoryEditContext.endDate || '',
+                oldStayKey: activeDirectoryEditContext.oldStayKey || stayKey,
+                identity: activeDirectoryEditContext.identity ||
+                    getDirectoryEditorIdentity(activeDirectoryEditContext.card || card)
+            }
+            : null;
+
+        if (candidates.length > 1) return { stayKey, ambiguous: true, editor };
+        if (!card || String(card.dataset.directoryStayKey || '').trim() !== stayKey) {
+            return { stayKey, editor };
+        }
+
+        return {
+            stayKey,
+            mainTab: card.dataset.mainProfileTab || 'profile',
+            secondaryTab: card.dataset.profileSubTab || 'overview',
+            desktopTab: card.dataset.v11160ActiveTab || '',
+            editing: card.dataset.profileEditing === 'true' || card.classList.contains('is-profile-editing'),
+            editor
+        };
+    }
+
+
+    function getDirectoryEditorIdentity(card) {
+        const currentValue = field => {
+            const value = String(
+                card?.querySelector(`[data-directory-edit-field="${field}"]`)?.dataset?.directoryCurrentValue || ''
+            ).trim().toLowerCase();
+            return field === 'phone' ? value.replace(/\s+/g, '') : value.replace(/\s+/g, ' ');
+        };
+        return {
+            breed: String(card?.querySelector('.directory-primary-breed')?.textContent || card?.dataset?.v1088Breed || '')
+                .trim().replace(/\s+/g, ' ').toLowerCase(),
+            ownerName: currentValue('ownerName') || String(card?.dataset?.v1088OwnerName || '').trim().replace(/\s+/g, ' ').toLowerCase(),
+            phone: currentValue('phone') || String(card?.dataset?.v1088Phone || '').trim().replace(/\s+/g, '').toLowerCase()
+        };
+    }
+
+
+    function directoryIdentityConflicts(expected, actual) {
+        return ['breed', 'ownerName', 'phone'].some(field =>
+            expected?.[field] && actual?.[field] && expected[field] !== actual[field]
+        );
+    }
+
+
+    function directoryCardsForStayKey(stayKey) {
+        const key = String(stayKey || '').trim();
+        return Array.from(document.querySelectorAll('.directory-card[data-directory-stay-key]'))
+            .filter(card => String(card.dataset.directoryStayKey || '').trim() === key);
+    }
+
+
+    function restoreDirectoryGuestDetailDraft(state, card) {
+        const editor = state?.editor;
+        if (!editor) return;
+
+        const modal = document.getElementById('guestDetailEditModal');
+        const saveButton = document.getElementById('saveGuestDetailEdit');
+        const status = document.getElementById('guestDetailEditStatus');
+        const fieldKey = String(editor.fieldKey || '').trim();
+        const stayKey = String(editor.stayKey || '').trim();
+        const candidates = Array.from(document.querySelectorAll('.directory-card[data-directory-stay-key]'))
+            .filter(item => String(item.dataset.directoryStayKey || '').trim() === stayKey);
+        const matchingCard = candidates.length === 1 && card === candidates[0]
+            ? candidates[0]
+            : null;
+        const identityConflict = matchingCard && directoryIdentityConflicts(
+            editor.identity,
+            getDirectoryEditorIdentity(matchingCard)
+        );
+        const trigger = matchingCard
+            ? Array.from(matchingCard.querySelectorAll('[data-directory-edit-field]'))
+                .find(item => String(item.dataset.directoryEditField || '').trim() === fieldKey) || null
+            : null;
+
+        activeDirectoryEditContext = {
+            ...editor,
+            card: matchingCard,
+            trigger,
+            unmatched: !matchingCard || !trigger || identityConflict
+        };
+
+        if (modal) {
+            modal.classList.add('open');
+            modal.setAttribute('aria-hidden', 'false');
+        }
+
+        if (saveButton) saveButton.disabled = !matchingCard || !trigger || identityConflict;
+        if (status && (!matchingCard || !trigger || identityConflict)) {
+            status.textContent = identityConflict
+                ? 'This stay has different owner, contact, or breed details. Cancel this draft before editing another stay.'
+                : 'This stay changed or is no longer available. Cancel this draft before editing another stay.';
+            status.className = 'guest-detail-edit-status is-error';
+        }
+    }
+
+
     function applyGuestDirectoryResponse(
         response,
         options = {}
     ) {
+        const preservedUiState = captureDirectoryProfileUiState();
         const bookings =
             response.bookings ||
             [];
@@ -9034,6 +9154,8 @@ registerWaffleServiceWorker();
             !directoryBookingStateSignature ||
             directoryBookingStateSignature !==
                 nextSignature;
+
+        if (preservedUiState) preservedUiState.rebuiltCards = shouldRebuildCards;
 
         directorySummaryRecordsCache = {};
         directoryPhotoRecordsCache = {};
@@ -9153,7 +9275,7 @@ registerWaffleServiceWorker();
 
         refreshDirectoryCareSummary();
         filterGuestDirectoryCards();
-        restoreSelectedDirectoryProfile();
+        restoreSelectedDirectoryProfile({ state: preservedUiState });
     }
 
 
@@ -9489,6 +9611,9 @@ registerWaffleServiceWorker();
                 'Guest'
             );
 
+        const wasActive = card.classList.contains('is-profile-active');
+        const wasVisited = card.dataset.profileVisited === 'true';
+
         document
             .querySelectorAll(
                 '.directory-card.is-profile-active'
@@ -9504,6 +9629,7 @@ registerWaffleServiceWorker();
         card.classList.add(
             'is-profile-active'
         );
+        card.dataset.profileVisited = 'true';
 
         dashboard?.classList.add(
             'is-profile-mode'
@@ -9518,25 +9644,35 @@ registerWaffleServiceWorker();
                 dogName;
         }
 
-        /*
-         * V8.4.1 opens directly into Profile.
-         * Belongings remains lazy until selected.
-         */
+        const preserved = options.preserveState &&
+            options.preserveState.stayKey === stayKey
+            ? options.preserveState
+            : null;
+        const reopening = wasActive || wasVisited;
+
+        /* V8.4.1 opens new profiles into Profile; an existing profile keeps
+         * its own tab/edit state when harmlessly reopened or restored. */
         setDirectoryProfileEditMode(
             card,
-            false
+            preserved ? preserved.editing : reopening
+                ? card.dataset.profileEditing === 'true'
+                : false
         );
 
         switchDirectoryProfileMainTab(
             card,
-            'profile'
+            preserved?.mainTab || (reopening ? card.dataset.mainProfileTab : '') || 'profile'
         );
 
         switchDirectoryProfileSubTab(
             card,
-            card.dataset.profileSubTab ||
-            'overview'
+            preserved?.secondaryTab || card.dataset.profileSubTab || 'overview'
         );
+
+        if (preserved?.desktopTab) {
+            card.dataset.v11160ActiveTab = preserved.desktopTab;
+            if (preserved.rebuiltCards) card.dataset.v11160RestoreLoad = 'true';
+        }
 
         const profileSection =
             card.querySelector(
@@ -9555,6 +9691,8 @@ registerWaffleServiceWorker();
                 console.error(error)
             );
         }
+
+        if (preserved?.editor) restoreDirectoryGuestDetailDraft(preserved, card);
 
         if (!options.preserveScroll) {
             document
@@ -9626,19 +9764,24 @@ registerWaffleServiceWorker();
     }
 
 
-    function restoreSelectedDirectoryProfile() {
+    function restoreSelectedDirectoryProfile(options = {}) {
         if (
             !directorySelectedProfileStayKey
         ) {
             return;
         }
 
-        const card =
-            getDirectoryProfileCard(
-                directorySelectedProfileStayKey
-            );
+        if (options.state?.ambiguous) {
+            restoreDirectoryGuestDetailDraft(options.state, null);
+            closeDirectoryGuestProfile({ preserveScroll: true });
+            return;
+        }
+
+        const selectedCards = directoryCardsForStayKey(directorySelectedProfileStayKey);
+        const card = selectedCards.length === 1 ? selectedCards[0] : null;
 
         if (!card) {
+            restoreDirectoryGuestDetailDraft(options.state, null);
             closeDirectoryGuestProfile({
                 preserveScroll:
                     true
@@ -9652,7 +9795,9 @@ registerWaffleServiceWorker();
                 preserveScroll:
                     true,
                 instant:
-                    true
+                    true,
+                preserveState:
+                    options.state
             }
         ).catch(error =>
             console.error(error)
@@ -12061,6 +12206,9 @@ registerWaffleServiceWorker();
             originalDogName: dogName,
             startDate,
             endDate,
+            stayKey: String(card.dataset.directoryStayKey || '').trim(),
+            identity: getDirectoryEditorIdentity(card),
+            unmatched: directoryCardsForStayKey(card.dataset.directoryStayKey).length !== 1,
             oldStayKey: String(
                 card.dataset.directoryStayKey || ''
             ).trim()
@@ -12094,6 +12242,13 @@ registerWaffleServiceWorker();
         status.textContent =
             'Changes are saved directly to the shared Google Sheet.';
         status.className = 'guest-detail-edit-status';
+
+        const saveButton = document.getElementById('saveGuestDetailEdit');
+        if (saveButton) saveButton.disabled = activeDirectoryEditContext.unmatched;
+        if (activeDirectoryEditContext.unmatched) {
+            status.textContent = 'This stay is ambiguous. Cancel this draft before editing another stay.';
+            status.className = 'guest-detail-edit-status is-error';
+        }
 
         modal.classList.add('open');
         modal.setAttribute('aria-hidden', 'false');
@@ -12251,6 +12406,43 @@ registerWaffleServiceWorker();
     async function saveGuestDetailFromEditor() {
         const context = activeDirectoryEditContext;
         if (!context) return;
+
+        const currentStayKey = String(
+            context.card?.dataset?.directoryStayKey ||
+            context.card?.dataset?.stayKey ||
+            ''
+        ).trim();
+        const triggerCard = context.trigger?.closest?.('.directory-card') || null;
+        const triggerField = String(
+            context.trigger?.dataset?.directoryEditField || ''
+        ).trim();
+        const identityConflict = directoryIdentityConflicts(
+            context.identity,
+            getDirectoryEditorIdentity(context.card)
+        );
+        const stayCards = directoryCardsForStayKey(currentStayKey);
+        if (
+            context.unmatched ||
+            !context.card?.isConnected ||
+            !context.trigger?.isConnected ||
+            !currentStayKey ||
+            currentStayKey !== String(context.stayKey || context.oldStayKey || '').trim() ||
+            triggerCard !== context.card ||
+            triggerField !== String(context.fieldKey || '').trim() ||
+            identityConflict ||
+            stayCards.length !== 1
+        ) {
+            const status = document.getElementById('guestDetailEditStatus');
+            const saveButton = document.getElementById('saveGuestDetailEdit');
+            if (status) {
+                status.textContent = identityConflict
+                    ? 'This stay has different owner, contact, or breed details. Cancel this draft before editing another stay.'
+                    : 'This stay changed or is no longer available. Cancel this draft before editing another stay.';
+                status.className = 'guest-detail-edit-status is-error';
+            }
+            if (saveButton) saveButton.disabled = true;
+            return;
+        }
 
         const config = DIRECTORY_EDIT_FIELD_CONFIG[context.fieldKey];
         if (!config) return;

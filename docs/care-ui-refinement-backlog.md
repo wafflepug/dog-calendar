@@ -14,6 +14,8 @@ Acceptance: in deterministic delayed-read fixtures the selected profile shell ap
 
 ## Care 2: Clear profile hierarchy and consistent sections
 
+Implemented slice: [overview readability](care-overview-refinement.md), with scoped typography, wrapping and focus styles. Generated profile/safety renderer fixtures use shipped CSS at 390, 412, 768 and 1440 widths, with light/dark text contrast checks. These are emulated layout checks; physical-device validation and the full configured-accent matrix remain separate checks.
+
 User story: I can find care instructions, owner contact and stay dates without navigating unrelated panels.
 
 Luna prompt: Inspect `care.js`, directory markup in `waffle-app.js`, relevant runtime styles and existing theme tokens. Lead agent provides design before implementation. Refine the profile overview with consistent titles, spacing and high-contrast attribute labels; group care instructions, owner/contact and stay dates in a readable order. Reuse the mobile Palz Stay header and avoid duplicate notification/search controls. Keep Profile, Belongings, History and Media navigation consistent across mobile and desktop; make selected/loading/error states visible. Do not relocate operational dates or media ownership keys, hide safety information, or change saved values.
@@ -21,6 +23,10 @@ Luna prompt: Inspect `care.js`, directory markup in `waffle-app.js`, relevant ru
 Acceptance: light/dark and each configured accent remain readable; long names, multi-dog bookings, missing fields and long care notes fit at narrow phone and Fold widths; controls have accessible names and visible focus; no overlapping fixed navigation; repeated navigation does not reset edits or refetch unchanged panels. Deliver screenshots and relevant fixture/browser checks.
 
 ## Care 3: Load only selected content and preserve work
+
+First bounded slice: [profile tab and field-draft preservation](next-care-state-preservation-prompt.md). Belongings upload drafts and broader cache invalidation remain separate follow-ups. Complete the [read-only timing diagnosis](next-care-read-timing-prompt.md) before choosing a performance optimization; fixture timings cannot establish the reported deployment delay.
+
+Implemented slice: [state preservation policy](care-state-preservation-policy.md). Main/secondary/desktop tabs and edit mode survive matching refreshes, field modal drafts retain their DOM values, and missing/ambiguous/conflicting stays block saves. Rebuilt desktop panels load only the restored selection once. Twelve state fixtures and seven readiness fixtures cover this bounded behavior.
 
 User story: Visiting one profile does not load every guest's media or repeatedly reload panels I already opened.
 
