@@ -88,11 +88,12 @@
 
   // Preserve the original V11.0.5 execution order. This loader itself is
   // parser-inserted at the old V11.0.5 script position.
+  const coreSrc = 'waffle-v11.0.5-core.js?v=11.1.40&build=2026.08.27.04&rev=' + encodeURIComponent(String(window.WAFFLE_ASSET_REVISION || 'legacy'));
   if (document.readyState === 'loading') {
-    document.write('<script src="waffle-v11.0.5-core.js?v=11.1.40&build=2026.08.27.04"></script>');
+    document.write('<script src="' + coreSrc + '"></script>');
   } else {
     const core = document.createElement('script');
-    core.src = 'waffle-v11.0.5-core.js?v=11.1.40&build=2026.08.27.04';
+    core.src = coreSrc;
     core.async = false;
     document.head.appendChild(core);
   }
