@@ -2,7 +2,7 @@
   "release": "phase3d-2026.08.28.01",
   "currentRelease": "2026.09.18.01",
   "currentReleaseName": "Care profile readability and preserved work",
-  "latestMergedSha": "65e9c9dc4634dd957c4687b6d0b9e3ad8c43f282",
+  "latestMergedSha": "a694915ad13f7d7e5a9aa276a89c9388cc82d8bb",
   "latestReleaseDate": "2026-09-18",
   "recentChanges": ["Readable Care profile headings and attributes", "Preserve Care tabs and open field drafts during refresh", "Block field saves when refreshed stays cannot be matched", "Scoped profile timeout and retry", "Quarantine known legacy checkout collisions", "Owner-aware confirmed-stay deduplication", "Consistent Today tile headings and tracker layout", "Early checkout calendar dates"],
   "runtimeBuild": "2026.08.28.01",
