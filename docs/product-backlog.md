@@ -2,6 +2,11 @@
 
 Reviewed 17 September 2026. Repository: `wafflepug/dog-calendar`; always start implementation from current `origin/main` in an isolated worktree. Stack: static HTML/CSS, browser JavaScript, FullCalendar, Apps Script backend, Python contracts, Playwright. Keep production smoke checks read-only. Preserve existing theme settings, offline work, and early checkout behavior. Use Luna for bounded implementation; lead agent reviews design and integration. Complete relevant CI before merging.
 
+
+## Owner priority: Care UI refinements next
+
+After checkout-safety and mobile measurement, prioritize [Care UI refinements](care-ui-refinement-backlog.md): bounded profile readiness and useful loading states, readable overview hierarchy, then lazy tabs and preserved work. Investigate reported 3–5 minute profile access with actual request timings; configured timeout limits alone do not prove the cause. Deployment metadata and general diagnostics move below these Care tasks.
+
 ## Completed — Safe confirmed-stay identity (#139)
 
 User story: As a sitter, I can trust that each real booking appears once without hiding another owner's similarly named dog.

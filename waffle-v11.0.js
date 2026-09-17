@@ -9,6 +9,7 @@ let v110OperationsMap={};
 let v110LatestCalendarEvents=[];
 let v110MediaCache={};
 let v110MasterCache={};
+let v110CheckoutCollisionMap={};
 
 function v110Escape(v){return escapeDashboardHtml(v==null?'':String(v));}
 function v110NormaliseStayDate(value){
@@ -42,18 +43,82 @@ function v110StayKeyForEvent(event){
     .trim();
   return v110MakeStayKey(dogName,d.start,d.end);
 }
-function v110OperationForStay(k){return v110OperationsMap[String(k||'')]||null;}
+function v110OperationForStay(k){const key=String(k||'');return v110IsCheckoutCollision(key)?null:(v110OperationsMap[key]||null);}
+function v110IdentityPart(value){
+  const text=String(value==null?'':value).trim().replace(/\s+/g,' ').toLowerCase();
+  return /^(?:n\/a|na|none|null|unknown|database synced|-|—)$/.test(text)?'':text;
+}
+function v110CheckoutIdentity(event){
+  const p=event?.extendedProps||{};
+  const breed=v110IdentityPart(p.breed);
+  const consistent=(...values)=>{
+    const parts=values.map(v110IdentityPart).filter(Boolean);
+    return parts.length&&parts.every(value=>value===parts[0])?parts[0]:'';
+  };
+  const owner=consistent(p.ownerName,p.owner);
+  const phone=consistent(p.phone,p.contact,p.ownerPhone);
+  return owner&&phone?JSON.stringify([breed,owner,phone]):'';
+}
+function v110IndexCheckoutEvidence(events,options={}){
+  if(!Array.isArray(events)||!events.length)return;
+  const groups={};
+  (Array.isArray(events)?events:[]).forEach(event=>{
+    const p=event?.extendedProps||{};
+    if(p.isPotential===true||p.isMeetGreet===true)return;
+    const key=v110StayKeyForEvent(event); if(!key)return;
+    const identity=v110CheckoutIdentity(event);
+    (groups[key]||(groups[key]={known:new Set(),incomplete:false}));
+    if(identity)groups[key].known.add(identity); else groups[key].incomplete=true;
+  });
+  const next={};
+  Object.keys(groups).forEach(key=>{
+    const group=groups[key];
+    if(group.known.size>1)next[key]={state:'collision',count:group.known.size};
+    else if(group.known.size===1&&group.incomplete)next[key]={state:'incomplete'};
+  });
+  if(options.replace===true){v110CheckoutCollisionMap=next;return;}
+  Object.keys(next).forEach(key=>{
+    if(next[key].state==='collision'||!v110CheckoutCollisionMap[key])v110CheckoutCollisionMap[key]=next[key];
+  });
+}
+function v110CheckoutGuard(payload){
+  const key=String(payload?.stayKey||'');
+  const evidence=v110CheckoutCollisionMap[key];
+  if(evidence?.state==='collision')throw new Error('Checkout is paused: this dog has more than one confirmed owner for the same dates. Refresh the booking data and choose the correct stay.');
+  return true;
+}
+function v110IsCheckoutCollision(key){return v110CheckoutCollisionMap[String(key||'')]?.state==='collision';}
 function v110CheckoutDisplayEnd(checkoutDate){
   const date=new Date(`${checkoutDate}T00:00:00`);
   if(Number.isNaN(date.getTime()))return'';
   date.setDate(date.getDate()+1);
   return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
 }
+function v110EventDisplayEnd(event){
+  return v110NormaliseStayDate(event?.endStr||event?.end);
+}
 function v110ApplyEffectiveCheckoutDates(events){
   (Array.isArray(events)?events:[]).forEach(event=>{
-    const operation=v110OperationForStay(v110StayKeyForEvent(event));
-    if(operation?.status!=='checked_out')return;
+    const stayKey=v110StayKeyForEvent(event);
     const booked=v10EventRawDates(event);
+    if(v110IsCheckoutCollision(stayKey)){
+      const props=event.extendedProps||(event.extendedProps={});
+      const hadEffective=props.effectiveCheckoutDate!=null||props.bookedEndDate!=null;
+      if(typeof event.setExtendedProp==='function'&&hadEffective){
+        event.setExtendedProp('effectiveCheckoutDate',null);
+        event.setExtendedProp('bookedEndDate',null);
+      }else if(hadEffective){
+        delete props.effectiveCheckoutDate;
+        delete props.bookedEndDate;
+      }
+      const displayEnd=v110CheckoutDisplayEnd(booked.end);
+      if(displayEnd&&v110EventDisplayEnd(event)!==displayEnd){
+        if(typeof event.setEnd==='function')event.setEnd(displayEnd);else event.end=displayEnd;
+      }
+      return;
+    }
+    const operation=v110OperationForStay(stayKey);
+    if(operation?.status!=='checked_out')return;
     const checkoutDate=v110NormaliseStayDate(operation.actualCheckoutDate||operation.checkedOutAt);
     if(!checkoutDate||!booked.end||checkoutDate>=booked.end)return;
     const props=event.extendedProps||(event.extendedProps={});
@@ -73,9 +138,11 @@ function v110ApplyEffectiveCheckoutDates(events){
 function v110IndexOperations(records){
   v110OperationsMap={};
   (Array.isArray(records)?records:[]).forEach(r=>{if(r?.stayKey)v110OperationsMap[String(r.stayKey)]=r;});
-  if(WAFFLE_PAGE==='calendar')v110ApplyEffectiveCheckoutDates(globalCalendar?.getEvents()?.slice()||v110LatestCalendarEvents);
+  const events=globalCalendar?.getEvents?.()?.slice()||v110LatestCalendarEvents;
+  v110IndexCheckoutEvidence(events);
+  if(WAFFLE_PAGE==='calendar')v110ApplyEffectiveCheckoutDates(events);
 }
-function v110IsCheckedOutEvent(event){return v110OperationForStay(v110StayKeyForEvent(event))?.status==='checked_out';}
+function v110IsCheckedOutEvent(event){const key=v110StayKeyForEvent(event);return !v110IsCheckoutCollision(key)&&v110OperationForStay(key)?.status==='checked_out';}
 function v110FormatTime(v){if(!v)return'';const d=new Date(v);return Number.isNaN(d.getTime())?'':d.toLocaleTimeString('en-AU',{hour:'numeric',minute:'2-digit'});}
 
 async function v110LoadOperations(options={}){
@@ -88,6 +155,8 @@ async function v110LoadOperations(options={}){
 }
 
 async function v110SaveOperationalStatus(payload,status){
+  v110CollectCareCheckoutEvidence();
+  v110CheckoutGuard(payload);
   const action=status==='checked_out'?'checkout_stay':'checkin_stay';
   const r=await sendPayloadToAppsScript({action,...payload,source:'V11 Operations'});
   if(r?.queued){showWaffleForegroundPush({title:'↻ Saved for sync',body:`${payload.dogName} ${status==='checked_out'?'checkout':'check-in'} will sync when online.`});return r;}
@@ -99,9 +168,18 @@ async function v110SaveOperationalStatus(payload,status){
 function v110OperationalPayloadFromCard(card){
   return {stayKey:String(card?.dataset?.directoryStayKey||card?.dataset?.stayKey||''),dogName:String(card?.dataset?.directoryDogName||card?.dataset?.dogName||''),startDate:String(card?.dataset?.directoryStartDate||card?.dataset?.startDate||''),endDate:String(card?.dataset?.directoryEndDate||card?.dataset?.endDate||''),breed:String(card?.querySelector('.directory-primary-breed')?.textContent||card?.dataset?.v1088Breed||'').trim(),ownerName:String(card?.querySelector('[data-directory-edit-field="ownerName"]')?.dataset?.directoryCurrentValue||card?.dataset?.v1088OwnerName||''),phone:String(card?.querySelector('[data-directory-edit-field="phone"]')?.dataset?.directoryCurrentValue||card?.dataset?.v1088Phone||'')};
 }
+function v110CollectCareCheckoutEvidence(){
+  if(typeof document==='undefined')return;
+  const events=Array.from(document.querySelectorAll('.directory-card[data-directory-stay-key]')).map(card=>{
+    const p=v110OperationalPayloadFromCard(card);
+    return {title:p.dogName,start:p.startDate,end:p.endDate,extendedProps:{dogName:p.dogName,breed:p.breed,ownerName:p.ownerName,phone:p.phone,rawStartDate:p.startDate,rawEndDate:p.endDate,bookingType:'Confirmed Boarding'}};
+  });
+  if(events.length)v110IndexCheckoutEvidence(events);
+}
 
 function v110OperationDisplayState(card){
   const p=v110OperationalPayloadFromCard(card),op=v110OperationForStay(p.stayKey),today=getLocalTodayDateString();
+  if(v110IsCheckoutCollision(p.stayKey))return{code:'collision',label:'Checkout Paused',icon:'⚠️',meta:'Multiple confirmed owners share these dates. Refresh booking data.'};
   if(op?.status==='checked_out')return{code:'checked_out',label:'Checked Out',icon:'✅',meta:op.checkedOutAt?`Completed ${v110FormatTime(op.checkedOutAt)}`:'Stay completed'};
   if(op?.status==='checked_in')return{code:'checked_in',label:'Checked In',icon:'🏡',meta:op.checkedInAt?`Arrived ${v110FormatTime(op.checkedInAt)}`:'Currently at home'};
   if(p.startDate>today)return{code:'expected',label:'Expected',icon:'🛬',meta:`Arriving ${formatStayDateShort(p.startDate)}`};
@@ -126,9 +204,9 @@ function v110EnsureCareOperationBar(card){
   const state=v110OperationDisplayState(card);
   const p=v110OperationalPayloadFromCard(card);
   const today=getLocalTodayDateString();
-  const canCheckout=
+  const canCheckout=state.code!=='collision'&&(
     state.code==='checked_in'||
-    (state.code==='date_active'&&p.endDate<=today);
+    (state.code==='date_active'&&p.endDate<=today));
   const canCheckIn=
     !['checked_in','checked_out','completed'].includes(state.code);
 
@@ -172,7 +250,7 @@ async function v110PhotoForStay(stayKey){try{const r=await queryAppsScript({acti
 async function v110RenderLeavingModal(){const m=v110EnsureLeavingModal(),h=m.querySelector('[data-v110-leaving-list]'),list=v110LeavingEvents();if(!list.length){h.innerHTML='<div class="v110-leaving-empty"><span>✅</span><strong>No pets are waiting to check out.</strong><small>Completed checkouts disappear from the Leaving count.</small></div>';return;}h.innerHTML=list.map((ev,i)=>{const p=ev.extendedProps||{},d=v10EventRawDates(ev),dog=String(p.dogName||ev.title||'Guest');return`<article class="v110-leaving-pet"><div class="v110-leaving-photo" data-v110-leaving-photo="${i}"><span>🐶</span></div><div class="v110-leaving-copy"><strong>${v110Escape(dog)}</strong><span>${v110Escape(p.breed||'Breed not recorded')}</span><small>${v110Escape(formatStayDateShort(d.start))} → ${v110Escape(formatStayDateShort(d.end))}</small></div><button type="button" class="v110-checkout-button" data-v110-leaving-checkout="${i}">👋 Check Out</button></article>`;}).join('');list.forEach(async(ev,i)=>{const u=await v110PhotoForStay(v110StayKeyForEvent(ev));if(!u)return;const el=h.querySelector(`[data-v110-leaving-photo="${i}"]`);if(el)el.innerHTML=`<img src="${v110Escape(u)}" alt="" loading="lazy">`;});}
 async function v110OpenLeavingModal(){const m=v110EnsureLeavingModal();m.hidden=false;await v110RenderLeavingModal();}
 
-renderV10OperationsHome=function(events){v110LatestCalendarEvents=Array.isArray(events)?events:[];const filtered=v110LatestCalendarEvents.filter(e=>{const p=e?.extendedProps||{};return p.isMeetGreet===true||p.isPotential===true||!v110IsCheckedOutEvent(e);});v110BaseRenderOperationsHome(filtered);};
+renderV10OperationsHome=function(events){v110LatestCalendarEvents=Array.isArray(events)?events:[];v110IndexCheckoutEvidence(v110LatestCalendarEvents);v110ApplyEffectiveCheckoutDates(v110LatestCalendarEvents);const filtered=v110LatestCalendarEvents.filter(e=>{const p=e?.extendedProps||{};return p.isMeetGreet===true||p.isPotential===true||!v110IsCheckedOutEvent(e);});v110BaseRenderOperationsHome(filtered);};
 
 /* Master profile */
 function v110EnsureTab(card,name,icon,label){const tabs=card?.querySelector('.directory-main-profile-tabs');if(!tabs||tabs.querySelector(`[data-v110-tab="${name}"]`))return;const b=document.createElement('button');b.type='button';b.className='directory-main-profile-tab v110-profile-tab';b.role='tab';b.setAttribute('aria-selected','false');b.dataset.v110Tab=name;b.innerHTML=`<span aria-hidden="true">${icon}</span><span>${label}</span>`;tabs.appendChild(b);const panel=document.createElement('section');panel.className=`directory-main-profile-panel v110-${name}-panel`;panel.hidden=true;panel.role='tabpanel';panel.dataset.v110Panel=name;panel.innerHTML=`<div class="v110-panel-loading" data-v110-${name}-host><span class="v110-panel-spinner"></span><strong>Loading ${label.toLowerCase()}…</strong></div>`;card.querySelector('.directory-profile-content')?.appendChild(panel);}
@@ -196,6 +274,7 @@ let v110CareEnhanceQueued=false;
 
 function v110EnhanceAllCareCards(){
   if(WAFFLE_PAGE!=='directory')return;
+  v110CollectCareCheckoutEvidence();
   document
     .querySelectorAll('.directory-card[data-directory-stay-key]')
     .forEach(v110EnhanceCareCard);
