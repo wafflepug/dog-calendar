@@ -1,0 +1,50 @@
+{
+  "schema": "mobile-performance-baseline/v1",
+  "generatedAt": "2026-09-17T10:04:46.166Z",
+  "fixedApplicationDate": "2026-09-17T12:00:00.000Z",
+  "measuredRuns": 5,
+  "calibrationRuns": 1,
+  "calibrationPurpose": "matched counters-disabled harness runs; overhead is reported and never subtracted",
+  "unsupportedMetrics": [
+    "longtask is unavailable in WebKit when absent",
+    "layout-shift is not collected"
+  ],
+  "groups": [
+    {
+      "page": "calendar",
+      "project": "iphone-pro-390x844",
+      "repetitions": 5,
+      "readyMs": {
+        "median": 1076,
+        "p95": 2184
+      },
+      "hydrationMs": {
+        "median": 6101,
+        "p95": 6105
+      },
+      "totalMs": {
+        "median": 23599,
+        "p95": 24924
+      },
+      "mutationRecords": {
+        "median": 208100,
+        "p95": 218368
+      },
+      "rafCallbacks": {
+        "median": 1975,
+        "p95": 1999
+      }
+    }
+  ],
+  "calibrations": [
+    {
+      "page": "calendar",
+      "project": "iphone-pro-390x844",
+      "readyMs": 976,
+      "hydrationMs": 6011,
+      "totalMs": 19034,
+      "mutationRecords": 0,
+      "rafCallbacks": 0
+    }
+  ]
+}

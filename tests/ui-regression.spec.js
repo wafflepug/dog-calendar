@@ -1,5 +1,5 @@
 const { test, expect } = require('@playwright/test');
-const { localBackendRequestPolicy } = require('../scripts/local-network-policy');
+const { resolveLocalBackendAction } = require('../scripts/local-network-policy');
 
 const PAGES = [
   ['index.html', 'calendar', 'Calendar / Today'],
@@ -16,14 +16,14 @@ test.beforeEach(async ({ page }) => {
   if (!LOCAL_BUILD) return;
   await page.route(/^https:\/\/script\.google(?:usercontent)?\.com\//, route => {
     const url = new URL(route.request().url());
-    const policy = localBackendRequestPolicy({
+    const resolved = resolveLocalBackendAction({
       method: route.request().method(),
-      action: url.searchParams.get('action')
+      url: route.request().url()
     });
-    if (!policy.allowed) {
-      return route.fulfill({ status: 403, contentType: 'text/plain', body: `Blocked local UI backend request: ${policy.reason}` });
+    if (!resolved.policy.allowed) {
+      return route.fulfill({ status: 403, contentType: 'text/plain', body: `Blocked local UI backend request: ${resolved.policy.reason}` });
     }
-    if (url.searchParams.get('action') !== 'maintenance_status') return route.continue();
+    if (resolved.action !== 'maintenance_status') return route.continue();
 
     const callback = String(url.searchParams.get('callback') || '');
     if (!/^[A-Za-z_$][\w$]*$/.test(callback)) {
