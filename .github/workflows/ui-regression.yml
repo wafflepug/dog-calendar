@@ -76,6 +76,7 @@ jobs:
           node node_modules/@playwright/test/cli.js install --with-deps chromium firefox webkit
           node node_modules/@playwright/test/cli.js test --config=playwright.care-profile.config.js
           node node_modules/@playwright/test/cli.js test --config=playwright.care-overview.config.js
+          node node_modules/@playwright/test/cli.js test --config=playwright.runtime-review.config.js
 
       - name: Run cross-device UI placement regression
         id: ui

@@ -5786,13 +5786,14 @@ body.dark-theme .directory-profile-read-status[data-state="error"] {
 }
 
 .directory-card.is-profile-active .directory-card-header {
-    grid-template-columns: clamp(68px, 18vw, 92px) minmax(0, 1fr);
+    grid-template-columns: clamp(68px, 18vw, 92px) minmax(0, 1fr) !important;
+    justify-items: stretch !important;
     align-items: start;
 }
 
 .directory-card.is-profile-active .directory-photo-shell {
-    width: clamp(68px, 18vw, 92px);
-    height: clamp(68px, 18vw, 92px);
+    width: clamp(68px, 18vw, 92px) !important;
+    height: clamp(68px, 18vw, 92px) !important;
 }
 
 .directory-card.is-profile-active .directory-dog-name-btn,
@@ -5812,7 +5813,7 @@ body.dark-theme .directory-profile-read-status[data-state="error"] {
     overflow: visible;
     text-overflow: clip;
     white-space: normal;
-    font-size: 22px;
+    font-size: 22px !important;
     line-height: 1.2;
 }
 
@@ -5822,14 +5823,14 @@ body.dark-theme .directory-profile-read-status[data-state="error"] {
     overflow: visible;
     text-overflow: clip;
     white-space: normal;
-    font-size: 14px;
+    font-size: 14px !important;
     line-height: 1.35;
 }
 
 .directory-card.is-profile-active .directory-profile-section-heading h4,
 .directory-card.is-profile-active .care-risk-section-heading strong,
 .directory-card.is-profile-active .belongings-item-section-heading strong {
-    font-size: 16px;
+    font-size: 16px !important;
     line-height: 1.25;
 }
 
@@ -5873,13 +5874,13 @@ body.dark-theme .directory-profile-read-status[data-state="error"] {
 
 @media (max-width: 520px) {
     .directory-card.is-profile-active .directory-card-header {
-        grid-template-columns: 68px minmax(0, 1fr);
+        grid-template-columns: 68px minmax(0, 1fr) !important;
         align-items: flex-start;
     }
 
     .directory-card.is-profile-active .directory-photo-shell {
-        width: 68px;
-        height: 68px;
+        width: 68px !important;
+        height: 68px !important;
     }
 
     .directory-card.is-profile-active .directory-profile-section-tools {
