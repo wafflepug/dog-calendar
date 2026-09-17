@@ -14,6 +14,7 @@ const LOCAL_BUILD = /^https?:\/\/(?:127\.0\.0\.1|localhost)(?::|\/)/i.test(
 
 test.beforeEach(async ({ page }) => {
   if (!LOCAL_BUILD) return;
+  page.__waffleBuildProbe = { seen: false, settled: null, resolve: null };
   await page.route(/^https:\/\/script\.google(?:usercontent)?\.com\//, route => {
     const url = new URL(route.request().url());
     const resolved = resolveLocalBackendAction({
@@ -36,11 +37,23 @@ test.beforeEach(async ({ page }) => {
       body: `${callback}({"result":"success","enabled":false});`
     });
   });
-  await page.route('**/waffle-build.json*', route => route.fulfill({
-    status: 200,
-    contentType: 'application/json',
-    body: '{"build":""}'
-  }));
+  await page.route('**/waffle-build.json*', async route => {
+    const state = page.__waffleBuildProbe;
+    let resolve;
+    if (state && !state.seen) {
+      state.seen = true;
+      resolve = state.resolve;
+    }
+    try {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: '{"build":""}'
+      });
+    } finally {
+      resolve?.();
+    }
+  });
 });
 
 function record(failures, condition, message) {
@@ -69,6 +82,14 @@ function collectPageErrors(page) {
 }
 
 async function gotoCanonical(page, path, expectedPage) {
+  if (LOCAL_BUILD) {
+    let resolveProbe;
+    page.__waffleBuildProbe = {
+      seen: false,
+      settled: new Promise(done => { resolveProbe = done; }),
+      resolve: resolveProbe
+    };
+  }
   const separator = path.includes('?') ? '&' : '?';
   const response = await page.goto(`${path}${separator}uiRegression=${Date.now()}`, { waitUntil: 'domcontentloaded' });
 
@@ -111,6 +132,13 @@ async function gotoCanonical(page, path, expectedPage) {
     throw new Error(`Canonical UI did not become ready for ${expectedPage}: ${JSON.stringify(diagnostics)}. ${error.message}`);
   }
 
+  if (LOCAL_BUILD) {
+    await page.waitForTimeout(0);
+    await Promise.race([
+      page.__waffleBuildProbe.settled,
+      page.waitForTimeout(5_000)
+    ]);
+  }
   await page.waitForTimeout(250);
 }
 
