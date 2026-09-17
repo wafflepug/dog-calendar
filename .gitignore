@@ -1,2 +1,7 @@
 .clasprc.json
 apps-script/.clasp.json
+node_modules/
+playwright-report/
+test-results/
+ui-regression-report.json
+ui-regression-summary.md

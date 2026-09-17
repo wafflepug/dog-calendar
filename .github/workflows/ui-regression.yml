@@ -9,6 +9,12 @@ on:
       - '*.js'
       - 'playwright.ui.config.js'
       - 'tests/ui-regression.spec.js'
+      - 'tests/local-ui-runner.test.js'
+      - 'tests/local-network-policy.test.js'
+      - 'scripts/local-network-policy.js'
+      - 'scripts/run-local-ui.js'
+      - 'package.json'
+      - 'package-lock.json'
       - 'scripts/summarize-ui-regression.js'
       - '.github/workflows/ui-regression.yml'
   push:
@@ -19,6 +25,12 @@ on:
       - '*.js'
       - 'playwright.ui.config.js'
       - 'tests/ui-regression.spec.js'
+      - 'tests/local-ui-runner.test.js'
+      - 'tests/local-network-policy.test.js'
+      - 'scripts/local-network-policy.js'
+      - 'scripts/run-local-ui.js'
+      - 'package.json'
+      - 'package-lock.json'
       - 'scripts/summarize-ui-regression.js'
       - '.github/workflows/ui-regression.yml'
 
@@ -46,9 +58,10 @@ jobs:
       - name: Install Playwright and browser engines
         run: |
           set -euo pipefail
-          npm init -y >/dev/null 2>&1
-          npm install --save-dev @playwright/test@1.55.0 >/dev/null
-          npx playwright install --with-deps chromium firefox webkit
+          npm ci
+          node --test tests/local-ui-runner.test.js
+          node --test tests/local-network-policy.test.js
+          node node_modules/@playwright/test/cli.js install --with-deps chromium firefox webkit
 
       - name: Run cross-device UI placement regression
         id: ui
@@ -75,7 +88,7 @@ jobs:
           fi
 
           set +e
-          npx playwright test --config=playwright.ui.config.js
+          node node_modules/@playwright/test/cli.js test --config=playwright.ui.config.js
           test_exit=$?
           set -e
           echo "test_exit=$test_exit" >> "$GITHUB_OUTPUT"
