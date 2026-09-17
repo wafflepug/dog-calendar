@@ -13,6 +13,7 @@ const CSV = [
 const APPROVED = new Set(['maintenance_status', 'get_guest_directory', 'get_guest_profile', 'get_data_versions', 'get_reminders_notes', 'get_stay_operations', 'get_notification_centre', 'get_past_guest_directory', 'waffle_ai_health']);
 
 async function installFixtures(page, ledger) {
+  await page.clock.setFixedTime(new Date('2026-09-18T00:00:00Z'));
   await page.route('**/*', async route => {
     const request = route.request();
     const url = request.url();
@@ -30,8 +31,9 @@ async function installFixtures(page, ledger) {
         return route.fulfill({ status: 403, contentType: 'application/json', body: JSON.stringify({ result: 'error' }) });
       }
       let body = { result: 'success', records: [] };
+      const requestedPayload = JSON.parse(new URL(url).searchParams.get('payload') || '{}');
       if (action === 'get_guest_directory') body = { result: 'success', bookings: [BOOKING] };
-      if (action === 'get_guest_profile') body = { result: 'success', record: { stayKey: new URL(url).searchParams.get('stayKey') || 'fixture|2026-09-17|2026-09-22', intakeAttributes: { medicationInstructions: 'Fixture instruction' }, intakeAttributesSource: 'Fixture' } };
+      if (action === 'get_guest_profile') body = { result: 'success', record: { stayKey: requestedPayload.stayKey || new URL(url).searchParams.get('stayKey'), intakeAttributes: { medicationInstructions: 'Fixture instruction' }, intakeAttributesSource: 'Fixture' } };
       if (action === 'get_data_versions') body = { result: 'success', versions: { bookings: 'fixture', belongings: 'fixture' } };
       const callback = new URL(url).searchParams.get('callback');
       const payload = callback ? `${callback}(${JSON.stringify(body)});` : JSON.stringify(body);
@@ -39,7 +41,7 @@ async function installFixtures(page, ledger) {
       entry.fulfillmentEnd = performance.now();
       return;
     }
-    if (/^https?:/i.test(url) && !url.startsWith('http://127.0.0.1:4176/')) return route.fulfill({ status: 403, contentType: 'text/plain', body: 'External request blocked' });
+    if (/^https?:/i.test(url) && !url.startsWith('http://127.0.0.1:44971/')) return route.fulfill({ status: 403, contentType: 'text/plain', body: 'External request blocked' });
     return route.continue();
   });
 }
@@ -74,20 +76,20 @@ async function runProfile(page, ledger, mode, testInfo) {
   return evidence;
 }
 
-test('directory profile read cold timing', async ({ page }, testInfo) => {
+test('directory profile read cold timing', async ({ page, baseURL }, testInfo) => {
   const ledger = [];
   await installFixtures(page, ledger);
-  await page.goto('http://127.0.0.1:4176/directory.html?timing=cold', { waitUntil: 'domcontentloaded' });
+  await page.goto(`${baseURL}/directory.html?timing=cold`, { waitUntil: 'domcontentloaded' });
   const evidence = await runProfile(page, ledger, 'cold', testInfo);
   expect(evidence.cacheStatus).toBe('unavailable');
   expect(evidence.actionAttempts.get_guest_directory).toBeGreaterThan(0);
   expect(evidence.actionAttempts.get_guest_profile).toBeGreaterThan(0);
 });
 
-test('directory profile read warm reopen timing', async ({ page }, testInfo) => {
+test('directory profile read warm reopen timing', async ({ page, baseURL }, testInfo) => {
   const ledger = [];
   await installFixtures(page, ledger);
-  await page.goto('http://127.0.0.1:4176/directory.html?timing=warm', { waitUntil: 'domcontentloaded' });
+  await page.goto(`${baseURL}/directory.html?timing=warm`, { waitUntil: 'domcontentloaded' });
   const first = await runProfile(page, ledger, 'warm-first', testInfo);
   await page.locator('#directoryBackToGuestsBtn').click();
   await expect(page.locator('.directory-card[data-directory-stay-key]')).toBeVisible();
