@@ -5778,8 +5778,19 @@ html.waffle-standalone
     border-radius: 8px;
     background: var(--wh-surface-muted, #f8fafc);
     color: var(--wh-text-muted, #64748b);
-    font-size: 10px;
+    font-size: 12px;
     line-height: 1.35;
+}
+
+.directory-profile-read-status-message {
+    min-width: 0;
+}
+
+.directory-profile-read-retry {
+    flex: 0 0 auto;
+    min-height: 44px;
+    min-width: 44px;
+    padding: 8px 12px;
 }
 
 .directory-profile-read-status[data-state="loading"],
@@ -5804,6 +5815,33 @@ body.dark-theme .directory-profile-read-status[data-state="fresh"] {
 
 body.dark-theme .directory-profile-read-status[data-state="error"] {
     color: #fca5a5;
+}
+
+@media (prefers-contrast: more) {
+    .directory-profile-read-status {
+        border-width: 2px;
+        color: var(--wh-text, #172033);
+    }
+
+    .directory-profile-read-status[data-state="fresh"] {
+        border-color: var(--wh-success, #166534);
+        color: var(--wh-success, #166534);
+    }
+
+    .directory-profile-read-status[data-state="error"] {
+        border-color: var(--wh-danger, #991b1b);
+        color: var(--wh-danger, #991b1b);
+    }
+
+    body.dark-theme .directory-profile-read-status[data-state="fresh"] {
+        border-color: #86efac;
+        color: #86efac;
+    }
+
+    body.dark-theme .directory-profile-read-status[data-state="error"] {
+        border-color: #fca5a5;
+        color: #fca5a5;
+    }
 }
 
 /* Care profile overview refinement: keep the identity and stay context easy

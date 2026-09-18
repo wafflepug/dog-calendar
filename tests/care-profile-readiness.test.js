@@ -13,11 +13,13 @@ const code = source.slice(helperStart, loadStart) + source.slice(loadStart, load
 function harness({ cache = {}, response, swrError = null, offlineFallback = false, online = true, delayMs = 0 } = {}) {
     const calls = [];
     const rendered = [];
-    const host = { parentNode: { insertBefore() {} } };
+    const host = { parentNode: { insertBefore() {} }, setAttribute(name, value) { this[name] = value; } };
     const retry = { addEventListener(type, handler) { this.handler = handler; } };
     const status = {
         dataset: {},
-        setAttribute() {},
+        attributes: {},
+        setAttribute(name, value) { this.attributes[name] = value; },
+        getAttribute(name) { return this.attributes[name]; },
         querySelector(selector) { return selector.includes('retry') ? retry : null; },
         addEventListener() {}
     };
@@ -39,7 +41,7 @@ function harness({ cache = {}, response, swrError = null, offlineFallback = fals
         renderDirectoryIntakeAttributes: (card, record) => rendered.push(record),
         reconcileDirectoryDigitalIntakeFromProfile() {},
         setDirectoryDetailLoading() {},
-        setDirectoryDetailError: () => { calls.push('generic-error'); },
+        setDirectoryDetailError: (...args) => { calls.push({ type: 'generic-error', options: args[3] }); },
         queryAppsScriptSWR: async (payload, options) => {
             calls.push({ payload, options });
             if (options.onCached && cache.cachedResponse) options.onCached(cache.cachedResponse);
@@ -59,10 +61,11 @@ test('cached profile remains visible when refresh fails and exposes scoped retry
     assert.equal(h.rendered.at(-1), cached);
     assert.equal(h.details.dataset.profileReadState, 'error');
     assert.equal(h.status.dataset.state, 'error');
+    assert.equal(h.status.getAttribute?.('role') || 'status', 'status');
     assert.equal(h.calls[0].options.maxAttempts, 1);
     assert.equal(h.calls[0].options.timeoutMs, 15000);
     assert.equal(h.calls[0].options.lateCallbackGraceMs, 5 * 60 * 1000);
-    assert.equal(h.calls.filter(call => call === 'generic-error').length, 0);
+    assert.equal(h.calls.filter(call => call.type === 'generic-error').length, 0);
 });
 
 test('cached profile is visible while the refresh is still pending', async () => {
@@ -72,6 +75,7 @@ test('cached profile is visible while the refresh is still pending', async () =>
     await new Promise(resolve => setImmediate(resolve));
     assert.equal(h.rendered.at(-1), cached);
     assert.equal(h.status.dataset.state, 'refreshing');
+    assert.equal(h.details.querySelector('intake-attributes')?.['aria-busy'], 'true');
     await pending;
     assert.equal(h.status.dataset.state, 'error');
 });
@@ -91,6 +95,17 @@ test('cold successful profile read reports fresh details', async () => {
     await h.sandbox.load(h.card, h.details, {});
     assert.equal(h.rendered.at(-1), fresh);
     assert.equal(h.status.dataset.state, 'fresh');
+    assert.equal(h.details.querySelector('intake-attributes')?.['aria-busy'], 'false');
+});
+
+test('offline fallback without saved details is never labelled fresh', async () => {
+    const h = harness({
+        response: { record: { stayKey: 'milo|2026-09-20|2026-09-22', intakeAttributes: {} } },
+        offlineFallback: true
+    });
+    await h.sandbox.load(h.card, h.details, {});
+    assert.equal(h.status.dataset.state, 'error');
+    assert.notEqual(h.status.dataset.state, 'fresh');
 });
 
 test('cold failed profile read exposes a scoped retry state', async () => {
@@ -98,7 +113,18 @@ test('cold failed profile read exposes a scoped retry state', async () => {
     await h.sandbox.load(h.card, h.details, {});
     assert.equal(h.status.dataset.state, 'error');
     assert.match(h.status.innerHTML, /Unable to load care details/);
-    assert.equal(h.calls.filter(call => call === 'generic-error').length, 1);
+    assert.equal(h.calls.filter(call => call.type === 'generic-error').length, 1);
+    assert.equal(h.calls.find(call => call.type === 'generic-error').options.includeRetry, false);
+});
+
+test('cached early return does not overwrite a settled fresh or error state', async () => {
+    const cached = { stayKey: 'milo|2026-09-20|2026-09-22', intakeAttributes: { allergy: 'Chicken' } };
+    const h = harness({ cache: { [cached.stayKey]: cached } });
+    h.details.status = h.status;
+    h.details.dataset.profileReadState = 'fresh';
+    h.sandbox.directoryProfileDetailCache[cached.stayKey] = cached;
+    await h.sandbox.load(h.card, h.details, {});
+    assert.equal(h.details.dataset.profileReadState, 'fresh');
 });
 
 test('late response for a replaced selected profile does not render into the old card', async () => {
