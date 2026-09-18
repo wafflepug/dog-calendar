@@ -16,6 +16,8 @@ on:
       - 'tests/care-overview-refinement.browser.spec.js'
       - 'tests/care-state-preservation.test.js'
       - 'playwright.care-profile.config.js'
+      - 'playwright.care-mobile-hierarchy.config.js'
+      - 'tests/care-mobile-hierarchy.browser.spec.js'
       - 'scripts/local-network-policy.js'
       - 'scripts/run-local-ui.js'
       - 'package.json'
@@ -37,6 +39,8 @@ on:
       - 'tests/care-overview-refinement.browser.spec.js'
       - 'tests/care-state-preservation.test.js'
       - 'playwright.care-profile.config.js'
+      - 'playwright.care-mobile-hierarchy.config.js'
+      - 'tests/care-mobile-hierarchy.browser.spec.js'
       - 'scripts/local-network-policy.js'
       - 'scripts/run-local-ui.js'
       - 'package.json'
@@ -75,6 +79,7 @@ jobs:
           node --test tests/care-state-preservation.test.js
           node node_modules/@playwright/test/cli.js install --with-deps chromium firefox webkit
           node node_modules/@playwright/test/cli.js test --config=playwright.care-profile.config.js
+          node node_modules/@playwright/test/cli.js test --config=playwright.care-mobile-hierarchy.config.js
           node node_modules/@playwright/test/cli.js test --config=playwright.care-overview.config.js
           node node_modules/@playwright/test/cli.js test --config=playwright.runtime-review.config.js
 
