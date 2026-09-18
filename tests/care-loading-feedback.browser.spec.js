@@ -22,12 +22,18 @@ function profileRecord(key, label = 'Saved') {
 function installReadOnlyRuntimeFixture(page, options = {}) {
   const profileCalls = new Map();
   const gates = new Map();
-  const release = (key, call = 1) => gates.get(`${key}:${call}`)?.();
+  const released = new Set();
+  const release = (key, call = 1) => {
+    const id = `${key}:${call}`;
+    released.add(id);
+    gates.get(id)?.();
+  };
   const handler = async route => {
     const request = route.request();
     const url = request.url();
     if (!['GET', 'HEAD'].includes(request.method())) return route.fulfill({ status: 405, body: 'Read-only fixture blocked mutation' });
     if (url.startsWith('http://127.0.0.1:44972/')) return route.continue();
+    if (url.includes('docs.google.com/spreadsheets') && url.includes('output=csv')) return route.fulfill({ status: 200, contentType: 'text/csv', body: csv() });
     if (url.includes('cdn.jsdelivr.net') && url.includes('fullcalendar')) return route.fulfill({ status: 200, contentType: 'application/javascript', body: fullCalendar });
     if (url.includes('script.google.com')) {
       const params = new URL(url).searchParams;
@@ -40,7 +46,7 @@ function installReadOnlyRuntimeFixture(page, options = {}) {
       let response;
       if (action === 'get_guest_directory') {
         response = { result: 'success', bookings, summaries: bookings.map(b => ({ stayKey: stayKey(b), riskFlags: {} })) };
-      } else {
+      } else if (action === 'get_guest_profile') {
         const key = String(payload.stayKey || '');
         const call = (profileCalls.get(key) || 0) + 1;
         profileCalls.set(key, call);
@@ -51,12 +57,12 @@ function installReadOnlyRuntimeFixture(page, options = {}) {
           return route.fulfill({ status: 200, contentType: 'application/javascript', body: `${callback}(${JSON.stringify(errorResponse)});` });
         }
         response = { result: 'success', record: profileRecord(key, behavior.label || 'Fresh') };
-        if (options.holdProfile && behavior.kind === 'success') {
+        if ((options.holdProfile || behavior.hold) && behavior.kind === 'success' && !released.has(`${key}:${call}`)) {
           await new Promise(resolve => gates.set(`${key}:${call}`, resolve));
         }
         if (behavior.delay) await new Promise(resolve => setTimeout(resolve, behavior.delay));
       }
-      if (!response) response = { result: 'success', records: [] };
+      if (!response) response = { result: 'success', records: [], enabled: false };
       return route.fulfill({ status: 200, contentType: 'application/javascript', body: `${callback}(${JSON.stringify(response)});` });
     }
     if (/^https?:/.test(url)) return route.fulfill({ status: 200, contentType: url.match(/\.css(?:\?|$)/) ? 'text/css' : 'image/svg+xml', body: url.match(/\.css(?:\?|$)/) ? '' : '<svg xmlns="http://www.w3.org/2000/svg" width="2" height="2"><rect width="2" height="2" fill="#ddd"/></svg>' });
@@ -72,6 +78,7 @@ async function openDirectory(page, baseURL, fixture, colorScheme = 'light') {
   await page.addInitScript(mode => localStorage.setItem('theme', mode), colorScheme);
   await page.route('**/*', fixture.handler);
   await page.goto(`${baseURL}/directory.html`, { waitUntil: 'domcontentloaded' });
+  await page.waitForFunction(() => document.documentElement.dataset.waffleUiReady === 'true');
   await expect(page.locator('.directory-card[data-directory-stay-key]')).toHaveCount(2);
 }
 
@@ -87,6 +94,35 @@ async function seedProfileCache(page, key, label = 'Cached') {
     if (typeof putWaffleCachedResponse !== 'function') throw new Error('actual Waffle cache helper is unavailable');
     await putWaffleCachedResponse(`directory:profile:${key}`, { result: 'success', record });
   }, { key, record: profileRecord(key, label) });
+}
+
+async function assertFeedbackStyles(status) {
+  const actual = await status.evaluate(element => {
+    const style = getComputedStyle(element);
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = 1;
+    const context = canvas.getContext('2d');
+    const luminance = color => {
+      context.clearRect(0, 0, 1, 1);
+      context.fillStyle = color;
+      context.fillRect(0, 0, 1, 1);
+      const rgb = Array.from(context.getImageData(0, 0, 1, 1).data).slice(0, 3).map(value => {
+        value /= 255;
+        return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+      });
+      return rgb[0] * 0.2126 + rgb[1] * 0.7152 + rgb[2] * 0.0722;
+    };
+    const foreground = luminance(style.color);
+    const background = luminance(style.backgroundColor);
+    return {
+      contrast: (Math.max(foreground, background) + 0.05) / (Math.min(foreground, background) + 0.05),
+      fontSize: parseFloat(getComputedStyle(element.querySelector('.directory-profile-read-status-message')).fontSize),
+      busyAncestor: Boolean(element.closest('[aria-busy="true"]'))
+    };
+  });
+  expect(actual.contrast).toBeGreaterThanOrEqual(4.5);
+  expect(actual.fontSize).toBeGreaterThanOrEqual(12);
+  expect(actual.busyAncestor).toBe(false);
 }
 
 for (const colorScheme of ['light', 'dark']) {
@@ -128,14 +164,16 @@ test('saved cached profile stays visible while delayed fresh data arrives', asyn
 
 test('cached profile failure preserves saved content and one retry succeeds', async ({ page, baseURL }) => {
   const fixture = installReadOnlyRuntimeFixture(page, { profileBehavior: (_key, call) => call === 1 ? { kind: 'error' } : { kind: 'success', label: 'Retried' } });
-  await openDirectory(page, baseURL, fixture);
+  await openDirectory(page, baseURL, fixture, 'dark');
   const card = page.locator('.directory-card[data-directory-dog-name="Milo"]');
-  await seedProfileCache(page, stayKey(bookings[0]));
+  await seedProfileCache(page, await card.getAttribute('data-directory-stay-key'));
   await card.locator('[data-open-directory-profile]').click();
   const details = card.locator('[data-directory-detail="profile"]');
   const status = details.locator('[data-directory-profile-read-status]');
   await expect(status).toHaveAttribute('data-state', 'error', { timeout: 2_000 });
+  await assertFeedbackStyles(status);
   await expect(status.locator('[data-retry-directory-profile-read]')).toHaveCount(1);
+  await expect(details.locator('[data-retry-directory-profile-read], [data-retry-directory-detail="profile"]')).toHaveCount(1);
   await expect(details.locator('[data-intake-attribute="medicationInstructions"]')).toHaveValue('Cached medication');
   await status.locator('[data-retry-directory-profile-read]').click();
   await expect(status).toHaveAttribute('data-state', 'fresh', { timeout: 2_000 });
@@ -150,26 +188,36 @@ test('cold profile failure renders exactly one status retry and succeeds after r
   const details = card.locator('[data-directory-detail="profile"]');
   const status = details.locator('[data-directory-profile-read-status]');
   await expect(status).toHaveAttribute('data-state', 'error', { timeout: 2_000 });
+  await assertFeedbackStyles(status);
   await expect(status.locator('[data-retry-directory-profile-read]')).toHaveCount(1);
+  await expect(details.locator('[data-retry-directory-profile-read], [data-retry-directory-detail="profile"]')).toHaveCount(1);
+  const target = await status.locator('[data-retry-directory-profile-read]').boundingBox();
+  expect(target.height).toBeGreaterThanOrEqual(44);
+  expect(target.width).toBeGreaterThanOrEqual(44);
+  await status.locator('[data-retry-directory-profile-read]').focus();
+  await expect(status.locator('[data-retry-directory-profile-read]')).toBeFocused();
   await status.locator('[data-retry-directory-profile-read]').click();
   await expect(status).toHaveAttribute('data-state', 'fresh', { timeout: 2_000 });
   await expect(details.locator('[data-intake-attribute="medicationInstructions"]')).toHaveValue('Recovered medication');
 });
 
 test('status remains visible across care subtabs, Back stays usable, and late response cannot cross stays', async ({ page, baseURL }) => {
-  const fixture = installReadOnlyRuntimeFixture(page, { profileBehavior: (key, call) => key.startsWith('milo|') ? { kind: 'success', delay: 350, label: 'Late Milo' } : { kind: 'success', delay: 0, label: 'Nala' } });
+  const fixture = installReadOnlyRuntimeFixture(page, { profileBehavior: key => key.startsWith('milo|') ? { kind: 'success', hold: true, label: 'Late Milo' } : { kind: 'success', label: 'Nala' } });
   await openDirectory(page, baseURL, fixture);
+  const miloKey = await page.locator('.directory-card[data-directory-dog-name="Milo"]').getAttribute('data-directory-stay-key');
+  await seedProfileCache(page, miloKey);
   const milo = await openProfile(page, 'Milo');
   const miloStatus = milo.locator('[data-directory-profile-read-status]');
-  await expect(miloStatus).toHaveAttribute('data-state', 'loading');
+  await expect(miloStatus).toHaveAttribute('data-state', 'refreshing');
   await milo.locator('[data-profile-subtab="care"]').click();
   await expect(miloStatus).toBeVisible();
   await page.locator('#directoryBackToGuestsBtn').click();
   await expect(page.locator('.directory-dashboard-fused')).not.toHaveClass(/is-profile-mode/);
   const nala = await openProfile(page, 'Nala');
   await expect(nala.locator('[data-intake-attribute="medicationInstructions"]')).toHaveValue('Nala medication', { timeout: 2_000 });
-  await page.waitForTimeout(500);
-  await expect(nala.locator('[data-directory-intake-attributes]')).not.toContainText('Late Milo');
+  fixture.release(miloKey);
+  await expect.poll(() => page.evaluate(key => directoryProfileDetailCache[key]?.intakeAttributes?.medicationInstructions, miloKey)).toBe('Late Milo medication');
+  await expect(nala.locator('[data-intake-attribute="medicationInstructions"]')).toHaveValue('Nala medication');
   await page.locator('#directoryBackToGuestsBtn').focus();
   await expect(page.locator('#directoryBackToGuestsBtn')).toBeFocused();
   await page.locator('#directoryBackToGuestsBtn').click();
