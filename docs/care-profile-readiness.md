@@ -15,3 +15,12 @@ This is a client readiness refinement. It does not change Apps Script reads,
 backend schemas, mutation behavior, or media keys. The shared JSONP lifecycle
 keeps existing behavior, with an opt-in late-callback grace window used only
 by the profile read; the broad retry and timeout policy remains unchanged.
+
+The loading feedback refinement uses a polite, atomic live status outside the
+busy intake content. The Retry target has a minimum 44px size, and cold failures
+show one Retry instead of duplicating it in both the placeholder and status.
+Reopening an already loaded card preserves its settled fresh/error state.
+An offline fallback cannot be labeled as a fresh successful read.
+
+Profile latency in production remains under investigation. Controlled local
+fixtures verify status transitions and navigation, not backend response speed.
