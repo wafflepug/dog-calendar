@@ -277,14 +277,25 @@
     document.body.appendChild(buildBanner);
   }
 
-  async function checkBuild() {
-    try {
-      const response = await fetch('waffle-build.json?_=' + Date.now(), { cache:'no-store' });
-      if (!response.ok) return;
-      const manifest = await response.json();
-      const remote = String(manifest && manifest.build || '').trim();
-      if (remote && remote !== BUILD) showBuildUpdate(remote);
-    } catch (_) {}
+  let buildCheckPromise = null;
+  let buildCheckHasRun = false;
+  let documentWasHidden = document.visibilityState === 'hidden';
+
+  function checkBuild() {
+    if (buildCheckPromise) return buildCheckPromise;
+    buildCheckHasRun = true;
+    buildCheckPromise = (async () => {
+      try {
+        const response = await fetch('waffle-build.json?_=' + Date.now(), { cache:'no-store' });
+        if (!response.ok) return;
+        const manifest = await response.json();
+        const remote = String(manifest && manifest.build || '').trim();
+        if (remote && remote !== BUILD) showBuildUpdate(remote);
+      } catch (_) {}
+    })().finally(() => {
+      buildCheckPromise = null;
+    });
+    return buildCheckPromise;
   }
 
   startMaintenanceGate();
@@ -301,15 +312,19 @@
   }
 
   document.addEventListener('DOMContentLoaded', checkFirstPaintReady, { once:true });
-  window.addEventListener('pageshow', () => {
-    checkBuild();
+  window.addEventListener('pageshow', event => {
+    // The initial pageshow follows DOMContentLoaded, so checking again here
+    // can leave a second fetch in flight while the next page is navigating.
+    // A persisted pageshow is a real bfcache restore and needs a fresh check.
+    if (event.persisted || !buildCheckHasRun) checkBuild();
     checkFirstPaintReady();
   });
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') {
-      checkBuild();
+      if (documentWasHidden) checkBuild();
       checkFirstPaintReady();
     }
+    documentWasHidden = document.visibilityState === 'hidden';
   });
   setInterval(checkBuild, 5 * 60 * 1000);
 })();

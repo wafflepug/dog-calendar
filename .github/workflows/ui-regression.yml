@@ -11,6 +11,7 @@ on:
       - 'tests/ui-regression.spec.js'
       - 'tests/local-ui-runner.test.js'
       - 'tests/local-network-policy.test.js'
+      - 'tests/waffle-bootstrap-lifecycle.test.js'
       - 'tests/care-profile-readiness.test.js'
       - 'tests/care-profile-readiness.browser.spec.js'
       - 'tests/care-overview-refinement.browser.spec.js'
@@ -36,6 +37,7 @@ on:
       - 'tests/ui-regression.spec.js'
       - 'tests/local-ui-runner.test.js'
       - 'tests/local-network-policy.test.js'
+      - 'tests/waffle-bootstrap-lifecycle.test.js'
       - 'tests/care-profile-readiness.test.js'
       - 'tests/care-profile-readiness.browser.spec.js'
       - 'tests/care-overview-refinement.browser.spec.js'
@@ -79,6 +81,7 @@ jobs:
           npm ci
           node --test tests/local-ui-runner.test.js
           node --test tests/local-network-policy.test.js
+          node --test tests/waffle-bootstrap-lifecycle.test.js
           node --test tests/care-profile-readiness.test.js
           node --test tests/care-state-preservation.test.js
           node node_modules/@playwright/test/cli.js install --with-deps chromium firefox webkit
