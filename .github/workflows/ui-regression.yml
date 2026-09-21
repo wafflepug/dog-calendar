@@ -11,6 +11,7 @@ on:
       - 'tests/ui-regression.spec.js'
       - 'tests/local-ui-runner.test.js'
       - 'tests/local-network-policy.test.js'
+      - 'tests/waffle-bootstrap-lifecycle.test.js'
       - 'tests/care-profile-readiness.test.js'
       - 'tests/care-profile-readiness.browser.spec.js'
       - 'tests/care-overview-refinement.browser.spec.js'
@@ -18,6 +19,8 @@ on:
       - 'playwright.care-profile.config.js'
       - 'playwright.care-mobile-hierarchy.config.js'
       - 'tests/care-mobile-hierarchy.browser.spec.js'
+      - 'tests/care-loading-feedback.browser.spec.js'
+      - 'playwright.care-loading-feedback.config.js'
       - 'scripts/local-network-policy.js'
       - 'scripts/run-local-ui.js'
       - 'package.json'
@@ -34,6 +37,7 @@ on:
       - 'tests/ui-regression.spec.js'
       - 'tests/local-ui-runner.test.js'
       - 'tests/local-network-policy.test.js'
+      - 'tests/waffle-bootstrap-lifecycle.test.js'
       - 'tests/care-profile-readiness.test.js'
       - 'tests/care-profile-readiness.browser.spec.js'
       - 'tests/care-overview-refinement.browser.spec.js'
@@ -41,6 +45,8 @@ on:
       - 'playwright.care-profile.config.js'
       - 'playwright.care-mobile-hierarchy.config.js'
       - 'tests/care-mobile-hierarchy.browser.spec.js'
+      - 'tests/care-loading-feedback.browser.spec.js'
+      - 'playwright.care-loading-feedback.config.js'
       - 'scripts/local-network-policy.js'
       - 'scripts/run-local-ui.js'
       - 'package.json'
@@ -75,11 +81,13 @@ jobs:
           npm ci
           node --test tests/local-ui-runner.test.js
           node --test tests/local-network-policy.test.js
+          node --test tests/waffle-bootstrap-lifecycle.test.js
           node --test tests/care-profile-readiness.test.js
           node --test tests/care-state-preservation.test.js
           node node_modules/@playwright/test/cli.js install --with-deps chromium firefox webkit
           node node_modules/@playwright/test/cli.js test --config=playwright.care-profile.config.js
           node node_modules/@playwright/test/cli.js test --config=playwright.care-mobile-hierarchy.config.js
+          node node_modules/@playwright/test/cli.js test --config=playwright.care-loading-feedback.config.js
           node node_modules/@playwright/test/cli.js test --config=playwright.care-overview.config.js
           node node_modules/@playwright/test/cli.js test --config=playwright.runtime-review.config.js
 

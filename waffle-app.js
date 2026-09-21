@@ -8533,7 +8533,8 @@ registerWaffleServiceWorker();
     function setDirectoryDetailError(
         details,
         type,
-        error
+        error,
+        options = {}
     ) {
         const host =
             details.querySelector(
@@ -8550,12 +8551,14 @@ registerWaffleServiceWorker();
                     <strong>⚠️ Could not load this section</strong>
                     <span>${escapeDashboardHtml(error?.message || String(error || 'Unknown error'))}</span>
                 </div>
-                <button
-                    type="button"
-                    class="directory-intake-action"
-                    data-retry-directory-detail="${escapeDashboardHtml(type)}">
-                    ↻ Retry
-                </button>
+                ${options.includeRetry === false ? '' : `
+                    <button
+                        type="button"
+                        class="directory-intake-action"
+                        data-retry-directory-detail="${escapeDashboardHtml(type)}">
+                        ↻ Retry
+                    </button>
+                `}
             </div>
         `;
     }
@@ -8567,12 +8570,17 @@ registerWaffleServiceWorker();
             status = document.createElement('div');
             status.className = 'directory-profile-read-status';
             status.setAttribute('data-directory-profile-read-status', '');
+            status.setAttribute('role', 'status');
+            status.setAttribute('aria-live', 'polite');
+            status.setAttribute('aria-atomic', 'true');
             const host = details.querySelector('[data-directory-intake-attributes]');
             if (host) host.parentNode.insertBefore(status, host);
             else details.prepend(status);
         }
         status.dataset.state = state;
         details.dataset.profileReadState = state;
+        const content = details.querySelector('[data-directory-intake-attributes]');
+        if (content) content.setAttribute('aria-busy', state === 'loading' || state === 'refreshing' ? 'true' : 'false');
         status.innerHTML = `<span class="directory-profile-read-status-message">${escapeDashboardHtml(message || '')}</span>${state === 'error' ? '<button type="button" class="directory-intake-action directory-profile-read-retry" data-retry-directory-profile-read>↻ Retry</button>' : ''}`;
         const retry = status.querySelector('[data-retry-directory-profile-read]');
         if (retry && typeof onRetry === 'function') retry.addEventListener('click', onRetry, { once: true });
@@ -8608,7 +8616,7 @@ registerWaffleServiceWorker();
             details.dataset.detailLoaded =
                 'true';
 
-            if (details.dataset.profileReadState !== 'error') {
+            if (!details.dataset.profileReadState) {
                 setDirectoryProfileReadStatus(
                     details,
                     'saved',
@@ -8725,8 +8733,8 @@ registerWaffleServiceWorker();
                 );
 
             if (
-                !swr.unchanged ||
-                !cachedRendered
+                !swr.offlineFallback &&
+                (!swr.unchanged || !cachedRendered)
             ) {
                 applyRecord(
                     swr.data.record ||
@@ -8767,7 +8775,8 @@ registerWaffleServiceWorker();
                 setDirectoryDetailError(
                     details,
                     'profile',
-                    error
+                    error,
+                    { includeRetry: false }
                 );
                 setDirectoryProfileReadStatus(
                     details,

@@ -96,7 +96,10 @@ async function awaitBuildProbe(page) {
       new Promise((_, reject) => setTimeout(() => reject(new Error(`Build manifest request did not settle before navigation (in flight: ${state.inFlight.size}).`)), Math.max(1, deadline - Date.now())))
     ]);
     const activity = state.activity;
-    await new Promise(resolve => setTimeout(resolve, 300));
+    // WebKit can deliver the fetch completion and the page lifecycle event on
+    // adjacent turns. Keep the settled window long enough to cover that
+    // handoff before the next canonical page navigation.
+    await new Promise(resolve => setTimeout(resolve, 1000));
     if (state.inFlight.size === 0 && state.activity === activity) return;
     if (Date.now() >= deadline) throw new Error(`Build manifest request did not remain settled before navigation (in flight: ${state.inFlight.size}).`);
   }
