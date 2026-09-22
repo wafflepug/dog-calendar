@@ -604,7 +604,8 @@ function v1082SwitchStayView(view, options = {}) {
 
     closeDirectoryGuestProfile({
         preserveScroll: true,
-        instant: true
+        instant: true,
+        discardOrigin: true
     });
 
     document

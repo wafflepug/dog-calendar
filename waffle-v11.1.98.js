@@ -424,7 +424,7 @@
 
       try {
         if (typeof window.closeDirectoryGuestProfile === 'function') {
-          window.closeDirectoryGuestProfile({ preserveScroll: true, instant: true });
+          window.closeDirectoryGuestProfile({ preserveScroll: true, instant: true, restoreOrigin: true });
         }
       } catch (_) {}
 

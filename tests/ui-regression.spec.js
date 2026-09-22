@@ -507,3 +507,74 @@ test('New Boarding action remains reachable above fixed mobile navigation', asyn
   for (const error of cleanErrors(errors)) failures.push(`Uncaught browser error: ${error}`);
   expect(failures, failures.join('\n')).toEqual([]);
 });
+
+test('runtime dialog families keep their title and actions clear of mobile navigation', async ({ page }, testInfo) => {
+  const mobileShell = testInfo.project.metadata.mobileShell === true;
+  test.skip(!mobileShell, 'Mobile dialog clearance test only applies at widths <= 820px.');
+
+  await gotoCanonical(page, 'index.html?action=boarding', 'calendar');
+  const viewport = page.viewportSize();
+  const nav = page.locator('#wh75MobileBottomNav');
+  const boarding = page.locator('#v108BoardingModal');
+  await expect(boarding).toBeVisible({ timeout: 12_000 });
+  const boardingPanel = boarding.locator(':scope > .v108-modal-card');
+  await expect(boardingPanel).toBeVisible();
+
+  const boardingBox = await box(boarding);
+  const navBox = await box(nav);
+  expect(boardingBox, 'New Boarding overlay has no visible box.').toBeTruthy();
+  expect(navBox, 'Mobile navigation has no visible box.').toBeTruthy();
+  if (boardingBox) {
+    expect(boardingBox.x).toBeGreaterThanOrEqual(-2);
+    expect(boardingBox.x + boardingBox.width).toBeLessThanOrEqual(viewport.width + 2);
+  }
+  expect(await boarding.evaluate(element => Number(getComputedStyle(element).zIndex))).toBeGreaterThan(
+    await nav.evaluate(element => Number(getComputedStyle(element).zIndex))
+  );
+
+  // Exercise the dynamically-created Quick Add sheet from waffle-app.js too.
+  await boarding.locator('[data-v108-close]').first().click();
+  await page.locator('#wh75MobileBottomNav [data-wh78-quick-add], #wh75MobileBottomNav [data-wh75-quick-add]').first().click();
+  const quickAdd = page.locator('#v10QuickAddSheet');
+  await expect(quickAdd).toBeVisible({ timeout: 12_000 });
+  const quickPanel = quickAdd.locator('.v10-quick-add-panel');
+  const quickBox = await box(quickAdd);
+  const quickPanelBox = await box(quickPanel);
+  const visualViewport = await page.evaluate(() => ({
+    top: window.visualViewport?.offsetTop || 0,
+    height: window.visualViewport?.height || window.innerHeight
+  }));
+  expect(quickBox, 'Quick Add overlay has no visible box.').toBeTruthy();
+  expect(quickPanelBox, 'Quick Add panel has no visible box.').toBeTruthy();
+  if (quickBox) {
+    expect(quickBox.x).toBeGreaterThanOrEqual(-2);
+    expect(quickBox.x + quickBox.width).toBeLessThanOrEqual(viewport.width + 2);
+  }
+  if (quickPanelBox) {
+    expect(quickPanelBox.y).toBeGreaterThanOrEqual(visualViewport.top - 2);
+    expect(quickPanelBox.y + quickPanelBox.height).toBeLessThanOrEqual(visualViewport.top + visualViewport.height + 2);
+  }
+  await expect(quickPanel.locator('[data-v10-quick-action="reminder"]')).toBeVisible();
+  expect(await quickAdd.evaluate(element => Number(getComputedStyle(element).zIndex))).toBeGreaterThan(
+    await nav.evaluate(element => Number(getComputedStyle(element).zIndex))
+  );
+
+  // Exercise a full-height runtime prompt outside the Quick Add family.
+  await quickAdd.locator('button[data-v10-quick-close]').click();
+  await page.waitForFunction(() => !!window.WAFFLE_PHASE4_CORE?.open, null, { timeout: 12_000 });
+  await page.evaluate(() => window.WAFFLE_PHASE4_CORE.open('booking'));
+  const toolsModal = page.locator('#p4Modal');
+  const toolsCard = toolsModal.locator('.p4-card');
+  await expect(toolsModal).toBeVisible();
+  await expect(toolsCard.getByRole('heading', { name: /Sitter Tools/ })).toBeVisible();
+  await expect(toolsCard.locator('[data-p4-tab="insights"]')).toBeVisible();
+  const toolsBox = await box(toolsCard);
+  expect(toolsBox, 'Sitter Tools panel has no visible box.').toBeTruthy();
+  if (toolsBox) {
+    expect(toolsBox.y).toBeGreaterThanOrEqual(visualViewport.top - 2);
+    expect(toolsBox.y + toolsBox.height).toBeLessThanOrEqual(visualViewport.top + visualViewport.height + 2);
+  }
+  expect(await toolsModal.evaluate(element => Number(getComputedStyle(element).zIndex))).toBeGreaterThan(
+    await nav.evaluate(element => Number(getComputedStyle(element).zIndex))
+  );
+});
