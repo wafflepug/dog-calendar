@@ -209,7 +209,8 @@
     try {
       closeDirectoryGuestProfile({
         preserveScroll: true,
-        instant: options.instant === true
+        instant: options.instant === true,
+        discardOrigin: true
       });
     } catch (_) {}
 

@@ -21,6 +21,9 @@ on:
       - 'tests/care-mobile-hierarchy.browser.spec.js'
       - 'tests/care-loading-feedback.browser.spec.js'
       - 'playwright.care-loading-feedback.config.js'
+      - 'tests/care-navigation-continuity.test.js'
+      - 'tests/care-navigation-continuity.browser.spec.js'
+      - 'playwright.care-navigation-continuity.config.js'
       - 'scripts/local-network-policy.js'
       - 'scripts/run-local-ui.js'
       - 'package.json'
@@ -47,6 +50,9 @@ on:
       - 'tests/care-mobile-hierarchy.browser.spec.js'
       - 'tests/care-loading-feedback.browser.spec.js'
       - 'playwright.care-loading-feedback.config.js'
+      - 'tests/care-navigation-continuity.test.js'
+      - 'tests/care-navigation-continuity.browser.spec.js'
+      - 'playwright.care-navigation-continuity.config.js'
       - 'scripts/local-network-policy.js'
       - 'scripts/run-local-ui.js'
       - 'package.json'
@@ -84,10 +90,12 @@ jobs:
           node --test tests/waffle-bootstrap-lifecycle.test.js
           node --test tests/care-profile-readiness.test.js
           node --test tests/care-state-preservation.test.js
+          node --test tests/care-navigation-continuity.test.js
           node node_modules/@playwright/test/cli.js install --with-deps chromium firefox webkit
           node node_modules/@playwright/test/cli.js test --config=playwright.care-profile.config.js
           node node_modules/@playwright/test/cli.js test --config=playwright.care-mobile-hierarchy.config.js
           node node_modules/@playwright/test/cli.js test --config=playwright.care-loading-feedback.config.js
+          node node_modules/@playwright/test/cli.js test --config=playwright.care-navigation-continuity.config.js
           node node_modules/@playwright/test/cli.js test --config=playwright.care-overview.config.js
           node node_modules/@playwright/test/cli.js test --config=playwright.runtime-review.config.js
 

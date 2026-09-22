@@ -5654,7 +5654,7 @@ html.waffle-standalone
     align-items: center;
     justify-content: center;
     gap: 6px;
-    min-height: 42px;
+    min-height: 44px;
     padding: 8px 11px;
     border: 1px solid transparent;
     border-radius: 8px;
@@ -5671,6 +5671,12 @@ html.waffle-standalone
     background: var(--wh-surface, #ffffff);
     color: #1d4ed8;
     box-shadow: 0 2px 7px rgba(15,23,42,.07);
+}
+
+.directory-main-profile-tab:focus-visible,
+.directory-profile-subtab:focus-visible {
+    outline: 3px solid var(--wh-accent, #2563eb);
+    outline-offset: 2px;
 }
 
 .directory-main-profile-panel[hidden] {
@@ -5691,7 +5697,7 @@ html.waffle-standalone
     align-items: center;
     justify-content: center;
     gap: 4px;
-    min-height: 36px;
+    min-height: 44px;
     padding: 7px 10px;
     border: 1px solid var(--wh-border, #dbe3ea);
     border-radius: 999px;
@@ -6081,7 +6087,7 @@ body.dark-theme .directory-profile-subtab.is-active {
     }
 
     .directory-profile-subtab {
-        min-height: 38px;
+        min-height: 44px;
         padding: 7px 10px;
         font-size: 11px;
     }

@@ -7,6 +7,9 @@ let directoryConsolidatedLoadInProgress = false;
 let directoryConsolidatedLastFetch = 0;
 let directoryBookingStateSignature = '';
 let directorySelectedProfileStayKey = '';
+/* The list origin is intentionally ephemeral: it is only needed while the
+ * profile shell is open and is never written to cache or persistent storage. */
+let directoryProfileNavigationOrigin = null;
 let directorySummaryRecordsCache = {};
 let directoryProfileDetailCache = {};
 let directoryBelongingsDetailCache = {};
@@ -9452,6 +9455,134 @@ registerWaffleServiceWorker();
     }
 
 
+    function getDirectoryWindowScrollTop() {
+        return Math.max(
+            0,
+            Number(
+                window.pageYOffset ??
+                document.documentElement?.scrollTop ??
+                document.body?.scrollTop ??
+                0
+            ) || 0
+        );
+    }
+
+
+    function captureDirectoryProfileNavigationOrigin(card) {
+        if (directoryProfileNavigationOrigin) return;
+
+        const opener = card?.querySelector('[data-open-directory-profile]') ||
+            (card?.matches?.('[data-open-directory-profile]') ? card : null);
+        const search = document.getElementById('guestDirectorySearch');
+
+        directoryProfileNavigationOrigin = {
+            stayKey: String(card?.dataset?.directoryStayKey || '').trim(),
+            scrollTop: getDirectoryWindowScrollTop(),
+            searchValue: search?.value || '',
+            openerStayKey: String(card?.dataset?.directoryStayKey || '').trim(),
+            opener
+        };
+    }
+
+
+    function restoreDirectoryProfileNavigationOrigin(options = {}) {
+        const origin = directoryProfileNavigationOrigin;
+        if (!origin) return false;
+
+        directoryProfileNavigationOrigin = null;
+
+        const search = document.getElementById('guestDirectorySearch');
+        if (search && search.value !== origin.searchValue) {
+            search.value = origin.searchValue;
+            filterGuestDirectoryCards();
+        }
+
+        const restoreLayout = (onlyIfFocusLost = false) => {
+            const activeElement = document.activeElement;
+            if (
+                onlyIfFocusLost &&
+                activeElement &&
+                activeElement !== document.body &&
+                activeElement !== document.documentElement &&
+                activeElement.isConnected
+            ) {
+                return;
+            }
+
+            const maxScroll = Math.max(
+                0,
+                (Number(document.documentElement?.scrollHeight) || 0) -
+                    (Number(window.innerHeight) || 0)
+            );
+            const requested = Math.max(0, Number(origin.scrollTop) || 0);
+            const targetScroll = Math.min(requested, maxScroll);
+
+            try {
+                window.scrollTo({
+                    top: targetScroll,
+                    left: 0,
+                    behavior: 'auto'
+                });
+            } catch (_) {
+                try { window.scrollTo(0, targetScroll); } catch (_) {}
+            }
+
+            const stayKey = origin.openerStayKey;
+            const isVisibleCard = item => {
+                if (!item || item.hidden) return false;
+                if (typeof item.getClientRects === 'function' && item.getClientRects().length === 0) {
+                    return false;
+                }
+                return typeof window.getComputedStyle !== 'function' || (
+                    window.getComputedStyle(item).display !== 'none' &&
+                    window.getComputedStyle(item).visibility !== 'hidden'
+                );
+            };
+            const capturedOpener = origin.opener;
+            const opener = (
+                capturedOpener?.isConnected &&
+                isVisibleCard(capturedOpener.closest('.directory-card'))
+                    ? capturedOpener
+                    : null
+            ) || Array.from(
+                document.querySelectorAll('.directory-card[data-directory-stay-key]')
+            ).find(item =>
+                String(item.dataset.directoryStayKey || '').trim() === stayKey &&
+                isVisibleCard(item)
+            )?.querySelector('[data-open-directory-profile]');
+            const visibleOpener = Array.from(
+                document.querySelectorAll('.directory-card[data-directory-stay-key] [data-open-directory-profile]')
+            ).find(item => {
+                const card = item.closest('.directory-card');
+                return isVisibleCard(card);
+            });
+            const fallback = opener ||
+                visibleOpener ||
+                document.getElementById('guestDirectorySearch') ||
+                document.querySelector('[data-v1082-stay-tab]') ||
+                document.getElementById('directory-grid');
+
+            if (fallback && typeof fallback.focus === 'function') {
+                try { fallback.focus({ preventScroll: true }); }
+                catch (_) { try { fallback.focus(); } catch (_) {} }
+            }
+        };
+
+        /* Most cards rebuild synchronously, while desktop compatibility
+         * renderers can replace the visible card shortly afterwards. Repeat
+         * the same idempotent restore twice within a bounded window so focus
+         * lands on the final opener without a global observer or poll loop. */
+        if (typeof window.requestAnimationFrame === 'function') {
+            window.requestAnimationFrame(() => window.requestAnimationFrame(restoreLayout));
+        } else {
+            window.setTimeout(restoreLayout, 0);
+        }
+        window.setTimeout(() => restoreLayout(true), 160);
+        window.setTimeout(() => restoreLayout(true), 640);
+        return true;
+    }
+
+
 
     function switchDirectoryProfileMainTab(card, tabName) {
         if (!card) return;
@@ -9592,6 +9723,10 @@ registerWaffleServiceWorker();
             ).trim();
 
         if (!stayKey) return;
+
+        if (typeof captureDirectoryProfileNavigationOrigin === 'function') {
+            captureDirectoryProfileNavigationOrigin(card);
+        }
 
         directorySelectedProfileStayKey =
             stayKey;
@@ -9756,7 +9891,16 @@ registerWaffleServiceWorker();
 
         filterGuestDirectoryCards();
 
-        if (!options.preserveScroll) {
+        let restoringOrigin = false;
+        if (options.restoreOrigin === true || !options.preserveScroll) {
+            restoringOrigin = restoreDirectoryProfileNavigationOrigin(options);
+        } else if (options.discardOrigin === true) {
+            /* Explicit stay-view changes replace the list context. Routine
+             * refresh and wrapper calls retain the first list origin. */
+            directoryProfileNavigationOrigin = null;
+        }
+
+        if (!options.preserveScroll && !restoringOrigin) {
             document
                 .querySelector(
                     '.directory-dashboard-fused'
@@ -9782,7 +9926,7 @@ registerWaffleServiceWorker();
 
         if (options.state?.ambiguous) {
             restoreDirectoryGuestDetailDraft(options.state, null);
-            closeDirectoryGuestProfile({ preserveScroll: true });
+            closeDirectoryGuestProfile({ preserveScroll: true, restoreOrigin: true });
             return;
         }
 
@@ -9792,8 +9936,8 @@ registerWaffleServiceWorker();
         if (!card) {
             restoreDirectoryGuestDetailDraft(options.state, null);
             closeDirectoryGuestProfile({
-                preserveScroll:
-                    true
+                preserveScroll: true,
+                restoreOrigin: true
             });
             return;
         }

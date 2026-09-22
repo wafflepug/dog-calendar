@@ -15,14 +15,32 @@
   'use strict';
   if (window.WAFFLE_QUICK_ADD_TOUCH_SCROLL) return;
 
-  const VERSION = '1.2.0';
+  const VERSION = '1.3.0';
   const STYLE_ID = 'waffleQuickAddTouchScrollStyle';
-  const MODAL_SELECTOR = [
+  const QUICK_ADD_SELECTOR = [
     '#customBookingModal',
     '#potentialStayModal',
     '#v108BoardingModal',
     '[data-quick-add-modal]'
   ].join(',');
+  // These overlays are created by separate runtime modules, often after this
+  // script has started. Keep the selector explicit so ordinary role=dialog
+  // content inside a page is not accidentally promoted to a fixed overlay.
+  const GENERAL_MODAL_SELECTOR = [
+    '.v108-modal',
+    '.v11217-modal',
+    '.belongings-camera-modal',
+    '.hosted-photo-uploader-modal',
+    '.guest-detail-edit-modal',
+    '.waffle-notification-modal',
+    '.v10-modal',
+    '.v10-quick-add-sheet',
+    '.waffle-install-guide',
+    '.p4-modal',
+    '.v11115-modal',
+    '#v11133AskWaffleModal'
+  ].join(',');
+  const MODAL_SELECTOR = `${QUICK_ADD_SELECTOR},${GENERAL_MODAL_SELECTOR}`;
   const PANEL_SELECTOR = ':scope > .modal-content-panel, :scope > .v108-modal-card';
   const SPACER_ATTR = 'data-quick-add-scroll-spacer';
   const MIN_CLEARANCE = 180;
@@ -110,6 +128,56 @@
           pointer-events: none !important;
           visibility: hidden !important;
         }
+
+        /* Every runtime-owned dialog must stay in the visual viewport. The
+           fixed bottom nav remains mounted underneath the scrim; its z-index
+           is deliberately lower than the dialog so it cannot cover controls. */
+        html body .v108-modal,
+        html body .v11217-modal,
+        html body .belongings-camera-modal,
+        html body .hosted-photo-uploader-modal,
+        html body .guest-detail-edit-modal,
+        html body .waffle-notification-modal,
+        html body .v10-modal,
+        html body .v10-quick-add-sheet,
+        html body .waffle-install-guide,
+        html body .p4-modal,
+        html body .v11115-modal,
+        html body #v11133AskWaffleModal {
+          z-index: 2147482500 !important;
+          box-sizing: border-box !important;
+          max-height: var(--waffle-mobile-visual-height, 100dvh) !important;
+          height: var(--waffle-mobile-visual-height, 100dvh) !important;
+          top: var(--waffle-mobile-visual-top, 0px) !important;
+          bottom: auto !important;
+          padding-top: max(8px, env(safe-area-inset-top)) !important;
+          padding-right: max(8px, env(safe-area-inset-right)) !important;
+          padding-bottom: max(8px, env(safe-area-inset-bottom)) !important;
+          padding-left: max(8px, env(safe-area-inset-left)) !important;
+          overflow: hidden !important;
+          overscroll-behavior: contain !important;
+        }
+
+        html body .v108-modal > .v108-modal-card,
+        html body .v11217-modal > .v11217-modal-card,
+        html body .belongings-camera-modal > *,
+        html body .hosted-photo-uploader-modal > *,
+        html body .guest-detail-edit-modal > *,
+        html body .waffle-notification-modal > *,
+        html body .v10-modal > *,
+        html body .v10-quick-add-sheet > *,
+        html body .waffle-install-guide > *,
+        html body .p4-modal > .p4-card,
+        html body .v11115-modal > .v11115-modal-card,
+        html body #v11133AskWaffleModal > .aw37-card {
+          max-height: calc(var(--waffle-mobile-visual-height, 100dvh) - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom)) !important;
+          min-height: 0 !important;
+          overflow-x: hidden !important;
+          overflow-y: auto !important;
+          -webkit-overflow-scrolling: touch !important;
+          overscroll-behavior-y: contain !important;
+          scroll-padding-bottom: max(20px, env(safe-area-inset-bottom)) !important;
+        }
       }
     `;
 
@@ -143,10 +211,27 @@
     ensureSpacer(modal);
   }
 
+  function visualViewportHeight() {
+    const vv = window.visualViewport;
+    return Math.max(1, Math.round(Number(vv?.height || window.innerHeight || document.documentElement?.clientHeight || 0)));
+  }
+
+  function visualViewportTop() {
+    return Math.max(0, Math.round(Number(window.visualViewport?.offsetTop || 0)));
+  }
+
+  function prepareGeneralModal(modal) {
+    if (!(modal instanceof HTMLElement) || !isMobile()) return;
+    modal.setAttribute('data-waffle-mobile-modal-clearance', 'true');
+  }
+
   function prepareAll() {
     frame = 0;
     if (!isMobile()) return;
-    document.querySelectorAll(MODAL_SELECTOR).forEach(prepareModal);
+    document.documentElement.style.setProperty('--waffle-mobile-visual-height', `${visualViewportHeight()}px`);
+    document.documentElement.style.setProperty('--waffle-mobile-visual-top', `${visualViewportTop()}px`);
+    document.querySelectorAll(QUICK_ADD_SELECTOR).forEach(prepareModal);
+    document.querySelectorAll(GENERAL_MODAL_SELECTOR).forEach(prepareGeneralModal);
   }
 
   function schedulePrepare() {
