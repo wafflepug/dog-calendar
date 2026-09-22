@@ -70,11 +70,11 @@ jobs:
           grep -q "WAFFLE_CARE_CANONICAL" care.js
           grep -q "v11160DesktopCareRebuildVersion" care.js
           grep -q "v11160-desktop-tabs" care.js
-          grep -q "label: 'Profile'" care.js
-          grep -q "label: 'Belongings'" care.js
-          grep -q "label: 'Media'" care.js
-          grep -q "label: 'History'" care.js
-          grep -q "label: 'Master'" care.js
+          grep -q "label: 'Overview'" care.js
+          grep -q "label: 'Items'" care.js
+          grep -q "label: 'Photos'" care.js
+          grep -q "label: 'Stay history'" care.js
+          grep -q "label: 'Dog record'" care.js
           grep -q "switchDirectoryProfileMainTab" care.js
           grep -q "v108LoadHistory" care.js
           grep -q "v110LoadMedia" care.js
