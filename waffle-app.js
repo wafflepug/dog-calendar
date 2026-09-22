@@ -4886,13 +4886,17 @@ registerWaffleServiceWorker();
                 const action = careBriefAction.dataset.careBriefAction;
 
                 if (action === 'belongings') {
-                    switchDirectoryProfileMainTab(card, 'belongings');
+                    const unifiedItemsTab = card?.querySelector('[data-v11160-tab="belongings"]');
+                    if (unifiedItemsTab) unifiedItemsTab.click();
+                    else switchDirectoryProfileMainTab(card, 'belongings');
                     card?.querySelector('[data-directory-main-panel="belongings"]')
                         ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                     return;
                 }
 
-                switchDirectoryProfileMainTab(card, 'profile');
+                const unifiedOverviewTab = card?.querySelector('[data-v11160-tab="profile"]');
+                if (unifiedOverviewTab) unifiedOverviewTab.click();
+                else switchDirectoryProfileMainTab(card, 'profile');
 
                 if (action === 'edit') {
                     setDirectoryProfileEditMode(card, true);
@@ -8340,11 +8344,29 @@ registerWaffleServiceWorker();
                 timeoutMs: 45000
             });
 
-            careRiskRecordsCache = {};
+            const nextCareRiskRecordsCache = {
+                ...directorySummaryRecordsCache
+            };
 
             (response.records || []).forEach(record => {
-                careRiskRecordsCache[record.stayKey] = record;
+                if (!record?.stayKey) return;
+
+                const previousRecord =
+                    nextCareRiskRecordsCache[record.stayKey] ||
+                    careRiskRecordsCache[record.stayKey] ||
+                    {};
+
+                nextCareRiskRecordsCache[record.stayKey] = {
+                    ...previousRecord,
+                    ...record,
+                    riskFlags: {
+                        ...(previousRecord.riskFlags || {}),
+                        ...(record.riskFlags || {})
+                    }
+                };
             });
+
+            careRiskRecordsCache = nextCareRiskRecordsCache;
 
             renderCareRiskDashboard(stays);
         } catch (error) {
@@ -8800,6 +8822,22 @@ registerWaffleServiceWorker();
                     stayKey
                 ] = record;
 
+                if (record?.riskFlags) {
+                    const previousCareRecord =
+                        careRiskRecordsCache[stayKey] ||
+                        directorySummaryRecordsCache[stayKey] ||
+                        {};
+
+                    careRiskRecordsCache[stayKey] = {
+                        ...previousCareRecord,
+                        ...record,
+                        riskFlags: {
+                            ...(previousCareRecord.riskFlags || {}),
+                            ...record.riskFlags
+                        }
+                    };
+                }
+
                 if (!profileIsCurrent()) return;
 
                 renderDirectoryIntakeAttributes(
@@ -8968,6 +9006,19 @@ registerWaffleServiceWorker();
 
         const applyRecord =
             record => {
+                const previousCareRecord =
+                    careRiskRecordsCache[stayKey] ||
+                    directorySummaryRecordsCache[stayKey] ||
+                    {};
+                const mergedCareRecord = {
+                    ...previousCareRecord,
+                    ...record,
+                    riskFlags: {
+                        ...(previousCareRecord.riskFlags || {}),
+                        ...(record?.riskFlags || {})
+                    }
+                };
+
                 directoryBelongingsDetailCache[
                     stayKey
                 ] = record;
@@ -8998,15 +9049,7 @@ registerWaffleServiceWorker();
 
                 careRiskRecordsCache[
                     stayKey
-                ] = {
-                    ...(
-                        careRiskRecordsCache[
-                            stayKey
-                        ] ||
-                        {}
-                    ),
-                    ...record
-                };
+                ] = mergedCareRecord;
 
                 setDirectoryDogPhoto(
                     stayKey,
@@ -9015,7 +9058,7 @@ registerWaffleServiceWorker();
 
                 setDirectoryCareFlags(
                     stayKey,
-                    record
+                    mergedCareRecord
                 );
 
                 renderDirectoryBelongings(
@@ -10475,8 +10518,16 @@ registerWaffleServiceWorker();
                 dogPhoto: null
             };
 
+        const stayKey = String(
+            card.dataset.stayKey ||
+            card.dataset.directoryStayKey ||
+            ''
+        );
+
         renderDirectoryCareProfile(
             card,
+            careRiskRecordsCache[stayKey] ||
+            directorySummaryRecordsCache[stayKey] ||
             record
         );
 
@@ -14208,11 +14259,11 @@ registerWaffleServiceWorker();
                                         <section
                                             class="directory-care-brief"
                                             data-directory-care-brief
-                                            aria-label="Care brief">
+                                            aria-label="Today’s care plan">
                                             <div class="directory-care-brief-heading">
                                                 <div>
-                                                    <span class="directory-profile-section-kicker">Ready at a glance</span>
-                                                    <h3>Care brief</h3>
+                                                    <span class="directory-profile-section-kicker">Ready first</span>
+                                                    <h3>Today’s care plan</h3>
                                                 </div>
                                                 <span
                                                     class="directory-care-brief-freshness"
@@ -14243,14 +14294,27 @@ registerWaffleServiceWorker();
                                                         Loading with full profile…
                                                     </p>
                                                 </section>
+                                                <section class="directory-care-brief-item">
+                                                    <h4>Owner</h4>
+                                                    <p class="directory-care-brief-value directory-care-brief-contact">
+                                                        <strong>${escapeDashboardHtml(ownerName ? ownerName.trim() : 'Not provided')}</strong>
+                                                        <span>${escapeDashboardHtml(phone ? phone.trim() : 'No contact number')}</span>
+                                                    </p>
+                                                </section>
+                                                <section class="directory-care-brief-item directory-care-brief-note">
+                                                    <h4>Handover note</h4>
+                                                    <p class="directory-care-brief-value">
+                                                        ${escapeDashboardHtml(notes ? notes.trim() : 'No handover note recorded')}
+                                                    </p>
+                                                </section>
                                             </div>
 
                                             <div class="directory-care-brief-actions" aria-label="Care profile actions">
                                                 <button type="button" class="directory-care-brief-action is-primary" data-care-brief-action="full-profile">
-                                                    Full profile
+                                                    Care details
                                                 </button>
                                                 <button type="button" class="directory-care-brief-action" data-care-brief-action="belongings">
-                                                    Belongings
+                                                    Items &amp; photos
                                                 </button>
                                                 <button type="button" class="directory-care-brief-action" data-care-brief-action="edit">
                                                     Edit care details
@@ -14287,6 +14351,15 @@ registerWaffleServiceWorker();
                                             role="tabpanel"
                                             data-directory-main-panel="profile">
 
+                                        <details class="directory-care-records-disclosure">
+                                            <summary>
+                                                <span>
+                                                    <strong>Records &amp; forms</strong>
+                                                    <small>Safety record, intake link and legacy documents</small>
+                                                </span>
+                                                <span class="directory-care-records-chevron" aria-hidden="true">⌄</span>
+                                            </summary>
+                                            <div class="directory-care-records-body">
                                         <div
                                             class="directory-care-strip"
                                             data-directory-care="${escapeDashboardHtml(directoryStayKey)}">
@@ -14323,7 +14396,13 @@ registerWaffleServiceWorker();
                                                 ＋ PDF
                                             </button>
                                         </div>
+                                            </div>
+                                        </details>
 
+                                        <div class="directory-care-section-heading">
+                                            <span class="directory-profile-section-kicker">Stay contact</span>
+                                            <h3>Owner &amp; handover</h3>
+                                        </div>
                                         <div class="directory-attributes-grid directory-core-attributes">
                                             <button
                                                 type="button"
@@ -14362,8 +14441,8 @@ registerWaffleServiceWorker();
                                             data-detail-loaded="false">
                                             <div class="directory-profile-section-heading">
                                                 <div>
-                                                    <span class="directory-profile-section-kicker">Guest profile</span>
-                                                    <h4>📋 Profile &amp; Care</h4>
+                                                    <span class="directory-profile-section-kicker">Detailed care</span>
+                                                    <h4>Routine, behaviour &amp; health</h4>
                                                 </div>
                                                 <div class="directory-profile-section-tools">
                                                     <span

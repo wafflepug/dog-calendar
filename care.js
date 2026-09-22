@@ -20,25 +20,24 @@
    Preserved from the proven historical implementation.
    ============================================================ */
 /* ============================================================
-   WAFFLE HOUSE V11.1.60 — DESKTOP CARE TABS REBUILT FROM SCRATCH
+   WAFFLE HOUSE V11.1.60 — CARE SECTION NAVIGATION
    ============================================================
-   Desktop only. Mobile keeps the existing working Care navigation.
+   One Care section navigator for mobile and desktop.
 
    This layer does NOT reuse the historical desktop tab buttons or their click
    delegates. It creates a new five-tab navigation component and directly owns
-   panel selection/loading for Profile, Belongings, Media, History and Master.
+   panel selection/loading for Overview, Items, Photos, Stay history and Dog record.
    ============================================================ */
 (function () {
   'use strict';
 
   const VERSION = '11.1.60';
-  const DESKTOP_QUERY = '(min-width: 769px)';
   const TABS = [
-    { key: 'profile', icon: '🐶', label: 'Profile' },
-    { key: 'belongings', icon: '🧳', label: 'Belongings' },
-    { key: 'media', icon: '📸', label: 'Media' },
-    { key: 'history', icon: '🕘', label: 'History' },
-    { key: 'master', icon: '⭐', label: 'Master' }
+    { key: 'profile', icon: '🐶', label: 'Overview' },
+    { key: 'belongings', icon: '🧳', label: 'Items' },
+    { key: 'media', icon: '📸', label: 'Photos' },
+    { key: 'history', icon: '🕘', label: 'Stay history' },
+    { key: 'master', icon: '⭐', label: 'Dog record' }
   ];
   const TAB_KEYS = new Set(TABS.map(item => item.key));
   const wrapped = new Set();
@@ -49,7 +48,7 @@
   }
 
   function isDesktopCare() {
-    return pageName() === 'directory' && !!window.matchMedia && window.matchMedia(DESKTOP_QUERY).matches;
+    return pageName() === 'directory';
   }
 
   function activeCards() {
@@ -409,11 +408,6 @@
   function prepare() {
     if (pageName() !== 'directory') return;
 
-    if (!isDesktopCare()) {
-      document.querySelectorAll('.directory-card.v11160-desktop-profile').forEach(teardownCard);
-      return;
-    }
-
     activeCards().forEach(prepareCard);
   }
 
@@ -447,76 +441,101 @@
     const style = document.createElement('style');
     style.id = 'v11160DesktopCareStyle';
     style.textContent = `
-      @media (min-width:769px) {
-        body[data-waffle-page="directory"] .directory-card.v11160-desktop-profile .v11160-legacy-tabs {
-          display:none!important;
-          pointer-events:none!important;
-        }
+      body[data-waffle-page="directory"] .directory-card.v11160-desktop-profile .v11160-legacy-tabs {
+        display:none!important;
+        pointer-events:none!important;
+      }
+      body[data-waffle-page="directory"] .v11160-desktop-tabs {
+        display:grid;
+        grid-template-columns:repeat(5,minmax(0,1fr));
+        gap:6px;
+        padding:5px;
+        margin:0 0 10px;
+        border:1px solid var(--wh-border,#d9e2ec);
+        border-radius:14px;
+        background:var(--wh-surface,#fff);
+        position:sticky;
+        top:0;
+        z-index:12;
+        min-width:0;
+      }
+      body[data-waffle-page="directory"] .v11160-desktop-tab {
+        min-width:0;
+        min-height:44px;
+        border:0;
+        border-radius:10px;
+        background:transparent;
+        color:var(--wh-text-muted,#64748b);
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        gap:8px;
+        padding:8px 6px;
+        font:inherit;
+        font-size:clamp(9px,1vw,12px);
+        font-weight:800;
+        line-height:1.15;
+        cursor:pointer;
+        transition:background .15s ease,color .15s ease,box-shadow .15s ease;
+      }
+      body[data-waffle-page="directory"] .v11160-desktop-tab > span:last-child {
+        min-width:0;
+        overflow-wrap:anywhere;
+      }
+      body[data-waffle-page="directory"] .v11160-desktop-tab:hover {
+        background:var(--wh-surface-soft,#eef3f8);
+        color:var(--wh-text,#111827);
+      }
+      body[data-waffle-page="directory"] .v11160-desktop-tab.is-active {
+        background:var(--wh-accent,#0f6292);
+        color:var(--wh-accent-contrast,#fff);
+        box-shadow:0 1px 2px rgba(15,23,42,.14);
+      }
+      body[data-waffle-page="directory"] .v11160-desktop-tab:focus-visible {
+        outline:2px solid var(--wh-accent,#0f6292);
+        outline-offset:2px;
+      }
+      @media (max-width:768px) {
         body[data-waffle-page="directory"] .v11160-desktop-tabs {
-          display:grid;
-          grid-template-columns:repeat(5,minmax(0,1fr));
-          gap:6px;
-          padding:5px;
-          margin:0 0 10px;
-          border:1px solid var(--wh-border,#d9e2ec);
-          border-radius:14px;
-          background:var(--wh-surface,#fff);
-          position:relative;
-          z-index:12;
+          display:flex;
+          gap:4px;
+          overflow-x:auto;
+          overscroll-behavior-x:contain;
+          scrollbar-width:thin;
+          -webkit-overflow-scrolling:touch;
+          scroll-snap-type:x proximity;
+          padding:4px;
         }
         body[data-waffle-page="directory"] .v11160-desktop-tab {
-          min-width:0;
-          min-height:44px;
-          border:0;
-          border-radius:10px;
-          background:transparent;
-          color:var(--wh-text-muted,#64748b);
-          display:flex;
-          align-items:center;
-          justify-content:center;
-          gap:8px;
-          padding:8px 10px;
-          font:inherit;
-          font-size:11px;
-          font-weight:800;
-          cursor:pointer;
-          transition:background .15s ease,color .15s ease,box-shadow .15s ease;
+          flex:0 0 auto;
+          min-width:68px;
+          max-width:130px;
+          scroll-snap-align:start;
+          padding:7px 8px;
         }
-        body[data-waffle-page="directory"] .v11160-desktop-tab:hover {
-          background:var(--wh-surface-soft,#eef3f8);
-          color:var(--wh-text,#111827);
-        }
-        body[data-waffle-page="directory"] .v11160-desktop-tab.is-active {
-          background:#243958;
-          color:#fff;
-          box-shadow:0 1px 2px rgba(15,23,42,.14);
-        }
-        body[data-waffle-page="directory"] .v11160-desktop-tab:focus-visible {
-          outline:2px solid var(--wh-accent,#0f6292);
-          outline-offset:2px;
-        }
-        body[data-waffle-page="directory"] .directory-card.v11160-desktop-profile [data-v11160-managed-panel="true"] {
-          display:none!important;
-        }
-        body[data-waffle-page="directory"] .directory-card.v11160-desktop-profile [data-v11160-managed-panel="true"].is-v11160-active:not([hidden]) {
-          display:block!important;
-        }
-        body.dark-theme[data-waffle-page="directory"] .v11160-desktop-tabs {
-          background:#17243a;
-          border-color:#334155;
-        }
-        body.dark-theme[data-waffle-page="directory"] .v11160-desktop-tab {
-          color:#aebbd0;
-        }
-        body.dark-theme[data-waffle-page="directory"] .v11160-desktop-tab:hover {
-          background:#22304a;
-          color:#fff;
-        }
-        body.dark-theme[data-waffle-page="directory"] .v11160-desktop-tab.is-active {
-          background:#243958;
-          color:#fff;
-        }
-        .v11160-loading,.v11160-error,.v11160-empty {
+      }
+      body[data-waffle-page="directory"] .directory-card.v11160-desktop-profile [data-v11160-managed-panel="true"] {
+        display:none!important;
+      }
+      body[data-waffle-page="directory"] .directory-card.v11160-desktop-profile [data-v11160-managed-panel="true"].is-v11160-active:not([hidden]) {
+        display:block!important;
+      }
+      body.dark-theme[data-waffle-page="directory"] .v11160-desktop-tabs {
+        background:var(--wh-surface,#17243a);
+        border-color:var(--wh-border,#334155);
+      }
+      body.dark-theme[data-waffle-page="directory"] .v11160-desktop-tab {
+        color:var(--wh-text-muted,#aebbd0);
+      }
+      body.dark-theme[data-waffle-page="directory"] .v11160-desktop-tab:hover {
+        background:var(--wh-surface-soft,#22304a);
+        color:var(--wh-text,#fff);
+      }
+      body.dark-theme[data-waffle-page="directory"] .v11160-desktop-tab.is-active {
+        background:var(--wh-accent,#0f6292);
+        color:var(--wh-accent-contrast,#fff);
+      }
+      .v11160-loading,.v11160-error,.v11160-empty {
           padding:18px;
           border:1px dashed var(--wh-border,#d9e2ec);
           border-radius:12px;
@@ -539,7 +558,6 @@
         .v11160-master-grid>div,.v11160-note { padding:11px 13px;border:1px solid var(--wh-border,#d9e2ec);border-radius:12px;background:var(--wh-surface-soft,#f8fafc); }
         .v11160-master-grid small,.v11160-note small { display:block;font-size:8px;font-weight:900;letter-spacing:.06em;color:var(--wh-text-muted,#64748b); }
         .v11160-note p { margin:5px 0 0; }
-      }
     `;
     document.head.appendChild(style);
   }
