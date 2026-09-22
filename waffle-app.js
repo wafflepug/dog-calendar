@@ -10391,7 +10391,9 @@ registerWaffleServiceWorker();
             }
         );
 
-        renderDirectoryCareBrief(card);
+        if (typeof renderDirectoryCareBrief === 'function') {
+            renderDirectoryCareBrief(card);
+        }
 
         applyDirectoryProfileEditMode(card);
     }
