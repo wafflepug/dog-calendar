@@ -1,0 +1,5 @@
+# Next Care intake draft prompt
+
+Work in a fresh isolated branch from the reviewed Care candidate. Take one bounded dirty-intake and safety-first slice using the actual production intake flow and browser tests. Preserve the read-only policy for all unrelated requests, block mutations unless the slice explicitly exercises a reviewed write, and never log names, contacts, notes, keys, URLs, or raw payloads. Use real runtime fixtures and report unsupported metrics as unavailable.
+
+Inspect the intake entry point, draft persistence hooks, validation state, and safety confirmation path before editing. Measure only the user-visible phases needed to decide whether draft recovery or safety validation is the next improvement. Add focused browser assertions for incomplete, recoverable, and safety-blocked states. Do not broaden into a full intake matrix or change backend behavior. Deliver the test, fixture, JSON evidence, limitations, and a clear decision gate for the next slice. Do not push until review.
