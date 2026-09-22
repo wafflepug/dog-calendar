@@ -45,7 +45,14 @@ function installReadOnlyRuntimeFixture(page, options = {}) {
       if (!resolved.policy.allowed) return route.fulfill({ status: 403, body: `Unapproved backend action blocked: ${resolved.policy.reason}` });
       let response;
       if (action === 'get_guest_directory') {
-        response = { result: 'success', bookings, summaries: bookings.map(b => ({ stayKey: stayKey(b), riskFlags: {} })) };
+        response = {
+          result: 'success',
+          bookings,
+          summaries: options.summaryRecords || bookings.map(b => ({
+            stayKey: stayKey(b),
+            riskFlags: options.summaryRiskFlags?.(b) || {}
+          }))
+        };
       } else if (action === 'get_guest_profile') {
         const key = String(payload.stayKey || '');
         const call = (profileCalls.get(key) || 0) + 1;
@@ -56,11 +63,21 @@ function installReadOnlyRuntimeFixture(page, options = {}) {
           if (behavior.delay) await new Promise(resolve => setTimeout(resolve, behavior.delay));
           return route.fulfill({ status: 200, contentType: 'application/javascript', body: `${callback}(${JSON.stringify(errorResponse)});` });
         }
-        response = { result: 'success', record: profileRecord(key, behavior.label || 'Fresh') };
+        response = {
+          result: 'success',
+          record: behavior.record || profileRecord(key, behavior.label || 'Fresh')
+        };
         if ((options.holdProfile || behavior.hold) && behavior.kind === 'success' && !released.has(`${key}:${call}`)) {
           await new Promise(resolve => gates.set(`${key}:${call}`, resolve));
         }
         if (behavior.delay) await new Promise(resolve => setTimeout(resolve, behavior.delay));
+      } else if (action === 'get_belongings') {
+        response = {
+          result: 'success',
+          records: typeof options.belongingsRecords === 'function'
+            ? options.belongingsRecords(payload)
+            : (options.belongingsRecords || [])
+        };
       }
       if (!response) response = { result: 'success', records: [], enabled: false };
       return route.fulfill({ status: 200, contentType: 'application/javascript', body: `${callback}(${JSON.stringify(response)});` });
@@ -222,4 +239,39 @@ test('status remains visible across care subtabs, Back stays usable, and late re
   await expect(page.locator('#directoryBackToGuestsBtn')).toBeFocused();
   await page.locator('#directoryBackToGuestsBtn').click();
   await expect(page.locator('.directory-dashboard-fused')).not.toHaveClass(/is-profile-mode/);
+});
+
+test('Care Brief shows cached safety before the profile read and refreshes feeding and medication', async ({ page, baseURL }) => {
+  const key = stayKey(bookings[0]);
+  const fixture = installReadOnlyRuntimeFixture(page, {
+    summaryRiskFlags: booking => booking.dogName === 'Milo' ? { foodAllergy: true } : {},
+    profileBehavior: () => ({
+      kind: 'success',
+      record: {
+        stayKey: key,
+        intakeAttributes: {
+          feedingTimes: '07:00 and 17:00',
+          foodAmount: '1 cup',
+          foodBrandType: 'Sensitive formula',
+          medicationInstructions: 'Give after dinner'
+        },
+        intakeAttributesSource: 'Saved profile',
+        riskFlags: { foodAllergy: true }
+      }
+    })
+  });
+  await openDirectory(page, baseURL, fixture, 'dark');
+  const card = page.locator('.directory-card[data-directory-dog-name="Milo"]');
+  const brief = card.locator('[data-directory-care-brief]');
+
+  await expect(brief.locator('[data-care-brief-safety]')).toContainText('Food Allergy');
+  await expect(brief.locator('[data-care-brief-feeding]')).toContainText('Loading with full profile');
+  await expect(brief.locator('[data-care-brief-medication]')).toContainText('Loading with full profile');
+  expect(fixture.profileCalls.get(key)).toBeUndefined();
+
+  await openProfile(page);
+  await expect(brief.locator('[data-care-brief-feeding]')).toHaveText('07:00 and 17:00 · 1 cup · Sensitive formula');
+  await expect(brief.locator('[data-care-brief-medication]')).toHaveText('Give after dinner');
+  await expect(brief.locator('[data-care-brief-freshness]')).toHaveAttribute('data-state', 'available');
+  expect(fixture.profileCalls.get(key)).toBe(1);
 });

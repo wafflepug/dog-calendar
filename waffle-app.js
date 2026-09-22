@@ -4875,6 +4875,42 @@ registerWaffleServiceWorker();
             );
 
         directoryGrid.addEventListener('click', async function(event) {
+            const careBriefAction =
+                event.target.closest('[data-care-brief-action]');
+
+            if (careBriefAction) {
+                event.preventDefault();
+                event.stopPropagation();
+
+                const card = careBriefAction.closest('.directory-card');
+                const action = careBriefAction.dataset.careBriefAction;
+
+                if (action === 'belongings') {
+                    switchDirectoryProfileMainTab(card, 'belongings');
+                    card?.querySelector('[data-directory-main-panel="belongings"]')
+                        ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    return;
+                }
+
+                switchDirectoryProfileMainTab(card, 'profile');
+
+                if (action === 'edit') {
+                    setDirectoryProfileEditMode(card, true);
+                }
+
+                const profileSection = card?.querySelector('[data-directory-detail="profile"]');
+                profileSection?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                const focusTarget = action === 'edit'
+                    ? profileSection?.querySelector('[data-intake-attribute], [data-care-risk-flag]')
+                    : profileSection?.querySelector('.directory-profile-section-heading h4');
+                if (focusTarget) {
+                    if (focusTarget.matches('h4')) focusTarget.tabIndex = -1;
+                    try { focusTarget.focus({ preventScroll: true }); }
+                    catch (_) { focusTarget.focus(); }
+                }
+                return;
+            }
+
             const editProfileButton =
                 event.target.closest('[data-toggle-profile-edit]');
 
@@ -8098,6 +8134,87 @@ registerWaffleServiceWorker();
         return CARE_SAFETY_FLAGS.filter(flag => riskFlags[flag.key] === true);
     }
 
+    function getDirectoryCareBriefRecord(stayKey) {
+        return (
+            directoryProfileDetailCache[stayKey] ||
+            belongingsRecordsCache[stayKey] ||
+            directorySummaryRecordsCache[stayKey] ||
+            null
+        );
+    }
+
+    function renderDirectoryCareBrief(card) {
+        if (!card) return;
+
+        const brief = card.querySelector('[data-directory-care-brief]');
+        if (!brief) return;
+
+        const stayKey = String(card.dataset.stayKey || card.dataset.directoryStayKey || '').trim();
+        const profileRecord = getDirectoryCareBriefRecord(stayKey);
+        const safetyRecord =
+            careRiskRecordsCache[stayKey] ||
+            belongingsRecordsCache[stayKey] ||
+            directorySummaryRecordsCache[stayKey] ||
+            null;
+        const attributes =
+            profileRecord?.intakeAttributes && typeof profileRecord.intakeAttributes === 'object'
+                ? profileRecord.intakeAttributes
+                : null;
+        const activeFlags = safetyRecord ? getActiveCareFlags(safetyRecord) : [];
+
+        const safetyHost = brief.querySelector('[data-care-brief-safety]');
+        const feedingHost = brief.querySelector('[data-care-brief-feeding]');
+        const medicationHost = brief.querySelector('[data-care-brief-medication]');
+        const freshnessHost = brief.querySelector('[data-care-brief-freshness]');
+
+        if (safetyHost) {
+            if (!safetyRecord) {
+                safetyHost.innerHTML = '<span class="care-brief-state is-pending">Safety profile not yet available</span>';
+            } else if (!activeFlags.length) {
+                safetyHost.innerHTML = '<span class="care-brief-state is-clear">✓ No active safety flags recorded</span>';
+            } else {
+                safetyHost.innerHTML = activeFlags.map(flag => `
+                    <span class="care-brief-alert ${escapeDashboardHtml(flag.className)}">
+                        <span aria-hidden="true">${escapeDashboardHtml(flag.icon)}</span>
+                        <span>${escapeDashboardHtml(flag.label)}</span>
+                    </span>
+                `).join('');
+            }
+        }
+
+        const feedingParts = attributes
+            ? [attributes.feedingTimes, attributes.foodAmount, attributes.foodBrandType]
+                .map(value => String(value || '').trim())
+                .filter(Boolean)
+            : [];
+        if (feedingHost) {
+            feedingHost.textContent = attributes
+                ? (feedingParts.length ? feedingParts.join(' · ') : 'Not provided')
+                : 'Loading with full profile…';
+            feedingHost.classList.toggle('is-pending', !attributes);
+        }
+
+        const medicationText = String(
+            attributes?.medicationInstructions ||
+            belongingsRecordsCache[stayKey]?.items?.medication ||
+            ''
+        ).trim();
+        if (medicationHost) {
+            medicationHost.textContent = attributes
+                ? (medicationText || 'Not provided')
+                : (medicationText || 'Loading with full profile…');
+            medicationHost.classList.toggle('is-pending', !attributes && !medicationText);
+        }
+
+        if (freshnessHost) {
+            const source = String(profileRecord?.intakeAttributesSource || '').trim();
+            freshnessHost.textContent = attributes
+                ? (source ? `Care details available · ${source}` : 'Care details available')
+                : 'Stay details ready · care details loading';
+            freshnessHost.dataset.state = attributes ? 'available' : 'loading';
+        }
+    }
+
     function findDirectoryCareElement(stayKey) {
         return Array.from(
             document.querySelectorAll('[data-directory-care]')
@@ -8119,6 +8236,7 @@ registerWaffleServiceWorker();
                     riskFlags: {}
                 }
             );
+            renderDirectoryCareBrief(profileCard);
         }
 
         const container = findDirectoryCareElement(stayKey);
@@ -9813,6 +9931,10 @@ registerWaffleServiceWorker();
             preserved?.secondaryTab || card.dataset.profileSubTab || 'overview'
         );
 
+        if (typeof renderDirectoryCareBrief === 'function') {
+            renderDirectoryCareBrief(card);
+        }
+
         if (preserved?.desktopTab) {
             card.dataset.v11160ActiveTab = preserved.desktopTab;
             if (preserved.rebuiltCards) card.dataset.v11160RestoreLoad = 'true';
@@ -10268,6 +10390,10 @@ registerWaffleServiceWorker();
                 riskFlags: {}
             }
         );
+
+        if (typeof renderDirectoryCareBrief === 'function') {
+            renderDirectoryCareBrief(card);
+        }
 
         applyDirectoryProfileEditMode(card);
     }
@@ -10830,6 +10956,8 @@ registerWaffleServiceWorker();
                         'Web App'
                 };
             }
+
+            renderDirectoryCareBrief(card);
 
             renderCareRiskDashboard(
                 getCurrentBoardingStays(
@@ -14077,6 +14205,59 @@ registerWaffleServiceWorker();
                                             </div>
                                         </div>
 
+                                        <section
+                                            class="directory-care-brief"
+                                            data-directory-care-brief
+                                            aria-label="Care brief">
+                                            <div class="directory-care-brief-heading">
+                                                <div>
+                                                    <span class="directory-profile-section-kicker">Ready at a glance</span>
+                                                    <h3>Care brief</h3>
+                                                </div>
+                                                <span
+                                                    class="directory-care-brief-freshness"
+                                                    data-care-brief-freshness
+                                                    role="status"
+                                                    aria-live="polite"
+                                                    data-state="loading">
+                                                    Stay details ready · care details loading
+                                                </span>
+                                            </div>
+
+                                            <div class="directory-care-brief-grid">
+                                                <section class="directory-care-brief-item directory-care-brief-safety">
+                                                    <h4>Safety</h4>
+                                                    <div class="directory-care-brief-value" data-care-brief-safety aria-live="polite">
+                                                        <span class="care-brief-state is-pending">Safety profile not yet available</span>
+                                                    </div>
+                                                </section>
+                                                <section class="directory-care-brief-item">
+                                                    <h4>Feeding</h4>
+                                                    <p class="directory-care-brief-value is-pending" data-care-brief-feeding>
+                                                        Loading with full profile…
+                                                    </p>
+                                                </section>
+                                                <section class="directory-care-brief-item">
+                                                    <h4>Medication</h4>
+                                                    <p class="directory-care-brief-value is-pending" data-care-brief-medication>
+                                                        Loading with full profile…
+                                                    </p>
+                                                </section>
+                                            </div>
+
+                                            <div class="directory-care-brief-actions" aria-label="Care profile actions">
+                                                <button type="button" class="directory-care-brief-action is-primary" data-care-brief-action="full-profile">
+                                                    Full profile
+                                                </button>
+                                                <button type="button" class="directory-care-brief-action" data-care-brief-action="belongings">
+                                                    Belongings
+                                                </button>
+                                                <button type="button" class="directory-care-brief-action" data-care-brief-action="edit">
+                                                    Edit care details
+                                                </button>
+                                            </div>
+                                        </section>
+
                                         <nav
                                             class="directory-main-profile-tabs"
                                             role="tablist"
@@ -14279,6 +14460,10 @@ registerWaffleServiceWorker();
         document.getElementById('leaving-list').innerHTML = leavingDogs.length > 0 ? leavingDogs.join('') : '<li class="no-dogs">No checkouts scheduled this week</li>';
         document.getElementById('upcoming-list').innerHTML = upcomingDogs.length > 0 ? upcomingDogs.join('') : '<li class="no-dogs">No new arrivals scheduled this week</li>';
         document.getElementById('directory-grid').innerHTML = directoryCardsHTML.length > 0 ? directoryCardsHTML.join('') : '<div class="no-dogs" style="grid-column: 1/-1; text-align: center; padding: 20px;">No active guests to display.</div>';
+
+        document
+            .querySelectorAll('.directory-card[data-directory-stay-key]')
+            .forEach(card => renderDirectoryCareBrief(card));
 
         if (
             WAFFLE_PAGE === 'directory' &&

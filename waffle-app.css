@@ -5204,6 +5204,161 @@ body.dark-theme .directory-lazy-placeholder.is-error {
     padding: 18px;
 }
 
+.directory-care-brief {
+    margin-top: 16px;
+    padding: 16px;
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--wh-accent, #2563eb) 38%, var(--wh-border, #dbe3ea));
+    border-radius: 14px;
+    background: color-mix(in srgb, var(--wh-accent, #2563eb) 5%, var(--wh-surface, #ffffff));
+}
+
+.directory-care-brief-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+}
+
+.directory-care-brief-heading h3 {
+    margin: 3px 0 0;
+    color: var(--wh-text, #172033);
+    font-size: 20px;
+    font-weight: 900;
+    line-height: 1.2;
+}
+
+.directory-care-brief-freshness {
+    max-width: 260px;
+    padding: 6px 9px;
+    border: 1px solid var(--wh-border, #cbd5e1);
+    border-radius: 999px;
+    background: var(--wh-surface, #ffffff);
+    color: var(--wh-text-muted, #475569);
+    font-size: 12px;
+    font-weight: 750;
+    line-height: 1.3;
+    text-align: right;
+}
+
+.directory-care-brief-freshness[data-state="available"] {
+    border-color: var(--wh-success, #166534);
+    color: var(--wh-success, #166534);
+}
+
+.directory-care-brief-grid {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr 1fr;
+    gap: 10px;
+    margin-top: 14px;
+}
+
+.directory-care-brief-item {
+    min-width: 0;
+    min-height: 112px;
+    padding: 12px;
+    border: 1px solid var(--wh-border, #dbe3ea);
+    border-radius: 10px;
+    background: var(--wh-surface, #ffffff);
+}
+
+.directory-care-brief-item h4 {
+    margin: 0 0 8px;
+    color: var(--wh-text, #172033);
+    font-size: 13px;
+    font-weight: 900;
+    letter-spacing: .015em;
+}
+
+.directory-care-brief-value {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 0;
+    color: var(--wh-text, #172033);
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+}
+
+.directory-care-brief-value.is-pending,
+.care-brief-state.is-pending {
+    color: var(--wh-text-muted, #475569);
+    font-weight: 650;
+}
+
+.care-brief-state.is-clear {
+    color: var(--wh-success, #166534);
+}
+
+.care-brief-alert {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 32px;
+    padding: 6px 9px;
+    border: 1px solid var(--wh-danger, #b42318);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--wh-danger, #b42318) 9%, var(--wh-surface, #ffffff));
+    color: var(--wh-danger, #8f1d17);
+    font-size: 12px;
+    font-weight: 850;
+    line-height: 1.25;
+}
+
+.directory-care-brief-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.directory-care-brief-action {
+    min-height: 44px;
+    padding: 10px 14px;
+    border: 1px solid var(--wh-accent, #2563eb);
+    border-radius: 9px;
+    background: var(--wh-surface, #ffffff);
+    color: var(--wh-accent-contrast, var(--wh-primary, #0f3550));
+    font: inherit;
+    font-size: 13px;
+    font-weight: 850;
+    cursor: pointer;
+}
+
+.directory-care-brief-action.is-primary {
+    background: var(--wh-accent, #2563eb);
+    color: #ffffff;
+}
+
+.directory-care-brief-action:hover {
+    filter: brightness(.96);
+}
+
+body.dark-theme .directory-care-brief {
+    background: color-mix(in srgb, var(--wh-accent, #60a5fa) 9%, #182235);
+}
+
+body.dark-theme .directory-care-brief-freshness,
+body.dark-theme .directory-care-brief-item,
+body.dark-theme .directory-care-brief-action:not(.is-primary) {
+    background: #182235;
+    border-color: #40516a;
+}
+
+body.dark-theme .directory-care-brief-freshness[data-state="available"],
+body.dark-theme .care-brief-state.is-clear {
+    color: #86efac;
+    border-color: #4ade80;
+}
+
+body.dark-theme .care-brief-alert {
+    color: #fecaca;
+    border-color: #f87171;
+    background: rgba(127, 29, 29, .32);
+}
+
 .directory-profile-back-bar {
     display: flex;
     align-items: center;
@@ -5360,6 +5515,39 @@ body.dark-theme
     .directory-card.is-profile-active
     .directory-profile-content {
         padding: 12px;
+    }
+
+    .directory-care-brief {
+        margin-top: 12px;
+        padding: 13px;
+    }
+
+    .directory-care-brief-heading {
+        display: block;
+    }
+
+    .directory-care-brief-freshness {
+        display: inline-flex;
+        max-width: 100%;
+        margin-top: 9px;
+        text-align: left;
+    }
+
+    .directory-care-brief-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .directory-care-brief-item {
+        min-height: 0;
+    }
+
+    .directory-care-brief-actions {
+        display: grid;
+        grid-template-columns: 1fr;
+    }
+
+    .directory-care-brief-action {
+        width: 100%;
     }
 
     .directory-dashboard-fused.is-profile-mode
