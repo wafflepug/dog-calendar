@@ -2,7 +2,7 @@
    Build: 2026.08.27.04
    Historical base styles remain compatibility sources during Phase 3A, but pages no longer
    reference them individually. Preserve this import order until modules are folded in. */
-@import url("waffle-app.css?build=2026.08.27.04&rev=2026.09.23.09");
+@import url("waffle-app.css?build=2026.08.27.04&rev=2026.09.23.10");
 @import url("waffle-v10.8.css?build=2026.08.27.04");
 @import url("waffle-v10.8.2.css?build=2026.08.27.04");
 @import url("waffle-v10.8.3.css?build=2026.08.27.04");
@@ -310,9 +310,12 @@ body[data-waffle-page="directory"] .directory-dashboard-fused {
   box-shadow: none !important;
 }
 body[data-waffle-page="directory"] .directory-roster-heading {
-  align-items: flex-end;
+  display: block;
   margin: 0;
   padding: 3px 2px;
+}
+body[data-waffle-page="directory"] .directory-roster-heading > div:first-child {
+  display: none !important;
 }
 body[data-waffle-page="directory"] .directory-roster-heading > div:first-child::before {
   display: block;
@@ -345,6 +348,10 @@ body[data-waffle-page="directory"] .directory-roster-heading .guest-directory-se
   color: var(--v10-text, var(--wh75-text, #172033));
   box-shadow: 0 2px 8px rgb(15 23 42 / 3.5%);
 }
+body[data-waffle-page="directory"] .directory-roster-heading .guest-directory-toolbar {
+  width: 100% !important;
+  max-width: none;
+}
 body[data-waffle-page="directory"] .directory-roster-filters {
   display: grid !important;
   grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
@@ -374,6 +381,48 @@ body[data-waffle-page="directory"] .directory-roster-filters .v1086-stay-tab-ico
 }
 body[data-waffle-page="directory"] .directory-roster-filters .v1086-stay-tab-copy {
   text-align: center;
+}
+body[data-waffle-page="directory"] .directory-roster-filters .v1082-stay-tab {
+  border: 1px solid color-mix(in srgb, var(--wh75-accent, #7562db) 38%, var(--v10-border, #dce3eb)) !important;
+  background: color-mix(in srgb, var(--wh75-accent, #7562db) 10%, var(--v10-card, #fff)) !important;
+  color: var(--v10-text, #172033) !important;
+}
+body[data-waffle-page="directory"] .directory-roster-filters .v1082-stay-tab:hover {
+  background: color-mix(in srgb, var(--wh75-accent, #7562db) 16%, var(--v10-card, #fff)) !important;
+}
+body[data-waffle-page="directory"] .directory-roster-filters .v1082-stay-tab.is-active {
+  border: 2px solid var(--wh75-accent, #7562db) !important;
+  background: color-mix(in srgb, var(--wh75-accent, #7562db) 23%, var(--v10-card, #fff)) !important;
+  color: var(--v10-text, #172033) !important;
+  box-shadow: 0 3px 10px color-mix(in srgb, var(--wh75-accent, #7562db) 20%, transparent) !important;
+}
+body[data-waffle-page="directory"] .directory-roster-filters .v1082-stay-tab.is-active::after {
+  height: 4px;
+  background: var(--wh75-accent, #7562db) !important;
+}
+body[data-waffle-page="directory"] .directory-roster-filters .v1086-stay-tab-copy strong,
+body[data-waffle-page="directory"] .directory-roster-filters .v1082-stay-tab > span:first-child {
+  color: inherit !important;
+  font-size: 14px !important;
+  line-height: 1.2;
+  font-weight: 900 !important;
+}
+body[data-waffle-page="directory"] .directory-roster-filters .v1086-stay-tab-count,
+body[data-waffle-page="directory"] .directory-roster-filters .v1082-stay-tab > strong {
+  min-width: 30px !important;
+  min-height: 30px !important;
+  padding: 4px 8px !important;
+  border: 1px solid var(--wh75-accent, #7562db) !important;
+  background: var(--v10-card, #fff) !important;
+  color: var(--wh75-accent-ink, #4338ca) !important;
+  font-size: 14px !important;
+  line-height: 1 !important;
+  font-weight: 900 !important;
+}
+body[data-waffle-page="directory"] .directory-roster-filters .v1082-stay-tab.is-active .v1086-stay-tab-count,
+body[data-waffle-page="directory"] .directory-roster-filters .v1082-stay-tab.is-active > strong {
+  background: var(--wh75-accent-ink, #4338ca) !important;
+  color: var(--wh75-shell, #fff) !important;
 }
 body[data-waffle-page="directory"] .v1082-stay-panels {
   min-width: 0;
@@ -408,7 +457,7 @@ body.dark-theme[data-waffle-page="directory"] .directory-roster-heading p {
   .wh-home-shortcuts > span { max-width: 58%; font-size: 12px; }
 
   body[data-waffle-page="directory"] .directory-dashboard-fused { gap: 12px; margin-bottom: 14px; }
-  body[data-waffle-page="directory"] .directory-roster-heading { gap: 12px; padding: 0 2px; }
+  body[data-waffle-page="directory"] .directory-roster-heading { padding: 0 2px; }
   body[data-waffle-page="directory"] .directory-roster-heading .guest-directory-toolbar { width: 100%; }
   body[data-waffle-page="directory"] .directory-roster-filters {
     gap: 5px !important;

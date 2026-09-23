@@ -11,8 +11,128 @@ const V1086_PAST_CACHE_KEY =
 const v1086BaseApplyGuestDirectoryResponse =
     applyGuestDirectoryResponse;
 
+const v1086BaseApplyPastResponse =
+    v1082ApplyPastResponse;
+
 let v1086BackgroundPastRequested =
     false;
+
+
+function v1086PastOperationForBooking(
+    booking,
+    response
+) {
+    const stayKey =
+        String(
+            booking?.stayKey ||
+            (
+                typeof v110MakeStayKey ===
+                    'function'
+                    ? v110MakeStayKey(
+                        booking?.dogName,
+                        booking?.startDate,
+                        booking?.endDate
+                      )
+                    : ''
+            )
+        );
+
+    const responseOperation =
+        (Array.isArray(response?.operations)
+            ? response.operations
+            : []
+        ).find(
+            operation =>
+                String(
+                    operation?.stayKey ||
+                    ''
+                ) === stayKey
+        );
+
+    if (responseOperation) {
+        return responseOperation;
+    }
+
+    if (
+        stayKey &&
+        typeof v110OperationForStay ===
+            'function'
+    ) {
+        return v110OperationForStay(
+            stayKey
+        );
+    }
+
+    return (
+        stayKey &&
+        typeof v110OperationsMap ===
+            'object'
+            ? v110OperationsMap[stayKey]
+            : null
+    );
+}
+
+
+function v1086ExcludeCheckedOutPast(
+    response
+) {
+    const source =
+        response &&
+        typeof response ===
+            'object'
+            ? response
+            : {};
+
+    const bookings =
+        (Array.isArray(source.bookings)
+            ? source.bookings
+            : []
+        ).filter(
+            booking =>
+                String(
+                    v1086PastOperationForBooking(
+                        booking,
+                        source
+                    )?.status ||
+                    ''
+                )
+                    .trim()
+                    .toLowerCase() !==
+                'checked_out'
+        );
+
+    return {
+        ...source,
+        bookings,
+        totalPastStays:
+            bookings.length,
+        returned:
+            bookings.length
+    };
+}
+
+
+v1082ApplyPastResponse =
+    function(
+        response
+    ) {
+        const filtered =
+            v1086ExcludeCheckedOutPast(
+                response
+            );
+
+        if (
+            response ===
+            v1082PastResponse
+        ) {
+            v1082PastResponse =
+                filtered;
+        }
+
+        return v1086BaseApplyPastResponse(
+            filtered
+        );
+    };
 
 
 function v1086IsoDate(
@@ -183,6 +303,47 @@ function v1086PastBookingsFromCsv(
             continue;
         }
 
+        const stayKey =
+            (
+                typeof v110MakeStayKey ===
+                    'function'
+                    ? v110MakeStayKey(
+                        dogName,
+                        startDate,
+                        endDate
+                      )
+                    : [
+                        String(
+                            dogName ||
+                            ''
+                        )
+                            .trim()
+                            .toLowerCase(),
+                        startDate,
+                        endDate
+                      ].join('|')
+            );
+
+        if (
+            String(
+                v1086PastOperationForBooking(
+                    {
+                        stayKey,
+                        dogName,
+                        startDate,
+                        endDate
+                    },
+                    null
+                )?.status ||
+                ''
+            )
+                .trim()
+                .toLowerCase() ===
+            'checked_out'
+        ) {
+            continue;
+        }
+
         bookings.push({
             row:
                 index + 1,
@@ -191,26 +352,7 @@ function v1086PastBookingsFromCsv(
                     columns[0] ||
                     ''
                 ),
-            stayKey:
-                (
-                    typeof v110MakeStayKey ===
-                        'function'
-                        ? v110MakeStayKey(
-                            dogName,
-                            startDate,
-                            endDate
-                          )
-                        : [
-                            String(
-                                dogName ||
-                                ''
-                            )
-                                .trim()
-                                .toLowerCase(),
-                            startDate,
-                            endDate
-                          ].join('|')
-                ),
+            stayKey,
             dogName,
             breed:
                 String(

@@ -2311,6 +2311,70 @@ function getPastGuestDirectoryPayload_(data) {
     }
   );
 
+  /* A checkout is an operational state, not a historical Care profile. Keep
+   * explicitly checked-out stays out of Past before totals and pagination are
+   * calculated so the tab count and rendered records stay consistent. */
+  var candidateStayKeys =
+    bookings.map(
+      function(booking) {
+        return booking.stayKey;
+      }
+    );
+
+  var candidateOperations =
+    readStayOperations_(
+      candidateStayKeys
+    );
+
+  var candidateOperationsByStayKey = {};
+
+  (candidateOperations || []).forEach(
+    function(operation) {
+      var stayKey =
+        String(
+          operation &&
+          operation.stayKey ||
+          ""
+        );
+
+      if (stayKey) {
+        candidateOperationsByStayKey[stayKey] =
+          operation;
+      }
+    }
+  );
+
+  var checkedOutExcluded = 0;
+
+  bookings =
+    bookings.filter(
+      function(booking) {
+        var operation =
+          candidateOperationsByStayKey[
+            booking.stayKey
+          ];
+
+        var isCheckedOut =
+          String(
+            operation &&
+            operation.status ||
+            ""
+          )
+            .trim()
+            .toLowerCase() ===
+          "checked_out";
+
+        if (isCheckedOut) {
+          checkedOutExcluded++;
+        }
+
+        return !isCheckedOut;
+      }
+    );
+
+  diagnostics.checkedOutExcluded =
+    checkedOutExcluded;
+
   var totalPastStays =
     bookings.length;
 
