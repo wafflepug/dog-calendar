@@ -11,9 +11,6 @@ const V1086_PAST_CACHE_KEY =
 const v1086BaseApplyGuestDirectoryResponse =
     applyGuestDirectoryResponse;
 
-const v1086BaseApplyPastResponse =
-    v1082ApplyPastResponse;
-
 let v1086BackgroundPastRequested =
     false;
 
@@ -73,7 +70,24 @@ function v1086PastOperationForBooking(
 }
 
 
-function v1086ExcludeCheckedOutPast(
+function v1086IsCheckedOutBooking(
+    booking,
+    response
+) {
+    return String(
+        v1086PastOperationForBooking(
+            booking,
+            response
+        )?.status ||
+        ''
+    )
+        .trim()
+        .toLowerCase() ===
+        'checked_out';
+}
+
+
+function v1086ExcludeCheckedOutCurrent(
     response
 ) {
     const source =
@@ -89,50 +103,17 @@ function v1086ExcludeCheckedOutPast(
             : []
         ).filter(
             booking =>
-                String(
-                    v1086PastOperationForBooking(
-                        booking,
-                        source
-                    )?.status ||
-                    ''
+                !v1086IsCheckedOutBooking(
+                    booking,
+                    source
                 )
-                    .trim()
-                    .toLowerCase() !==
-                'checked_out'
         );
 
     return {
         ...source,
-        bookings,
-        totalPastStays:
-            bookings.length,
-        returned:
-            bookings.length
+        bookings
     };
 }
-
-
-v1082ApplyPastResponse =
-    function(
-        response
-    ) {
-        const filtered =
-            v1086ExcludeCheckedOutPast(
-                response
-            );
-
-        if (
-            response ===
-            v1082PastResponse
-        ) {
-            v1082PastResponse =
-                filtered;
-        }
-
-        return v1086BaseApplyPastResponse(
-            filtered
-        );
-    };
 
 
 function v1086IsoDate(
@@ -294,7 +275,6 @@ function v1086PastBookingsFromCsv(
             !dogName ||
             !startDate ||
             !endDate ||
-            endDate >= today ||
             typeLower ===
                 'meet & greet' ||
             typeLower ===
@@ -324,22 +304,19 @@ function v1086PastBookingsFromCsv(
                       ].join('|')
             );
 
+        const booking = {
+            stayKey,
+            dogName,
+            startDate,
+            endDate
+        };
+
         if (
-            String(
-                v1086PastOperationForBooking(
-                    {
-                        stayKey,
-                        dogName,
-                        startDate,
-                        endDate
-                    },
-                    null
-                )?.status ||
-                ''
+            endDate >= today &&
+            !v1086IsCheckedOutBooking(
+                booking,
+                null
             )
-                .trim()
-                .toLowerCase() ===
-            'checked_out'
         ) {
             continue;
         }
@@ -521,6 +498,158 @@ function v1086UpdateCareStayCounts() {
 }
 
 
+function v1086MoveCheckedOutStayToPast(
+    card,
+    payload = {}
+) {
+    if (
+        WAFFLE_PAGE !==
+            'directory' ||
+        !card
+    ) {
+        return;
+    }
+
+    const stayKey =
+        String(
+            payload.stayKey ||
+            card.dataset.directoryStayKey ||
+            card.dataset.stayKey ||
+            ''
+        );
+
+    const booking = {
+        stayKey,
+        dogName:
+            String(
+                payload.dogName ||
+                card.dataset.dogName ||
+                ''
+            ),
+        breed:
+            String(
+                payload.breed ||
+                ''
+            ),
+        startDate:
+            String(
+                payload.startDate ||
+                card.dataset.directoryStartDate ||
+                card.dataset.startDate ||
+                ''
+            ),
+        endDate:
+            String(
+                payload.endDate ||
+                card.dataset.directoryEndDate ||
+                card.dataset.endDate ||
+                ''
+            ),
+        ownerName:
+            String(
+                payload.ownerName ||
+                ''
+            ),
+        phone:
+            String(
+                payload.phone ||
+                ''
+            )
+    };
+
+    if (
+        card.classList.contains(
+            'is-profile-active'
+        ) &&
+        typeof closeDirectoryGuestProfile ===
+            'function'
+    ) {
+        closeDirectoryGuestProfile({
+            preserveScroll:
+                true,
+            restoreOrigin:
+                false
+        });
+    }
+
+    card.dataset.v1082PastStay =
+        'true';
+    card.dataset.v1082StayKind =
+        'past';
+    card.classList.remove(
+        'is-profile-active'
+    );
+
+    const pastGrid =
+        document.getElementById(
+            'past-directory-grid'
+        );
+
+    if (pastGrid) {
+        pastGrid.appendChild(
+            card
+        );
+    }
+
+    if (
+        typeof v1082ApplyPastReadOnly ===
+            'function'
+    ) {
+        v1082ApplyPastReadOnly(
+            card
+        );
+    }
+
+    const currentPastResponse =
+        v1082PastResponse &&
+        typeof v1082PastResponse ===
+            'object'
+            ? v1082PastResponse
+            : {};
+
+    const existingBookings =
+        Array.isArray(
+            currentPastResponse.bookings
+        )
+            ? currentPastResponse.bookings
+            : [];
+
+    if (
+        stayKey &&
+        !existingBookings.some(
+            item =>
+                String(
+                    item?.stayKey ||
+                    ''
+                ) === stayKey
+        )
+    ) {
+        const bookings = [
+            booking,
+            ...existingBookings
+        ];
+
+        v1082PastResponse = {
+            ...currentPastResponse,
+            bookings,
+            totalPastStays:
+                bookings.length,
+            returned:
+                bookings.length
+        };
+    }
+
+    v1086UpdateCareStayCounts();
+
+    if (
+        typeof filterGuestDirectoryCards ===
+            'function'
+    ) {
+        filterGuestDirectoryCards();
+    }
+}
+
+
 /*
  * The original Current count could run before the consolidated directory
  * finished rebuilding the cards. Update it at the exact point the directory
@@ -531,9 +660,14 @@ applyGuestDirectoryResponse =
         response,
         options = {}
     ) {
+        const currentResponse =
+            v1086ExcludeCheckedOutCurrent(
+                response
+            );
+
         const result =
             v1086BaseApplyGuestDirectoryResponse(
-                response,
+                currentResponse,
                 options
             );
 

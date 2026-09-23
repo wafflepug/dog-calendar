@@ -2223,10 +2223,9 @@ function getPastGuestDirectoryPayload_(data) {
         todayStr
     ) {
       diagnostics.activeOrFuture++;
-      continue;
+    } else {
+      diagnostics.historicalBoarding++;
     }
-
-    diagnostics.historicalBoarding++;
 
     bookings.push({
       row:
@@ -2311,9 +2310,9 @@ function getPastGuestDirectoryPayload_(data) {
     }
   );
 
-  /* A checkout is an operational state, not a historical Care profile. Keep
-   * explicitly checked-out stays out of Past before totals and pagination are
-   * calculated so the tab count and rendered records stay consistent. */
+  /* Past includes date-completed stays and any stay explicitly checked out.
+   * Operational checkout wins immediately, including on the checkout date or
+   * before the original booking end date. */
   var candidateStayKeys =
     bookings.map(
       function(booking) {
@@ -2344,7 +2343,7 @@ function getPastGuestDirectoryPayload_(data) {
     }
   );
 
-  var checkedOutExcluded = 0;
+  var checkedOutIncluded = 0;
 
   bookings =
     bookings.filter(
@@ -2364,16 +2363,28 @@ function getPastGuestDirectoryPayload_(data) {
             .toLowerCase() ===
           "checked_out";
 
-        if (isCheckedOut) {
-          checkedOutExcluded++;
+        var isDateCompleted =
+          String(
+            booking.endDate ||
+            ""
+          ) < todayStr;
+
+        if (
+          isCheckedOut &&
+          !isDateCompleted
+        ) {
+          checkedOutIncluded++;
         }
 
-        return !isCheckedOut;
+        return (
+          isDateCompleted ||
+          isCheckedOut
+        );
       }
     );
 
-  diagnostics.checkedOutExcluded =
-    checkedOutExcluded;
+  diagnostics.checkedOutIncluded =
+    checkedOutIncluded;
 
   var totalPastStays =
     bookings.length;
