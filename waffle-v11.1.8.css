@@ -687,10 +687,6 @@ body.dark-theme .v1118-status-chip.is-checked-out { background: #22304a; border-
   .v1118-care-sort > div { flex: 1; }
   .v1118-care-sort button { flex: 1; min-height: 34px; font-size: 10px !important; }
 
-  .v1118-care-status { top: 7px; left: 7px; font-size: 8px !important; min-height: 20px; padding: 3px 6px; }
-  .v1118-care-signals { top: 6px; right: 6px; gap: 3px; }
-  .v1118-care-signals > span { width: 24px; height: 24px; font-size: 11px; }
-
   .v1118-attention-panel { padding: 11px; margin: 9px 0 11px; }
   .v1118-attention-item { grid-template-columns: 30px minmax(0,1fr) 14px; gap: 7px; padding: 8px; }
   .v1118-attention-icon { width: 29px; height: 29px; font-size: 14px; }
