@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+import json
+import re
 from pathlib import Path
 
 errors = []
@@ -34,9 +36,14 @@ require(frontend, 'object-fit:contain')
 # Runtime: this release adds a brand-new runtime filename, so it can ship on the
 # existing coordinated shell revision without repinning every entry page/CSS/SW.
 require(bootstrap, '"waffle-v11.2.18.js"')
-require(bootstrap, "const ASSET_REVISION = '2026.09.23.04';")
 require(bootstrap, "const BUILD = '2026.08.28.01';")
 text = Path(bootstrap).read_text(encoding='utf-8')
+asset_revision = str(json.loads(Path('waffle-build.json').read_text(encoding='utf-8')).get('assetRevision') or '').strip()
+revision_match = re.search(r"const ASSET_REVISION = '([^']+)';", text)
+if not asset_revision:
+    errors.append('waffle-build.json: assetRevision is required')
+elif not revision_match or revision_match.group(1) != asset_revision:
+    errors.append('waffle-bootstrap.js: ASSET_REVISION must match waffle-build.json assetRevision')
 if text.find('"waffle-v11.2.18.js"') < text.find('"waffle-v11.2.17.js"'):
     errors.append('waffle-bootstrap.js: V11.2.18 must load after V11.2.17')
 
