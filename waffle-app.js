@@ -4885,6 +4885,21 @@ registerWaffleServiceWorker();
                 const card = careBriefAction.closest('.directory-card');
                 const action = careBriefAction.dataset.careBriefAction;
 
+                if (action === 'handover') {
+                    const unifiedOverviewTab = card?.querySelector('[data-v11160-tab="profile"]');
+                    if (unifiedOverviewTab) unifiedOverviewTab.click();
+                    else switchDirectoryProfileMainTab(card, 'profile');
+
+                    const contactDisclosure = card?.querySelector('[data-directory-stay-contact]');
+                    if (contactDisclosure) contactDisclosure.open = true;
+                    const notesControl = contactDisclosure?.querySelector('[data-directory-edit-field="notes"]');
+                    contactDisclosure?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    if (notesControl) {
+                        window.setTimeout(() => notesControl.click(), 0);
+                    }
+                    return;
+                }
+
                 if (action === 'belongings') {
                     const unifiedItemsTab = card?.querySelector('[data-v11160-tab="belongings"]');
                     if (unifiedItemsTab) unifiedItemsTab.click();
@@ -8163,6 +8178,16 @@ registerWaffleServiceWorker();
         );
     }
 
+    function normalizeDirectoryPhoneForTel(value) {
+        const phone = String(value || '').trim();
+        if (!phone || !/^[+\d\s().-]+$/.test(phone)) return '';
+        const digits = phone.replace(/\D/g, '');
+        if (digits.length < 7 || digits.length > 15) return '';
+        if (phone.includes('+') && !/^\s*\+/.test(phone)) return '';
+        if ((phone.match(/\+/g) || []).length > 1) return '';
+        return `${phone.trim().startsWith('+') ? '+' : ''}${digits}`;
+    }
+
     function renderDirectoryCareBrief(card) {
         if (!card) return;
 
@@ -8186,6 +8211,7 @@ registerWaffleServiceWorker();
         const feedingHost = brief.querySelector('[data-care-brief-feeding]');
         const medicationHost = brief.querySelector('[data-care-brief-medication]');
         const freshnessHost = brief.querySelector('[data-care-brief-freshness]');
+        const callActionHost = brief.querySelector('[data-care-brief-call-owner]');
 
         if (safetyHost) {
             if (!safetyRecord) {
@@ -8232,6 +8258,15 @@ registerWaffleServiceWorker();
                 ? (source ? `Care details available · ${source}` : 'Care details available')
                 : 'Stay details ready · care details loading';
             freshnessHost.dataset.state = attributes ? 'available' : 'loading';
+        }
+
+        if (callActionHost) {
+            const phone = normalizeDirectoryPhoneForTel(
+                card.querySelector('[data-directory-edit-field="phone"]')?.dataset.directoryCurrentValue || card.dataset.v1088Phone
+            );
+            callActionHost.innerHTML = phone
+                ? `<a class="directory-care-brief-action" href="tel:${escapeDashboardHtml(phone)}" aria-label="Call owner">Call owner</a>`
+                : '<span class="directory-care-brief-action is-unavailable" aria-disabled="true" title="No valid owner phone number">Call owner unavailable</span>';
         }
     }
 
@@ -14394,6 +14429,12 @@ registerWaffleServiceWorker();
                                                 <button type="button" class="directory-care-brief-action is-primary" data-care-brief-action="full-profile">
                                                     Care details
                                                 </button>
+                                                <span data-care-brief-call-owner>
+                                                    <span class="directory-care-brief-action is-unavailable" aria-disabled="true">Call owner unavailable</span>
+                                                </span>
+                                                <button type="button" class="directory-care-brief-action" data-care-brief-action="handover">
+                                                    Update handover
+                                                </button>
                                                 <button type="button" class="directory-care-brief-action" data-care-brief-action="belongings">
                                                     Items &amp; photos
                                                 </button>
@@ -14480,11 +14521,15 @@ registerWaffleServiceWorker();
                                             </div>
                                         </details>
 
-                                        <div class="directory-care-section-heading">
-                                            <span class="directory-profile-section-kicker">Stay contact</span>
-                                            <h3>Owner &amp; handover</h3>
-                                        </div>
-                                        <div class="directory-attributes-grid directory-core-attributes">
+                                        <details class="directory-care-contact-disclosure" data-directory-stay-contact>
+                                            <summary>
+                                                <span>
+                                                    <strong>Stay contact &amp; handover</strong>
+                                                    <small>Edit owner details and the handover note</small>
+                                                </span>
+                                                <span class="directory-care-records-chevron" aria-hidden="true">⌄</span>
+                                            </summary>
+                                            <div class="directory-care-contact-body directory-attributes-grid directory-core-attributes">
                                             <button
                                                 type="button"
                                                 class="directory-attribute"
@@ -14515,6 +14560,7 @@ registerWaffleServiceWorker();
                                                 <span class="directory-field-value">${escapeDashboardHtml(notes ? notes.trim() : 'None')}</span>
                                             </button>
                                         </div>
+                                        </details>
 
                                         <section
                                             class="directory-profile-section directory-profile-intake-section"
