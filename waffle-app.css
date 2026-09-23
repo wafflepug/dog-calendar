@@ -2585,9 +2585,11 @@
 
         .directory-care-badge {
             margin: 0;
-            padding: 4px 6px;
-            font-size: 9px;
-            line-height: 1;
+            min-height: 28px;
+            padding: 5px 8px;
+            font-size: 11px;
+            line-height: 1.2;
+            white-space: normal;
         }
 
         .directory-care-icon {
@@ -2663,13 +2665,15 @@
 
             .directory-care-badge {
                 max-width: 100%;
-                font-size: 8.8px;
-                padding: 4px 6px;
+                min-height: 30px;
+                font-size: 11px;
+                padding: 6px 8px;
             }
 
             .directory-care-clear,
             .directory-care-unset {
-                font-size: 9px;
+                font-size: 11px;
+                line-height: 1.35;
             }
         }
 
@@ -8899,7 +8903,9 @@ body.dark-theme .directory-roster-avatar {
     .directory-roster-status {
         max-width: 34%;
         gap: 5px;
-        font-size: 11px;
+        font-size: 12px;
+        line-height: 1.35;
+        overflow-wrap: anywhere;
     }
 
     .directory-profile-back-bar {

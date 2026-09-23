@@ -5,7 +5,7 @@
 (function () {
   'use strict';
 
-  const VERSION = '11.1.7';
+  const VERSION = '11.1.7.1';
 
   function escapeHtml(value) {
     return String(value == null ? '' : value)
@@ -274,9 +274,8 @@
         data-v1117-care-source-badge="${escapeHtml(source.value)}"
         title="Requested via ${escapeHtml(source.label)}"
         aria-label="Requested via ${escapeHtml(source.label)}">
-        ${source.image
-          ? `<img src="${escapeHtml(source.image)}" alt="">`
-          : `<span>${escapeHtml(source.label)}</span>`}
+        ${source.image ? `<img src="${escapeHtml(source.image)}" alt="">` : ''}
+        <span class="v1117-care-source-label">${escapeHtml(source.label)}</span>
       </span>`;
   }
 

@@ -5,6 +5,9 @@ const { test, expect } = require('@playwright/test');
 const root = path.resolve(__dirname, '..');
 const app = fs.readFileSync(path.join(root, 'waffle-app.js'), 'utf8');
 const css = fs.readFileSync(path.join(root, 'waffle-app.css'), 'utf8');
+const sourceBadgeCss = fs.readFileSync(path.join(root, 'waffle-v11.1.7.css'), 'utf8');
+const carePolishCss = fs.readFileSync(path.join(root, 'waffle-v11.1.8.css'), 'utf8');
+const carePolishJs = fs.readFileSync(path.join(root, 'waffle-v11.1.8.js'), 'utf8');
 const start = app.indexOf('function filterGuestDirectoryCards()');
 const end = app.indexOf('function intakeAttributeControlHtml(', start);
 if (start < 0 || end < 0) throw new Error('Could not locate the Care roster filter functions.');
@@ -61,13 +64,13 @@ test('Care roster filters keep staying, arriving, past, search, and profile mode
 });
 
 test('Care roster stays compact and fits a narrow mobile viewport', async ({ page }) => {
-  await page.setContent(`<!doctype html><html><head><style>${rosterStyles}</style></head>
+  await page.setContent(`<!doctype html><html><head><style>${rosterStyles}\n${sourceBadgeCss}\n${carePolishCss}</style></head>
     <body data-waffle-page="directory">
       <main id="directoryTabPanel" class="app-tab-panel active">
         <div class="directory-dashboard directory-dashboard-fused">
           <div class="directory-roster-heading"><div><h1>Guests</h1><p>2 staying · 1 arriving soon</p></div><div class="guest-directory-toolbar"><input class="guest-directory-search" placeholder="Find dog or owner" aria-label="Find a dog or owner"></div></div>
           <nav class="v1082-stay-tabs directory-roster-filters"><button class="v1086-stay-tab is-active">Staying</button><button class="v1086-stay-tab">Arriving</button><button class="v1086-stay-tab">Past</button></nav>
-          <div class="directory-grid directory-grid-fused"><div class="directory-card directory-card-fused"><button class="directory-guest-tile-open directory-roster-row" aria-label="Open Maple care profile"><span class="directory-roster-avatar" aria-hidden="true">M</span><span class="directory-roster-copy"><span class="directory-guest-tile-name">Maple</span><span class="directory-roster-context">Cavoodle · leaves today</span></span><span class="directory-roster-status is-alert">Medication</span></button></div></div>
+          <div class="directory-grid directory-grid-fused"><div class="directory-card directory-card-fused has-request-source has-v1118-care-signals"><button class="directory-guest-tile-open directory-roster-row" aria-label="Open Maple care profile"><span class="directory-roster-avatar" aria-hidden="true">M</span><span class="directory-roster-copy"><span class="directory-guest-tile-name">Maple with a long name</span><span class="directory-roster-context">Cavoodle · leaves today</span></span><span class="directory-roster-status is-alert">Medication</span><span class="v1117-care-source-badge"><span class="v1117-care-source-label">MadPaws</span></span><span class="v1118-status-chip v1118-care-status is-checked-out">CHECKED OUT</span><span class="v1118-care-signals"><span class="v1118-care-signal"><span aria-hidden="true">💊</span><span>Medication</span></span><span class="v1118-care-signal"><span aria-hidden="true">📋</span><span>Intake missing</span></span></span></button></div></div>
         </div>
       </main>
     </body></html>`);
@@ -78,9 +81,31 @@ test('Care roster stays compact and fits a narrow mobile viewport', async ({ pag
     return { width: box.width, height: box.height, scrollWidth: document.documentElement.scrollWidth };
   });
 
-  await expect.poll(async () => (await dimensions()).height).toBeLessThan(90);
+  await expect.poll(async () => (await dimensions()).height).toBeLessThan(180);
   await page.setViewportSize({ width: 375, height: 760 });
   await expect.poll(async () => (await dimensions()).width).toBeLessThanOrEqual(375);
   const mobile = await dimensions();
   expect(mobile.scrollWidth).toBeLessThanOrEqual(375);
+
+  await expect(row.locator('.v1118-care-status')).toHaveText('CHECKED OUT');
+  await expect(row.locator('.v1118-care-signal', { hasText: 'Medication' })).toBeVisible();
+  await expect(row.locator('.v1118-care-signal', { hasText: 'Intake missing' })).toBeVisible();
+  await expect(row.locator('.v1117-care-source-label')).toHaveText('MadPaws');
+
+  const boxes = await row.evaluate(node => {
+    const selectors = ['.directory-roster-copy', '.v1117-care-source-badge', '.v1118-care-status', '.v1118-care-signals'];
+    return selectors.map(selector => {
+      const box = node.querySelector(selector).getBoundingClientRect();
+      return { selector, left: box.left, right: box.right, top: box.top, bottom: box.bottom };
+    });
+  });
+  const [copy, source, status, signals] = boxes;
+  expect(copy.right).toBeLessThanOrEqual(source.left);
+  expect(status.bottom).toBeLessThanOrEqual(signals.top);
+});
+
+test('legacy Care sort controls are retired', async () => {
+  expect(carePolishJs).not.toContain('Today’s priority');
+  expect(carePolishJs).not.toContain('data-v1118-sort');
+  expect(carePolishJs).toContain('removeCareSort');
 });

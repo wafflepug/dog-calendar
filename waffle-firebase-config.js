@@ -127,7 +127,7 @@
       return;
     }
     var patch = document.createElement("script");
-    patch.src = "waffle-v11.1.8.js?v=11.1.8";
+    patch.src = "waffle-v11.1.8.js?v=11.1.8.1";
     patch.async = false;
     patch.setAttribute("data-waffle-v1118", "js");
     patch.addEventListener("load", loadV1119Script, { once: true });
@@ -142,7 +142,7 @@
       return;
     }
     var patch = document.createElement("script");
-    patch.src = "waffle-v11.1.7.js?v=11.1.7";
+    patch.src = "waffle-v11.1.7.js?v=11.1.7.1";
     patch.async = false;
     patch.setAttribute("data-waffle-v1117", "js");
     patch.addEventListener("load", loadV1118Script, { once: true });
@@ -231,8 +231,8 @@
     ensureStylesheet('link[data-waffle-v1114]', "waffle-v11.1.4.css?v=11.1.4", "data-waffle-v1114");
     ensureStylesheet('link[data-waffle-v1115]', "waffle-v11.1.5.css?v=11.1.5", "data-waffle-v1115");
     ensureStylesheet('link[data-waffle-v1116]', "waffle-v11.1.6.css?v=11.1.6", "data-waffle-v1116");
-    ensureStylesheet('link[data-waffle-v1117]', "waffle-v11.1.7.css?v=11.1.7", "data-waffle-v1117");
-    ensureStylesheet('link[data-waffle-v1118]', "waffle-v11.1.8.css?v=11.1.8", "data-waffle-v1118");
+    ensureStylesheet('link[data-waffle-v1117]', "waffle-v11.1.7.css?v=11.1.7.1", "data-waffle-v1117");
+    ensureStylesheet('link[data-waffle-v1118]', "waffle-v11.1.8.css?v=11.1.8.1", "data-waffle-v1118");
     ensureStylesheet('link[data-waffle-v11110]', "waffle-v11.1.10.css?v=11.1.10", "data-waffle-v11110");
     ensureStylesheet('link[data-waffle-v11111]', "waffle-v11.1.11.css?v=11.1.11", "data-waffle-v11111");
     ensureStylesheet('link[data-waffle-v11112]', "waffle-v11.1.12.css?v=11.1.12", "data-waffle-v11112");

@@ -254,44 +254,50 @@ body.dark-theme .v1117-profile-source-tile.is-other .v1117-profile-source-circle
    CARE CURRENT — REQUEST SOURCE BADGE ON THE TILE
    ------------------------------------------------------------ */
 .v1117-care-source-badge {
-  position: absolute;
-  right: 8px;
-  bottom: 8px;
-  z-index: 4;
-  width: 38px;
-  height: 38px;
-  display: grid;
-  place-items: center;
-  overflow: hidden;
+  position: static;
+  z-index: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-width: 0;
+  min-height: 28px;
+  padding: 4px 8px;
   box-sizing: border-box;
-  border: 2px solid #fff;
-  border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 3px 10px rgba(15, 23, 42, .30);
+  border: 1px solid var(--wh-border, #cbd5e1);
+  border-radius: 999px;
+  background: var(--wh-surface, #fff);
+  color: var(--wh-text-muted, #475569);
+  box-shadow: none;
+  font-size: 10px;
+  line-height: 1.15;
+  font-weight: 800;
+  white-space: nowrap;
   pointer-events: none;
 }
 
 .v1117-care-source-badge img {
-  width: 100%;
-  height: 100%;
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
   object-fit: contain;
+  border-radius: 50%;
 }
 
 .v1117-care-source-badge.is-other {
-  background: #94a3b8;
-  color: #fff;
-  border-color: #fff;
+  background: var(--wh-surface-muted, #f1f5f9);
+  color: var(--wh-text-muted, #475569);
+  border-color: var(--wh-border, #cbd5e1);
 }
 
-.v1117-care-source-badge.is-other > span {
-  font-size: 8px;
-  line-height: 1;
-  font-weight: 900;
-  text-align: center;
+.v1117-care-source-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .directory-card.has-profile-photo.has-request-source .directory-guest-tile-name {
-  right: 56px;
+  right: auto;
 }
 
 /* ------------------------------------------------------------
@@ -491,18 +497,20 @@ body.dark-theme .v1117-profile-source-tile.is-other .v1117-profile-source-circle
   }
 
   .v1117-care-source-badge {
-    right: 7px;
-    bottom: 7px;
-    width: 32px;
-    height: 32px;
+    min-height: 26px;
+    max-width: 112px;
+    padding: 4px 7px;
+    font-size: 10px;
   }
 
-  .v1117-care-source-badge.is-other > span {
-    font-size: 7px;
+  .v1117-care-source-badge img {
+    width: 16px;
+    height: 16px;
+    flex-basis: 16px;
   }
 
   .directory-card.has-profile-photo.has-request-source .directory-guest-tile-name {
-    right: 46px;
+    right: auto;
   }
 }
 
@@ -522,7 +530,6 @@ body.dark-theme .v1117-profile-source-tile.is-other .v1117-profile-source-circle
   }
 
   .v1117-care-source-badge {
-    width: 30px;
-    height: 30px;
+    max-width: 96px;
   }
 }

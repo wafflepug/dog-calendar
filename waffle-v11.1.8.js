@@ -5,9 +5,8 @@
 (function () {
   'use strict';
 
-  const VERSION = '11.1.8';
+  const VERSION = '11.1.8.1';
   const state = {
-    sortMode: localStorage.getItem('waffleCareSortMode') || 'priority',
     reminders: [],
     directory: null,
     searchData: null,
@@ -408,6 +407,8 @@
     if (risk.medicated === true) signals.push({ icon: '💊', label: 'Medication', weight: 90 });
     if (risk.foodAllergy === true) signals.push({ icon: '⚠️', label: 'Food allergy', weight: 95 });
     if (risk.escapeRisk === true) signals.push({ icon: '🚪', label: 'Escape risk', weight: 92 });
+    if (risk.separationAnxiety === true) signals.push({ icon: '😟', label: 'Separation anxiety', weight: 88 });
+    if (risk.weightManagement === true) signals.push({ icon: '⚖️', label: 'Weight management', weight: 60 });
     if (status === 'LEAVING TODAY') signals.push({ icon: '👋', label: 'Checkout today', weight: 100 });
     if (status === 'ARRIVING TODAY') signals.push({ icon: '🛬', label: 'Arrival today', weight: 75 });
     if (reminderMatchesDog(dogName)) signals.push({ icon: '📌', label: 'Reminder due', weight: 98 });
@@ -436,8 +437,13 @@
       host.className = 'v1118-care-signals';
       button.appendChild(host);
     }
-    host.innerHTML = signals.slice(0, 3).map(signal => `<span title="${esc(signal.label)}" aria-label="${esc(signal.label)}">${esc(signal.icon)}</span>`).join('');
+    host.innerHTML = signals.map(signal => `
+      <span class="v1118-care-signal" title="${esc(signal.label)}">
+        <span class="v1118-care-signal-icon" aria-hidden="true">${esc(signal.icon)}</span>
+        <span>${esc(signal.label)}</span>
+      </span>`).join('');
     host.hidden = signals.length === 0;
+    card.classList.toggle('has-v1118-care-signals', signals.length > 0);
     card.dataset.v1118PriorityScore = String(signals.reduce((sum, signal) => sum + signal.weight, 0));
   }
 
@@ -445,40 +451,11 @@
     if (pageName() !== 'directory') return;
     document.querySelectorAll('.directory-card[data-directory-stay-key]').forEach(decorateCareCard);
     enhanceProfileDisclosure();
-    sortCareCards();
+    removeCareSort();
   }
 
-  function ensureCareSort() {
-    if (pageName() !== 'directory' || document.querySelector('[data-v1118-care-sort]')) return;
-    const toolbar = document.querySelector('.guest-directory-toolbar');
-    if (!toolbar) return;
-    const wrapper = document.createElement('div');
-    wrapper.className = 'v1118-care-sort';
-    wrapper.dataset.v1118CareSort = '';
-    wrapper.innerHTML = '<span>Sort</span><div role="group" aria-label="Care guest sort"><button type="button" data-v1118-sort="priority">Today’s priority</button><button type="button" data-v1118-sort="alpha">A–Z</button></div>';
-    toolbar.appendChild(wrapper);
-    updateSortButtons();
-  }
-
-  function updateSortButtons() {
-    document.querySelectorAll('[data-v1118-sort]').forEach(button => {
-      const active = button.dataset.v1118Sort === state.sortMode;
-      button.classList.toggle('is-active', active);
-      button.setAttribute('aria-pressed', active ? 'true' : 'false');
-    });
-  }
-
-  function sortCareCards() {
-    const grid = document.getElementById('directory-grid');
-    if (!grid || document.querySelector('.directory-dashboard-fused.is-profile-mode')) return;
-    const cards = Array.from(grid.querySelectorAll('.directory-card[data-directory-stay-key]'));
-    cards.sort((a, b) => {
-      const an = String(a.dataset.directoryDogName || '').toLowerCase();
-      const bn = String(b.dataset.directoryDogName || '').toLowerCase();
-      if (state.sortMode === 'alpha') return an.localeCompare(bn);
-      return Number(b.dataset.v1118PriorityScore || 0) - Number(a.dataset.v1118PriorityScore || 0) || an.localeCompare(bn);
-    });
-    cards.forEach(card => grid.appendChild(card));
+  function removeCareSort() {
+    document.querySelectorAll('[data-v1118-care-sort], .v1118-care-sort').forEach(control => control.remove());
   }
 
   async function loadCareReminders() {
@@ -496,7 +473,7 @@
     const wrapped = function(response, options = {}) {
       state.directory = response || state.directory;
       const result = base(response, options);
-      setTimeout(() => { ensureCareSort(); decorateAllCareCards(); }, 40);
+      setTimeout(() => { removeCareSort(); decorateAllCareCards(); }, 40);
       return result;
     };
     wrapped.v1118Wrapped = true;
@@ -661,14 +638,6 @@
     document.addEventListener('click', event => {
       if (event.target.closest('[data-v1118-open-quick-add]')) { event.preventDefault(); openQuickAction(); return; }
       if (event.target.closest('[data-v1118-search-open]')) { event.preventDefault(); openSearch().catch(error => showToast('Search unavailable', error?.message || String(error), { kind: 'error' })); return; }
-      const sort = event.target.closest('[data-v1118-sort]');
-      if (sort) {
-        state.sortMode = sort.dataset.v1118Sort === 'alpha' ? 'alpha' : 'priority';
-        localStorage.setItem('waffleCareSortMode', state.sortMode);
-        updateSortButtons();
-        sortCareCards();
-        return;
-      }
       const empty = event.target.closest('[data-v1118-empty-action]');
       if (empty) {
         const action = String(empty.dataset.v1118EmptyAction || '');
@@ -685,7 +654,7 @@
 
   function oneShotPolish() {
     ensureSearchButton();
-    ensureCareSort();
+    removeCareSort();
     decorateAllCareCards();
     improveEmptyStates();
     enhanceProfileDisclosure();
@@ -705,7 +674,7 @@
     wireModalSkeletons();
     openQuickAddFromUrl();
     if (pageName() === 'directory') {
-      ensureCareSort();
+      removeCareSort();
       decorateAllCareCards();
       loadCareReminders().catch(() => {});
     }
