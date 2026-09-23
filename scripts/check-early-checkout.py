@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+import json
+import re
 from pathlib import Path
 
 errors = []
@@ -90,7 +92,34 @@ if text.find('"waffle-v11.2.19.js"') < text.find('"waffle-v11.2.18.js"'):
 require(service_worker, "path.endsWith('/waffle-v11.2.17.js')")
 require(service_worker, "path.endsWith('/waffle-v11.2.19.js')")
 require(service_worker, "fetch(request, { cache: 'no-store' })")
-require(service_worker, "v11.4.32-care-roster-2026.09.23.04")
+
+# Release names change independently of the early-checkout feature. Validate
+# that the worker and bootstrap use the current build revision instead of
+# pinning this contract to a historical Care release name.
+build = json.loads(Path('waffle-build.json').read_text(encoding='utf-8'))
+asset_revision = str(build.get('assetRevision') or '').strip()
+service_worker_text = Path(service_worker).read_text(encoding='utf-8')
+worker_version = re.search(
+    r"const WAFFLE_SW_VERSION = '([^']+)';",
+    service_worker_text,
+)
+if not asset_revision:
+    errors.append('waffle-build.json: assetRevision is required')
+elif not worker_version or not worker_version.group(1).endswith(asset_revision):
+    errors.append(
+        'service-worker.js: WAFFLE_SW_VERSION must end with current assetRevision '
+        + asset_revision
+    )
+
+bootstrap_revision = re.search(
+    r"const ASSET_REVISION = '([^']+)';",
+    text,
+)
+if not bootstrap_revision or bootstrap_revision.group(1) != asset_revision:
+    errors.append(
+        'waffle-bootstrap.js: ASSET_REVISION must match waffle-build.json '
+        + asset_revision
+    )
 
 if errors:
     raise SystemExit('\n'.join(errors))
