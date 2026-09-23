@@ -124,6 +124,22 @@
     const dogName = String(card.dataset.directoryDogName || card.dataset.dogName || '').trim();
     const originalStartDate = String(card.dataset.directoryStartDate || card.dataset.startDate || '').trim();
     const originalEndDate = String(card.dataset.directoryEndDate || card.dataset.endDate || originalStartDate).trim();
+    const sourceRow = Number(card.dataset.directorySourceRow || 0);
+    const breed = String(
+      card.dataset.v1088Breed ||
+      card.querySelector('.directory-primary-breed')?.textContent ||
+      ''
+    ).trim();
+    const ownerName = String(
+      card.dataset.v1088OwnerName ||
+      card.querySelector('[data-directory-edit-field="ownerName"]')?.dataset?.directoryCurrentValue ||
+      ''
+    ).trim();
+    const phone = String(
+      card.dataset.v1088Phone ||
+      card.querySelector('[data-directory-edit-field="phone"]')?.dataset?.directoryCurrentValue ||
+      ''
+    ).trim();
 
     if (!startDate || !endDate) {
       status.textContent = 'Choose both dates.';
@@ -148,6 +164,11 @@
         originalDogName: dogName,
         originalStartDate,
         originalEndDate,
+        sourceRow: sourceRow >= 2 ? sourceRow : '',
+        stayKey: String(card.dataset.directoryStayKey || card.dataset.stayKey || '').trim(),
+        breed,
+        ownerName,
+        phone,
         startDate,
         endDate,
         source: 'Dog Profile'

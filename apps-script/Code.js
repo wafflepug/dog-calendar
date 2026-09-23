@@ -3398,6 +3398,52 @@ function findV108BoardingRow_(rows, dogName, startDate, endDate) {
   return -1;
 }
 
+function findV108BoardingRowForUpdate_(rows, data) {
+  data = data && typeof data === "object" ? data : {};
+  var dog = normalizeV108Identity_(data.originalDogName || data.dogName);
+  var start = normalizeDateValue_(data.originalStartDate || data.startDate);
+  var end = normalizeDateValue_(data.originalEndDate || "");
+  var owner = normalizeV108Identity_(data.ownerName || data.originalOwnerName);
+  var breed = normalizeV108Identity_(data.breed || data.originalBreed);
+  var phone = String(data.phone || data.originalPhone || "").replace(/\D/g, "");
+  var requestedRow = Number(data.sourceRow || 0);
+  var exact = [];
+  var relaxed = [];
+
+  for (var i = 1; i < rows.length; i++) {
+    var row = rows[i] || [];
+    var type = String(row[11] || "").trim().toLowerCase();
+    if (type === "meet & greet" || type === "potential stay") continue;
+    if (dog && normalizeV108Identity_(row[1]) !== dog) continue;
+    if (start && normalizeDateValue_(row[3]) !== start) continue;
+
+    var rowOwner = normalizeV108Identity_(row[5]);
+    var rowBreed = normalizeV108Identity_(row[2]);
+    var rowPhone = String(row[6] || "").replace(/\D/g, "");
+    if (owner && rowOwner && rowOwner !== owner) continue;
+    if (breed && rowBreed && rowBreed !== breed) continue;
+    if (phone && rowPhone && rowPhone !== phone) continue;
+
+    var rowNumber = i + 1;
+    var candidate = {
+      row: rowNumber,
+      endMatches: !end || normalizeDateValue_(row[4] || row[3]) === end
+    };
+    relaxed.push(candidate);
+    if (candidate.endMatches) exact.push(candidate);
+  }
+
+  var sourceCandidate = relaxed.filter(function(candidate) {
+    return requestedRow >= 2 && candidate.row === requestedRow;
+  });
+  if (sourceCandidate.length === 1) return sourceCandidate[0].row;
+  if (exact.length === 1) return exact[0].row;
+  if (exact.length > 1 || relaxed.length > 1) {
+    throw new Error("Multiple confirmed boardings match this dog and date. Refresh Care and choose the exact stay again.");
+  }
+  return relaxed.length === 1 ? relaxed[0].row : -1;
+}
+
 function getV108DogHistory_(data) {
   data = data && typeof data === "object" ? data : {};
   var dogName = String(data.dogName || "").trim();
@@ -3490,7 +3536,7 @@ function createV108Boarding_(data) {
 
 function updateV108BoardingDates_(data) {
   var sheet=getTargetSheet_(), rows=sheet.getDataRange().getValues();
-  var row=findV108BoardingRow_(rows,data.originalDogName||data.dogName,data.originalStartDate||data.startDate,data.originalEndDate||data.endDate);
+  var row=findV108BoardingRowForUpdate_(rows,data);
   if (row === -1) throw new Error("Confirmed boarding could not be found.");
   var before=auditBookingSnapshotFromSheetRow_(sheet,row), start=normalizeDateValue_(data.startDate), end=normalizeDateValue_(data.endDate||data.startDate);
   if (!start || !end || end < start) throw new Error("New boarding dates are invalid.");

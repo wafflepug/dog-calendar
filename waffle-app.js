@@ -14262,6 +14262,10 @@ registerWaffleServiceWorker();
                                         data-directory-dog-name="${escapeDashboardHtml(dogName.trim())}"
                                         data-directory-start-date="${escapeDashboardHtml(startParsed)}"
                                         data-directory-end-date="${escapeDashboardHtml(endParsed)}"
+                                        data-directory-source-row="${i + 1}"
+                                        data-v1088-breed="${escapeDashboardHtml(breedTxt)}"
+                                        data-v1088-owner-name="${escapeDashboardHtml(ownerName ? ownerName.trim() : '')}"
+                                        data-v1088-phone="${escapeDashboardHtml(phone ? phone.trim() : '')}"
                                         data-stay-key="${escapeDashboardHtml(directoryStayKey)}"
                                         data-dog-name="${escapeDashboardHtml(dogName.trim())}"
                                         data-start-date="${escapeDashboardHtml(startParsed)}"
@@ -14605,7 +14609,7 @@ registerWaffleServiceWorker();
 
                         events.push({
                             title: dogName.trim(), start: startParsed, end: forcedDisplayEnd, allDay: true, backgroundColor: stringToColor(dogName.trim()), textColor: '#ffffff',
-                            extendedProps: { isMeetGreet: false, isPotential: false, breed: breedTxt, dogName: dogName.trim(), owner: ownerName ? ownerName.trim() : "N/A", ownerName: ownerName ? ownerName.trim() : "N/A", phone: phone ? phone.trim() : "N/A", notes: notes ? notes.trim() : "None", rawStartDate: startParsed, rawEndDate: endParsed, bookingType: bookingType || "Boarding", editLink: editLink.trim() }
+                            extendedProps: { isMeetGreet: false, isPotential: false, sourceRow: i + 1, breed: breedTxt, dogName: dogName.trim(), owner: ownerName ? ownerName.trim() : "N/A", ownerName: ownerName ? ownerName.trim() : "N/A", phone: phone ? phone.trim() : "N/A", notes: notes ? notes.trim() : "None", rawStartDate: startParsed, rawEndDate: endParsed, bookingType: bookingType || "Boarding", editLink: editLink.trim() }
                         });
                     }
                 }
