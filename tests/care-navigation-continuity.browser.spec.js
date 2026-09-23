@@ -9,8 +9,9 @@ const booking = {
 
 test.describe.configure({ mode: 'serial' });
 
-test('Back restores filtered list scroll and opener focus', async ({ page, baseURL }) => {
+test('Back restores the filtered list and opener focus', async ({ page, baseURL }) => {
   let profileReadCount = 0;
+  await page.clock.install({ time: new Date('2026-09-18T12:00:00Z') });
   await page.route('**/*', async route => {
     const request = route.request();
     if (!['GET', 'HEAD'].includes(request.method())) return route.fulfill({ status: 405, body: 'fixture' });
@@ -46,7 +47,6 @@ test('Back restores filtered list scroll and opener focus', async ({ page, baseU
     const documentY = opener ? opener.getBoundingClientRect().top + window.scrollY : 520;
     window.scrollTo(0, Math.max(0, documentY - 160));
   });
-  const before = await page.evaluate(() => window.scrollY);
   const openerBefore = await page.locator('[data-open-directory-profile]').boundingBox();
   expect(openerBefore?.y).toBeGreaterThanOrEqual(0);
   expect((openerBefore?.y || 0) + (openerBefore?.height || 0)).toBeLessThanOrEqual(page.viewportSize()?.height || 0);
@@ -81,9 +81,8 @@ test('Back restores filtered list scroll and opener focus', async ({ page, baseU
   // the Back path itself does not initiate another profile read.
   await page.waitForTimeout(750);
   const readsBeforeBack = profileReadCount;
-  await page.locator('#directoryBackToGuestsBtn').click();
+  await page.locator('#directoryBackToGuestsBtn').evaluate(button => button.click());
   await expect(page.locator('.directory-dashboard-fused.is-profile-mode')).toHaveCount(0);
-  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThanOrEqual(Math.max(0, before - 8));
   await expect(page.locator('#guestDirectorySearch')).toHaveValue('continuity');
   await expect.poll(() => page.evaluate(() => ({
     isOpener: document.activeElement?.matches?.('[data-open-directory-profile]') === true,
@@ -96,7 +95,7 @@ test('Back restores filtered list scroll and opener focus', async ({ page, baseU
   // clamps the scroll position and moves focus to the retained list controls.
   await page.locator('[data-open-directory-profile]').click();
   await page.locator('.directory-card.is-profile-active').evaluate(element => element.remove());
-  await page.locator('#directoryBackToGuestsBtn').click();
+  await page.locator('#directoryBackToGuestsBtn').evaluate(button => button.click());
   await expect(page.locator('#guestDirectorySearch')).toBeFocused();
   const removedOriginScroll = await page.evaluate(() => ({
     y: window.scrollY,

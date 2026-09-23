@@ -190,7 +190,7 @@
     const legacyUpload = document.getElementById('openLegacyIntakeUploadBtn');
 
     if (search) {
-      search.placeholder = '🔍 Search future dog, breed, owner, care, intake or belongings...';
+      search.placeholder = 'Find dog or owner';
     }
     if (note) {
       note.textContent = 'Future stays use the same full Care profile. Prepare intake, care details, belongings and photos before arrival.';

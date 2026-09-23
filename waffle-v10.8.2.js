@@ -84,19 +84,19 @@ function v1082PastCardHtml(booking) {
 
             <button
                 type="button"
-                class="directory-guest-tile-open v1082-past-tile"
+                class="directory-guest-tile-open directory-roster-row v1082-past-tile"
                 data-open-directory-profile
-                aria-label="Open ${v1082Escape(dogName)} past care profile">
+                aria-label="Open ${v1082Escape(dogName)} past care profile. ${v1082Escape(breed)}. Stayed ${v1082Escape(dateLabel)}.">
                 <span
                     class="directory-guest-tile-photo"
                     data-directory-tile-photo="${v1082Escape(stayKey)}"
                     aria-hidden="true"></span>
-                <span class="directory-guest-tile-name">
-                    ${v1082Escape(dogName)}
+                <span class="directory-roster-avatar" aria-hidden="true">${v1082Escape(dogName.split(/\s+/).slice(0, 2).map(part => part.charAt(0)).join('') || '🐾')}</span>
+                <span class="directory-roster-copy">
+                    <span class="directory-guest-tile-name">${v1082Escape(dogName)}</span>
+                    <span class="directory-roster-context">${v1082Escape(breed)} · stayed ${v1082Escape(dateLabel)}</span>
                 </span>
-                <span class="v1082-past-tile-date">
-                    ${v1082Escape(dateLabel)}
-                </span>
+                <span class="directory-roster-status is-past">Past stay</span>
             </button>
 
             <div class="directory-profile-content">
@@ -672,9 +672,7 @@ function v1082SwitchStayView(view, options = {}) {
 
     if (search) {
         search.placeholder =
-            view === 'past'
-                ? '🔍 Search past dog, breed, owner, date, intake or belongings...'
-                : '🔍 Search dog, breed, owner, care, intake or belongings...';
+            'Find dog or owner';
     }
 
     if (note) {

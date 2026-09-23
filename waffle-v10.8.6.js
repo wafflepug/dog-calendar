@@ -661,7 +661,7 @@ function v1086PolishCareTabs() {
 
     tabs.setAttribute(
         'aria-label',
-        'Choose current or historical care stays'
+        'Filter guests by stay status'
     );
 
     const current =
@@ -674,24 +674,28 @@ function v1086PolishCareTabs() {
             '[data-v1082-stay-tab="past"]'
         );
 
+    const future =
+        tabs.querySelector(
+            '[data-v1082-stay-tab="future"]'
+        );
+
     if (current) {
         current.innerHTML = `
-            <span class="v1086-stay-tab-icon" aria-hidden="true">🏡</span>
-            <span class="v1086-stay-tab-copy">
-                <strong>Current</strong>
-                <small>At home &amp; upcoming</small>
-            </span>
+            <span class="v1086-stay-tab-copy"><strong>Staying</strong></span>
             <span class="v1086-stay-tab-count" id="v1082CurrentStayCount">…</span>
+        `;
+    }
+
+    if (future) {
+        future.innerHTML = `
+            <span class="v1086-stay-tab-copy"><strong>Arriving</strong></span>
+            <span class="v1086-stay-tab-count" id="v1082FutureStayCount">…</span>
         `;
     }
 
     if (past) {
         past.innerHTML = `
-            <span class="v1086-stay-tab-icon" aria-hidden="true">🕘</span>
-            <span class="v1086-stay-tab-copy">
-                <strong>Past Stays</strong>
-                <small>Historical care profiles</small>
-            </span>
+            <span class="v1086-stay-tab-copy"><strong>Past</strong></span>
             <span class="v1086-stay-tab-count" id="v1082PastStayCount">…</span>
         `;
     }

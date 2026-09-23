@@ -8572,3 +8572,343 @@ body.dark-theme
         transition: none !important;
     }
 }
+
+
+/* Care roster: compact, accessible guest rows; details remain in the profile. */
+body[data-waffle-page="directory"] #directoryTabPanel.app-tab-panel.active {
+    padding: clamp(16px, 3vw, 30px);
+    border: 1px solid var(--wh-border, #dbe3ea);
+    border-radius: 16px;
+    background: var(--wh-surface-muted, #f4f7fb);
+    box-shadow: none;
+}
+
+.directory-roster-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+    margin: 0 0 16px;
+}
+
+.directory-roster-heading h1 {
+    margin: 0;
+    color: var(--wh-text, #172033);
+    font-size: clamp(24px, 3vw, 30px);
+    line-height: 1.15;
+    font-weight: 750;
+}
+
+.directory-roster-heading p {
+    margin: 4px 0 0;
+    color: var(--wh-text-muted, #64748b);
+    font-size: 13px;
+}
+
+.directory-roster-heading .guest-directory-toolbar {
+    width: min(360px, 48%);
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+}
+
+.directory-roster-heading .guest-directory-search {
+    min-width: 0;
+    min-height: 46px;
+    padding: 11px 14px;
+    border: 1px solid var(--wh-border, #dbe3ea);
+    border-radius: 11px;
+    background: var(--wh-surface, #fff);
+    color: var(--wh-text, #172033);
+    font-size: 14px;
+}
+
+.directory-roster-heading .guest-directory-search:focus-visible {
+    outline: 3px solid color-mix(in srgb, var(--wh75-accent, var(--wh-accent, #7562db)) 30%, transparent);
+    outline-offset: 2px;
+}
+
+.directory-roster-filters {
+    display: flex;
+    width: fit-content;
+    gap: 8px;
+    margin: 0 0 16px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+}
+
+.directory-roster-filters .v1086-stay-tab-copy strong,
+.directory-roster-filters .v1086-stay-tab-count {
+    font-size: 13px;
+}
+
+.directory-roster-filters .v1086-stay-tab-count {
+    min-width: 0;
+    margin-left: 3px;
+}
+
+.directory-grid-fused,
+.v1082-past-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 8px !important;
+    max-height: none;
+    overflow: visible;
+}
+
+.directory-card.directory-card-fused {
+    display: block;
+    min-width: 0;
+    padding: 0;
+    overflow: hidden;
+    border: 1px solid var(--wh-border, #d7e0eb);
+    border-radius: 13px;
+    background: var(--wh-surface, #fff);
+    box-shadow: none;
+}
+
+.directory-guest-tile-open.directory-roster-row,
+.directory-card-fused > .directory-guest-tile-open:not(.directory-roster-row) {
+    display: flex;
+    position: relative;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 14px;
+    width: 100%;
+    min-height: 70px;
+    aspect-ratio: auto;
+    padding: 10px 14px;
+    overflow: hidden;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: var(--wh-text, #172033);
+    text-align: left;
+    box-shadow: none;
+    transform: none;
+}
+
+.directory-guest-tile-open.directory-roster-row:hover,
+.directory-card-fused > .directory-guest-tile-open:not(.directory-roster-row):hover {
+    border-color: transparent;
+    background: color-mix(in srgb, var(--wh75-accent, var(--wh-accent, #7562db)) 5%, var(--wh-surface, #fff));
+    box-shadow: none;
+    transform: none;
+}
+
+.directory-card.has-profile-photo .directory-guest-tile-open::after {
+    content: none;
+}
+
+.directory-guest-tile-photo,
+.directory-card.has-profile-photo .directory-guest-tile-photo {
+    position: relative;
+    inset: auto;
+    z-index: auto;
+    display: grid;
+    flex: 0 0 48px;
+    width: 48px;
+    height: 48px;
+    overflow: hidden;
+    border-radius: 50%;
+    background: var(--wh-surface-muted, #edf2f7);
+}
+
+.directory-roster-avatar {
+    display: grid;
+    flex: 0 0 48px;
+    width: 48px;
+    height: 48px;
+    place-items: center;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--wh75-accent, var(--wh-accent, #7562db)) 10%, #edf2f7);
+    color: var(--wh75-accent-ink, var(--wh-accent, #6040bf));
+    font-size: 15px;
+    font-weight: 750;
+}
+
+.directory-card.has-profile-photo .directory-roster-avatar {
+    display: none;
+}
+
+.directory-roster-copy {
+    display: grid;
+    min-width: 0;
+    flex: 1 1 auto;
+    gap: 4px;
+}
+
+.directory-guest-tile-name,
+.directory-card.has-profile-photo .directory-guest-tile-name {
+    position: static;
+    display: block;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    color: var(--wh-text, #172033);
+    font-size: 14px;
+    line-height: 1.2;
+    font-weight: 700;
+    text-align: left;
+    text-shadow: none;
+}
+
+.directory-roster-context {
+    display: block;
+    color: var(--wh-text-muted, #64748b);
+    font-size: 12px;
+    line-height: 1.3;
+}
+
+.directory-roster-status {
+    display: inline-flex;
+    align-items: center;
+    flex: 0 0 auto;
+    gap: 7px;
+    max-width: 38%;
+    color: var(--wh-text-muted, #64748b);
+    font-size: 12px;
+    line-height: 1.25;
+    text-align: right;
+}
+
+.directory-roster-status::before {
+    width: 8px;
+    height: 8px;
+    flex: 0 0 8px;
+    border-radius: 50%;
+    background: var(--wh75-accent, var(--wh-accent, #7562db));
+    content: "";
+}
+
+.directory-roster-status.is-alert::before,
+.directory-roster-status.is-unset::before {
+    background: #c2413b;
+}
+
+.directory-roster-status.is-past::before {
+    background: #94a3b8;
+}
+
+.directory-dashboard-fused.is-profile-mode .directory-roster-heading,
+.directory-dashboard-fused.is-profile-mode .directory-roster-filters {
+    display: none;
+}
+
+.directory-dashboard-fused .v11195-future-heading,
+.directory-dashboard-fused .v1082-past-heading {
+    display: none !important;
+}
+
+.directory-dashboard-fused:not([data-v11195-stay-view="future"])
+.v11195-future-empty,
+.directory-dashboard-fused[data-v11195-stay-view="future"]
+.v11195-current-empty {
+    display: none !important;
+}
+
+.directory-profile-tools {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.directory-profile-tools .directory-care-summary {
+    margin: 0;
+}
+
+.directory-profile-tools .directory-legacy-global-btn,
+.directory-profile-tools .belongings-refresh-btn {
+    min-height: 36px;
+}
+
+.directory-profile-breadcrumb-label {
+    display: none;
+}
+
+body.dark-theme[data-waffle-page="directory"] #directoryTabPanel.app-tab-panel.active {
+    background: var(--wh-surface-muted, #182235);
+    border-color: var(--wh-border, #34445b);
+}
+
+body.dark-theme .directory-roster-heading h1,
+body.dark-theme .directory-guest-tile-name {
+    color: var(--wh-text, #f8fafc);
+}
+
+body.dark-theme .directory-card.directory-card-fused {
+    background: var(--wh-surface, #1e293b);
+    border-color: var(--wh-border, #34445b);
+}
+
+body.dark-theme .directory-guest-tile-open.directory-roster-row:hover,
+body.dark-theme .directory-card-fused > .directory-guest-tile-open:not(.directory-roster-row):hover {
+    background: color-mix(in srgb, var(--wh75-accent, var(--wh-accent, #7562db)) 13%, var(--wh-surface, #1e293b));
+}
+
+body.dark-theme .directory-roster-avatar {
+    background: color-mix(in srgb, var(--wh75-accent, var(--wh-accent, #7562db)) 20%, #26344a);
+    color: var(--wh75-accent-ink, #c4b5fd);
+}
+
+@media (max-width: 700px) {
+    body[data-waffle-page="directory"] #directoryTabPanel.app-tab-panel.active {
+        padding: 16px 12px;
+        border-radius: 12px;
+    }
+
+    .directory-roster-heading {
+        display: grid;
+        gap: 13px;
+    }
+
+    .directory-roster-heading .guest-directory-toolbar {
+        width: 100%;
+    }
+
+    .directory-roster-filters {
+        width: 100%;
+        gap: 7px;
+    }
+
+    .directory-roster-filters .v1086-stay-tab {
+        min-height: 42px;
+        flex: 1 1 0;
+        justify-content: center;
+        padding: 8px 10px;
+    }
+
+    .directory-guest-tile-open.directory-roster-row,
+    .directory-card-fused > .directory-guest-tile-open:not(.directory-roster-row) {
+        min-height: 68px;
+        gap: 10px;
+        padding: 9px 10px;
+    }
+
+    .directory-guest-tile-photo,
+    .directory-card.has-profile-photo .directory-guest-tile-photo,
+    .directory-roster-avatar {
+        flex-basis: 42px;
+        width: 42px;
+        height: 42px;
+    }
+
+    .directory-roster-status {
+        max-width: 34%;
+        gap: 5px;
+        font-size: 11px;
+    }
+
+    .directory-profile-back-bar {
+        align-items: flex-start;
+        flex-wrap: wrap;
+    }
+
+    .directory-profile-tools {
+        width: 100%;
+        justify-content: flex-start;
+    }
+}

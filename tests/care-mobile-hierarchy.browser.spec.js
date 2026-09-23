@@ -77,7 +77,7 @@ for (const [name, viewport, colorScheme] of [['390-light', { width: 390, height:
     expect(actionReads.filter(action => action === 'get_guest_belongings').length).toBeLessThanOrEqual(1);
     expect(actionReads.filter(action => action === 'get_dog_history').length).toBe(readsAfterProfileOpen.filter(action => action === 'get_dog_history').length);
     expect(actionReads.filter(action => action === 'get_dog_master_profile').length).toBe(readsAfterProfileOpen.filter(action => action === 'get_dog_master_profile').length);
-    await expect(page.locator('.directory-dashboard-fused.is-profile-mode .directory-dashboard-header > div:first-child')).toBeHidden();
+    await expect(page.locator('.directory-dashboard-fused.is-profile-mode .directory-roster-heading')).toBeHidden();
     await expect(page.locator('.directory-dashboard-fused.is-profile-mode .v1082-stay-tabs')).toBeHidden();
     await expect(page.locator('.directory-dashboard-fused.is-profile-mode .guest-directory-toolbar')).toBeHidden();
     await expect(page.locator('.directory-dashboard-fused.is-profile-mode #v11190ScanIntakePdfBtn')).toBeHidden();
@@ -102,10 +102,10 @@ for (const [name, viewport, colorScheme] of [['390-light', { width: 390, height:
     await expect(page.locator('#directoryBackToGuestsBtn')).toBeFocused();
     await page.locator('#directoryBackToGuestsBtn').click();
     await expect(page.locator('.directory-dashboard-fused.is-profile-mode')).toHaveCount(0);
-    await expect(page.locator('.directory-dashboard-header')).toBeVisible();
-    await expect(page.locator('#refreshGuestDirectoryBtn')).toBeVisible();
-    await expect(page.getByRole('button', { name: /Scan Intake PDF/i })).toBeVisible();
-    await expect(page.locator('#v11190PdfOcrReviewNote')).toBeVisible();
-    await expect(page.locator('#directory-care-summary')).toBeVisible();
+    await expect(page.locator('.directory-roster-heading')).toBeVisible();
+    await expect(page.locator('#refreshGuestDirectoryBtn')).toBeHidden();
+    await expect(page.getByRole('button', { name: /Scan Intake PDF/i })).toBeHidden();
+    await expect(page.locator('#v11190PdfOcrReviewNote')).toBeHidden();
+    await expect(page.locator('#directory-care-summary')).toBeHidden();
   });
 }

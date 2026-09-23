@@ -5377,6 +5377,22 @@ registerWaffleServiceWorker();
                     'input',
                     filterGuestDirectoryCards
                 );
+
+            const rosterFilters = document.querySelector('.directory-roster-filters');
+            if (rosterFilters) {
+                const rosterSummaryObserver = new MutationObserver(
+                    updateDirectoryRosterSummary
+                );
+                rosterSummaryObserver.observe(
+                    rosterFilters,
+                    { childList: true, characterData: true, subtree: true }
+                );
+            }
+
+            document.addEventListener('click', event => {
+                if (!event.target.closest('[data-v1082-stay-tab]')) return;
+                window.setTimeout(filterGuestDirectoryCards, 0);
+            });
         }
 
         const themeToggleBtn = document.getElementById('themeToggle');
@@ -8251,6 +8267,7 @@ registerWaffleServiceWorker();
             container.classList.add('care-unset');
             container.innerHTML =
                 '<span class="directory-care-unset">🛡️ Care profile not set</span>';
+            updateDirectoryRosterStatus(stayKey, 'Care not set', 'is-unset');
             refreshDirectoryCareSummary();
             return;
         }
@@ -8262,6 +8279,7 @@ registerWaffleServiceWorker();
             container.classList.add('care-clear');
             container.innerHTML =
                 '<span class="directory-care-clear">✓ No active care alerts</span>';
+            updateDirectoryRosterStatus(stayKey, 'Ready', 'is-ready');
             refreshDirectoryCareSummary();
             return;
         }
@@ -8281,7 +8299,31 @@ registerWaffleServiceWorker();
             </span>
         `).join('');
 
+        updateDirectoryRosterStatus(
+            stayKey,
+            activeFlags[0].label,
+            'is-alert'
+        );
+
         refreshDirectoryCareSummary();
+    }
+
+    function updateDirectoryRosterStatus(stayKey, label, stateClass) {
+        const card = getDirectoryProfileCard(stayKey);
+        const status = card?.querySelector('.directory-roster-status');
+        if (!status) return;
+        status.textContent = label;
+        status.classList.remove('is-ready', 'is-unset', 'is-alert');
+        if (stateClass) status.classList.add(stateClass);
+        const openButton = card.querySelector('[data-open-directory-profile]');
+        if (openButton) {
+            const dogName = card.dataset.directoryDogName || card.dataset.dogName || 'Guest';
+            const context = card.querySelector('.directory-roster-context')?.textContent || '';
+            openButton.setAttribute(
+                'aria-label',
+                `Open ${dogName} care profile. ${context}. ${label}.`
+            );
+        }
     }
 
     function refreshDirectoryCareSummary() {
@@ -10145,6 +10187,11 @@ registerWaffleServiceWorker();
                 ) ||
             false;
 
+        const activeView = String(
+            document.querySelector('[data-v1082-stay-tab].is-active')?.dataset.v1082StayTab ||
+            'current'
+        );
+
         document
             .querySelectorAll(
                 '.directory-card'
@@ -10160,14 +10207,34 @@ registerWaffleServiceWorker();
                     return;
                 }
 
+                const isPast = card.dataset.v1082PastStay === 'true';
+                const isFuture = card.dataset.v1082StayKind === 'future' ||
+                    (card.dataset.directoryStartDate || card.dataset.startDate || '') >
+                    (typeof getLocalTodayDateString === 'function'
+                        ? getLocalTodayDateString()
+                        : new Date().toISOString().slice(0, 10));
+                const matchesView = activeView === 'past'
+                    ? isPast
+                    : !isPast && (activeView === 'future' ? isFuture : !isFuture);
+
                 card.style.display =
-                    !search ||
+                    matchesView && (!search ||
                     card.innerText
                         .toLowerCase()
-                        .includes(search)
+                        .includes(search))
                         ? 'block'
                         : 'none';
             });
+
+        updateDirectoryRosterSummary();
+    }
+
+    function updateDirectoryRosterSummary() {
+        const summary = document.getElementById('directory-roster-summary');
+        if (!summary) return;
+        const staying = document.getElementById('v1082CurrentStayCount')?.textContent || '0';
+        const arriving = document.getElementById('v1082FutureStayCount')?.textContent || '0';
+        summary.textContent = `${staying} staying · ${arriving} arriving soon`;
     }
 
     function intakeAttributeControlHtml(field, value) {
@@ -14180,6 +14247,13 @@ registerWaffleServiceWorker();
                                 const directoryStayKey = potentialKey;
                                 const stayDateLabel =
                                     `${formatStayDateShort(startParsed)} – ${formatStayDateShort(endParsed)}`;
+                                const rosterContext = isCurrentlyAtHome
+                                    ? `${breedTxt} · ${isTodayTheEndDate ? 'leaves today' : `leaves ${formatStayDateShort(endParsed)}`}`
+                                    : `${breedTxt} · arrives ${formatStayDateShort(startParsed)}`;
+                                const rosterStatus = hasBeenPickedUp
+                                    ? 'Checked out'
+                                    : (isCurrentlyAtHome ? 'Staying' : 'Arriving');
+                                const rosterInitials = dogName.trim().split(/\s+/).slice(0, 2).map(part => part.charAt(0)).join('');
 
                                 directoryCardsHTML.push(`
                                     <div
@@ -14198,14 +14272,17 @@ registerWaffleServiceWorker();
                                             type="button"
                                             class="directory-guest-tile-open"
                                             data-open-directory-profile
-                                            aria-label="Open ${escapeDashboardHtml(dogName.trim())} care profile">
+                                            aria-label="Open ${escapeDashboardHtml(dogName.trim())} care profile. ${escapeDashboardHtml(rosterContext)}. ${escapeDashboardHtml(rosterStatus)}.">
                                             <span
                                                 class="directory-guest-tile-photo"
                                                 data-directory-tile-photo="${escapeDashboardHtml(directoryStayKey)}"
                                                 aria-hidden="true"></span>
-                                            <span class="directory-guest-tile-name">
-                                                ${escapeDashboardHtml(dogName.trim())}
+                                            <span class="directory-roster-avatar" aria-hidden="true">${escapeDashboardHtml(rosterInitials || '🐾')}</span>
+                                            <span class="directory-roster-copy">
+                                                <span class="directory-guest-tile-name">${escapeDashboardHtml(dogName.trim())}</span>
+                                                <span class="directory-roster-context">${escapeDashboardHtml(rosterContext)}</span>
                                             </span>
+                                            <span class="directory-roster-status">${rosterStatus}</span>
                                         </button>
 
                                         <div class="directory-profile-content">

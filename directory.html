@@ -12,7 +12,7 @@
     <link rel="icon" type="image/png" sizes="192x192" href="pwa-icon-192.png?v=2026.08.28.01">
     <link rel="apple-touch-icon" sizes="180x180" href="pwa-apple-touch-icon.png?v=2026.08.28.01">
     <title>Waffle House — Guest Directory & Care</title>
-<link rel="stylesheet" href="waffle-runtime.css?v=2026.08.28.01&amp;rev=2026.09.23.03">
+<link rel="stylesheet" href="waffle-runtime.css?v=2026.08.28.01&amp;rev=2026.09.23.04">
     </head>
 <body data-waffle-page="directory">
 
@@ -197,58 +197,36 @@
 
     <div id="directoryTabPanel" class="app-tab-panel active" data-app-panel="directory">
         <div class="directory-dashboard directory-dashboard-fused">
-            <div class="directory-dashboard-header">
+            <div class="directory-roster-heading">
                 <div>
-                    <h3>🐾 Guest Directory &amp; Care</h3>
-                    <p class="directory-dashboard-subtitle">
-                        Switch between current/upcoming guests and completed stays. Select a dog to open the stay-specific care profile, intake, belongings and photos.
-                    </p>
+                    <h1>Guests</h1>
+                    <p id="directory-roster-summary" aria-live="polite">Loading guests…</p>
                 </div>
-
-                <div class="directory-header-actions directory-header-actions-fused">
-                    <button
-                        type="button"
-                        id="openLegacyIntakeUploadBtn"
-                        class="directory-legacy-global-btn">
-                        📚 Upload PDF
-                    </button>
-
-                    <button
-                        type="button"
-                        id="refreshGuestDirectoryBtn"
-                        class="belongings-refresh-btn">
-                        🔄 Refresh
-                    </button>
-
-                    <span id="directory-care-summary" class="directory-care-summary">
-                        No active care alerts
-                    </span>
+                <div class="guest-directory-toolbar">
+                    <input
+                        type="search"
+                        id="guestDirectorySearch"
+                        class="search-input guest-directory-search"
+                        placeholder="Find dog or owner"
+                        aria-label="Find a dog or owner"
+                        autocomplete="off">
                 </div>
             </div>
 
-            <nav class="v1082-stay-tabs" role="tablist" aria-label="Care stay status">
+            <nav class="v1082-stay-tabs directory-roster-filters" role="tablist" aria-label="Filter guests by stay status">
                 <button type="button" class="v1082-stay-tab is-active" role="tab" aria-selected="true" data-v1082-stay-tab="current">
-                    <span>🏡 Current</span>
+                    <span>Staying</span>
                     <strong id="v1082CurrentStayCount">…</strong>
                 </button>
+                <button type="button" class="v1082-stay-tab" role="tab" aria-selected="false" data-v1082-stay-tab="future">
+                    <span>Arriving</span>
+                    <strong id="v1082FutureStayCount">…</strong>
+                </button>
                 <button type="button" class="v1082-stay-tab" role="tab" aria-selected="false" data-v1082-stay-tab="past">
-                    <span>🕘 Past Stays</span>
+                    <span>Past</span>
                     <strong id="v1082PastStayCount">…</strong>
                 </button>
             </nav>
-
-            <div class="guest-directory-toolbar">
-                <input
-                    type="search"
-                    id="guestDirectorySearch"
-                    class="search-input guest-directory-search"
-                    placeholder="🔍 Search dog, breed, owner, care, intake or belongings..."
-                    autocomplete="off">
-
-                <span class="guest-directory-toolbar-note">
-                    Tap a guest tile to open their full profile.
-                </span>
-            </div>
 
             <div
                 id="directoryProfileBackBar"
@@ -258,12 +236,16 @@
                     type="button"
                     id="directoryBackToGuestsBtn"
                     class="directory-profile-back-btn">
-                    ← All Guests
+                    ← Guests
                 </button>
 
                 <div class="directory-profile-breadcrumb">
-                    <span class="directory-profile-breadcrumb-label">Care Profile</span>
                     <strong id="directoryProfileBreadcrumbName">Guest</strong>
+                </div>
+                <div class="directory-profile-tools">
+                    <span id="directory-care-summary" class="directory-care-summary">No active care alerts</span>
+                    <button type="button" id="openLegacyIntakeUploadBtn" class="directory-legacy-global-btn">📚 Upload PDF</button>
+                    <button type="button" id="refreshGuestDirectoryBtn" class="belongings-refresh-btn">🔄 Refresh</button>
                 </div>
             </div>
 
@@ -585,6 +567,6 @@
     body.dark-theme .modal-content-panel input { background: #334155; border-color: #475569; color: white; }
 </style>
 
-<script src="waffle-bootstrap.js?v=2026.08.28.01&amp;rev=2026.09.23.03"></script>
+<script src="waffle-bootstrap.js?v=2026.08.28.01&amp;rev=2026.09.23.04"></script>
     </html>
 
