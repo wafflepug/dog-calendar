@@ -5,8 +5,8 @@
    seven-day working set. V11.1.96 can extend Future Stays to six months, but
    on the Care page there is no FullCalendar adapter to supply the remaining
    confirmed bookings. This bridge reads the full cached booking CSV without
-   mutating the directory, temporarily exposes those bookings through the
-   Calendar adapter contract, then lets V11.1.96 create/group the extra cards.
+   mutating the directory and hands the event snapshot to V11.1.96. That module
+   only materializes arrivals beyond seven days after the user asks to see them.
    ============================================================ */
 (function () {
   'use strict';
@@ -15,7 +15,6 @@
   const VERSION = '11.1.99';
   const REFRESH_MS = 15000;
   let refreshTimer = 0;
-  let running = false;
   let originalSyncSpreadsheetData = null;
 
   function pageName() {
@@ -111,6 +110,7 @@
           notes: notes || 'None',
           rawStartDate: startDate,
           rawEndDate: endDate,
+          sourceRow: i + 1,
           bookingType: bookingType || 'Boarding',
           editLink
         }
@@ -135,52 +135,15 @@
   }
 
   function runRangeMaintain() {
-    if (!isCarePage() || running) return;
+    if (!isCarePage()) return;
     const range = window.WAFFLE_V11196_FUTURE_RANGE;
-    if (!range || typeof range.maintain !== 'function') return;
+    if (!range || typeof range.updateEvents !== 'function') return;
 
     const events = fullConfirmedEvents();
-    if (!events.length) {
-      try { range.maintain(); } catch (_) {}
-      return;
-    }
-
-    const bridge = {
-      getEvents() { return events; }
-    };
-
-    running = true;
-    let lexicalReplaced = false;
-    let previousLexical = null;
-    const hadWindowAdapter = Object.prototype.hasOwnProperty.call(window, 'globalCalendar');
-    const previousWindowAdapter = window.globalCalendar;
-
     try {
-      /* waffle-app.js owns a shared global lexical `let globalCalendar`.
-         On Care it is normally null because FullCalendar is not instantiated. */
-      try {
-        previousLexical = globalCalendar;
-        globalCalendar = bridge;
-        lexicalReplaced = true;
-      } catch (_) {
-        window.globalCalendar = bridge;
-      }
-
-      range.maintain();
+      range.updateEvents(events);
     } catch (error) {
       console.warn('Future Care full-range refresh could not run:', error);
-    } finally {
-      try {
-        if (lexicalReplaced) globalCalendar = previousLexical;
-      } catch (_) {}
-
-      if (!lexicalReplaced) {
-        try {
-          if (hadWindowAdapter) window.globalCalendar = previousWindowAdapter;
-          else delete window.globalCalendar;
-        } catch (_) {}
-      }
-      running = false;
     }
   }
 

@@ -43,7 +43,14 @@ require('waffle-v11.1.96.js', 'data-v11196-synthetic-future="true"')
 require('waffle-v11.1.96.js', 'data-directory-detail="profile"')
 require('waffle-v11.1.96.js', 'data-directory-detail="belongings"')
 require('waffle-v11.1.96.js', 'groupFutureCardsByMonth')
-require('waffle-v11.1.96.js', 'Next 6+ months · grouped by month')
+require('waffle-v11.1.96.js', "button.textContent = 'Show next 7 days only'")
+require('waffle-v11.1.96.js', 'View ${deferredCount} later arrivals')
+require('waffle-v11.1.96.js', 'updateEvents(events)')
+require('waffle-v11.1.96.js', 'totalFutureCount')
+require('waffle-v11.1.96.js', 'matchesDistantStay')
+require('waffle-v11.1.96.js', 'requestedDeepLinkKey')
+require('waffle-v11.1.96.css', '.v11196-future-range-button')
+require('waffle-v11.1.96.css', '@media (forced-colors: active)')
 require('waffle-v11.1.96.css', '.v11196-month-heading')
 require('waffle-v11.1.96.css', 'grid-column: 1 / -1')
 
@@ -101,9 +108,24 @@ require('waffle-v11.1.99.js', 'confirmedEventsFromCsv')
 require('waffle-v11.1.99.js', "lowerType === 'meet & greet'")
 require('waffle-v11.1.99.js', "lowerType === 'potential stay'")
 require('waffle-v11.1.99.js', 'WAFFLE_V11196_FUTURE_RANGE')
-require('waffle-v11.1.99.js', 'globalCalendar = bridge')
+require('waffle-v11.1.99.js', 'range.updateEvents(events)')
 require('waffle-v11.1.99.js', 'REFRESH_MS = 15000')
 forbid('waffle-v11.1.99.js', 'parseCSVToEvents(')
+forbid('waffle-v11.1.99.js', 'globalCalendar = bridge')
+
+future_range = Path('waffle-v11.1.96.js').read_text(encoding='utf-8')
+maintain_start = future_range.index('function maintain()')
+maintain_end = future_range.index('function scheduleMaintain()', maintain_start)
+maintain_body = future_range[maintain_start:maintain_end]
+if maintain_body.find('requestedDeepLinkKey()') > maintain_body.find('const initialEvents'):
+    errors.append('waffle-v11.1.96.js: expand a requested distant stay before choosing the initial seven-day event set')
+
+for path in ('index.html', 'directory.html', 'reminders.html', 'audit.html'):
+    require(path, 'rev=2026.09.23.14')
+require('waffle-bootstrap.js', "ASSET_REVISION = '2026.09.23.14'")
+require('service-worker.js', 'v11.4.39-load-later-care-arrivals-on-demand-2026.09.23.14')
+require('waffle-build.json', 'Load later Care arrivals on demand')
+require('waffle-release.json', 'Load later Care arrivals on demand')
 
 # V11.2.01 is the final count-consistency guard. Current and Future share the
 # same DOM grid, so any legacy cards.length write must be replaced/reconciled

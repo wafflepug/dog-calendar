@@ -91,6 +91,47 @@
   border-color: color-mix(in srgb, #3b82f6 36%, var(--wh-border, #dbe3ea));
 }
 
+.v11196-future-range-control {
+  display: block;
+  grid-column: 1 / -1;
+  width: 100%;
+  margin: 8px 0;
+}
+
+.v11196-future-range-control[hidden] {
+  display: none !important;
+}
+
+.v11196-future-range-button {
+  display: flex;
+  width: 100%;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  padding: 11px 14px;
+  border: 1px solid #2563eb;
+  border-radius: 12px;
+  background: color-mix(in srgb, #2563eb 9%, var(--wh-surface, #fff));
+  color: #1d4ed8;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 900;
+  line-height: 1.3;
+  text-align: center;
+  cursor: pointer;
+}
+
+.v11196-future-range-button:hover,
+.v11196-future-range-button:focus-visible {
+  background: #2563eb;
+  color: #fff;
+}
+
+.v11196-future-range-button:focus-visible {
+  outline: 3px solid color-mix(in srgb, #2563eb 48%, transparent);
+  outline-offset: 2px;
+}
+
 /* In Future mode, the six-month range is primary; keep the helper copy readable. */
 .directory-dashboard-fused[data-v11195-stay-view="future"] .guest-directory-toolbar-note {
   max-width: 520px;
@@ -110,7 +151,41 @@ body.dark-theme .v11196-month-count {
   color: #bfdbfe;
 }
 
+body.dark-theme .v11196-future-range-button {
+  border-color: #60a5fa;
+  background: #172841;
+  color: #bfdbfe;
+}
+
+body.dark-theme .v11196-future-range-button:hover,
+body.dark-theme .v11196-future-range-button:focus-visible {
+  background: #1d4ed8;
+  color: #fff;
+}
+
+@media (forced-colors: active) {
+  .v11196-future-range-button {
+    border: 2px solid ButtonText;
+    background: ButtonFace;
+    color: ButtonText;
+  }
+
+  .v11196-future-range-button:focus-visible {
+    outline: 3px solid Highlight;
+  }
+}
+
 @media (max-width: 768px) {
+  .v11196-future-range-control {
+    margin: 6px 0;
+  }
+
+  .v11196-future-range-button {
+    min-height: 52px;
+    padding: 12px;
+    font-size: 13px;
+  }
+
   .v11196-month-heading {
     align-items: center;
     margin-top: 10px;

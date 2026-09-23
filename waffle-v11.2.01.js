@@ -88,6 +88,11 @@
       else current += 1;
     });
 
+    try {
+      const rangeCount = window.WAFFLE_V11196_FUTURE_RANGE?.totalFutureCount?.();
+      if (Number.isFinite(rangeCount)) future = rangeCount;
+    } catch (_) {}
+
     writeCounter('v1082CurrentStayCount', current);
     writeCounter('v1082FutureStayCount', future);
 

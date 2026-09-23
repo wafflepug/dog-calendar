@@ -158,6 +158,11 @@
       else currentCount += 1;
     });
 
+    try {
+      const rangeCount = window.WAFFLE_V11196_FUTURE_RANGE?.totalFutureCount?.();
+      if (Number.isFinite(rangeCount)) futureCount = Math.max(futureCount, rangeCount);
+    } catch (_) {}
+
     const currentCounter = document.getElementById('v1082CurrentStayCount');
     const futureCounter = document.getElementById('v1082FutureStayCount');
     if (currentCounter) currentCounter.textContent = String(currentCount);

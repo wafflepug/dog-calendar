@@ -17,7 +17,9 @@
   let gridObserver = null;
   let scheduled = false;
   let mutating = false;
-  let refreshTimer = 0;
+  let cachedFutureEvents = [];
+  let cacheReady = false;
+  let expanded = false;
 
   function pageName() {
     return String(window.WAFFLE_PAGE || document.body?.dataset?.wafflePage || '');
@@ -67,6 +69,13 @@
       0
     );
     return localDateKey(end);
+  }
+
+  function sevenDayKey() {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    today.setDate(today.getDate() + 7);
+    return localDateKey(today);
   }
 
   function getCalendarAdapter() {
@@ -158,6 +167,25 @@
       });
   }
 
+  function cacheEvents(events) {
+    const seen = new Set();
+    cachedFutureEvents = (Array.isArray(events) ? events : [])
+      .filter(isConfirmedFutureEvent)
+      .filter(event => {
+        const key = stayKeyFor(event);
+        if (!key || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
+      .sort((a, b) => {
+        const left = eventDates(a).start;
+        const right = eventDates(b).start;
+        if (left !== right) return left.localeCompare(right);
+        return eventDogName(a).localeCompare(eventDogName(b));
+      });
+    cacheReady = true;
+  }
+
   function grid() {
     return document.getElementById('directory-grid');
   }
@@ -166,6 +194,29 @@
     const host = grid();
     if (!host) return [];
     return Array.from(host.querySelectorAll(':scope > .directory-card[data-directory-stay-key]'));
+  }
+
+  function cardKeys() {
+    return new Set(allCareCards().map(card => String(card.dataset.directoryStayKey || '')));
+  }
+
+  function laterEvents() {
+    const keys = cardKeys();
+    return cachedFutureEvents.filter(event => {
+      const start = eventDates(event).start;
+      return start > sevenDayKey() && !keys.has(stayKeyFor(event));
+    });
+  }
+
+  function totalFutureCount() {
+    if (!cacheReady) return null;
+    const keys = new Set(cachedFutureEvents.map(stayKeyFor));
+    allCareCards().forEach(card => {
+      const start = parseDateKey(card.dataset.directoryStartDate || card.dataset.startDate || '');
+      const key = String(card.dataset.directoryStayKey || '');
+      if (start > todayKey() && key) keys.add(key);
+    });
+    return keys.size;
   }
 
   function formatStayDate(value) {
@@ -403,6 +454,104 @@
     });
   }
 
+  function ensureRangeControl() {
+    const panel = document.getElementById('v1082CurrentStayPanel');
+    const host = grid();
+    if (!panel || !host) return null;
+    let control = document.getElementById('v11196FutureRangeControl');
+    if (!control) {
+      control = document.createElement('div');
+      control.id = 'v11196FutureRangeControl';
+      control.className = 'v11196-future-range-control';
+      control.setAttribute('aria-live', 'polite');
+      control.innerHTML = '<button type="button" class="v11196-future-range-button" data-v11196-expand-later></button>';
+      panel.insertBefore(control, host);
+    }
+    return control;
+  }
+
+  function updateRangeControl() {
+    const control = ensureRangeControl();
+    if (!control) return;
+    const button = control.querySelector('[data-v11196-expand-later]');
+    const later = laterEvents();
+    const deferredCount = later.length;
+    control.hidden = !document.querySelector('.directory-dashboard-fused')?.dataset?.v11195StayView
+      || document.querySelector('.directory-dashboard-fused')?.dataset?.v11195StayView !== 'future'
+      || (!deferredCount && !expanded);
+    if (!button) return;
+    if (expanded) {
+      button.textContent = 'Show next 7 days only';
+      button.hidden = false;
+      button.setAttribute('aria-expanded', 'true');
+      button.setAttribute('aria-controls', 'directory-grid');
+      button.dataset.v11196Action = 'collapse';
+      return;
+    }
+    if (!deferredCount) {
+      button.hidden = true;
+      return;
+    }
+    const earliest = formatStayDate(eventDates(later[0]).start);
+    button.textContent = `View ${deferredCount} later arrivals · First arrives ${earliest}`;
+    button.hidden = false;
+    button.setAttribute('aria-expanded', 'false');
+    button.setAttribute('aria-controls', 'directory-grid');
+    button.dataset.v11196Action = 'expand';
+  }
+
+  function removeDeferredSyntheticCards() {
+    allCareCards().forEach(card => {
+      if (card.dataset.v11196SyntheticFuture !== 'true') return;
+      const start = parseDateKey(card.dataset.directoryStartDate || card.dataset.startDate || '');
+      if (start > sevenDayKey()) card.remove();
+    });
+  }
+
+  function activateLaterArrivals() {
+    if (!cacheReady) {
+      cacheEvents(futureEvents());
+    }
+    expanded = true;
+    mutating = true;
+    try {
+      reconcileFutureCards(cachedFutureEvents);
+      groupFutureCardsByMonth();
+      updateFutureRangeCopy();
+      refreshExistingCareHooks();
+      updateMonthHeadingVisibility();
+    } finally {
+      mutating = false;
+    }
+    updateRangeControl();
+    window.WAFFLE_V11201_CARE_COUNT_CONSISTENCY?.reconcileCounts?.();
+  }
+
+  function showNextSevenDaysOnly() {
+    expanded = false;
+    mutating = true;
+    try {
+      removeMonthHeadings();
+      removeDeferredSyntheticCards();
+      groupFutureCardsByMonth();
+      updateFutureRangeCopy();
+      refreshExistingCareHooks();
+      updateMonthHeadingVisibility();
+    } finally {
+      mutating = false;
+    }
+    updateRangeControl();
+    window.WAFFLE_V11201_CARE_COUNT_CONSISTENCY?.reconcileCounts?.();
+  }
+
+  function requestedDeepLinkKey() {
+    try {
+      return String(new URLSearchParams(window.location.search).get('stayKey') || '').trim();
+    } catch (_) {
+      return '';
+    }
+  }
+
   function removeMonthHeadings() {
     grid()?.querySelectorAll(`:scope > .${MONTH_HEADING_CLASS}`).forEach(node => node.remove());
   }
@@ -460,10 +609,13 @@
   }
 
   function updateFutureRangeCopy() {
+    const copy = expanded
+      ? 'Next 6+ months · grouped by month'
+      : 'Next 7 days · more arrivals on demand';
     const heading = document.getElementById('v11195FutureStayHeading');
     if (heading) {
       const right = heading.querySelector(':scope > span');
-      if (right) right.textContent = 'Next 6+ months · grouped by month';
+      if (right) right.textContent = copy;
     }
 
     const note = document.querySelector('.guest-directory-toolbar-note');
@@ -474,7 +626,9 @@
     }
 
     if (dashboard?.dataset?.v11195StayView === 'future' && note) {
-      note.textContent = 'Future stays cover at least six months and are grouped by arrival month. Open any dog for the same full Care profile.';
+      note.textContent = expanded
+        ? 'Showing confirmed arrivals for the next six months, grouped by month. Open any dog for its full Care profile.'
+        : 'Showing arrivals for the next seven days. Open later arrivals only when you need the longer view.';
     }
   }
 
@@ -493,12 +647,23 @@
     const host = grid();
     if (!host) return;
 
-    const events = futureEvents();
-    if (!events.length && !getCalendarAdapter()) return;
+    if (!cacheReady) {
+      const events = futureEvents();
+      if (events.length || getCalendarAdapter()) cacheEvents(events);
+    }
+    if (!cacheReady) return;
+
+    const deepLinkKey = requestedDeepLinkKey();
+    if (deepLinkKey && cachedFutureEvents.some(event => {
+      return stayKeyFor(event) === deepLinkKey && eventDates(event).start > sevenDayKey();
+    })) {
+      expanded = true;
+    }
 
     mutating = true;
     try {
-      reconcileFutureCards(events);
+      const initialEvents = cachedFutureEvents.filter(event => eventDates(event).start <= sevenDayKey());
+      reconcileFutureCards(expanded ? cachedFutureEvents : initialEvents);
       groupFutureCardsByMonth();
       updateFutureRangeCopy();
       refreshExistingCareHooks();
@@ -507,6 +672,8 @@
     } finally {
       mutating = false;
     }
+    updateRangeControl();
+    window.WAFFLE_V11201_CARE_COUNT_CONSISTENCY?.reconcileCounts?.();
   }
 
   function scheduleMaintain() {
@@ -527,34 +694,63 @@
   function start() {
     if (!isCarePage()) return;
     startObserver();
-    scheduleMaintain();
+    ensureRangeControl();
 
     document.addEventListener('click', event => {
       if (event.target?.closest?.('[data-v1082-stay-tab="future"]')) {
         setTimeout(() => {
           updateFutureRangeCopy();
           updateMonthHeadingVisibility();
+          updateRangeControl();
         }, 0);
+      }
+      const rangeButton = event.target?.closest?.('[data-v11196-expand-later]');
+      if (rangeButton) {
+        if (rangeButton.dataset.v11196Action === 'collapse') showNextSevenDaysOnly();
+        else activateLaterArrivals();
       }
     }, true);
 
-    document.getElementById('guestDirectorySearch')?.addEventListener('input', () => {
+    document.getElementById('guestDirectorySearch')?.addEventListener('input', event => {
+      const query = String(event.target?.value || '').trim().toLocaleLowerCase();
+      if (query) {
+        if (!cacheReady) {
+          const bridgeEvents = window.WAFFLE_V11199_FUTURE_DATA_BRIDGE?.readConfirmedEvents?.();
+          cacheEvents(Array.isArray(bridgeEvents) ? bridgeEvents : futureEvents());
+        }
+        const matchesDistantStay = cachedFutureEvents.some(item => {
+          const props = item.extendedProps || {};
+          const haystack = [eventDogName(item), props.ownerName, props.owner, props.breed]
+            .join(' ').toLocaleLowerCase();
+          return eventDates(item).start > sevenDayKey() && haystack.includes(query);
+        });
+        if (matchesDistantStay) {
+          activateLaterArrivals();
+          document.querySelector('[data-v1082-stay-tab="future"]')?.click();
+        }
+      }
       requestAnimationFrame(updateMonthHeadingVisibility);
+      requestAnimationFrame(updateRangeControl);
     });
 
     window.addEventListener('pageshow', scheduleMaintain);
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible') scheduleMaintain();
     });
-
-    clearInterval(refreshTimer);
-    refreshTimer = window.setInterval(scheduleMaintain, 15000);
   }
 
   window.WAFFLE_V11196_FUTURE_RANGE = Object.freeze({
     version: VERSION,
     monthsAhead: FULL_MONTHS_AHEAD,
     horizonKey,
+    updateEvents(events) {
+      cacheEvents(events);
+      maintain();
+    },
+    activateLaterArrivals,
+    showNextSevenDaysOnly,
+    totalFutureCount,
+    deferredCount: () => laterEvents().length,
     maintain
   });
 
