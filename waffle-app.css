@@ -5217,6 +5217,173 @@ body.dark-theme .directory-lazy-placeholder.is-error {
     background: color-mix(in srgb, var(--wh-accent, #2563eb) 5%, var(--wh-surface, #ffffff));
 }
 
+.directory-care-readiness {
+    margin-top: 12px;
+    border: 1px solid var(--wh-border, #dbe3ea);
+    border-radius: 11px;
+    background: var(--wh-surface, #ffffff);
+}
+
+.directory-care-readiness > summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 44px;
+    padding: 8px 12px;
+    color: var(--wh-text, #172033);
+    font-size: 14px;
+    font-weight: 850;
+    cursor: pointer;
+    list-style-position: inside;
+}
+
+.directory-care-readiness > summary strong {
+    color: var(--wh-text-muted, #475569);
+    font-size: 12px;
+    text-align: right;
+}
+
+.directory-care-readiness-list {
+    display: grid;
+    gap: 7px;
+    padding: 0 10px 10px;
+}
+
+.directory-care-readiness-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    padding: 7px 9px;
+    border: 1px solid var(--wh-border, #dbe3ea);
+    border-radius: 9px;
+    background: var(--wh-surface, #ffffff);
+}
+
+.directory-care-readiness-row[data-state="attention"] {
+    border-inline-start: 4px solid var(--wh-danger, #b42318);
+    background: color-mix(in srgb, var(--wh-danger, #b42318) 5%, var(--wh-surface, #ffffff));
+}
+
+.directory-care-readiness-row[data-state="ready"] {
+    border-inline-start: 4px solid var(--wh-success, #166534);
+}
+
+.directory-care-readiness-copy {
+    display: grid;
+    min-width: 0;
+    gap: 2px;
+    color: var(--wh-text, #172033);
+    font-size: 13px;
+}
+
+.directory-care-readiness-copy small {
+    color: var(--wh-text-muted, #475569);
+    font-size: 12px;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+.directory-care-readiness-status {
+    color: var(--wh-text, #172033);
+    font-size: 12px;
+    font-weight: 850;
+    text-align: right;
+}
+
+.directory-care-readiness-row[data-state="attention"] .directory-care-readiness-status {
+    color: var(--wh-danger, #b42318);
+}
+
+.directory-care-readiness-row[data-state="ready"] .directory-care-readiness-status {
+    color: var(--wh-success, #166534);
+}
+
+.directory-care-readiness-row > button {
+    min-width: 68px;
+    min-height: 44px;
+    padding: 7px 10px;
+    border: 1px solid var(--wh-border, #cbd5e1);
+    border-radius: 8px;
+    background: var(--wh-surface, #ffffff);
+    color: var(--wh-primary, #0f3550);
+    font: inherit;
+    font-size: 12px;
+    font-weight: 850;
+    cursor: pointer;
+}
+
+.directory-care-readiness-row > button:focus-visible,
+.directory-care-readiness > summary:focus-visible {
+    outline: 2px solid var(--wh-focus, #2563eb);
+    outline-offset: 2px;
+}
+
+@media (max-width: 520px) {
+    .directory-care-readiness > summary {
+        gap: 8px;
+        padding-inline: 9px;
+        font-size: 13px;
+    }
+
+    .directory-care-readiness-row {
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 4px 8px;
+    }
+
+    .directory-care-readiness-copy {
+        grid-column: 1;
+        grid-row: 1 / span 2;
+    }
+
+    .directory-care-readiness-status {
+        grid-column: 2;
+        grid-row: 1;
+    }
+
+    .directory-care-readiness-row > button {
+        grid-column: 2;
+        grid-row: 2;
+    }
+}
+
+body.dark-theme .directory-care-readiness-row[data-state="attention"] {
+    background: color-mix(in srgb, var(--wh-danger, #f87171) 10%, var(--wh-surface, #111827));
+}
+
+@media (forced-colors: active) {
+    .directory-care-readiness,
+    .directory-care-readiness-row,
+    .directory-care-readiness-row[data-state="attention"],
+    .directory-care-readiness-row[data-state="ready"] {
+        border-color: CanvasText;
+        forced-color-adjust: auto;
+    }
+
+    .directory-care-readiness-row[data-state="attention"] {
+        border-inline-start: 4px solid Mark;
+    }
+
+    .directory-care-readiness-row[data-state="ready"] {
+        border-inline-start: 4px solid Highlight;
+    }
+
+    .directory-care-readiness > summary,
+    .directory-care-readiness > summary strong,
+    .directory-care-readiness-copy,
+    .directory-care-readiness-copy small,
+    .directory-care-readiness-status {
+        color: CanvasText;
+    }
+
+    .directory-care-readiness-row > button {
+        border: 1px solid ButtonText;
+        color: ButtonText;
+    }
+}
+
 .directory-care-brief-heading {
     display: flex;
     align-items: flex-start;

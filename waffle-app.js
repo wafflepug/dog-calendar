@@ -4875,6 +4875,15 @@ registerWaffleServiceWorker();
             );
 
         directoryGrid.addEventListener('click', async function(event) {
+            const readinessAction = event.target.closest('[data-care-readiness-action]');
+            if (readinessAction) {
+                event.preventDefault();
+                event.stopPropagation();
+                const card = readinessAction.closest('.directory-card');
+                openCareReadinessTarget(card, readinessAction.dataset.careReadinessAction);
+                return;
+            }
+
             const careBriefAction =
                 event.target.closest('[data-care-brief-action]');
 
@@ -8207,6 +8216,76 @@ registerWaffleServiceWorker();
                 : null;
         const activeFlags = safetyRecord ? getActiveCareFlags(safetyRecord) : [];
 
+        const readinessItems = {
+            feeding: {
+                ready: !!attributes && [attributes.feedingTimes, attributes.foodAmount, attributes.foodBrandType]
+                    .some(value => String(value || '').trim()),
+                status: attributes ? 'Check' : 'Loading',
+                detail: attributes ? 'Confirm the feeding routine' : 'Care details loading'
+            },
+            medication: {
+                ready: !!(String(attributes?.medicationInstructions || belongingsRecordsCache[stayKey]?.items?.medication || '').trim()),
+                status: 'Check',
+                detail: 'Confirm instructions or record none'
+            },
+            safety: {
+                ready: !!safetyRecord && !activeFlags.length,
+                status: !safetyRecord ? 'Check' : (activeFlags.length ? 'Attention' : 'Clear'),
+                detail: !safetyRecord ? 'Safety record not available' : (activeFlags.length ? `${activeFlags.length} active flag${activeFlags.length === 1 ? '' : 's'}` : 'No active flags')
+            },
+            intake: {
+                ready: ['digital', 'legacy'].includes(String(card.dataset.intakeMethod || '')) || /intake complete/i.test(card.querySelector('[data-directory-intake]')?.textContent || ''),
+                status: 'Not sent',
+                detail: 'Owner intake form'
+            },
+            handover: {
+                ready: !!String(card.querySelector('[data-directory-edit-field="notes"]')?.dataset.directoryCurrentValue || card.dataset.v1088Notes || '').trim(),
+                status: 'Add note',
+                detail: 'Handover note'
+            }
+        };
+        const intakeText = String(card.querySelector('[data-directory-intake]')?.textContent || '');
+        if (readinessItems.intake.ready) {
+            readinessItems.intake.status = 'Complete';
+            readinessItems.intake.detail = 'Owner form received';
+        } else if (/awaiting owner/i.test(intakeText)) {
+            readinessItems.intake.status = 'Awaiting';
+            readinessItems.intake.detail = 'Waiting for owner';
+        }
+        if (readinessItems.feeding.ready) {
+            readinessItems.feeding.status = 'Ready';
+            readinessItems.feeding.detail = 'Routine recorded';
+        } else if (attributes) {
+            readinessItems.feeding.status = 'Add details';
+        }
+        if (readinessItems.medication.ready) {
+            readinessItems.medication.status = 'Ready';
+            readinessItems.medication.detail = 'Instructions recorded';
+        } else if (!attributes) {
+            readinessItems.medication.status = 'Loading';
+            readinessItems.medication.detail = 'Care details loading';
+        }
+        if (readinessItems.handover.ready) {
+            readinessItems.handover.status = 'Ready';
+            readinessItems.handover.detail = 'Note recorded';
+        }
+        const checklist = brief.querySelector('[data-care-readiness-list]');
+        if (checklist) {
+            Object.entries(readinessItems).forEach(([key, item]) => {
+                const row = checklist.querySelector(`[data-care-readiness-item="${key}"]`);
+                if (!row) return;
+                const status = row.querySelector('[data-care-readiness-status]');
+                const detail = row.querySelector('[data-care-readiness-detail]');
+                const needsAttention = !item.ready && item.status !== 'Loading';
+                row.dataset.state = needsAttention ? 'attention' : (item.ready ? 'ready' : 'pending');
+                if (status) status.textContent = item.status;
+                if (detail) detail.textContent = item.detail;
+            });
+            const unresolved = Object.values(readinessItems).filter(item => !item.ready && item.status !== 'Loading').length;
+            const summary = brief.querySelector('[data-care-readiness-summary]');
+            if (summary) summary.textContent = unresolved ? `${unresolved} to review` : 'Ready for care';
+        }
+
         const safetyHost = brief.querySelector('[data-care-brief-safety]');
         const feedingHost = brief.querySelector('[data-care-brief-feeding]');
         const medicationHost = brief.querySelector('[data-care-brief-medication]');
@@ -8267,6 +8346,40 @@ registerWaffleServiceWorker();
             callActionHost.innerHTML = phone
                 ? `<a class="directory-care-brief-action" href="tel:${escapeDashboardHtml(phone)}" aria-label="Call owner">Call owner</a>`
                 : '<span class="directory-care-brief-action is-unavailable" aria-disabled="true" title="No valid owner phone number">Call owner unavailable</span>';
+        }
+    }
+
+    function openCareReadinessTarget(card, action) {
+        const profileTab = card?.querySelector('[data-v11160-tab="profile"]');
+        if (profileTab) profileTab.click();
+        else switchDirectoryProfileMainTab(card, 'profile');
+
+        let target = null;
+        if (action === 'handover') {
+            const disclosure = card.querySelector('[data-directory-stay-contact]');
+            if (disclosure) disclosure.open = true;
+            target = disclosure?.querySelector('[data-directory-edit-field="notes"]');
+            if (target) window.setTimeout(() => target.click(), 0);
+        } else if (action === 'intake') {
+            const disclosure = card.querySelector('.directory-care-records-disclosure');
+            if (disclosure) disclosure.open = true;
+            target = disclosure?.querySelector('[data-create-intake-link]');
+        } else if (action === 'safety') {
+            setDirectoryProfileEditMode(card, true);
+            target = card.querySelector('[data-directory-detail="profile"] [data-care-risk-flag]');
+        } else {
+            const profileSection = card.querySelector('[data-directory-detail="profile"]');
+            setDirectoryProfileEditMode(card, true);
+            const selector = action === 'feeding'
+                ? '[data-intake-attribute="feedingTimes"], [data-intake-attribute="foodAmount"], [data-intake-attribute="foodBrandType"]'
+                : '[data-intake-attribute="medicationInstructions"]';
+            target = profileSection?.querySelector(selector);
+        }
+
+        target?.closest('section, details, [data-directory-detail]')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        if (target && action !== 'handover') {
+            try { target.focus({ preventScroll: true }); }
+            catch (_) { target.focus(); }
         }
     }
 
@@ -13360,6 +13473,7 @@ registerWaffleServiceWorker();
             applyDirectoryIntakeMethodVisibility(
                 stayKey
             );
+            renderDirectoryCareBriefForStay(stayKey);
             return;
         }
 
@@ -13404,6 +13518,7 @@ registerWaffleServiceWorker();
             applyDirectoryIntakeMethodVisibility(
                 stayKey
             );
+            renderDirectoryCareBriefForStay(stayKey);
             return;
         }
 
@@ -13423,6 +13538,14 @@ registerWaffleServiceWorker();
         applyDirectoryIntakeMethodVisibility(
             stayKey
         );
+        renderDirectoryCareBriefForStay(stayKey);
+    }
+
+    function renderDirectoryCareBriefForStay(stayKey) {
+        const card = Array.from(document.querySelectorAll('.directory-card')).find(item =>
+            String(item.dataset.stayKey || item.dataset.directoryStayKey || '') === String(stayKey || '')
+        );
+        if (card) renderDirectoryCareBrief(card);
     }
 
     async function hydrateDirectoryIntakeStatuses(options = {}) {
@@ -14375,11 +14498,11 @@ registerWaffleServiceWorker();
                                         <section
                                             class="directory-care-brief"
                                             data-directory-care-brief
-                                            aria-label="Today’s care plan">
+                                            aria-label="Care readiness">
                                             <div class="directory-care-brief-heading">
                                                 <div>
-                                                    <span class="directory-profile-section-kicker">Ready first</span>
-                                                    <h3>Today’s care plan</h3>
+                                                    <span class="directory-profile-section-kicker">Selected guest</span>
+                                                    <h3>Care readiness</h3>
                                                 </div>
                                                 <span
                                                     class="directory-care-brief-freshness"
@@ -14391,6 +14514,38 @@ registerWaffleServiceWorker();
                                                 </span>
                                             </div>
 
+                                            <details class="directory-care-readiness">
+                                                <summary>
+                                                    <span>Review checklist</span>
+                                                    <strong data-care-readiness-summary>Care details loading</strong>
+                                                </summary>
+                                                <div class="directory-care-readiness-list" data-care-readiness-list>
+                                                    <div class="directory-care-readiness-row" data-care-readiness-item="feeding" data-state="pending">
+                                                        <span class="directory-care-readiness-copy"><strong>Feeding</strong><small data-care-readiness-detail>Care details loading</small></span>
+                                                        <span class="directory-care-readiness-status" data-care-readiness-status>Loading</span>
+                                                        <button type="button" data-care-readiness-action="feeding" aria-label="Review feeding details">Review</button>
+                                                    </div>
+                                                    <div class="directory-care-readiness-row" data-care-readiness-item="medication" data-state="pending">
+                                                        <span class="directory-care-readiness-copy"><strong>Medication</strong><small data-care-readiness-detail>Care details loading</small></span>
+                                                        <span class="directory-care-readiness-status" data-care-readiness-status>Loading</span>
+                                                        <button type="button" data-care-readiness-action="medication" aria-label="Review medication details">Review</button>
+                                                    </div>
+                                                    <div class="directory-care-readiness-row" data-care-readiness-item="safety" data-state="attention">
+                                                        <span class="directory-care-readiness-copy"><strong>Safety</strong><small data-care-readiness-detail>Safety record not available</small></span>
+                                                        <span class="directory-care-readiness-status" data-care-readiness-status>Check</span>
+                                                        <button type="button" data-care-readiness-action="safety" aria-label="Review safety flags">Review</button>
+                                                    </div>
+                                                    <div class="directory-care-readiness-row" data-care-readiness-item="intake" data-state="attention">
+                                                        <span class="directory-care-readiness-copy"><strong>Intake</strong><small data-care-readiness-detail>Owner intake form</small></span>
+                                                        <span class="directory-care-readiness-status" data-care-readiness-status>Not sent</span>
+                                                        <button type="button" data-care-readiness-action="intake" aria-label="Review intake form">Review</button>
+                                                    </div>
+                                                    <div class="directory-care-readiness-row" data-care-readiness-item="handover" data-state="attention">
+                                                        <span class="directory-care-readiness-copy"><strong>Handover</strong><small data-care-readiness-detail>Handover note</small></span>
+                                                        <span class="directory-care-readiness-status" data-care-readiness-status>Add note</span>
+                                                        <button type="button" data-care-readiness-action="handover" aria-label="Review handover note">Review</button>
+                                                    </div>
+                                                </div>
                                             <div class="directory-care-brief-grid">
                                                 <section class="directory-care-brief-item directory-care-brief-safety">
                                                     <h4>Safety</h4>
@@ -14442,6 +14597,7 @@ registerWaffleServiceWorker();
                                                     Edit care details
                                                 </button>
                                             </div>
+                                            </details>
                                         </section>
 
                                         <nav
