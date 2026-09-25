@@ -106,9 +106,11 @@ for (const [name, viewport, colorScheme] of [['390-light', { width: 390, height:
     await expect(page.locator('#directoryProfileBackBar')).toBeVisible();
     await expect(page.locator('.directory-card.is-profile-active .directory-dog-name-btn')).toContainText('very long dog name');
     await expect(page.locator('[data-directory-detail="profile"]')).toHaveAttribute('data-detail-loaded', 'true');
-    await page.locator('.directory-card.is-profile-active [data-profile-subtab="care"]').click();
+    await page.locator('.directory-card.is-profile-active [data-profile-subtab="healthHome"]').click();
     await expect(page.locator('.directory-card.is-profile-active [data-intake-attribute="medicationInstructions"]')).toHaveValue('Safety warning: monitor appetite.');
-    await expect(page.locator('.directory-card.is-profile-active [data-directory-profile-care]')).toBeVisible();
+    await page.locator('.directory-card.is-profile-active [data-profile-subtab="safety"]').scrollIntoViewIfNeeded();
+    await page.locator('.directory-card.is-profile-active [data-profile-subtab="safety"]').evaluate(button => button.click());
+    await expect(page.locator('.directory-card.is-profile-active [data-profile-subtab="safety"]')).toHaveAttribute('aria-expanded', 'true');
     await expect(page.locator('.directory-card.is-profile-active [data-care-risk-flag="foodAllergy"]')).toBeChecked();
     const readsBeforeHandoverEdit = [...actionReads];
     await careBrief.getByRole('button', { name: 'Update handover' }).click();

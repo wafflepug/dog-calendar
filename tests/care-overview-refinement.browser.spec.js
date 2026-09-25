@@ -11,7 +11,8 @@ const profileTabs = appSource.slice(appSource.indexOf('const DIRECTORY_PROFILE_S
 const intakeControl = appSource.slice(appSource.indexOf('function intakeAttributeControlHtml'), appSource.indexOf('function renderDirectoryIntakeAttributes'));
 const intakeRenderer = appSource.slice(appSource.indexOf('function renderDirectoryIntakeAttributes'), appSource.indexOf('function renderDirectoryCareProfile'));
 const careRenderer = appSource.slice(appSource.indexOf('function renderDirectoryCareProfile'), appSource.indexOf('function renderDirectoryBelongings'));
-const actualRenderer = `${careFlags}\n${intakeGroups}\n${profileTabs}\nlet careRiskRecordsCache = {};\nconst directorySummaryRecordsCache = {};\nconst belongingsRecordsCache = {};\nconst applyDirectoryProfileEditMode = () => {};\nfunction escapeDashboardHtml(value){return String(value == null ? '' : value).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');}\n${intakeControl}\n${intakeRenderer}\n${careRenderer}\nwindow.renderDirectoryIntakeAttributes = renderDirectoryIntakeAttributes;`;
+const profileSubtabSwitch = appSource.slice(appSource.indexOf('function switchDirectoryProfileSubTab'), appSource.indexOf('async function openDirectoryGuestProfile'));
+const actualRenderer = `${careFlags}\n${intakeGroups}\n${profileTabs}\nlet careRiskRecordsCache = {};\nconst directorySummaryRecordsCache = {};\nconst belongingsRecordsCache = {};\nconst applyDirectoryProfileEditMode = () => {};\nfunction escapeDashboardHtml(value){return String(value == null ? '' : value).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');}\n${profileSubtabSwitch}\n${intakeControl}\n${intakeRenderer}\n${careRenderer}\nwindow.renderDirectoryIntakeAttributes = renderDirectoryIntakeAttributes;`;
 const briefRenderer = appSource.slice(appSource.indexOf('function renderDirectoryCareBrief(card)'), appSource.indexOf('function openCareReadinessTarget'));
 const readinessNavigator = appSource.slice(appSource.indexOf('function openCareReadinessTarget'), appSource.indexOf('function findDirectoryCareElement'));
 const briefTestCode = `
@@ -46,7 +47,16 @@ test('Care overview wraps long values and keeps controls usable at phone widths'
     await expect(page.locator('.directory-profile-section-heading h4')).toHaveCSS('font-size', '16px');
     await expect(page.locator('.directory-field-value').first()).toHaveCSS('font-size', '14px');
     await expect(page.locator('.intake-profile-control').first()).toHaveAttribute('placeholder', 'Not provided');
-    await expect(page.locator('.directory-profile-subtab')).toHaveCount(5);
+    await expect(page.locator('.care-category-toggle')).toHaveCount(4);
+    expect(await page.locator('.care-category-toggle').evaluateAll(buttons => buttons.every(button => button.getAttribute('aria-expanded') === 'false'))).toBeTruthy();
+    await page.locator('[data-profile-subtab="foodWalks"]').click();
+    await expect(page.locator('[data-profile-subpanel="foodWalks"]')).toBeVisible();
+    await expect(page.locator('[data-profile-subpanel="behaviour"]')).toBeHidden();
+    await page.locator('[data-profile-subtab="behaviour"]').click();
+    await expect(page.locator('[data-profile-subpanel="foodWalks"]')).toBeHidden();
+    await expect(page.locator('[data-profile-subpanel="behaviour"]')).toBeVisible();
+    await expect(page.locator('[data-intake-attribute="feedingTimes"]')).toBeHidden();
+    await expect(page.locator('[data-intake-attribute="friendlyDogs"]')).toBeVisible();
     const identityLayout = await page.evaluate(() => {
       if (document.documentElement.scrollWidth > innerWidth) return false;
       return ['.directory-dog-name-btn', '.directory-primary-breed', '.directory-stay-dates'].map(selector => {
@@ -133,9 +143,9 @@ test('readiness checklist updates from cached profile state, prioritizes gaps, a
   await expect(page.locator('.directory-care-readiness-row').first()).toHaveCSS('border-left-width', '4px');
 });
 
-test('readiness actions open the existing feeding, medication, safety, intake, and handover controls', async ({ page }) => {
-  await page.setContent(`<main class="directory-card"><button data-v11160-tab="profile"></button><section data-directory-detail="profile"><input data-intake-attribute="feedingTimes"><input data-intake-attribute="foodAmount"><textarea data-intake-attribute="medicationInstructions"></textarea><label><input type="checkbox" data-care-risk-flag="foodAllergy"></label><details class="directory-care-records-disclosure"><button data-create-intake-link></button></details><details data-directory-stay-contact><button data-directory-edit-field="notes"></button></details></section></main>`);
-  await page.addScriptTag({ content: `${readinessNavigator}\nwindow.WAFFLE_TEST_CALLS=[];function switchDirectoryProfileMainTab(){}function setDirectoryProfileEditMode(card,enabled){window.WAFFLE_TEST_CALLS.push(enabled);}` });
+test('readiness actions expand the correct category and focus its existing field', async ({ page }) => {
+  await page.setContent(`<main class="directory-card"><button data-v11160-tab="profile"></button><section data-directory-detail="profile"><section data-care-category="foodWalks"><button data-profile-subtab="foodWalks" aria-expanded="false"></button><div data-profile-subpanel="foodWalks" hidden><input data-intake-attribute="feedingTimes"><input data-intake-attribute="foodAmount"></div></section><section data-care-category="healthHome"><button data-profile-subtab="healthHome" aria-expanded="false"></button><div data-profile-subpanel="healthHome" hidden><textarea data-intake-attribute="medicationInstructions"></textarea></div></section><section data-care-category="safety"><button data-profile-subtab="safety" aria-expanded="false"></button><div data-profile-subpanel="safety" hidden><label><input type="checkbox" data-care-risk-flag="foodAllergy"></label></div></section><details class="directory-care-records-disclosure"><button data-create-intake-link></button></details><details data-directory-stay-contact><button data-directory-edit-field="notes"></button></details></section></main>`);
+  await page.addScriptTag({ content: `${readinessNavigator}\nwindow.WAFFLE_TEST_CALLS=[];function switchDirectoryProfileMainTab(){}function switchDirectoryProfileSubTab(card,key){card.querySelectorAll('[data-profile-subpanel]').forEach(panel=>panel.hidden=panel.dataset.profileSubpanel!==key);card.querySelectorAll('[data-profile-subtab]').forEach(button=>button.setAttribute('aria-expanded',button.dataset.profileSubtab===key?'true':'false'));}function setDirectoryProfileEditMode(card,enabled){window.WAFFLE_TEST_CALLS.push(enabled);}` });
   for (const [action, selector] of [
     ['feeding', '[data-intake-attribute="feedingTimes"]'],
     ['medication', '[data-intake-attribute="medicationInstructions"]'],
@@ -153,6 +163,11 @@ test('readiness actions open the existing feeding, medication, safety, intake, a
       await expect.poll(() => page.locator(selector).evaluate(item => item.clicked)).toBeTruthy();
     } else {
       await expect(page.locator(selector)).toBeFocused();
+    }
+    if (['feeding', 'medication', 'safety'].includes(action)) {
+      const category = action === 'feeding' ? 'foodWalks' : action === 'safety' ? 'safety' : 'healthHome';
+      await expect(page.locator(`[data-profile-subtab="${category}"]`)).toHaveAttribute('aria-expanded', 'true');
+      await expect(page.locator(`[data-profile-subpanel="${category}"]`)).toBeVisible();
     }
   }
   await expect(page.locator('.directory-care-records-disclosure')).toHaveAttribute('open', '');

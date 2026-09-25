@@ -4406,34 +4406,20 @@ registerWaffleServiceWorker();
 
     const DIRECTORY_PROFILE_SECONDARY_TABS = [
         {
-            key: 'overview',
-            label: 'Overview',
-            icon: '🐶',
-            groups: ['Owner & Emergency', 'Dog Information']
+            key: 'foodWalks', label: 'Food & Walks', icon: '🥣',
+            groups: ['Feeding', 'Walking'], fields: ['foodBrandType', 'feedingTimes', 'foodAmount', 'allowedTreats', 'foodAllergies', 'walksPerDay', 'walkDuration', 'offLeashAllowed', 'pullsOnLeash']
         },
         {
-            key: 'behaviour',
-            label: 'Behaviour',
-            icon: '🧠',
-            groups: ['Behaviour & Personality']
+            key: 'behaviour', label: 'Behaviour', icon: '🧠',
+            groups: ['Behaviour & Personality'], fields: ['friendlyDogs', 'friendlyCats', 'friendlyChildren', 'friendlyStrangers', 'separationAnxiety', 'aggression', 'foodAggression', 'escapeAttempts', 'indoorAccidents', 'chewingFurniture', 'triggersFears']
         },
         {
-            key: 'foodWalks',
-            label: 'Food & Walks',
-            icon: '🥣',
-            groups: ['Feeding', 'Walking']
+            key: 'healthHome', label: 'Health & Home', icon: '🩺',
+            groups: ['Owner & Emergency', 'Dog Information', 'Medical', 'Sleeping & Home Routine'], fields: ['emergencyContact', 'emergencyPhone', 'age', 'weight', 'sex', 'desexed', 'vaccinated', 'microchipped', 'weightManagement', 'medicalConditions', 'medicationInstructions', 'regularVetClinic', 'vetPhone', 'sleepLocation', 'crateTrained', 'canBeLeftAlone', 'aloneDuration']
         },
         {
-            key: 'healthHome',
-            label: 'Health & Home',
-            icon: '🩺',
-            groups: ['Medical', 'Sleeping & Home Routine']
-        },
-        {
-            key: 'care',
-            label: 'Care',
-            icon: '🛡️',
-            groups: []
+            key: 'safety', label: 'Safety', icon: '🛡️',
+            groups: [], fields: []
         }
     ];
 
@@ -8366,10 +8352,12 @@ registerWaffleServiceWorker();
             target = disclosure?.querySelector('[data-create-intake-link]');
         } else if (action === 'safety') {
             setDirectoryProfileEditMode(card, true);
+            switchDirectoryProfileSubTab(card, 'safety');
             target = card.querySelector('[data-directory-detail="profile"] [data-care-risk-flag]');
         } else {
             const profileSection = card.querySelector('[data-directory-detail="profile"]');
             setDirectoryProfileEditMode(card, true);
+            switchDirectoryProfileSubTab(card, action === 'feeding' ? 'foodWalks' : 'healthHome');
             const selector = action === 'feeding'
                 ? '[data-intake-attribute="feedingTimes"], [data-intake-attribute="foodAmount"], [data-intake-attribute="foodBrandType"]'
                 : '[data-intake-attribute="medicationInstructions"]';
@@ -10005,58 +9993,21 @@ registerWaffleServiceWorker();
     function switchDirectoryProfileSubTab(card, tabName) {
         if (!card) return;
 
-        const valid =
-            DIRECTORY_PROFILE_SECONDARY_TABS
-                .some(tab =>
-                    tab.key ===
-                    tabName
-                );
+        const valid = DIRECTORY_PROFILE_SECONDARY_TABS.some(tab => tab.key === tabName);
+        tabName = valid ? tabName : '';
+        card.dataset.profileSubTab = tabName;
 
-        tabName =
-            valid
-                ? tabName
-                : 'overview';
+        card.querySelectorAll('[data-profile-subtab]').forEach(button => {
+            const expanded = button.dataset.profileSubtab === tabName;
+            button.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+            button.classList.toggle('is-expanded', expanded);
+        });
 
-        card.dataset.profileSubTab =
-            tabName;
-
-        card
-            .querySelectorAll(
-                '[data-profile-subtab]'
-            )
-            .forEach(button => {
-                const active =
-                    button.dataset.profileSubtab ===
-                    tabName;
-
-                button.classList.toggle(
-                    'is-active',
-                    active
-                );
-
-                button.setAttribute(
-                    'aria-selected',
-                    active ? 'true' : 'false'
-                );
-            });
-
-        card
-            .querySelectorAll(
-                '[data-profile-subpanel]'
-            )
-            .forEach(panel => {
-                const active =
-                    panel.dataset.profileSubpanel ===
-                    tabName;
-
-                panel.classList.toggle(
-                    'is-active',
-                    active
-                );
-
-                panel.hidden =
-                    !active;
-            });
+        card.querySelectorAll('[data-profile-subpanel]').forEach(panel => {
+            const expanded = panel.dataset.profileSubpanel === tabName;
+            panel.hidden = !expanded;
+            panel.closest('[data-care-category]')?.classList.toggle('is-expanded', expanded);
+        });
     }
 
 
@@ -10520,118 +10471,75 @@ registerWaffleServiceWorker();
                     : sourceLabel;
         }
 
-        const selectedSubTab =
-            String(
-                card.dataset.profileSubTab ||
-                'overview'
-            );
-
-        const tabButtons =
-            DIRECTORY_PROFILE_SECONDARY_TABS
-                .map(tab => {
-                    const active =
-                        tab.key === selectedSubTab;
-
-                    return `
-                        <button
-                            type="button"
-                            class="directory-profile-subtab ${active ? 'is-active' : ''}"
-                            role="tab"
-                            aria-selected="${active ? 'true' : 'false'}"
-                            data-profile-subtab="${escapeDashboardHtml(tab.key)}">
-                            <span aria-hidden="true">${escapeDashboardHtml(tab.icon)}</span>
-                            <span>${escapeDashboardHtml(tab.label)}</span>
+        const selectedSubTab = String(card.dataset.profileSubTab || '');
+        const cardsHtml = DIRECTORY_PROFILE_SECONDARY_TABS.map((tab, index) => {
+            const active = tab.key === selectedSubTab;
+            const groupsHtml = tab.groups.map(groupTitle => {
+                const group = INTAKE_ATTRIBUTE_UI_GROUPS.find(item => item.title === groupTitle);
+                if (!group) return '';
+                const fieldsHtml = group.fields
+                    .filter(field => tab.fields.includes(field.key))
+                    .map(field => intakeAttributeControlHtml(field, attributes[field.key]))
+                    .join('');
+                return `<section class="intake-profile-group"><div class="intake-profile-group-title">${escapeDashboardHtml(group.title)}</div><div class="intake-profile-grid">${fieldsHtml}</div></section>`;
+            }).join('');
+            let summary = '';
+            if (tab.key === 'safety') {
+                const activeFlags = CARE_SAFETY_FLAGS.filter(flag => !!record?.riskFlags?.[flag.key]);
+                summary = activeFlags.length ? `${activeFlags.length} active ${activeFlags.length === 1 ? 'alert' : 'alerts'} · ${activeFlags.slice(0, 2).map(flag => flag.label).join(', ')}` : 'No active alerts';
+            } else {
+                const fields = INTAKE_ATTRIBUTE_UI_GROUPS.flatMap(group => group.fields).filter(field => tab.fields.includes(field.key));
+                const filled = fields.filter(field => String(attributes[field.key] ?? '').trim());
+                summary = filled.length
+                    ? `${filled.slice(0, 2).map(field => {
+                        const value = String(attributes[field.key]).trim().replace(/\s+/g, ' ');
+                        return `${field.label}: ${value.length > 36 ? `${value.slice(0, 33)}…` : value}`;
+                    }).join(' · ')}${filled.length > 2 ? ` · +${filled.length - 2} more` : ''}`
+                    : 'No details saved yet';
+            }
+            const content = tab.key === 'safety'
+                ? '<div class="directory-profile-care-host" data-directory-profile-care><div class="intake-profile-empty">Loading safety settings…</div></div>'
+                : groupsHtml;
+            return `
+                <section class="care-category-card${active ? ' is-expanded' : ''}" data-care-category="${escapeDashboardHtml(tab.key)}">
+                    <h5 class="care-category-heading">
+                        <button type="button" class="care-category-toggle directory-profile-subtab${active ? ' is-expanded' : ''}" id="care-category-${escapeDashboardHtml(tab.key)}-${index}" aria-expanded="${active ? 'true' : 'false'}" aria-controls="care-category-panel-${escapeDashboardHtml(tab.key)}-${index}" data-profile-subtab="${escapeDashboardHtml(tab.key)}">
+                            <span class="care-category-title"><span aria-hidden="true">${escapeDashboardHtml(tab.icon)}</span><span>${escapeDashboardHtml(tab.label)}</span></span>
+                            <span class="care-category-summary" data-care-category-summary="${escapeDashboardHtml(tab.key)}">${escapeDashboardHtml(summary)}</span>
+                            <span class="care-category-chevron" aria-hidden="true">⌄</span>
                         </button>
-                    `;
-                })
-                .join('');
-
-        const panels =
-            DIRECTORY_PROFILE_SECONDARY_TABS
-                .map(tab => {
-                    const active =
-                        tab.key === selectedSubTab;
-
-                    if (tab.key === 'care') {
-                        return `
-                            <section
-                                class="directory-profile-subpanel ${active ? 'is-active' : ''}"
-                                role="tabpanel"
-                                data-profile-subpanel="care"
-                                ${active ? '' : 'hidden'}>
-                                <div
-                                    class="directory-profile-care-host"
-                                    data-directory-profile-care>
-                                    <div class="intake-profile-empty">
-                                        Loading care settings…
-                                    </div>
-                                </div>
-                            </section>
-                        `;
-                    }
-
-                    const groupsHtml =
-                        tab.groups
-                            .map(groupTitle => {
-                                const group =
-                                    INTAKE_ATTRIBUTE_UI_GROUPS
-                                        .find(item =>
-                                            item.title === groupTitle
-                                        );
-
-                                if (!group) return '';
-
-                                const fieldsHtml =
-                                    group.fields
-                                        .map(field =>
-                                            intakeAttributeControlHtml(
-                                                field,
-                                                attributes[field.key]
-                                            )
-                                        )
-                                        .join('');
-
-                                return `
-                                    <section class="intake-profile-group">
-                                        <div class="intake-profile-group-title">
-                                            ${escapeDashboardHtml(group.title)}
-                                        </div>
-                                        <div class="intake-profile-grid">
-                                            ${fieldsHtml}
-                                        </div>
-                                    </section>
-                                `;
-                            })
-                            .join('');
-
-                    return `
-                        <section
-                            class="directory-profile-subpanel ${active ? 'is-active' : ''}"
-                            role="tabpanel"
-                            data-profile-subpanel="${escapeDashboardHtml(tab.key)}"
-                            ${active ? '' : 'hidden'}>
-                            ${groupsHtml}
-                        </section>
-                    `;
-                })
-                .join('');
+                    </h5>
+                    <div class="care-category-panel" id="care-category-panel-${escapeDashboardHtml(tab.key)}-${index}" role="region" aria-labelledby="care-category-${escapeDashboardHtml(tab.key)}-${index}" data-profile-subpanel="${escapeDashboardHtml(tab.key)}"${active ? '' : ' hidden'}>${content}</div>
+                </section>`;
+        }).join('');
 
         host.innerHTML = `
             <div class="intake-profile-source directory-profile-source-line">
                 📋 ${sourceLabel}
             </div>
-
-            <div
-                class="directory-profile-subtabs"
-                role="tablist"
-                aria-label="Profile details">
-                ${tabButtons}
-            </div>
-
-            <div class="directory-profile-subpanels">
-                ${panels}
-            </div>
+            <div class="care-category-list" aria-label="Detailed care categories">${cardsHtml}</div>
         `;
+
+        host.querySelectorAll('[data-profile-subtab]').forEach(button => {
+            button.addEventListener('click', event => {
+                event.preventDefault();
+                event.stopPropagation();
+                switchDirectoryProfileSubTab(card, button.dataset.profileSubtab);
+            });
+        });
+
+        if (host.dataset.careCategoryCardsBound !== 'true') {
+            host.dataset.careCategoryCardsBound = 'true';
+            host.addEventListener('click', event => {
+                const button = event.target instanceof Element ? event.target.closest('[data-profile-subtab]') : null;
+                if (!button || !host.contains(button)) return;
+                event.preventDefault();
+                event.stopPropagation();
+                switchDirectoryProfileSubTab(card, button.dataset.profileSubtab);
+            });
+        }
+
+        switchDirectoryProfileSubTab(card, selectedSubTab);
 
         renderDirectoryCareProfile(
             card,
@@ -10690,10 +10598,8 @@ registerWaffleServiceWorker();
             <div class="care-profile-compact">
                 <div class="care-risk-section-heading">
                     <div>
-                        <strong>🛡️ Care &amp; Safety</strong>
-                        <span>
-                            Operational alerts stored with this guest profile.
-                        </span>
+                        <strong>Active safety alerts</strong>
+                        <span>Use these flags to keep important risks visible to the team.</span>
                     </div>
                 </div>
 
@@ -10702,6 +10608,12 @@ registerWaffleServiceWorker();
                 </div>
             </div>
         `;
+
+        const safetySummary = host.closest('[data-care-category]')?.querySelector('[data-care-category-summary="safety"]');
+        const activeFlags = CARE_SAFETY_FLAGS.filter(flag => !!riskFlags[flag.key]);
+        if (safetySummary) safetySummary.textContent = activeFlags.length
+            ? `${activeFlags.length} active ${activeFlags.length === 1 ? 'alert' : 'alerts'} · ${activeFlags.slice(0, 2).map(flag => flag.label).join(', ')}`
+            : 'No active alerts';
 
         applyDirectoryProfileEditMode(card);
     }
