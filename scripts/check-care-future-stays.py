@@ -124,8 +124,8 @@ for path in ('index.html', 'directory.html', 'reminders.html', 'audit.html'):
     require(path, 'rev=2026.09.24.18')
 require('waffle-bootstrap.js', "ASSET_REVISION = '2026.09.24.18'")
 require('service-worker.js', 'v11.4.43-mobile-care-navigation-2026.09.24.18')
-require('waffle-build.json', 'Reduce mobile Care navigation work')
-require('waffle-release.json', 'Reduce mobile Care navigation work')
+require('waffle-build.json', 'Re-engineer PDF intake OCR')
+require('waffle-release.json', 'Re-engineer PDF intake OCR')
 
 # V11.2.01 is the final count-consistency guard. Current and Future share the
 # same DOM grid, so any legacy cards.length write must be replaced/reconciled
