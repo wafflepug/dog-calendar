@@ -1,6 +1,6 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.09.24.19",
+  "assetRevision": "2026.09.24.18",
   "releaseName": "Re-engineer PDF intake OCR",
   "runtime": "waffle-bootstrap.js",
   "styles": "waffle-runtime.css",

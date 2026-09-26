@@ -6821,6 +6821,8 @@ function getLegacyIntakeContextForHtml(params) {
               documentRecord.originalFilename,
             extractionMethod:
               documentRecord.extractionMethod,
+            extractedText:
+              documentRecord.extractedText,
             ocrMethod:
               documentRecord.ocrMethod,
             parsedFields:
@@ -6881,9 +6883,9 @@ function decodeLegacyPdfData_(fileData, fileName) {
   }
 
   // Guard against unexpectedly large uploads in Apps Script.
-  if (bytes.length > 8 * 1024 * 1024) {
+  if (bytes.length > 10 * 1024 * 1024) {
     throw new Error(
-      "The PDF is larger than 8 MB. Please reduce the file size and try again."
+      "The PDF is larger than 10 MB. Please reduce the file size and try again."
     );
   }
 
