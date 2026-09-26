@@ -48,12 +48,25 @@ for (const [name, viewport, colorScheme] of [['390-light', { width: 390, height:
     await page.emulateMedia({ colorScheme });
     await page.clock.install({ time: new Date('2026-09-18T12:00:00Z') });
     await page.addInitScript(mode => localStorage.setItem('theme', mode), colorScheme);
+    await page.addInitScript(() => {
+      const nativeScrollIntoView = Element.prototype.scrollIntoView;
+      window.__directoryProfileScrollBehaviors = [];
+      Element.prototype.scrollIntoView = function(options) {
+        if (this.matches?.('.directory-dashboard-fused')) {
+          window.__directoryProfileScrollBehaviors.push(options?.behavior || 'auto');
+        }
+        return nativeScrollIntoView.call(this, options);
+      };
+    });
     const actionReads = await installReadOnlyFixture(page);
     await page.goto(`${baseURL}/directory.html?mobileHierarchy=1`, { waitUntil: 'domcontentloaded' });
     await page.waitForFunction(() => document.documentElement.dataset.waffleUiReady === 'true');
     await expect.poll(() => page.locator('.directory-card[data-directory-stay-key]').count()).toBe(1);
     await page.locator('[data-open-directory-profile]').evaluate(button => button.click());
     await expect.poll(() => page.locator('.directory-card.is-profile-active').count()).toBe(1);
+    if (name.startsWith('390')) {
+      await expect.poll(() => page.evaluate(() => window.__directoryProfileScrollBehaviors)).toContain('auto');
+    }
     const sectionNav = page.locator('.directory-card.is-profile-active .v11160-desktop-tabs');
     await expect(sectionNav).toBeVisible();
     await expect(sectionNav.locator('[role="tab"]')).toHaveCount(5);

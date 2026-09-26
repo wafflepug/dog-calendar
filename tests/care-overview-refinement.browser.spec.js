@@ -51,6 +51,7 @@ test('Care overview wraps long values and keeps controls usable at phone widths'
     expect(await page.locator('.care-category-toggle').evaluateAll(buttons => buttons.every(button => button.getAttribute('aria-expanded') === 'false'))).toBeTruthy();
     await page.locator('[data-profile-subtab="foodWalks"]').click();
     await expect(page.locator('[data-profile-subpanel="foodWalks"]')).toBeVisible();
+    await expect(page.locator('[data-profile-subpanel="foodWalks"]')).toHaveCSS('contain', 'content');
     await expect(page.locator('[data-profile-subpanel="behaviour"]')).toBeHidden();
     await page.locator('[data-profile-subtab="behaviour"]').click();
     await expect(page.locator('[data-profile-subpanel="foodWalks"]')).toBeHidden();
