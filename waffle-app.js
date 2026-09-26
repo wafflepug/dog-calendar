@@ -10145,13 +10145,20 @@ registerWaffleServiceWorker();
         if (preserved?.editor) restoreDirectoryGuestDetailDraft(preserved, card);
 
         if (!options.preserveScroll) {
+            const prefersReducedMotion =
+                typeof window !== 'undefined' &&
+                typeof window.matchMedia === 'function' &&
+                window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            const isCompactViewport =
+                typeof window !== 'undefined' &&
+                Number(window.innerWidth || 0) <= 768;
             document
                 .querySelector(
                     '.directory-dashboard-fused'
                 )
                 ?.scrollIntoView({
                     behavior:
-                        options.instant
+                        options.instant || prefersReducedMotion || isCompactViewport
                             ? 'auto'
                             : 'smooth',
                     block:
