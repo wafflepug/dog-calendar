@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.09.27.19",
-  "releaseName": "Re-engineer PDF intake OCR",
+  "assetRevision": "2026.09.27.20",
+  "releaseName": "Recover belongings photo uploads safely",
   "runtime": "waffle-bootstrap.js",
   "styles": "waffle-runtime.css",
   "phase": "phase-4-sitter-workflow-expansion",
