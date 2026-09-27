@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.09.27.20",
-  "releaseName": "Recover belongings photo uploads safely",
+  "assetRevision": "2026.09.28.01",
+  "releaseName": "Keep guest detail drafts clear and recoverable",
   "runtime": "waffle-bootstrap.js",
   "styles": "waffle-runtime.css",
   "phase": "phase-4-sitter-workflow-expansion",

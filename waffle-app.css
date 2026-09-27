@@ -3060,6 +3060,15 @@
             color: #2563eb;
         }
 
+        .guest-detail-edit-status.is-clean {
+            color: #64748b;
+        }
+
+        .guest-detail-edit-status.is-unsaved {
+            color: #a16207;
+            font-weight: 700;
+        }
+
         .guest-detail-edit-status.is-success {
             color: #15803d;
             font-weight: 750;
