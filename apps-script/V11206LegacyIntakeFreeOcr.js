@@ -15,7 +15,14 @@
 
 var LEGACY_INTAKE_FREE_OCR_VERSION_V11206_ = '11.2.06';
 var LEGACY_INTAKE_FREE_OCR_MAX_TEXT_V11206_ = 60000;
+var LEGACY_INTAKE_FREE_OCR_STORED_TEXT_MAX_V11206_ = 45000;
 var LEGACY_INTAKE_FREE_OCR_MAX_FILE_BYTES_V11206_ = 10 * 1024 * 1024;
+
+function legacyFreeOcrIsPdfDataUrlV11206_(value) {
+  return /^data:(?:application\/pdf|application\/octet-stream)(?:;[^,]*)?;base64,/i.test(
+    String(value || '').replace(/\s+/g, '')
+  );
+}
 
 
 function legacyFreeOcrCleanV11206_(value) {
@@ -419,7 +426,7 @@ function saveLegacyIntakeMediaForFreeOcrV11206(payload) {
   var sourceKind = String(payload.sourceKind || '').toLowerCase();
   var pdfBlob;
 
-  if (/^data:application\/pdf;base64,/i.test(fileData)) {
+  if (legacyFreeOcrIsPdfDataUrlV11206_(fileData)) {
     pdfBlob = decodeLegacyPdfData_(fileData, fileName);
   } else if (/^data:image\//i.test(fileData)) {
     var imageBlob = decodeLegacyIntakeImageV11191_(fileData, fileName);
@@ -443,7 +450,7 @@ function saveLegacyIntakeMediaForFreeOcrV11206(payload) {
     pdfUrl: saved.pdfUrl,
     uploadedAt: saved.uploadedAt,
     originalFilename: fileName,
-    sourceKind: sourceKind || (/^data:application\/pdf/i.test(fileData) ? 'pdf' : 'image'),
+    sourceKind: sourceKind || (legacyFreeOcrIsPdfDataUrlV11206_(fileData) ? 'pdf' : 'image'),
     aiStatus: saved.aiStatus,
     provider: 'free-browser'
   };
@@ -482,6 +489,7 @@ function getLegacyIntakeOcrSourceForHtmlV11206(payload) {
 
 
 function applyLegacyIntakeFreeExtractionV11206_(documentId, extraction, meta) {
+  meta = meta && typeof meta === 'object' ? meta : {};
   var legacySheet = getLegacyIntakeSheet_();
   var record = findLegacyIntakeDocumentById_(legacySheet, documentId);
   if (!record) throw new Error('The legacy intake record could not be found.');
@@ -535,13 +543,13 @@ function applyLegacyIntakeFreeExtractionV11206_(documentId, extraction, meta) {
   legacySheet.getRange(record.row, 4).setValue(finalStayKey);
   legacySheet.getRange(record.row, 5).setValue(finalDogName);
   legacySheet.getRange(record.row, 17).setValue(methodLabel);
-  legacySheet.getRange(record.row, 18).setValue('');
+  legacySheet.getRange(record.row, 18).setValue(
+    String(meta.rawText || '').substring(0, LEGACY_INTAKE_FREE_OCR_STORED_TEXT_MAX_V11206_)
+  );
   legacySheet.getRange(record.row, 19).setValue(JSON.stringify(extraction));
   legacySheet.getRange(record.row, 20).setValue(JSON.stringify(mergedApplied));
   legacySheet.getRange(record.row, 21).setValue(JSON.stringify(plan.conflicts));
   legacySheet.getRange(record.row, 22).setValue(finalStatus);
-
-  meta = meta && typeof meta === 'object' ? meta : {};
 
   logAuditEvent_({
     category: 'Intake',
@@ -617,7 +625,8 @@ function processLegacyIntakeFreeOcrTextV11206(payload) {
     extraction,
     {
       pageCount: payload.pageCount,
-      ocrConfidence: payload.ocrConfidence
+      ocrConfidence: payload.ocrConfidence,
+      rawText: rawText
     }
   );
 }

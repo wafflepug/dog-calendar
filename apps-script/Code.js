@@ -5751,7 +5751,7 @@ var LEGACY_INTAKE_HEADERS_ = [
 ];
 
 var GEMINI_LEGACY_INTAKE_MODEL_DEFAULT_ =
-  "gemini-3.6-flash";
+  "gemini-2.5-flash";
 
 
 function getLegacyIntakeSheet_() {
@@ -6821,6 +6821,8 @@ function getLegacyIntakeContextForHtml(params) {
               documentRecord.originalFilename,
             extractionMethod:
               documentRecord.extractionMethod,
+            extractedText:
+              documentRecord.extractedText,
             ocrMethod:
               documentRecord.ocrMethod,
             parsedFields:
@@ -6840,22 +6842,50 @@ function getLegacyIntakeContextForHtml(params) {
 
 
 function decodeLegacyPdfData_(fileData, fileName) {
-  var match = String(fileData || "").match(
-    /^data:application\/pdf;base64,(.+)$/i
+  var value = String(fileData || "")
+    .replace(/\s+/g, "")
+    .trim();
+  var match = value.match(
+    /^data:([^,]*),([A-Za-z0-9+/=_-]+)$/i
   );
 
-  if (!match) {
+  if (!match || !/;base64/i.test(match[1])) {
     throw new Error(
       "Please upload a valid PDF file."
     );
   }
 
-  var bytes = Utilities.base64Decode(match[1]);
+  var mime = String(match[1] || "")
+    .split(";")[0]
+    .toLowerCase();
+  if (mime !== "application/pdf" && mime !== "application/octet-stream") {
+    throw new Error(
+      "Please upload a valid PDF file."
+    );
+  }
+
+  var encoded = String(match[2] || "")
+    .replace(/-/g, "+")
+    .replace(/_/g, "/");
+  while (encoded.length % 4) encoded += "=";
+  var bytes = Utilities.base64Decode(encoded);
+
+  if (!bytes || !bytes.length) {
+    throw new Error(
+      "The PDF file is empty. Please choose a readable PDF."
+    );
+  }
+
+  if (bytes.length < 5 || bytes[0] !== 37 || bytes[1] !== 80 || bytes[2] !== 68 || bytes[3] !== 70) {
+    throw new Error(
+      "The selected file is not a readable PDF. Please choose the original PDF intake."
+    );
+  }
 
   // Guard against unexpectedly large uploads in Apps Script.
-  if (bytes.length > 8 * 1024 * 1024) {
+  if (bytes.length > 10 * 1024 * 1024) {
     throw new Error(
-      "The PDF is larger than 8 MB. Please reduce the file size and try again."
+      "The PDF is larger than 10 MB. Please reduce the file size and try again."
     );
   }
 

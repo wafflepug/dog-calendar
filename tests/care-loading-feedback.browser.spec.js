@@ -226,7 +226,8 @@ test('status remains visible across care subtabs, Back stays usable, and late re
   const milo = await openProfile(page, 'Milo');
   const miloStatus = milo.locator('[data-directory-profile-read-status]');
   await expect(miloStatus).toHaveAttribute('data-state', 'refreshing');
-  await milo.locator('[data-profile-subtab="care"]').click();
+  await milo.locator('[data-profile-subtab="healthHome"]').click();
+  await expect(milo.locator('[data-profile-subtab="healthHome"]')).toHaveAttribute('aria-expanded', 'true');
   await expect(miloStatus).toBeVisible();
   await page.locator('#directoryBackToGuestsBtn').click();
   await expect(page.locator('.directory-dashboard-fused')).not.toHaveClass(/is-profile-mode/);

@@ -8,6 +8,12 @@ on:
       - 'apps-script/V11206LegacyIntakeFreeOcr.js'
       - 'apps-script/V11207LegacyIntakePriority.js'
       - 'apps-script/LegacyIntake.html'
+      - 'apps-script/Code.js'
+      - 'tests/legacy-intake-ocr.browser.spec.js'
+      - 'tests/legacy-intake-pdf-decode.test.js'
+      - 'playwright.legacy-intake-ocr.config.js'
+      - 'package.json'
+      - 'package-lock.json'
       - '.github/workflows/legacy-intake-ai-retry.yml'
   push:
     branches: [main]
@@ -17,6 +23,12 @@ on:
       - 'apps-script/V11206LegacyIntakeFreeOcr.js'
       - 'apps-script/V11207LegacyIntakePriority.js'
       - 'apps-script/LegacyIntake.html'
+      - 'apps-script/Code.js'
+      - 'tests/legacy-intake-ocr.browser.spec.js'
+      - 'tests/legacy-intake-pdf-decode.test.js'
+      - 'playwright.legacy-intake-ocr.config.js'
+      - 'package.json'
+      - 'package-lock.json'
       - '.github/workflows/legacy-intake-ai-retry.yml'
 
 permissions:
@@ -28,6 +40,18 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install test dependencies
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
 
       - name: Validate provider priority backend
         run: |
@@ -48,6 +72,12 @@ jobs:
           grep -q "applyLegacyIntakeProfileUpdates_" apps-script/V11206LegacyIntakeFreeOcr.js
           grep -q "finalizeLegacyIntakeForSelectedBookingV11204" apps-script/V11204LegacyIntakeFinalize.js
           grep -q "extraction.profile.dogName = selectedDogName" apps-script/V11204LegacyIntakeFinalize.js
+
+      - name: Test local PDF decoding limits
+        run: node tests/legacy-intake-pdf-decode.test.js
+
+      - name: Test browser PDF intake OCR and retry behavior
+        run: npx playwright test -c playwright.legacy-intake-ocr.config.js
 
       - name: Validate Legacy Intake scanner priority
         run: |

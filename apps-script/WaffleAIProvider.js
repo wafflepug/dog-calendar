@@ -14,7 +14,7 @@
    Properties WAFFLE_AI_MAX_PER_MINUTE and WAFFLE_AI_MAX_PER_DAY.
    ============================================================ */
 
-var WAFFLE_AI_GEMINI_MODEL_DEFAULT_ = 'gemini-3.6-flash';
+var WAFFLE_AI_GEMINI_MODEL_DEFAULT_ = 'gemini-2.5-flash';
 var WAFFLE_AI_GEMINI_MAX_ROUNDS_ = 5;
 var WAFFLE_AI_MAX_PER_MINUTE_DEFAULT_ = 20;
 var WAFFLE_AI_MAX_PER_DAY_DEFAULT_ = 250;
