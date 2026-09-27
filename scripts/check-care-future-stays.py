@@ -121,9 +121,9 @@ if maintain_body.find('requestedDeepLinkKey()') > maintain_body.find('const init
     errors.append('waffle-v11.1.96.js: expand a requested distant stay before choosing the initial seven-day event set')
 
 for path in ('index.html', 'directory.html', 'reminders.html', 'audit.html'):
-    require(path, 'rev=2026.09.24.18')
-require('waffle-bootstrap.js', "ASSET_REVISION = '2026.09.24.18'")
-require('service-worker.js', 'v11.4.43-mobile-care-navigation-2026.09.24.18')
+    require(path, 'rev=2026.09.27.19')
+require('waffle-bootstrap.js', "ASSET_REVISION = '2026.09.27.19'")
+require('service-worker.js', 'v11.4.44-care-record-pdf-2026.09.27.19')
 require('waffle-build.json', 'Re-engineer PDF intake OCR')
 require('waffle-release.json', 'Re-engineer PDF intake OCR')
 

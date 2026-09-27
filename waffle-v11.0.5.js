@@ -337,7 +337,7 @@
 
     document.querySelectorAll('[data-upload-legacy-intake], [data-reassign-legacy-intake]')
       .forEach(node => {
-        if (!sink.contains(node)) sink.appendChild(node);
+        if (!node.matches('[data-care-record-upload]') && !sink.contains(node)) sink.appendChild(node);
       });
   }
 

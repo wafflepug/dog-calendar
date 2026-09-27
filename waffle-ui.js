@@ -2001,6 +2001,7 @@
     '#v11123LegacyIntakeHistoryNote',
     '[data-upload-legacy-intake]',
     '[data-reassign-legacy-intake]',
+    '[data-care-record-upload]',
     '[data-v1115-recovery-panel]',
     '#v1118MobileNav',
     'nav.v1118-mobile-nav',
@@ -2233,7 +2234,9 @@
     if (legacyGlobal) moveToSink(legacyGlobal);
 
     document.querySelectorAll('[data-upload-legacy-intake], [data-reassign-legacy-intake]')
-      .forEach(moveToSink);
+      .forEach(control => {
+        if (!control.matches('[data-care-record-upload]')) moveToSink(control);
+      });
 
     ensureHistoricalIntakeNote();
   }

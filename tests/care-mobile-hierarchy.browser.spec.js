@@ -167,6 +167,41 @@ test('Call owner is unavailable without a valid phone number', async ({ page, ba
   expect(actionReads.filter(action => action === 'get_guest_directory')).toHaveLength(directoryReadsBeforeChecklist);
 });
 
+test('Records & Forms opens legacy PDF OCR for the selected dog and stay', async ({ page, baseURL }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.clock.install({ time: new Date('2026-09-18T12:00:00Z') });
+  await page.addInitScript(() => {
+    window.__openedLegacyIntakeUrls = [];
+    window.open = url => {
+      window.__openedLegacyIntakeUrls.push(String(url));
+      return { closed: true };
+    };
+  });
+  await installReadOnlyFixture(page);
+  await page.goto(`${baseURL}/directory.html?mobileHierarchy=1`, { waitUntil: 'domcontentloaded' });
+  await page.waitForFunction(() => document.documentElement.dataset.waffleUiReady === 'true');
+
+  const card = page.locator('.directory-card[data-directory-stay-key]').filter({ has: page.locator('[data-open-directory-profile]') });
+  await expect(card).toHaveCount(1);
+  const stayKey = await card.getAttribute('data-directory-stay-key');
+  await card.locator('[data-open-directory-profile]').click();
+  await expect(card.locator('[data-directory-detail="profile"]')).toHaveAttribute('data-detail-loaded', 'true');
+
+  const records = card.locator('.directory-care-records-disclosure');
+  await records.locator('summary').click();
+  const upload = records.getByRole('button', { name: 'Upload PDF for OCR' });
+  await expect(upload).toBeVisible();
+  const bounds = await upload.boundingBox();
+  const stripBounds = await records.locator('.directory-legacy-strip').boundingBox();
+  expect(bounds.width).toBeGreaterThanOrEqual(stripBounds.width - 18);
+
+  await upload.evaluate(button => button.click());
+  const openedUrl = await page.evaluate(() => window.__openedLegacyIntakeUrls.at(-1));
+  expect(openedUrl).toBeTruthy();
+  expect(new URL(openedUrl).searchParams.get('stayKey')).toBe(stayKey);
+  expect(new URL(openedUrl).searchParams.get('action')).toBe('legacy_intake');
+});
+
 test('Care brief actions stay visible and keyboard focused in forced-colors mode', async ({ page, baseURL }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.emulateMedia({ forcedColors: 'active' });

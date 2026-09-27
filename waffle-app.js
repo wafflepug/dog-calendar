@@ -5184,7 +5184,7 @@ registerWaffleServiceWorker();
 
             const legacyUploadTrigger =
                 event.target.closest(
-                    '[data-upload-legacy-intake]'
+                    '[data-upload-legacy-intake], [data-care-record-upload]'
                 );
 
             if (legacyUploadTrigger) {
@@ -13782,9 +13782,9 @@ registerWaffleServiceWorker();
                 </div>
                 <button
                     type="button"
-                    class="directory-intake-action"
-                    data-upload-legacy-intake>
-                    ＋ PDF
+                    class="directory-intake-action directory-legacy-upload-action"
+                    data-care-record-upload>
+                    Upload PDF for OCR
                 </button>
             `;
 
@@ -13863,9 +13863,9 @@ registerWaffleServiceWorker();
                 ` : ''}
                 <button
                     type="button"
-                    class="directory-intake-action"
-                    data-upload-legacy-intake>
-                    ＋ PDF
+                    class="directory-intake-action directory-legacy-upload-action"
+                    data-care-record-upload>
+                    Upload PDF for OCR
                 </button>
                 <button
                     type="button"
@@ -14588,9 +14588,9 @@ registerWaffleServiceWorker();
                                             </div>
                                             <button
                                                 type="button"
-                                                class="directory-intake-action"
-                                                data-upload-legacy-intake>
-                                                ＋ PDF
+                                                class="directory-intake-action directory-legacy-upload-action"
+                                                data-care-record-upload>
+                                                Upload PDF for OCR
                                             </button>
                                         </div>
                                             </div>
