@@ -7,14 +7,14 @@
  * can use Groq again without requiring the sitter to re-upload the document.
  *
  * Provider order:
- *   1. Groq Vision via GROQ_API_KEY (default qwen/qwen3.6-27b)
+ *   1. Groq Vision via GROQ_API_KEY (default qwen/qwen3.8-27b)
  *   2. Gemini fallback via GEMINI_API_KEY (enabled by default)
  *
  * The provider layer returns the same normalized extraction object consumed by
  * the existing conflict review, profile update and audit workflow.
  * ============================================================ */
 
-var LEGACY_INTAKE_GROQ_MODEL_DEFAULT_V11203_ = 'qwen/qwen3.6-27b';
+var LEGACY_INTAKE_GROQ_MODEL_DEFAULT_V11203_ = 'qwen/qwen3.8-27b';
 var LEGACY_INTAKE_GROQ_MAX_RENDERED_PAGES_V11203_ = 5;
 var LEGACY_INTAKE_GROQ_RETRY_DELAYS_V11203_ = [0, 900, 2400];
 
@@ -28,17 +28,33 @@ function legacyIntakePropertyBooleanV11203_(properties, key, fallback) {
 }
 
 
+function legacyIntakeNormalizeGroqModelV11203_(model) {
+  var value = String(model || '').trim();
+
+  // Qwen 3.6 was a preview model and may remain in existing Script
+  // Properties after access was removed. Keep old deployments moving to the
+  // documented successor instead of sending a request that Groq rejects.
+  if (value.toLowerCase() === 'qwen/qwen3.6-27b') {
+    return LEGACY_INTAKE_GROQ_MODEL_DEFAULT_V11203_;
+  }
+
+  return value || LEGACY_INTAKE_GROQ_MODEL_DEFAULT_V11203_;
+}
+
+
 function getLegacyIntakeProviderConfigV11203_() {
   var properties = PropertiesService.getScriptProperties();
-  var model = String(
+  var model = legacyIntakeNormalizeGroqModelV11203_(
+    String(
     properties.getProperty('GROQ_LEGACY_INTAKE_MODEL') ||
     properties.getProperty('WAFFLE_AI_GROQ_VISION_MODEL') ||
     LEGACY_INTAKE_GROQ_MODEL_DEFAULT_V11203_
-  ).trim();
+    ).trim()
+  );
 
   return {
     groqApiKey: String(properties.getProperty('GROQ_API_KEY') || '').trim(),
-    groqModel: model || LEGACY_INTAKE_GROQ_MODEL_DEFAULT_V11203_,
+    groqModel: model,
     geminiApiKey: String(properties.getProperty('GEMINI_API_KEY') || '').trim(),
     geminiFallbackEnabled: legacyIntakePropertyBooleanV11203_(
       properties,
