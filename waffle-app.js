@@ -4300,6 +4300,10 @@ registerWaffleServiceWorker();
     let activeEditingPotential = null;
     let belongingsRecordsCache = {};
     let belongingsUploadInProgress = false;
+    // Keep uncertain uploads only in memory. A token is the server-side
+    // idempotency/status handle; retaining it prevents a late success from
+    // being mistaken for a failed upload and submitted a second time.
+    const uncertainBelongingsPhotoUploads = new Map();
     let belongingsCameraStream = null;
     let belongingsCameraCard = null;
     let hostedBelongingsPhotoContext = null;
@@ -4861,6 +4865,17 @@ registerWaffleServiceWorker();
             );
 
         directoryGrid.addEventListener('click', async function(event) {
+            const checkBelongingsUploadButton = event.target.closest(
+                '[data-check-belongings-photo-upload]'
+            );
+            if (checkBelongingsUploadButton) {
+                event.preventDefault();
+                event.stopPropagation();
+                const card = checkBelongingsUploadButton.closest('.belongings-pet-card');
+                if (card) await checkUncertainBelongingsPhotoUpload(card);
+                return;
+            }
+
             const readinessAction = event.target.closest('[data-care-readiness-action]');
             if (readinessAction) {
                 event.preventDefault();
@@ -10799,6 +10814,9 @@ registerWaffleServiceWorker();
                 </div>
             </div>
         `;
+        if (uncertainBelongingsPhotoUploads.has(stayKey)) {
+            setBelongingsUploadCheckVisible(card, true);
+        }
     }
 
 
@@ -11489,7 +11507,11 @@ registerWaffleServiceWorker();
             await uploadBelongingsPhotoData(card, photoData, null);
         } catch (error) {
             console.error('Camera capture failed:', error);
-            alert('❌ PHOTO WAS NOT SAVED\n\n' + error.message);
+            alert(uncertainBelongingsPhotoUploads.has(
+                getBelongingsCardPayload(card).stayKey
+            )
+                ? '⏳ PHOTO UPLOAD STATUS IS UNCERTAIN\n\nCheck upload status before sending another photo. ' + error.message
+                : '❌ PHOTO WAS NOT SAVED\n\n' + error.message);
         } finally {
             captureButton.disabled = false;
             captureButton.innerText = '📸 Capture Photo';
@@ -11582,8 +11604,15 @@ registerWaffleServiceWorker();
             await uploadBelongingsPhotoData(card, photoData, input);
         } catch (error) {
             console.error('Photo upload failed:', error);
-            if (status) status.textContent = '❌ ' + error.message;
-            alert('❌ PHOTO WAS NOT SAVED\n\n' + error.message);
+            const uncertain = uncertainBelongingsPhotoUploads.has(
+                getBelongingsCardPayload(card).stayKey
+            );
+            if (status) status.textContent = uncertain
+                ? '⏳ Upload completion is unconfirmed. Check upload status before sending another photo.'
+                : '❌ ' + error.message;
+            alert(uncertain
+                ? '⏳ PHOTO UPLOAD STATUS IS UNCERTAIN\n\nCheck upload status before sending another photo. ' + error.message
+                : '❌ PHOTO WAS NOT SAVED\n\n' + error.message);
             if (input) input.disabled = false;
         }
     }
@@ -11701,6 +11730,93 @@ registerWaffleServiceWorker();
             Math.random().toString(36).slice(2, 12);
     }
 
+    function setBelongingsUploadCheckVisible(card, visible) {
+        const status = card && card.querySelector('[data-belongings-photo-status]');
+        if (!status) return null;
+        let button = status.parentNode && status.parentNode.querySelector(
+            '[data-check-belongings-photo-upload]'
+        );
+        if (!button && visible) {
+            button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'belongings-upload-btn';
+            button.dataset.checkBelongingsPhotoUpload = '';
+            button.textContent = '🔎 Check upload status';
+            button.setAttribute('aria-label', 'Check the existing belongings photo upload status');
+            status.insertAdjacentElement('afterend', button);
+        }
+        if (button) button.hidden = !visible;
+        return button;
+    }
+
+    async function checkUncertainBelongingsPhotoUpload(card) {
+        const payload = getBelongingsCardPayload(card);
+        const pending = uncertainBelongingsPhotoUploads.get(payload.stayKey);
+        const status = card.querySelector('[data-belongings-photo-status]');
+        const button = setBelongingsUploadCheckVisible(card, !!pending);
+        if (!pending || !button || button.disabled) return;
+
+        button.disabled = true;
+        try {
+            if (status) status.textContent = '🔎 Checking the existing upload…';
+            const response = await queryAppsScript({
+                action: 'get_belongings_photo_upload_status',
+                uploadToken: pending.uploadToken
+            }, { maxAttempts: 2, timeoutMs: 45000 });
+            if (!isCurrentBelongingsPhotoUploadCheck(card, pending)) return;
+            const uploadStatus = response.uploadStatus || null;
+
+            if (uploadStatus && uploadStatus.state === 'success') {
+                try {
+                    const record = await waitForBelongingsPhotoRecord(
+                        pending.stayKey,
+                        pending.previousCount
+                    );
+                    if (!isCurrentBelongingsPhotoUploadCheck(card, pending)) return;
+                    uncertainBelongingsPhotoUploads.delete(pending.stayKey);
+                    setBelongingsUploadCheckVisible(card, false);
+                    await refreshBelongingsPhotoRecord(pending.stayKey, record);
+                    if (status) status.textContent = '✅ Photo saved to Google Drive';
+                } catch (_) {
+                    if (isCurrentBelongingsPhotoUploadCheck(card, pending) && status) {
+                        status.textContent = '⏳ Google Drive confirmed the upload. The photo record is still updating; check again shortly. No new upload was sent.';
+                    }
+                }
+            } else if (uploadStatus && uploadStatus.state === 'error') {
+                uncertainBelongingsPhotoUploads.delete(pending.stayKey);
+                setBelongingsUploadCheckVisible(card, false);
+                if (status) status.textContent = '❌ The server rejected this upload: ' +
+                    (uploadStatus.error || 'Please try again.');
+            } else {
+                if (status) status.textContent = '⏳ Upload status is still ' +
+                    ((uploadStatus && uploadStatus.state) || 'unknown') +
+                    '. Check again before selecting or sending another photo.';
+            }
+        } catch (error) {
+            if (isCurrentBelongingsPhotoUploadCheck(card, pending) && status) {
+                status.textContent = '⏳ Could not confirm the existing upload: ' +
+                    error.message + ' Check again before sending another photo.';
+            }
+        } finally {
+            if (button.isConnected !== false) button.disabled = false;
+        }
+    }
+
+    function isCurrentBelongingsPhotoUploadCheck(card, pending) {
+        const current = card && getBelongingsCardPayload(card);
+        return !!current && String(current.stayKey) === String(pending.stayKey) &&
+            uncertainBelongingsPhotoUploads.get(pending.stayKey) === pending;
+    }
+
+    async function refreshBelongingsPhotoRecord(stayKey, record) {
+        belongingsRecordsCache[stayKey] = record;
+        directoryPhotoRecordsCache[stayKey] = record;
+        careRiskRecordsCache[stayKey] = record;
+        setDirectoryDogPhoto(stayKey, record);
+        setDirectoryCareFlags(stayKey, record);
+        renderDirectoryOperationalSections(stayKey, record);
+    }
+
     async function uploadBelongingsPhotoData(card, photoData, input) {
         if (!card || !photoData) return;
 
@@ -11709,8 +11825,16 @@ registerWaffleServiceWorker();
         const status = card.querySelector('[data-belongings-photo-status]');
         const photoLabelInput = card.querySelector('[data-belongings-photo-label]');
         const payloadBase = getBelongingsCardPayload(card);
+        const existingUpload = uncertainBelongingsPhotoUploads.get(payloadBase.stayKey);
+        if (existingUpload) {
+            if (input) input.disabled = false;
+            setBelongingsUploadCheckVisible(card, true);
+            if (status) status.textContent = '⏳ An earlier photo upload may still be finishing. Check its status before sending another photo.';
+            return;
+        }
         const previousCount = belongingsRecordsCache[payloadBase.stayKey]?.photos?.length || 0;
         const uploadToken = makeBelongingsPhotoUploadToken();
+        let serverConfirmed = false;
 
         if (input) input.disabled = true;
 
@@ -11728,6 +11852,14 @@ registerWaffleServiceWorker();
             });
 
             const photoLabel = photoLabelInput?.value.trim() || 'Belongings photo';
+            uncertainBelongingsPhotoUploads.set(payloadBase.stayKey, {
+                uploadToken,
+                photoData,
+                photoLabel,
+                stayKey: payloadBase.stayKey,
+                previousCount
+            });
+            setBelongingsUploadCheckVisible(card, true);
             if (status) status.textContent = '☁️ Sending photo securely to Apps Script...';
 
             await submitBelongingsPhotoViaForm({
@@ -11749,6 +11881,7 @@ registerWaffleServiceWorker();
                     'The photo upload failed.'
                 );
             }
+            serverConfirmed = true;
 
             const updatedRecord = await waitForBelongingsPhotoRecord(
                 payloadBase.stayKey,
@@ -11756,6 +11889,8 @@ registerWaffleServiceWorker();
             );
 
             belongingsRecordsCache[payloadBase.stayKey] = updatedRecord;
+            uncertainBelongingsPhotoUploads.delete(payloadBase.stayKey);
+            setBelongingsUploadCheckVisible(card, false);
 
             if (status) status.textContent = '✅ Photo saved to Google Drive';
 
@@ -11784,7 +11919,13 @@ registerWaffleServiceWorker();
 
         } catch (error) {
             console.error('Photo upload failed:', error);
-            if (status) status.textContent = '❌ ' + error.message;
+            if (uncertainBelongingsPhotoUploads.has(payloadBase.stayKey)) {
+                setBelongingsUploadCheckVisible(card, true);
+                if (status) status.textContent = serverConfirmed
+                    ? '⏳ The server confirmed the upload, but the photo record is still updating. Check upload status again shortly; no new photo was sent.'
+                    : '⏳ Upload completion is unconfirmed. ' + error.message +
+                        ' Check upload status before sending another photo.';
+            } else if (status) status.textContent = '❌ ' + error.message;
             throw error;
         } finally {
             belongingsUploadInProgress = false;
