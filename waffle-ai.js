@@ -1766,7 +1766,7 @@ if (['calendar', 'directory'].includes(String(window.WAFFLE_PAGE || document.bod
     if (!isDirectory()) return;
 
     document.querySelectorAll(
-      '#openLegacyIntakeUploadBtn, [data-upload-legacy-intake], [data-reassign-legacy-intake]'
+      '#openLegacyIntakeUploadBtn, [data-upload-legacy-intake]:not([data-care-record-upload]), [data-reassign-legacy-intake]'
     ).forEach(control => {
       control.hidden = true;
       control.setAttribute('aria-hidden', 'true');

@@ -17,8 +17,8 @@
       layout.
    4. Organiser is the only visible Reminders page shell; Sticky Notes remain a
       feature inside Organiser, not a startup page.
-   5. Historical PDF Intake is read-only UI. Legacy upload controls cannot be
-      reintroduced by delayed/focus recovery passes.
+   5. Legacy intake uploads are available only from the selected dog's Records
+      & Forms section; retired global and older controls remain hidden.
    6. Waffle AI is free-form conversation; legacy quick-prompt chips are retired.
    7. Ask Waffle composer geometry is canonical after prompt-strip retirement.
    8. This file performs geometry/visibility normalisation only. It does not
@@ -39,6 +39,7 @@
     '#v11123LegacyIntakeHistoryNote',
     '[data-upload-legacy-intake]',
     '[data-reassign-legacy-intake]',
+    '[data-care-record-upload]',
     '[data-v1115-recovery-panel]',
     '#v1118MobileNav',
     'nav.v1118-mobile-nav',
@@ -271,7 +272,9 @@
     if (legacyGlobal) moveToSink(legacyGlobal);
 
     document.querySelectorAll('[data-upload-legacy-intake], [data-reassign-legacy-intake]')
-      .forEach(moveToSink);
+      .forEach(control => {
+        if (!control.matches('[data-care-record-upload]')) moveToSink(control);
+      });
 
     ensureHistoricalIntakeNote();
   }
