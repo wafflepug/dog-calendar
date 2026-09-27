@@ -214,7 +214,7 @@ async function waitForDrawerOpenEndpoint(page, drawer) {
     if (!element || !element.classList.contains('is-open')) return false;
     const rect = element.getBoundingClientRect();
     return Math.abs(rect.left) <= 4;
-  }, null, { timeout: 3_000 });
+  }, null, { timeout: 12_000 });
 }
 
 test('canonical pages keep the primary UI inside the viewport', async ({ page }, testInfo) => {

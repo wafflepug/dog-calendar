@@ -9032,6 +9032,8 @@ body[data-waffle-page="directory"] #directoryTabPanel.app-tab-panel.active {
 }
 
 .directory-roster-heading .guest-directory-toolbar {
+    display: grid;
+    gap: 8px;
     width: min(360px, 48%);
     margin: 0;
     padding: 0;
@@ -9164,6 +9166,33 @@ body[data-waffle-page="directory"] #directoryTabPanel.app-tab-panel.active {
     min-width: 0;
     flex: 1 1 auto;
     gap: 4px;
+}
+
+.directory-dog-id {
+    display: inline-flex;
+    align-items: center;
+    width: fit-content;
+    margin-top: 3px;
+    padding: 2px 6px;
+    border: 1px solid var(--wh-border, #dbe3ea);
+    border-radius: 999px;
+    color: var(--wh-text-muted, #64748b);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .02em;
+}
+
+.guest-directory-toolbar .p4-backfill {
+    min-height: 42px;
+    padding: 8px 10px;
+    border: 1px solid var(--wh-border, #dbe3ea);
+    border-radius: 11px;
+    background: var(--wh-surface, #fff);
+    color: var(--wh-text, #172033);
+    font: inherit;
+    font-size: 12px;
+    font-weight: 750;
+    cursor: pointer;
 }
 
 .directory-guest-tile-name,
