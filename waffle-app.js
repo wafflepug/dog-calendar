@@ -5000,7 +5000,8 @@ registerWaffleServiceWorker();
 
                 switchDirectoryProfileSubTab(
                     card,
-                    profileSubTab.dataset.profileSubtab
+                    profileSubTab.dataset.profileSubtab,
+                    true
                 );
 
                 return;
@@ -10027,11 +10028,12 @@ registerWaffleServiceWorker();
     }
 
 
-    function switchDirectoryProfileSubTab(card, tabName) {
+    function switchDirectoryProfileSubTab(card, tabName, toggleCurrent = false) {
         if (!card) return;
 
         const valid = DIRECTORY_PROFILE_SECONDARY_TABS.some(tab => tab.key === tabName);
         tabName = valid ? tabName : '';
+        if (toggleCurrent && card.dataset.profileSubTab === tabName) tabName = '';
         card.dataset.profileSubTab = tabName;
 
         card.querySelectorAll('[data-profile-subtab]').forEach(button => {
@@ -10568,7 +10570,7 @@ registerWaffleServiceWorker();
             button.addEventListener('click', event => {
                 event.preventDefault();
                 event.stopPropagation();
-                switchDirectoryProfileSubTab(card, button.dataset.profileSubtab);
+                switchDirectoryProfileSubTab(card, button.dataset.profileSubtab, true);
             });
         });
 
@@ -10579,7 +10581,7 @@ registerWaffleServiceWorker();
                 if (!button || !host.contains(button)) return;
                 event.preventDefault();
                 event.stopPropagation();
-                switchDirectoryProfileSubTab(card, button.dataset.profileSubtab);
+                switchDirectoryProfileSubTab(card, button.dataset.profileSubtab, true);
             });
         }
 
