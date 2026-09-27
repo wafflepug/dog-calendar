@@ -508,24 +508,6 @@
     });
   }
 
-  async function forceDirectorySourceRefresh() {
-    if (String(document.body?.dataset?.wafflePage || '') !== 'directory') return;
-
-    try {
-      /* V11.1.7 changes the directory payload shape by adding Request From.
-         Clear the old six-hour snapshot once per page load so a pre-release
-         cached payload cannot hide the new source badges after deployment. */
-      if (typeof invalidateWaffleClientCaches === 'function') {
-        await invalidateWaffleClientCaches(['directory']);
-      }
-      if (typeof loadGuestDirectoryConsolidated === 'function') {
-        await loadGuestDirectoryConsolidated({ force: true, quiet: true });
-      }
-    } catch (error) {
-      console.warn('V11.1.7 directory source refresh skipped:', error);
-    }
-  }
-
   function start() {
     polishOtherSourceTiles(document);
     wireAtHomeTile();
@@ -539,7 +521,6 @@
       if (active) scheduleProfileSourceEditor(active);
     }, delay));
 
-    forceDirectorySourceRefresh();
   }
 
   if (document.readyState === 'loading') {

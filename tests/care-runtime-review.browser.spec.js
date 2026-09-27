@@ -24,8 +24,9 @@ function csvFixture() {
   ].join('\n');
 }
 
-async function installReadOnlyFixtures(page) {
+async function installReadOnlyFixtures(page, options = {}) {
   const writes = [];
+  const directoryReads = [];
   await page.route('**/*', async route => {
     const request = route.request();
     const url = request.url();
@@ -49,7 +50,13 @@ async function installReadOnlyFixtures(page) {
       let response = { result: 'success', records: [] };
       const action = resolved.action;
       if (action === 'maintenance_status') response = { result: 'success', enabled: false };
-      if (action === 'get_guest_directory') response = { result: 'success', bookings: [booking] };
+      if (action === 'get_guest_directory') {
+        const read = { startedAt: Date.now() };
+        directoryReads.push(read);
+        if (options.directoryDelayMs) await new Promise(resolve => setTimeout(resolve, options.directoryDelayMs));
+        response = { result: 'success', bookings: [booking] };
+        read.fulfilledAt = Date.now();
+      }
       if (action === 'get_guest_profile') response = { result: 'success', record: { stayKey: 'a very long dog name that must wrap without clipping|2026-09-17|2026-09-22', intakeAttributes: { medicationInstructions: 'Give after dinner; call owner if appetite changes.' }, intakeAttributesSource: 'Synthetic saved profile', riskFlags: { foodAllergy: true } } };
       if (action === 'get_data_versions') response = { result: 'success', versions: { bookings: 'runtime-review', belongings: 'runtime-review' } };
       if (callback) return route.fulfill({ status: 200, contentType: 'application/javascript', body: `${callback}(${JSON.stringify(response)});` });
@@ -59,7 +66,7 @@ async function installReadOnlyFixtures(page) {
     if (/^https?:/.test(url) && !url.includes('127.0.0.1:4175')) return route.fulfill({ status: 200, contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="4" height="4"><rect width="4" height="4" fill="#ddd"/></svg>' });
     return route.continue();
   });
-  return writes;
+  return { writes, directoryReads };
 }
 
 for (const [name, viewport, colorScheme] of [['390-light', { width: 390, height: 844 }, 'light'], ['390-dark', { width: 390, height: 844 }, 'dark'], ['1440-light', { width: 1440, height: 900 }, 'light']]) {
@@ -67,7 +74,7 @@ for (const [name, viewport, colorScheme] of [['390-light', { width: 390, height:
     await page.setViewportSize(viewport);
     await page.emulateMedia({ colorScheme });
     await page.addInitScript(mode => localStorage.setItem('theme', mode), colorScheme);
-    const writes = await installReadOnlyFixtures(page);
+    const fixture = await installReadOnlyFixtures(page);
     await page.goto('http://127.0.0.1:4175/directory.html?runtimeReview=1', { waitUntil: 'domcontentloaded' });
     await page.waitForFunction(() => document.documentElement.dataset.waffleUiReady === 'true', null, { timeout: 30000 });
     await expect.poll(() => page.locator('.directory-card[data-directory-stay-key]').count(), { timeout: 30000 }).toBe(1);
@@ -83,7 +90,7 @@ for (const [name, viewport, colorScheme] of [['390-light', { width: 390, height:
     });
     console.log(`RUNTIME_EVIDENCE ${name} ${JSON.stringify(evidence)}`);
     await page.screenshot({ path: `test-results/care-runtime-${name}.png`, fullPage: true });
-    expect(writes.every(item => item.reason === 'unapproved action' || item.reason === 'non-read method')).toBe(true);
+    expect(fixture.writes.every(item => item.reason === 'unapproved action' || item.reason === 'non-read method')).toBe(true);
     expect(evidence.darkTheme).toBe(colorScheme === 'dark');
     expect(evidence.pageWidth).toBeLessThanOrEqual(evidence.viewport);
     expect(evidence.heading.fontSize).toBe('16px');
@@ -102,4 +109,28 @@ for (const [name, viewport, colorScheme] of [['390-light', { width: 390, height:
     }
   });
 }
+
+test('a fast initial directory response owns startup and builds its Care card once', async ({ page }) => {
+  const fixture = await installReadOnlyFixtures(page);
+  await page.goto('http://127.0.0.1:4175/directory.html?runtimeReview=single-directory-read', { waitUntil: 'domcontentloaded' });
+  await page.waitForFunction(() => document.documentElement.dataset.waffleUiReady === 'true', null, { timeout: 30000 });
+  await expect(page.locator('.directory-card[data-directory-stay-key]')).toHaveCount(1, { timeout: 30000 });
+  await expect(page.locator('.directory-card[data-directory-stay-key]')).toContainText(booking.dogName);
+  await page.waitForTimeout(500);
+
+  expect(fixture.directoryReads).toHaveLength(1);
+  expect(fixture.directoryReads[0].fulfilledAt).toBeDefined();
+  expect(fixture.writes.every(item => item.reason === 'unapproved action' || item.reason === 'non-read method')).toBe(true);
+});
+
+test('a delayed initial directory response still builds its Care card', async ({ page }) => {
+  const fixture = await installReadOnlyFixtures(page, { directoryDelayMs: 250 });
+  await page.goto('http://127.0.0.1:4175/directory.html?runtimeReview=delayed-directory', { waitUntil: 'domcontentloaded' });
+  await expect(page.locator('.directory-card[data-directory-stay-key]')).toHaveCount(1, { timeout: 30000 });
+  await expect(page.locator('.directory-card[data-directory-stay-key]')).toContainText(booking.dogName);
+
+  expect(fixture.directoryReads).toHaveLength(1);
+  expect(fixture.directoryReads[0].fulfilledAt).toBeGreaterThan(fixture.directoryReads[0].startedAt);
+  expect(fixture.writes.every(item => item.reason === 'unapproved action' || item.reason === 'non-read method')).toBe(true);
+});
 
