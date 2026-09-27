@@ -244,12 +244,13 @@
     const target = panel(card, 'history');
     const host = target?.querySelector('[data-v108-history]') || target;
     const dogName = String(card?.dataset?.directoryDogName || card?.dataset?.dogName || '').trim();
+    const dogId = String(card?.dataset?.directoryDogId || '').trim();
     if (!host || !dogName || typeof window.queryAppsScript !== 'function') return;
 
     host.innerHTML = '<div class="v11160-loading">Loading stay history…</div>';
     try {
       const response = await window.queryAppsScript(
-        { action: 'get_dog_history', dogName },
+        { action: 'get_dog_history', dogName, ...(dogId ? { dogId } : {}) },
         { maxAttempts: 2, timeoutMs: 30000 }
       );
       const history = response?.history || {};
@@ -293,13 +294,14 @@
     const target = panel(card, 'master');
     const host = target?.querySelector('[data-v110-master-host]') || target;
     const dogName = String(card?.dataset?.directoryDogName || card?.dataset?.dogName || '').trim();
+    const dogId = String(card?.dataset?.directoryDogId || '').trim();
     const breed = String(card?.querySelector('.directory-primary-breed')?.textContent || card?.dataset?.v1088Breed || '').trim();
     if (!host || !dogName || typeof window.queryAppsScript !== 'function') return;
 
     host.innerHTML = '<div class="v11160-loading">Loading master profile…</div>';
     try {
       const response = await window.queryAppsScript(
-        { action: 'get_dog_master_profile', dogName, breed },
+        { action: 'get_dog_master_profile', dogName, ...(dogId ? { dogId } : {}), breed },
         { maxAttempts: 2, timeoutMs: 30000 }
       );
       const record = response?.record || {};
