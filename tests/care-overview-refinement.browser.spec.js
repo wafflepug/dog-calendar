@@ -58,6 +58,15 @@ test('Care overview wraps long values and keeps controls usable at phone widths'
     await expect(page.locator('[data-profile-subpanel="behaviour"]')).toBeVisible();
     await expect(page.locator('[data-intake-attribute="feedingTimes"]')).toBeHidden();
     await expect(page.locator('[data-intake-attribute="friendlyDogs"]')).toBeVisible();
+    const behaviourToggle = page.locator('[data-profile-subtab="behaviour"]');
+    await behaviourToggle.focus();
+    await behaviourToggle.press('Enter');
+    await expect(page.locator('[data-profile-subpanel="behaviour"]')).toBeHidden();
+    await expect(behaviourToggle).toHaveAttribute('aria-expanded', 'false');
+    await expect(behaviourToggle).toBeFocused();
+    await behaviourToggle.press('Space');
+    await expect(page.locator('[data-profile-subpanel="behaviour"]')).toBeVisible();
+    await expect(behaviourToggle).toHaveAttribute('aria-expanded', 'true');
     const identityLayout = await page.evaluate(() => {
       if (document.documentElement.scrollWidth > innerWidth) return false;
       return ['.directory-dog-name-btn', '.directory-primary-breed', '.directory-stay-dates'].map(selector => {
