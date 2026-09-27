@@ -9399,6 +9399,12 @@ registerWaffleServiceWorker();
                 startDate: activeDirectoryEditContext.startDate || '',
                 endDate: activeDirectoryEditContext.endDate || '',
                 oldStayKey: activeDirectoryEditContext.oldStayKey || stayKey,
+                ...(activeDirectoryEditContext.initialValue !== undefined
+                    ? { initialValue: activeDirectoryEditContext.initialValue }
+                    : {}),
+                ...(activeDirectoryEditContext.failed ? { failed: true } : {}),
+                ...(activeDirectoryEditContext.conflict ? { conflict: true } : {}),
+                ...(activeDirectoryEditContext.saved ? { saved: true } : {}),
                 identity: activeDirectoryEditContext.identity ||
                     getDirectoryEditorIdentity(activeDirectoryEditContext.card || card)
             }
@@ -9472,11 +9478,22 @@ registerWaffleServiceWorker();
             ? Array.from(matchingCard.querySelectorAll('[data-directory-edit-field]'))
                 .find(item => String(item.dataset.directoryEditField || '').trim() === fieldKey) || null
             : null;
+        const config = DIRECTORY_EDIT_FIELD_CONFIG[fieldKey];
+        const control = config?.multiline
+            ? document.getElementById('guestDetailEditTextarea')
+            : document.getElementById('guestDetailEditInput');
+        const initialValue = String(
+            editor.initialValue ?? trigger?.dataset?.directoryCurrentValue ?? ''
+        );
+        const isDirty = String(control?.value ?? '') !== initialValue;
+        const blocked = !matchingCard || !trigger || identityConflict || !!editor.conflict;
 
         activeDirectoryEditContext = {
             ...editor,
             card: matchingCard,
             trigger,
+            initialValue,
+            conflict: !!editor.conflict || !!identityConflict,
             unmatched: !matchingCard || !trigger || identityConflict
         };
 
@@ -9485,12 +9502,17 @@ registerWaffleServiceWorker();
             modal.setAttribute('aria-hidden', 'false');
         }
 
-        if (saveButton) saveButton.disabled = !matchingCard || !trigger || identityConflict;
-        if (status && (!matchingCard || !trigger || identityConflict)) {
+        if (saveButton) saveButton.disabled = blocked || !isDirty || !!editor.saved;
+        if (status && blocked) {
             status.textContent = identityConflict
-                ? 'This stay has different owner, contact, or breed details. Cancel this draft before editing another stay.'
-                : 'This stay changed or is no longer available. Cancel this draft before editing another stay.';
+                ? 'This stay has different owner, contact, or breed details. Discard this draft before editing another stay.'
+                : 'This stay changed or is no longer available. Discard this draft before editing another stay.';
             status.className = 'guest-detail-edit-status is-error';
+        } else if (status && !editor.failed && !editor.saved) {
+            status.textContent = isDirty ? 'Unsaved changes.' : 'No unsaved changes.';
+            status.className = isDirty
+                ? 'guest-detail-edit-status is-unsaved'
+                : 'guest-detail-edit-status is-clean';
         }
     }
 
@@ -12766,6 +12788,11 @@ registerWaffleServiceWorker();
     function closeGuestDetailEditor() {
         const modal = document.getElementById('guestDetailEditModal');
         if (!modal) return;
+        if (activeDirectoryEditContext?.saving) return;
+
+        if (isGuestDetailEditorDirty() && !confirm('Discard your unsaved changes?')) {
+            return;
+        }
 
         modal.classList.remove('open');
         modal.setAttribute('aria-hidden', 'true');
@@ -12776,6 +12803,31 @@ registerWaffleServiceWorker();
             status.textContent = '';
             status.className = 'guest-detail-edit-status';
         }
+    }
+
+    function getGuestDetailEditorValue() {
+        const context = activeDirectoryEditContext;
+        if (!context) return '';
+        const control = DIRECTORY_EDIT_FIELD_CONFIG[context.fieldKey]?.multiline
+            ? document.getElementById('guestDetailEditTextarea')
+            : document.getElementById('guestDetailEditInput');
+        return String(control?.value ?? '');
+    }
+
+    function isGuestDetailEditorDirty() {
+        const context = activeDirectoryEditContext;
+        return !!context && getGuestDetailEditorValue() !== String(context.initialValue ?? '');
+    }
+
+    function updateGuestDetailEditorDraftStatus() {
+        const context = activeDirectoryEditContext;
+        const status = document.getElementById('guestDetailEditStatus');
+        const saveButton = document.getElementById('saveGuestDetailEdit');
+        if (!context || !status || context.saving || context.conflict || context.failed || context.saved) return;
+        const dirty = isGuestDetailEditorDirty();
+        status.textContent = dirty ? 'Unsaved changes.' : 'No unsaved changes.';
+        status.className = dirty ? 'guest-detail-edit-status is-unsaved' : 'guest-detail-edit-status is-clean';
+        if (saveButton) saveButton.disabled = !dirty || !!context.unmatched;
     }
 
     function openGuestDetailEditor(trigger) {
@@ -12816,6 +12868,8 @@ registerWaffleServiceWorker();
             stayKey: String(card.dataset.directoryStayKey || '').trim(),
             identity: getDirectoryEditorIdentity(card),
             unmatched: directoryCardsForStayKey(card.dataset.directoryStayKey).length !== 1,
+            initialValue: currentValue,
+            saving: false,
             oldStayKey: String(
                 card.dataset.directoryStayKey || ''
             ).trim()
@@ -12846,14 +12900,23 @@ registerWaffleServiceWorker();
             input.type = fieldKey === 'phone' ? 'tel' : 'text';
         }
 
-        status.textContent =
-            'Changes are saved directly to the shared Google Sheet.';
-        status.className = 'guest-detail-edit-status';
+        status.textContent = 'No unsaved changes.';
+        status.className = 'guest-detail-edit-status is-clean';
+
+        const handleDraftInput = () => {
+            if (activeDirectoryEditContext) {
+                activeDirectoryEditContext.failed = false;
+                activeDirectoryEditContext.saved = false;
+            }
+            updateGuestDetailEditorDraftStatus();
+        };
+        input.oninput = handleDraftInput;
+        textarea.oninput = handleDraftInput;
 
         const saveButton = document.getElementById('saveGuestDetailEdit');
-        if (saveButton) saveButton.disabled = activeDirectoryEditContext.unmatched;
+        if (saveButton) saveButton.disabled = activeDirectoryEditContext.unmatched || currentValue === String(activeDirectoryEditContext.initialValue ?? '');
         if (activeDirectoryEditContext.unmatched) {
-            status.textContent = 'This stay is ambiguous. Cancel this draft before editing another stay.';
+            status.textContent = 'This stay is ambiguous. Discard this draft before editing another stay.';
             status.className = 'guest-detail-edit-status is-error';
         }
 
@@ -13012,7 +13075,7 @@ registerWaffleServiceWorker();
 
     async function saveGuestDetailFromEditor() {
         const context = activeDirectoryEditContext;
-        if (!context) return;
+        if (!context || context.saving || context.conflict) return;
 
         const currentStayKey = String(
             context.card?.dataset?.directoryStayKey ||
@@ -13041,10 +13104,11 @@ registerWaffleServiceWorker();
         ) {
             const status = document.getElementById('guestDetailEditStatus');
             const saveButton = document.getElementById('saveGuestDetailEdit');
+            context.conflict = true;
             if (status) {
                 status.textContent = identityConflict
-                    ? 'This stay has different owner, contact, or breed details. Cancel this draft before editing another stay.'
-                    : 'This stay changed or is no longer available. Cancel this draft before editing another stay.';
+                    ? 'This stay has different owner, contact, or breed details. Discard this draft before editing another stay.'
+                    : 'This stay changed or is no longer available. Discard this draft before editing another stay.';
                 status.className = 'guest-detail-edit-status is-error';
             }
             if (saveButton) saveButton.disabled = true;
@@ -13072,9 +13136,12 @@ registerWaffleServiceWorker();
             return;
         }
 
+        context.saving = true;
         saveButton.disabled = true;
         cancelButton.disabled = true;
         closeButton.disabled = true;
+        input.disabled = true;
+        textarea.disabled = true;
         saveButton.textContent = '⏳ Saving...';
 
         status.textContent =
@@ -13130,6 +13197,8 @@ registerWaffleServiceWorker();
                 `✅ ${response.fieldLabel || config.label} saved and synced.`;
             status.className =
                 'guest-detail-edit-status is-success';
+            context.initialValue = config.multiline ? textarea.value : input.value;
+            context.saved = true;
 
             // Re-render all dashboard and calendar references immediately
             // from the locally patched copy while the published CSV catches up.
@@ -13141,21 +13210,22 @@ registerWaffleServiceWorker();
             loadCareRiskDashboard(cachedCsv)
                 .catch(() => {});
 
-            setTimeout(() => {
-                closeGuestDetailEditor();
-            }, 500);
-
         } catch (error) {
             console.error('Guest detail update failed:', error);
 
             status.textContent =
-                '❌ ' + (error.message || String(error));
+                'Save failed. Your draft is still here. ' + (error.message || String(error));
 
             status.className =
                 'guest-detail-edit-status is-error';
+            context.failed = true;
 
         } finally {
-            saveButton.disabled = false;
+            context.saving = false;
+            input.disabled = false;
+            textarea.disabled = false;
+            saveButton.disabled = !!context.unmatched || !!context.conflict ||
+                String(config.multiline ? textarea.value : input.value) === String(context.initialValue ?? '');
             cancelButton.disabled = false;
             closeButton.disabled = false;
             saveButton.textContent = '💾 Save Changes';

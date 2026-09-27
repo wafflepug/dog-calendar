@@ -12,7 +12,7 @@
     <link rel="icon" type="image/png" sizes="192x192" href="pwa-icon-192.png?v=2026.08.28.01">
     <link rel="apple-touch-icon" sizes="180x180" href="pwa-apple-touch-icon.png?v=2026.08.28.01">
     <title>Waffle House — Guest Directory & Care</title>
-<link rel="stylesheet" href="waffle-runtime.css?v=2026.08.28.01&amp;rev=2026.09.27.20">
+<link rel="stylesheet" href="waffle-runtime.css?v=2026.08.28.01&amp;rev=2026.09.28.01">
     </head>
 <body data-waffle-page="directory">
 
@@ -449,13 +449,13 @@
             maxlength="2000"
             style="display:none;"></textarea>
 
-        <div id="guestDetailEditStatus" class="guest-detail-edit-status"></div>
+        <div id="guestDetailEditStatus" class="guest-detail-edit-status" role="status" aria-live="polite" aria-atomic="true"></div>
 
         <div class="guest-detail-edit-actions">
             <button
                 type="button"
                 id="cancelGuestDetailEdit"
-                class="guest-detail-edit-cancel">Cancel</button>
+                class="guest-detail-edit-cancel">Discard</button>
             <button
                 type="button"
                 id="saveGuestDetailEdit"
@@ -567,6 +567,6 @@
     body.dark-theme .modal-content-panel input { background: #334155; border-color: #475569; color: white; }
 </style>
 
-<script src="waffle-bootstrap.js?v=2026.08.28.01&amp;rev=2026.09.27.20"></script>
+<script src="waffle-bootstrap.js?v=2026.08.28.01&amp;rev=2026.09.28.01"></script>
     </html>
 
