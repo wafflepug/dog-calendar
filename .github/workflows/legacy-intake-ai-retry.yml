@@ -11,6 +11,7 @@ on:
       - 'apps-script/Code.js'
       - 'tests/legacy-intake-ocr.browser.spec.js'
       - 'tests/legacy-intake-pdf-decode.test.js'
+      - 'tests/legacy-intake-groq-config.test.js'
       - 'playwright.legacy-intake-ocr.config.js'
       - 'package.json'
       - 'package-lock.json'
@@ -26,6 +27,7 @@ on:
       - 'apps-script/Code.js'
       - 'tests/legacy-intake-ocr.browser.spec.js'
       - 'tests/legacy-intake-pdf-decode.test.js'
+      - 'tests/legacy-intake-groq-config.test.js'
       - 'playwright.legacy-intake-ocr.config.js'
       - 'package.json'
       - 'package-lock.json'
@@ -75,6 +77,9 @@ jobs:
 
       - name: Test local PDF decoding limits
         run: node tests/legacy-intake-pdf-decode.test.js
+
+      - name: Test Groq OCR model migration and page batching
+        run: node --test tests/legacy-intake-groq-config.test.js
 
       - name: Test browser PDF intake OCR and retry behavior
         run: npx playwright test -c playwright.legacy-intake-ocr.config.js
