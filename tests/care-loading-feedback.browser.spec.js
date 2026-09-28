@@ -51,7 +51,9 @@ function installReadOnlyRuntimeFixture(page, options = {}) {
           summaries: options.summaryRecords || bookings.map(b => ({
             stayKey: stayKey(b),
             riskFlags: options.summaryRiskFlags?.(b) || {}
-          }))
+          })),
+          digitalIntakes: options.digitalIntakes || [],
+          legacyIntakes: options.legacyIntakes || []
         };
       } else if (action === 'get_guest_profile') {
         const key = String(payload.stayKey || '');
@@ -275,4 +277,72 @@ test('Care Brief shows cached safety before the profile read and refreshes feedi
   await expect(brief.locator('[data-care-brief-medication]')).toHaveText('Give after dinner');
   await expect(brief.locator('[data-care-brief-freshness]')).toHaveAttribute('data-state', 'available');
   expect(fixture.profileCalls.get(key)).toBe(1);
+});
+
+test('Records & forms shows resolved safety and document states with one primary next action', async ({ page, baseURL }) => {
+  test.setTimeout(60_000);
+  const key = stayKey(bookings[0]);
+  const fixture = installReadOnlyRuntimeFixture(page, {
+    summaryRiskFlags: booking => booking.dogName === 'Milo' ? { foodAllergy: true } : {},
+    digitalIntakes: [{ stayKey: key, status: 'Awaiting Owner', token: 'fixture-token' }],
+    legacyIntakes: [{
+      stayKey: key,
+      count: 1,
+      latest: {
+        documentId: 'legacy-milo',
+        dogName: 'Milo',
+        uploadedAt: '2026-09-18T10:00:00Z',
+        aiStatus: 'Review Required',
+        conflictCount: 1,
+        pdfUrl: 'https://example.test/milo.pdf'
+      }
+    }]
+  });
+  await openDirectory(page, baseURL, fixture);
+  await openProfile(page, 'Milo');
+  const card = page.locator('.directory-card[data-directory-dog-name="Milo"]');
+  const records = card.locator('.directory-care-records-disclosure');
+  await records.locator('summary').click();
+
+  const safety = records.locator('[data-directory-care]');
+  const intake = records.locator('[data-directory-intake]');
+  const legacy = records.locator('[data-directory-legacy]');
+  await expect(safety).toContainText('Food Allergy');
+  await expect(intake).toContainText('Awaiting owner');
+  await expect(intake).toContainText('Next: send the intake link.');
+  await expect(intake.locator('[data-create-intake-link]')).toHaveAttribute('aria-label', 'Copy Milo intake link');
+  await expect(legacy).toContainText('Legacy PDF on file');
+  await expect(legacy).toContainText('Next: review the saved PDF and extracted details.');
+  await expect(legacy.locator('[data-care-record-upload]')).toHaveText('Upload PDF for OCR');
+  await expect(legacy.locator('.is-primary')).toHaveCount(1);
+  await expect(records).not.toContainText(/not uploaded|not sent/i);
+
+  const narrowGeometry = await records.evaluate(root => {
+    const body = root.querySelector('.directory-care-records-body');
+    const actions = [...root.querySelectorAll('.directory-intake-action')];
+    return {
+      fits: body.scrollWidth <= body.clientWidth,
+      targets: actions.map(item => {
+        const rect = item.getBoundingClientRect();
+        return { width: rect.width, height: rect.height };
+      })
+    };
+  });
+  expect(narrowGeometry.fits).toBe(true);
+  expect(narrowGeometry.targets.every(rect => rect.width >= 44 && rect.height >= 44)).toBe(true);
+});
+
+test('missing records resolve to truthful empty states and preserve create/upload actions', async ({ page, baseURL }) => {
+  test.setTimeout(60_000);
+  const fixture = installReadOnlyRuntimeFixture(page);
+  await openDirectory(page, baseURL, fixture);
+  await openProfile(page, 'Milo');
+  const card = page.locator('.directory-card[data-directory-dog-name="Milo"]');
+  const records = card.locator('.directory-care-records-disclosure');
+  await records.locator('summary').click();
+  await expect(records.locator('[data-directory-intake]')).toContainText('No digital intake on file');
+  await expect(records.locator('[data-directory-intake] [data-create-intake-link]')).toHaveAttribute('aria-label', 'Create Milo intake link');
+  await expect(records.locator('[data-directory-legacy]')).toContainText('No legacy PDF on file');
+  await expect(records.locator('[data-directory-legacy] [data-care-record-upload]')).toHaveText('Upload PDF for OCR');
+  await expect(records.locator('[aria-busy="true"]')).toHaveCount(0);
 });

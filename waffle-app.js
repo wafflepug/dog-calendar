@@ -8417,6 +8417,7 @@ registerWaffleServiceWorker();
 
         const container = findDirectoryCareElement(stayKey);
         if (!container) return;
+        container.setAttribute('aria-busy', 'false');
 
         if (!record) {
             container.classList.remove('has-alerts', 'care-clear');
@@ -9652,6 +9653,15 @@ registerWaffleServiceWorker();
             }
         );
 
+        document.querySelectorAll('.directory-card[data-directory-stay-key]')
+            .forEach(card => {
+                const key = String(card.dataset.directoryStayKey || '').trim();
+                if (!key) return;
+                if (!Object.prototype.hasOwnProperty.call(directorySummaryRecordsCache, key)) setDirectoryCareFlags(key, null);
+                if (!Object.prototype.hasOwnProperty.call(directoryIntakeStatusCache, key)) directoryIntakeStatusCache[key] = null;
+                if (!Object.prototype.hasOwnProperty.call(directoryLegacyIntakeCache, key)) directoryLegacyIntakeCache[key] = null;
+            });
+
         Object.entries(
             directoryIntakeStatusCache
         ).forEach(
@@ -9798,6 +9808,12 @@ registerWaffleServiceWorker();
                 'Guest Directory load failed:',
                 error
             );
+
+            document.querySelectorAll('.directory-card [aria-busy="true"] .directory-record-loading')
+                .forEach(status => {
+                    status.textContent = 'Status unavailable. Refresh the guest list to try again.';
+                    status.closest('[aria-busy="true"]')?.setAttribute('aria-busy', 'false');
+                });
 
             if (
                 grid &&
@@ -13542,53 +13558,10 @@ registerWaffleServiceWorker();
             !!legacyGroup &&
             !!legacyGroup.latest;
 
-        let showDigital = true;
-        let showLegacy = true;
-
-        if (
-            digitalComplete &&
-            legacyComplete
-        ) {
-            /*
-             * Historical edge case: both document types already exist.
-             * Preserve the method that was completed first so the card
-             * still presents one clear source-of-record intake method.
-             */
-            const digitalTime =
-                getIntakeCompletionTimestamp(
-                    digitalRecord
-                );
-
-            const legacyTime =
-                getIntakeCompletionTimestamp(
-                    legacyGroup.latest
-                );
-
-            if (
-                legacyTime <
-                digitalTime
-            ) {
-                showDigital = false;
-                showLegacy = true;
-            } else {
-                showDigital = true;
-                showLegacy = false;
-            }
-
-        } else if (digitalComplete) {
-            showDigital = true;
-            showLegacy = false;
-
-        } else if (legacyComplete) {
-            showDigital = false;
-            showLegacy = true;
-        }
-
-        digitalStrip.hidden =
-            !showDigital;
-
-        legacyStrip.hidden =
-            !showLegacy;
+        // These are independent records. Keep both states visible so a saved
+        // legacy PDF cannot hide an outstanding digital intake link.
+        digitalStrip.hidden = false;
+        legacyStrip.hidden = false;
 
         const card =
             digitalStrip.closest(
@@ -13596,14 +13569,11 @@ registerWaffleServiceWorker();
             );
 
         if (card) {
-            card.dataset.intakeMethod =
-                digitalComplete &&
-                showDigital
-                    ? 'digital'
-                    : legacyComplete &&
-                      showLegacy
-                        ? 'legacy'
-                        : 'none';
+            card.dataset.intakeMethod = digitalComplete
+                ? 'digital'
+                : legacyComplete
+                    ? 'legacy'
+                    : 'none';
         }
     }
 
@@ -13619,17 +13589,21 @@ registerWaffleServiceWorker();
         );
 
         if (!strip) return;
+        strip.setAttribute('aria-busy', 'false');
+        const dogName = strip.closest('.directory-card')?.dataset.directoryDogName || 'this dog';
 
         if (!record) {
             strip.innerHTML = `
                 <div class="directory-intake-state">
                     <span class="directory-intake-dot is-not-sent"></span>
-                    <span>Intake not sent</span>
+                    <span>No digital intake on file</span>
+                    <span class="directory-record-next">Next: create and send the intake link.</span>
                 </div>
                 <button
                     type="button"
-                    class="directory-intake-action"
-                    data-create-intake-link>
+                    class="directory-intake-action is-primary"
+                    data-create-intake-link
+                    aria-label="Create ${escapeDashboardHtml(dogName)} intake link">
                     📝 Create Link
                 </button>
             `;
@@ -13653,6 +13627,7 @@ registerWaffleServiceWorker();
                     <span>
                         Intake complete${record.storedProfileFallback ? ' · Stored profile' : ''}${submitted ? ` · ${escapeDashboardHtml(submitted)}` : ''}
                     </span>
+                    <span class="directory-record-next">Next: review the submitted intake.</span>
                 </div>
                 <div class="directory-intake-actions">
                     ${record.pdfUrl ? `
@@ -13660,15 +13635,17 @@ registerWaffleServiceWorker();
                             href="${escapeDashboardHtml(record.pdfUrl)}"
                             target="_blank"
                             rel="noopener"
-                            class="directory-intake-action is-pdf">
-                            📄 PDF
+                            class="directory-intake-action is-pdf is-primary"
+                            aria-label="View ${escapeDashboardHtml(dogName)} submitted intake PDF">
+                            📄 View PDF
                         </a>
                     ` : ''}
                     ${record.token ? `
                         <button
                             type="button"
-                            class="directory-intake-action"
-                            data-create-intake-link>
+                            class="directory-intake-action${record.pdfUrl ? '' : ' is-primary'}"
+                            data-create-intake-link
+                            aria-label="Copy ${escapeDashboardHtml(dogName)} intake link">
                             🔗 Copy Link
                         </button>
                     ` : `
@@ -13690,11 +13667,13 @@ registerWaffleServiceWorker();
             <div class="directory-intake-state">
                 <span class="directory-intake-dot is-awaiting"></span>
                 <span>Awaiting owner</span>
+                <span class="directory-record-next">Next: send the intake link.</span>
             </div>
             <button
                 type="button"
-                class="directory-intake-action"
-                data-create-intake-link>
+                class="directory-intake-action is-primary"
+                data-create-intake-link
+                aria-label="Copy ${escapeDashboardHtml(dogName)} intake link">
                 🔗 Copy Link
             </button>
         `;
@@ -14012,6 +13991,8 @@ registerWaffleServiceWorker();
         );
 
         if (!strip) return;
+        strip.setAttribute('aria-busy', 'false');
+        const dogName = strip.closest('.directory-card')?.dataset.directoryDogName || 'this dog';
 
         if (
             !group ||
@@ -14023,12 +14004,14 @@ registerWaffleServiceWorker();
 
             strip.innerHTML = `
                 <div class="directory-legacy-state">
-                    <span>📚 Legacy intake not uploaded</span>
+                    <span>📚 No legacy PDF on file</span>
+                    <span class="directory-record-next">Next: upload the signed PDF for OCR.</span>
                 </div>
                 <button
                     type="button"
                     class="directory-intake-action directory-legacy-upload-action"
-                    data-care-record-upload>
+                    data-care-record-upload
+                    aria-label="Upload a legacy intake PDF for ${escapeDashboardHtml(dogName)} for OCR">
                     Upload PDF for OCR
                 </button>
             `;
@@ -14091,10 +14074,11 @@ registerWaffleServiceWorker();
 
         strip.innerHTML = `
             <div class="directory-legacy-state">
-                📚 Legacy intake ·
+                <span>📚 Legacy PDF on file ·
                 ${count} ${count === 1 ? 'file' : 'files'}
                 ${uploaded ? ` · ${escapeDashboardHtml(uploaded)}` : ''}
-                ${aiStatusHtml}
+                ${aiStatusHtml}</span>
+                <span class="directory-record-next">${aiStatus === 'Review Required' || aiStatus === 'AI Failed' ? 'Next: review the saved PDF and extracted details.' : 'Next: check the saved PDF.'}</span>
             </div>
             <div class="directory-legacy-actions">
                 ${latest.pdfUrl ? `
@@ -14102,20 +14086,23 @@ registerWaffleServiceWorker();
                         href="${escapeDashboardHtml(latest.pdfUrl)}"
                         target="_blank"
                         rel="noopener"
-                        class="directory-intake-action directory-legacy-view">
+                        class="directory-intake-action directory-legacy-view is-primary"
+                        aria-label="View ${escapeDashboardHtml(dogName)} legacy intake PDF">
                         📄 View
                     </a>
                 ` : ''}
                 <button
                     type="button"
-                    class="directory-intake-action directory-legacy-upload-action"
-                    data-care-record-upload>
+                    class="directory-intake-action directory-legacy-upload-action${latest.pdfUrl || aiStatus === 'Review Required' || aiStatus === 'AI Failed' ? '' : ' is-primary'}"
+                    data-care-record-upload
+                    aria-label="Upload another legacy intake PDF for ${escapeDashboardHtml(dogName)} for OCR">
                     Upload PDF for OCR
                 </button>
                 <button
                     type="button"
-                    class="directory-intake-action"
+                    class="directory-intake-action${!latest.pdfUrl && (aiStatus === 'Review Required' || aiStatus === 'AI Failed') ? ' is-primary' : ''}"
                     data-reassign-legacy-intake
+                    aria-label="Review or reassign ${escapeDashboardHtml(dogName)} legacy intake PDF"
                     data-legacy-document-id="${escapeDashboardHtml(latest.documentId || '')}">
                     ✨ Review / Reassign
                 </button>
@@ -14824,39 +14811,27 @@ registerWaffleServiceWorker();
                                             <div class="directory-care-records-body">
                                         <div
                                             class="directory-care-strip"
-                                            data-directory-care="${escapeDashboardHtml(directoryStayKey)}">
-                                            <span class="directory-care-unset">
-                                                🛡️ Care profile not set
-                                            </span>
+                                            data-directory-care="${escapeDashboardHtml(directoryStayKey)}"
+                                            role="status" aria-live="polite" aria-busy="true">
+                                            <span class="directory-record-loading">Loading safety record…</span>
                                         </div>
 
                                         <div
                                             class="directory-intake-strip"
-                                            data-directory-intake="${escapeDashboardHtml(directoryStayKey)}">
+                                            data-directory-intake="${escapeDashboardHtml(directoryStayKey)}"
+                                            aria-busy="true">
                                             <div class="directory-intake-state">
-                                                <span class="directory-intake-dot is-not-sent"></span>
-                                                <span>Intake not sent</span>
+                                                <span class="directory-record-loading">Loading intake status…</span>
                                             </div>
-                                            <button
-                                                type="button"
-                                                class="directory-intake-action"
-                                                data-create-intake-link>
-                                                📝 Create Link
-                                            </button>
                                         </div>
 
                                         <div
                                             class="directory-legacy-strip"
-                                            data-directory-legacy="${escapeDashboardHtml(directoryStayKey)}">
+                                            data-directory-legacy="${escapeDashboardHtml(directoryStayKey)}"
+                                            aria-busy="true">
                                             <div class="directory-legacy-state">
-                                                <span>📚 Legacy intake not uploaded</span>
+                                                <span class="directory-record-loading">Loading PDF records…</span>
                                             </div>
-                                            <button
-                                                type="button"
-                                                class="directory-intake-action directory-legacy-upload-action"
-                                                data-care-record-upload>
-                                                Upload PDF for OCR
-                                            </button>
                                         </div>
                                             </div>
                                         </details>
