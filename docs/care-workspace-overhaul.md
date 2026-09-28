@@ -13,4 +13,6 @@ Lower-priority intake and legacy-document controls are grouped under **Records &
 
 The navigator keeps the established runtime selectors and loader functions so existing stay selection, caching, editing and Back-navigation continuity remain intact. Its presentation is consistent across phone and desktop, supports keyboard arrow navigation, has 44px targets, wraps or scrolls within its own boundary, and uses the configured accent in both themes.
 
+The Care readiness checklist opens independently, so safety, feeding, medication, owner contact and handover remain visible when a profile first opens. The detailed care categories can stay open together and retain their expanded state across a matching profile refresh. Less frequent Items & photos and Edit care details actions sit under More actions; the main Care details, owner call and handover actions stay on the first row.
+
 This release changes information hierarchy and access speed. It does not claim to reduce Apps Script response latency; request attribution and backend performance remain separate measured work.

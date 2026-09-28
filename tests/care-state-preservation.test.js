@@ -26,7 +26,7 @@ const editorEnd = source.indexOf('    function decodeDirectoryCsvCell', editorSt
 const closeEditorStart = source.indexOf('    function closeGuestDetailEditor');
 assert(captureStart >= 0 && captureEnd > captureStart && restoreStart > captureEnd && restoreEnd > restoreStart && saveStart > 0 && saveEnd > saveStart && identityStart > 0 && identityEnd > identityStart && openStart > 0 && closeStart > openStart && closeEditorStart > 0 && editorStart > closeEditorStart && editorEnd > editorStart);
 
-function makeCard(stayKey, { mainTab = 'profile', secondaryTab = 'overview', desktopTab = 'profile', editing = false } = {}) {
+function makeCard(stayKey, { mainTab = 'profile', secondaryTab = 'overview', secondaryTabs = '', desktopTab = 'profile', editing = false } = {}) {
   const card = {
     isConnected: true,
     classList: {
@@ -36,6 +36,7 @@ function makeCard(stayKey, { mainTab = 'profile', secondaryTab = 'overview', des
       directoryStayKey: stayKey,
       mainProfileTab: mainTab,
       profileSubTab: secondaryTab,
+      ...(secondaryTabs ? { profileSubTabs: secondaryTabs } : {}),
       v11160ActiveTab: desktopTab,
       profileEditing: editing ? 'true' : 'false'
     },
@@ -158,12 +159,13 @@ function editorHarness() {
 }
 
 test('captures exact selected stay and all Care tab/edit state', () => {
-  const card = makeCard('milo|2026-09-20|2026-09-22', { mainTab: 'belongings', secondaryTab: 'healthHome', desktopTab: 'media', editing: true });
+  const card = makeCard('milo|2026-09-20|2026-09-22', { mainTab: 'belongings', secondaryTab: 'healthHome', secondaryTabs: 'foodWalks,healthHome', desktopTab: 'media', editing: true });
   const h = harness(card, { fieldKey: 'ownerName', oldStayKey: card.dataset.directoryStayKey, initialValue: 'Original owner', failed: true });
   assert.deepEqual(JSON.parse(JSON.stringify(h.sandbox.capture())), {
     stayKey: card.dataset.directoryStayKey,
     mainTab: 'belongings',
     secondaryTab: 'healthHome',
+    secondaryTabs: ['foodWalks', 'healthHome'],
     desktopTab: 'media',
     editing: true,
     editor: {
