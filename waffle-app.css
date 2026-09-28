@@ -9425,3 +9425,29 @@ body.dark-theme .directory-roster-avatar {
         justify-content: flex-start;
     }
 }
+
+/* Long routine instructions stay readable in view mode and while editing. */
+.directory-card.is-profile-active .intake-profile-field-feedingTimes,
+.directory-card.is-profile-active .intake-profile-field-medicationInstructions {
+    min-width: 0;
+}
+
+.directory-card.is-profile-active .intake-profile-field-feedingTimes textarea.intake-profile-control {
+    min-height: 68px;
+    resize: vertical;
+    white-space: pre-wrap;
+}
+
+.directory-card.is-profile-active .intake-profile-field-medicationInstructions textarea.intake-profile-control {
+    min-height: 132px;
+    resize: vertical;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    line-height: 1.55;
+}
+
+.directory-card.is-profile-active .intake-profile-field-feedingTimes textarea.intake-profile-control:focus,
+.directory-card.is-profile-active .intake-profile-field-medicationInstructions textarea.intake-profile-control:focus {
+    outline: 2px solid var(--wh75-accent, #7562db);
+    outline-offset: 2px;
+}

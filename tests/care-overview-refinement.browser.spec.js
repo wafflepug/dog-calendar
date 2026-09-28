@@ -86,10 +86,83 @@ test('Care overview wraps long values and keeps controls usable at phone widths'
   }
 });
 
+test('long feeding times and medication instructions remain readable and editable on desktop and narrow phones', async ({ page }) => {
+  const feeding = '06:30 before the morning walk, then 18:00 after the evening walk; keep the bowl away from the back door.';
+  const medication = 'Give one tablet with the evening meal. If a dose is missed, do not give an extra tablet. Watch for changes in appetite or energy and contact the owner if either occurs. Keep the medication in its labelled container and out of reach of other dogs.';
+  for (const width of [360, 390, 1440]) {
+    for (const theme of ['', 'dark-theme']) {
+      await page.setViewportSize({ width, height: 760 });
+      await page.setContent(fixture(theme));
+      await page.addScriptTag({ content: actualRenderer });
+      await page.evaluate(({feeding, medication}) => renderDirectoryIntakeAttributes(document.querySelector('.directory-card'), {
+        intakeAttributes: { feedingTimes: feeding, medicationInstructions: medication },
+        intakeAttributesSource: 'Synthetic saved fixture'
+      }), {feeding, medication});
+      await page.locator('[data-profile-subtab="foodWalks"]').click();
+      await page.locator('[data-profile-subtab="healthHome"]').click();
+      const feedingControl = page.locator('[data-intake-attribute="feedingTimes"]');
+      const medicationControl = page.locator('[data-intake-attribute="medicationInstructions"]');
+      await expect(feedingControl).toHaveValue(feeding);
+      await expect(medicationControl).toHaveValue(medication);
+      await expect(page.locator(`label[for="${await feedingControl.getAttribute('id')}"]`)).toHaveText('Feeding Times');
+      await expect(page.locator(`label[for="${await medicationControl.getAttribute('id')}"]`)).toHaveText('Medication Instructions');
+      await expect(feedingControl).toHaveAttribute('rows', '2');
+      await expect(medicationControl).toHaveAttribute('rows', '5');
+      await medicationControl.focus();
+      await medicationControl.press('End');
+      expect(await medicationControl.evaluate(el => getComputedStyle(el).outlineStyle)).toBe('solid');
+      const geometry = await page.evaluate(() => {
+        const rgb = value => value.match(/[\d.]+/g).slice(0, 3).map(Number).map(channel => {
+          const normalized = channel / 255;
+          return normalized <= .03928 ? normalized / 12.92 : ((normalized + .055) / 1.055) ** 2.4;
+        });
+        const luminance = value => rgb(value).reduce((sum, channel, index) => sum + channel * [0.2126, 0.7152, 0.0722][index], 0);
+        const contrast = (foreground, background) => {
+          const values = [luminance(foreground), luminance(background)].sort((a, b) => b - a);
+          return (values[0] + .05) / (values[1] + .05);
+        };
+        const selectors = ['[data-intake-attribute="feedingTimes"]', '[data-intake-attribute="medicationInstructions"]'];
+        const fields = selectors.map(selector => {
+          const el = document.querySelector(selector);
+          const rect = el.getBoundingClientRect();
+          const style = getComputedStyle(el);
+          return {right: rect.right, width: rect.width, scrollWidth: el.scrollWidth, clientWidth: el.clientWidth, height: rect.height, contrast: contrast(style.color, style.backgroundColor)};
+        });
+        return {pageWidth: document.documentElement.scrollWidth, fields};
+      });
+      expect(geometry.pageWidth).toBeLessThanOrEqual(width);
+      expect(geometry.fields.every(field => field.right <= width + 1 && field.width > 0 && field.clientWidth > 0)).toBeTruthy();
+      expect(geometry.fields.every(field => field.contrast >= 4.5)).toBeTruthy();
+      expect(geometry.fields[1].height).toBeGreaterThanOrEqual(132);
+    }
+  }
+});
+
 test('the fixture stays aligned with the production generated profile structure', () => {
   for (const selector of ['directory-profile-section', 'directory-profile-subtab', 'data-directory-intake-attributes', 'data-directory-profile-care', 'directory-profile-read-status']) {
     expect(appSource).toContain(selector);
   }
+});
+
+test('care field labels target the selected dog when multiple profiles are rendered', async ({ page }) => {
+  await page.setContent(fixture());
+  await page.addScriptTag({ content: actualRenderer });
+  const controls = await page.evaluate(() => {
+    const first = document.querySelector('.directory-card');
+    first.dataset.directorySourceRow = '2';
+    const second = first.cloneNode(true);
+    second.dataset.directorySourceRow = '3';
+    first.after(second);
+    for (const card of [first, second]) {
+      renderDirectoryIntakeAttributes(card, { intakeAttributes: { feedingTimes: 'Morning and evening' } });
+    }
+    return [first, second].map(card => {
+      const control = card.querySelector('[data-intake-attribute="feedingTimes"]');
+      return { id: control.id, labelFor: card.querySelector('.intake-profile-field-feedingTimes label').htmlFor };
+    });
+  });
+  expect(controls[0].id).not.toBe(controls[1].id);
+  for (const control of controls) expect(control.labelFor).toBe(control.id);
 });
 
 test('Care overview text and muted labels meet the scoped contrast targets in light and dark themes', async ({ page }) => {
