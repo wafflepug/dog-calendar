@@ -10422,8 +10422,9 @@ registerWaffleServiceWorker();
         if (field.type === 'yesno') {
             return `
                 <div class="intake-profile-field${wideClass}">
-                    <label for="">${safeLabel}</label>
+                    <label for="intake-${safeKey}">${safeLabel}</label>
                     <select
+                        id="intake-${safeKey}"
                         class="intake-profile-control"
                         data-intake-attribute="${safeKey}">
                         <option value="" ${!value ? 'selected' : ''}>Not provided</option>
@@ -10437,8 +10438,9 @@ registerWaffleServiceWorker();
         if (field.type === 'sex') {
             return `
                 <div class="intake-profile-field${wideClass}">
-                    <label>${safeLabel}</label>
+                    <label for="intake-${safeKey}">${safeLabel}</label>
                     <select
+                        id="intake-${safeKey}"
                         class="intake-profile-control"
                         data-intake-attribute="${safeKey}">
                         <option value="" ${!value ? 'selected' : ''}>Not provided</option>
@@ -10452,9 +10454,11 @@ registerWaffleServiceWorker();
 
         if (field.type === 'textarea') {
             return `
-                <div class="intake-profile-field${wideClass}">
-                    <label>${safeLabel}</label>
+                <div class="intake-profile-field${wideClass} intake-profile-field-${safeKey}">
+                    <label for="intake-${safeKey}">${safeLabel}</label>
                     <textarea
+                        id="intake-${safeKey}"
+                        rows="${field.key === 'medicationInstructions' ? '5' : '3'}"
                         class="intake-profile-control"
                         data-intake-attribute="${safeKey}"
                         placeholder="Not provided">${safeValue}</textarea>
@@ -10463,14 +10467,15 @@ registerWaffleServiceWorker();
         }
 
         return `
-            <div class="intake-profile-field${wideClass}">
-                <label>${safeLabel}</label>
-                <input
+            <div class="intake-profile-field${wideClass}${field.key === 'feedingTimes' ? ' intake-profile-field-feedingTimes' : ''}">
+                <label for="intake-${safeKey}">${safeLabel}</label>
+                ${field.key === 'feedingTimes' ? `<textarea id="intake-${safeKey}" rows="2" class="intake-profile-control" data-intake-attribute="${safeKey}" placeholder="Not provided">${safeValue}</textarea>` : `<input
+                    id="intake-${safeKey}"
                     type="text"
                     class="intake-profile-control"
                     data-intake-attribute="${safeKey}"
                     value="${safeValue}"
-                    placeholder="Not provided">
+                    placeholder="Not provided">`}
             </div>
         `;
     }
