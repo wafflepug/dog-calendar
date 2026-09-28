@@ -86,7 +86,7 @@ jobs:
           grep -q 'get_dog_history' phase4-booking.js
           grep -q 'dogId' phase4-booking.js
           grep -Ei 'book again|returning guest' phase4-booking.js >/dev/null
-          grep -q 'copyPreviousProfile' phase4-ai-actions.js
+          grep -q 'copyPreviousProfile' phase4-booking.js
           grep -q 'get_returning_guest_prefill' apps-script/Code.js
 
       - name: Validate 4G Smart Reminders
