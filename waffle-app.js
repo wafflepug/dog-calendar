@@ -8310,6 +8310,7 @@ registerWaffleServiceWorker();
                     </span>
                 `).join('');
             }
+            safetyHost.closest('.directory-care-brief-safety')?.setAttribute('data-state', safetyHost.dataset.state);
         }
 
         const feedingParts = attributes
