@@ -3468,6 +3468,10 @@ function rememberV108DogNumberWatermark_(value) {
 function v108CurrentDateKey_() {
   return Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd");
 }
+function v108LinkableBoardingType_(value) {
+  var type = String(value || "Boarding").trim().toLowerCase();
+  return type === "boarding" || type === "confirmed boarding";
+}
 
 // A fingerprint binds a manual link request to the exact row the reviewer saw.
 // The sheet row number alone is insufficient because rows can move between read and save.
@@ -3490,7 +3494,7 @@ function listV108DogStaysForLinking_() {
   for (var i = 1; i < rows.length; i++) {
     var row = rows[i] || [];
     var type = String(row[11] || "Boarding").trim().toLowerCase();
-    if (!String(row[1] || "").trim() || type === "potential stay" || type === "meet & greet") continue;
+    if (!String(row[1] || "").trim() || !v108LinkableBoardingType_(type)) continue;
     var start = normalizeDateValue_(row[3]);
     var end = normalizeDateValue_(row[4] || row[3]);
     if (!start || !end || end >= v108CurrentDateKey_()) continue;
@@ -3532,7 +3536,7 @@ function linkV108StayToDog_(data) {
 
   var source = rows[sourceRow - 1] || [];
   var type = String(source[11] || "Boarding").trim().toLowerCase();
-  if (!String(source[1] || "").trim() || !normalizeDateValue_(source[3]) || type === "potential stay" || type === "meet & greet") {
+  if (!String(source[1] || "").trim() || !normalizeDateValue_(source[3]) || !v108LinkableBoardingType_(type)) {
     throw dogIdError_("DOG_ID_LINK_SOURCE_INVALID", "Only a confirmed boarding stay can be linked to a dog.");
   }
   if (!data.sourceFingerprint || String(data.sourceFingerprint) !== v108DogLinkFingerprint_(source)) {
@@ -3568,7 +3572,7 @@ function linkV108StayToDog_(data) {
     if (i === sourceRow - 1) continue;
     var other = rows[i] || [];
     var otherType = String(other[11] || "Boarding").trim().toLowerCase();
-    if (otherType === "potential stay" || otherType === "meet & greet" || !normalizeDateValue_(other[3])) continue;
+    if (!v108LinkableBoardingType_(otherType) || !normalizeDateValue_(other[3])) continue;
     var otherKey = makeGuestStayKey_(String(other[1] || ""), normalizeDateValue_(other[3]), normalizeDateValue_(other[4] || other[3]));
     if (otherKey === sourceStayKey) {
       throw dogIdError_("DOG_ID_LINK_AMBIGUOUS_STAY", "Another stay has the same dog name and dates. Resolve that duplicate before linking this stay.");
