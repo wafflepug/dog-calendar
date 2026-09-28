@@ -10398,11 +10398,12 @@ registerWaffleServiceWorker();
         summary.textContent = `${staying} staying · ${arriving} arriving soon`;
     }
 
-    function intakeAttributeControlHtml(field, value) {
+    function intakeAttributeControlHtml(field, value, controlPrefix) {
         const safeKey =
             escapeDashboardHtml(
                 field.key
             );
+        const controlId = `intake-${String(controlPrefix || 'profile').replace(/[^a-zA-Z0-9_-]/g, '-')}-${safeKey}`;
 
         const safeLabel =
             escapeDashboardHtml(
@@ -10422,9 +10423,9 @@ registerWaffleServiceWorker();
         if (field.type === 'yesno') {
             return `
                 <div class="intake-profile-field${wideClass}">
-                    <label for="intake-${safeKey}">${safeLabel}</label>
+                    <label for="${controlId}">${safeLabel}</label>
                     <select
-                        id="intake-${safeKey}"
+                        id="${controlId}"
                         class="intake-profile-control"
                         data-intake-attribute="${safeKey}">
                         <option value="" ${!value ? 'selected' : ''}>Not provided</option>
@@ -10438,9 +10439,9 @@ registerWaffleServiceWorker();
         if (field.type === 'sex') {
             return `
                 <div class="intake-profile-field${wideClass}">
-                    <label for="intake-${safeKey}">${safeLabel}</label>
+                    <label for="${controlId}">${safeLabel}</label>
                     <select
-                        id="intake-${safeKey}"
+                        id="${controlId}"
                         class="intake-profile-control"
                         data-intake-attribute="${safeKey}">
                         <option value="" ${!value ? 'selected' : ''}>Not provided</option>
@@ -10455,9 +10456,9 @@ registerWaffleServiceWorker();
         if (field.type === 'textarea') {
             return `
                 <div class="intake-profile-field${wideClass} intake-profile-field-${safeKey}">
-                    <label for="intake-${safeKey}">${safeLabel}</label>
+                    <label for="${controlId}">${safeLabel}</label>
                     <textarea
-                        id="intake-${safeKey}"
+                        id="${controlId}"
                         rows="${field.key === 'medicationInstructions' ? '5' : '3'}"
                         class="intake-profile-control"
                         data-intake-attribute="${safeKey}"
@@ -10468,9 +10469,9 @@ registerWaffleServiceWorker();
 
         return `
             <div class="intake-profile-field${wideClass}${field.key === 'feedingTimes' ? ' intake-profile-field-feedingTimes' : ''}">
-                <label for="intake-${safeKey}">${safeLabel}</label>
-                ${field.key === 'feedingTimes' ? `<textarea id="intake-${safeKey}" rows="2" class="intake-profile-control" data-intake-attribute="${safeKey}" placeholder="Not provided">${safeValue}</textarea>` : `<input
-                    id="intake-${safeKey}"
+                <label for="${controlId}">${safeLabel}</label>
+                ${field.key === 'feedingTimes' ? `<textarea id="${controlId}" rows="2" class="intake-profile-control" data-intake-attribute="${safeKey}" placeholder="Not provided">${safeValue}</textarea>` : `<input
+                    id="${controlId}"
                     type="text"
                     class="intake-profile-control"
                     data-intake-attribute="${safeKey}"
@@ -10547,7 +10548,7 @@ registerWaffleServiceWorker();
                 if (!group) return '';
                 const fieldsHtml = group.fields
                     .filter(field => tab.fields.includes(field.key))
-                    .map(field => intakeAttributeControlHtml(field, attributes[field.key]))
+                    .map(field => intakeAttributeControlHtml(field, attributes[field.key], card.dataset.directorySourceRow || card.dataset.directoryStayKey))
                     .join('');
                 return `<section class="intake-profile-group"><div class="intake-profile-group-title">${escapeDashboardHtml(group.title)}</div><div class="intake-profile-grid">${fieldsHtml}</div></section>`;
             }).join('');
