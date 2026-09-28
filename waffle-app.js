@@ -9426,6 +9426,8 @@ registerWaffleServiceWorker();
             stayKey,
             mainTab: card.dataset.mainProfileTab || 'profile',
             secondaryTab: card.dataset.profileSubTab || 'overview',
+            secondaryTabs: String(card.dataset.profileSubTabs || card.dataset.profileSubTab || '')
+                .split(',').map(value => value.trim()).filter(Boolean),
             desktopTab: card.dataset.v11160ActiveTab || '',
             editing: card.dataset.profileEditing === 'true' || card.classList.contains('is-profile-editing'),
             editor
@@ -10036,26 +10038,31 @@ registerWaffleServiceWorker();
 
     function switchDirectoryProfileSubTab(card, tabName, toggleCurrent = false) {
         if (!card) return;
-
         const valid = DIRECTORY_PROFILE_SECONDARY_TABS.some(tab => tab.key === tabName);
         tabName = valid ? tabName : '';
-        if (toggleCurrent && card.dataset.profileSubTab === tabName) tabName = '';
-        card.dataset.profileSubTab = tabName;
-
+        const allowed = new Set(DIRECTORY_PROFILE_SECONDARY_TABS.map(tab => tab.key));
+        const expanded = new Set(String(card.dataset.profileSubTabs || card.dataset.profileSubTab || '').split(',').map(value => value.trim()).filter(value => allowed.has(value)));
+        if (toggleCurrent && tabName) {
+            if (expanded.has(tabName)) expanded.delete(tabName);
+            else expanded.add(tabName);
+        } else if (tabName && !card.dataset.profileSubTabs) expanded.add(tabName);
+        card.dataset.profileSubTabs = Array.from(expanded).join(',');
+        if (tabName && expanded.has(tabName)) card.dataset.profileSubTab = tabName;
+        else if (!expanded.has(card.dataset.profileSubTab)) {
+            const remaining = Array.from(expanded);
+            card.dataset.profileSubTab = remaining[remaining.length - 1] || '';
+        }
         card.querySelectorAll('[data-profile-subtab]').forEach(button => {
-            const expanded = button.dataset.profileSubtab === tabName;
-            button.setAttribute('aria-expanded', expanded ? 'true' : 'false');
-            button.classList.toggle('is-expanded', expanded);
+            const isExpanded = expanded.has(button.dataset.profileSubtab);
+            button.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
+            button.classList.toggle('is-expanded', isExpanded);
         });
-
         card.querySelectorAll('[data-profile-subpanel]').forEach(panel => {
-            const expanded = panel.dataset.profileSubpanel === tabName;
-            panel.hidden = !expanded;
-            panel.closest('[data-care-category]')?.classList.toggle('is-expanded', expanded);
+            const isExpanded = expanded.has(panel.dataset.profileSubpanel);
+            panel.hidden = !isExpanded;
+            panel.closest('[data-care-category]')?.classList.toggle('is-expanded', isExpanded);
         });
     }
-
-
     async function openDirectoryGuestProfile(
         card,
         options = {}
@@ -10155,6 +10162,9 @@ registerWaffleServiceWorker();
             preserved?.mainTab || (reopening ? card.dataset.mainProfileTab : '') || 'profile'
         );
 
+        if (preserved?.secondaryTabs?.length) {
+            card.dataset.profileSubTabs = preserved.secondaryTabs.join(',');
+        }
         switchDirectoryProfileSubTab(
             card,
             preserved?.secondaryTab || card.dataset.profileSubTab || 'overview'
@@ -10524,8 +10534,9 @@ registerWaffleServiceWorker();
         }
 
         const selectedSubTab = String(card.dataset.profileSubTab || '');
+        const expandedSubTabs = new Set(String(card.dataset.profileSubTabs || selectedSubTab).split(',').map(value => value.trim()).filter(Boolean));
         const cardsHtml = DIRECTORY_PROFILE_SECONDARY_TABS.map((tab, index) => {
-            const active = tab.key === selectedSubTab;
+            const active = expandedSubTabs.has(tab.key);
             const groupsHtml = tab.groups.map(groupTitle => {
                 const group = INTAKE_ATTRIBUTE_UI_GROUPS.find(item => item.title === groupTitle);
                 if (!group) return '';
@@ -10536,9 +10547,11 @@ registerWaffleServiceWorker();
                 return `<section class="intake-profile-group"><div class="intake-profile-group-title">${escapeDashboardHtml(group.title)}</div><div class="intake-profile-grid">${fieldsHtml}</div></section>`;
             }).join('');
             let summary = '';
+            let summaryState = '';
             if (tab.key === 'safety') {
                 const activeFlags = CARE_SAFETY_FLAGS.filter(flag => !!record?.riskFlags?.[flag.key]);
                 summary = activeFlags.length ? `${activeFlags.length} active ${activeFlags.length === 1 ? 'alert' : 'alerts'} · ${activeFlags.slice(0, 2).map(flag => flag.label).join(', ')}` : 'No active alerts';
+                summaryState = activeFlags.length ? 'attention' : 'clear';
             } else {
                 const fields = INTAKE_ATTRIBUTE_UI_GROUPS.flatMap(group => group.fields).filter(field => tab.fields.includes(field.key));
                 const filled = fields.filter(field => String(attributes[field.key] ?? '').trim());
@@ -10557,7 +10570,7 @@ registerWaffleServiceWorker();
                     <h5 class="care-category-heading">
                         <button type="button" class="care-category-toggle directory-profile-subtab${active ? ' is-expanded' : ''}" id="care-category-${escapeDashboardHtml(tab.key)}-${index}" aria-expanded="${active ? 'true' : 'false'}" aria-controls="care-category-panel-${escapeDashboardHtml(tab.key)}-${index}" data-profile-subtab="${escapeDashboardHtml(tab.key)}">
                             <span class="care-category-title"><span aria-hidden="true">${escapeDashboardHtml(tab.icon)}</span><span>${escapeDashboardHtml(tab.label)}</span></span>
-                            <span class="care-category-summary" data-care-category-summary="${escapeDashboardHtml(tab.key)}">${escapeDashboardHtml(summary)}</span>
+                            <span class="care-category-summary" data-care-category-summary="${escapeDashboardHtml(tab.key)}"${summaryState ? ` data-state="${summaryState}"` : ''}>${escapeDashboardHtml(summary)}</span>
                             <span class="care-category-chevron" aria-hidden="true">⌄</span>
                         </button>
                     </h5>
@@ -10663,9 +10676,12 @@ registerWaffleServiceWorker();
 
         const safetySummary = host.closest('[data-care-category]')?.querySelector('[data-care-category-summary="safety"]');
         const activeFlags = CARE_SAFETY_FLAGS.filter(flag => !!riskFlags[flag.key]);
-        if (safetySummary) safetySummary.textContent = activeFlags.length
-            ? `${activeFlags.length} active ${activeFlags.length === 1 ? 'alert' : 'alerts'} · ${activeFlags.slice(0, 2).map(flag => flag.label).join(', ')}`
-            : 'No active alerts';
+        if (safetySummary) {
+            safetySummary.textContent = activeFlags.length
+                ? `${activeFlags.length} active ${activeFlags.length === 1 ? 'alert' : 'alerts'} · ${activeFlags.slice(0, 2).map(flag => flag.label).join(', ')}`
+                : 'No active alerts';
+            safetySummary.dataset.state = activeFlags.length ? 'attention' : 'clear';
+        }
 
         applyDirectoryProfileEditMode(card);
     }
@@ -14701,6 +14717,7 @@ registerWaffleServiceWorker();
                                                         <button type="button" data-care-readiness-action="handover" aria-label="Review handover note">Review</button>
                                                     </div>
                                                 </div>
+                                            </details>
                                             <div class="directory-care-brief-grid">
                                                 <section class="directory-care-brief-item directory-care-brief-safety">
                                                     <h4>Safety</h4>
@@ -14745,14 +14762,16 @@ registerWaffleServiceWorker();
                                                 <button type="button" class="directory-care-brief-action" data-care-brief-action="handover">
                                                     Update handover
                                                 </button>
+                                                <details class="directory-care-more-actions">
+                                                    <summary aria-label="More care actions">More actions</summary>
                                                 <button type="button" class="directory-care-brief-action" data-care-brief-action="belongings">
                                                     Items &amp; photos
                                                 </button>
                                                 <button type="button" class="directory-care-brief-action" data-care-brief-action="edit">
                                                     Edit care details
                                                 </button>
+                                                </details>
                                             </div>
-                                            </details>
                                         </section>
 
                                         <nav

@@ -5530,9 +5530,38 @@ body.dark-theme .directory-care-readiness-row[data-state="attention"] {
 .directory-care-brief-actions {
     display: flex;
     flex-wrap: wrap;
+    align-items: center;
     gap: 8px;
     margin-top: 12px;
 }
+
+.directory-care-more-actions {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 7px;
+}
+
+.directory-care-more-actions > summary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 9px 12px;
+    border: 1px solid var(--wh-border, #cbd5e1);
+    border-radius: 9px;
+    background: var(--wh-surface, #ffffff);
+    color: var(--wh-text, #172033);
+    font-size: 13px;
+    font-weight: 800;
+    cursor: pointer;
+    list-style: none;
+}
+
+.directory-care-more-actions > summary::-webkit-details-marker { display: none; }
+.directory-care-more-actions > summary::after { content: '⌄'; margin-inline-start: 7px; }
+.directory-care-more-actions[open] > summary::after { content: '⌃'; }
+.directory-care-more-actions > summary:focus-visible { outline: 2px solid var(--wh-focus, #2563eb); outline-offset: 2px; }
 
 .directory-care-brief-actions [data-care-brief-call-owner] {
     display: contents;
@@ -6383,6 +6412,16 @@ html.waffle-standalone
     transform: rotate(180deg);
 }
 
+.care-category-summary[data-state="attention"] {
+    color: var(--wh-danger, #b42318);
+    font-weight: 800;
+}
+
+.care-category-summary[data-state="clear"] {
+    color: var(--wh-success, #166534);
+    font-weight: 700;
+}
+
 .care-category-panel {
     padding: 0 11px 11px;
     contain: content;
@@ -6682,6 +6721,10 @@ body.dark-theme .care-category-toggle.is-expanded {
     background: #202c3e;
 }
 
+body.dark-theme .care-category-summary[data-state="attention"] { color: #fecaca; }
+body.dark-theme .care-category-summary[data-state="clear"] { color: #86efac; }
+body.dark-theme .directory-care-more-actions > summary { background: #182235; border-color: #40516a; color: #e2e8f0; }
+
 @media (max-width: 480px) {
     .care-category-toggle {
         grid-template-columns: minmax(0, 1fr) 20px;
@@ -6776,6 +6819,11 @@ body.dark-theme .directory-profile-subtab.is-active {
 }
 
 @media (max-width: 768px) {
+    .directory-care-more-actions { width: 100%; }
+    .directory-care-more-actions[open] { display: grid; grid-template-columns: 1fr 1fr; }
+    .directory-care-more-actions > summary { grid-column: 1 / -1; }
+    .directory-care-more-actions .directory-care-brief-action { width: 100%; padding-inline: 8px; }
+
     .directory-photo-edit-button {
         width: 34px;
         height: 34px;

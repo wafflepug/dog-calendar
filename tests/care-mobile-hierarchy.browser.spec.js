@@ -103,10 +103,12 @@ for (const [name, viewport, colorScheme] of [['390-light', { width: 390, height:
     await expect(readiness).toBeVisible();
     await expect(readiness).not.toHaveAttribute('open', '');
     await expect(careBrief.locator('[data-care-readiness-summary]')).toContainText(/review|Ready for care/);
-    await readiness.locator('summary').click();
-    await expect(readiness).toHaveAttribute('open', '');
+    await expect(careBrief.locator('[data-care-brief-safety]')).toBeVisible();
+    await expect(careBrief.locator('[data-care-brief-feeding]')).toBeVisible();
     await expect(careBrief.getByRole('heading', { name: 'Owner', exact: true })).toBeVisible();
     await expect(careBrief.getByRole('heading', { name: 'Handover note', exact: true })).toBeVisible();
+    await readiness.locator('summary').click();
+    await expect(readiness).toHaveAttribute('open', '');
     const records = page.locator('.directory-card.is-profile-active .directory-care-records-disclosure');
     await expect(records).toBeVisible();
     await expect(records).not.toHaveAttribute('open', '');
@@ -115,7 +117,12 @@ for (const [name, viewport, colorScheme] of [['390-light', { width: 390, height:
     await expect(contactDisclosure).not.toHaveAttribute('open', '');
     await expect(contactDisclosure.locator('[data-directory-edit-field]')).toHaveCount(3);
     await expect(careBrief.getByRole('link', { name: 'Call owner' })).toHaveAttribute('href', 'tel:0400123456');
-    expect(await careBrief.locator('.directory-care-brief-action').evaluateAll(buttons => buttons.every(button => button.getBoundingClientRect().height >= 44))).toBeTruthy();
+    expect(await careBrief.locator('.directory-care-brief-action:visible').evaluateAll(buttons => buttons.every(button => button.getBoundingClientRect().height >= 44))).toBeTruthy();
+    const moreActions = careBrief.locator('.directory-care-more-actions');
+    await moreActions.locator('summary').click();
+    await expect(moreActions.getByRole('button', { name: 'Items & photos' })).toBeVisible();
+    await expect(moreActions.getByRole('button', { name: 'Edit care details' })).toBeVisible();
+    expect(await moreActions.locator('.directory-care-brief-action:visible').evaluateAll(buttons => buttons.every(button => button.getBoundingClientRect().height >= 44))).toBeTruthy();
     await expect(page.locator('#directoryProfileBackBar')).toBeVisible();
     await expect(page.locator('.directory-card.is-profile-active .directory-dog-name-btn')).toContainText('very long dog name');
     await expect(page.locator('[data-directory-detail="profile"]')).toHaveAttribute('data-detail-loaded', 'true');
