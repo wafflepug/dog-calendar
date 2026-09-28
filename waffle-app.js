@@ -8296,10 +8296,13 @@ registerWaffleServiceWorker();
 
         if (safetyHost) {
             if (!safetyRecord) {
+                safetyHost.dataset.state = 'pending';
                 safetyHost.innerHTML = '<span class="care-brief-state is-pending">Safety profile not yet available</span>';
             } else if (!activeFlags.length) {
+                safetyHost.dataset.state = 'clear';
                 safetyHost.innerHTML = '<span class="care-brief-state is-clear">✓ No active safety flags recorded</span>';
             } else {
+                safetyHost.dataset.state = 'attention';
                 safetyHost.innerHTML = activeFlags.map(flag => `
                     <span class="care-brief-alert ${escapeDashboardHtml(flag.className)}">
                         <span aria-hidden="true">${escapeDashboardHtml(flag.icon)}</span>
@@ -8307,6 +8310,7 @@ registerWaffleServiceWorker();
                     </span>
                 `).join('');
             }
+            safetyHost.closest('.directory-care-brief-safety')?.setAttribute('data-state', safetyHost.dataset.state);
         }
 
         const feedingParts = attributes
@@ -14751,7 +14755,10 @@ registerWaffleServiceWorker();
                                                     </p>
                                                 </section>
                                                 <section class="directory-care-brief-item directory-care-brief-note">
-                                                    <h4>Handover note</h4>
+                                                    <div class="directory-care-brief-note-heading">
+                                                        <h4>Handover note</h4>
+                                                        <button type="button" class="directory-care-brief-note-edit" data-care-brief-action="handover" aria-label="Update handover">Update</button>
+                                                    </div>
                                                     <p class="directory-care-brief-value">
                                                         ${escapeDashboardHtml(notes ? notes.trim() : 'No handover note recorded')}
                                                     </p>
@@ -14765,9 +14772,6 @@ registerWaffleServiceWorker();
                                                 <span data-care-brief-call-owner>
                                                     <span class="directory-care-brief-action is-unavailable" aria-disabled="true">Call owner unavailable</span>
                                                 </span>
-                                                <button type="button" class="directory-care-brief-action" data-care-brief-action="handover">
-                                                    Update handover
-                                                </button>
                                                 <details class="directory-care-more-actions">
                                                     <summary aria-label="More care actions">More actions</summary>
                                                 <button type="button" class="directory-care-brief-action" data-care-brief-action="belongings">

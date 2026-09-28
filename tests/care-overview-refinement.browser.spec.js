@@ -189,7 +189,8 @@ test('readiness checklist updates from cached profile state, prioritizes gaps, a
     <section class="directory-care-brief" data-directory-care-brief>
       <details class="directory-care-readiness"><summary>Review checklist <strong data-care-readiness-summary></strong></summary><div class="directory-care-readiness-list" data-care-readiness-list>
       ${['feeding','medication','safety','intake','handover'].map(key => `<div class="directory-care-readiness-row" data-care-readiness-item="${key}"><span class="directory-care-readiness-copy"><strong>${key}</strong><small data-care-readiness-detail></small></span><span class="directory-care-readiness-status" data-care-readiness-status></span><button>Review</button></div>`).join('')}
-      </div></details><div data-care-brief-safety></div><p data-care-brief-feeding></p><p data-care-brief-medication></p><span data-care-brief-freshness></span><span data-care-brief-call-owner></span>
+      </div></details><section class="directory-care-brief-item directory-care-brief-safety"><div data-care-brief-safety></div></section><p data-care-brief-feeding></p><p data-care-brief-medication></p><span data-care-brief-freshness></span><span data-care-brief-call-owner></span>
+      <section class="directory-care-brief-item directory-care-brief-note"><div class="directory-care-brief-note-heading"><h4>Handover note</h4><button class="directory-care-brief-note-edit" data-care-brief-action="handover" aria-label="Update handover">Update</button></div><p class="directory-care-brief-value">Call before pickup\nMedication is in the blue bag.</p></section>
       <div data-directory-intake>Intake not sent</div><button data-directory-edit-field="notes" data-directory-current-value="" ></button>
     </section></main></body></html>`);
   await page.addScriptTag({ content: briefTestCode });
@@ -215,6 +216,29 @@ test('readiness checklist updates from cached profile state, prioritizes gaps, a
     window.renderBrief(card);
   });
   await expect(page.locator('[data-care-readiness-summary]')).toHaveText('Ready for care');
+  await expect(page.locator('[data-care-brief-safety]')).toHaveAttribute('data-state', 'clear');
+  await expect(page.locator('.directory-care-brief-safety')).toHaveAttribute('data-state', 'clear');
+  await page.evaluate(() => {
+    const card = document.querySelector('.directory-card');
+    careRiskRecordsCache[card.dataset.stayKey] = { riskFlags: { foodAllergy: true } };
+    window.renderBrief(card);
+  });
+  await expect(page.locator('[data-care-brief-safety]')).toHaveAttribute('data-state', 'attention');
+  await expect(page.locator('.directory-care-brief-safety')).toHaveAttribute('data-state', 'attention');
+  await expect(page.locator('[data-care-brief-safety]')).toContainText('Food allergy');
+  await expect(page.locator('[data-care-brief-safety] .care-brief-alert')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Update handover' })).toBeVisible();
+  await page.emulateMedia({ forcedColors: 'active' });
+  const handoverAction = page.getByRole('button', { name: 'Update handover' });
+  await handoverAction.focus();
+  expect(await handoverAction.evaluate(button => ({
+    height: button.getBoundingClientRect().height,
+    outline: getComputedStyle(button).outlineStyle
+  }))).toMatchObject({ height: expect.any(Number), outline: 'solid' });
+  expect(await handoverAction.evaluate(button => button.getBoundingClientRect().height)).toBeGreaterThanOrEqual(44);
+  await page.emulateMedia({ forcedColors: 'none' });
+  await expect(page.locator('.directory-care-brief-note .directory-care-brief-value')).toHaveCSS('white-space', 'pre-wrap');
+  await expect(page.locator('.directory-care-brief-note .directory-care-brief-value')).toContainText('Medication is in the blue bag.');
   for (const width of [390, 1440]) {
     await page.setViewportSize({ width, height: 844 });
     await page.locator('.directory-care-readiness > summary').click();
