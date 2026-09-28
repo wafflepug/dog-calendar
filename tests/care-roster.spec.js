@@ -8,6 +8,11 @@ const css = fs.readFileSync(path.join(root, 'waffle-app.css'), 'utf8');
 const sourceBadgeCss = fs.readFileSync(path.join(root, 'waffle-v11.1.7.css'), 'utf8');
 const carePolishCss = fs.readFileSync(path.join(root, 'waffle-v11.1.8.css'), 'utf8');
 const carePolishJs = fs.readFileSync(path.join(root, 'waffle-v11.1.8.js'), 'utf8');
+const runtimeCss = fs.readFileSync(path.join(root, 'waffle-runtime.css'), 'utf8');
+const careRuntimeStart = runtimeCss.indexOf('/* Care roster refinement:');
+const careRuntimeEnd = runtimeCss.indexOf('/* Keep mobile scrolling', careRuntimeStart);
+if (careRuntimeStart < 0 || careRuntimeEnd < 0) throw new Error('Could not locate the responsive Care refinements.');
+const careRuntimeStyles = runtimeCss.slice(careRuntimeStart, careRuntimeEnd);
 const start = app.indexOf('function filterGuestDirectoryCards()');
 const end = app.indexOf('function intakeAttributeControlHtml(', start);
 if (start < 0 || end < 0) throw new Error('Could not locate the Care roster filter functions.');
@@ -64,7 +69,7 @@ test('Care roster filters keep staying, arriving, past, search, and profile mode
 });
 
 test('Care roster stays compact and fits a narrow mobile viewport', async ({ page }) => {
-  await page.setContent(`<!doctype html><html><head><style>${rosterStyles}\n${sourceBadgeCss}\n${carePolishCss}</style></head>
+  await page.setContent(`<!doctype html><html><head><style>${rosterStyles}\n${sourceBadgeCss}\n${carePolishCss}\n${careRuntimeStyles}</style></head>
     <body data-waffle-page="directory">
       <main id="directoryTabPanel" class="app-tab-panel active">
         <div class="directory-dashboard directory-dashboard-fused">
@@ -76,6 +81,9 @@ test('Care roster stays compact and fits a narrow mobile viewport', async ({ pag
     </body></html>`);
 
   const row = page.getByRole('button', { name: 'Open Maple care profile' });
+  await expect(page.locator('.directory-roster-heading h1')).toHaveText('Guests');
+  await expect(page.getByLabel('Find a dog or owner')).toBeVisible();
+  await expect(page.locator('.directory-roster-filters')).toBeVisible();
   const dimensions = async () => row.evaluate(node => {
     const box = node.getBoundingClientRect();
     return { width: box.width, height: box.height, scrollWidth: document.documentElement.scrollWidth };
@@ -86,6 +94,15 @@ test('Care roster stays compact and fits a narrow mobile viewport', async ({ pag
   await expect.poll(async () => (await dimensions()).width).toBeLessThanOrEqual(375);
   const mobile = await dimensions();
   expect(mobile.scrollWidth).toBeLessThanOrEqual(375);
+  const careControlsFit = await page.evaluate(() => {
+    const controls = [
+      document.querySelector('.directory-roster-heading'),
+      document.querySelector('.directory-roster-filters'),
+      document.querySelector('.guest-directory-search')
+    ].filter(Boolean);
+    return controls.every(node => node.getBoundingClientRect().right <= innerWidth + 1);
+  });
+  expect(careControlsFit).toBe(true);
 
   await expect(row.locator('.v1118-care-status')).toHaveText('CHECKED OUT');
   await expect(row.locator('.v1118-care-signal', { hasText: 'Medication' })).toBeVisible();
@@ -102,6 +119,43 @@ test('Care roster stays compact and fits a narrow mobile viewport', async ({ pag
   const [copy, source, status, signals] = boxes;
   expect(copy.right).toBeLessThanOrEqual(source.left);
   expect(status.bottom).toBeLessThanOrEqual(signals.top);
+});
+
+test('Care stay-link controls and profile actions remain usable on desktop and mobile', async ({ page }) => {
+  await page.setContent(`<!doctype html><html><head><style>${rosterStyles}\n${careRuntimeStyles}</style></head>
+    <body data-waffle-page="directory"><main id="directoryTabPanel" class="app-tab-panel active">
+      <div class="directory-dashboard-fused">
+        <div class="directory-roster-heading"><div><h1>Guests</h1><p>2 staying · 1 arriving soon</p></div>
+          <div class="guest-directory-toolbar"><input class="guest-directory-search" aria-label="Find a dog or owner"><button class="care-stay-link-trigger">Link older stay</button></div></div>
+        <section class="care-stay-link"><header class="care-stay-link-header"><div><small>CARE RECORDS</small><h2>Link a past stay</h2><p>Choose the exact stay and numbered dog it belongs to.</p></div><button class="care-stay-link-close" aria-label="Close stay linking">×</button></header>
+          <div class="care-stay-link-body"><div class="care-stay-link-form"><label>Past stay<select><option>Maple · 1–4 Sep · Ada · no Dog ID</option></select></label><label>Link to numbered dog<select><option>#00001 · Maple</option></select></label><button class="care-stay-link-review">Review link</button></div>
+            <div class="care-stay-link-review-card"><strong>Stay to link</strong><span>Maple · 1–4 Sep</span><strong>Numbered dog</strong><span>#00001 · Maple</span><label class="care-stay-link-explicit-check"><input type="checkbox">I confirm this exact stay belongs to #00001.</label><div class="care-stay-link-actions"><button>Back</button><button>Link this stay</button></div></div></div></section>
+        <div class="directory-profile-back-bar"><button class="directory-profile-back-btn">← Guests</button><div class="directory-profile-breadcrumb"><strong>Maple</strong></div><div class="directory-profile-tools"><span class="directory-care-summary">1 alert · 1 dog</span><button class="directory-legacy-global-btn">Upload PDF</button><button class="belongings-refresh-btn">Refresh</button></div></div>
+      </div></main></body></html>`);
+
+  const form = page.locator('.care-stay-link-form');
+  await expect(page.locator('.care-stay-link-trigger')).toBeVisible();
+  await expect(page.locator('.directory-profile-tools button')).toHaveCount(2);
+  const desktopColumns = await form.evaluate(node => getComputedStyle(node).gridTemplateColumns.split(' ').length);
+  expect(desktopColumns).toBe(3);
+
+  await page.setViewportSize({ width: 360, height: 760 });
+  const mobile = await page.evaluate(() => ({
+    scrollWidth: document.documentElement.scrollWidth,
+    viewport: innerWidth,
+    columns: getComputedStyle(document.querySelector('.care-stay-link-form')).gridTemplateColumns.split(' ').length,
+    controlsRight: Math.max(
+      document.querySelector('.directory-profile-back-bar').getBoundingClientRect().right,
+      document.querySelector('.care-stay-link').getBoundingClientRect().right,
+      document.querySelector('.directory-roster-heading').getBoundingClientRect().right
+    )
+  }));
+  expect(mobile.scrollWidth).toBeLessThanOrEqual(mobile.viewport);
+  expect(mobile.controlsRight).toBeLessThanOrEqual(mobile.viewport + 1);
+  expect(mobile.columns).toBe(1);
+  await expect(page.locator('.care-stay-link-explicit-check input')).toBeVisible();
+  await expect(page.locator('.directory-profile-tools button').first()).toBeVisible();
+  await expect(page.locator('.directory-profile-tools button').last()).toBeVisible();
 });
 
 test('legacy Care sort controls are retired', async () => {
