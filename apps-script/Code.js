@@ -3440,13 +3440,13 @@ function v108DogIdentityAt_(rows, rowIndex) {
   var headers=rows[0]||[], id=-1, number=-1;
   for(var i=0;i<headers.length;i++){var h=String(headers[i]||"").trim().toLowerCase();if(h==="dog id")id=i;if(h==="dog number")number=i;}
   var value=id<0?"":String((rows[rowIndex]||[])[id]||"").trim();
-  if (/^(other|dog id other|n\/a|na|unknown)$/i.test(value)) value="";
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)) value="";
   return {dogId:value,dogNumber:number<0?"":String((rows[rowIndex]||[])[number]||"").trim()};
 }
 function formatV108DogNumber_(n) { return "#"+String(Number(n)||0).padStart(5,"0"); }
-function assignV108DogIdentity_(sheet,row,dogId,alreadyLocked,forceNewNumber) {
-  var lock=alreadyLocked?null:LockService.getScriptLock(); if(lock)lock.waitLock(30000);
-  try {
+// These writers run under processSheetAction_'s script lock. Do not acquire a
+// second lock here: Apps Script locks are not re-entrant.
+function assignV108DogIdentity_(sheet,row,dogId,forceNewNumber) {
     var cols=ensureV108DogIdColumn_(sheet), rows=sheet.getDataRange().getValues(), idCol=cols.id, numCol=cols.number;
     if(!dogId) dogId=String((rows[row-1]||[])[idCol]||"").trim()||newV108DogId_();
     var nums=[], existing="";
@@ -3454,7 +3454,6 @@ function assignV108DogIdentity_(sheet,row,dogId,alreadyLocked,forceNewNumber) {
     var number=(!forceNewNumber&&existing)||formatV108DogNumber_(Math.max.apply(null,[0].concat(nums))+1);
     sheet.getRange(row,idCol+1).setValue(dogId); sheet.getRange(row,numCol+1).setValue(number);
     return {dogId:dogId,dogNumber:number};
-  } finally { if(lock)lock.releaseLock(); }
 }
 
 function newV108DogId_() {
@@ -3463,13 +3462,18 @@ function newV108DogId_() {
 
 function backfillV108DogIds_() {
   var sheet = getTargetSheet_();
-  var lock=LockService.getScriptLock(); lock.waitLock(30000);
-  try {
   var cols=ensureV108DogIdColumn_(sheet);
   var rows = sheet.getDataRange().getValues();
   var assigned = 0;
   var alreadyAssigned = 0;
   var numberOwners={}, numbersByDogId={}, repairedNumbers=0;
+  var maxNumber=0, candidateNumbers={};
+  for(var scan=1;scan<rows.length;scan++){
+    var existingIdentity=v108DogIdentityAt_(rows,scan), existingNumber=existingIdentity.dogNumber;
+    var digits=existingNumber.replace(/^#/,"");
+    if(/^\d+$/.test(digits))maxNumber=Math.max(maxNumber,Number(digits));
+    if(existingIdentity.dogId && /^#\d+$/.test(existingNumber) && !candidateNumbers[existingIdentity.dogId])candidateNumbers[existingIdentity.dogId]=existingNumber;
+  }
   for (var i = 1; i < rows.length; i++) {
     var type = String(rows[i][11] || "Boarding").trim().toLowerCase();
     if (!String(rows[i][1] || "").trim() || type === "meet & greet" || type === "potential stay") continue;
@@ -3477,22 +3481,21 @@ function backfillV108DogIds_() {
     var dogId=identity.dogId||newV108DogId_(), dogNumber=identity.dogNumber;
     if(identity.dogId) alreadyAssigned++;
     if(numbersByDogId[dogId]) {
-      if(dogNumber!==numbersByDogId[dogId]) { sheet.getRange(i+1,cols.id+1).setValue(dogId); sheet.getRange(i+1,cols.number+1).setValue(numbersByDogId[dogId]); repairedNumbers++; }
-      continue;
+      dogNumber=numbersByDogId[dogId];
+      if(identity.dogNumber!==dogNumber) repairedNumbers++;
+    } else {
+      dogNumber=dogNumber||candidateNumbers[dogId]||"";
+      if(dogNumber && numberOwners[dogNumber] && numberOwners[dogNumber]!==dogId) {
+        dogNumber=formatV108DogNumber_(++maxNumber); repairedNumbers++;
+      } else if(!dogNumber) dogNumber=formatV108DogNumber_(++maxNumber);
+      numbersByDogId[dogId]=dogNumber; numberOwners[dogNumber]=dogId;
     }
-    if(dogNumber && numberOwners[dogNumber] && numberOwners[dogNumber]!==dogId) {
-      var repaired=assignV108DogIdentity_(sheet,i+1,dogId,true,true); dogNumber=repaired.dogNumber; repairedNumbers++;
-    } else if(!dogNumber) {
-      var created=assignV108DogIdentity_(sheet,i+1,dogId,true); dogNumber=created.dogNumber;
-      if(numberOwners[dogNumber] && numberOwners[dogNumber]!==dogId) { var createdUnique=assignV108DogIdentity_(sheet,i+1,dogId,true,true); dogNumber=createdUnique.dogNumber; repairedNumbers++; }
-    }
-    if(!identity.dogId) { sheet.getRange(i+1,cols.id+1).setValue(dogId); assigned++; }
-    if(!identity.dogNumber || identity.dogNumber!==dogNumber) sheet.getRange(i+1,cols.number+1).setValue(dogNumber);
-    numbersByDogId[dogId]=dogNumber; numberOwners[dogNumber]=dogId;
+    if(!identity.dogId) assigned++;
+    if(identity.dogId!==dogId) sheet.getRange(i+1,cols.id+1).setValue(dogId);
+    if(identity.dogNumber!==dogNumber) sheet.getRange(i+1,cols.number+1).setValue(dogNumber);
   }
   touchWaffleDataVersion_("directory");
   return {result:"success",action:"backfill_dog_ids",assigned:assigned,alreadyAssigned:alreadyAssigned,repairedNumbers:repairedNumbers};
-  } finally { lock.releaseLock(); }
 }
 
 function dogIdError_(code, message) {
