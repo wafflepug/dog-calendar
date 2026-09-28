@@ -5675,6 +5675,7 @@ body.dark-theme .care-brief-alert {
 .directory-care-records-disclosure,
 .directory-care-contact-disclosure {
     margin: 12px 0 16px;
+    scroll-margin-bottom: calc(100px + env(safe-area-inset-bottom, 0px));
     overflow: hidden;
     border: 1px solid var(--wh-border, #dbe3ea);
     border-radius: 12px;
@@ -5733,8 +5734,122 @@ body.dark-theme .care-brief-alert {
 .directory-care-records-body {
     display: grid;
     gap: 8px;
+    min-width: 0;
     padding: 0 12px 12px;
     border-top: 1px solid var(--wh-border-soft, #e2e8f0);
+}
+
+.directory-care-records-body > * {
+    min-width: 0;
+}
+
+.directory-care-records-body .directory-care-strip,
+.directory-care-records-body .directory-intake-strip,
+.directory-care-records-body .directory-legacy-strip {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+    padding: 10px;
+    border-radius: 10px;
+}
+
+.directory-care-records-body .directory-care-strip {
+    border: 1px solid var(--wh-border, #cbd5e1);
+    background: var(--wh-surface-muted, #f8fafc);
+}
+
+.directory-care-records-body .directory-care-strip.care-unset {
+    border-color: #64748b;
+}
+
+.directory-care-records-body .directory-care-strip.care-clear {
+    border-color: #15803d;
+}
+
+.directory-care-records-body .directory-care-strip.has-alerts {
+    border-color: #b91c1c;
+    background: #fff7f7;
+}
+
+.directory-record-loading,
+.directory-record-next {
+    display: block;
+    color: var(--wh-text-muted, #475569);
+    font-size: 12px;
+    font-weight: 650;
+    line-height: 1.4;
+}
+
+.directory-care-records-body .directory-intake-state,
+.directory-care-records-body .directory-legacy-state {
+    display: grid;
+    gap: 4px;
+    color: var(--wh-text, #172033);
+    font-size: 13px;
+    font-weight: 800;
+    line-height: 1.4;
+}
+
+.directory-care-records-body .directory-intake-actions,
+.directory-care-records-body .directory-legacy-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    width: 100%;
+    min-width: 0;
+}
+
+.directory-care-records-body .directory-intake-action {
+    min-width: 44px;
+    min-height: 44px;
+    padding: 8px 12px;
+    border-color: var(--wh-accent, #1d4ed8);
+    color: var(--wh-accent-contrast, #1e3a8a);
+    font-size: 13px;
+    white-space: normal;
+}
+
+.directory-care-records-body .directory-intake-action.is-primary {
+    border: 2px solid var(--wh-accent, #1d4ed8);
+    background: var(--wh-accent, #1d4ed8);
+    color: var(--wh-accent-on, #ffffff);
+}
+
+.directory-care-records-body .directory-intake-action:focus-visible,
+.directory-care-records-disclosure > summary:focus-visible {
+    outline: 3px solid var(--wh-accent, #1d4ed8);
+    outline-offset: 2px;
+}
+
+body.dark-theme .directory-care-records-body .directory-care-strip {
+    border-color: #64748b;
+    background: #202c3e;
+}
+
+body.dark-theme .directory-care-records-body .directory-care-strip.care-clear {
+    border-color: #4ade80;
+}
+
+body.dark-theme .directory-care-records-body .directory-care-strip.has-alerts {
+    border-color: #f87171;
+    background: #351f2a;
+}
+
+body.dark-theme .directory-care-records-body .directory-intake-state,
+body.dark-theme .directory-care-records-body .directory-legacy-state {
+    color: #f1f5f9;
+}
+
+body.dark-theme .directory-record-loading,
+body.dark-theme .directory-record-next {
+    color: #cbd5e1;
+}
+
+body.dark-theme .directory-care-records-body .directory-intake-action.is-primary {
+    border-color: var(--wh-accent, #93c5fd);
+    background: var(--wh-accent, #93c5fd);
+    color: #0f172a;
 }
 
 .directory-care-contact-body {
@@ -5750,6 +5865,23 @@ body.dark-theme .care-brief-alert {
 
 .directory-care-records-body > :first-child {
     margin-top: 12px;
+}
+
+@media (max-width: 520px) {
+    .directory-care-records-body {
+        padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    }
+
+    .directory-care-records-body .directory-intake-actions,
+    .directory-care-records-body .directory-legacy-actions {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr));
+    }
+
+    .directory-care-records-body .directory-intake-action {
+        width: 100%;
+        overflow-wrap: anywhere;
+    }
 }
 
 .directory-care-section-heading {
@@ -5816,6 +5948,18 @@ body.dark-theme .directory-care-brief-action.is-unavailable {
     .directory-care-contact-disclosure > summary:focus {
         outline: 2px solid Highlight;
         outline-offset: 2px;
+    }
+
+    .directory-care-records-body .directory-intake-action {
+        border: 2px solid ButtonText;
+        background: ButtonFace;
+        color: ButtonText;
+    }
+
+    .directory-care-records-body .directory-intake-action.is-primary {
+        border-color: Highlight;
+        background: Highlight;
+        color: HighlightText;
     }
 }
 
