@@ -5492,6 +5492,48 @@ body.dark-theme .directory-care-readiness-row[data-state="attention"] {
     grid-column: span 2;
 }
 
+.directory-care-brief-safety[data-state="attention"] {
+    border-color: var(--wh-danger, #b42318);
+    border-inline-start: 5px solid var(--wh-danger, #b42318);
+}
+
+.directory-care-brief-safety[data-state="clear"] {
+    border-inline-start: 5px solid var(--wh-success, #166534);
+}
+
+.directory-care-brief-note-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.directory-care-brief-note .directory-care-brief-value {
+    display: block;
+    min-height: 2.9em;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.directory-care-brief-note-edit {
+    flex: 0 0 auto;
+    min-height: 36px;
+    padding: 6px 12px;
+    border: 1px solid var(--wh-accent, #2563eb);
+    border-radius: 8px;
+    background: var(--wh-surface, #ffffff);
+    color: var(--wh-accent, #0f6292);
+    font: inherit;
+    font-size: 12px;
+    font-weight: 850;
+    cursor: pointer;
+}
+
+.directory-care-brief-note-edit:focus-visible {
+    outline: 2px solid var(--wh-focus, #2563eb);
+    outline-offset: 2px;
+}
+
 .directory-care-brief-contact {
     display: grid;
     gap: 3px;
@@ -5619,6 +5661,11 @@ body.dark-theme .care-brief-state.is-clear {
     border-color: #4ade80;
 }
 
+body.dark-theme .directory-care-brief-note-edit {
+    background: #182235;
+    color: var(--wh-accent-contrast, #bfdbfe);
+}
+
 body.dark-theme .care-brief-alert {
     color: #fecaca;
     border-color: #f87171;
@@ -5739,6 +5786,7 @@ body.dark-theme .directory-care-brief-action.is-unavailable {
 
 @media (forced-colors: active) {
     .directory-care-brief-action,
+.directory-care-brief-note-edit,
     .directory-care-records-disclosure,
     .directory-care-contact-disclosure {
         border: 1px solid ButtonText;
@@ -5746,6 +5794,7 @@ body.dark-theme .directory-care-brief-action.is-unavailable {
     }
 
     .directory-care-brief-action,
+.directory-care-brief-note-edit,
     .directory-care-records-disclosure > summary,
     .directory-care-contact-disclosure > summary {
         color: ButtonText;
@@ -5950,6 +5999,10 @@ body.dark-theme
     .directory-care-brief-safety,
     .directory-care-brief-note {
         grid-column: auto;
+    }
+
+    .directory-care-brief-note .directory-care-brief-value {
+        min-height: 0;
     }
 
     .directory-care-brief-item {
