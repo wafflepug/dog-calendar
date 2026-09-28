@@ -14757,7 +14757,7 @@ registerWaffleServiceWorker();
                                                 <section class="directory-care-brief-item directory-care-brief-note">
                                                     <div class="directory-care-brief-note-heading">
                                                         <h4>Handover note</h4>
-                                                        <button type="button" class="directory-care-brief-note-edit" data-care-brief-action="handover">Update</button>
+                                                        <button type="button" class="directory-care-brief-note-edit" data-care-brief-action="handover" aria-label="Update handover">Update</button>
                                                     </div>
                                                     <p class="directory-care-brief-value">
                                                         ${escapeDashboardHtml(notes ? notes.trim() : 'No handover note recorded')}

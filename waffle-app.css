@@ -5517,7 +5517,7 @@ body.dark-theme .directory-care-readiness-row[data-state="attention"] {
 
 .directory-care-brief-note-edit {
     flex: 0 0 auto;
-    min-height: 36px;
+    min-height: 44px;
     padding: 6px 12px;
     border: 1px solid var(--wh-accent, #2563eb);
     border-radius: 8px;
@@ -5786,7 +5786,7 @@ body.dark-theme .directory-care-brief-action.is-unavailable {
 
 @media (forced-colors: active) {
     .directory-care-brief-action,
-.directory-care-brief-note-edit,
+    .directory-care-brief-note-edit,
     .directory-care-records-disclosure,
     .directory-care-contact-disclosure {
         border: 1px solid ButtonText;
@@ -5794,7 +5794,7 @@ body.dark-theme .directory-care-brief-action.is-unavailable {
     }
 
     .directory-care-brief-action,
-.directory-care-brief-note-edit,
+    .directory-care-brief-note-edit,
     .directory-care-records-disclosure > summary,
     .directory-care-contact-disclosure > summary {
         color: ButtonText;
@@ -5811,6 +5811,7 @@ body.dark-theme .directory-care-brief-action.is-unavailable {
     }
 
     .directory-care-brief-action:focus,
+    .directory-care-brief-note-edit:focus,
     .directory-care-records-disclosure > summary:focus,
     .directory-care-contact-disclosure > summary:focus {
         outline: 2px solid Highlight;
