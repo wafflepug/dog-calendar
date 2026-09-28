@@ -196,8 +196,9 @@ test('Records & Forms opens legacy PDF OCR for the selected dog and stay', async
 
   const records = card.locator('.directory-care-records-disclosure');
   await records.locator('summary').click();
-  const upload = records.getByRole('button', { name: 'Upload PDF for OCR' });
+  const upload = records.locator('[data-care-record-upload]');
   await expect(upload).toBeVisible();
+  await expect(upload).toHaveAccessibleName(/Upload.*legacy intake PDF.*OCR/);
   const bounds = await upload.boundingBox();
   const stripBounds = await records.locator('.directory-legacy-strip').boundingBox();
   expect(bounds.width).toBeGreaterThanOrEqual(stripBounds.width - 18);
