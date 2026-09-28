@@ -4,7 +4,7 @@ const path = require('node:path');
 const vm = require('node:vm');
 
 const backend = fs.readFileSync(path.join(__dirname, '..', 'apps-script', 'Code.js'), 'utf8');
-const helperStart = backend.indexOf('function ensureV108DogIdColumn_');
+const helperStart = backend.indexOf('// Identity fields are discovered by header');
 const helperEnd = backend.indexOf('function findV108BoardingRowForUpdate_', helperStart);
 const copyStart = backend.indexOf('function validateV108DogProfileCopy_', helperEnd);
 const copyEnd = backend.indexOf('function createV108Boarding_', copyStart);
@@ -20,9 +20,10 @@ function makeHarness(initialRows, priorProfiles = []) {
   const sheet = {
     getName() { return 'Bookings'; },
     getDataRange() { return { getValues: () => rows }; },
-    getRange(row, col) {
+    getRange(row, col, numRows, numCols) {
       return {
         getValue() { return cells.get(`${row}:${col}`) || (rows[row - 1] || [])[col - 1] || ''; },
+        getDisplayValues() { return [(rows[row - 1] || []).slice(col - 1, col - 1 + (numCols || 1)).map(value => String(value || ''))]; },
         setValue(value) {
           cells.set(`${row}:${col}`, value);
           while (rows.length < row) rows.push([]);
@@ -32,7 +33,8 @@ function makeHarness(initialRows, priorProfiles = []) {
       };
     },
     appendRow(row) { rows.push(row.slice()); },
-    getLastRow() { return rows.length; }
+    getLastRow() { return rows.length; },
+    getLastColumn() { return Math.max(0, ...rows.map(row => row.length)); }
   };
   const belongings = {
     getRange(row, col) {
@@ -42,6 +44,7 @@ function makeHarness(initialRows, priorProfiles = []) {
   let uuidCounter = 0;
   const sandbox = {
     Utilities: { getUuid: () => `uuid-${++uuidCounter}` },
+    LockService: { getScriptLock: () => ({ waitLock() {}, releaseLock() {} }) },
     getTargetSheet_: () => sheet,
     getBelongingsSheet_: () => belongings,
     normalizeV108Identity_: value => String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim(),
@@ -63,7 +66,7 @@ function makeHarness(initialRows, priorProfiles = []) {
   return { api: sandbox.api, rows, writes, versionTouches };
 }
 
-const header = ['Timestamp', 'Dog Name', 'Breed', 'Start Date', 'End Date', 'Owner', 'Phone', '', '', 'Notes', 'Edit', 'Booking Type'];
+const header = ['Timestamp', 'Dog Name', 'Breed', 'Start Date', 'End Date', 'Owner', 'Phone', '', '', 'Notes', 'Edit', 'Booking Type', 'Dog ID'];
 const booking = (name, owner, id = '') => ['', name, 'Cavoodle', '2026-10-01', '2026-10-02', owner, '0400000000', '', '', '', '', 'Confirmed Boarding', id];
 
 // Same-name dogs remain separate; a client with no selection gets a fresh ID.
@@ -72,7 +75,7 @@ const booking = (name, owner, id = '') => ['', name, 'Cavoodle', '2026-10-01', '
   const result = h.api.create({ dogName: 'Coco', breed: 'Cavoodle', ownerName: 'C', phone: '0400000000', startDate: '2026-10-03', endDate: '2026-10-04' });
   assert.equal(result.dogId, 'uuid-1');
   assert.equal(h.rows[3][12], 'uuid-1');
-  assert.equal(h.rows[3].length, 13, 'Dog ID is appended after the unchanged A:L booking fields');
+  assert.equal(h.rows[3].length, 14, 'Dog ID and Dog Number are appended after the unchanged A:L booking fields');
   const oldClient = h.api.create({ dogName: 'Coco', breed: 'Cavoodle', ownerName: 'D', phone: '0400000000', startDate: '2026-10-05', endDate: '2026-10-06', copyPreviousProfile: true });
   assert.ok(oldClient.dogId);
   assert.equal(oldClient.copiedPreviousProfile.copied, false);
@@ -151,6 +154,52 @@ const booking = (name, owner, id = '') => ['', name, 'Cavoodle', '2026-10-01', '
 }
 
 console.log('Dog ID backend identity tests passed.');
+
+// A pre-existing source column in M is untouched; identity fields move to headers
+// appended after it and receive unique, stable display numbers.
+{
+  const occupiedHeader = header.slice(0, 12).concat(['Source']);
+  const first = booking('Waffle', 'A'); first[12] = 'Other';
+  const second = booking('Waffle', 'A'); second[12] = 'Other';
+  const third = booking('Coco', 'B'); third[12] = 'Other';
+  const h = makeHarness([occupiedHeader, first, second, third]);
+  const result = h.api.backfill();
+  assert.equal(result.assigned, 3);
+  assert.equal(h.rows[0][12], 'Source');
+  assert.equal(h.rows[1][12], 'Other');
+  assert.notEqual(h.rows[1][13], 'Other');
+  assert.equal(h.rows[1][14], '#00001');
+  assert.equal(h.rows[2][14], '#00002', 'separate legacy booking rows become distinct dog records');
+  assert.equal(h.rows[3][14], '#00003');
+  const idsBefore = h.rows.slice(1).map(row => row[13]);
+  h.api.backfill();
+  assert.deepEqual(h.rows.slice(1).map(row => row[13]), idsBefore);
+  assert.deepEqual(h.rows.slice(1).map(row => row[14]), ['#00001', '#00002', '#00003']);
+}
+
+// Repeated stays for a known UUID share its dog number and do not allocate a new one.
+{
+  const h = makeHarness([header.concat(['Dog Number']), booking('Pip', 'A', 'pip-uuid'), booking('Pip', 'A', 'pip-uuid')]);
+  h.rows[1][13] = '#00017';
+  const result = h.api.backfill();
+  assert.equal(result.assigned, 0);
+  assert.equal(h.rows[1][13], '#00017');
+  assert.equal(h.rows[2][13], '#00017');
+}
+
+// Conflicting numbers are resolved in sheet order; the later dog gets a fresh
+// number above the current maximum and subsequent backfills leave it stable.
+{
+  const a = booking('Milo', 'A', 'milo-uuid');
+  const b = booking('Coco', 'B', 'coco-uuid');
+  const c = booking('Pip', 'C', 'pip-uuid');
+  a[13] = '#00001'; b[13] = '#00001'; c[13] = '#00009';
+  const h = makeHarness([header.concat(['Dog Number']), a, b, c]);
+  assert.equal(h.api.backfill().repairedNumbers, 1);
+  assert.deepEqual(h.rows.slice(1).map(row => row[13]), ['#00001', '#00010', '#00009']);
+  assert.equal(h.api.backfill().repairedNumbers, 0);
+  assert.deepEqual(h.rows.slice(1).map(row => row[13]), ['#00001', '#00010', '#00009']);
+}
 
 // Master-profile derivation follows Dog ID and never joins same-name profiles.
 {
