@@ -418,7 +418,9 @@
     const dogId = String(card?.dataset?.directoryDogId || '').trim();
     if (!host || !dogName || typeof window.queryAppsScript !== 'function') return;
 
-    host.innerHTML = '<div class="v11160-loading">Loading stay history…</div>';
+    if (host.dataset.historyState === 'loading' || host.dataset.historyState === 'loaded') return;
+    host.dataset.historyState = 'loading';
+    host.innerHTML = '<div class="v11160-loading" role="status">Loading stay history…</div>';
     try {
       const response = await window.queryAppsScript(
         { action: 'get_dog_history', dogName, ...(dogId ? { dogId } : {}) },
@@ -426,16 +428,23 @@
       );
       const history = response?.history || {};
       const stays = Array.isArray(history.previousStays) ? history.previousStays : [];
-      host.innerHTML = `
-        <section class="v11160-simple-section">
-          <div class="v11160-section-head"><div><small>STAY HISTORY</small><h4>🕘 ${html(dogName)}</h4></div><strong>${Number(history.stayCount || stays.length)}</strong></div>
-          ${stays.length ? `<div class="v11160-list">${stays.map(stay => `
-            <article><strong>${html(stay.startDate || '')} → ${html(stay.endDate || stay.startDate || '')}</strong><span>${html(stay.breed || '')}${stay.bookingType ? ' · ' + html(stay.bookingType) : ''}</span>${stay.notes ? `<small>${html(stay.notes)}</small>` : ''}</article>`).join('')}</div>` : '<div class="v11160-empty">No previous stays found.</div>'}
-        </section>`;
+      host.dataset.historyState = 'loaded';
+      const dateLabel = value => typeof window.v10FormatDateLabel === 'function' ? window.v10FormatDateLabel(value) : String(value || '');
+      host.innerHTML = `<section class="v11160-simple-section v108-history-fallback"><div class="v11160-section-head"><div><small>STAY HISTORY</small><h4>🕘 ${html(dogName)}</h4></div><strong>${Number(history.stayCount ?? stays.length)} previous stay${Number(history.stayCount ?? stays.length) === 1 ? '' : 's'}</strong></div>${history.dogNumber ? `<p>Dog ID ${html(history.dogNumber)}</p>` : ''}${stays.length ? `<div class="v11160-list">${stays.map(stay => `<article class="v108-stay-history"><strong>${html(dateLabel(stay.startDate))}${stay.endDate && stay.endDate !== stay.startDate ? ' – ' + html(dateLabel(stay.endDate)) : ''}</strong><span>${[stay.bookingType || 'Boarding', stay.breed, stay.ownerName].filter(Boolean).map(html).join(' · ')}</span>${stay.phone ? `<a href="tel:${html(stay.phone)}">${html(stay.phone)}</a>` : ''}${stay.notes ? `<details><summary>Notes</summary><p>${html(stay.notes)}</p></details>` : ''}</article>`).join('')}</div>` : '<div class="v11160-empty">No previous stays are recorded for this dog.</div>'}</section>`;
     } catch (error) {
-      host.innerHTML = `<div class="v11160-error">History could not be loaded.<br>${html(error?.message || String(error))}</div>`;
+      host.dataset.historyState = 'error';
+      host.innerHTML = `<div class="v11160-error v108-history-error" role="alert"><strong>Stay history could not be loaded</strong><br>${html(error?.message || String(error))}<br><button type="button" data-v108-history-retry>Try again</button></div>`;
     }
   }
+
+  document.addEventListener('click', event => {
+    if (!event.target.closest('[data-v108-history-retry]')) return;
+    const card = event.target.closest('.directory-card');
+    const host = card?.querySelector('[data-v108-history]');
+    if (host) delete host.dataset.historyState;
+    const result = callNamed('v108LoadHistory', [card]);
+    if (!result.called) fallbackHistory(card);
+  });
 
   async function fallbackMedia(card) {
     const target = panel(card, 'media');

@@ -1,6 +1,6 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.09.28.09",
+  "assetRevision": "2026.09.28.10",
   "releaseName": "Clarify Care records and forms",
   "runtime": "waffle-bootstrap.js",
   "styles": "waffle-runtime.css",

@@ -101,3 +101,27 @@ body.dark-theme .v108-copy{border-color:#1d4ed8;background:#172554;color:#bfdbfe
  .directory-status-tag{font-size:11.5px!important}.directory-care-badge{font-size:12px!important}.directory-care-icon{font-size:17px!important}.directory-main-profile-tab{min-width:0;padding:7px 5px!important;font-size:11px!important}
 }
 @media (max-width:390px){.calendar-brand-logo{width:50px!important;height:50px!important;min-width:50px!important;max-width:50px!important;flex-basis:50px!important}.calendar-brand-copy{flex-basis:calc(100% - 64px)!important}.calendar-header-branding .calendar-brand-copy h2{font-size:15.5px!important}}
+/* Care stay history: dates lead, booking context stays compact, notes open on demand. */
+.v108-history-summary { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin:0 0 16px; padding:14px 16px; border:1px solid color-mix(in srgb,var(--wh75-accent,#7562db) 35%,transparent); border-radius:14px; background:color-mix(in srgb,var(--wh75-accent,#7562db) 8%,var(--v10-card,#fff)); color:var(--wh-text,#172033); }
+.v108-history-summary div { display:grid; gap:3px; }
+.v108-history-summary small,.v108-history-section h4 { color:var(--wh-text-muted,#475569); }
+.v108-history-summary strong { font-size:1.05rem; }
+.v108-history-summary>span { border-radius:999px; padding:6px 10px; background:var(--v10-card,#fff); color:var(--wh-text,#172033); font-size:.85rem; font-weight:700; }
+.v108-history-section { margin:16px 0; }
+.v108-history-section h4 { margin:0 0 9px; font-size:.95rem; }
+.v108-owner-list,.v108-stay-list { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr)); gap:10px; }
+.v108-owner,.v108-stay-history { min-width:0; padding:13px 14px; border:1px solid color-mix(in srgb,var(--wh-text,#172033) 16%,transparent); border-radius:12px; background:var(--v10-card,#fff); color:var(--wh-text,#172033); }
+.v108-owner { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:6px 12px; }
+.v108-owner a,.v108-stay-history a { color:var(--wh75-accent,#5142a8); font-weight:700; overflow-wrap:anywhere; }
+.dark-theme .v108-owner a,.dark-theme .v108-stay-history a { color:#c4b5fd; }
+.v108-stay-history { display:grid; align-content:start; gap:6px; }
+.v108-stay-history>strong { color:var(--wh-text,#172033); font-size:1rem; }
+.v108-stay-history>span,.v108-stay-history>p { margin:0; color:var(--wh-text-muted,#475569); overflow-wrap:anywhere; }
+.v108-stay-history details { border-top:1px solid color-mix(in srgb,var(--wh-text,#172033) 14%,transparent); margin-top:4px; }
+.v108-stay-history summary { min-height:44px; display:flex; align-items:center; cursor:pointer; color:var(--wh75-accent,#5142a8); font-weight:700; }
+.dark-theme .v108-stay-history summary { color:#c4b5fd; }
+.v108-stay-history details p { white-space:pre-wrap; overflow-wrap:anywhere; margin:2px 0 0; color:var(--wh-text,#172033); }
+.v108-history-error { display:grid; gap:9px; padding:16px; border:1px solid #b42318; border-radius:12px; background:color-mix(in srgb,#b42318 8%,var(--v10-card,#fff)); color:var(--wh-text,#172033); }
+.v108-history-error button { min-height:44px; width:max-content; max-width:100%; border:1px solid var(--wh75-accent,#5142a8); border-radius:9px; padding:8px 14px; background:var(--wh75-accent,#5142a8); color:#fff; font:inherit; font-weight:700; cursor:pointer; }
+.v108-history-error button:focus-visible,.v108-stay-history summary:focus-visible,.v108-owner a:focus-visible,.v108-stay-history a:focus-visible { outline:3px solid #f59e0b; outline-offset:2px; }
+@media(max-width:600px){.v108-history-summary{padding:12px}.v108-owner-list,.v108-stay-list{grid-template-columns:1fr}.v108-owner,.v108-stay-history{padding:13px}.v108-history-section{margin:14px 0}}
