@@ -8622,7 +8622,8 @@ registerWaffleServiceWorker();
             'Notes',
             'Edit Link',
             'Booking Type',
-            'Dog ID'
+            'Dog ID',
+            'Dog Number'
         ];
 
         const rows = [
@@ -8646,7 +8647,8 @@ registerWaffleServiceWorker();
                 booking.notes || '',
                 booking.editLink || '',
                 booking.bookingType || 'Boarding',
-                booking.dogId || ''
+                booking.dogId || '',
+                booking.dogNumber || ''
             ]);
         });
 
@@ -8679,7 +8681,8 @@ registerWaffleServiceWorker();
                 booking.ownerName || '',
                 booking.phone || '',
                 booking.notes || '',
-                booking.dogId || ''
+                booking.dogId || '',
+                booking.dogNumber || ''
             ].join('|'))
             .sort()
             .join('||');
@@ -14421,6 +14424,10 @@ registerWaffleServiceWorker();
     function parseCSVToEvents(csvText) {
         if (!csvText) return [];
         const lines = csvText.split(/\r?\n/); const events = [];
+        const headerColumns = (lines[0] || '').split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/)
+            .map(value => String(value || '').replace(/^"|"$/g, '').trim().toLowerCase());
+        const dogIdColumn = headerColumns.indexOf('dog id');
+        const dogNumberColumn = headerColumns.indexOf('dog number');
         const localTodayStr = getLocalTodayDateString(); const today = new Date(localTodayStr + 'T00:00:00');
         const sevenDaysFromNow = new Date(today.getTime()); sevenDaysFromNow.setDate(today.getDate() + 7); sevenDaysFromNow.setHours(23,59,59,999);
 
@@ -14443,7 +14450,14 @@ registerWaffleServiceWorker();
             const notes = columns[9] ? columns[9].replace(/^"|"$/g, '') : '';
             const editLink = columns[10] ? columns[10].replace(/^"|"$/g, '') : '';
             const bookingType = columns[11] ? columns[11].replace(/^"|"$/g, '').trim() : '';
-            const dogId = columns[12] ? columns[12].replace(/^"|"$/g, '').trim() : '';
+            const rawDogId = dogIdColumn >= 0 && columns[dogIdColumn]
+                ? columns[dogIdColumn].replace(/^"|"$/g, '').trim() : '';
+            const dogId = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rawDogId)
+                ? rawDogId : '';
+            const rawDogNumber = dogNumberColumn >= 0 && columns[dogNumberColumn]
+                ? columns[dogNumberColumn].replace(/^"|"$/g, '').trim() : '';
+            const dogNumber = dogId && /^#?\d{1,5}$/.test(rawDogNumber)
+                ? `#${rawDogNumber.replace('#', '').padStart(5, '0')}` : '';
             
             const isMeetGreetType = (bookingType.toLowerCase() === 'meet & greet');
             const isPotentialType = (bookingType.toLowerCase() === 'potential stay');
@@ -14549,7 +14563,6 @@ registerWaffleServiceWorker();
                                     ? 'Checked out'
                                     : (isCurrentlyAtHome ? 'Staying' : 'Arriving');
                                 const rosterInitials = dogName.trim().split(/\s+/).slice(0, 2).map(part => part.charAt(0)).join('');
-                                const shortDogId = dogId ? String(dogId).replace(/[^a-z0-9]/gi, '').slice(0, 8) : '';
 
                                 directoryCardsHTML.push(`
                                     <div
@@ -14557,6 +14570,7 @@ registerWaffleServiceWorker();
                                         data-directory-stay-key="${escapeDashboardHtml(directoryStayKey)}"
                                         data-directory-dog-name="${escapeDashboardHtml(dogName.trim())}"
                                         data-directory-dog-id="${escapeDashboardHtml(dogId)}"
+                                        data-directory-dog-number="${escapeDashboardHtml(dogNumber)}"
                                         data-directory-start-date="${escapeDashboardHtml(startParsed)}"
                                         data-directory-end-date="${escapeDashboardHtml(endParsed)}"
                                         data-directory-source-row="${i + 1}"
@@ -14581,7 +14595,7 @@ registerWaffleServiceWorker();
                                             <span class="directory-roster-avatar" aria-hidden="true">${escapeDashboardHtml(rosterInitials || '🐾')}</span>
                                             <span class="directory-roster-copy">
                                                 <span class="directory-guest-tile-name">${escapeDashboardHtml(dogName.trim())}</span>
-                                                ${shortDogId ? `<span class="directory-dog-id">Dog ID ${escapeDashboardHtml(shortDogId)}</span>` : ''}
+                                                ${dogNumber ? `<span class="directory-dog-id">Dog ID ${escapeDashboardHtml(dogNumber)}</span>` : ''}
                                                 <span class="directory-roster-context">${escapeDashboardHtml(rosterContext)}</span>
                                             </span>
                                             <span class="directory-roster-status">${rosterStatus}</span>
@@ -14617,7 +14631,7 @@ registerWaffleServiceWorker();
                                                         title="Tap to edit Dog Name">
                                                         ${escapeDashboardHtml(dogName.trim())}
                                                     </button>
-                                                    ${shortDogId ? `<span class="directory-dog-id">Dog ID ${escapeDashboardHtml(shortDogId)}</span>` : ''}
+                                                    ${dogNumber ? `<span class="directory-dog-id">Dog ID ${escapeDashboardHtml(dogNumber)}</span>` : ''}
                                                     ${statusTag}
                                                 </div>
 
