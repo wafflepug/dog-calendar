@@ -9182,6 +9182,14 @@ body[data-waffle-page="directory"] #directoryTabPanel.app-tab-panel.active {
     letter-spacing: .02em;
 }
 
+.directory-profile-content .directory-dog-id {
+    padding: 4px 9px;
+    color: var(--wh-text, #172033);
+    background: color-mix(in srgb, var(--wh75-accent, #7c3aed) 9%, var(--wh-surface, #fff));
+    font-size: 12px;
+    font-weight: 800;
+}
+
 .guest-directory-toolbar .p4-backfill {
     min-height: 42px;
     padding: 8px 10px;

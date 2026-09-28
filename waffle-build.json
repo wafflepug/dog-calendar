@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.09.28.03",
-  "releaseName": "Add persistent Dog IDs and exact booking selection",
+  "assetRevision": "2026.09.28.04",
+  "releaseName": "Show distinct numbered Dog IDs in Care",
   "runtime": "waffle-bootstrap.js",
   "styles": "waffle-runtime.css",
   "phase": "phase-4-sitter-workflow-expansion",
