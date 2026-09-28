@@ -2,9 +2,11 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
+const crypto = require('node:crypto');
 const uuid = n => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
 
 const backend = fs.readFileSync(path.join(__dirname, '..', 'apps-script', 'Code.js'), 'utf8');
+const careUi = fs.readFileSync(path.join(__dirname, '..', 'care.js'), 'utf8');
 const helperStart = backend.indexOf('// Identity fields are discovered by header');
 const helperEnd = backend.indexOf('function findV108BoardingRowForUpdate_', helperStart);
 const copyStart = backend.indexOf('function validateV108DogProfileCopy_', helperEnd);
@@ -44,9 +46,19 @@ function makeHarness(initialRows, priorProfiles = []) {
   };
   let uuidCounter = 0;
   let sandboxLockHeld = false;
+  const scriptProperties = new Map();
   const sandbox = {
-    Utilities: { getUuid: () => uuid(++uuidCounter) },
+    Utilities: {
+      getUuid: () => uuid(++uuidCounter),
+      DigestAlgorithm: { SHA_256: 'SHA-256' },
+      Charset: { UTF_8: 'UTF-8' },
+      formatDate: () => '2026-09-28',
+      computeDigest: (_algorithm, value) => [...crypto.createHash('sha256').update(String(value)).digest()],
+      base64EncodeWebSafe: bytes => Buffer.from(bytes).toString('base64url')
+    },
     LockService: { getScriptLock: () => ({ waitLock() { if (sandboxLockHeld) throw new Error('nested script lock'); sandboxLockHeld = true; }, releaseLock() { sandboxLockHeld = false; } }) },
+    PropertiesService: { getScriptProperties: () => ({ getProperty: key => scriptProperties.get(key) || null, setProperty: (key, value) => scriptProperties.set(key, String(value)) }) },
+    Session: { getScriptTimeZone: () => 'Australia/Sydney' },
     getTargetSheet_: () => sheet,
     getBelongingsSheet_: () => belongings,
     normalizeV108Identity_: value => String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim(),
@@ -64,7 +76,7 @@ function makeHarness(initialRows, priorProfiles = []) {
   };
   vm.createContext(sandbox);
   const prefillStart = backend.indexOf('function getV108ReturningGuestPrefill_');
-  vm.runInContext(`${backend.slice(helperStart, helperEnd)}\n${backend.slice(prefillStart, copyEnd)}\n${backend.slice(createStart, createEnd)}\nthis.api = { resolve: resolveV108DogRows_, identityAt: v108DogIdentityAt_, create: createV108Boarding_, createIntake: createV108IntakeBooking_, prefill: getV108ReturningGuestPrefill_, backfill: backfillV108DogIds_ };`, sandbox);
+  vm.runInContext(`${backend.slice(helperStart, helperEnd)}\n${backend.slice(prefillStart, copyEnd)}\n${backend.slice(createStart, createEnd)}\nthis.api = { resolve: resolveV108DogRows_, identityAt: v108DogIdentityAt_, create: createV108Boarding_, createIntake: createV108IntakeBooking_, prefill: getV108ReturningGuestPrefill_, backfill: backfillV108DogIds_, link: linkV108StayToDog_, linkable: listV108DogStaysForLinking_ };`, sandbox);
   return { api: sandbox.api, rows, writes, versionTouches, underActionLock(fn) { if (sandboxLockHeld) throw new Error('test action lock already held'); sandboxLockHeld=true; try { return fn(); } finally { sandboxLockHeld=false; } } };
 }
 
@@ -156,6 +168,91 @@ const booking = (name, owner, id = '') => ['', name, 'Cavoodle', '2026-10-01', '
 }
 
 console.log('Dog ID backend identity tests passed.');
+
+// Manual stay linking requires the exact reviewed row, current source identity,
+// numbered target identity, row fingerprint, and explicit confirmation.
+{
+  const target = booking('Coco', 'A', uuid(201)); target[13] = '#00017';
+  const source = booking('Coco', 'A', uuid(202)); source[3] = '2024-10-01'; source[4] = '2024-10-02'; source[13] = '#00018';
+  const secondSourceStay = booking('Coco', 'A', uuid(202)); secondSourceStay[3] = '2023-10-01'; secondSourceStay[4] = '2023-10-02'; secondSourceStay[13] = '#00018';
+  const h = makeHarness([header.concat(['Dog Number']), target, source, secondSourceStay]);
+  const candidates = h.api.linkable();
+  const selected = candidates.find(item => item.sourceRow === 3);
+  assert.equal(candidates.length, 2, 'only completed past stays are offered for linking');
+  assert.ok(selected.sourceFingerprint);
+  assert.equal(selected.sourceDogId, uuid(202));
+  const baseRequest = { sourceRow: 3, sourceFingerprint: selected.sourceFingerprint, sourceStayKey: selected.sourceStayKey, sourceDogId: uuid(202), sourceDogNumber: '#00018', targetDogId: uuid(201), confirmLink: true, confirmTargetDogId: uuid(201), confirmTargetDogNumber: '#00017' };
+  assert.throws(() => h.api.link({ ...baseRequest, confirmLink: false }), error => error.code === 'DOG_ID_LINK_CONFIRMATION_REQUIRED');
+  assert.throws(() => h.api.link({ ...baseRequest, confirmTargetDogId: uuid(202) }), error => error.code === 'DOG_ID_LINK_CONFIRMATION_REQUIRED');
+  assert.throws(() => h.api.link({ ...baseRequest, confirmTargetDogNumber: '#00018' }), error => error.code === 'DOG_ID_LINK_TARGET_STALE');
+  assert.throws(() => h.api.link({ ...baseRequest, sourceRow: 4 }), error => error.code === 'DOG_ID_LINK_SOURCE_STALE');
+  const linked = h.underActionLock(() => h.api.link(baseRequest));
+  assert.equal(linked.dogId, uuid(201));
+  assert.equal(linked.dogNumber, '#00017');
+  assert.equal(linked.sourceIdentityStaysBefore, 2);
+  assert.equal(linked.sourceIdentityStaysRemaining, 1, 'linking one stay does not merge or rewrite its source identity group');
+  assert.equal(linked.targetStaysBefore, 1);
+  assert.equal(linked.targetStaysAfter, 2);
+  assert.equal(h.rows[2][12], uuid(201));
+  assert.equal(h.rows[2][13], '#00017');
+  assert.equal(h.rows[3][12], uuid(202), 'other source stays remain on their original Dog ID');
+}
+
+// Header-based identity columns keep a pre-existing Source field untouched during linking.
+{
+  const sourceHeader = header.slice(0, 12).concat(['Source', 'Dog ID', 'Dog Number']);
+  const target = booking('Milo', 'A').slice(0, 12).concat(['Other', uuid(208), '#00031']);
+  const source = booking('Milo', 'A').slice(0, 12).concat(['Other', uuid(209), '#00032']);
+  source[3] = '2023-09-01'; source[4] = '2023-09-02';
+  const h = makeHarness([sourceHeader, target, source]);
+  const selected = h.api.linkable()[0];
+  h.api.link({ sourceRow: 3, sourceFingerprint: selected.sourceFingerprint, sourceStayKey: selected.sourceStayKey, sourceDogId: uuid(209), sourceDogNumber: '#00032', targetDogId: uuid(208), confirmLink: true, confirmTargetDogId: uuid(208), confirmTargetDogNumber: '#00031' });
+  assert.equal(h.rows[2][12], 'Other');
+  assert.equal(h.rows[2][13], uuid(208));
+  assert.equal(h.rows[2][14], '#00031');
+  const created = h.api.create({ dogName: 'New Dog', breed: 'Pug', ownerName: 'C', phone: '0400000000', startDate: '2026-10-10', endDate: '2026-10-11' });
+  assert.equal(created.dogNumber, '#00033', 'a retired highest number remains reserved after its only stay is linked away');
+}
+
+// Different historical names require a second, explicit acknowledgement; identical
+// name/date stay keys are blocked even when one exact row was selected.
+{
+  const target = booking('Coco', 'A', uuid(203)); target[13] = '#00021';
+  const source = booking('Cocoa', 'A', uuid(204)); source[3] = '2023-10-01'; source[4] = '2023-10-02'; source[13] = '#00022';
+  const h = makeHarness([header.concat(['Dog Number']), target, source]);
+  const selected = h.api.linkable()[0];
+  const request = { sourceRow: 3, sourceFingerprint: selected.sourceFingerprint, sourceStayKey: selected.sourceStayKey, sourceDogId: uuid(204), sourceDogNumber: '#00022', targetDogId: uuid(203), confirmLink: true, confirmTargetDogId: uuid(203), confirmTargetDogNumber: '#00021' };
+  assert.throws(() => h.api.link(request), error => error.code === 'DOG_ID_LINK_NAME_CONFIRMATION_REQUIRED');
+  assert.equal(h.api.link({ ...request, confirmNameMismatch: true }).dogId, uuid(203));
+}
+{
+  const target = booking('Coco', 'A', uuid(205)); target[13] = '#00023';
+  const source = booking('Coco', 'A', uuid(206)); source[3] = '2023-10-01'; source[4] = '2023-10-02'; source[13] = '#00024';
+  const duplicate = booking('Coco', 'B', uuid(207)); duplicate[3] = '2023-10-01'; duplicate[4] = '2023-10-02'; duplicate[13] = '#00025';
+  const h = makeHarness([header.concat(['Dog Number']), target, source, duplicate]);
+  const selected = h.api.linkable().find(item => item.sourceRow === 3);
+  assert.throws(() => h.api.link({ sourceRow: 3, sourceFingerprint: selected.sourceFingerprint, sourceStayKey: selected.sourceStayKey, sourceDogId: uuid(206), sourceDogNumber: '#00024', targetDogId: uuid(205), confirmLink: true, confirmTargetDogId: uuid(205), confirmTargetDogNumber: '#00023' }), error => error.code === 'DOG_ID_LINK_AMBIGUOUS_STAY');
+}
+
+console.log('Dog stay link review tests passed.');
+
+// The public mutation route remains under the shared script lock, and the Care
+// UI uses explicit stay/target review controls before calling it.
+{
+  const actionStart = backend.indexOf('function processSheetAction_(data)');
+  const actionLock = backend.indexOf('.tryLock(5000)', actionStart);
+  const linkRoute = backend.indexOf('if (data.action === "link_stay_to_dog")', actionStart);
+  assert.ok(actionStart >= 0 && actionLock > actionStart && linkRoute > actionLock, 'link mutation route runs after acquiring the mutation lock');
+  assert.match(backend.slice(0, backend.indexOf('function processSheetAction_(data)')), /list_dog_stays_for_linking:\s*true/);
+  assert.match(careUi, /action: 'list_dog_stays_for_linking'/);
+  assert.match(careUi, /action: 'list_dog_identities'/);
+  assert.match(careUi, /action: 'link_stay_to_dog'/);
+  assert.match(careUi, /data-care-stay-link-confirm/);
+  assert.match(careUi, /confirmTargetDogNumber: dog\.dogNumber/);
+  assert.match(careUi, /confirmNameMismatch: true/);
+}
+
+console.log('Dog stay link UI and route contract tests passed.');
 
 // A pre-existing source column in M is untouched; identity fields move to headers
 // appended after it and receive unique, stable display numbers.

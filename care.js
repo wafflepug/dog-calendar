@@ -240,6 +240,177 @@
       .replace(/'/g, '&#039;');
   }
 
+  function installStayLinkReview() {
+    const heading = document.querySelector('.directory-roster-heading');
+    const toolbar = heading?.querySelector('.guest-directory-toolbar');
+    if (!heading || !toolbar || heading.querySelector('.care-stay-link-trigger')) return;
+
+    const trigger = document.createElement('button');
+    trigger.type = 'button';
+    trigger.className = 'care-stay-link-trigger';
+    trigger.textContent = 'Link older stay';
+    toolbar.appendChild(trigger);
+
+    const panel = document.createElement('section');
+    panel.className = 'care-stay-link';
+    panel.hidden = true;
+    panel.setAttribute('aria-labelledby', 'careStayLinkTitle');
+    panel.innerHTML = `
+      <header class="care-stay-link-header">
+        <div><small>CARE RECORDS</small><h2 id="careStayLinkTitle">Link a past stay</h2>
+          <p>Choose the exact stay and the numbered dog it belongs to. Only that stay will move.</p></div>
+        <button type="button" class="care-stay-link-close" aria-label="Close stay linking">✕</button>
+      </header>
+      <div class="care-stay-link-body">
+        <div class="care-stay-link-form">
+          <label>Past stay<select data-care-stay-source><option value="">Loading stays…</option></select></label>
+          <label>Link to numbered dog<select data-care-stay-target><option value="">Loading dogs…</option></select></label>
+          <button type="button" class="care-stay-link-review" disabled>Review link</button>
+        </div>
+        <div class="care-stay-link-confirm" data-care-stay-confirm hidden></div>
+        <p class="care-stay-link-status" data-care-stay-status role="status" aria-live="polite"></p>
+      </div>`;
+    heading.insertAdjacentElement('afterend', panel);
+
+    const sourceSelect = panel.querySelector('[data-care-stay-source]');
+    const targetSelect = panel.querySelector('[data-care-stay-target]');
+    const reviewButton = panel.querySelector('.care-stay-link-review');
+    const confirmHost = panel.querySelector('[data-care-stay-confirm]');
+    const status = panel.querySelector('[data-care-stay-status]');
+    let stays = [];
+    let identities = [];
+    let loading = false;
+    let saving = false;
+
+    const selectedStay = () => stays.find(item => String(item.sourceRow) === sourceSelect.value) || null;
+    const selectedTarget = () => identities.find(item => item.dogId === targetSelect.value) || null;
+    const identityLabel = item => `${item.dogNumber} · ${item.dogName}${item.breed ? ` · ${item.breed}` : ''}`;
+    const updateReviewButton = () => {
+      reviewButton.disabled = loading || saving || !selectedStay() || !selectedTarget();
+      confirmHost.hidden = true;
+      confirmHost.innerHTML = '';
+    };
+
+    function renderStayChoices() {
+      const target = selectedTarget();
+      const eligible = stays.filter(item => !target || item.sourceDogId !== target.dogId);
+      const priorValue = sourceSelect.value;
+      sourceSelect.innerHTML = '<option value="">Choose one past stay</option>' + eligible.map(item => {
+        const sourceNumber = item.sourceDogNumber ? ` · current ${html(item.sourceDogNumber)}` : ' · no Dog ID';
+        const owner = item.ownerName ? ` · ${html(item.ownerName)}` : '';
+        return `<option value="${Number(item.sourceRow)}">${html(item.dogName)} · ${html(item.startDate)} to ${html(item.endDate)}${owner}${sourceNumber}</option>`;
+      }).join('');
+      if (eligible.some(item => String(item.sourceRow) === priorValue)) sourceSelect.value = priorValue;
+      reviewButton.disabled = loading || saving || !selectedStay() || !target;
+    }
+
+    async function loadData() {
+      if (loading || typeof window.queryAppsScript !== 'function') return;
+      loading = true;
+      status.textContent = 'Loading stays and numbered dogs…';
+      reviewButton.disabled = true;
+      sourceSelect.innerHTML = '<option value="">Loading stays…</option>';
+      targetSelect.innerHTML = '<option value="">Loading dogs…</option>';
+      try {
+        const [stayResponse, dogResponse] = await Promise.all([
+          window.queryAppsScript({ action: 'list_dog_stays_for_linking' }, { maxAttempts: 2, timeoutMs: 30000 }),
+          window.queryAppsScript({ action: 'list_dog_identities' }, { maxAttempts: 2, timeoutMs: 30000 })
+        ]);
+        if (stayResponse?.result === 'error' || dogResponse?.result === 'error') throw new Error(stayResponse?.error || dogResponse?.error || 'Care records could not be loaded.');
+        stays = Array.isArray(stayResponse?.stays) ? stayResponse.stays.slice().sort((a, b) => String(a.startDate).localeCompare(String(b.startDate))) : [];
+        identities = Array.isArray(dogResponse?.identities)
+          ? dogResponse.identities.filter(item => item.dogId && /^#?\d+$/.test(String(item.dogNumber || ''))).sort((a, b) => String(a.dogNumber).localeCompare(String(b.dogNumber)))
+          : [];
+        targetSelect.innerHTML = '<option value="">Choose a numbered dog</option>' + identities.map(item => `<option value="${html(item.dogId)}">${html(identityLabel(item))}</option>`).join('');
+        renderStayChoices();
+        status.textContent = stays.length ? 'Select a past stay and its numbered dog to review the link.' : 'No boarding stays are available to link.';
+        if (!identities.length) status.textContent = 'No numbered dogs are available. Assign Dog IDs and numbers, then refresh Care.';
+      } catch (error) {
+        stays = [];
+        identities = [];
+        sourceSelect.innerHTML = '<option value="">Stays unavailable</option>';
+        targetSelect.innerHTML = '<option value="">Dogs unavailable</option>';
+        status.textContent = `Care records could not be loaded. ${error?.message || String(error)}`;
+      } finally {
+        loading = false;
+        reviewButton.disabled = !selectedStay() || !selectedTarget();
+      }
+    }
+
+    trigger.addEventListener('click', () => {
+      panel.hidden = false;
+      trigger.setAttribute('aria-expanded', 'true');
+      if (!stays.length && !identities.length) loadData();
+    });
+    panel.querySelector('.care-stay-link-close').addEventListener('click', () => {
+      panel.hidden = true;
+      trigger.setAttribute('aria-expanded', 'false');
+      trigger.focus();
+    });
+    sourceSelect.addEventListener('change', updateReviewButton);
+    targetSelect.addEventListener('change', () => { renderStayChoices(); updateReviewButton(); });
+
+    reviewButton.addEventListener('click', () => {
+      const stay = selectedStay();
+      const dog = selectedTarget();
+      if (!stay || !dog) return;
+      const mismatch = String(stay.dogName).trim().toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim() !== String(dog.dogName).trim().toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+      confirmHost.innerHTML = `
+        <div class="care-stay-link-review-card">
+          <strong>Stay to link</strong><span>${html(stay.dogName)} · ${html(stay.startDate)} to ${html(stay.endDate)}${stay.ownerName ? ` · ${html(stay.ownerName)}` : ''}</span>
+          <strong>Numbered dog</strong><span>${html(identityLabel(dog))}</span>
+          ${mismatch ? `<label class="care-stay-link-name-check"><input type="checkbox" data-care-stay-name-confirm> The stay uses a different name. I confirm both names refer to this same dog.</label>` : ''}
+          <label class="care-stay-link-explicit-check"><input type="checkbox" data-care-stay-link-confirm> I confirm this exact stay belongs to ${html(dog.dogNumber)}.</label>
+          <div class="care-stay-link-actions"><button type="button" data-care-stay-cancel>Back</button><button type="button" data-care-stay-submit disabled>Link this stay</button></div>
+        </div>`;
+      confirmHost.hidden = false;
+      const linkCheck = confirmHost.querySelector('[data-care-stay-link-confirm]');
+      const nameCheck = confirmHost.querySelector('[data-care-stay-name-confirm]');
+      const submit = confirmHost.querySelector('[data-care-stay-submit]');
+      const updateSubmit = () => { submit.disabled = !linkCheck.checked || !!(nameCheck && !nameCheck.checked) || saving; };
+      linkCheck.addEventListener('change', updateSubmit);
+      nameCheck?.addEventListener('change', updateSubmit);
+      confirmHost.querySelector('[data-care-stay-cancel]').addEventListener('click', () => { confirmHost.hidden = true; confirmHost.innerHTML = ''; });
+      submit.addEventListener('click', async () => {
+        if (submit.disabled || saving) return;
+        saving = true;
+        submit.disabled = true;
+        status.textContent = 'Linking the selected stay…';
+        try {
+          const response = await window.queryAppsScript({
+            action: 'link_stay_to_dog',
+            sourceRow: stay.sourceRow,
+            sourceFingerprint: stay.sourceFingerprint,
+            sourceStayKey: stay.sourceStayKey,
+            sourceDogId: stay.sourceDogId || '',
+            sourceDogNumber: stay.sourceDogNumber || '',
+            targetDogId: dog.dogId,
+            confirmLink: true,
+            confirmTargetDogId: dog.dogId,
+            confirmTargetDogNumber: dog.dogNumber,
+            ...(mismatch ? { confirmNameMismatch: true } : {})
+          }, { maxAttempts: 1, timeoutMs: 30000 });
+          if (response?.result === 'error') throw new Error(response.error || 'The stay could not be linked.');
+          if (!response || response.result !== 'success') throw new Error('The stay link did not complete. Refresh Care before trying again.');
+          const remaining = Number(response.sourceIdentityStaysRemaining || 0);
+          status.textContent = `Linked ${stay.dogName}'s ${stay.startDate} stay to ${dog.dogNumber}. ${remaining ? `${remaining} other stay${remaining === 1 ? '' : 's'} remain on its previous Dog ID.` : 'The previous Dog ID has no other stays.'}`;
+          confirmHost.hidden = true;
+          confirmHost.innerHTML = '';
+          stays = [];
+          identities = [];
+          sourceSelect.innerHTML = '<option value="">Refresh to load stays</option>';
+          targetSelect.innerHTML = '<option value="">Refresh to load dogs</option>';
+          document.getElementById('refreshGuestDirectoryBtn')?.click();
+        } catch (error) {
+          status.textContent = `Stay not linked. ${error?.message || String(error)}`;
+        } finally {
+          saving = false;
+          reviewButton.disabled = !selectedStay() || !selectedTarget();
+        }
+      });
+    });
+  }
+
   async function fallbackHistory(card) {
     const target = panel(card, 'history');
     const host = target?.querySelector('[data-v108-history]') || target;
@@ -567,6 +738,7 @@
   function start() {
     if (pageName() !== 'directory') return;
     ensureStyle();
+    installStayLinkReview();
     installHooks();
     schedulePrepare([0, 80, 240, 650, 1400, 2600]);
 
