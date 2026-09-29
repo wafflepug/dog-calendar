@@ -452,21 +452,25 @@
     const stayKey = String(card?.dataset?.directoryStayKey || card?.dataset?.stayKey || '').trim();
     if (!host || !stayKey || typeof window.queryAppsScript !== 'function') return;
 
-    host.innerHTML = '<div class="v11160-loading">Loading media…</div>';
+    const requestId = String((Number(host.dataset.v110FallbackRequestId) || 0) + 1);
+    host.dataset.v110FallbackRequestId = requestId;
+    host.innerHTML = '<div class="v11160-loading" role="status">Loading photos…</div>';
     try {
       const response = await window.queryAppsScript(
         { action: 'get_guest_belongings', stayKey },
         { maxAttempts: 2, timeoutMs: 30000 }
       );
+      if (host.dataset.v110FallbackRequestId !== requestId || String(card?.dataset?.directoryStayKey || card?.dataset?.stayKey || '').trim() !== stayKey) return;
       const record = response?.record || {};
       const profile = Array.isArray(record.dogPhotoGallery) ? [...record.dogPhotoGallery] : [];
       if (record.dogPhoto && !profile.some(photo => String(photo?.id || '') === String(record.dogPhoto?.id || ''))) profile.push(record.dogPhoto);
       const stay = Array.isArray(record.stayPhotos) ? record.stayPhotos : [];
       const belongings = Array.isArray(record.photos) ? record.photos : [];
-      const photos = (title, rows) => `<section class="v11160-simple-section"><div class="v11160-section-head"><h4>${title}</h4><strong>${rows.length}</strong></div>${rows.length ? `<div class="v11160-photo-grid">${rows.map(photo => { const url = String(photo?.previewUrl || photo?.url || photo?.driveUrl || ''); return url ? `<a href="${html(url)}" target="_blank" rel="noopener"><img src="${html(url)}" alt="${html(photo?.label || 'Dog photo')}" loading="lazy"><span>${html(photo?.label || 'Photo')}</span></a>` : ''; }).join('')}</div>` : '<div class="v11160-empty">No photos saved.</div>'}</section>`;
-      host.innerHTML = photos('🐶 Profile Photos', profile) + photos('📸 Stay Photos', stay) + photos('🧳 Belongings Photos', belongings);
+      const photos = (key, title, desc, rows, label) => `<section class="v110-media-section"><button type="button" class="v110-media-section-title" data-v110-media-toggle="${key}" aria-expanded="${rows.length?'true':'false'}"><span><strong>${title}</strong><span class="v110-media-count">${rows.length}</span><small>${desc}</small></span><span class="v110-media-chevron" aria-hidden="true">⌄</span></button><div class="v110-media-group-content"${rows.length?'':' hidden'}>${rows.length ? `<div class="v110-media-grid">${rows.map((photo, index) => { const url = String(photo?.previewUrl || photo?.url || photo?.driveUrl || ''), name = String(photo?.label || `${label} ${index+1}`); return url ? `<article class="v110-media-photo"><a class="v110-media-view" href="${html(url)}" target="_blank" rel="noopener" aria-label="View ${html(name)}"><img src="${html(url)}" alt="${html(name)}" loading="lazy"></a><div class="v110-media-photo-meta"><span>${html(name)}</span></div></article>` : ''; }).join('')}</div>` : `<div class="v110-media-empty">No ${label.toLowerCase()} photos saved yet.</div>`}</div></section>`;
+      host.innerHTML = `<div class="v110-media-heading"><div><small>PHOTOS</small><h4>Photos for this dog and stay</h4><p>Profile photos follow the dog. Stay and belongings photos belong to this visit.</p></div><button type="button" class="v110-add-stay-photo" data-v110-add-stay-photo>＋ Add Stay Photos</button></div>` + photos('profile','🐶 Profile Photos','Persistent identity photos',profile,'Profile') + photos('stay','📸 Stay Photos','Photos from this boarding stay',stay,'Stay') + photos('belongings','🧳 Belongings Photos','Arrival belongings and item records',belongings,'Belongings');
     } catch (error) {
-      host.innerHTML = `<div class="v11160-error">Media could not be loaded.<br>${html(error?.message || String(error))}</div>`;
+      if (host.dataset.v110FallbackRequestId !== requestId || String(card?.dataset?.directoryStayKey || card?.dataset?.stayKey || '').trim() !== stayKey) return;
+      host.innerHTML = `<div class="v110-panel-error" role="alert"><strong>Photos could not be loaded.</strong><span>${html(error?.message || String(error))}</span><button type="button" data-v110-media-fallback-retry>Retry loading photos</button></div>`;
     }
   }
 
@@ -498,6 +502,11 @@
   }
 
   document.addEventListener('click', async event => {
+    if (event.target.closest('[data-v110-media-fallback-retry]')) {
+      const card = event.target.closest('.directory-card');
+      if (card) fallbackMedia(card);
+      return;
+    }
     const retry = event.target.closest('[data-v11160-master-retry]');
     if (!retry) return;
     const card = event.target.closest('.directory-card');

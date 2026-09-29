@@ -2,8 +2,8 @@
    Build: 2026.08.27.04
    Historical base styles remain compatibility sources during Phase 3A, but pages no longer
    reference them individually. Preserve this import order until modules are folded in. */
-@import url("waffle-app.css?build=2026.08.27.04&rev=2026.09.29.01");
-@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.09.29.01");
+@import url("waffle-app.css?build=2026.08.27.04&rev=2026.09.29.02");
+@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.09.29.02");
 @import url("waffle-v10.8.2.css?build=2026.08.27.04");
 @import url("waffle-v10.8.3.css?build=2026.08.27.04");
 @import url("waffle-v10.8.5.css?build=2026.08.27.04");
@@ -11,12 +11,12 @@
 @import url("waffle-v10.8.7.css?build=2026.08.27.04");
 @import url("waffle-v10.8.8.css?build=2026.08.27.04");
 @import url("waffle-v10.8.9.css?build=2026.08.27.04");
-@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.09.29.01");
+@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.09.29.02");
 @import url("waffle-v11.0.3.css?build=2026.08.27.04");
 @import url("waffle-v11.0.5.css?build=2026.08.27.04");
-@import url("waffle-v11.1.94.css?build=2026.08.28.01");
-@import url("waffle-v11.1.95.css?build=2026.08.28.01");
-@import url("waffle-v11.1.96.css?build=2026.08.28.01&rev=2026.09.29.01");
+@import url("waffle-v11.1.94.css?build=2026.09.29.02");
+@import url("waffle-v11.1.95.css?build=2026.09.29.02");
+@import url("waffle-v11.1.96.css?build=2026.09.29.02&rev=2026.09.29.02");
 
 /* ============================================================
    MOBILE FIRST-PAINT STABILITY GATE
@@ -1001,3 +1001,35 @@ body.dark-theme[data-waffle-page="directory"] .directory-roster-status.is-unset 
     contain-intrinsic-size: auto 360px;
   }
 }
+
+/* Care Photos: compact disclosures with readable counts and touch-sized actions. */
+.v110-media-panel{padding-bottom:calc(18px + env(safe-area-inset-bottom,0px))!important}
+.v110-media-heading{align-items:center;gap:16px;padding:16px;background:var(--v10-card-soft,#f8fafc)}
+.v110-media-heading small{font-size:10px;color:var(--v10-primary,#075985)}
+.v110-media-heading h4{font-size:16px;line-height:1.25}
+.v110-media-heading p{font-size:13px;line-height:1.45}
+.v110-add-stay-photo{min-height:48px;padding:11px 16px;font-size:14px;box-shadow:0 2px 5px #0002}
+.v110-media-section{margin-top:10px;padding:0;overflow:hidden;background:var(--v10-card,#fff)}
+.v110-media-section-title{display:flex;align-items:center;justify-content:space-between;width:100%;min-height:58px;margin:0;padding:10px 14px;border:0;background:transparent;color:var(--v10-text,#172033);text-align:left;cursor:pointer}
+.v110-media-section-title>span:first-child{display:grid;grid-template-columns:auto 30px;align-items:center;gap:2px 8px}
+.v110-media-section-title strong{font-size:14px}
+.v110-media-section-title small{grid-column:1/-1;color:var(--v10-muted,#475569);font-size:12px}
+.v110-media-section-title .v110-media-count{display:inline-grid;place-items:center;min-width:28px;height:28px;padding:0 7px;border-radius:999px;background:var(--v10-primary,#075985);color:#fff;font-size:12px;font-weight:800}
+.v110-media-chevron{font-size:19px;transition:transform .15s ease}
+.v110-media-section-title[aria-expanded=true] .v110-media-chevron{transform:rotate(180deg)}
+.v110-media-group-content{padding:0 12px 12px}
+.v110-media-group-content[hidden]{display:none!important}
+.v110-media-grid{gap:10px}
+.v110-media-photo{background:var(--v10-card,#fff)}
+.v110-media-view{min-height:100px}
+.v110-media-photo-meta{min-height:48px;padding:6px 8px}
+.v110-media-photo-meta span{font-size:12px}
+.v110-media-photo-meta button{width:44px;height:44px;background:#7f1d1d;color:#fff;font-size:23px}
+.v110-media-empty{padding:14px;border:1px dashed var(--v10-border,#64748b);border-radius:8px;color:var(--v10-text,#172033);font-size:13px;line-height:1.45;background:var(--v10-card-soft,#f8fafc)}
+.v110-media-panel button:focus-visible{outline:3px solid var(--v10-primary,#075985);outline-offset:2px;z-index:1}
+.v110-panel-error{display:grid;justify-items:center;gap:8px;padding:20px;border:1px solid #b91c1c;border-radius:10px;background:#fff7f7;color:#7f1d1d;font-size:14px}
+.v110-panel-error button{min-height:44px;padding:8px 14px;border:2px solid #7f1d1d;border-radius:8px;background:#fff;color:#7f1d1d;font:inherit;font-weight:800;cursor:pointer}
+body.dark-theme .v110-media-section{background:#111827}body.dark-theme .v110-media-section-title{color:#f8fafc}body.dark-theme .v110-media-section-title small{color:#cbd5e1}body.dark-theme .v110-media-photo{background:#111827}body.dark-theme .v110-media-empty{background:#1e293b;color:#f8fafc;border-color:#94a3b8}body.dark-theme .v110-panel-error{background:#450a0a;color:#fecaca;border-color:#f87171}body.dark-theme .v110-panel-error button{background:#1c1917;color:#fecaca;border-color:#fecaca}
+@media(max-width:768px){.v110-media-heading{align-items:stretch;padding:14px}.v110-add-stay-photo{width:100%;min-height:52px}.v110-media-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.v110-media-section-title{min-height:62px}.v110-media-group-content{padding:0 9px 10px}}
+@media(forced-colors:active){.v110-media-section,.v110-media-photo,.v110-media-empty{border:1px solid CanvasText}.v110-media-section-title,.v110-media-section-title .v110-media-count,.v110-add-stay-photo,.v110-media-photo-meta button,.v110-panel-error button{forced-color-adjust:auto;color:ButtonText;background:ButtonFace;border:1px solid ButtonText}.v110-media-panel button:focus-visible{outline:3px solid Highlight;outline-offset:2px}}
+@media(prefers-reduced-motion:reduce){.v110-panel-spinner{animation:none!important}}

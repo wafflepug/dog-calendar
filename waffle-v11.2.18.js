@@ -221,7 +221,8 @@
   function enhanceMediaHost(host) {
     if (!host) return;
     host.querySelectorAll('.v110-media-section').forEach(section => {
-      const grid = section.querySelector(':scope > .v110-media-grid');
+      const grid = section.querySelector(':scope > .v110-media-group-content > .v110-media-grid') ||
+        section.querySelector(':scope > .v110-media-grid');
       if (grid) enhanceGrid(grid, section);
     });
   }

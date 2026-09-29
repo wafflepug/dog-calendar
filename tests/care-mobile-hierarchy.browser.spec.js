@@ -35,6 +35,7 @@ async function installReadOnlyFixture(page, options = {}) {
       actionPayloads.push({ action, payload });
       let response = { result: 'success', records: [] };
       const stayKey = `${booking.dogName.toLowerCase()}|2026-09-17|2026-09-22`;
+      if (action === 'get_guest_belongings') response = { result: 'success', record: { stayKey: payload.stayKey || stayKey, dogPhotoGallery: [{ id: 'profile-1', label: 'Profile portrait', previewUrl: 'https://photos.test/profile.jpg' }], stayPhotos: [{ id: 'stay-1', label: 'Playtime', previewUrl: 'https://photos.test/stay.jpg' }], photos: [] } };
       if (action === 'get_guest_directory') response = { result: 'success', bookings: [fixtureBooking], summaries: [{ stayKey, riskFlags: { foodAllergy: true } }] };
       if (action === 'get_guest_profile') response = { result: 'success', record: { stayKey: payload.stayKey || stayKey, intakeAttributes: { medicationInstructions: 'Safety warning: monitor appetite.' }, riskFlags: { foodAllergy: true } } };
       if (action === 'get_dog_history') {
@@ -102,6 +103,18 @@ for (const [name, viewport, colorScheme] of [['390-light', { width: 390, height:
     expect(actionReads.filter(action => action === 'get_guest_belongings').length).toBeLessThanOrEqual(1);
     expect(actionReads.filter(action => action === 'get_dog_history').length).toBe(readsAfterProfileOpen.filter(action => action === 'get_dog_history').length);
     expect(actionReads.filter(action => action === 'get_dog_master_profile').length).toBe(readsAfterProfileOpen.filter(action => action === 'get_dog_master_profile').length);
+    await sectionNav.locator('[data-v11160-tab="media"]').click();
+    const mediaHost = page.locator('.directory-card.is-profile-active [data-v110-media-host]');
+    await expect(mediaHost.locator('.v110-media-section')).toHaveCount(3);
+    await expect(mediaHost.locator('.v110-media-count')).toHaveText(['1', '1', '0']);
+    await expect(mediaHost.locator('[data-v110-media-toggle="profile"]')).toHaveAttribute('aria-expanded', 'true');
+    await expect(mediaHost.locator('[data-v110-media-toggle="belongings"]')).toHaveAttribute('aria-expanded', 'false');
+    await expect(mediaHost.getByRole('button', { name: '＋ Add Stay Photos' })).toHaveCount(1);
+    await mediaHost.locator('[data-v110-media-toggle="belongings"]').click();
+    await expect(mediaHost.locator('[data-v110-media-toggle="belongings"]')).toHaveAttribute('aria-expanded', 'true');
+    await expect(mediaHost.getByText('No belongings photos saved for this stay.')).toBeVisible();
+    expect(await mediaHost.locator('.v110-add-stay-photo').evaluate(button => button.getBoundingClientRect().height)).toBeGreaterThanOrEqual(44);
+    await expect(mediaHost.locator('.v110-media-view img').first()).toHaveAttribute('alt', 'Profile portrait');
     await expect(page.locator('.directory-dashboard-fused.is-profile-mode .directory-roster-heading')).toBeHidden();
     await expect(page.locator('.directory-dashboard-fused.is-profile-mode .v1082-stay-tabs')).toBeHidden();
     await expect(page.locator('.directory-dashboard-fused.is-profile-mode .guest-directory-toolbar')).toBeHidden();

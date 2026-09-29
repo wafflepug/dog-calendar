@@ -13,12 +13,15 @@ def require(path, needle):
 
 
 frontend = 'waffle-v11.2.18.js'
+media_source = 'waffle-v11.0.js'
 bootstrap = 'waffle-bootstrap.js'
 
 # The gallery remains presentation-only and enhances the existing media model.
 require(frontend, "VERSION = '11.2.18'")
 require(frontend, 'v110RenderMedia')
 require(frontend, 'v110-media-grid')
+require(media_source, 'data-v110-media-toggle')
+require(media_source, 'data-v110-media-retry')
 require(frontend, 'v11218-carousel-track')
 require(frontend, 'scroll-snap-type:x mandatory')
 require(frontend, 'scroll-behavior:smooth')
