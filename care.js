@@ -466,8 +466,11 @@
       if (record.dogPhoto && !profile.some(photo => String(photo?.id || '') === String(record.dogPhoto?.id || ''))) profile.push(record.dogPhoto);
       const stay = Array.isArray(record.stayPhotos) ? record.stayPhotos : [];
       const belongings = Array.isArray(record.photos) ? record.photos : [];
-      const photos = (key, title, desc, rows, label) => `<section class="v110-media-section"><button type="button" class="v110-media-section-title" data-v110-media-toggle="${key}" aria-expanded="${rows.length?'true':'false'}"><span><strong>${title}</strong><span class="v110-media-count">${rows.length}</span><small>${desc}</small></span><span class="v110-media-chevron" aria-hidden="true">⌄</span></button><div class="v110-media-group-content"${rows.length?'':' hidden'}>${rows.length ? `<div class="v110-media-grid">${rows.map((photo, index) => { const url = String(photo?.previewUrl || photo?.url || photo?.driveUrl || ''), name = String(photo?.label || `${label} ${index+1}`); return url ? `<article class="v110-media-photo"><a class="v110-media-view" href="${html(url)}" target="_blank" rel="noopener" aria-label="View ${html(name)}"><img src="${html(url)}" alt="${html(name)}" loading="lazy"></a><div class="v110-media-photo-meta"><span>${html(name)}</span></div></article>` : ''; }).join('')}</div>` : `<div class="v110-media-empty">No ${label.toLowerCase()} photos saved yet.</div>`}</div></section>`;
-      host.innerHTML = `<div class="v110-media-heading"><div><small>PHOTOS</small><h4>Photos for this dog and stay</h4><p>Profile photos follow the dog. Stay and belongings photos belong to this visit.</p></div><button type="button" class="v110-add-stay-photo" data-v110-add-stay-photo>＋ Add Stay Photos</button></div>` + photos('profile','🐶 Profile Photos','Persistent identity photos',profile,'Profile') + photos('stay','📸 Stay Photos','Photos from this boarding stay',stay,'Stay') + photos('belongings','🧳 Belongings Photos','Arrival belongings and item records',belongings,'Belongings');
+      const photos = (key, title, desc, rows, label) => {
+        const visible = rows.filter(photo => String(photo?.previewUrl || photo?.url || photo?.driveUrl || '').trim());
+        return `<section class="v110-media-section"><button type="button" class="v110-media-section-title" data-v110-media-toggle="${key}" aria-expanded="${visible.length?'true':'false'}"><span><strong>${title}</strong><span class="v110-media-count">${visible.length}</span><small>${desc}</small></span><span class="v110-media-chevron" aria-hidden="true">⌄</span></button><div class="v110-media-group-content"${visible.length?'':' hidden'}>${visible.length ? `<div class="v110-media-grid">${visible.map((photo, index) => { const url = String(photo?.previewUrl || photo?.url || photo?.driveUrl || ''), name = String(photo?.label || `${label} ${index+1}`); return `<article class="v110-media-photo"><a class="v110-media-view" href="${html(url)}" target="_blank" rel="noopener" aria-label="View ${html(name)}"><img src="${html(url)}" alt="${html(name)}" loading="lazy"></a><div class="v110-media-photo-meta"><span>${html(name)}</span></div></article>`; }).join('')}</div>` : `<div class="v110-media-empty">No ${label.toLowerCase()} photos saved yet.</div>`}</div></section>`;
+      };
+      host.innerHTML = `<div class="v110-media-heading"><div><small>PHOTOS</small><h4>Photos for this dog and stay</h4><p>Profile photos follow the dog. Stay and belongings photos belong to this visit.</p></div></div>` + photos('profile','🐶 Profile Photos','Persistent identity photos',profile,'Profile') + photos('stay','📸 Stay Photos','Photos from this boarding stay',stay,'Stay') + photos('belongings','🧳 Belongings Photos','Arrival belongings and item records',belongings,'Belongings');
     } catch (error) {
       if (host.dataset.v110FallbackRequestId !== requestId || String(card?.dataset?.directoryStayKey || card?.dataset?.stayKey || '').trim() !== stayKey) return;
       host.innerHTML = `<div class="v110-panel-error" role="alert"><strong>Photos could not be loaded.</strong><span>${html(error?.message || String(error))}</span><button type="button" data-v110-media-fallback-retry>Retry loading photos</button></div>`;
@@ -501,7 +504,19 @@
     }
   }
 
+  function toggleMediaGroup(button) {
+    const expanded = button.getAttribute('aria-expanded') === 'true';
+    const content = button.closest('.v110-media-section')?.querySelector('.v110-media-group-content');
+    button.setAttribute('aria-expanded', expanded ? 'false' : 'true');
+    if (content) content.hidden = expanded;
+  }
+
   document.addEventListener('click', async event => {
+    const mediaToggle = event.target.closest('[data-v110-media-toggle]');
+    if (mediaToggle) {
+      toggleMediaGroup(mediaToggle);
+      return;
+    }
     if (event.target.closest('[data-v110-media-fallback-retry]')) {
       const card = event.target.closest('.directory-card');
       if (card) fallbackMedia(card);
