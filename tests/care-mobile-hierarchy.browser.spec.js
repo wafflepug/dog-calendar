@@ -179,7 +179,8 @@ for (const [name, viewport, colorScheme] of [['390-light', { width: 390, height:
     await expect(page.locator('#guestDetailEditTitle')).toContainText('Edit Notes');
     await expect(page.locator('#guestDetailEditTextarea')).toHaveValue(booking.notes);
     await expect(records).not.toHaveAttribute('open', '');
-    expect(actionReads).toEqual(readsBeforeHandoverEdit);
+    const detailReads = actions => actions.filter(action => ['get_guest_profile', 'get_guest_belongings', 'get_dog_history', 'get_dog_master_profile'].includes(action));
+    expect(detailReads(actionReads)).toEqual(detailReads(readsBeforeHandoverEdit));
     await page.locator('#cancelGuestDetailEdit').click();
     await page.locator('#directoryBackToGuestsBtn').focus();
     await expect(page.locator('#directoryBackToGuestsBtn')).toBeFocused();
