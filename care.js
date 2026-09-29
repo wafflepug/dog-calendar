@@ -1,6 +1,6 @@
 /* ============================================================
    WAFFLE HOUSE — CANONICAL CARE / GUEST DIRECTORY MODULE
-   Build 2026.08.27.03 · Canonical Source Consolidation Phase 2
+   Build 2026.09.29.03 · Care Overview Refinement
    ------------------------------------------------------------
    This is the only active standalone Care feature module. It contains the
    proven desktop Care / Guest Directory behavior formerly executed through

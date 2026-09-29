@@ -5244,6 +5244,7 @@ body.dark-theme .directory-lazy-placeholder.is-error {
 
 .directory-care-brief {
     margin-top: 16px;
+    scroll-margin-bottom: calc(112px + env(safe-area-inset-bottom, 0px));
     padding: 16px;
     overflow: hidden;
     border: 1px solid color-mix(in srgb, var(--wh-accent, #2563eb) 38%, var(--wh-border, #dbe3ea));
@@ -5501,6 +5502,11 @@ body.dark-theme .directory-care-readiness-row[data-state="attention"] {
     border-inline-start: 5px solid var(--wh-success, #166534);
 }
 
+.directory-care-brief-safety[data-state="pending"] {
+    border-inline-start: 5px solid var(--wh-warning, #9a6700);
+    background: color-mix(in srgb, var(--wh-warning, #9a6700) 7%, var(--wh-surface, #ffffff));
+}
+
 .directory-care-brief-note-heading {
     display: flex;
     align-items: center;
@@ -5664,6 +5670,10 @@ body.dark-theme .care-brief-state.is-clear {
 body.dark-theme .directory-care-brief-note-edit {
     background: #182235;
     color: var(--wh-accent-contrast, #bfdbfe);
+}
+
+body.dark-theme .directory-care-brief-safety[data-state="pending"] {
+    background: color-mix(in srgb, var(--wh-warning, #fbbf24) 14%, #182235);
 }
 
 body.dark-theme .care-brief-alert {
