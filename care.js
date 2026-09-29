@@ -478,28 +478,33 @@
     const breed = String(card?.querySelector('.directory-primary-breed')?.textContent || card?.dataset?.v1088Breed || '').trim();
     if (!host || !dogName || typeof window.queryAppsScript !== 'function') return;
 
-    host.innerHTML = '<div class="v11160-loading">Loading master profile…</div>';
+    host.innerHTML = '<div class="v11160-loading" role="status">Loading dog record…</div>';
     try {
       const response = await window.queryAppsScript(
         { action: 'get_dog_master_profile', dogName, ...(dogId ? { dogId } : {}), breed },
         { maxAttempts: 2, timeoutMs: 30000 }
       );
       const record = response?.record || {};
-      host.innerHTML = `
-        <section class="v11160-simple-section">
-          <div class="v11160-section-head"><div><small>PERSISTENT DOG PROFILE</small><h4>⭐ ${html(record.dogName || dogName)}</h4></div><strong>${Number(record.stayCount || 0)} stays</strong></div>
-          <div class="v11160-master-grid">
-            <div><small>Breed</small><strong>${html(record.breed || breed || 'Not recorded')}</strong></div>
-            <div><small>Owner</small><strong>${html(record.ownerName || 'Not recorded')}</strong></div>
-            <div><small>Contact</small><strong>${html(record.phone || 'Not recorded')}</strong></div>
-            <div><small>Profile</small><strong>${record.persisted ? 'Saved Master' : 'Built from history'}</strong></div>
-          </div>
-          ${record.notes ? `<div class="v11160-note"><small>KNOWN NOTES</small><p>${html(record.notes)}</p></div>` : ''}
-        </section>`;
+      const flags = record.riskFlags || {};
+      const risks = [['escapeRisk','Escape risk'],['foodAllergy','Food allergy'],['medicated','Medication'],['separationAnxiety','Separation anxiety'],['weightManagement','Weight management']];
+      const active = risks.filter(([key]) => flags[key] === true);
+      const known = risks.filter(([key]) => typeof flags[key] === 'boolean').length;
+      const safety = active.length ? active.map(([, label]) => `<span class="v11160-risk">⚠ ${html(label)}</span>`).join('') : known === risks.length ? '<span class="v11160-clear">✓ No care alerts recorded</span>' : '<span class="v11160-unknown" role="status">Safety status incomplete — check with owner</span>';
+      const number = String(record.dogNumber || card?.dataset?.directoryDogNumber || '').trim();
+      host.innerHTML = `<section class="v11160-simple-section v11160-master-record"><div class="v11160-section-head"><div><small>DOG RECORD</small><h4>${html(record.dogName || dogName)}</h4><span>${html(record.breed || breed || 'Breed not recorded')}</span></div><strong class="v11160-dog-id">Dog ID ${html(number || 'Not assigned')}</strong></div><div class="v11160-record-meta"><span>${record.persisted ? '✓ Saved master profile' : '↻ Derived from stay history'}</span><span>${Number(record.stayCount || 0)} recorded stays</span></div><div class="v11160-safety" aria-label="Safety alerts">${safety}</div><div class="v11160-master-grid"><div><small>OWNER</small><strong>${html(record.ownerName || 'Not recorded')}</strong></div><div><small>CONTACT</small><strong>${record.phone ? `<a href="tel:${html(record.phone)}">${html(record.phone)}</a>` : 'Not recorded'}</strong></div></div>${record.notes ? `<details class="v11160-note"><summary>Known notes</summary><p>${html(record.notes)}</p></details>` : ''}<p class="v11160-freshness" role="status">Profile loaded just now.</p></section>`;
     } catch (error) {
-      host.innerHTML = `<div class="v11160-error">Master Profile could not be loaded.<br>${html(error?.message || String(error))}</div>`;
+      host.innerHTML = `<div class="v11160-error" role="alert"><strong>Dog record could not be loaded.</strong><span>${html(error?.message || String(error))}</span><button type="button" data-v11160-master-retry>Retry loading dog record</button></div>`;
     }
   }
+
+  document.addEventListener('click', async event => {
+    const retry = event.target.closest('[data-v11160-master-retry]');
+    if (!retry) return;
+    const card = event.target.closest('.directory-card');
+    if (!card) return;
+    const result = callNamed('v110LoadMasterProfile', [card, { force:true }]);
+    if (!result.called) fallbackMaster(card);
+  });
 
   function loadTab(card, key) {
     if (key === 'profile' || key === 'belongings') {
@@ -740,6 +745,29 @@
         .v11160-master-grid>div,.v11160-note { padding:11px 13px;border:1px solid var(--wh-border,#d9e2ec);border-radius:12px;background:var(--wh-surface-soft,#f8fafc); }
         .v11160-master-grid small,.v11160-note small { display:block;font-size:8px;font-weight:900;letter-spacing:.06em;color:var(--wh-text-muted,#64748b); }
         .v11160-note p { margin:5px 0 0; }
+        .v11160-master-record { gap:10px;padding:12px;border:1px solid var(--wh-border,#d9e2ec);border-radius:14px;background:var(--wh-surface,#fff); }
+        .v11160-master-record .v11160-section-head { align-items:flex-start; }
+        .v11160-master-record .v11160-section-head h4 { font-size:clamp(18px,3vw,24px);line-height:1.15; }
+        .v11160-master-record .v11160-section-head>div>span { color:var(--wh-text-muted,#64748b);font-size:13px; }
+        .v11160-dog-id { flex:0 0 auto;padding:8px 10px;border-radius:9px;background:var(--wh-surface-soft,#f8fafc);color:var(--wh-text,#172033);font-size:13px;font-variant-numeric:tabular-nums; }
+        .v11160-record-meta,.v11160-safety { display:flex;flex-wrap:wrap;gap:7px 12px; }
+        .v11160-record-meta { color:var(--wh-text-muted,#64748b);font-size:11px; }
+        .v11160-record-meta span:first-child { color:var(--wh-text,#172033);font-weight:800; }
+        .v11160-risk,.v11160-clear,.v11160-unknown { padding:7px 10px;border:1px solid var(--wh-border,#d9e2ec);border-radius:9px;font-size:12px;font-weight:850; }
+        .v11160-risk,.v11160-unknown { border-color:#b45309;background:#fffbeb;color:#78350f; }
+        .v11160-clear { border-color:#15803d;background:#f0fdf4;color:#166534; }
+        .v11160-master-grid>div { min-width:0; }
+        .v11160-master-grid strong { display:block;margin-top:4px;font-size:13px;overflow-wrap:anywhere; }
+        .v11160-master-grid a { color:var(--wh-accent,#0f6292);text-underline-offset:2px; }
+        .v11160-note { padding:0; }
+        .v11160-note summary { min-height:44px;padding:12px;cursor:pointer;font-size:12px;font-weight:800; }
+        .v11160-note p { max-height:9em;overflow:auto;padding:0 12px 12px;font-size:13px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere; }
+        .v11160-master-record .v11160-error button,.v11160-error button { min-height:44px;padding:8px 12px;border:1px solid var(--wh-accent,#0f6292);border-radius:8px;background:var(--wh-accent,#0f6292);color:var(--wh-accent-contrast,#fff);font:inherit;font-weight:850;cursor:pointer; }
+        .v11160-freshness { margin:0;color:var(--wh-text-muted,#64748b);font-size:10px; }
+        .v11160-master-record button:focus-visible,.v11160-note summary:focus-visible { outline:3px solid #f59e0b;outline-offset:2px; }
+        body.dark-theme .v11160-risk,body.dark-theme .v11160-unknown { border-color:#b45309;background:#451a03;color:#fde68a; }
+        body.dark-theme .v11160-clear { border-color:#15803d;background:#052e16;color:#bbf7d0; }
+        @media(max-width:600px) { .v11160-master-record .v11160-section-head { flex-direction:column;align-items:stretch; }.v11160-dog-id { align-self:flex-start; }.v11160-master-grid { grid-template-columns:1fr; } }
     `;
     document.head.appendChild(style);
   }
