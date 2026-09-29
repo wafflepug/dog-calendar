@@ -188,7 +188,7 @@ test('readiness checklist updates from cached profile state, prioritizes gaps, a
   await page.setContent(`<!doctype html><html><head><style>${css}</style></head><body><main class="directory-card is-profile-active" data-stay-key="milo|stay" data-directory-stay-key="milo|stay">
     <section class="directory-care-brief" data-directory-care-brief>
       <details class="directory-care-readiness"><summary>Review checklist <strong data-care-readiness-summary></strong></summary><div class="directory-care-readiness-list" data-care-readiness-list>
-      ${['feeding','medication','safety','intake','handover'].map(key => `<div class="directory-care-readiness-row" data-care-readiness-item="${key}"><span class="directory-care-readiness-copy"><strong>${key}</strong><small data-care-readiness-detail></small></span><span class="directory-care-readiness-status" data-care-readiness-status></span><button>Review</button></div>`).join('')}
+      ${['intake','handover'].map(key => `<div class="directory-care-readiness-row" data-care-readiness-item="${key}"><span class="directory-care-readiness-copy"><strong>${key}</strong><small data-care-readiness-detail></small></span><span class="directory-care-readiness-status" data-care-readiness-status></span><button>Review</button></div>`).join('')}
       </div></details><section class="directory-care-brief-item directory-care-brief-safety"><div data-care-brief-safety></div></section><p data-care-brief-feeding></p><p data-care-brief-medication></p><span data-care-brief-freshness></span><span data-care-brief-call-owner></span>
       <section class="directory-care-brief-item directory-care-brief-note"><div class="directory-care-brief-note-heading"><h4>Handover note</h4><button class="directory-care-brief-note-edit" data-care-brief-action="handover" aria-label="Update handover">Update</button></div><p class="directory-care-brief-value">Call before pickup\nMedication is in the blue bag.</p></section>
       <div data-directory-intake>Intake not sent</div><button data-directory-edit-field="notes" data-directory-current-value="" ></button>
@@ -197,16 +197,16 @@ test('readiness checklist updates from cached profile state, prioritizes gaps, a
   await page.evaluate(() => {
     window.renderBrief(document.querySelector('.directory-card'));
   });
-  await expect(page.locator('[data-care-readiness-summary]')).toHaveText('3 to review');
-  await expect(page.locator('[data-care-readiness-item="feeding"]')).toHaveAttribute('data-state', 'pending');
-  await expect(page.locator('[data-care-readiness-item="safety"] [data-care-readiness-status]')).toHaveText('Check');
+  await expect(page.locator('[data-care-readiness-summary]')).toHaveText('2 to review');
+  await expect(page.locator('[data-care-brief-safety]')).toContainText('Safety profile not yet available');
+  await expect(page.locator('.directory-care-brief-safety')).toBeVisible();
   await page.evaluate(() => {
     const card = document.querySelector('.directory-card');
     card.dataset.intakeMethod = 'legacy';
     window.renderBrief(card);
   });
   await expect(page.locator('[data-care-readiness-item="intake"]')).toHaveAttribute('data-state', 'ready');
-  await expect(page.locator('[data-care-readiness-summary]')).toHaveText('2 to review');
+  await expect(page.locator('[data-care-readiness-summary]')).toHaveText('1 to review');
   await page.evaluate(() => {
     const card = document.querySelector('.directory-card');
     directoryProfileDetailCache[card.dataset.stayKey] = { intakeAttributes: { feedingTimes: '7 am', medicationInstructions: 'With dinner' } };

@@ -8219,22 +8219,6 @@ registerWaffleServiceWorker();
         const activeFlags = safetyRecord ? getActiveCareFlags(safetyRecord) : [];
 
         const readinessItems = {
-            feeding: {
-                ready: !!attributes && [attributes.feedingTimes, attributes.foodAmount, attributes.foodBrandType]
-                    .some(value => String(value || '').trim()),
-                status: attributes ? 'Check' : 'Loading',
-                detail: attributes ? 'Confirm the feeding routine' : 'Care details loading'
-            },
-            medication: {
-                ready: !!(String(attributes?.medicationInstructions || belongingsRecordsCache[stayKey]?.items?.medication || '').trim()),
-                status: 'Check',
-                detail: 'Confirm instructions or record none'
-            },
-            safety: {
-                ready: !!safetyRecord && !activeFlags.length,
-                status: !safetyRecord ? 'Check' : (activeFlags.length ? 'Attention' : 'Clear'),
-                detail: !safetyRecord ? 'Safety record not available' : (activeFlags.length ? `${activeFlags.length} active flag${activeFlags.length === 1 ? '' : 's'}` : 'No active flags')
-            },
             intake: {
                 ready: ['digital', 'legacy'].includes(String(card.dataset.intakeMethod || '')) || /intake complete/i.test(card.querySelector('[data-directory-intake]')?.textContent || ''),
                 status: 'Not sent',
@@ -8253,19 +8237,6 @@ registerWaffleServiceWorker();
         } else if (/awaiting owner/i.test(intakeText)) {
             readinessItems.intake.status = 'Awaiting';
             readinessItems.intake.detail = 'Waiting for owner';
-        }
-        if (readinessItems.feeding.ready) {
-            readinessItems.feeding.status = 'Ready';
-            readinessItems.feeding.detail = 'Routine recorded';
-        } else if (attributes) {
-            readinessItems.feeding.status = 'Add details';
-        }
-        if (readinessItems.medication.ready) {
-            readinessItems.medication.status = 'Ready';
-            readinessItems.medication.detail = 'Instructions recorded';
-        } else if (!attributes) {
-            readinessItems.medication.status = 'Loading';
-            readinessItems.medication.detail = 'Care details loading';
         }
         if (readinessItems.handover.ready) {
             readinessItems.handover.status = 'Ready';
@@ -14684,27 +14655,12 @@ registerWaffleServiceWorker();
 
                                             <details class="directory-care-readiness">
                                                 <summary>
-                                                    <span>Review checklist</span>
-                                                    <strong data-care-readiness-summary>Care details loading</strong>
+                                                    <span>Other setup checks</span>
+                                                    <strong data-care-readiness-summary>Loading</strong>
                                                 </summary>
                                                 <div class="directory-care-readiness-list" data-care-readiness-list>
-                                                    <div class="directory-care-readiness-row" data-care-readiness-item="feeding" data-state="pending">
-                                                        <span class="directory-care-readiness-copy"><strong>Feeding</strong><small data-care-readiness-detail>Care details loading</small></span>
-                                                        <span class="directory-care-readiness-status" data-care-readiness-status>Loading</span>
-                                                        <button type="button" data-care-readiness-action="feeding" aria-label="Review feeding details">Review</button>
-                                                    </div>
-                                                    <div class="directory-care-readiness-row" data-care-readiness-item="medication" data-state="pending">
-                                                        <span class="directory-care-readiness-copy"><strong>Medication</strong><small data-care-readiness-detail>Care details loading</small></span>
-                                                        <span class="directory-care-readiness-status" data-care-readiness-status>Loading</span>
-                                                        <button type="button" data-care-readiness-action="medication" aria-label="Review medication details">Review</button>
-                                                    </div>
-                                                    <div class="directory-care-readiness-row" data-care-readiness-item="safety" data-state="attention">
-                                                        <span class="directory-care-readiness-copy"><strong>Safety</strong><small data-care-readiness-detail>Safety record not available</small></span>
-                                                        <span class="directory-care-readiness-status" data-care-readiness-status>Check</span>
-                                                        <button type="button" data-care-readiness-action="safety" aria-label="Review safety flags">Review</button>
-                                                    </div>
                                                     <div class="directory-care-readiness-row" data-care-readiness-item="intake" data-state="attention">
-                                                        <span class="directory-care-readiness-copy"><strong>Intake</strong><small data-care-readiness-detail>Owner intake form</small></span>
+                                                        <span class="directory-care-readiness-copy"><strong>Owner intake</strong><small data-care-readiness-detail>Owner intake form</small></span>
                                                         <span class="directory-care-readiness-status" data-care-readiness-status>Not sent</span>
                                                         <button type="button" data-care-readiness-action="intake" aria-label="Review intake form">Review</button>
                                                     </div>
@@ -14714,22 +14670,21 @@ registerWaffleServiceWorker();
                                                         <button type="button" data-care-readiness-action="handover" aria-label="Review handover note">Review</button>
                                                     </div>
                                                 </div>
-                                            </details>
-                                            <div class="directory-care-brief-grid">
+                                            </details>                                            <div class="directory-care-brief-grid">
                                                 <section class="directory-care-brief-item directory-care-brief-safety">
-                                                    <h4>Safety</h4>
+                                                    <div class="directory-care-brief-note-heading"><h4>Safety</h4><button type="button" class="directory-care-brief-note-edit" data-care-readiness-action="safety" aria-label="Review safety details">Review</button></div>
                                                     <div class="directory-care-brief-value" data-care-brief-safety aria-live="polite">
                                                         <span class="care-brief-state is-pending">Safety profile not yet available</span>
                                                     </div>
                                                 </section>
                                                 <section class="directory-care-brief-item">
-                                                    <h4>Feeding</h4>
+                                                    <div class="directory-care-brief-note-heading"><h4>Feeding</h4><button type="button" class="directory-care-brief-note-edit" data-care-readiness-action="feeding" aria-label="Review feeding details">Review</button></div>
                                                     <p class="directory-care-brief-value is-pending" data-care-brief-feeding>
                                                         Loading with full profile…
                                                     </p>
                                                 </section>
                                                 <section class="directory-care-brief-item">
-                                                    <h4>Medication</h4>
+                                                    <div class="directory-care-brief-note-heading"><h4>Medication</h4><button type="button" class="directory-care-brief-note-edit" data-care-readiness-action="medication" aria-label="Review medication details">Review</button></div>
                                                     <p class="directory-care-brief-value is-pending" data-care-brief-medication>
                                                         Loading with full profile…
                                                     </p>
