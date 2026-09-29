@@ -27,7 +27,7 @@
 (function () {
   'use strict';
 
-  const VERSION = '11.1.51';
+  const VERSION = '11.1.52';
   const CONTRACT_ATTR = 'data-waffle-ui-contract';
   const PROTECTED_SELECTOR = [
     '#aw37launch',
