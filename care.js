@@ -491,7 +491,7 @@
       const known = risks.filter(([key]) => typeof flags[key] === 'boolean').length;
       const safety = active.length ? active.map(([, label]) => `<span class="v11160-risk">⚠ ${html(label)}</span>`).join('') : known === risks.length ? '<span class="v11160-clear">✓ No care alerts recorded</span>' : '<span class="v11160-unknown" role="status">Safety status incomplete — check with owner</span>';
       const number = String(record.dogNumber || card?.dataset?.directoryDogNumber || '').trim();
-      host.innerHTML = `<section class="v11160-simple-section v11160-master-record"><div class="v11160-section-head"><div><small>DOG RECORD</small><h4>${html(record.dogName || dogName)}</h4><span>${html(record.breed || breed || 'Breed not recorded')}</span></div><strong class="v11160-dog-id">Dog ID ${html(number || 'Not assigned')}</strong></div><div class="v11160-record-meta"><span>${record.persisted ? '✓ Saved master profile' : '↻ Derived from stay history'}</span><span>${Number(record.stayCount || 0)} recorded stays</span></div><div class="v11160-safety" aria-label="Safety alerts">${safety}</div><div class="v11160-master-grid"><div><small>OWNER</small><strong>${html(record.ownerName || 'Not recorded')}</strong></div><div><small>CONTACT</small><strong>${record.phone ? `<a href="tel:${html(record.phone)}">${html(record.phone)}</a>` : 'Not recorded'}</strong></div></div>${record.notes ? `<details class="v11160-note"><summary>Known notes</summary><p>${html(record.notes)}</p></details>` : ''}<button type="button" class="v11160-master-save" data-v11160-master-save>⭐ Sync This Stay to Master Profile</button><p class="v11160-freshness" role="status">Profile loaded just now.</p></section>`;
+      host.innerHTML = `<section class="v11160-simple-section v11160-master-record"><div class="v11160-section-head"><div><small>DOG RECORD</small><h4>${html(record.dogName || dogName)}</h4><span>${html(record.breed || breed || 'Breed not recorded')}</span></div><strong class="v11160-dog-id">Dog ID ${html(number || 'Not assigned')}</strong></div><div class="v11160-record-meta"><span>${record.persisted ? '✓ Saved master profile' : '↻ Derived from stay history'}</span><span>${Number(record.stayCount || 0)} recorded stays</span></div><div class="v11160-safety" aria-label="Safety alerts">${safety}</div><div class="v11160-master-grid"><div><small>OWNER</small><strong>${html(record.ownerName || 'Not recorded')}</strong></div><div><small>CONTACT</small><strong>${record.phone ? `<a href="tel:${html(record.phone)}">${html(record.phone)}</a>` : 'Not recorded'}</strong></div></div>${record.notes ? `<details class="v11160-note"><summary>Known notes</summary><p>${html(record.notes)}</p></details>` : ''}<p class="v11160-freshness" role="status">Profile loaded just now.</p></section>`;
     } catch (error) {
       host.innerHTML = `<div class="v11160-error" role="alert"><strong>Dog record could not be loaded.</strong><span>${html(error?.message || String(error))}</span><button type="button" data-v11160-master-retry>Retry loading dog record</button></div>`;
     }
@@ -499,31 +499,11 @@
 
   document.addEventListener('click', async event => {
     const retry = event.target.closest('[data-v11160-master-retry]');
-    const save = event.target.closest('[data-v11160-master-save]');
-    if (!retry && !save) return;
+    if (!retry) return;
     const card = event.target.closest('.directory-card');
     if (!card) return;
-    if (retry) {
-      const result = callNamed('v110LoadMasterProfile', [card, { force:true }]);
-      if (!result.called) fallbackMaster(card);
-      return;
-    }
-    const button = save;
-    button.disabled = true;
-    button.textContent = '⏳ Syncing dog record…';
-    try {
-      const ownerName = String(card.querySelector('[data-directory-edit-field="ownerName"]')?.dataset.directoryCurrentValue || card.dataset.v1088OwnerName || '').trim();
-      const phone = String(card.querySelector('[data-directory-edit-field="phone"]')?.dataset.directoryCurrentValue || card.dataset.v1088Phone || '').trim();
-      const notes = String(card.querySelector('[data-directory-edit-field="notes"]')?.dataset.directoryCurrentValue || card.dataset.v1088Notes || '').trim();
-      await window.queryAppsScript({ action:'save_dog_master_profile', dogName:String(card.dataset.directoryDogName || card.dataset.dogName || '').trim(), dogId:String(card.dataset.directoryDogId || '').trim(), breed:String(card.querySelector('.directory-primary-breed')?.textContent || card.dataset.v1088Breed || '').trim(), stayKey:String(card.dataset.directoryStayKey || '').trim(), ownerName, phone, notes });
-      fallbackMaster(card);
-    } catch (error) {
-      const host = panel(card, 'master')?.querySelector('[data-v110-master-host]');
-      if (host) host.insertAdjacentHTML('afterbegin', `<div class="v11160-error" role="alert">Dog record could not be synced. ${html(error?.message || String(error))}</div>`);
-    } finally {
-      button.disabled = false;
-      button.textContent = '⭐ Sync This Stay to Master Profile';
-    }
+    const result = callNamed('v110LoadMasterProfile', [card, { force:true }]);
+    if (!result.called) fallbackMaster(card);
   });
 
   function loadTab(card, key) {
@@ -782,7 +762,7 @@
         .v11160-note { padding:0; }
         .v11160-note summary { min-height:44px;padding:12px;cursor:pointer;font-size:12px;font-weight:800; }
         .v11160-note p { max-height:9em;overflow:auto;padding:0 12px 12px;font-size:13px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere; }
-        .v11160-master-save,.v11160-master-record .v11160-error button,.v11160-error button { min-height:44px;padding:8px 12px;border:1px solid var(--wh-accent,#0f6292);border-radius:8px;background:var(--wh-accent,#0f6292);color:var(--wh-accent-contrast,#fff);font:inherit;font-weight:850;cursor:pointer; }
+        .v11160-master-record .v11160-error button,.v11160-error button { min-height:44px;padding:8px 12px;border:1px solid var(--wh-accent,#0f6292);border-radius:8px;background:var(--wh-accent,#0f6292);color:var(--wh-accent-contrast,#fff);font:inherit;font-weight:850;cursor:pointer; }
         .v11160-freshness { margin:0;color:var(--wh-text-muted,#64748b);font-size:10px; }
         .v11160-master-record button:focus-visible,.v11160-note summary:focus-visible { outline:3px solid #f59e0b;outline-offset:2px; }
         body.dark-theme .v11160-risk,body.dark-theme .v11160-unknown { border-color:#b45309;background:#451a03;color:#fde68a; }

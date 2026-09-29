@@ -112,7 +112,8 @@ test('Dog record reads remain tab-triggered and failed loads expose a forced ret
   assert.match(master, /data-v110-master-retry/);
   assert.match(master, /v110LoadMasterProfile\(retryMaster\.closest\('\.directory-card'\),\{force:true\}\)/);
   assert.match(care, /data-v11160-master-retry/);
-  assert.match(care, /if \(retry\) \{[\s\S]*?\{ force:true \}/);
+  assert.match(care, /const retry = event\.target\.closest\('\[data-v11160-master-retry\]'\);[\s\S]*?callNamed\('v110LoadMasterProfile', \[card, \{ force:true \}\]\)/);
+  assert.doesNotMatch(care, /data-v11160-master-save|save_dog_master_profile/);
 });
 
 test('failed Dog record read displays an error and Retry recovers on a forced second read', async () => {
@@ -141,4 +142,29 @@ test('failed Dog record read displays an error and Retry recovers on a forced se
   assert.equal(calls, 2);
   assert.match(host.innerHTML, /Dog ID #00007/);
   assert.match(host.innerHTML, /Safety status incomplete/);
+});
+
+test('offline cached dog record is labelled saved, while a validated unchanged response is fresh', async () => {
+  const render = master.match(/function v110RenderMasterProfile\(card,r,opt=\{\}\)\{[^\n]+/)[0];
+  const risk = master.match(/function v110MasterRiskBadges\(flags\)\{[^\n]+/)[0];
+  const load = master.match(/async function v110LoadMasterProfile\(card,opt=\{\}\)\{[^\n]+/)[0];
+  let calls = 0;
+  const host = { innerHTML: '' };
+  const sandbox = {
+    escapeDashboardHtml: value => String(value),
+    v110MasterCache: {},
+    queryAppsScriptSWR: async () => {
+      calls += 1;
+      const data = { record:{ dogName:'Milo', dogNumber:'#00007', persisted:true, riskFlags:{} } };
+      return calls === 1
+        ? { ...data, data, cacheApplied:true, unchanged:true, offlineFallback:true }
+        : { ...data, data, cacheApplied:true, unchanged:true, offlineFallback:false };
+    }
+  };
+  vm.runInNewContext(`function v110Escape(v){return escapeDashboardHtml(v==null?'':String(v));}\n${risk}\n${render}\n${load}`, sandbox);
+  const card = { dataset:{ directoryDogName:'Milo', directoryDogId:'dog-7' }, querySelector(selector){ return selector === '[data-v110-master-host]' ? host : null; } };
+  await sandbox.v110LoadMasterProfile(card);
+  assert.match(host.innerHTML, /Showing saved profile data offline/);
+  await sandbox.v110LoadMasterProfile(card, { force:true });
+  assert.match(host.innerHTML, /Profile refreshed just now/);
 });
