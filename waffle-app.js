@@ -14670,7 +14670,8 @@ registerWaffleServiceWorker();
                                                         <button type="button" data-care-readiness-action="handover" aria-label="Review handover note">Review</button>
                                                     </div>
                                                 </div>
-                                            </details>                                            <div class="directory-care-brief-grid">
+                                            </details>
+                                            <div class="directory-care-brief-grid">
                                                 <section class="directory-care-brief-item directory-care-brief-safety">
                                                     <div class="directory-care-brief-note-heading"><h4>Safety</h4><button type="button" class="directory-care-brief-note-edit" data-care-readiness-action="safety" aria-label="Review safety details">Review</button></div>
                                                     <div class="directory-care-brief-value" data-care-brief-safety aria-live="polite">
