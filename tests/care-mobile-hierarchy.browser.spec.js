@@ -115,6 +115,7 @@ for (const [name, viewport, colorScheme] of [['390-light', { width: 390, height:
     await expect(mediaHost.getByText('No belongings photos saved for this stay.')).toBeVisible();
     expect(await mediaHost.locator('.v110-add-stay-photo').evaluate(button => button.getBoundingClientRect().height)).toBeGreaterThanOrEqual(44);
     await expect(mediaHost.locator('.v110-media-view img').first()).toHaveAttribute('alt', 'Profile portrait');
+    await sectionNav.locator('[data-v11160-tab="profile"]').click();
     await expect(page.locator('.directory-dashboard-fused.is-profile-mode .directory-roster-heading')).toBeHidden();
     await expect(page.locator('.directory-dashboard-fused.is-profile-mode .v1082-stay-tabs')).toBeHidden();
     await expect(page.locator('.directory-dashboard-fused.is-profile-mode .guest-directory-toolbar')).toBeHidden();

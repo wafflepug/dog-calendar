@@ -513,7 +513,7 @@
 
   document.addEventListener('click', async event => {
     const mediaToggle = event.target.closest('[data-v110-media-toggle]');
-    if (mediaToggle) {
+    if (mediaToggle && mediaToggle.closest('[data-v110-media-host]')?.dataset.v110FallbackRequestId) {
       toggleMediaGroup(mediaToggle);
       return;
     }
