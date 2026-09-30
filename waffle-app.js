@@ -9378,6 +9378,7 @@ registerWaffleServiceWorker();
             ? {
                 stayKey: editorStayKey,
                 fieldKey: String(activeDirectoryEditContext.fieldKey || '').trim(),
+                draftValue: getGuestDetailEditorValue(),
                 originalDogName: activeDirectoryEditContext.originalDogName || '',
                 startDate: activeDirectoryEditContext.startDate || '',
                 endDate: activeDirectoryEditContext.endDate || '',
@@ -9470,6 +9471,9 @@ registerWaffleServiceWorker();
         const initialValue = String(
             editor.initialValue ?? trigger?.dataset?.directoryCurrentValue ?? ''
         );
+        if (editor.draftValue !== undefined && control) {
+            control.value = String(editor.draftValue);
+        }
         const isDirty = String(control?.value ?? '') !== initialValue;
         const blocked = !matchingCard || !trigger || identityConflict || !!editor.conflict;
 
@@ -9493,7 +9497,13 @@ registerWaffleServiceWorker();
                 ? 'This stay has different owner, contact, or breed details. Discard this draft before editing another stay.'
                 : 'This stay changed or is no longer available. Discard this draft before editing another stay.';
             status.className = 'guest-detail-edit-status is-error';
-        } else if (status && !editor.failed && !editor.saved) {
+        } else if (status && editor.failed) {
+            status.textContent = 'Save failed. Your draft is still here. Try saving again or discard it.';
+            status.className = 'guest-detail-edit-status is-error';
+        } else if (status && editor.saved) {
+            status.textContent = 'Your changes were saved and synced.';
+            status.className = 'guest-detail-edit-status is-success';
+        } else if (status) {
             status.textContent = isDirty ? 'Unsaved changes.' : 'No unsaved changes.';
             status.className = isDirty
                 ? 'guest-detail-edit-status is-unsaved'
