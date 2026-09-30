@@ -59,6 +59,7 @@ function harness(card, editor = null) {
     directorySelectedProfileStayKey: card?.dataset?.directoryStayKey || '',
     activeDirectoryEditContext: editor,
     DIRECTORY_EDIT_FIELD_CONFIG: { ownerName: { label: 'Owner', multiline: false } },
+    getGuestDetailEditorValue: () => input.value,
     document: {
       getElementById(id) {
         return id === 'guestDetailEditModal' ? modal : id === 'guestDetailEditStatus' ? status : id === 'saveGuestDetailEdit' ? save : id === 'guestDetailEditInput' ? input : id === 'guestDetailEditTextarea' ? textarea : null;
@@ -171,6 +172,7 @@ test('captures exact selected stay and all Care tab/edit state', () => {
     editor: {
       stayKey: card.dataset.directoryStayKey,
       fieldKey: 'ownerName',
+      draftValue: '',
       initialValue: 'Original owner',
       failed: true,
       originalDogName: '',
@@ -235,6 +237,33 @@ test('restored guest editor keeps Save disabled when clean and enables it for a 
   assert.equal(h.save.disabled, false);
   assert.equal(h.status.textContent, 'Unsaved changes.');
   assert.equal(h.input.value, 'Draft owner');
+});
+
+test('refresh restoration restores the typed value and gives failed and saved drafts explicit status', () => {
+  const key = 'milo|2026-09-20|2026-09-22';
+  const card = makeCard(key);
+  const trigger = { dataset: { directoryEditField: 'ownerName', directoryCurrentValue: 'Owner' } };
+  card.querySelectorAll = selector => selector.includes('directory-edit-field') ? [trigger] : [];
+  const h = harness(card);
+  h.sandbox.DIRECTORY_EDIT_FIELD_CONFIG = { ownerName: { label: 'Owner', multiline: false } };
+  h.sandbox.getDirectoryEditorIdentity = () => ({ breed: '', ownerName: 'owner', phone: '' });
+
+  h.input.value = 'Typed draft';
+  h.sandbox.activeDirectoryEditContext = {
+    fieldKey: 'ownerName', stayKey: key, oldStayKey: key, initialValue: 'Owner',
+    identity: { breed: '', ownerName: 'owner', phone: '' }, failed: true
+  };
+  const failedState = { editor: { ...h.sandbox.activeDirectoryEditContext, draftValue: 'Typed draft' } };
+  h.input.value = 'stale control value';
+  h.sandbox.restore(failedState, card);
+  assert.equal(h.input.value, 'Typed draft');
+  assert.equal(h.status.textContent, 'Save failed. Your draft is still here. Try saving again or discard it.');
+  assert.equal(h.save.disabled, false);
+
+  h.sandbox.restore({ editor: { ...failedState.editor, failed: false, saved: true, draftValue: 'Saved value' } }, card);
+  assert.equal(h.input.value, 'Saved value');
+  assert.equal(h.status.textContent, 'Your changes were saved and synced.');
+  assert.equal(h.save.disabled, true);
 });
 
 test('production open path defaults new dogs and preserves an already visited card', async () => {

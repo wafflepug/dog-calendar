@@ -2105,6 +2105,118 @@ function updateV10ReminderFilterCounts() {
 }
 
 
+function directoryProfileEditKey(card) {
+    return String(card?.dataset?.directoryStayKey || card?.dataset?.stayKey || '').trim();
+}
+
+function getDirectoryProfileEditIdentity(card) {
+    const currentValue = field => {
+        const value = String(card?.querySelector(`[data-directory-edit-field="${field}"]`)?.dataset?.directoryCurrentValue || '').trim().toLowerCase();
+        return field === 'phone' ? value.replace(/\s+/g, '') : value.replace(/\s+/g, ' ');
+    };
+    return {
+        breed: String(card?.querySelector('.directory-primary-breed')?.textContent || card?.dataset?.v1088Breed || '').trim().replace(/\s+/g, ' ').toLowerCase(),
+        ownerName: currentValue('ownerName') || String(card?.dataset?.v1088OwnerName || '').trim().replace(/\s+/g, ' ').toLowerCase(),
+        phone: currentValue('phone') || String(card?.dataset?.v1088Phone || '').trim().replace(/\s+/g, '').toLowerCase()
+    };
+}
+
+function directoryProfileEditIdentityConflicts(expected, actual) {
+    return ['breed', 'ownerName', 'phone'].some(field => expected?.[field] && actual?.[field] && expected[field] !== actual[field]);
+}
+
+function collectDirectoryProfileEditValues(card) {
+    const values = {};
+    card?.querySelectorAll('[data-intake-attribute], [data-care-risk-flag]')?.forEach(control => {
+        const attribute = String(control.dataset.intakeAttribute || '').trim();
+        const flag = String(control.dataset.careRiskFlag || '').trim();
+        if (attribute) values[`intake:${attribute}`] = String(control.value ?? '');
+        if (flag) values[`risk:${flag}`] = !!control.checked;
+    });
+    return values;
+}
+
+function applyDirectoryProfileEditValues(card, values) {
+    if (!card || !values) return;
+    card.querySelectorAll('[data-intake-attribute], [data-care-risk-flag]').forEach(control => {
+        const attribute = String(control.dataset.intakeAttribute || '').trim();
+        const flag = String(control.dataset.careRiskFlag || '').trim();
+        if (attribute && Object.prototype.hasOwnProperty.call(values, `intake:${attribute}`)) control.value = String(values[`intake:${attribute}`] ?? '');
+        if (flag && Object.prototype.hasOwnProperty.call(values, `risk:${flag}`)) control.checked = !!values[`risk:${flag}`];
+    });
+}
+
+function directoryProfileEditIsDirty(card, state = directoryProfileEditDrafts.get(directoryProfileEditKey(card))) {
+    return !!state && JSON.stringify(collectDirectoryProfileEditValues(card)) !== JSON.stringify(state.initial);
+}
+
+function validateDirectoryProfileEditContext(card, state) {
+    const key = directoryProfileEditKey(card);
+    if (!key) {
+        state.conflict = true;
+        state.conflictReason = 'This stay is no longer available. Discard this draft before editing another stay.';
+    } else if (Array.from(document.querySelectorAll('.directory-card[data-directory-stay-key]')).filter(candidate =>
+        String(candidate.dataset.directoryStayKey || '').trim() === key
+    ).length !== 1) {
+        state.conflict = true;
+        state.conflictReason = 'This stay is ambiguous. Discard this draft before editing another stay.';
+    } else if (state.identity && directoryProfileEditIdentityConflicts(state.identity, getDirectoryProfileEditIdentity(card))) {
+        state.conflict = true;
+        state.conflictReason = 'This stay has different owner, contact, or breed details. Discard this draft before editing another stay.';
+    }
+}
+
+function updateDirectoryProfileEditFeedback(card, message, stateName) {
+    const status = card?.querySelector('[data-directory-profile-edit-status]');
+    const state = directoryProfileEditDrafts.get(directoryProfileEditKey(card));
+    const saveButton = card?.querySelector('[data-save-belongings]');
+    if (!status || !state) return;
+    const dirty = directoryProfileEditIsDirty(card, state);
+    status.textContent = message || (state.conflict
+        ? (state.conflictReason || 'Saved care details changed while you were editing. Discard this draft to load the latest profile.')
+        : state.saving
+            ? 'Saving care details…'
+            : state.failed
+                ? (state.failureMessage || 'Save failed. Your draft is still here. Try saving again or discard it.')
+                : dirty
+                    ? 'Unsaved changes.'
+                    : 'No unsaved changes.');
+    status.className = `directory-profile-edit-status${stateName || (state.conflict || state.failed ? ' is-error' : state.saving ? ' is-saving' : dirty ? ' is-unsaved' : ' is-clean')}`;
+    if (saveButton) saveButton.disabled = state.saving || state.conflict || !dirty;
+}
+
+function restoreDirectoryProfileEditDraft(card, options = {}) {
+    if (!card?.classList.contains('is-profile-editing')) return;
+    const state = directoryProfileEditDrafts.get(directoryProfileEditKey(card));
+    if (!state) return;
+    const renderedValues = collectDirectoryProfileEditValues(card);
+    if (!state.initialized && Object.keys(renderedValues).length) {
+        state.initial = { ...renderedValues };
+        state.values = { ...renderedValues };
+        state.identity = getDirectoryProfileEditIdentity(card);
+        state.initialized = true;
+    }
+    validateDirectoryProfileEditContext(card, state);
+    if (options.checkConflict && Object.keys({ ...state.initial, ...renderedValues }).some(key =>
+        renderedValues[key] !== state.initial[key] && renderedValues[key] !== state.values[key]
+    )) state.conflict = true;
+    applyDirectoryProfileEditValues(card, state.values);
+    updateDirectoryProfileEditFeedback(card);
+}
+
+function handleDirectoryProfileEditInput(event) {
+    const control = event.target?.closest?.('[data-intake-attribute], [data-care-risk-flag]');
+    if (!control) return;
+    const card = control.closest('.directory-card');
+    if (!card?.classList.contains('is-profile-editing')) return;
+    const state = directoryProfileEditDrafts.get(directoryProfileEditKey(card));
+    if (!state || state.saving) return;
+    state.values = collectDirectoryProfileEditValues(card);
+    state.failed = false;
+    state.failureMessage = '';
+    updateDirectoryProfileEditFeedback(card);
+}
+
 function applyDirectoryProfileEditMode(card) {
     if (!card) return;
 
@@ -2118,8 +2230,8 @@ function applyDirectoryProfileEditMode(card) {
             '[data-directory-main-panel="profile"] [data-intake-attribute], [data-directory-main-panel="profile"] [data-care-risk-flag]'
         )
         .forEach(control => {
-            control.disabled =
-                !editing;
+            const state = directoryProfileEditDrafts.get(directoryProfileEditKey(card));
+            control.disabled = !editing || card.dataset.profileSaving === 'true' || !!state?.conflict;
         });
 
     const editButton =
@@ -2140,6 +2252,14 @@ function applyDirectoryProfileEditMode(card) {
     if (cancelButton) {
         cancelButton.hidden =
             !editing;
+        cancelButton.disabled = card.dataset.profileSaving === 'true';
+        if (editing) cancelButton.textContent = 'Discard changes';
+    }
+
+    const saveButton = card.querySelector('[data-save-belongings]');
+    const state = directoryProfileEditDrafts.get(directoryProfileEditKey(card));
+    if (saveButton && editing && card.dataset.profileSaving !== 'true') {
+        saveButton.disabled = !state || state.conflict || !directoryProfileEditIsDirty(card, state);
     }
 }
 
@@ -2160,14 +2280,23 @@ function setDirectoryProfileEditMode(
             ? 'true'
             : 'false';
 
+    const editKey = directoryProfileEditKey(card);
+    if (editing && editKey && !directoryProfileEditDrafts.has(editKey)) {
+        const initial = collectDirectoryProfileEditValues(card);
+        directoryProfileEditDrafts.set(editKey, { initial, values: { ...initial }, identity: getDirectoryProfileEditIdentity(card), initialized: Object.keys(initial).length > 0, conflict: false, failed: false, saving: false });
+    }
+    if (editing && directoryProfileEditDrafts.has(editKey)) validateDirectoryProfileEditContext(card, directoryProfileEditDrafts.get(editKey));
+
     applyDirectoryProfileEditMode(
         card
     );
+    if (editing) updateDirectoryProfileEditFeedback(card);
 }
 
 
 function cancelDirectoryProfileEdit(card) {
     if (!card) return;
+    directoryProfileEditDrafts.delete(directoryProfileEditKey(card));
 
     const stayKey =
         String(
@@ -2204,6 +2333,11 @@ function cancelDirectoryProfileEdit(card) {
         card,
         false
     );
+    const status = card.querySelector('[data-directory-profile-edit-status]');
+    if (status) {
+        status.textContent = 'Draft discarded. Saved care details restored.';
+        status.className = 'directory-profile-edit-status is-clean';
+    }
 }
 
 
@@ -4293,6 +4427,7 @@ registerWaffleServiceWorker();
     let directoryLegacyIntakeCache = {};
     let directoryLegacyIntakeCacheLastFetch = 0;
     let activeDirectoryEditContext = null; 
+    const directoryProfileEditDrafts = new Map();
     let isUpdatingDropdowns = false; 
     let selectedClickDateStr = ""; 
     let activeEditingEvent = null; 
@@ -4852,6 +4987,8 @@ registerWaffleServiceWorker();
         document.getElementById('auditCategoryFilter').addEventListener('change', renderAuditLog);
 
         const directoryGrid = document.getElementById('directory-grid');
+        directoryGrid.addEventListener('input', handleDirectoryProfileEditInput);
+        directoryGrid.addEventListener('change', handleDirectoryProfileEditInput);
 
         document
             .getElementById(
@@ -9378,6 +9515,7 @@ registerWaffleServiceWorker();
             ? {
                 stayKey: editorStayKey,
                 fieldKey: String(activeDirectoryEditContext.fieldKey || '').trim(),
+                draftValue: getGuestDetailEditorValue(),
                 originalDogName: activeDirectoryEditContext.originalDogName || '',
                 startDate: activeDirectoryEditContext.startDate || '',
                 endDate: activeDirectoryEditContext.endDate || '',
@@ -9470,6 +9608,9 @@ registerWaffleServiceWorker();
         const initialValue = String(
             editor.initialValue ?? trigger?.dataset?.directoryCurrentValue ?? ''
         );
+        if (editor.draftValue !== undefined && control) {
+            control.value = String(editor.draftValue);
+        }
         const isDirty = String(control?.value ?? '') !== initialValue;
         const blocked = !matchingCard || !trigger || identityConflict || !!editor.conflict;
 
@@ -9493,7 +9634,13 @@ registerWaffleServiceWorker();
                 ? 'This stay has different owner, contact, or breed details. Discard this draft before editing another stay.'
                 : 'This stay changed or is no longer available. Discard this draft before editing another stay.';
             status.className = 'guest-detail-edit-status is-error';
-        } else if (status && !editor.failed && !editor.saved) {
+        } else if (status && editor.failed) {
+            status.textContent = 'Save failed. Your draft is still here. Try saving again or discard it.';
+            status.className = 'guest-detail-edit-status is-error';
+        } else if (status && editor.saved) {
+            status.textContent = 'Your changes were saved and synced.';
+            status.className = 'guest-detail-edit-status is-success';
+        } else if (status) {
             status.textContent = isDirty ? 'Unsaved changes.' : 'No unsaved changes.';
             status.className = isDirty
                 ? 'guest-detail-edit-status is-unsaved'
@@ -10619,6 +10766,8 @@ registerWaffleServiceWorker();
             }
         );
 
+        restoreDirectoryProfileEditDraft(card, { checkConflict: true });
+
         if (typeof renderDirectoryCareBrief === 'function') {
             renderDirectoryCareBrief(card);
         }
@@ -10680,6 +10829,7 @@ registerWaffleServiceWorker();
             safetySummary.dataset.state = activeFlags.length ? 'attention' : 'clear';
         }
 
+        restoreDirectoryProfileEditDraft(card, { checkConflict: true });
         applyDirectoryProfileEditMode(card);
     }
 
@@ -11118,13 +11268,30 @@ registerWaffleServiceWorker();
     async function saveBelongingsCard(card, button) {
         if (!card || !button) return;
 
+        const profileEdit = !!button.closest('[data-directory-main-panel="profile"]');
+        const profileKey = directoryProfileEditKey(card);
+        const editState = profileEdit ? directoryProfileEditDrafts.get(profileKey) : null;
+        if (profileEdit && editState) {
+            validateDirectoryProfileEditContext(card, editState);
+            if (editState.conflict) updateDirectoryProfileEditFeedback(card);
+        }
+        if (card.dataset.profileSaving === 'true' || (profileEdit && (!editState || editState.conflict || !directoryProfileEditIsDirty(card, editState)))) return;
+
         const originalText = button.innerText;
         button.disabled = true;
         button.innerText = '⏳ Saving...';
+        if (profileEdit) {
+            editState.saving = true;
+            card.dataset.profileSaving = 'true';
+            applyDirectoryProfileEditMode(card);
+            updateDirectoryProfileEditFeedback(card);
+        }
+        let serverSaved = false;
 
         try {
             const payload = getBelongingsCardPayload(card);
             await sendPayloadToAppsScript({ action: 'save_belongings', ...payload });
+            serverSaved = true;
 
             belongingsRecordsCache[payload.stayKey] = {
                 ...(belongingsRecordsCache[payload.stayKey] || {}),
@@ -11220,22 +11387,52 @@ registerWaffleServiceWorker();
 
             button.innerText = '✅ Saved';
 
-            if (
-                button.closest('[data-directory-main-panel="profile"]')
-            ) {
+            if (profileEdit) {
+                directoryProfileEditDrafts.delete(profileKey);
+                card.dataset.profileSaving = 'false';
                 setDirectoryProfileEditMode(
                     card,
                     false
                 );
+                const status = card.querySelector('[data-directory-profile-edit-status]');
+                if (status) {
+                    status.textContent = 'Care details saved successfully.';
+                    status.className = 'directory-profile-edit-status is-success';
+                }
             }
 
             setTimeout(() => { button.innerText = originalText; }, 1800);
         } catch (error) {
             console.error(error);
-            alert('❌ BELONGINGS WERE NOT SAVED\n\n' + error.message);
+            if (profileEdit && serverSaved) {
+                directoryProfileEditDrafts.delete(profileKey);
+                card.dataset.profileSaving = 'false';
+                setDirectoryProfileEditMode(card, false);
+                const status = card.querySelector('[data-directory-profile-edit-status]');
+                if (status) {
+                    status.textContent = 'Your changes were saved. Refresh the profile if its other views look out of date.';
+                    status.className = 'directory-profile-edit-status is-success';
+                }
+                button.innerText = '✅ Saved';
+            } else if (profileEdit) {
+                editState.saving = false;
+                editState.failed = true;
+                editState.failureMessage = `Save failed. Your draft is still here. ${error.message || String(error)}`;
+                card.dataset.profileSaving = 'false';
+                updateDirectoryProfileEditFeedback(card);
+            } else {
+                alert('❌ BELONGINGS WERE NOT SAVED\n\n' + error.message);
+            }
             button.innerText = originalText;
         } finally {
-            button.disabled = false;
+            if (profileEdit) {
+                editState.saving = false;
+                card.dataset.profileSaving = 'false';
+                applyDirectoryProfileEditMode(card);
+                if (editState.failed) updateDirectoryProfileEditFeedback(card);
+            } else {
+                button.disabled = false;
+            }
         }
     }
 
@@ -14859,7 +15056,7 @@ registerWaffleServiceWorker();
                                                         class="directory-profile-edit-cancel"
                                                         data-cancel-profile-edit
                                                         hidden>
-                                                        Cancel
+                                                        Discard changes
                                                     </button>
                                                 </div>
                                             </div>
@@ -14873,11 +15070,12 @@ registerWaffleServiceWorker();
                                         </section>
 
                                         <div class="directory-profile-save-bar">
+                                            <div class="directory-profile-edit-status is-clean" data-directory-profile-edit-status role="status" aria-live="polite" aria-atomic="true">No unsaved changes.</div>
                                             <button
                                                 type="button"
                                                 class="belongings-save-btn"
                                                 data-save-belongings>
-                                                💾 Save Profile &amp; Care
+                                                💾 Save changes
                                             </button>
                                         </div>
                                         </section>
