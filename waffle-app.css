@@ -8265,6 +8265,30 @@ body.v10-reminder-composer-open::after {
     color: var(--v10-muted);
 }
 
+.directory-profile-save-bar {
+    align-items: flex-end;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.directory-profile-edit-status {
+    flex: 1 1 100%;
+    min-height: 18px;
+    color: var(--v10-muted);
+    font-size: 11px;
+    line-height: 1.4;
+}
+
+.directory-profile-edit-status.is-unsaved { color: #8a4b08; font-weight: 800; }
+.directory-profile-edit-status.is-saving { color: #155e9a; font-weight: 800; }
+.directory-profile-edit-status.is-error { color: #a12622; font-weight: 800; }
+.directory-profile-edit-status.is-success { color: #18734a; font-weight: 800; }
+
+.directory-profile-save-bar .belongings-save-btn:disabled {
+    opacity: .58;
+    cursor: not-allowed;
+}
+
 .directory-card:not(.is-profile-editing)
 [data-directory-main-panel="profile"]
 .directory-profile-save-bar {

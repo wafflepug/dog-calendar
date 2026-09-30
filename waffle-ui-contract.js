@@ -1,6 +1,6 @@
 /* ============================================================
    WAFFLE HOUSE — FINAL UI CONTRACT
-   Version 11.1.53 · Care Overview Refinement
+   Version 11.1.54 · Care Draft Feedback
 
    Purpose
    -------
@@ -27,7 +27,7 @@
 (function () {
   'use strict';
 
-  const VERSION = '11.1.53';
+  const VERSION = '11.1.54';
   const CONTRACT_ATTR = 'data-waffle-ui-contract';
   const PROTECTED_SELECTOR = [
     '#aw37launch',
