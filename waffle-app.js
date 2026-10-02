@@ -4428,6 +4428,7 @@ registerWaffleServiceWorker();
     let directoryLegacyIntakeCacheLastFetch = 0;
     let activeDirectoryEditContext = null; 
     const directoryProfileEditDrafts = new Map();
+    const belongingsItemDrafts = new Map();
     let isUpdatingDropdowns = false; 
     let selectedClickDateStr = ""; 
     let activeEditingEvent = null; 
@@ -4989,6 +4990,8 @@ registerWaffleServiceWorker();
         const directoryGrid = document.getElementById('directory-grid');
         directoryGrid.addEventListener('input', handleDirectoryProfileEditInput);
         directoryGrid.addEventListener('change', handleDirectoryProfileEditInput);
+        directoryGrid.addEventListener('input', handleBelongingsItemDraftInput);
+        directoryGrid.addEventListener('change', handleBelongingsItemDraftInput);
 
         document
             .getElementById(
@@ -5002,6 +5005,13 @@ registerWaffleServiceWorker();
             );
 
         directoryGrid.addEventListener('click', async function(event) {
+            const hostedPhotoCheck = event.target.closest('[data-confirm-hosted-photo]');
+            if (hostedPhotoCheck) {
+                event.preventDefault();
+                event.stopPropagation();
+                await checkHostedBelongingsPhotoConfirmation(hostedPhotoCheck.closest('.belongings-pet-card'));
+                return;
+            }
             const checkBelongingsUploadButton = event.target.closest(
                 '[data-check-belongings-photo-upload]'
             );
@@ -5271,6 +5281,14 @@ registerWaffleServiceWorker();
                 event.target.closest(
                     '[data-save-belongings]'
                 );
+
+            const discardBelongingsDraftButton = event.target.closest('[data-discard-belongings-draft]');
+            if (discardBelongingsDraftButton) {
+                event.preventDefault();
+                event.stopPropagation();
+                discardBelongingsItemDraft(discardBelongingsDraftButton.closest('.belongings-pet-card'));
+                return;
+            }
 
             if (saveBelongingsButton) {
                 event.preventDefault();
@@ -10991,6 +11009,7 @@ registerWaffleServiceWorker();
                     <div
                         class="belongings-photo-status"
                         data-belongings-photo-status></div>
+                <button type="button" data-confirm-hosted-photo hidden>Check whether photo was saved</button>
                 </div>
 
                 <div class="belongings-photo-gallery">
@@ -11004,9 +11023,12 @@ registerWaffleServiceWorker();
                         data-save-belongings>
                         💾 Save Belongings
                     </button>
+                    <button type="button" class="belongings-save-btn" data-discard-belongings-draft>Discard draft</button>
                 </div>
+                <div class="directory-profile-edit-status is-clean" data-belongings-edit-status role="status" aria-live="polite" aria-atomic="true">No unsaved belongings changes.</div>
             </div>
         `;
+        restoreBelongingsItemDraft(card, record.items || {});
         if (uncertainBelongingsPhotoUploads.has(stayKey)) {
             setBelongingsUploadCheckVisible(card, true);
         }
@@ -11200,6 +11222,74 @@ registerWaffleServiceWorker();
         return items;
     }
 
+    function belongingsItemsEqual(left, right) {
+        return JSON.stringify(left || {}) === JSON.stringify(right || {});
+    }
+
+    function restoreBelongingsItemDraft(card, savedItems) {
+        const key = directoryProfileEditKey(card);
+        let state = belongingsItemDrafts.get(key);
+        const rendered = Object.fromEntries(BELONGINGS_ITEMS.map(item => {
+            const value = savedItems?.[item.key] || {};
+            return [item.key, { present: !!value.present, description: String(value.description || '') }];
+        }));
+        if (!state) {
+            state = { initial: JSON.parse(JSON.stringify(rendered)), values: JSON.parse(JSON.stringify(rendered)), identity: getDirectoryProfileEditIdentity(card), conflict: false, failed: false, saving: false };
+            belongingsItemDrafts.set(key, state);
+        } else {
+            for (const item of BELONGINGS_ITEMS) {
+                const actual = rendered[item.key] || { present: false, description: '' };
+                const original = state.initial[item.key] || { present: false, description: '' };
+                const draft = state.values[item.key] || original;
+                if ((actual.present !== original.present || String(actual.description || '') !== String(original.description || '')) &&
+                    (actual.present !== draft.present || String(actual.description || '') !== String(draft.description || ''))) state.conflict = true;
+            }
+        }
+        if (Array.from(document.querySelectorAll('.directory-card[data-directory-stay-key]')).filter(candidate => directoryProfileEditKey(candidate) === key).length !== 1 || directoryProfileEditIdentityConflicts(state.identity, getDirectoryProfileEditIdentity(card))) state.conflict = true;
+        BELONGINGS_ITEMS.forEach(item => {
+            const present = card.querySelector(`[data-belongings-item-present="${item.key}"]`);
+            const description = card.querySelector(`[data-belongings-item-description="${item.key}"]`);
+            if (present) present.checked = !!state.values[item.key]?.present;
+            if (description) description.value = state.values[item.key]?.description || '';
+        });
+        updateBelongingsItemDraftFeedback(card);
+    }
+
+    function updateBelongingsItemDraftFeedback(card, message) {
+        const status = card?.querySelector('[data-belongings-edit-status]');
+        const state = belongingsItemDrafts.get(directoryProfileEditKey(card));
+        const save = card?.querySelector('[data-save-belongings]');
+        const discard = card?.querySelector('[data-discard-belongings-draft]');
+        if (!state) return;
+        const dirty = !belongingsItemsEqual(collectBelongingsItems(card), state.initial);
+        if (status) {
+            status.textContent = message || (state.conflict ? 'This stay changed or is ambiguous. Draft retained; discard it before saving.' : state.saving ? 'Saving belongings…' : state.failed ? (state.failureMessage || 'Save failed. Your draft is still here. Try again or discard it.') : dirty ? 'Unsaved belongings changes.' : 'No unsaved belongings changes.');
+            status.className = `directory-profile-edit-status${state.conflict || state.failed ? ' is-error' : state.saving ? ' is-saving' : dirty ? ' is-unsaved' : ' is-clean'}`;
+        }
+        if (save) save.disabled = state.saving || state.conflict || !dirty;
+        if (discard) { discard.disabled = state.saving; discard.hidden = !dirty && !state.conflict && !state.failed; }
+    }
+
+    function handleBelongingsItemDraftInput(event) {
+        const control = event.target?.closest?.('[data-belongings-item-present], [data-belongings-item-description]');
+        if (!control) return;
+        const card = control.closest('.directory-card');
+        const state = belongingsItemDrafts.get(directoryProfileEditKey(card));
+        if (!state || state.saving || state.conflict) return;
+        state.values = collectBelongingsItems(card);
+        state.failed = false;
+        updateBelongingsItemDraftFeedback(card);
+    }
+
+    function discardBelongingsItemDraft(card) {
+        if (!card) return;
+        const key = directoryProfileEditKey(card);
+        belongingsItemDrafts.delete(key);
+        const record = directoryBelongingsDetailCache[key] || belongingsRecordsCache[key] || { items: {} };
+        renderDirectoryBelongings(card, record);
+        updateBelongingsItemDraftFeedback(card, 'Draft discarded. Saved belongings restored.');
+    }
+
     function collectCareSafetyFlags(card) {
         const riskFlags = {};
 
@@ -11269,6 +11359,18 @@ registerWaffleServiceWorker();
         if (!card || !button) return;
 
         const profileEdit = !!button.closest('[data-directory-main-panel="profile"]');
+        const belongingsState = !profileEdit ? belongingsItemDrafts.get(directoryProfileEditKey(card)) : null;
+        if (belongingsState) {
+            const key = directoryProfileEditKey(card);
+            const unique = Array.from(document.querySelectorAll('.directory-card[data-directory-stay-key]')).filter(candidate => directoryProfileEditKey(candidate) === key).length === 1;
+            if (!unique || directoryProfileEditIdentityConflicts(belongingsState.identity, getDirectoryProfileEditIdentity(card))) belongingsState.conflict = true;
+            if (belongingsState.conflict || belongingsItemsEqual(collectBelongingsItems(card), belongingsState.initial)) {
+                updateBelongingsItemDraftFeedback(card);
+                return;
+            }
+            belongingsState.saving = true;
+            updateBelongingsItemDraftFeedback(card);
+        }
         const profileKey = directoryProfileEditKey(card);
         const editState = profileEdit ? directoryProfileEditDrafts.get(profileKey) : null;
         if (profileEdit && editState) {
@@ -11290,6 +11392,14 @@ registerWaffleServiceWorker();
 
         try {
             const payload = getBelongingsCardPayload(card);
+            if (belongingsState) {
+                const key = directoryProfileEditKey(card);
+                const unique = Array.from(document.querySelectorAll('.directory-card[data-directory-stay-key]')).filter(candidate => directoryProfileEditKey(candidate) === key).length === 1;
+                if (!unique || directoryProfileEditIdentityConflicts(belongingsState.identity, getDirectoryProfileEditIdentity(card)) || payload.stayKey !== card.dataset.stayKey) {
+                    belongingsState.conflict = true;
+                    throw new Error('This stay changed or is ambiguous. Your draft is retained.');
+                }
+            }
             await sendPayloadToAppsScript({ action: 'save_belongings', ...payload });
             serverSaved = true;
 
@@ -11400,6 +11510,11 @@ registerWaffleServiceWorker();
                     status.className = 'directory-profile-edit-status is-success';
                 }
             }
+            if (belongingsState) {
+                belongingsItemDrafts.delete(directoryProfileEditKey(card));
+                const status = card.querySelector('[data-belongings-edit-status]');
+                if (status) { status.textContent = 'Belongings saved successfully.'; status.className = 'directory-profile-edit-status is-success'; }
+            }
 
             setTimeout(() => { button.innerText = originalText; }, 1800);
         } catch (error) {
@@ -11421,7 +11536,12 @@ registerWaffleServiceWorker();
                 card.dataset.profileSaving = 'false';
                 updateDirectoryProfileEditFeedback(card);
             } else {
-                alert('❌ BELONGINGS WERE NOT SAVED\n\n' + error.message);
+                if (belongingsState) {
+                    belongingsState.saving = false;
+                    belongingsState.failed = true;
+                    belongingsState.failureMessage = `Save failed. Your draft is still here. ${error.message || String(error)}`;
+                    updateBelongingsItemDraftFeedback(card);
+                } else alert('❌ BELONGINGS WERE NOT SAVED\n\n' + error.message);
             }
             button.innerText = originalText;
         } finally {
@@ -11431,7 +11551,8 @@ registerWaffleServiceWorker();
                 applyDirectoryProfileEditMode(card);
                 if (editState.failed) updateDirectoryProfileEditFeedback(card);
             } else {
-                button.disabled = false;
+                if (belongingsState) updateBelongingsItemDraftFeedback(card);
+                else button.disabled = false;
             }
         }
     }
@@ -11467,6 +11588,12 @@ registerWaffleServiceWorker();
         const isDogProfile = photoType === 'dogProfile';
         const isStayPhoto = photoType === 'stayPhoto';
         const requestToken = makeHostedPhotoRequestToken();
+        const identity = getDirectoryProfileEditIdentity(card);
+        const stayKey = directoryProfileEditKey(card);
+        const assertCurrentStay = () => {
+            const matches = Array.from(document.querySelectorAll('.directory-card[data-directory-stay-key]')).filter(candidate => directoryProfileEditKey(candidate) === stayKey);
+            if (matches.length !== 1 || directoryProfileEditIdentityConflicts(identity, getDirectoryProfileEditIdentity(card)) || payloadBase.stayKey !== card.dataset.stayKey) throw new Error('This stay changed or is ambiguous. Reopen the photo uploader after checking the selected stay.');
+        };
 
         belongingsUploadInProgress = true;
 
@@ -11502,12 +11629,15 @@ registerWaffleServiceWorker();
                         payloadBase.endDate
                 });
             } else {
+                assertCurrentStay();
                 await sendPayloadToAppsScript({
                     action:
                         'save_belongings',
                     ...payloadBase
                 });
             }
+
+            assertCurrentStay();
 
             hostedBelongingsPhotoContext = {
                 card,
@@ -11594,6 +11724,8 @@ registerWaffleServiceWorker();
 
         if (data.type === 'waffleBelongingsPhotoSaved') {
             try {
+                context.confirmationPending = true;
+                context.savedMessage = data;
                 if (status) status.textContent = '🔎 Refreshing shared photo record...';
 
                 const response = await queryAppsScript({
@@ -11613,6 +11745,12 @@ registerWaffleServiceWorker();
                     directoryPhotoRecordsCache[context.stayKey] = record;
                     setDirectoryDogPhoto(context.stayKey, record);
                     setDirectoryCareFlags(context.stayKey, record);
+                } else {
+                    const check = card?.querySelector('[data-confirm-hosted-photo]');
+                    if (check) check.hidden = false;
+                    if (status) status.textContent = 'Photo upload reported success, but the shared record is not visible yet. Check again before uploading another photo.';
+                    belongingsUploadInProgress = false;
+                    return;
                 }
 
                 if (status) {
@@ -11646,7 +11784,9 @@ registerWaffleServiceWorker();
 
             } catch (error) {
                 belongingsUploadInProgress = false;
-                if (status) status.textContent = '⚠️ Photo saved, but the shared record could not be refreshed.';
+                const check = card?.querySelector('[data-confirm-hosted-photo]');
+                if (check) check.hidden = false;
+                if (status) status.textContent = '⚠️ Photo may have saved, but the shared record could not be refreshed. Check again before uploading another photo.';
                 alert(
                     '✅ The photo was saved by Apps Script, but the web page could not reload the Pet_Belongings record.\n\n' +
                     error.message
@@ -11654,6 +11794,36 @@ registerWaffleServiceWorker();
             }
         }
     });
+
+    async function checkHostedBelongingsPhotoConfirmation(card) {
+        const context = hostedBelongingsPhotoContext;
+        if (!context || context.card !== card || !context.confirmationPending) return;
+        const status = card.querySelector('[data-belongings-photo-status]');
+        const button = card.querySelector('[data-confirm-hosted-photo]');
+        if (button) button.disabled = true;
+        if (status) status.textContent = '🔎 Checking the shared photo record…';
+        try {
+            const response = await queryAppsScript({ action: 'get_belongings', stayKeys: [context.stayKey] }, { maxAttempts: 2, timeoutMs: 45000 });
+            const record = (response.records || []).find(item => item.stayKey === context.stayKey);
+            if (!record) {
+                if (status) status.textContent = 'The photo record is still not visible. Check again later before uploading another photo.';
+                return;
+            }
+            belongingsRecordsCache[context.stayKey] = record;
+            careRiskRecordsCache[context.stayKey] = record;
+            directoryPhotoRecordsCache[context.stayKey] = record;
+            setDirectoryDogPhoto(context.stayKey, record);
+            setDirectoryCareFlags(context.stayKey, record);
+            renderDirectoryOperationalSections(context.stayKey, record);
+            if (status) status.textContent = '✅ Photo saved to Google Drive.';
+            if (button) button.hidden = true;
+            closeHostedBelongingsPhotoUploader();
+        } catch (error) {
+            if (status) status.textContent = `Photo confirmation check failed. Your upload may have succeeded; check again before uploading another photo. ${error.message || error}`;
+        } finally {
+            if (button) button.disabled = false;
+        }
+    }
 
 
     function closeBelongingsCamera() {
