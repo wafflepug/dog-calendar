@@ -11687,6 +11687,12 @@ registerWaffleServiceWorker();
             assertCurrentStay();
 
             if (itemDraft && card.dataset.v1082PastStay !== 'true') {
+                // The uploader saves the checklist before opening. Keep a
+                // reopened Belongings tab aligned with that confirmed save.
+                for (const cache of [belongingsRecordsCache, directoryBelongingsDetailCache]) {
+                    cache[stayKey] = { ...(cache[stayKey] || {}), stayKey,
+                        ...(payloadBase.items ? { items: payloadBase.items } : {}) };
+                }
                 itemDraft.initial = JSON.parse(JSON.stringify(payloadBase.items || {}));
                 itemDraft.values = JSON.parse(JSON.stringify(payloadBase.items || {}));
                 itemDraft.failed = false;

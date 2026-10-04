@@ -7027,8 +7027,13 @@ body.dark-theme .directory-care-more-actions > summary { background: #182235; bo
 
 .directory-belongings-save-bar [data-save-belongings] {
     color: #fff;
-    background: #166534;
-    border-color: #166534;
+    background: var(--wh-accent, #2563eb);
+    border-color: var(--wh-accent, #2563eb);
+}
+
+.directory-belongings-save-bar [data-discard-belongings-draft] {
+    background: var(--wh-surface, #fff) !important;
+    color: var(--wh-text, #172033) !important;
 }
 
 .directory-belongings-save-bar button:disabled,
@@ -7039,7 +7044,7 @@ body.dark-theme .directory-care-more-actions > summary { background: #182235; bo
 
 .directory-belongings-save-bar button:focus-visible,
 [data-confirm-hosted-photo]:focus-visible {
-    outline: 3px solid #2563eb;
+    outline: 3px solid var(--wh-accent, #2563eb);
     outline-offset: 2px;
 }
 
@@ -7051,7 +7056,7 @@ body.dark-theme .directory-care-more-actions > summary { background: #182235; bo
 body.dark-theme .directory-belongings-save-bar [data-discard-belongings-draft],
 body.dark-theme [data-confirm-hosted-photo] {
     color: var(--wh-text, #f8fafc);
-    background: #202c3e;
+    background: #202c3e !important;
     border-color: #40516a;
 }
 
