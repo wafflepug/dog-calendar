@@ -1,0 +1,9 @@
+# Care belongings recovery policy
+
+Release `2026.10.04.01` keeps unsaved checklist values and the photo note in page memory, keyed by the exact selected stay. Same-stay refreshes can restore those values when the stay remains unique and its identity matches. A conflict retains the visible draft, blocks Save, and offers Discard. Save locks checklist controls; failure keeps the draft, while success advances its saved baseline. Drafts are never written to local storage or another persistent store, so a full page reload clears them.
+
+The hosted photo uploader is a separate submission flow. Closing or switching away before its `uploading` progress message allows a new attempt. Once submission begins, the stay is held in an in-memory pending-confirmation state and another upload is blocked. The Check action makes only a `get_belongings` read. It clears that state only when the returned record shows the newly uploaded photo, preferring the returned photo IDs and using the before-upload photo set as a fallback. Confirmed records refresh the belongings, profile, summary, and photo caches.
+
+The browser does not retain selected or compressed photo bytes when the hosted iframe is closed. A request that partially saves photos and then fails can remain pending if the available record cannot prove the expected new photos; the user must keep checking the record or resolve the outcome through the normal operational process. The current iframe protocol does not expose a durable upload-status token to the parent page. Reloading the page clears pending upload guards, so an uncertain upload should be checked before another attempt after reload.
+
+This recovery work does not claim lower deployment or Apps Script latency. Node fixtures cover the client state transitions. Phone and desktop light/dark appearance and keyboard interaction still need browser review.

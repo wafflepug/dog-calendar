@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.09.30.01",
-  "releaseName": "Care Draft Feedback",
+  "assetRevision": "2026.10.04.01",
+  "releaseName": "Belongings Draft Recovery",
   "runtime": "waffle-bootstrap.js",
   "styles": "waffle-runtime.css",
   "phase": "phase-4-sitter-workflow-expansion",
