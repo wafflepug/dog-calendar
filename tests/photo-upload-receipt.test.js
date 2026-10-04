@@ -32,7 +32,7 @@ function harness() {
   return { context, values };
 }
 
-function uploadHarness() {
+function uploadHarness(failFirstSheetWrite = false) {
   const receipts = {};
   const rows = { 24: '[]' };
   let created = 0;
@@ -40,9 +40,12 @@ function uploadHarness() {
   const sheet = {
     getRange(row, col) {
       return {
-        getDisplayValues: () => [['stay-a', 'Milo', '2026-09-01', '2026-09-05']],
+        getValues: () => [['stay-a', 'Milo', new Date('2026-09-01T00:00:00Z'), new Date('2026-09-05T00:00:00Z')]],
         getValue: () => rows[col] || '',
-        setValue: value => { rows[col] = value; writes++; }
+        setValue: value => {
+          if (failFirstSheetWrite && col === 24 && writes === 0) { writes++; throw new Error('simulated sheet write failure'); }
+          rows[col] = value; writes++;
+        }
       };
     }
   };
@@ -57,7 +60,7 @@ function uploadHarness() {
     getBelongingsSheet_: () => sheet,
     findBelongingsRow_: () => 2,
     assertWaffleActionAllowedDuringMaintenance_() {},
-    belongingsPhotoDateKey_: value => String(value),
+    belongingsPhotoDateKey_: value => value instanceof Date ? value.toISOString().slice(0, 10) : String(value),
     saveBelongingsPhoto_: data => {
       const prior = Object.values(context.driveFiles).find(file => file.name === data.uploadSuffix);
       if (prior) return prior;
@@ -113,6 +116,18 @@ test('repeated and concurrent requests with one ID create one Drive photo and on
   assert.equal(first.photo.id, concurrent.photo.id);
   assert.equal(concurrent.idempotent, true);
   assert.doesNotMatch(Object.values(h.context.PropertiesService.getScriptProperties().getProperties()).join(' '), /private-image-data/);
+});
+
+test('retry reuses the deterministic Drive file after a sheet write failure', () => {
+  const h = uploadHarness(true);
+  const payload = { clientUploadId: `${Date.now().toString(36)}_fedcba0987654321`, stayKey: 'stay-a', dogName: 'Milo', startDate: '2026-09-01', endDate: '2026-09-05', photoType: 'belongings', photoData: 'private-image-data' };
+  assert.throws(() => h.context.uploadBelongingsPhotoFromHtml(payload), /simulated sheet write failure/);
+  assert.equal(h.created, 1);
+  assert.equal(JSON.parse(h.rows[24]).length, 0);
+  const retry = h.context.uploadBelongingsPhotoFromHtml(payload);
+  assert.equal(retry.photo.id, 'drive-1');
+  assert.equal(h.created, 1);
+  assert.equal(JSON.parse(h.rows[24]).length, 1);
 });
 
 test('uploader has stable per-photo IDs and uses the read-only status RPC before exposing retries', () => {

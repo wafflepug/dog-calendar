@@ -14485,7 +14485,7 @@ function uploadBelongingsPhotoFromHtml(data) {
       );
     }
 
-    var identity = sheet.getRange(row, 2, 1, 4).getDisplayValues()[0];
+    var identity = sheet.getRange(row, 2, 1, 4).getValues()[0];
     if (String(identity[1] || "").trim().toLowerCase() !== dogName.toLowerCase() ||
         (data.startDate && belongingsPhotoDateKey_(identity[2]) !== belongingsPhotoDateKey_(data.startDate)) ||
         (data.endDate && belongingsPhotoDateKey_(identity[3]) !== belongingsPhotoDateKey_(data.endDate))) {
@@ -14608,8 +14608,8 @@ function uploadBelongingsPhotoFromHtml(data) {
   }
 }
 
-// Receipts contain only Drive photo metadata, never image bytes. Expired keys
-// are retained as tombstones so a delayed client cannot reuse an old ID.
+// Receipts contain only Drive photo metadata, never image bytes. Timestamped
+// client IDs continue to report expired after the bounded receipt is cleaned up.
 function getPhotoUploadReceiptKey_(id) {
   if (!/^[A-Za-z0-9_-]{16,100}$/.test(String(id || ""))) throw new Error("Valid photo upload ID is required.");
   return "photo_upload_receipt_" + id;
