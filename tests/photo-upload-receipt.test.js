@@ -4,6 +4,20 @@ const test = require('node:test');
 const vm = require('node:vm');
 
 const source = fs.readFileSync('apps-script/Code.js', 'utf8');
+test('generated hosted uploader script parses after HTML string assembly', () => {
+  let html;
+  const output = { addMetaTag() { return this; }, setXFrameOptionsMode() { return this; } };
+  const context = vm.createContext({ HtmlService: {
+    createHtmlOutput(value) { html = value; return output; }, XFrameOptionsMode: { ALLOWALL: 1 }
+  } });
+  const start = source.indexOf('function buildBelongingsPhotoUploaderHtml_(');
+  const end = source.indexOf('function uploadBelongingsPhotoFromHtml(', start);
+  vm.runInContext(source.slice(start, end), context);
+  context.buildBelongingsPhotoUploaderHtml_({ stayKey: 'stay-a', dogName: 'Milo' });
+  const script = html.match(/<script>([\s\S]*?)<\/script>/);
+  assert.ok(script, 'hosted script present');
+  assert.doesNotThrow(() => new vm.Script(script[1]));
+});
 function extract(name) {
   const start = source.indexOf(`function ${name}(`);
   assert.notEqual(start, -1);
