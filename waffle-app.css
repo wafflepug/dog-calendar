@@ -9752,3 +9752,37 @@ body.dark-theme .directory-roster-avatar {
     outline: 2px solid var(--wh75-accent, #7562db);
     outline-offset: 2px;
 }
+.hosted-photo-session-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+}
+
+.hosted-photo-session-state {
+    flex: 1 1 100%;
+    color: var(--wh75-text, inherit);
+    font-size: 0.92rem;
+}
+
+.hosted-photo-session-controls button {
+    min-height: 44px;
+    padding: 8px 14px;
+    border: 1px solid var(--wh75-accent, #7562db);
+    border-radius: 9px;
+    background: transparent;
+    color: var(--wh75-accent, #7562db);
+    font: inherit;
+    font-weight: 650;
+    cursor: pointer;
+}
+
+.hosted-photo-session-controls button:focus-visible {
+    outline: 3px solid var(--wh75-accent, #7562db);
+    outline-offset: 2px;
+}
+
+.hosted-photo-session-controls button:hover {
+    background: color-mix(in srgb, var(--wh75-accent, #7562db) 10%, transparent);
+}

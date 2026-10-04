@@ -4441,6 +4441,10 @@ registerWaffleServiceWorker();
     // being mistaken for a failed upload and submitted a second time.
     const uncertainBelongingsPhotoUploads = new Map();
     const hostedPendingPhotoConfirmations = new Map();
+    // Hosted iframe sessions and their selected image bytes stay in page memory
+    // only. The iframe remains mounted while hidden so its prepared upload can
+    // resume without asking the user to select the photos again.
+    const hostedPhotoSessions = new Map();
     let belongingsCameraStream = null;
     let belongingsCameraCard = null;
     let hostedBelongingsPhotoContext = null;
@@ -5006,6 +5010,19 @@ registerWaffleServiceWorker();
             );
 
         directoryGrid.addEventListener('click', async function(event) {
+            const resumeHosted = event.target.closest('[data-hosted-photo-resume]');
+            if (resumeHosted) { event.preventDefault(); event.stopPropagation(); resumeHostedPhotoSession(resumeHosted.dataset.hostedPhotoResume); return; }
+            const discardHosted = event.target.closest('[data-hosted-photo-discard]');
+            if (discardHosted) { event.preventDefault(); event.stopPropagation(); discardHostedPhotoSession(discardHosted.dataset.hostedPhotoDiscard); return; }
+            const checkHosted = event.target.closest('[data-hosted-photo-check]');
+            if (checkHosted) {
+                event.preventDefault(); event.stopPropagation();
+                const session = hostedPhotoSessions.get(checkHosted.dataset.hostedPhotoCheck);
+                const currentCard = session && findUniqueHostedPhotoCard(session);
+                if (currentCard && hostedPendingPhotoConfirmations.has(session.stayKey)) await checkHostedBelongingsPhotoConfirmation(currentCard);
+                else if (session) resumeHostedPhotoSession(session.sessionKey);
+                return;
+            }
             const hostedPhotoCheck = event.target.closest('[data-confirm-hosted-photo]');
             if (hostedPhotoCheck) {
                 event.preventDefault();
@@ -11038,6 +11055,7 @@ registerWaffleServiceWorker();
         }
         const hostedCheck = card.querySelector('[data-confirm-hosted-photo]');
         if (hostedCheck) hostedCheck.hidden = !hostedPendingPhotoConfirmations.has(stayKey);
+        syncHostedPhotoSessionControls();
     }
 
 
@@ -11599,12 +11617,83 @@ registerWaffleServiceWorker();
             modal.setAttribute('aria-hidden', 'true');
         }
 
-        if (frame) {
-            frame.src = 'about:blank';
-        }
+        // Keep the frame, source, and context alive. A hidden modal is a paused
+        // view of the same in-memory session, not a cancelled upload.
+        syncHostedPhotoSessionControls();
+    }
 
-        hostedBelongingsPhotoContext = null;
+    function hostedPhotoSessionKey(stayKey, photoType) {
+        return String(stayKey || '') + '::' + String(photoType || 'belongings');
+    }
+
+    function findUniqueHostedPhotoCard(context) {
+        const matches = Array.from(document.querySelectorAll('.directory-card[data-directory-stay-key]'))
+            .filter(candidate => directoryProfileEditKey(candidate) === context.stayKey);
+        if (matches.length !== 1 || directoryProfileEditIdentityConflicts(context.identity, getDirectoryProfileEditIdentity(matches[0]))) return null;
+        return matches[0];
+    }
+
+    function syncHostedPhotoSessionControls() {
+        for (const context of hostedPhotoSessions.values()) {
+            const card = findUniqueHostedPhotoCard(context);
+            if (!card) continue;
+            const host = card.querySelector('[data-belongings-photo-status]')?.parentNode;
+            if (!host) continue;
+            let controls = host.querySelector('[data-hosted-photo-session-controls]');
+            if (!controls) {
+                controls = document.createElement('div');
+                controls.dataset.hostedPhotoSessionControls = '';
+                controls.className = 'hosted-photo-session-controls';
+                host.appendChild(controls);
+            }
+            const state = context.sessionState || (context.submitted ? 'uploading' : 'prepared');
+            const labels = { prepared: 'Photo session prepared', uploading: 'Uploading photos', awaiting: 'Awaiting confirmation', failed: 'Upload paused with an error', saved: 'Photos saved' };
+            controls.innerHTML = `<span class="hosted-photo-session-state">${labels[state] || labels.prepared}</span><button type="button" data-hosted-photo-resume="${escapeDashboardHtml(context.sessionKey)}">Resume</button>${context.submitted ? `<button type="button" data-hosted-photo-check="${escapeDashboardHtml(context.sessionKey)}">Check</button>` : ''}<button type="button" data-hosted-photo-discard="${escapeDashboardHtml(context.sessionKey)}">Discard</button>`;
+        }
+    }
+
+    function resumeHostedPhotoSession(key) {
+        const context = hostedPhotoSessions.get(key);
+        if (!context) return;
+        const card = findUniqueHostedPhotoCard(context);
+        if (!card) {
+            const status = context.card?.querySelector('[data-belongings-photo-status]');
+            if (status) status.textContent = 'This stay is ambiguous or changed. Select the original stay before resuming.';
+            return;
+        }
+        context.card = card;
+        hostedBelongingsPhotoContext = context;
+        const modal = document.getElementById('hostedBelongingsPhotoUploaderModal');
+        if (modal) { modal.style.display = 'flex'; modal.setAttribute('aria-hidden', 'false'); }
+        syncHostedPhotoSessionControls();
+    }
+
+    function discardHostedPhotoSession(key) {
+        const context = hostedPhotoSessions.get(key);
+        if (!context) return;
+        const discardMessage = context.submitted || context.confirmationPending
+            ? 'This photo upload has started. Discarding its session can leave its save status uncertain. Continue?'
+            : 'Discard this prepared photo session and clear its selected photos?';
+        if (!confirm(discardMessage)) return;
+        const frame = document.getElementById('hostedBelongingsPhotoUploaderFrame');
+        const modal = document.getElementById('hostedBelongingsPhotoUploaderModal');
+        if (frame && hostedBelongingsPhotoContext === context) frame.src = 'about:blank';
+        if (modal && hostedBelongingsPhotoContext === context) { modal.style.display = 'none'; modal.setAttribute('aria-hidden', 'true'); }
+        hostedPhotoSessions.delete(key);
+        if (hostedBelongingsPhotoContext === context) hostedBelongingsPhotoContext = null;
+        syncHostedPhotoSessionControls();
+    }
+
+    function releaseHostedPhotoSession(context) {
+        if (!context) return;
+        const frame = document.getElementById('hostedBelongingsPhotoUploaderFrame');
+        const modal = document.getElementById('hostedBelongingsPhotoUploaderModal');
+        if (frame) frame.src = 'about:blank';
+        if (modal) { modal.style.display = 'none'; modal.setAttribute('aria-hidden', 'true'); }
+        hostedPhotoSessions.delete(context.sessionKey);
+        if (hostedBelongingsPhotoContext === context) hostedBelongingsPhotoContext = null;
         belongingsUploadInProgress = false;
+        syncHostedPhotoSessionControls();
     }
 
     async function openHostedBelongingsPhotoUploader(card, mode, photoType = 'belongings') {
@@ -11622,6 +11711,18 @@ registerWaffleServiceWorker();
             const check = card.querySelector('[data-confirm-hosted-photo]');
             if (check) check.hidden = false;
             if (status) status.textContent = 'A previous photo upload still needs confirmation. Check its saved record before starting another upload.';
+            return;
+        }
+        const existingSession = hostedPhotoSessions.get(hostedPhotoSessionKey(payloadBase.stayKey, photoType));
+        if (existingSession) {
+            resumeHostedPhotoSession(existingSession.sessionKey);
+            return;
+        }
+        if (hostedBelongingsPhotoContext && hostedBelongingsPhotoContext.stayKey !== payloadBase.stayKey) {
+            const live = hostedBelongingsPhotoContext;
+            const liveCard = findUniqueHostedPhotoCard(live);
+            const liveStatus = liveCard?.querySelector('[data-belongings-photo-status]');
+            if (liveStatus) liveStatus.textContent = 'A photo session for another stay is still prepared. Resume or discard it before opening a different stay.';
             return;
         }
         const previousRecord = belongingsRecordsCache[payloadBase.stayKey] || directoryBelongingsDetailCache[payloadBase.stayKey] || {};
@@ -11710,8 +11811,11 @@ registerWaffleServiceWorker();
                 identity,
                 previousPhotoIds,
                 previousDogPhoto,
-                previousPhotoCount: beforePhotos.length
+                previousPhotoCount: beforePhotos.length,
+                sessionKey: hostedPhotoSessionKey(payloadBase.stayKey, photoType),
+                sessionState: 'prepared'
             };
+            hostedPhotoSessions.set(hostedBelongingsPhotoContext.sessionKey, hostedBelongingsPhotoContext);
 
             const params = new URLSearchParams({
                 action: 'photo_uploader',
@@ -11751,6 +11855,7 @@ registerWaffleServiceWorker();
                     ? '🐶 Dog photo uploader opened.'
                     : (isStayPhoto ? '📸 Stay photo uploader opened.' : '📷 Photo uploader opened. Choose or take a photo.');
             }
+            syncHostedPhotoSessionControls();
 
         } catch (error) {
             belongingsUploadInProgress = false;
@@ -11785,6 +11890,7 @@ registerWaffleServiceWorker();
         const status = card && card.querySelector('[data-belongings-photo-status]');
 
         if (data.type === 'waffleBelongingsPhotoUploaderReady') {
+            context.sessionState = 'prepared';
             if (status) {
                 status.textContent =
                     context.photoType === 'dogProfile'
@@ -11797,6 +11903,7 @@ registerWaffleServiceWorker();
         if (data.type === 'waffleBelongingsPhotoProgress') {
             if (data.phase === 'uploading') {
                 context.submitted = true;
+                context.sessionState = 'uploading';
                 const current = Math.max(1, Number(data.current || 1));
                 hostedPendingPhotoConfirmations.set(context.stayKey, {
                     stayKey: context.stayKey,
@@ -11811,26 +11918,38 @@ registerWaffleServiceWorker();
                 });
             }
             if (status && data.message) status.textContent = String(data.message);
+            syncHostedPhotoSessionControls();
             return;
         }
 
         if (data.type === 'waffleBelongingsPhotoError') {
             belongingsUploadInProgress = false;
+            context.sessionState = 'failed';
             if (context.submitted) {
+                const savedCount = Array.isArray(data.savedPhotoIds) ? data.savedPhotoIds.length : (Number(data.savedPhotos) || 0);
+                const remaining = Number(data.pendingPhotoCount);
                 const pending = hostedPendingPhotoConfirmations.get(context.stayKey);
                 const check = card?.querySelector('[data-confirm-hosted-photo]');
                 if (check) check.hidden = false;
-                if (status) status.textContent = '⚠️ Upload confirmation failed after submission began. Check whether it was saved before trying another upload.';
-                if (pending) pending.error = String(data.error || 'Photo upload confirmation failed.');
+                if (status) status.textContent = savedCount
+                    ? `⚠️ ${savedCount} photo${savedCount === 1 ? '' : 's'} saved, ${Number.isFinite(remaining) ? remaining : 'some'} remaining. Resume upload to continue.`
+                    : '⚠️ Upload confirmation failed after submission began. Check whether it was saved before trying another upload.';
+                if (pending) {
+                    pending.error = String(data.error || 'Photo upload confirmation failed.');
+                    pending.savedPhotoIds = Array.isArray(data.savedPhotoIds) ? data.savedPhotoIds : [];
+                    pending.pendingPhotoCount = Number.isFinite(remaining) ? remaining : null;
+                }
             } else {
                 if (status) status.textContent = '❌ ' + (data.error || 'Photo upload failed before submission.');
                 alert('❌ PHOTO WAS NOT SAVED\n\n' + (data.error || 'Photo upload failed before submission.'));
             }
+            syncHostedPhotoSessionControls();
             return;
         }
 
         if (data.type === 'waffleBelongingsPhotoSaved') {
             context.confirmationPending = true;
+            context.sessionState = 'awaiting';
             const pending = {
                 stayKey: context.stayKey,
                 photoType: context.photoType,
@@ -11839,7 +11958,7 @@ registerWaffleServiceWorker();
                 previousDogPhoto: context.previousDogPhoto,
                 previousPhotoCount: context.previousPhotoCount || 0,
                 expectedCount: Math.max(1, Number(data.count || 1)),
-                expectedPhotoIds: [data.photo, ...(Array.isArray(data.photos) ? data.photos : [])].filter(Boolean).map(photo => String(photo.id || photo.driveFileId || photo.fileId || '')).filter(Boolean),
+                expectedPhotoIds: [data.photo, ...(Array.isArray(data.photos) ? data.photos : [])].filter(Boolean).map(photo => String(photo.id || photo.driveFileId || photo.fileId || '')).filter(Boolean).concat(Array.isArray(data.savedPhotoIds) ? data.savedPhotoIds.map(String) : []),
                 requestToken: context.requestToken
             };
             hostedPendingPhotoConfirmations.set(context.stayKey, pending);
@@ -11914,13 +12033,18 @@ registerWaffleServiceWorker();
             setDirectoryDogPhoto(pending.stayKey, record);
             setDirectoryCareFlags(pending.stayKey, record);
             hostedPendingPhotoConfirmations.delete(pending.stayKey);
+            const completedContext = hostedBelongingsPhotoContext?.stayKey === pending.stayKey ? hostedBelongingsPhotoContext : null;
+            if (completedContext?.sessionKey) hostedPhotoSessions.delete(completedContext.sessionKey);
             renderDirectoryOperationalSections(pending.stayKey, record);
             const refreshedCard = Array.from(document.querySelectorAll('.directory-card[data-directory-stay-key]')).find(candidate => directoryProfileEditKey(candidate) === stayKey) || currentCard;
             const refreshedStatus = refreshedCard.querySelector('[data-belongings-photo-status]');
             const refreshedButton = refreshedCard.querySelector('[data-confirm-hosted-photo]');
             if (refreshedStatus) refreshedStatus.textContent = pending.photoType === 'dogProfile' ? '✅ Dog photo saved.' : '✅ Newly uploaded photo confirmed.';
             if (refreshedButton) refreshedButton.hidden = true;
-            if (hostedBelongingsPhotoContext?.stayKey === pending.stayKey) closeHostedBelongingsPhotoUploader();
+            if (completedContext) {
+                releaseHostedPhotoSession(completedContext);
+            }
+            syncHostedPhotoSessionControls();
         } catch (error) {
             if (status) status.textContent = `Photo confirmation check failed. Your upload may have succeeded; check again before uploading another photo. ${error.message || error}`;
         } finally {
