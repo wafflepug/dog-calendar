@@ -4,21 +4,25 @@ const path = require('node:path');
 
 const runtime = fs.readFileSync(path.join(__dirname, '..', 'waffle-v11.0.js'), 'utf8');
 const careRuntime = fs.readFileSync(path.join(__dirname, '..', 'care.js'), 'utf8');
-const photoFunctions = runtime.split(/\r?\n/).filter(line =>
-  line.startsWith('function v110PhotoUrl(') ||
-  line.startsWith('function v110PhotoGrid(') ||
-  line.startsWith('function v110RenderMedia(') ||
-  line.startsWith('async function v110LoadMedia(')
-).join('\n');
+const css = fs.readFileSync(path.join(__dirname, '..', 'waffle-v11.0.css'), 'utf8');
+const carouselRuntime = fs.readFileSync(path.join(__dirname, '..', 'waffle-v11.2.18.js'), 'utf8');
+const mediaStart = runtime.indexOf('function v110PhotoUrl(');
+const mediaEnd = runtime.indexOf('function v110EnsurePhotoViewer(', mediaStart);
+const viewerStart = runtime.indexOf('function v110OpenPhotoViewer(', mediaEnd);
+const viewerEnd = runtime.indexOf('function v110OpenCustomPanel(', viewerStart);
+const photoFunctions = runtime.slice(mediaStart, mediaEnd) + runtime.slice(viewerStart, viewerEnd);
 
 async function setup(page, queryBody) {
   await page.setContent('<article class="directory-card" data-directory-stay-key="stay-a"><div data-v110-media-host></div></article>');
+  await page.addStyleTag({ content: css });
   await page.addScriptTag({ content: `
     window.v110MediaCache = Object.create(null);
+    window.v110EnsurePhotoViewer = () => { let viewer=document.getElementById('v110PhotoViewer'); if(!viewer){viewer=document.createElement('div');viewer.id='v110PhotoViewer';viewer.innerHTML='<img alt=\"\">';document.body.appendChild(viewer);} return viewer; };
     window.v110Escape = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
     window.queryAppsScript = ${queryBody};
     ${photoFunctions}
   ` });
+  await page.addScriptTag({ content: carouselRuntime });
 }
 
 test('Care Photos render counts, disclosures, accessible actions, and empty groups', async ({ page }) => {
@@ -33,6 +37,49 @@ test('Care Photos render counts, disclosures, accessible actions, and empty grou
   await expect(host.locator('img[alt="Profile portrait"]')).toHaveCount(1);
   await expect(host.getByRole('button', { name: 'View Profile portrait' })).toHaveCount(1);
   await expect(host.getByRole('button', { name: 'Delete Playtime' })).toHaveCount(1);
+});
+
+test('Care gallery uses bounded Drive previews, wraps captions, loads originals on open, and retries one image locally', async ({ page }) => {
+  await setup(page, `async payload => {window.mediaQueryCount=(window.mediaQueryCount||0)+1;return {record:{stayPhotos:[{id:'p1',label:'A very long caption that should wrap across several readable lines instead of being cut off or reduced to tiny text',previewUrl:'https://drive.google.com/thumbnail?id=photo_123&sz=w1600',url:'https://drive.google.com/file/d/photo_123/view',driveUrl:'https://drive.google.com/file/d/photo_123/view'},{id:'p2',label:'Failed preview',previewUrl:'https://images.test/broken.jpg',url:'https://images.test/original.jpg'}]}};}`);
+  const requestedImages = [];
+  await page.route('https://drive.google.com/thumbnail**', route => { requestedImages.push(route.request().url()); return route.fulfill({ status:200, contentType:'image/svg+xml', body:'<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"2\" height=\"2\"></svg>' }); });
+  const retryRequests = [];
+  await page.route('https://images.test/**', route => { retryRequests.push(route.request().url()); return route.abort(); });
+  await page.evaluate(() => v110LoadMedia(document.querySelector('.directory-card')));
+  const images = page.locator('.v110-media-view img');
+  await expect(images).toHaveCount(2);
+  await expect(images.nth(0)).toHaveAttribute('src', /thumbnail\?id=photo_123&sz=w480/);
+  await expect(images.nth(0)).toHaveAttribute('loading', 'lazy');
+  await expect(page.locator('.v11218-carousel-track')).toHaveCount(1);
+  await expect(page.locator('.v11218-carousel-thumb')).toHaveCount(2);
+  await expect(page.locator('.v11218-carousel-thumb').first()).toHaveCSS('height', '44px');
+  await expect(page.locator('.v11218-carousel-counter')).toHaveCSS('font-size', '12px');
+  expect(requestedImages.every(url => new URL(url).searchParams.get('sz') === 'w480')).toBeTruthy();
+  await expect(page.locator('.v110-media-photo-meta span').first()).toHaveCSS('font-size', '14px');
+  await expect(page.locator('.v110-media-image-error').nth(1)).toBeVisible();
+  await expect(page.getByRole('button', {name:'Retry preview for Failed preview'})).toBeVisible();
+  await page.getByRole('button', {name:'Retry preview for Failed preview'}).scrollIntoViewIfNeeded();
+  const appQueryCountBeforeRetry = await page.evaluate(() => window.mediaQueryCount || 0);
+  await page.getByRole('button', {name:'Retry preview for Failed preview'}).click();
+  await expect(page.locator('.v110-media-image-error').nth(1)).toBeVisible();
+  await expect.poll(() => retryRequests.length).toBeGreaterThan(1);
+  expect(retryRequests.filter(url => new URL(url).searchParams.has('_waffleRetry'))).toHaveLength(1);
+  expect(await page.evaluate(() => window.mediaQueryCount || 0)).toBe(appQueryCountBeforeRetry);
+  await expect(page.locator('[data-v110-media-host]')).toContainText('A very long caption');
+  await expect(page.locator('.v110-photo-viewer')).toHaveCount(0);
+  await page.evaluate(() => v110OpenPhotoViewer(document.querySelector('[data-v110-view-photo]').dataset.v110ViewPhoto));
+  await expect(page.locator('#v110PhotoViewer img')).toHaveAttribute('src', 'https://drive.google.com/thumbnail?id=photo_123&sz=w1600');
+  for (const width of [320, 390, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    await expect(page.locator('.v110-media-photo-meta span').first()).toHaveCSS('font-size', '14px');
+    const noPageOverflow = await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth);
+    expect(noPageOverflow).toBeTruthy();
+  }
+  await page.locator('body').evaluate(body => body.classList.add('dark-theme'));
+  await page.keyboard.press('Tab');
+  await page.locator('.v110-media-view').first().focus();
+  await expect(page.locator('.v110-media-view').first()).toHaveCSS('outline-style', 'solid');
+  await expect.poll(() => requestedImages.some(url => new URL(url).searchParams.get('sz') === 'w1600')).toBeTruthy();
 });
 
 test('fallback photo disclosures toggle and the fallback exposes no unsupported upload action', async ({ page }) => {
