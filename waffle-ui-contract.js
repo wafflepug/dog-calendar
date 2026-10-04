@@ -1,6 +1,6 @@
 /* ============================================================
    WAFFLE HOUSE — FINAL UI CONTRACT
-   Version 11.1.54 · Belongings Draft Recovery
+   Version 11.1.54 · Care Photo Resume
 
    Purpose
    -------

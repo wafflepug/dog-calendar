@@ -13861,6 +13861,7 @@ function buildBelongingsPhotoUploaderHtml_(params) {
     "const zoomRange = document.getElementById(\"zoomRange\");",
     "",
     "let selectedPhotos = [];",
+    "let dogClientUploadId = '';",
     "let dogSourceImage = null;",
     "",
     "const cropState = {",
@@ -14110,6 +14111,7 @@ function buildBelongingsPhotoUploaderHtml_(params) {
     "  statusEl.textContent = \"⏳ Preparing dog photo…\";",
     "",
     "  dogSourceImage = await loadImageFromFile(file);",
+    "  dogClientUploadId = makeClientUploadId();",
     "",
     "  cropState.zoom = 1;",
     "  cropState.panX = 0;",
@@ -14162,6 +14164,7 @@ function buildBelongingsPhotoUploaderHtml_(params) {
     "      await compressBelongingsPhoto(selected[index]);",
     "",
     "    selectedPhotos.push({",
+    "      clientUploadId: makeClientUploadId(),",
     "      data,",
     "      name:",
     "        selected[index].name ||",
@@ -14263,6 +14266,8 @@ function buildBelongingsPhotoUploaderHtml_(params) {
     "  event => handleFiles(event.target.files)",
     ");",
     "",
+    "function makeClientUploadId() { return Date.now().toString(36) + '_' + (window.crypto && crypto.randomUUID ? crypto.randomUUID().replace(/-/g, '') : Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2)); }",
+    "function lookupUploadReceipt(payload) { return new Promise((resolve, reject) => google.script.run.withSuccessHandler(resolve).withFailureHandler(reject).getBelongingsPhotoUploadReceipt(payload)); }",
     "function uploadOne(payload) {",
     "  return new Promise((resolve, reject) => {",
     "    google.script.run",
@@ -14282,6 +14287,8 @@ function buildBelongingsPhotoUploaderHtml_(params) {
     "",
     "uploadBtn.addEventListener(\"click\", async () => {",
     "  uploadBtn.disabled = true;",
+    "  const batchSaved = [];",
+    "  let uncertainClientUploadId = '';",
     "",
     "  try {",
     "    if (isDogProfile) {",
@@ -14305,6 +14312,7 @@ function buildBelongingsPhotoUploaderHtml_(params) {
     "          startDate: CONFIG.startDate,",
     "          endDate: CONFIG.endDate,",
     "          photoType: CONFIG.photoType,",
+    "          clientUploadId: dogClientUploadId,",
     "          photoLabel:",
     "            (CONFIG.dogName || \"Dog\") +",
     "            \" profile photo\",",
@@ -14336,7 +14344,7 @@ function buildBelongingsPhotoUploaderHtml_(params) {
     "      photoLabel.value.trim() ||",
     "      \"Belongings photo\";",
     "",
-    "    const saved = [];",
+    "    const saved = batchSaved;",
     "",
     "    for (",
     "      let index = 0;",
@@ -14362,6 +14370,13 @@ function buildBelongingsPhotoUploaderHtml_(params) {
     "          ? baseLabel",
     "          : baseLabel + \" \" + (index + 1);",
     "",
+    "      const uploadId = selectedPhotos[index].clientUploadId;",
+    "      const receiptArgs = { clientUploadId: uploadId, stayKey: CONFIG.stayKey, photoType: CONFIG.photoType };",
+    "      const prior = await lookupUploadReceipt(receiptArgs);",
+    "      if (prior && prior.state === 'saved' && prior.photo) { saved.push(prior.photo); continue; }",
+    "      if (prior && prior.state === 'expired') throw Object.assign(new Error('Upload receipt expired; check the stay before retrying.'), { clientUploadId: uploadId });",
+    "",
+    "      uncertainClientUploadId = uploadId;",
     "      const result =",
     "        await uploadOne({",
     "          stayKey: CONFIG.stayKey,",
@@ -14369,6 +14384,7 @@ function buildBelongingsPhotoUploaderHtml_(params) {
     "          startDate: CONFIG.startDate,",
     "          endDate: CONFIG.endDate,",
     "          photoType: CONFIG.photoType,",
+    "          clientUploadId: selectedPhotos[index].clientUploadId,",
     "          photoLabel: label,",
     "          photoData: selectedPhotos[index].data",
     "        });",
@@ -14376,6 +14392,7 @@ function buildBelongingsPhotoUploaderHtml_(params) {
     "      if (result && result.photo) {",
     "        saved.push(result.photo);",
     "      }",
+    "      uncertainClientUploadId = '';",
     "    }",
     "",
     "    statusEl.textContent =",
@@ -14384,12 +14401,16 @@ function buildBelongingsPhotoUploaderHtml_(params) {
     "    notifyParent(",
     "      \"waffleBelongingsPhotoSaved\",",
     "      {",
-    "        count: selectedPhotos.length,",
-    "        photos: saved",
+    "        count: saved.length,",
+    "        photos: saved,",
+    "        savedPhotoIds: saved.map(photo => photo.id).filter(Boolean)",
     "      }",
     "    );",
     "",
     "  } catch (error) {",
+    "    if (uncertainClientUploadId) {",
+    "      try { const receipt = await lookupUploadReceipt({ clientUploadId: uncertainClientUploadId, stayKey: CONFIG.stayKey, photoType: CONFIG.photoType }); if (receipt && receipt.state === 'saved' && receipt.photo) { batchSaved.push(receipt.photo); uncertainClientUploadId = ''; } } catch (_) {}",
+    "    }",
     "    const message =",
     "      error && error.message",
     "        ? error.message",
@@ -14400,7 +14421,7 @@ function buildBelongingsPhotoUploaderHtml_(params) {
     "",
     "    notifyParent(",
     "      \"waffleBelongingsPhotoError\",",
-    "      { error: message }",
+    "      { error: message, savedPhotos: batchSaved, savedPhotoIds: batchSaved.map(photo => photo.id).filter(Boolean), pendingPhotoCount: selectedPhotos.length - batchSaved.length, uncertainClientUploadId: uncertainClientUploadId || '' }",
     "    );",
     "",
     "  } finally {",
@@ -14443,11 +14464,13 @@ function uploadBelongingsPhotoFromHtml(data) {
 
   var stayKey = String(data.stayKey || "").trim();
   var dogName = String(data.dogName || "").trim();
+  var clientUploadId = String(data.clientUploadId || "").trim();
   var photoData = String(data.photoData || "");
 
   if (!stayKey) throw new Error("Stay Key is required.");
   if (!dogName) throw new Error("Dog Name is required.");
   if (!photoData) throw new Error("No photo data was supplied.");
+  if (clientUploadId && !/^[A-Za-z0-9_-]{16,100}$/.test(clientUploadId)) throw new Error("Invalid photo upload ID.");
 
   var lock = LockService.getScriptLock();
   lock.waitLock(10000);
@@ -14462,18 +14485,38 @@ function uploadBelongingsPhotoFromHtml(data) {
       );
     }
 
+    var identity = sheet.getRange(row, 2, 1, 4).getValues()[0];
+    if (String(identity[1] || "").trim().toLowerCase() !== dogName.toLowerCase() ||
+        (data.startDate && belongingsPhotoDateKey_(identity[2]) !== belongingsPhotoDateKey_(data.startDate)) ||
+        (data.endDate && belongingsPhotoDateKey_(identity[3]) !== belongingsPhotoDateKey_(data.endDate))) {
+      throw new Error("The selected stay identity changed. Refresh the stay and try again.");
+    }
+
     var photoType = String(data.photoType || "belongings").trim();
     var isDogProfile = photoType === "dogProfile";
     var isStayPhoto = photoType === "stayPhoto";
+    if (["belongings", "dogProfile", "stayPhoto"].indexOf(photoType) < 0) throw new Error("Unsupported photo type.");
+    var receipt = clientUploadId ? getPhotoUploadReceiptRecord_(clientUploadId) : null;
+    if (receipt) {
+      if (receipt.stayKey !== stayKey || receipt.photoType !== photoType) throw new Error("Photo upload ID belongs to another stay or photo type.");
+      if (receipt.state === "saved") return { result: "success", row: row, stayKey: stayKey, photoType: photoType, photo: receipt.photo, idempotent: true };
+      if (receipt.state === "expired") throw new Error("This photo upload receipt expired. Check the stay photos before creating a new upload.");
+    }
     var previousDogPhoto = null;
 
+    var uploadSuffix = clientUploadId ? "_upload_" + clientUploadId : "";
+    if (clientUploadId && !receipt) {
+      receipt = { state: "creating", stayKey: stayKey, photoType: photoType, createdAt: Date.now() };
+      setPhotoUploadReceipt_(clientUploadId, receipt);
+    }
     var photo = saveBelongingsPhoto_({
       dogName: dogName,
       photoLabel: String(
         data.photoLabel ||
         (isDogProfile ? dogName + " profile photo" : (isStayPhoto ? "Stay photo" : "Belongings photo"))
       ),
-      photoData: photoData
+      photoData: photoData,
+      uploadSuffix: uploadSuffix
     });
 
     if (isDogProfile) {
@@ -14489,21 +14532,22 @@ function uploadBelongingsPhotoFromHtml(data) {
           previousDogPhoto
         );
 
-      dogPhotoGallery = dogPhotoGallery.filter(function(item) {
+      var dogPhotoAlreadyAttached = clientUploadId && dogPhotoGallery.some(function(item) { return String(item.id) === String(photo.id); });
+      if (!dogPhotoAlreadyAttached) dogPhotoGallery = dogPhotoGallery.filter(function(item) {
         return String(item.id || "") !== String(photo.id || "");
       });
-      dogPhotoGallery.push(photo);
+      if (!dogPhotoAlreadyAttached) dogPhotoGallery.push(photo);
 
       sheet.getRange(row, 30).setValue(JSON.stringify(photo));
       sheet.getRange(row, 33).setValue(JSON.stringify(dogPhotoGallery));
       // V10.6 deliberately retains previous dog profile images.
     } else if (isStayPhoto) {
       var stayPhotos=parseStayPhotosJson_(sheet.getRange(row,34).getValue());
-      stayPhotos.push(photo);
+      if (!stayPhotos.some(function(item) { return String(item.id) === String(photo.id); })) stayPhotos.push(photo);
       sheet.getRange(row,34).setValue(JSON.stringify(stayPhotos));
     } else {
       var photos = parsePhotosJson_(sheet.getRange(row, 24).getValue());
-      photos.push(photo);
+      if (!photos.some(function(item) { return String(item.id) === String(photo.id); })) photos.push(photo);
       sheet.getRange(row, 24).setValue(JSON.stringify(photos));
     }
 
@@ -14548,6 +14592,8 @@ function uploadBelongingsPhotoFromHtml(data) {
       "directory"
     );
 
+    if (clientUploadId) setPhotoUploadReceipt_(clientUploadId, { state: "saved", stayKey: stayKey, photoType: photoType, photo: photo });
+
     return {
       result: "success",
       row: row,
@@ -14560,6 +14606,50 @@ function uploadBelongingsPhotoFromHtml(data) {
       lock.releaseLock();
     } catch (_) {}
   }
+}
+
+// Receipts contain only Drive photo metadata, never image bytes. Timestamped
+// client IDs continue to report expired after the bounded receipt is cleaned up.
+function getPhotoUploadReceiptKey_(id) {
+  if (!/^[A-Za-z0-9_-]{16,100}$/.test(String(id || ""))) throw new Error("Valid photo upload ID is required.");
+  return "photo_upload_receipt_" + id;
+}
+function belongingsPhotoDateKey_(value) {
+  if (value instanceof Date) return Utilities.formatDate(value, Session.getScriptTimeZone(), "yyyy-MM-dd");
+  var text = String(value || "").trim();
+  var iso = text.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (iso) return iso[1] + "-" + ("0" + iso[2]).slice(-2) + "-" + ("0" + iso[3]).slice(-2);
+  var us = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (us) return us[3] + "-" + ("0" + us[1]).slice(-2) + "-" + ("0" + us[2]).slice(-2);
+  return text;
+}
+function getPhotoUploadReceiptRecord_(id) {
+  var props = PropertiesService.getScriptProperties(), key = getPhotoUploadReceiptKey_(id), raw = props.getProperty(key);
+  if (!raw) {
+    var stamp = String(id).split("_")[0], created = parseInt(stamp, 36);
+    return created && Date.now() - created > 24 * 60 * 60 * 1000 ? { state: "expired" } : null;
+  }
+  var value; try { value = JSON.parse(raw); } catch (_) { return { state: "expired" }; }
+  if (Date.now() - Number(value.createdAt || 0) > 24 * 60 * 60 * 1000) {
+    return { state: "expired" };
+  }
+  return value;
+}
+function setPhotoUploadReceipt_(id, receipt) {
+  var props = PropertiesService.getScriptProperties(), key = getPhotoUploadReceiptKey_(id);
+  var all = props.getProperties(), prefix = "photo_upload_receipt_", keys = Object.keys(all).filter(function(k) { return k.indexOf(prefix) === 0; });
+  keys.forEach(function(k) { try { if (Date.now() - Number(JSON.parse(all[k]).createdAt || 0) > 24 * 60 * 60 * 1000) props.deleteProperty(k); } catch (_) { props.deleteProperty(k); } });
+  var active = Object.keys(props.getProperties()).filter(function(k) { return k.indexOf(prefix) === 0; });
+  if (!props.getProperty(key) && active.length >= 450) throw new Error("Photo upload receipt storage is full. Please try again later.");
+  receipt.createdAt = Date.now();
+  props.setProperty(key, JSON.stringify(receipt));
+}
+function getBelongingsPhotoUploadReceipt(data) {
+  data = data || {};
+  var receipt = getPhotoUploadReceiptRecord_(String(data.clientUploadId || ""));
+  if (!receipt) return { state: "unknown" };
+  if (receipt.state === "saved" && (receipt.stayKey !== String(data.stayKey || "").trim() || receipt.photoType !== String(data.photoType || "belongings"))) return { state: "identity_mismatch" };
+  return receipt.state === "saved" ? { state: "saved", photo: receipt.photo } : { state: receipt.state };
 }
 
 
@@ -14676,11 +14766,16 @@ function saveBelongingsPhoto_(data) {
   var extension = mimeType === "image/png" ? "png" : "jpg";
   var dogPart = sanitizeFileName_(data.dogName || "pet");
   var itemPart = sanitizeFileName_(data.photoLabel || "belongings");
-  var filename = dogPart + "_" + itemPart + "_" + Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyyMMdd_HHmmss") + "." + extension;
+  var filename = data.uploadSuffix ? data.uploadSuffix.replace(/^_upload_/, "upload_") + "." + extension : dogPart + "_" + itemPart + "_" + Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyyMMdd_HHmmss") + "." + extension;
 
   var blob = Utilities.newBlob(bytes, mimeType, filename);
   var folder = getBelongingsPhotoFolder_();
-  var file = folder.createFile(blob);
+  var file = null;
+  if (data.uploadSuffix && folder.getFilesByName) {
+    var matches = folder.getFilesByName(filename);
+    if (matches.hasNext()) file = matches.next();
+  }
+  if (!file) file = folder.createFile(blob);
 
   try {
     file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
