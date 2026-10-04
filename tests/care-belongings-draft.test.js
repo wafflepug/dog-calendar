@@ -200,6 +200,7 @@ function hostedCheckHarness(responses) {
     belongingsRecordsCache: {}, careRiskRecordsCache: {}, directoryPhotoRecordsCache: {},
     directoryBelongingsDetailCache: {}, directoryProfileDetailCache: {}, directorySummaryRecordsCache: {},
     setDirectoryDogPhoto() {}, setDirectoryCareFlags() {}, renderDirectoryOperationalSections() {},
+    syncHostedPhotoSessionControls() {},
     closeHostedBelongingsPhotoUploader() { closed = true; }, console: { error() {} }
   };
   vm.createContext(context);
