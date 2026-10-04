@@ -11626,6 +11626,10 @@ registerWaffleServiceWorker();
         return String(stayKey || '') + '::' + String(photoType || 'belongings');
     }
 
+    function canOpenHostedPhotoSession(requestedSessionKey) {
+        return !hostedBelongingsPhotoContext || hostedBelongingsPhotoContext.sessionKey === requestedSessionKey;
+    }
+
     function findUniqueHostedPhotoCard(context) {
         const matches = Array.from(document.querySelectorAll('.directory-card[data-directory-stay-key]'))
             .filter(candidate => directoryProfileEditKey(candidate) === context.stayKey);
@@ -11634,6 +11638,10 @@ registerWaffleServiceWorker();
     }
 
     function syncHostedPhotoSessionControls() {
+        const liveKeys = new Set(hostedPhotoSessions.keys());
+        document.querySelectorAll('[data-hosted-photo-session-controls]').forEach(control => {
+            if (!liveKeys.has(control.dataset.sessionKey)) control.remove();
+        });
         for (const context of hostedPhotoSessions.values()) {
             const card = findUniqueHostedPhotoCard(context);
             if (!card) continue;
@@ -11643,6 +11651,7 @@ registerWaffleServiceWorker();
             if (!controls) {
                 controls = document.createElement('div');
                 controls.dataset.hostedPhotoSessionControls = '';
+                controls.dataset.sessionKey = context.sessionKey;
                 controls.className = 'hosted-photo-session-controls';
                 host.appendChild(controls);
             }
@@ -11718,7 +11727,8 @@ registerWaffleServiceWorker();
             resumeHostedPhotoSession(existingSession.sessionKey);
             return;
         }
-        if (hostedBelongingsPhotoContext && hostedBelongingsPhotoContext.stayKey !== payloadBase.stayKey) {
+        const requestedSessionKey = hostedPhotoSessionKey(payloadBase.stayKey, photoType);
+        if (!canOpenHostedPhotoSession(requestedSessionKey)) {
             const live = hostedBelongingsPhotoContext;
             const liveCard = findUniqueHostedPhotoCard(live);
             const liveStatus = liveCard?.querySelector('[data-belongings-photo-status]');

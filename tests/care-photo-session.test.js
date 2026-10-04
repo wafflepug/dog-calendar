@@ -22,27 +22,37 @@ function harness() {
   const modal = { style: {}, attrs: {}, setAttribute(k, v) { this.attrs[k] = v; } };
   let unique = true;
   const identity = { dogName: 'Milo', startDate: '2026-10-01', endDate: '2026-10-05' };
-  const card = { dataset: { stayKey: 'stay-1' }, querySelector: () => ({ textContent: '' }) };
+  const host = {
+    control: null,
+    querySelector() { return this.control; },
+    appendChild(control) { this.control = control; control.parentNode = this; }
+  };
+  const status = { textContent: '', parentNode: host };
+  const card = { dataset: { stayKey: 'stay-1' }, querySelector: () => status };
   const context = {
     hostedPhotoSessions: new Map(), hostedBelongingsPhotoContext: null,
     hostedPendingPhotoConfirmations: new Map(), belongingsUploadInProgress: true,
     document: {
       getElementById(id) { return id.includes('Frame') ? frame : modal; },
-      querySelectorAll() { return unique ? [card] : [card, {}]; },
-      createElement() { return { dataset: {}, className: '', appendChild() {}, set innerHTML(v) { this.html = v; } }; }
+      querySelectorAll(selector) {
+        if (selector === '[data-hosted-photo-session-controls]') return host.control ? [host.control] : [];
+        return unique ? [card] : [card, {}];
+      },
+      createElement() { return { dataset: {}, className: '', appendChild() {}, remove() { if (this.parentNode) this.parentNode.control = null; }, set innerHTML(v) { this.html = v; } }; }
     },
     directoryProfileEditKey: () => 'stay-1',
     getDirectoryProfileEditIdentity: () => identity,
     directoryProfileEditIdentityConflicts: (a, b) => a.dogName !== b.dogName,
     escapeDashboardHtml: s => String(s),
     confirm: () => true,
-    card, frame, modal,
+    card, frame, modal, host,
     setUnique(value) { unique = value; }
   };
   vm.createContext(context);
   vm.runInContext([
     extractFunction('closeHostedBelongingsPhotoUploader'),
     extractFunction('hostedPhotoSessionKey'),
+    extractFunction('canOpenHostedPhotoSession'),
     extractFunction('findUniqueHostedPhotoCard'),
     extractFunction('syncHostedPhotoSessionControls'),
     extractFunction('resumeHostedPhotoSession'),
@@ -84,9 +94,11 @@ test('resume requires the same unique stay identity and restores the modal', () 
 
 test('a different stay key does not resolve to the prepared session', () => {
   const c = harness();
-  addSession(c);
+  const session = addSession(c);
   assert.equal(c.hostedPhotoSessionKey('stay-2', 'belongings'), 'stay-2::belongings');
   assert.equal(c.hostedPhotoSessions.has(c.hostedPhotoSessionKey('stay-2', 'belongings')), false);
+  assert.equal(c.canOpenHostedPhotoSession('stay-2::belongings'), false);
+  assert.equal(c.canOpenHostedPhotoSession(c.hostedPhotoSessionKey(session.stayKey, 'stayPhoto')), false);
 });
 
 test('discard releases a prepared iframe and its in-memory context', () => {
@@ -107,4 +119,16 @@ test('confirmed completion releases iframe and context', () => {
   assert.equal(c.hostedBelongingsPhotoContext, null);
   assert.equal(c.hostedPhotoSessions.size, 0);
   assert.equal(c.belongingsUploadInProgress, false);
+});
+
+test('discard removes recovery controls but retains a pending confirmation guard', () => {
+  const c = harness();
+  const session = addSession(c);
+  session.submitted = true;
+  c.hostedPendingPhotoConfirmations.set(session.stayKey, { stayKey: session.stayKey });
+  c.syncHostedPhotoSessionControls();
+  assert.ok(c.host.hostControl || c.host.control);
+  c.discardHostedPhotoSession(session.sessionKey);
+  assert.equal(c.host.control, null);
+  assert.equal(c.hostedPendingPhotoConfirmations.has(session.stayKey), true);
 });
