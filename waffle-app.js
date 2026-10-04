@@ -11805,7 +11805,7 @@ registerWaffleServiceWorker();
                     previousPhotoIds: context.previousPhotoIds || [],
                     previousDogPhoto: context.previousDogPhoto,
                     previousPhotoCount: context.previousPhotoCount || 0,
-                    expectedCount: current,
+                    expectedCount: Math.max(current, Number(data.total || current)),
                     expectedPhotoIds: [],
                     requestToken: context.requestToken
                 });
