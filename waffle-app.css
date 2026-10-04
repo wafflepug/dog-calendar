@@ -7005,6 +7005,75 @@ body.dark-theme .directory-care-more-actions > summary { background: #182235; bo
 
 .directory-belongings-save-bar {
     margin-top: 13px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+.directory-belongings-save-bar [data-save-belongings],
+.directory-belongings-save-bar [data-discard-belongings-draft],
+[data-confirm-hosted-photo] {
+    min-height: 44px;
+    padding: 9px 14px;
+    border: 1px solid var(--wh-border, #cbd5e1);
+    border-radius: 9px;
+    color: var(--wh-text, #172033);
+    background: var(--wh-surface, #fff);
+    font: inherit;
+    font-weight: 750;
+    cursor: pointer;
+}
+
+.directory-belongings-save-bar [data-save-belongings] {
+    color: #fff;
+    background: var(--wh-accent, #2563eb);
+    border-color: var(--wh-accent, #2563eb);
+}
+
+.directory-belongings-save-bar [data-discard-belongings-draft] {
+    background: var(--wh-surface, #fff) !important;
+    color: var(--wh-text, #172033) !important;
+}
+
+.directory-belongings-save-bar button:disabled,
+[data-confirm-hosted-photo]:disabled {
+    cursor: wait;
+    opacity: .62;
+}
+
+.directory-belongings-save-bar button:focus-visible,
+[data-confirm-hosted-photo]:focus-visible {
+    outline: 3px solid var(--wh-accent, #2563eb);
+    outline-offset: 2px;
+}
+
+[data-belongings-edit-status] {
+    margin-top: 7px;
+    color: var(--wh-text-muted, #64748b);
+}
+
+body.dark-theme .directory-belongings-save-bar [data-discard-belongings-draft],
+body.dark-theme [data-confirm-hosted-photo] {
+    color: var(--wh-text, #f8fafc);
+    background: #202c3e !important;
+    border-color: #40516a;
+}
+
+@media (max-width: 600px) {
+    .directory-belongings-save-bar {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .directory-belongings-save-bar [data-save-belongings],
+    .directory-belongings-save-bar [data-discard-belongings-draft] {
+        width: 100%;
+    }
+
+    .directory-belongings-save-bar [data-save-belongings] {
+        grid-column: 1 / -1;
+    }
 }
 
 body.dark-theme .directory-main-profile-tabs,

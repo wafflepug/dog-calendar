@@ -14,6 +14,31 @@ const careRenderer = appSource.slice(appSource.indexOf('function renderDirectory
 const profileSubtabSwitch = appSource.slice(appSource.indexOf('function switchDirectoryProfileSubTab'), appSource.indexOf('async function openDirectoryGuestProfile'));
 const actualRenderer = `${careFlags}\n${intakeGroups}\n${profileTabs}\nlet careRiskRecordsCache = {};\nconst directorySummaryRecordsCache = {};\nconst belongingsRecordsCache = {};\nconst applyDirectoryProfileEditMode = () => {};\nconst restoreDirectoryProfileEditDraft = () => {};\nfunction escapeDashboardHtml(value){return String(value == null ? '' : value).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');}\n${profileSubtabSwitch}\n${intakeControl}\n${intakeRenderer}\n${careRenderer}\nwindow.renderDirectoryIntakeAttributes = renderDirectoryIntakeAttributes;`;
 const briefRenderer = appSource.slice(appSource.indexOf('function renderDirectoryCareBrief(card)'), appSource.indexOf('function openCareReadinessTarget'));
+const belongingsItems = appSource.slice(appSource.indexOf('const BELONGINGS_ITEMS'), appSource.indexOf('];', appSource.indexOf('const BELONGINGS_ITEMS')) + 2);
+const belongingsRenderer = appSource.slice(appSource.indexOf('function renderDirectoryBelongings'), appSource.indexOf('function renderDirectoryOperationalSections'));
+
+test('Belongings recovery controls wrap, remain touch-sized, and expose keyboard focus in both themes', async ({ page }) => {
+  for (const theme of ['', 'dark-theme']) {
+    for (const width of [320, 390, 1440]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.setContent(`<style>${css}</style><body class="${theme}"><main class="directory-card" data-stay-key="stay-a" style="padding:12px"><section data-directory-detail="belongings"><div data-directory-belongings></div></section></main></body>`);
+      await page.addScriptTag({ content: `${belongingsItems}\nconst careRiskRecordsCache={},directorySummaryRecordsCache={}; const uncertainBelongingsPhotoUploads=new Map(),hostedPendingPhotoConfirmations=new Map([['stay-a',{}]]); function renderDirectoryCareProfile(){} function restoreBelongingsItemDraft(){} function setBelongingsUploadCheckVisible(){} function escapeDashboardHtml(v){return String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');}\n${belongingsRenderer}` });
+      await page.evaluate(() => renderDirectoryBelongings(document.querySelector('.directory-card'), {items:{},photos:[]}));
+      const buttons = page.locator('[data-save-belongings], [data-discard-belongings-draft], [data-confirm-hosted-photo]');
+      await expect(buttons).toHaveCount(3);
+      for (const button of await buttons.all()) {
+        const box = await button.boundingBox();
+        expect(box.height).toBeGreaterThanOrEqual(44);
+        expect(box.x).toBeGreaterThanOrEqual(0);
+        expect(box.x + box.width).toBeLessThanOrEqual(width);
+      }
+      await page.locator('[data-confirm-hosted-photo]').focus();
+      await expect(page.locator('[data-confirm-hosted-photo]')).toHaveCSS('outline-style', 'solid');
+      const backgrounds = await page.locator('[data-save-belongings], [data-discard-belongings-draft]').evaluateAll(nodes => nodes.map(node => getComputedStyle(node).backgroundColor));
+      expect(backgrounds[0]).not.toBe(backgrounds[1]);
+    }
+  }
+});
 const readinessNavigator = appSource.slice(appSource.indexOf('function openCareReadinessTarget'), appSource.indexOf('function findDirectoryCareElement'));
 const briefTestCode = `
   const directoryProfileDetailCache = {};
