@@ -8,7 +8,7 @@ const css = fs.readFileSync(path.join(__dirname, '..', 'waffle-v11.0.css'), 'utf
 const carouselRuntime = fs.readFileSync(path.join(__dirname, '..', 'waffle-v11.2.18.js'), 'utf8');
 const mediaStart = runtime.indexOf('function v110PhotoUrl(');
 const mediaEnd = runtime.indexOf('function v110EnsurePhotoViewer(', mediaStart);
-const viewerStart = runtime.indexOf('function v110OpenPhotoViewer(', mediaEnd);
+const viewerStart = mediaEnd;
 const viewerEnd = runtime.indexOf('function v110OpenCustomPanel(', viewerStart);
 const photoFunctions = runtime.slice(mediaStart, mediaEnd) + runtime.slice(viewerStart, viewerEnd);
 
@@ -17,7 +17,6 @@ async function setup(page, queryBody) {
   await page.addStyleTag({ content: css });
   await page.addScriptTag({ content: `
     window.v110MediaCache = Object.create(null);
-    window.v110EnsurePhotoViewer = () => { let viewer=document.getElementById('v110PhotoViewer'); if(!viewer){viewer=document.createElement('div');viewer.id='v110PhotoViewer';viewer.innerHTML='<img alt=\"\">';document.body.appendChild(viewer);} return viewer; };
     window.v110Escape = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
     window.queryAppsScript = ${queryBody};
     ${photoFunctions}
@@ -76,8 +75,10 @@ test('Care gallery uses bounded Drive previews, wraps captions, loads originals 
     expect(noPageOverflow).toBeTruthy();
   }
   await page.locator('body').evaluate(body => body.classList.add('dark-theme'));
-  await page.keyboard.press('Tab');
+  await page.evaluate(() => v110ClosePhotoViewer());
   await page.locator('.v110-media-view').first().focus();
+  await page.keyboard.press('Tab');
+  await page.keyboard.press('Shift+Tab');
   await expect(page.locator('.v110-media-view').first()).toHaveCSS('outline-style', 'solid');
   await expect.poll(() => requestedImages.some(url => new URL(url).searchParams.get('sz') === 'w1600')).toBeTruthy();
 });
