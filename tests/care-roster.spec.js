@@ -16,31 +16,32 @@ const careRuntimeStyles = runtimeCss.slice(careRuntimeStart, careRuntimeEnd);
 const start = app.indexOf('function filterGuestDirectoryCards()');
 const end = app.indexOf('function intakeAttributeControlHtml(', start);
 if (start < 0 || end < 0) throw new Error('Could not locate the Care roster filter functions.');
-const rosterFilters = app.slice(start, end);
+const rosterFilters = app.slice(app.indexOf('function setupDirectorySearchControls('), end);
 const cssStart = css.lastIndexOf('/* Care roster: compact, accessible guest rows; details remain in the profile. */');
 if (cssStart < 0) throw new Error('Could not locate the Care roster styles.');
 const rosterStyles = css.slice(cssStart);
 
 test('Care roster filters keep staying, arriving, past, search, and profile mode aligned', async ({ page }) => {
-  await page.setContent(`<!doctype html><html><body>
+  await page.setContent(`<!doctype html><html><head><style>${rosterStyles}</style></head><body data-waffle-page="directory">
     <div class="directory-dashboard-fused">
       <button data-v1082-stay-tab="current" class="is-active">Staying <strong id="v1082CurrentStayCount">1</strong></button>
       <button data-v1082-stay-tab="future">Arriving <strong id="v1082FutureStayCount">1</strong></button>
       <button data-v1082-stay-tab="past">Past <strong id="v1082PastStayCount">1</strong></button>
-      <p id="directory-roster-summary"></p>
+      <div class="directory-roster-heading"><div><h1>Guests</h1><p id="directory-roster-summary"></p></div>
+        <div class="guest-directory-toolbar"><input id="guestDirectorySearch" class="guest-directory-search"></div></div>
       <div id="directory-grid">
-        <div class="directory-card" data-directory-start-date="2026-09-20"><button>Maple</button><div class="directory-profile-content">owner: Ada</div></div>
-        <div class="directory-card" data-directory-start-date="2026-10-10"><button>Ravioli</button></div>
+        <div class="directory-card" data-directory-stay-key="maple" data-directory-dog-name="Maple" data-v1088-owner-name="Ada" data-directory-dog-number="0001" data-directory-start-date="2026-09-20"><button>Maple</button><div class="directory-profile-content"><span data-directory-edit-field="ownerName" data-directory-current-value="Ada">owner: Ada</span><div>private profile note</div></div></div>
+        <div class="directory-card" data-directory-stay-key="ravioli" data-directory-dog-name="Ravioli" data-v1088-owner-name="Bea" data-directory-start-date="2026-10-10"><button>Ravioli</button></div>
       </div>
       <div id="past-directory-grid">
-        <div class="directory-card" data-v1082-past-stay="true" data-directory-start-date="2026-08-10"><button>Juniper</button></div>
+        <div class="directory-card" data-directory-stay-key="juniper" data-directory-dog-name="Juniper" data-v1088-owner-name="Cam" data-directory-dog-number="0003" data-v1082-past-stay="true" data-directory-start-date="2026-08-10"><button>Juniper</button></div>
       </div>
-      <input id="guestDirectorySearch">
     </div>
   </body></html>`);
   await page.evaluate(rosterFilters => {
     window.getLocalTodayDateString = () => '2026-09-23';
     window.eval(rosterFilters);
+    setupDirectorySearchControls(document.querySelector('#guestDirectorySearch'));
     filterGuestDirectoryCards();
   }, rosterFilters);
 
@@ -60,10 +61,64 @@ test('Care roster filters keep staying, arriving, past, search, and profile mode
   await page.locator('#guestDirectorySearch').fill('Ada');
   await page.evaluate(() => filterGuestDirectoryCards());
   await expect.poll(visibleNames).toEqual(['Maple']);
+  await expect(page.locator('[data-directory-search-feedback]')).toHaveText('1 matching stay');
+  await expect(page.locator('#directory-roster-summary')).toHaveText('1 staying · 1 arriving soon');
+  await expect(page.locator('[data-directory-search-clear]')).toBeVisible();
+  await expect(page.locator('[data-directory-search-clear]')).toHaveCSS('min-height', '44px');
+  await page.locator('[data-directory-edit-field="ownerName"]').evaluate(node => { node.dataset.directoryCurrentValue = 'Updated Ada'; });
+  await page.locator('#guestDirectorySearch').fill('Updated Ada');
+  await page.evaluate(() => filterGuestDirectoryCards());
+  await expect.poll(visibleNames).toEqual(['Maple']);
+  await page.locator('[data-directory-edit-field="ownerName"]').evaluate(node => { node.dataset.directoryCurrentValue = 'Ada'; });
+  await page.locator('#guestDirectorySearch').fill('Ada');
+  await page.evaluate(() => filterGuestDirectoryCards());
+  await page.locator('[data-directory-search-clear]').click();
+  await expect(page.locator('#guestDirectorySearch')).toBeFocused();
+  await expect(page.locator('[data-directory-search-feedback]')).toBeHidden();
 
+  await page.locator('#guestDirectorySearch').fill('private profile note');
+  await page.evaluate(() => filterGuestDirectoryCards());
+  await expect.poll(visibleNames).toEqual([]);
+  await expect(page.locator('[data-directory-search-feedback]')).toContainText('No stays match');
+  await expect(page.locator('#directory-roster-summary')).toHaveText('1 staying · 1 arriving soon');
+
+  await page.locator('#guestDirectorySearch').fill('0001');
+  await page.evaluate(() => filterGuestDirectoryCards());
+  await expect.poll(visibleNames).toEqual(['Maple']);
+  await page.locator('[data-v1082-stay-tab="future"]').evaluate(node => {
+    document.querySelectorAll('[data-v1082-stay-tab]').forEach(tab => tab.classList.remove('is-active'));
+    node.classList.add('is-active');
+    filterGuestDirectoryCards();
+  });
+  await expect.poll(visibleNames).toEqual([]);
+  await expect(page.locator('[data-directory-search-feedback]')).toContainText('No currently loaded arriving stays match');
+  await expect(page.locator('[data-v1082-stay-tab="future"] strong')).toHaveText('1');
+
+  await page.locator('#guestDirectorySearch').fill('Maple');
+  await page.locator('[data-v1082-stay-tab="current"]').evaluate(node => {
+    document.querySelectorAll('[data-v1082-stay-tab]').forEach(tab => tab.classList.remove('is-active'));
+    node.classList.add('is-active');
+    filterGuestDirectoryCards();
+  });
+  for (const theme of ['', 'dark-theme']) {
+    await page.locator('body').evaluate((body, value) => body.className = value, theme);
+    for (const width of [320, 390, 768, 1440]) {
+      await page.setViewportSize({ width, height: 800 });
+      const button = page.locator('[data-directory-search-clear]');
+      const bounds = await button.boundingBox();
+      expect(bounds.height).toBeGreaterThanOrEqual(44);
+      expect(bounds.x + bounds.width).toBeLessThanOrEqual(width + 1);
+      await page.locator('#guestDirectorySearch').focus();
+      await page.keyboard.press('Tab');
+      await expect(button).toBeFocused();
+      await expect(button).toHaveCSS('outline-style', 'solid');
+    }
+  }
+
+  await page.locator('#guestDirectorySearch').fill('no match');
+  await page.evaluate(() => filterGuestDirectoryCards());
   await page.locator('.directory-dashboard-fused').evaluate(node => node.classList.add('is-profile-mode'));
   await page.locator('.directory-card').first().evaluate(node => node.classList.add('is-profile-active'));
-  await page.locator('#guestDirectorySearch').fill('no match');
   await page.evaluate(() => filterGuestDirectoryCards());
   await expect.poll(visibleNames).toEqual(['Maple']);
 });

@@ -99,7 +99,7 @@ jobs:
               sys.exit(1)
           versions = payload.get('versions') or {}
           deployment = payload.get('deployment') or {}
-          if payload.get('result') != 'success' or versions.get('stableStayIdentityVersion') != 1 or versions.get('stayOperationIdentityVersion') != 1:
+          if payload.get('result') != 'success' or versions.get('stableStayIdentityVersion') != 1 or versions.get('stayOperationIdentityVersion') != 1 or versions.get('stayOperationReviewVersion') != 1:
               sys.exit(1)
           if deployment.get('commitSha') != os.environ.get('GITHUB_SHA') or str(deployment.get('workflowRunId')) != os.environ.get('GITHUB_RUN_ID'):
               sys.exit(1)

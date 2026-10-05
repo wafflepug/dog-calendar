@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.10.06.02",
-  "releaseName": "Release Attribution",
+  "assetRevision": "2026.10.06.03",
+  "releaseName": "Care Record Review & Quick Access",
   "runtime": "waffle-bootstrap.js",
   "sharedCsvReader": "waffle-csv.js",
   "syncStatusAdapter": "system-status-sync.js",

@@ -38,7 +38,10 @@ test('Back restores the filtered list and opener focus', async ({ page, baseURL 
   await page.goto(`${baseURL}/directory.html`, { waitUntil: 'domcontentloaded' });
   await page.waitForFunction(() => document.documentElement.dataset.waffleUiReady === 'true');
   await expect(page.locator('[data-open-directory-profile]')).toHaveCount(1);
+  const countPillsBeforeSearch = await page.locator('.directory-roster-filters strong').allTextContents();
   await page.locator('#guestDirectorySearch').fill('continuity');
+  await expect(page.locator('[data-directory-search-feedback]')).toHaveText('1 matching stay');
+  await expect(page.locator('.directory-roster-filters strong')).toHaveText(countPillsBeforeSearch);
   await page.evaluate(() => {
     document.body.style.minHeight = '2600px';
     const grid = document.getElementById('directory-grid');
@@ -84,6 +87,8 @@ test('Back restores the filtered list and opener focus', async ({ page, baseURL 
   await page.locator('#directoryBackToGuestsBtn').evaluate(button => button.click());
   await expect(page.locator('.directory-dashboard-fused.is-profile-mode')).toHaveCount(0);
   await expect(page.locator('#guestDirectorySearch')).toHaveValue('continuity');
+  await expect(page.locator('[data-directory-search-feedback]')).toHaveText('1 matching stay');
+  await expect(page.locator('.directory-roster-filters strong')).toHaveText(countPillsBeforeSearch);
   await expect.poll(() => page.evaluate(() => ({
     isOpener: document.activeElement?.matches?.('[data-open-directory-profile]') === true,
     active: document.activeElement?.outerHTML?.slice(0, 220) || ''
@@ -91,8 +96,15 @@ test('Back restores the filtered list and opener focus', async ({ page, baseURL 
   await page.waitForTimeout(200);
   expect(profileReadCount).toBe(readsBeforeBack);
 
+  await page.locator('[data-directory-search-clear]').click();
+  await expect(page.locator('#guestDirectorySearch')).toHaveValue('');
+  await expect(page.locator('#guestDirectorySearch')).toBeFocused();
+  await expect(page.locator('[data-directory-search-feedback]')).toBeHidden();
+  await expect(page.locator('.directory-roster-filters strong')).toHaveText(countPillsBeforeSearch);
+
   // If a refresh removes the original stay while its profile is open, Back
   // clamps the scroll position and moves focus to the retained list controls.
+  await page.locator('#guestDirectorySearch').fill('continuity');
   await page.locator('[data-open-directory-profile]').click();
   await page.locator('.directory-card.is-profile-active').evaluate(element => element.remove());
   await page.locator('#directoryBackToGuestsBtn').evaluate(button => button.click());

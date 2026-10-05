@@ -15,6 +15,7 @@ const careRenderer = appSource.slice(appSource.indexOf('function renderDirectory
 const profileSubtabSwitch = appSource.slice(appSource.indexOf('function switchDirectoryProfileSubTab'), appSource.indexOf('async function openDirectoryGuestProfile'));
 const actualRenderer = `${careFlags}\n${intakeGroups}\n${profileTabs}\nlet careRiskRecordsCache = {};\nconst directorySafetyReadFailures = new Set();\nconst directorySummaryRecordsCache = {};\nconst belongingsRecordsCache = {};\nconst applyDirectoryProfileEditMode = () => {};\nconst restoreDirectoryProfileEditDraft = () => {};\nfunction escapeDashboardHtml(value){return String(value == null ? '' : value).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');}\n${categorySummary}\n${profileSubtabSwitch}\n${intakeControl}\n${intakeRenderer}\n${careRenderer}\nwindow.renderDirectoryIntakeAttributes = renderDirectoryIntakeAttributes;\nwindow.setCategorySafetyRecord = (key, record) => { careRiskRecordsCache[key] = record; directorySafetyReadFailures.delete(key); };\nwindow.setCategorySafetyFailure = key => directorySafetyReadFailures.add(key);\nwindow.summarizeCareCategory = directoryCareCategorySummary;`;
 const briefRenderer = appSource.slice(appSource.indexOf('function renderDirectoryCareBrief(card)'), appSource.indexOf('function openCareReadinessTarget'));
+const phoneNormalizer = appSource.slice(appSource.indexOf('function normalizeDirectoryPhoneForTel('), appSource.indexOf('function renderDirectoryCareBrief(card)'));
 const belongingsItems = appSource.slice(appSource.indexOf('const BELONGINGS_ITEMS'), appSource.indexOf('];', appSource.indexOf('const BELONGINGS_ITEMS')) + 2);
 const belongingsRenderer = appSource.slice(appSource.indexOf('function renderDirectoryBelongings'), appSource.indexOf('function renderDirectoryOperationalSections'));
 
@@ -40,6 +41,41 @@ test('Belongings recovery controls wrap, remain touch-sized, and expose keyboard
     }
   }
 });
+
+test('Care phone links accept formatted 7–15 digit values without guessing country codes', async ({ page }) => {
+  await page.setContent('<main></main>');
+  await page.addScriptTag({ content: briefTestCode });
+  const results = await page.evaluate(() => [
+    ['+61 (400) 123-456', '+61400123456'],
+    ['0400 123 456', '0400123456'],
+    ['1234567', '1234567'],
+    ['123456', ''],
+    ['Contact unknown', ''],
+    ['0400,123,456', ''],
+    ['0400;123;456', ''],
+    ['0400\n123456', ''],
+    ['+61+400123456', ''],
+    ['\t0400123456', ''],
+    ['0400123456\u0000', ''],
+    ['1234567890123456', ''],
+    ['   ', '']
+  ].map(([value]) => [value, normalizeDirectoryPhoneForTel(value)]));
+  expect(results).toEqual([
+    ['+61 (400) 123-456', '+61400123456'],
+    ['0400 123 456', '0400123456'],
+    ['1234567', '1234567'],
+    ['123456', ''],
+    ['Contact unknown', ''],
+    ['0400,123,456', ''],
+    ['0400;123;456', ''],
+    ['0400\n123456', ''],
+    ['+61+400123456', ''],
+    ['\t0400123456', ''],
+    ['0400123456\u0000', ''],
+    ['1234567890123456', ''],
+    ['   ', '']
+  ]);
+});
 const readinessNavigator = appSource.slice(appSource.indexOf('function openCareReadinessTarget'), appSource.indexOf('function findDirectoryCareElement'));
 const briefTestCode = `
   const directoryProfileDetailCache = {};
@@ -49,9 +85,10 @@ const briefTestCode = `
   const escapeDashboardHtml = value => String(value == null ? '' : value).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[char]));
   function getDirectoryCareBriefRecord(key) { return directoryProfileDetailCache[key] || belongingsRecordsCache[key] || directorySummaryRecordsCache[key] || null; }
   function getActiveCareFlags(record) { return [{key:'foodAllergy', label:'Food allergy', icon:'⚠', className:'is-danger'}].filter(flag => record?.riskFlags?.[flag.key]); }
-  function normalizeDirectoryPhoneForTel(value) { return String(value || '').replace(/[^+\\d]/g, ''); }
+  ${phoneNormalizer}
   ${briefRenderer}
   window.renderBrief = renderDirectoryCareBrief;
+  window.normalizePhone = normalizeDirectoryPhoneForTel;
 `;
 
 function fixture(theme = '') {

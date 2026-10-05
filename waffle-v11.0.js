@@ -256,13 +256,26 @@ function v110CollectCareCheckoutEvidence(){
 
 function v110OperationDisplayState(card){
   const p=v110OperationalPayloadFromCard(card),op=v110OperationForStay(p),today=getLocalTodayDateString();
-  if((!p.stayId&&v110IsCheckoutCollision(p.stayKey))||v110OperationIdentityConflicts[p.stayId.toLowerCase()]||(!p.stayId&&v110OperationIdentityConflicts[`key:${p.stayKey}`]))return{code:'collision',label:'Checkout Paused',icon:'⚠️',meta:'Conflicting operation records need review before changing status.'};
+  if((!p.stayId&&v110IsCheckoutCollision(p.stayKey))||v110OperationIdentityConflicts[p.stayId.toLowerCase()]||(!p.stayId&&v110OperationIdentityConflicts[`key:${p.stayKey}`]))return{code:'collision',label:'Stay changes paused',icon:'⚠️',meta:'Conflicting stay records need review.'};
   if(op?.status==='checked_out')return{code:'checked_out',label:'Checked Out',icon:'✅',meta:op.checkedOutAt?`Completed ${v110FormatTime(op.checkedOutAt)}`:'Stay completed'};
   if(op?.status==='checked_in')return{code:'checked_in',label:'Checked In',icon:'🏡',meta:op.checkedInAt?`Arrived ${v110FormatTime(op.checkedInAt)}`:'Currently at home'};
   if(p.startDate>today)return{code:'expected',label:'Expected',icon:'🛬',meta:`Arriving ${formatStayDateShort(p.startDate)}`};
   if(p.endDate<today)return{code:'completed',label:'Completed',icon:'🕘',meta:'Historical stay'};
   return{code:'date_active',label:'At Home',icon:'🏡',meta:'Date-based · use Check In to start operational tracking'};
 }
+
+/* Read-only bridge for the selected-stay review feature. Keep the quarantined
+   source rows private; expose only the selected identity and its known reason. */
+function v110ReviewEvidenceForStay(stay){
+  const p=v110OperationalPayloadFromCard(stay),id=String(p.stayId||'').trim().toLowerCase(),key=String(p.stayKey||'');
+  const collision=(!id&&v110IsCheckoutCollision(key))||!!v110OperationIdentityConflicts[id]||(!id&&!!v110OperationIdentityConflicts[`key:${key}`]);
+  if(!collision)return null;
+  const idReason=id?v110OperationIdentityConflicts[id]:'';
+  const keyReason=!id?v110OperationIdentityConflicts[`key:${key}`]:'';
+  const raw=v110OperationRecords.find(row=>row?.identityConflict===true&&(id?String(row.stayId||row.identityStayId||row.sourceStayId||'').trim().toLowerCase()===id:String(row.stayKey||'')===key));
+  return {stayId:p.stayId,stayKey:key,reasonCode:String(idReason||keyReason||raw?.identityConflictReason||'conflicting_booking')};
+}
+if(typeof window!=='undefined')window.v110ReviewEvidenceForStay=v110ReviewEvidenceForStay;
 
 function v110EnsureCareOperationBar(card){
   if(!card||card.dataset.v1082PastStay==='true')return;
@@ -284,7 +297,7 @@ function v110EnsureCareOperationBar(card){
   const canCheckout=state.code!=='collision'&&(
     state.code==='checked_in'||
     (state.code==='date_active'&&p.endDate<=today));
-  const canCheckIn=
+  const canCheckIn=state.code!=='collision'&&
     !['checked_in','checked_out','completed'].includes(state.code);
 
   /*

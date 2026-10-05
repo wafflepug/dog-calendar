@@ -21,10 +21,12 @@ var STAY_IDENTITY_ACTIONS_V11225_ = {
 var WAFFLE_V11225_RECEIPT_LOCK_HELD_ = false;
 
 function stableStayHeadersV11225_(sheet, create) {
-  var lastColumn = Math.max(12, Number(sheet.getLastColumn ? sheet.getLastColumn() : 12));
-  if (sheet.getMaxColumns && sheet.getMaxColumns() < lastColumn) {
+  var lastColumn = Math.max(0, Number(sheet.getLastColumn ? sheet.getLastColumn() : 0));
+  if (create) lastColumn = Math.max(12, lastColumn);
+  if (create && sheet.getMaxColumns && sheet.getMaxColumns() < lastColumn) {
     sheet.insertColumnsAfter(sheet.getMaxColumns(), lastColumn - sheet.getMaxColumns());
   }
+  if (!lastColumn) return { stayId: 0, mutationId: 0, width: 0 };
   var header = sheet.getRange(1, 1, 1, lastColumn).getValues()[0] || [];
   var cols = {};
   var duplicates = {};
