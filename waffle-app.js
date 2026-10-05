@@ -10847,7 +10847,7 @@ registerWaffleServiceWorker();
             feedback.hidden = !searching;
             feedback.textContent = searching
                 ? Number(visibleCount) === 0
-                    ? `${activeView === 'future' ? 'No currently loaded arriving stays match' : `No ${activeView === 'past' ? 'past ' : ''}stays match`} “${search}”.`
+                    ? `${activeView === 'future' ? (window.WAFFLE_V11196_FUTURE_RANGE?.isExpanded?.() ? 'No cached arrivals in the next six months match' : 'No currently loaded arriving stays match') : `No ${activeView === 'past' ? 'past ' : ''}stays match`} “${search}”.`
                     : `${visibleCount} matching ${visibleCount === 1 ? 'stay' : 'stays'}`
                 : '';
         }

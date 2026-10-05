@@ -102,6 +102,30 @@
   display: none !important;
 }
 
+.v11196-search-later-button {
+  display: inline-flex;
+  min-height: 44px;
+  max-width: 100%;
+  align-items: center;
+  justify-content: center;
+  margin: 4px 0;
+  padding: 8px 12px;
+  border: 1px solid var(--wh75-accent, #7562db);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--wh75-accent, #7562db) 9%, var(--wh-surface, #fff));
+  color: var(--wh75-accent-ink, #4338ca);
+  font: inherit;
+  font-weight: 800;
+  line-height: 1.25;
+  text-align: center;
+  white-space: normal;
+  cursor: pointer;
+}
+
+.v11196-search-later-button[hidden] { display: none !important; }
+.v11196-search-later-button:focus-visible { outline: 3px solid var(--wh75-accent, #7562db); outline-offset: 2px; }
+.v11196-search-later-button:disabled { cursor: progress; opacity: .75; }
+
 .v11196-future-range-button {
   display: flex;
   width: 100%;
@@ -157,6 +181,15 @@ body.dark-theme .v11196-future-range-button {
   color: #bfdbfe;
 }
 
+body.dark-theme .v11196-search-later-button {
+  border-color: var(--wh75-accent, #60a5fa);
+  background: color-mix(in srgb, var(--wh75-accent, #60a5fa) 16%, #172841);
+  color: var(--wh75-accent-ink, #bfdbfe);
+}
+
+body.dark-theme .v11196-search-later-button:focus-visible { outline-color: var(--wh75-accent, #93c5fd); }
+body.dark-theme .v11196-search-later-button:disabled { color: #e2e8f0; }
+
 body.dark-theme .v11196-future-range-button:hover,
 body.dark-theme .v11196-future-range-button:focus-visible {
   background: #1d4ed8;
@@ -165,6 +198,12 @@ body.dark-theme .v11196-future-range-button:focus-visible {
 
 @media (forced-colors: active) {
   .v11196-future-range-button {
+    border: 2px solid ButtonText;
+    background: ButtonFace;
+    color: ButtonText;
+  }
+
+  .v11196-search-later-button {
     border: 2px solid ButtonText;
     background: ButtonFace;
     color: ButtonText;
@@ -186,6 +225,8 @@ body.dark-theme .v11196-future-range-button:focus-visible {
     font-size: 13px;
   }
 
+  .v11196-search-later-button { width: 100%; padding: 10px; }
+
   .v11196-month-heading {
     align-items: center;
     margin-top: 10px;
@@ -202,6 +243,7 @@ body.dark-theme .v11196-future-range-button:focus-visible {
 }
 
 @media (max-width: 430px) {
+  .v11196-search-later-button { width: 100%; }
   .v11196-month-heading {
     gap: 8px;
   }
