@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.10.05.04",
-  "releaseName": "Care Records & Forms",
+  "assetRevision": "2026.10.05.05",
+  "releaseName": "Care Contact & Handover",
   "runtime": "waffle-bootstrap.js",
   "styles": "waffle-runtime.css",
   "phase": "phase-4-sitter-workflow-expansion",
