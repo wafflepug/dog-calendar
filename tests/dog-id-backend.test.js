@@ -387,3 +387,31 @@ console.log('Dog master profile identity tests passed.');
 }
 
 console.log('Dog identity cache invalidation tests passed.');
+
+// Versioned identity reads must keep dog and stay request identity in their
+// service-cache key, even when names and stay keys collide.
+{
+  const variantStart = backend.indexOf('function waffleReadVariant_');
+  const variantEnd = backend.indexOf('function waffleReadCacheKey_', variantStart);
+  assert.ok(variantStart >= 0 && variantEnd > variantStart);
+  const cache = new Map();
+  const sandbox = {
+    Utilities: { formatDate: () => '2026-10-06' },
+    Session: { getScriptTimeZone: () => 'UTC' },
+    waffleCacheFingerprint_: value => value,
+    STAY_OPERATION_IDENTITY_VERSION_V11226_: 1,
+  };
+  vm.createContext(sandbox);
+  vm.runInContext(`${backend.slice(variantStart, variantEnd)}\nthis.variant = waffleReadVariant_;`, sandbox);
+  const base = { action: 'get_dog_master_profile', dogName: 'Coco', stayKey: 'coco|2026-10-14|2026-10-20', stayId: 'stay-a' };
+  const first = sandbox.variant('get_dog_master_profile', { ...base, dogId: 'dog-a' });
+  const second = sandbox.variant('get_dog_master_profile', { ...base, dogId: 'dog-b' });
+  assert.notEqual(first, second, 'different dog IDs must not share a cached profile');
+  const third = sandbox.variant('get_dog_master_profile', { ...base, dogId: 'dog-a', stayId: 'stay-b' });
+  assert.notEqual(first, third, 'different stay IDs must not share a cached profile');
+  const same = sandbox.variant('get_dog_master_profile', { ...base, dogId: 'dog-a' });
+  cache.set(first, 'dog-a');
+  assert.equal(cache.get(same), 'dog-a', 'identical identity context should hit the same cache key');
+}
+
+console.log('Dog identity cache variant isolation tests passed.');
