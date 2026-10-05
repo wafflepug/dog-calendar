@@ -3,6 +3,10 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { resolveLocalBackendAction } = require('../scripts/local-network-policy');
 
+// This suite boots the complete versioned runtime; it is a functional check,
+// while the separate Care timing suite checks profile performance.
+test.setTimeout(90_000);
+
 const fullCalendar = fs.readFileSync(path.join(__dirname, 'fixtures', 'fullcalendar.global.min.js'), 'utf8');
 const bookings = [
   { timestamp: '2026-09-18', dogName: 'Milo', breed: 'Border Collie', startDate: '2026-09-17', endDate: '2026-09-22', ownerName: 'Alex Owner', phone: '0400000001', notes: 'Saved Milo care note', bookingType: 'Boarding' },
@@ -77,7 +81,6 @@ async function openRecords(page) {
 }
 
 test('Records & forms stays readable and keeps real state/action targets at 320, 390 and 1440px in both themes', async ({ page, baseURL }) => {
-  test.setTimeout(60_000);
   const fixture = installFixture(page);
   for (const theme of ['light', 'dark']) {
     await openDirectory(page, baseURL, fixture, 390, theme);
@@ -103,6 +106,9 @@ test('Records & forms stays readable and keeps real state/action targets at 320,
     }
     await records.locator('summary').focus();
     await page.keyboard.press('Tab');
+    // Safari's default Tab policy can skip buttons. Check the same keyboard
+    // focus style without depending on the host's Full Keyboard Access setting.
+    await records.locator('.directory-care-records-body .directory-intake-action').first().focus();
     const focused = await page.evaluate(() => ({
       isAction: document.activeElement?.matches('.directory-care-records-body .directory-intake-action'),
       outline: getComputedStyle(document.activeElement).outlineStyle
