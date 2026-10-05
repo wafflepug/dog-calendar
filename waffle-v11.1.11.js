@@ -93,39 +93,15 @@
     return props.isMeetGreet === true || /meet\s*&\s*greet/i.test(String(props.bookingType || ''));
   }
 
-  function parseCsvLine(line) {
-    const values = [];
-    let value = '';
-    let quoted = false;
-    for (let index = 0; index < line.length; index++) {
-      const char = line[index];
-      if (char === '"') {
-        if (quoted && line[index + 1] === '"') {
-          value += '"';
-          index += 1;
-        } else {
-          quoted = !quoted;
-        }
-        continue;
-      }
-      if (char === ',' && !quoted) {
-        values.push(value.trim());
-        value = '';
-        continue;
-      }
-      value += char;
-    }
-    values.push(value.trim());
-    return values;
-  }
-
   function cachedSpreadsheetMeetEvents() {
     const csv = String(localStorage.getItem('boardingDataCache') || '');
     if (!csv) return [];
+    const parsed = window.WaffleCsv?.parse(csv);
+    if (!parsed?.ok || !parsed.records.length) return [];
     const events = [];
-    csv.split(/\r?\n/).slice(1).forEach(line => {
-      if (!line.trim()) return;
-      const columns = parseCsvLine(line);
+    parsed.records.slice(1).forEach(row => {
+      if (!row.raw.trim()) return;
+      const columns = row.cells;
       if (!/meet\s*&\s*greet/i.test(String(columns[11] || '').trim())) return;
       const dogName = String(columns[1] || '').trim();
       const start = normaliseDate(columns[3]);

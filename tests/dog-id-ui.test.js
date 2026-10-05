@@ -2,6 +2,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const test = require('node:test');
 const vm = require('node:vm');
+const WaffleCsv = require('../waffle-csv');
 
 const booking = fs.readFileSync('phase4-booking.js', 'utf8');
 const care = fs.readFileSync('care.js', 'utf8');
@@ -62,7 +63,7 @@ test('local stay counts separate same-name dogs when a Dog ID is supplied', () =
     '2026-04-01,Waffle,Pug,2026-04-02,2026-04-03,Owner,0422222222,,,,,Boarding,Other,Other,#00003'
   ].join('\n');
   const sandbox = {
-    window: {},
+    window: { WaffleCsv },
     document: { readyState: 'loading', body: { dataset: {} }, addEventListener() {}, getElementById() { return null; } },
     localStorage: { getItem(key) { return key === 'boardingDataCache' ? csv : null; }, setItem() {} },
     setTimeout,

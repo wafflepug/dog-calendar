@@ -6248,17 +6248,19 @@ registerWaffleServiceWorker();
     function getCsvBookingRecords(csvText) {
         if (!csvText) return [];
 
-        const lines = csvText.split(/\r?\n/);
+        const parsedCsv = window.WaffleCsv?.parse(csvText);
+        if (!parsedCsv?.ok || !parsedCsv.records.length) return [];
         const records = [];
 
-        for (let i = 1; i < lines.length; i++) {
-            if (!lines[i].trim()) continue;
+        for (let i = 1; i < parsedCsv.records.length; i++) {
+            const row = parsedCsv.records[i];
+            if (!row.raw.trim()) continue;
 
-            const columns = lines[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-            const dogName = columns[1] ? columns[1].replace(/^"|"$/g, '').trim() : '';
+            const columns = row.cells;
+            const dogName = String(columns[1] || '').trim();
             const startDate = parseCsvDate(columns[3]);
             const endDate = parseCsvDate(columns[4]) || startDate;
-            const bookingType = columns[11] ? columns[11].replace(/^"|"$/g, '').trim() : '';
+            const bookingType = String(columns[11] || '').trim();
 
             if (dogName && startDate) {
                 records.push({
@@ -6343,6 +6345,10 @@ registerWaffleServiceWorker();
             .then(csvText => {
                 if (!csvText || csvText.trim().length < 20 || !csvText.includes(',')) {
                     throw new Error("Corrupted spreadsheet payload.");
+                }
+                const parsedCsv = window.WaffleCsv?.parse(csvText);
+                if (!parsedCsv?.ok) {
+                    throw new Error("Malformed spreadsheet CSV.");
                 }
                 return csvText;
             });
@@ -8143,23 +8149,24 @@ registerWaffleServiceWorker();
     function getCurrentBoardingStays(csvText) {
         if (!csvText) return [];
 
-        const lines = csvText.split(/\r?\n/);
+        const parsedCsv = window.WaffleCsv?.parse(csvText);
+        if (!parsedCsv?.ok || !parsedCsv.records.length) return [];
         const todayStr = getLocalTodayDateString();
         const today = new Date(todayStr + 'T00:00:00');
         const pickedUpDogs = getLocalArray('pickedUpDogs_' + todayStr);
         const stays = [];
 
-        for (let i = 1; i < lines.length; i++) {
-            if (!lines[i].trim()) continue;
-
-            const columns = lines[i].split(/,(?=(?:(?:[^\"]*\"){2})*[^\"]*$)/);
-            const dogName = columns[1] ? columns[1].replace(/^\"|\"$/g, '').trim() : '';
-            const breed = columns[2] ? columns[2].replace(/^\"|\"$/g, '').trim() : '';
+        for (let i = 1; i < parsedCsv.records.length; i++) {
+            const row = parsedCsv.records[i];
+            if (!row.raw.trim()) continue;
+            const columns = row.cells;
+            const dogName = String(columns[1] || '').trim();
+            const breed = String(columns[2] || '').trim();
             const startDate = parseCsvDate(columns[3]);
             const endDate = parseCsvDate(columns[4]) || startDate;
-            const ownerName = columns[5] ? columns[5].replace(/^\"|\"$/g, '').trim() : '';
-            const phone = columns[6] ? columns[6].replace(/^\"|\"$/g, '').trim() : '';
-            const bookingType = columns[11] ? columns[11].replace(/^\"|\"$/g, '').trim().toLowerCase() : '';
+            const ownerName = String(columns[5] || '').trim();
+            const phone = String(columns[6] || '').trim();
+            const bookingType = String(columns[11] || '').trim().toLowerCase();
 
             if (!dogName || !startDate || !endDate) continue;
             if (bookingType === 'meet & greet' || bookingType === 'potential stay') continue;
@@ -13178,9 +13185,12 @@ registerWaffleServiceWorker();
     function refreshCalendarData() {
         if (!globalCalendar) return;
 
+        const csvText = localStorage.getItem('boardingDataCache') || "";
+        const parsedCsv = window.WaffleCsv?.parse(csvText);
+        if (!parsedCsv?.ok) return false;
+
         globalCalendar.getEventSources().forEach(source => source.remove());
 
-        const csvText = localStorage.getItem('boardingDataCache') || "";
         dailyCapacityCounts = {}; 
 
         const spreadsheetEvents = parseCSVToEvents(csvText);
@@ -13639,7 +13649,8 @@ registerWaffleServiceWorker();
         const csv = localStorage.getItem('boardingDataCache') || '';
         if (!csv || !record) return false;
 
-        const lines = csv.split(/\r?\n/);
+        const parsedCsv = window.WaffleCsv?.parse(csv);
+        if (!parsedCsv?.ok || !parsedCsv.records.length) return false;
         const targetDog = String(
             original.originalDogName || ''
         ).trim().toLowerCase();
@@ -13649,14 +13660,10 @@ registerWaffleServiceWorker();
             original.endDate || original.startDate || ''
         ).trim();
 
-        for (let i = 1; i < lines.length; i++) {
-            if (!lines[i].trim()) continue;
-
-            const rawCells = lines[i].split(
-                /,(?=(?:(?:[^\"]*\"){2})*[^\"]*$)/
-            );
-
-            const cells = rawCells.map(decodeDirectoryCsvCell);
+        for (let i = 1; i < parsedCsv.records.length; i++) {
+            const row = parsedCsv.records[i];
+            if (!row.raw.trim()) continue;
+            const cells = [...row.cells];
 
             while (cells.length < 12) cells.push('');
 
@@ -13687,13 +13694,11 @@ registerWaffleServiceWorker();
             cells[10] = record.editLink || cells[10] || '';
             cells[11] = record.bookingType || cells[11] || 'Boarding';
 
-            lines[i] = cells
-                .map(encodeDirectoryCsvCell)
-                .join(',');
+            row.raw = cells.map(window.WaffleCsv.encodeField).join(',');
 
             localStorage.setItem(
                 'boardingDataCache',
-                lines.join('\n')
+                window.WaffleCsv.serialize(parsedCsv.records)
             );
 
             return true;
@@ -15085,9 +15090,11 @@ registerWaffleServiceWorker();
 
     function parseCSVToEvents(csvText) {
         if (!csvText) return [];
-        const lines = csvText.split(/\r?\n/); const events = [];
-        const headerColumns = (lines[0] || '').split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/)
-            .map(value => String(value || '').replace(/^"|"$/g, '').trim().toLowerCase());
+        const parsedCsv = window.WaffleCsv?.parse(csvText);
+        if (!parsedCsv?.ok || !parsedCsv.records.length) return [];
+        const csvRows = parsedCsv.records; const events = [];
+        const headerColumns = csvRows[0].cells
+            .map(value => String(value || '').trim().toLowerCase());
         const dogIdColumn = headerColumns.indexOf('dog id');
         const dogNumberColumn = headerColumns.indexOf('dog number');
         const localTodayStr = getLocalTodayDateString(); const today = new Date(localTodayStr + 'T00:00:00');
@@ -15098,26 +15105,26 @@ registerWaffleServiceWorker();
 
         dailyCapacityCounts = {};
 
-        for (let i = 1; i < lines.length; i++) {
-            if (!lines[i].trim()) continue;
-            const columns = lines[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/); 
+        for (let i = 1; i < csvRows.length; i++) {
+            if (!csvRows[i].raw.trim()) continue;
+            const columns = csvRows[i].cells;
             
-            const dogName = columns[1] ? columns[1].replace(/^"|"$/g, '') : '';
-            const breed = columns[2] ? columns[2].replace(/^"|"$/g, '') : '';
+            const dogName = String(columns[1] || '');
+            const breed = String(columns[2] || '');
             const startDate = columns[3]; const endDate = columns[4];
-            const ownerName = columns[5] ? columns[5].replace(/^"|"$/g, '') : '';
-            const phone = columns[6] ? columns[6].replace(/^"|"$/g, '') : '';
+            const ownerName = String(columns[5] || '');
+            const phone = String(columns[6] || '');
             // Columns 8 and 9 (Likes / Dislikes) are retained only for historical sheet compatibility.
             // The Web App no longer reads or writes them.
-            const notes = columns[9] ? columns[9].replace(/^"|"$/g, '') : '';
-            const editLink = columns[10] ? columns[10].replace(/^"|"$/g, '') : '';
-            const bookingType = columns[11] ? columns[11].replace(/^"|"$/g, '').trim() : '';
+            const notes = String(columns[9] || '');
+            const editLink = String(columns[10] || '');
+            const bookingType = String(columns[11] || '').trim();
             const rawDogId = dogIdColumn >= 0 && columns[dogIdColumn]
-                ? columns[dogIdColumn].replace(/^"|"$/g, '').trim() : '';
+                ? String(columns[dogIdColumn] || '').trim() : '';
             const dogId = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rawDogId)
                 ? rawDogId : '';
             const rawDogNumber = dogNumberColumn >= 0 && columns[dogNumberColumn]
-                ? columns[dogNumberColumn].replace(/^"|"$/g, '').trim() : '';
+                ? String(columns[dogNumberColumn] || '').trim() : '';
             const dogNumber = dogId && /^#?\d{1,5}$/.test(rawDogNumber)
                 ? `#${rawDogNumber.replace('#', '').padStart(5, '0')}` : '';
             

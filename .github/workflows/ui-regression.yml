@@ -16,6 +16,7 @@ on:
       - 'tests/care-profile-readiness.browser.spec.js'
       - 'tests/care-overview-refinement.browser.spec.js'
       - 'tests/care-state-preservation.test.js'
+      - 'tests/care-csv-integrity.test.js'
       - 'playwright.care-profile.config.js'
       - 'playwright.care-mobile-hierarchy.config.js'
       - 'tests/care-mobile-hierarchy.browser.spec.js'
@@ -47,6 +48,7 @@ on:
       - 'tests/care-profile-readiness.browser.spec.js'
       - 'tests/care-overview-refinement.browser.spec.js'
       - 'tests/care-state-preservation.test.js'
+      - 'tests/care-csv-integrity.test.js'
       - 'playwright.care-profile.config.js'
       - 'playwright.care-mobile-hierarchy.config.js'
       - 'tests/care-mobile-hierarchy.browser.spec.js'
@@ -94,6 +96,7 @@ jobs:
           node --test tests/waffle-bootstrap-lifecycle.test.js
           node --test tests/care-profile-readiness.test.js
           node --test tests/care-state-preservation.test.js
+          node --test tests/care-csv-integrity.test.js
           node --test tests/care-navigation-continuity.test.js
           node node_modules/@playwright/test/cli.js install --with-deps chromium firefox webkit
           node node_modules/@playwright/test/cli.js test --config=playwright.care-profile.config.js

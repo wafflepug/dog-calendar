@@ -7,12 +7,12 @@ test.setTimeout(90_000);
 
 const fullCalendar = fs.readFileSync(path.join(__dirname, 'fixtures', 'fullcalendar.global.min.js'), 'utf8');
 const bookings = [
-  { timestamp: '2026-10-05', dogName: 'Milo', breed: 'Border Collie', startDate: '2026-01-01', endDate: '2027-01-01', ownerName: 'Alex Owner', phone: '0400000001', notes: `handover-${'verylongword'.repeat(12)} Bring the blue blanket`, bookingType: 'Boarding' },
+  { timestamp: '2026-10-05', dogName: 'Milo', breed: 'Border Collie', startDate: '2026-01-01', endDate: '2027-01-01', ownerName: 'Alex "A", Owner', phone: '0400000001', notes: `handover-${'verylongword'.repeat(12)}\nBring the "blue", blanket\nLeave at 7pm`, bookingType: 'Boarding' },
   { timestamp: '2026-10-05', dogName: 'Nala', breed: 'Labrador', startDate: '2026-01-01', endDate: '2027-01-01', ownerName: '   ', phone: '  ', notes: '  ', bookingType: 'Boarding' }
 ];
 const keyFor = b => `${b.dogName.toLowerCase()}|${b.startDate}|${b.endDate}`;
 const dateCell = value => { const [year, month, day] = value.split('-'); return `${day}/${month}/${year}`; };
-const csv = () => ['Timestamp,Dog Name,Breed,Start Date,End Date,Owner,Phone,Likes,Dislikes,Notes,Edit Link,Booking Type', ...bookings.map(b => [b.timestamp, b.dogName, b.breed, dateCell(b.startDate), dateCell(b.endDate), b.ownerName, b.phone, '', '', b.notes, '', b.bookingType].map(value => /[",\r\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value).join(','))].join('\n');
+const csv = () => ['Timestamp,Dog Name,Breed,Start Date,End Date,Owner,Phone,Likes,Dislikes,Notes,Edit Link,Booking Type', ...bookings.map(b => [b.timestamp, b.dogName, b.breed, dateCell(b.startDate), dateCell(b.endDate), b.ownerName, b.phone, '', '', b.notes, '', b.bookingType].map(value => /[",\r\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value).join(','))].join('\r\n');
 
 function installFixture(page) {
   const handler = async route => {
@@ -55,6 +55,7 @@ test('stay contact and handover is readable, editable and tied to the selected d
   await page.addInitScript(mode => localStorage.setItem('theme', mode), 'light');
   await page.goto(`${baseURL}/directory.html`, { waitUntil: 'domcontentloaded' });
   await page.waitForFunction(() => document.documentElement.dataset.waffleUiReady === 'true');
+  await expect(page.locator('.directory-card[data-directory-stay-key]')).toHaveCount(2);
   const emptyCard = page.locator(`.directory-card[data-directory-stay-key="${keyFor(bookings[1])}"]`);
   await expect(emptyCard.locator('[data-open-directory-profile]')).toBeVisible();
   // Both stays cover the test date; status filtering is tested separately.
@@ -74,6 +75,8 @@ test('stay contact and handover is readable, editable and tied to the selected d
     await page.emulateMedia({ colorScheme: theme });
     expect(await page.evaluate(() => document.body.classList.contains('dark-theme'))).toBe(theme === 'dark');
     await expect(contact.locator('.directory-field-label')).toHaveText(['Owner', 'Contact', 'Handover note']);
+    await expect(contact.locator('[data-directory-edit-field="ownerName"] .directory-field-value')).toHaveText(bookings[0].ownerName);
+    await expect(contact.locator('[data-directory-edit-field="notes"]')).toHaveAttribute('data-directory-current-value', selectedNote);
     await expect(contact.locator('[data-directory-edit-field="notes"] .directory-field-value')).toHaveText(selectedNote);
     await expect(contact.locator('[data-directory-edit-field="notes"] .directory-field-value')).toHaveCSS('white-space', 'pre-wrap');
     await expect(contact.locator('[data-directory-edit-field="notes"]')).toHaveAttribute('aria-label', 'Edit Milo handover note');
@@ -122,6 +125,11 @@ test('stay contact and handover is readable, editable and tied to the selected d
   await expect(page.locator('#guestDetailEditDog')).toContainText('Milo');
   await expect(page.locator('#guestDetailEditTextarea')).toHaveValue(selectedNote);
   await page.locator('#cancelGuestDetailEdit').click();
+
+  // Malformed data must not clear the already rendered guest profile.
+  await page.evaluate(() => parseCSVToEvents('Timestamp,Dog Name\n"Unclosed guest'));
+  await expect(page.locator('.directory-card[data-directory-stay-key]')).toHaveCount(2);
+  await expect(contact.locator('[data-directory-edit-field="notes"]')).toHaveAttribute('data-directory-current-value', selectedNote);
 
   await page.locator('#directoryBackToGuestsBtn').click();
   await page.getByRole('tab', { name: /Staying/ }).click();
