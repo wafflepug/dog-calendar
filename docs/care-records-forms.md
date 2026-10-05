@@ -13,3 +13,11 @@ Acceptance and testing matrix:
 Automated checks execute actual renderers and shipped styles through `playwright.care-overview.config.js`, retaining release, first-open and existing Care regression checks. Physical iPhone and Fold validation remains a manual follow-up.
 
 Next bounded backlog: refine Stay Contact & Handover presentation, with readable contact actions and concise saved/unsaved feedback. Retain existing owner editing and handover draft safety.
+
+Delegation brief for that next item:
+
+- Use the existing `data-directory-stay-contact` disclosure in `waffle-app.js` and its shipped CSS. Separate readable owner/contact values from the handover note; retain the existing edit field targets and exact stay ownership.
+- Make long names, phone values and multiline notes wrap at 320px without clipping or touching the navigation footer. Keep actions at least 44px high with visible keyboard focus, using current theme/accent tokens.
+- Preserve existing draft capture, discard confirmation, duplicate-identity guards and save payloads. Do not add backend calls or change profile loading.
+- Verify empty contact information, long values, dirty edits, failed save and switching between same-named dogs. Extend actual-renderer browser coverage and run existing Care state preservation tests.
+- Deliver one bounded implementation commit, relevant tests and a completion report. Deployment remains a separate reviewed step.
