@@ -176,7 +176,7 @@ for (const [name, viewport, colorScheme] of [['390-light', { width: 390, height:
     await careBrief.getByRole('button', { name: 'Update handover' }).click();
     await expect(contactDisclosure).toHaveAttribute('open', '');
     await expect(page.locator('#guestDetailEditModal')).toHaveClass(/open/);
-    await expect(page.locator('#guestDetailEditTitle')).toContainText('Edit Notes');
+    await expect(page.locator('#guestDetailEditTitle')).toContainText('Edit Handover note');
     await expect(page.locator('#guestDetailEditTextarea')).toHaveValue(booking.notes);
     await expect(records).not.toHaveAttribute('open', '');
     const detailReads = actions => actions.filter(action => ['get_guest_profile', 'get_guest_belongings', 'get_dog_history', 'get_dog_master_profile'].includes(action));
