@@ -57,11 +57,17 @@ Delegation prompt: Inventory CSV identifiers, Apps Script guest directory fields
 
 Delegation prompt: Add a small documented local UI test setup pinned to the CI Playwright version. Current repository has no checked-in package manifest; CI initializes one at runtime. Inspect existing runner configs and workflows before choosing the minimum tooling. Make local fixture tests use the local URL explicitly, never the production default. Acceptance: a clean checkout can run the targeted phone regression with one documented setup and one test command; dependency versions match CI; production writes are intercepted/blocked; a failed test leaves trace artifacts; generated reports are ignored. Keep this separate from performance optimization.
 
-### P1.4 — Explain cached data and pending sync in System Status
+### P1.4 — Explain cached data and pending sync in System Status (implemented)
 
 User story: As the owner, I can tell whether a booking change has reached the server before relying on the calendar after a refresh.
 
-Delegation prompt: Inventory existing response-cache timestamps and any actual offline mutation queue API. Add a read-only System Status view of last successful boarding/operations sync without reintroducing the removed Home live ticker. Display pending mutation counts only if a real queue exists; current `queued` response branches do not establish one. Do not expose guest names, contact details, or mutation payloads in diagnostics. A network connection alone must not imply a successful data sync. Acceptance: synced, cached/offline, failed and unavailable-storage states are distinct; refresh never sends a mutation; absent timestamps show unknown rather than fabricated recency. Deliver small adapters and fixtures retaining user themes.
+Delegation prompt: Inventory response-cache timestamps and the active V10.8 IndexedDB offline mutation queue. Add a read-only System Status view of last successful spreadsheet and stay-operations reads without reintroducing the removed Home live ticker. Display only a count from the real queue; never expose guest names, contact details, or mutation payloads in diagnostics. A network connection alone must not imply a successful data sync, and the directory summary cache must not imply a fresh spreadsheet read. Acceptance: synced, cached/offline, failed and unavailable-storage states are distinct; refresh never sends a mutation; absent timestamps show unknown rather than fabricated recency. Deliver small adapters and fixtures retaining user themes.
+
+## Implemented — Care Clarity & Sync (2026.10.05.07)
+
+Four bounded improvements: saved Detailed Care category summaries; readable responsive category disclosures; read-only spreadsheet/operations sync timestamps and actual offline queue counts in System Status; and conservative confirmed-stay reconciliation with Dog ID conflict guards. See `system-status-sync.md` and `confirmed-stay-reconciliation.md` for contracts and limitations.
+
+Validation includes unit fixtures, browser checks across desktop/mobile/WebKit and both themes, and cache-upgrade checks. Physical iPhone/Fold verification remains a manual check. Stable booking IDs and server mutation receipts remain the next identity task; this release does not claim exactly-once mutation processing or migrate persisted Care/media keys.
 
 ## Completion report template
 

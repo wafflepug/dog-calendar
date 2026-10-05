@@ -165,22 +165,48 @@ function v1105ConfirmedStayIdentity(event) {
     return JSON.stringify([dogName, startDate, endDate, breed, owner, phone]);
 }
 
+function v1105SameConfirmedStayIdentity(left, right) {
+    const leftIdentity = v1105ConfirmedStayIdentity(left);
+    if (!leftIdentity || leftIdentity !== v1105ConfirmedStayIdentity(right)) return false;
+    const leftDogId = String(left?.extendedProps?.dogId || '').trim().toLowerCase();
+    const rightDogId = String(right?.extendedProps?.dogId || '').trim().toLowerCase();
+    return !leftDogId || !rightDogId || leftDogId === rightDogId;
+}
+
 function v1105DedupeConfirmedStays(events) {
+    const groups = new Map();
+    events.forEach(event => {
+        const key = v1105ConfirmedStayIdentity(event);
+        if (!key) return;
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(event);
+    });
     const seen = new Map();
     return events.filter(event => {
         const key = v1105ConfirmedStayIdentity(event);
         if (!key) return true;
-        if (seen.has(key)) {
+        const group = groups.get(key) || [];
+        const dogIds = new Set(group.map(candidate => String(candidate?.extendedProps?.dogId || '').trim().toLowerCase()).filter(Boolean));
+        const eventDogId = String(event?.extendedProps?.dogId || '').trim().toLowerCase();
+        // An ID-less copy is compatible with one known ID, but cannot be used
+        // as a bridge between two different persisted dogs.
+        if (dogIds.size > 1 && !eventDogId) return true;
+        const matches = seen.get(key) || [];
+        const retained = matches.find(candidate => {
+            if (dogIds.size > 1 && String(candidate?.extendedProps?.dogId || '').trim().toLowerCase() !== eventDogId) return false;
+            return v1105SameConfirmedStayIdentity(candidate, event);
+        });
+        if (retained) {
             // Keep the first event (the sheet is composed first and is thus
             // authoritative), but retain a usable edit link if it was only
             // present on a later local copy.
-            const retained = seen.get(key);
             const retainedProps = retained?.extendedProps;
             const duplicateLink = event?.extendedProps?.editLink;
             if (retainedProps && !retainedProps.editLink && duplicateLink) retainedProps.editLink = duplicateLink;
             return false;
         }
-        seen.set(key, event);
+        matches.push(event);
+        seen.set(key, matches);
         return true;
     });
 }

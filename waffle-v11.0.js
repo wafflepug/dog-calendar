@@ -65,15 +65,19 @@ function v110IndexCheckoutEvidence(events,options={}){
   (Array.isArray(events)?events:[]).forEach(event=>{
     const p=event?.extendedProps||{};
     if(p.isPotential===true||p.isMeetGreet===true)return;
+    const bookingType=String(p.bookingType||'').trim().toLowerCase();
+    if(bookingType&&!['boarding','confirmed boarding'].includes(bookingType))return;
     const key=v110StayKeyForEvent(event); if(!key)return;
     const identity=v110CheckoutIdentity(event);
-    (groups[key]||(groups[key]={known:new Set(),incomplete:false}));
+    (groups[key]||(groups[key]={known:new Set(),dogIds:new Set(),incomplete:false}));
     if(identity)groups[key].known.add(identity); else groups[key].incomplete=true;
+    const dogId=String(p.dogId||'').trim().toLowerCase();
+    if(dogId)groups[key].dogIds.add(dogId);
   });
   const next={};
   Object.keys(groups).forEach(key=>{
     const group=groups[key];
-    if(group.known.size>1)next[key]={state:'collision',count:group.known.size};
+    if(group.known.size>1||group.dogIds.size>1)next[key]={state:'collision',count:Math.max(group.known.size,group.dogIds.size)};
     else if(group.known.size===1&&group.incomplete)next[key]={state:'incomplete'};
   });
   if(options.replace===true){v110CheckoutCollisionMap=next;return;}
@@ -172,7 +176,7 @@ function v110CollectCareCheckoutEvidence(){
   if(typeof document==='undefined')return;
   const events=Array.from(document.querySelectorAll('.directory-card[data-directory-stay-key]')).map(card=>{
     const p=v110OperationalPayloadFromCard(card);
-    return {title:p.dogName,start:p.startDate,end:p.endDate,extendedProps:{dogName:p.dogName,breed:p.breed,ownerName:p.ownerName,phone:p.phone,rawStartDate:p.startDate,rawEndDate:p.endDate,bookingType:'Confirmed Boarding'}};
+    return {title:p.dogName,start:p.startDate,end:p.endDate,extendedProps:{dogName:p.dogName,dogId:p.dogId,breed:p.breed,ownerName:p.ownerName,phone:p.phone,rawStartDate:p.startDate,rawEndDate:p.endDate,bookingType:'Confirmed Boarding'}};
   });
   if(events.length)v110IndexCheckoutEvidence(events);
 }

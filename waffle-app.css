@@ -7053,7 +7053,6 @@ body.dark-theme .directory-care-more-actions > summary { background: #182235; bo
         grid-row: 1 / span 2;
     }
 }
-
 @media (forced-colors: active) {
     .care-category-card,
     .care-category-toggle {
@@ -9884,4 +9883,93 @@ body.dark-theme .directory-roster-avatar {
 
 .hosted-photo-session-controls button:hover {
     background: color-mix(in srgb, var(--wh75-accent, #7562db) 10%, transparent);
+}
+
+/* Detailed Care category summaries stay readable beside their disclosure control. */
+.care-category-toggle {
+    grid-template-columns: minmax(120px, .7fr) minmax(0, 1.7fr) 24px;
+    min-height: 56px;
+    gap: 5px 12px;
+    padding: 10px 12px;
+}
+
+.care-category-title { grid-column: 1; grid-row: 1; }
+.care-category-summary { grid-column: 2; grid-row: 1; }
+.care-category-chevron { grid-column: 3; grid-row: 1; }
+
+.care-category-toggle:focus,
+.care-category-toggle:focus-visible {
+    position: relative;
+    z-index: 1;
+    outline: 3px solid var(--wh-focus, var(--wh-accent, #2563eb));
+    outline-offset: -3px;
+}
+
+.care-category-title {
+    min-width: 0;
+    font-size: 14px;
+}
+
+.care-category-summary {
+    min-width: 0;
+    color: var(--wh-text-muted, #475569);
+    font-size: 13px;
+    line-height: 1.4;
+    white-space: normal !important;
+    overflow-wrap: anywhere;
+    word-break: normal;
+    text-overflow: clip;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+}
+
+body.dark-theme .directory-card.is-profile-active select.intake-profile-control {
+    color-scheme: dark;
+}
+
+body.dark-theme .directory-card:not(.is-profile-editing)
+[data-directory-main-panel="profile"] select.intake-profile-control:disabled {
+    appearance: auto !important;
+    color-scheme: dark;
+    border: 1px solid #52617a !important;
+    background: #1e293b !important;
+    color: #f8fafc !important;
+    -webkit-text-fill-color: #f8fafc !important;
+    opacity: 1 !important;
+}
+
+body.dark-theme .directory-card.is-profile-active select.intake-profile-control option {
+    background: #1e293b;
+    color: #f8fafc;
+}
+
+.care-category-summary[data-state="unknown"],
+.care-category-summary[data-state="empty"] {
+    color: var(--wh-text-muted, #475569);
+    font-weight: 550;
+}
+
+@media (max-width: 480px) {
+    .care-category-toggle {
+        grid-template-columns: minmax(0, 1fr) 24px;
+        min-height: 60px;
+        gap: 4px 10px;
+        padding: 10px;
+    }
+
+    .care-category-title,
+    .care-category-summary {
+        grid-column: 1;
+    }
+
+    .care-category-title { grid-row: 1; }
+    .care-category-summary { grid-row: 2; font-size: 12px; }
+
+    .care-category-chevron {
+        grid-column: 2;
+        grid-row: 1 / span 2;
+    }
 }
