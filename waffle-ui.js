@@ -161,20 +161,24 @@
         return;
       }
       const focused = host.contains(document.activeElement) ? document.activeElement : null;
-      const retained = new Set(events.map(v110StayKeyForEvent));
-      Array.from(host.children).forEach(link => { if (!retained.has(link.dataset.homeStay)) link.remove(); });
+      const identityFor = event => typeof v110EventUniqueKey === 'function' ? v110EventUniqueKey(event, v110StayKeyForEvent(event)) : v110StayKeyForEvent(event);
+      const retained = new Set(events.map(identityFor));
+      Array.from(host.children).forEach(link => { if (!retained.has(link.dataset.homeIdentity || link.dataset.homeStay)) link.remove(); });
       events.forEach((event, index) => {
         const key = v110StayKeyForEvent(event);
-        retained.add(key);
+        const identity = identityFor(event);
+        const stayId = String(event.extendedProps?.stayId || '').trim();
         const name = String(event.extendedProps?.dogName || event.title || 'Guest').trim();
-        let link = Array.from(host.children).find(child => child.dataset.homeStay === key);
+        let link = Array.from(host.children).find(child => (child.dataset.homeIdentity || child.dataset.homeStay) === identity);
         if (!link) {
           link = document.createElement('a');
           link.className = 'wh-home-guest';
           link.dataset.homeStay = key;
+          link.dataset.homeIdentity = identity;
           link.innerHTML = '<span class="wh-home-portrait" aria-hidden="true"><span class="wh-home-initials"></span></span><span class="wh-home-departure-flag" aria-hidden="true"><span>🧳</span></span><strong class="wh-home-guest-name"></strong><span class="wh-home-guest-label"></span>';
-          link.href = 'directory.html?stayKey=' + encodeURIComponent(key);
         }
+        link.dataset.homeStayId = stayId;
+        link.href = 'directory.html?stayKey=' + encodeURIComponent(key) + (typeof v110ValidStayId === 'function' && v110ValidStayId(stayId) ? '&stayId=' + encodeURIComponent(stayId) : '');
         const departure = !upcoming && departureMeta(event, today);
         const label = upcoming ? arrivalLabel(event, today) : departure?.label || 'At home';
         link.setAttribute('aria-label', `Open ${name} stay and care details, ${label.toLowerCase()}`);
