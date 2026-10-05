@@ -2,7 +2,7 @@ const { defineConfig } = require('@playwright/test');
 
 module.exports = defineConfig({
   testDir: './tests',
-  testMatch: ['care-overview-refinement.browser.spec.js', 'care-photo-session.browser.spec.js', 'care-photos.browser.spec.js', 'care-photo-viewer.browser.spec.js'],
+  testMatch: ['care-overview-refinement.browser.spec.js', 'care-photo-session.browser.spec.js', 'care-photos.browser.spec.js', 'care-photo-viewer.browser.spec.js', 'care-records-forms.browser.spec.js'],
   timeout: 30000,
   workers: 2,
   reporter: 'list',
