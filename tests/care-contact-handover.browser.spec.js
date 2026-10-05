@@ -82,7 +82,8 @@ test('stay contact and handover is readable, editable and tied to the selected d
       const layout = await contact.evaluate(root => ({ overflow: root.scrollWidth > root.clientWidth, buttons: [...root.querySelectorAll('button')].map(button => { const r = button.getBoundingClientRect(); return [r.width, r.height]; }) }));
       expect(layout.overflow).toBe(false);
       expect(layout.buttons.every(([w, h]) => Math.round(w * 100) / 100 >= 44 && Math.round(h * 100) / 100 >= 44)).toBe(true);
-      const readable = await contact.evaluate(root => {
+      let readable;
+      const measureReadability = root => {
         const size = selector => [...root.querySelectorAll(selector)].map(el => Number.parseFloat(getComputedStyle(el).fontSize));
         const canvas = document.createElement('canvas');
         const context = canvas.getContext('2d', { willReadFrequently: true });
@@ -101,7 +102,12 @@ test('stay contact and handover is readable, editable and tied to the selected d
           });
         });
         return { labels: size('.directory-field-label'), values: size('.directory-field-value'), hints: size('.directory-contact-edit-hint'), contrast };
-      });
+      };
+      // Theme surfaces transition; verify the settled rendered contrast, not an intermediate frame.
+      await expect.poll(async () => {
+        readable = await contact.evaluate(measureReadability);
+        return readable.contrast.every(value => value.ratio >= 4.5);
+      }, { message: 'Contact text reaches readable contrast after the theme transition' }).toBe(true);
       expect(readable.labels.every(size => size >= 12)).toBe(true);
       expect(readable.values.every(size => size >= 14)).toBe(true);
       expect(readable.hints.every(size => size >= 12)).toBe(true);
