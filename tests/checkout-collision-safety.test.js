@@ -18,7 +18,8 @@ const sandbox = {
   escapeDashboardHtml: value => String(value),
   queryAppsScriptSWR: async () => ({}),
   sendCalls: 0,
-  sendPayloadToAppsScript: async function (payload) { this.sendCalls += 1; return { record: payload }; },
+  queryAppsScript: async () => ({ result:'success', versions:{ stayOperationIdentityVersion:1 } }),
+  sendPayloadToAppsScript: async function (payload) { this.sendCalls += 1; return { result:'success', record:{ ...payload, stayId:payload.stayId||'00000000-0000-4000-8000-000000000099', status:payload.action==='checkin_stay'?'checked_in':'checked_out' } }; },
   invalidateWaffleClientCaches: async () => {},
   showWaffleForegroundPush() {},
   globalCalendar: null

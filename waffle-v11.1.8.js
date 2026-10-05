@@ -377,7 +377,7 @@
     const end = String(card?.dataset?.directoryEndDate || card?.dataset?.endDate || '');
     const stayKey = String(card?.dataset?.directoryStayKey || '');
     let op = null;
-    try { if (typeof v110OperationForStay === 'function') op = v110OperationForStay(stayKey); } catch (_) {}
+    try { if (typeof v110OperationForStay === 'function') op = v110OperationForStay(card); } catch (_) {}
     if (String(op?.status || '') === 'checked_out') return 'CHECKED OUT';
     if (card?.dataset?.v1082PastStay === 'true' || (end && end < currentDate)) return 'PAST STAY';
     if (start === currentDate && String(op?.status || '') !== 'checked_in') return 'ARRIVING TODAY';

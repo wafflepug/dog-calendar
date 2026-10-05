@@ -6,6 +6,10 @@ const V110_VERSION='11.0';
 const v110BaseRenderOperationsHome=renderV10OperationsHome;
 const v110BaseApplyDirectoryResponse=applyGuestDirectoryResponse;
 let v110OperationsMap={};
+let v110OperationsById={};
+let v110OperationIdentityConflicts={};
+let v110AuthoritativeCheckouts={};
+let v110OperationRecords=[];
 let v110LatestCalendarEvents=[];
 let v110MediaCache={};
 let v110MasterCache={};
@@ -43,7 +47,25 @@ function v110StayKeyForEvent(event){
     .trim();
   return v110MakeStayKey(dogName,d.start,d.end);
 }
-function v110OperationForStay(k){const key=String(k||'');return v110IsCheckoutCollision(key)?null:(v110OperationsMap[key]||null);}
+function v110ValidStayId(value){return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value||'').trim());}
+function v110OperationForStay(stay,maybeStayId){
+  const object=stay&&typeof stay==='object'?stay:null;
+  const props=object?.extendedProps||{},dataset=object?.dataset||{};
+  const key=String(object?.stayKey||props.stayKey||dataset.directoryStayKey||dataset.stayKey||(object?v110StayKeyForEvent(object):stay)||'');
+  const id=String(object?.stayId||props.stayId||dataset.directoryStayId||maybeStayId||'').trim().toLowerCase();
+  let operation;
+  if(id){
+    if(!v110ValidStayId(id)||v110OperationIdentityConflicts[id])return null;
+    operation=v110OperationsById[id]||null;
+  }else{
+    if(v110IsCheckoutCollision(key)||v110OperationIdentityConflicts[`key:${key}`])return null;
+    operation=v110OperationsMap[key]||null;
+  }
+  const dog=String(object?.dogName||props.dogName||dataset.directoryDogName||dataset.dogName||'').trim().toLowerCase();
+  if(dog&&operation?.dogName&&dog!==String(operation.dogName).trim().toLowerCase())return null;
+  return operation;
+}
+function v110EventUniqueKey(event,legacyKey){const p=event?.extendedProps||{},id=String(p.stayId||'').trim().toLowerCase();if(!id)return legacyKey;const dates=v10EventRawDates(event);return`id:${id}:${JSON.stringify([p.dogId||'',p.dogName||event?.title||'',dates.start||'',dates.end||'',p.ownerName||p.owner||'',p.phone||''])}`;}
 function v110IdentityPart(value){
   const text=String(value==null?'':value).trim().replace(/\s+/g,' ').toLowerCase();
   return /^(?:n\/a|na|none|null|unknown|database synced|-|—)$/.test(text)?'':text;
@@ -61,7 +83,7 @@ function v110CheckoutIdentity(event){
 }
 function v110IndexCheckoutEvidence(events,options={}){
   if(!Array.isArray(events)||!events.length)return;
-  const groups={};
+  const groups={},idEvidence={};
   (Array.isArray(events)?events:[]).forEach(event=>{
     const p=event?.extendedProps||{};
     if(p.isPotential===true||p.isMeetGreet===true)return;
@@ -69,15 +91,19 @@ function v110IndexCheckoutEvidence(events,options={}){
     if(bookingType&&!['boarding','confirmed boarding'].includes(bookingType))return;
     const key=v110StayKeyForEvent(event); if(!key)return;
     const identity=v110CheckoutIdentity(event);
-    (groups[key]||(groups[key]={known:new Set(),dogIds:new Set(),incomplete:false}));
+    const stayId=String(p.stayId||'').trim().toLowerCase();
+    if(v110ValidStayId(stayId)){(idEvidence[stayId]||(idEvidence[stayId]=new Set())).add(JSON.stringify([key,p.dogId||'',identity]));}
+    (groups[key]||(groups[key]={known:new Set(),dogIds:new Set(),stayIds:new Set(),incomplete:false}));
+    if(v110ValidStayId(stayId))groups[key].stayIds.add(stayId);
     if(identity)groups[key].known.add(identity); else groups[key].incomplete=true;
     const dogId=String(p.dogId||'').trim().toLowerCase();
     if(dogId)groups[key].dogIds.add(dogId);
   });
   const next={};
+  Object.keys(idEvidence).forEach(id=>{if(idEvidence[id].size>1)v110OperationIdentityConflicts[id]='duplicate_booking_stay_id';});
   Object.keys(groups).forEach(key=>{
     const group=groups[key];
-    if(group.known.size>1||group.dogIds.size>1)next[key]={state:'collision',count:Math.max(group.known.size,group.dogIds.size)};
+    if(group.known.size>1||group.dogIds.size>1||group.stayIds.size>1)next[key]={state:'collision',count:Math.max(group.known.size,group.dogIds.size,group.stayIds.size)};
     else if(group.known.size===1&&group.incomplete)next[key]={state:'incomplete'};
   });
   if(options.replace===true){v110CheckoutCollisionMap=next;return;}
@@ -87,6 +113,10 @@ function v110IndexCheckoutEvidence(events,options={}){
 }
 function v110CheckoutGuard(payload){
   const key=String(payload?.stayKey||'');
+  const id=String(payload?.stayId||'').trim();
+  if(id&&!v110ValidStayId(id))throw new Error('Checkout is paused: this booking has an invalid Stay ID. Reload the current booking before checkout.');
+  if(id&&v110OperationIdentityConflicts[id.toLowerCase()])throw new Error('Checkout is paused: this Stay ID has conflicting operation or booking records. Review the stay records before trying again.');
+  if(id)return true;
   const evidence=v110CheckoutCollisionMap[key];
   if(evidence?.state==='collision')throw new Error('Checkout is paused: conflicting confirmed bookings share these dates. Review duplicate bookings, correct the booking records, then reload the page before checking out.');
   return true;
@@ -103,9 +133,10 @@ function v110EventDisplayEnd(event){
 }
 function v110ApplyEffectiveCheckoutDates(events){
   (Array.isArray(events)?events:[]).forEach(event=>{
-    const stayKey=v110StayKeyForEvent(event);
     const booked=v10EventRawDates(event);
-    if(v110IsCheckoutCollision(stayKey)){
+    const operation=v110OperationForStay(event);
+    const checkoutDate=operation?.status==='checked_out'?v110NormaliseStayDate(operation.actualCheckoutDate||operation.checkedOutAt):'';
+    if(!checkoutDate||!booked.end||checkoutDate>=booked.end){
       const props=event.extendedProps||(event.extendedProps={});
       const hadEffective=props.effectiveCheckoutDate!=null||props.bookedEndDate!=null;
       if(typeof event.setExtendedProp==='function'&&hadEffective){
@@ -116,15 +147,11 @@ function v110ApplyEffectiveCheckoutDates(events){
         delete props.bookedEndDate;
       }
       const displayEnd=v110CheckoutDisplayEnd(booked.end);
-      if(displayEnd&&v110EventDisplayEnd(event)!==displayEnd){
+      if(hadEffective&&displayEnd&&v110EventDisplayEnd(event)!==displayEnd){
         if(typeof event.setEnd==='function')event.setEnd(displayEnd);else event.end=displayEnd;
       }
       return;
     }
-    const operation=v110OperationForStay(stayKey);
-    if(operation?.status!=='checked_out')return;
-    const checkoutDate=v110NormaliseStayDate(operation.actualCheckoutDate||operation.checkedOutAt);
-    if(!checkoutDate||!booked.end||checkoutDate>=booked.end)return;
     const props=event.extendedProps||(event.extendedProps={});
     if(props.effectiveCheckoutDate===checkoutDate)return;
     if(typeof event.setExtendedProp==='function'){
@@ -139,51 +166,97 @@ function v110ApplyEffectiveCheckoutDates(events){
     else event.end=displayEnd;
   });
 }
-function v110IndexOperations(records){
-  v110OperationsMap={};
-  (Array.isArray(records)?records:[]).forEach(r=>{if(r?.stayKey)v110OperationsMap[String(r.stayKey)]=r;});
+function v110IndexOperations(records,options={}){
+  v110OperationRecords=Array.isArray(records)?records.slice():[];
+  v110OperationsMap={};v110OperationsById={};v110OperationIdentityConflicts={};
+  const byKey={},byId={};
+  (Array.isArray(records)?records:[]).forEach(r=>{
+    if(!r||typeof r!=='object')return;
+    const key=String(r.stayKey||'');const id=String(r.stayId||r.identityStayId||r.sourceStayId||'').trim().toLowerCase();
+    if(r.identityConflict===true){if(id)v110OperationIdentityConflicts[id]=String(r.identityConflictReason||'conflict');if(key)v110OperationIdentityConflicts[`key:${key}`]=String(r.identityConflictReason||'conflict');return;}
+    if(id){if(!v110ValidStayId(id)){v110OperationIdentityConflicts[id]='invalid_stay_id';return;}(byId[id]||(byId[id]=[])).push(r);}
+    if(key)(byKey[key]||(byKey[key]=[])).push(r);
+  });
+  Object.keys(byId).forEach(id=>{if(byId[id].length===1)v110OperationsById[id]=byId[id][0];else v110OperationIdentityConflicts[id]='duplicate_stay_id';});
+  Object.keys(byId).forEach(id=>{
+    if(byId[id].length!==1||byId[id][0].status!=='checked_out')return;
+    const incoming=byId[id][0],saved=v110AuthoritativeCheckouts[id];
+    if(!saved||Date.parse(incoming.updatedAt||'')>Date.parse(saved.updatedAt||''))v110AuthoritativeCheckouts[id]=incoming;
+  });
+  if(options.authoritative===true)Object.keys(byId).forEach(id=>{
+    if(byId[id].length!==1)return;
+    const incoming=byId[id][0],saved=v110AuthoritativeCheckouts[id];
+    const incomingTime=Date.parse(incoming.updatedAt||''),savedTime=Date.parse(saved?.updatedAt||'');
+    if(saved&&(!Number.isFinite(incomingTime)||(Number.isFinite(savedTime)&&incomingTime<savedTime)))return;
+    if(incoming.status==='checked_out')v110AuthoritativeCheckouts[id]=incoming;else delete v110AuthoritativeCheckouts[id];
+  });
+  Object.keys(byKey).forEach(key=>{const rows=byKey[key];if(rows.length===1&&!v110OperationIdentityConflicts[`key:${key}`])v110OperationsMap[key]=rows[0];else if(rows.length>1&&!rows.every(row=>v110ValidStayId(row.stayId)))v110OperationIdentityConflicts[`key:${key}`]='conflicting_operation_rows';});
+  Object.keys(v110AuthoritativeCheckouts).forEach(id=>{if(!v110OperationIdentityConflicts[id])v110OperationsById[id]=v110AuthoritativeCheckouts[id];});
+  Object.keys(v110OperationsMap).forEach(key=>{
+    const id=String(v110OperationsMap[key].stayId||'').toLowerCase();
+    if(id&&v110OperationsById[id]&&!v110OperationIdentityConflicts[id])v110OperationsMap[key]=v110OperationsById[id];
+  });
   const events=globalCalendar?.getEvents?.()?.slice()||v110LatestCalendarEvents;
   v110IndexCheckoutEvidence(events);
   if(WAFFLE_PAGE==='calendar')v110ApplyEffectiveCheckoutDates(events);
 }
-function v110IsCheckedOutEvent(event){const key=v110StayKeyForEvent(event);return !v110IsCheckoutCollision(key)&&v110OperationForStay(key)?.status==='checked_out';}
+function v110MergeOperationRead(records){
+  const incoming=Array.isArray(records)?records:[];
+  const identity=row=>String(row?.stayId||row?.identityStayId||row?.sourceStayId||'').trim().toLowerCase();
+  const ids=new Set(incoming.map(identity).filter(Boolean));
+  const keys=new Set(incoming.filter(row=>!identity(row)).map(row=>String(row?.stayKey||'')).filter(Boolean));
+  const prior=v110OperationRecords.filter(row=>identity(row)?!ids.has(identity(row)):!keys.has(String(row?.stayKey||'')));
+  v110IndexOperations([...prior,...incoming]);
+}
+function v110IsCheckedOutEvent(event){return v110OperationForStay(event)?.status==='checked_out';}
 function v110FormatTime(v){if(!v)return'';const d=new Date(v);return Number.isNaN(d.getTime())?'':d.toLocaleTimeString('en-AU',{hour:'numeric',minute:'2-digit'});}
 
 async function v110LoadOperations(options={}){
   try{
     const r=await queryAppsScriptSWR({action:'get_stay_operations'},{cacheKey:'directory:stay-operations',maxStaleMs:2*60*60*1000,maxAttempts:2,timeoutMs:30000,onCached:c=>v110IndexOperations(c.records)});
-    if(r?.data)v110IndexOperations(r.data.records);
+    if(r?.data?.result==='success'&&Array.isArray(r.data.records))v110IndexOperations(r.data.records,{authoritative:r.offlineFallback!==true});
     if(WAFFLE_PAGE==='calendar'&&!options.noRender)renderV10OperationsHome(globalCalendar?.getEvents()?.slice()||v110LatestCalendarEvents);
     if(WAFFLE_PAGE==='directory')v110EnhanceAllCareCards();
   }catch(e){console.warn('Stay Operations unavailable:',e);}
 }
 
-async function v110SaveOperationalStatus(payload,status){
+async function v110SaveOperationalStatus(payload,status,target){
+  if(!['checked_in','checked_out'].includes(status))throw new Error('Unsupported stay operational status.');
   v110CollectCareCheckoutEvidence();
   v110CheckoutGuard(payload);
-  const action=status==='checked_out'?'checkout_stay':'checkin_stay';
-  const r=await sendPayloadToAppsScript({action,...payload,source:'V11 Operations'});
-  if(r?.queued){showWaffleForegroundPush({title:'↻ Saved for sync',body:`${payload.dogName} ${status==='checked_out'?'checkout':'check-in'} will sync when online.`});return r;}
-  if(r?.record?.stayKey)v110OperationsMap[r.record.stayKey]=r.record;
+  if(typeof navigator!=='undefined'&&navigator.onLine===false)throw new Error('Check-in and checkout require a live connection. Nothing was queued.');
+  const capability=await queryAppsScript({action:'get_data_versions'},{maxAttempts:1,timeoutMs:20000});
+  if(capability?.result!=='success'||Number(capability?.versions?.stayOperationIdentityVersion||0)<1)throw new Error('This server does not support Stay ID operations yet. No status change was sent.');
+  if(payload?.stayId&&!v110ValidStayId(payload.stayId))throw new Error('This stay has an invalid Stay ID. Reload the current booking before changing its operational status.');
+  const action=status==='checked_out'?(payload.action==='early_checkout_stay'?'early_checkout_stay':'checkout_stay'):'checkin_stay';
+  const r=await sendPayloadToAppsScript({...payload,action,source:'V11 Operations'});
+  if(r?.queued)throw new Error('Stay operations cannot be queued offline. Nothing was saved.');
+  const record=r?.record,requested=String(payload.stayId||'').toLowerCase(),returned=String(record?.stayId||'').toLowerCase();
+  if(r?.result!=='success'||!record||!v110ValidStayId(returned)||(requested&&requested!==returned)||String(record.stayKey||'')!==String(payload.stayKey||'')||String(record.status||'')!==status)throw new Error('The server did not confirm the selected stay operation. Reload before continuing.');
+  if(record.startDate&&v110NormaliseStayDate(record.startDate)!==v110NormaliseStayDate(payload.startDate)||record.endDate&&v110NormaliseStayDate(record.endDate)!==v110NormaliseStayDate(payload.endDate))throw new Error('The server response does not match the selected booking dates. Reload before continuing.');
+  if(String(record.dogName||'').trim().toLowerCase()!==String(payload.dogName||'').trim().toLowerCase())throw new Error('The server response does not match the selected dog. Reload before continuing.');
+  payload.stayId=returned;if(target?.dataset&&!requested)target.dataset.directoryStayId=returned;if(target?.extendedProps&&!requested)target.extendedProps.stayId=returned;
+  if(status==='checked_out')v110AuthoritativeCheckouts[returned]=record;else delete v110AuthoritativeCheckouts[returned];
+  if(record.stayKey){const rest=v110OperationRecords.filter(old=>{const id=String(old.stayId||old.identityStayId||old.sourceStayId||'').toLowerCase();return id?id!==returned:old.identityConflict===true||old.stayKey!==record.stayKey;});v110IndexOperations([...rest,record]);}
   try{await invalidateWaffleClientCaches(['directory','audit']);}catch(_){ }
   return r;
 }
 
 function v110OperationalPayloadFromCard(card){
-  return {stayKey:String(card?.dataset?.directoryStayKey||card?.dataset?.stayKey||''),dogId:String(card?.dataset?.directoryDogId||''),dogName:String(card?.dataset?.directoryDogName||card?.dataset?.dogName||''),startDate:String(card?.dataset?.directoryStartDate||card?.dataset?.startDate||''),endDate:String(card?.dataset?.directoryEndDate||card?.dataset?.endDate||''),breed:String(card?.querySelector('.directory-primary-breed')?.textContent||card?.dataset?.v1088Breed||'').trim(),ownerName:String(card?.querySelector('[data-directory-edit-field="ownerName"]')?.dataset?.directoryCurrentValue||card?.dataset?.v1088OwnerName||''),phone:String(card?.querySelector('[data-directory-edit-field="phone"]')?.dataset?.directoryCurrentValue||card?.dataset?.v1088Phone||'')};
+  return {stayId:String(card?.dataset?.directoryStayId||''),stayKey:String(card?.dataset?.directoryStayKey||card?.dataset?.stayKey||''),dogId:String(card?.dataset?.directoryDogId||''),dogName:String(card?.dataset?.directoryDogName||card?.dataset?.dogName||''),startDate:String(card?.dataset?.directoryStartDate||card?.dataset?.startDate||''),endDate:String(card?.dataset?.directoryEndDate||card?.dataset?.endDate||''),breed:String(card?.querySelector('.directory-primary-breed')?.textContent||card?.dataset?.v1088Breed||'').trim(),ownerName:String(card?.querySelector('[data-directory-edit-field="ownerName"]')?.dataset?.directoryCurrentValue||card?.dataset?.v1088OwnerName||''),phone:String(card?.querySelector('[data-directory-edit-field="phone"]')?.dataset?.directoryCurrentValue||card?.dataset?.v1088Phone||'')};
 }
 function v110CollectCareCheckoutEvidence(){
   if(typeof document==='undefined')return;
   const events=Array.from(document.querySelectorAll('.directory-card[data-directory-stay-key]')).map(card=>{
     const p=v110OperationalPayloadFromCard(card);
-    return {title:p.dogName,start:p.startDate,end:p.endDate,extendedProps:{dogName:p.dogName,dogId:p.dogId,breed:p.breed,ownerName:p.ownerName,phone:p.phone,rawStartDate:p.startDate,rawEndDate:p.endDate,bookingType:'Confirmed Boarding'}};
+    return {title:p.dogName,start:p.startDate,end:p.endDate,extendedProps:{stayId:p.stayId,dogName:p.dogName,dogId:p.dogId,breed:p.breed,ownerName:p.ownerName,phone:p.phone,rawStartDate:p.startDate,rawEndDate:p.endDate,bookingType:'Confirmed Boarding'}};
   });
   if(events.length)v110IndexCheckoutEvidence(events);
 }
 
 function v110OperationDisplayState(card){
-  const p=v110OperationalPayloadFromCard(card),op=v110OperationForStay(p.stayKey),today=getLocalTodayDateString();
-  if(v110IsCheckoutCollision(p.stayKey))return{code:'collision',label:'Checkout Paused',icon:'⚠️',meta:'Conflicting bookings share these dates. Review the bookings before checkout.'};
+  const p=v110OperationalPayloadFromCard(card),op=v110OperationForStay(p),today=getLocalTodayDateString();
+  if((!p.stayId&&v110IsCheckoutCollision(p.stayKey))||v110OperationIdentityConflicts[p.stayId.toLowerCase()]||(!p.stayId&&v110OperationIdentityConflicts[`key:${p.stayKey}`]))return{code:'collision',label:'Checkout Paused',icon:'⚠️',meta:'Conflicting operation records need review before changing status.'};
   if(op?.status==='checked_out')return{code:'checked_out',label:'Checked Out',icon:'✅',meta:op.checkedOutAt?`Completed ${v110FormatTime(op.checkedOutAt)}`:'Stay completed'};
   if(op?.status==='checked_in')return{code:'checked_in',label:'Checked In',icon:'🏡',meta:op.checkedInAt?`Arrived ${v110FormatTime(op.checkedInAt)}`:'Currently at home'};
   if(p.startDate>today)return{code:'expected',label:'Expected',icon:'🛬',meta:`Arriving ${formatStayDateShort(p.startDate)}`};
@@ -225,6 +298,7 @@ function v110EnsureCareOperationBar(card){
    * changed, do not touch the DOM.
    */
   const signature=JSON.stringify([
+    p.stayId,
     p.stayKey,
     state.code,
     state.label,
@@ -249,7 +323,7 @@ function v110EnsureCareOperationBar(card){
 }
 
 function v110LeavingEvents(){const today=getLocalTodayDateString();return(Array.isArray(v110LatestCalendarEvents)?v110LatestCalendarEvents:[]).filter(e=>{const p=e?.extendedProps||{};if(p.isPotential===true||p.isMeetGreet===true)return false;return v10EventRawDates(e).end===today&&!v110IsCheckedOutEvent(e);});}
-function v110EnsureLeavingModal(){let m=document.getElementById('v110LeavingModal');if(m)return m;m=document.createElement('div');m.id='v110LeavingModal';m.className='v108-modal v110-leaving-modal';m.hidden=true;m.innerHTML=`<div class="v108-modal-card v110-leaving-card"><div class="v108-modal-head"><div><small>DEPARTURES</small><h3>👋 Leaving Today</h3><p>Review each pet and check them out when collected.</p></div><button type="button" data-v110-leaving-close aria-label="Close">×</button></div><div class="v110-leaving-list" data-v110-leaving-list></div></div>`;document.body.appendChild(m);m.addEventListener('click',async e=>{if(e.target===m||e.target.closest('[data-v110-leaving-close]')){m.hidden=true;return;}const b=e.target.closest('[data-v110-leaving-checkout]');if(!b)return;const ev=v110LeavingEvents()[Number(b.dataset.v110LeavingCheckout)];if(!ev)return;const p=ev.extendedProps||{},d=v10EventRawDates(ev),dog=String(p.dogName||ev.title||'Guest');b.disabled=true;b.textContent='⏳ Checking out…';try{await v110SaveOperationalStatus({stayKey:v110StayKeyForEvent(ev),dogName:dog,breed:p.breed||'',startDate:d.start,endDate:d.end,ownerName:p.ownerName||p.owner||'',phone:p.phone||''},'checked_out');await v110RenderLeavingModal();renderV10OperationsHome(globalCalendar?.getEvents()?.slice()||v110LatestCalendarEvents);}catch(err){alert('Checkout could not be saved.\n\n'+(err?.message||String(err)));b.disabled=false;b.textContent='👋 Check Out';}});return m;}
+function v110EnsureLeavingModal(){let m=document.getElementById('v110LeavingModal');if(m)return m;m=document.createElement('div');m.id='v110LeavingModal';m.className='v108-modal v110-leaving-modal';m.hidden=true;m.innerHTML=`<div class="v108-modal-card v110-leaving-card"><div class="v108-modal-head"><div><small>DEPARTURES</small><h3>👋 Leaving Today</h3><p>Review each pet and check them out when collected.</p></div><button type="button" data-v110-leaving-close aria-label="Close">×</button></div><div class="v110-leaving-list" data-v110-leaving-list></div></div>`;document.body.appendChild(m);m.addEventListener('click',async e=>{if(e.target===m||e.target.closest('[data-v110-leaving-close]')){m.hidden=true;return;}const b=e.target.closest('[data-v110-leaving-checkout]');if(!b)return;const ev=v110LeavingEvents()[Number(b.dataset.v110LeavingCheckout)];if(!ev)return;const p=ev.extendedProps||{},d=v10EventRawDates(ev),dog=String(p.dogName||ev.title||'Guest');b.disabled=true;b.textContent='⏳ Checking out…';try{await v110SaveOperationalStatus({stayId:p.stayId||'',stayKey:v110StayKeyForEvent(ev),dogName:dog,breed:p.breed||'',startDate:d.start,endDate:d.end,ownerName:p.ownerName||p.owner||'',phone:p.phone||''},'checked_out',ev);await v110RenderLeavingModal();renderV10OperationsHome(globalCalendar?.getEvents()?.slice()||v110LatestCalendarEvents);}catch(err){alert('Checkout could not be saved.\n\n'+(err?.message||String(err)));b.disabled=false;b.textContent='👋 Check Out';}});return m;}
 async function v110PhotoForStay(stayKey){try{const r=await queryAppsScript({action:'get_guest_profile',stayKey},{maxAttempts:1,timeoutMs:20000}),photo=r?.record?.dogPhoto||(Array.isArray(r?.record?.dogPhotoGallery)?r.record.dogPhotoGallery[r.record.dogPhotoGallery.length-1]:null);return String(photo?.previewUrl||photo?.url||photo?.driveUrl||'');}catch(_){return'';}}
 async function v110RenderLeavingModal(){const m=v110EnsureLeavingModal(),h=m.querySelector('[data-v110-leaving-list]'),list=v110LeavingEvents();if(!list.length){h.innerHTML='<div class="v110-leaving-empty"><span>✅</span><strong>No pets are waiting to check out.</strong><small>Completed checkouts disappear from the Leaving count.</small></div>';return;}h.innerHTML=list.map((ev,i)=>{const p=ev.extendedProps||{},d=v10EventRawDates(ev),dog=String(p.dogName||ev.title||'Guest');return`<article class="v110-leaving-pet"><div class="v110-leaving-photo" data-v110-leaving-photo="${i}"><span>🐶</span></div><div class="v110-leaving-copy"><strong>${v110Escape(dog)}</strong><span>${v110Escape(p.breed||'Breed not recorded')}</span><small>${v110Escape(formatStayDateShort(d.start))} → ${v110Escape(formatStayDateShort(d.end))}</small></div><button type="button" class="v110-checkout-button" data-v110-leaving-checkout="${i}">👋 Check Out</button></article>`;}).join('');list.forEach(async(ev,i)=>{const u=await v110PhotoForStay(v110StayKeyForEvent(ev));if(!u)return;const el=h.querySelector(`[data-v110-leaving-photo="${i}"]`);if(el)el.innerHTML=`<img src="${v110Escape(u)}" alt="" loading="lazy">`;});}
 async function v110OpenLeavingModal(){const m=v110EnsureLeavingModal();m.hidden=false;await v110RenderLeavingModal();}
@@ -362,7 +436,7 @@ function v110ScheduleCareEnhancement(){
 }
 
 applyGuestDirectoryResponse=function(response,options={}){
-  if(Array.isArray(response?.operations))v110IndexOperations(response.operations);
+  if(Array.isArray(response?.operations))v110MergeOperationRead(response.operations);
   const r=v110BaseApplyDirectoryResponse(response,options);
   setTimeout(v110ScheduleCareEnhancement,20);
   return r;
@@ -396,8 +470,8 @@ document.addEventListener('click',async e=>{
 
   const dep=e.target.closest('[data-v10-jump="departures"]');if(dep&&WAFFLE_PAGE==='calendar'){e.preventDefault();e.stopPropagation();await v110OpenLeavingModal();return;}
   const tab=e.target.closest('[data-v110-tab]');if(tab){e.preventDefault();e.stopPropagation();v110OpenCustomPanel(tab.closest('.directory-card'),tab.dataset.v110Tab);return;}
-  const ci=e.target.closest('[data-v110-checkin]');if(ci){const card=ci.closest('.directory-card'),p=v110OperationalPayloadFromCard(card);ci.disabled=true;ci.textContent='⏳ Checking in…';try{await v110SaveOperationalStatus(p,'checked_in');v110EnsureCareOperationBar(card);showWaffleForegroundPush({title:`🏡 ${p.dogName} checked in`,body:'Operational stay tracking is now active.'});}catch(err){alert('Check In could not be saved.\n\n'+(err?.message||String(err)));}finally{ci.disabled=false;}return;}
-  const co=e.target.closest('[data-v110-checkout]');if(co){const card=co.closest('.directory-card'),p=v110OperationalPayloadFromCard(card);if(!confirm(`Check out ${p.dogName}?`))return;co.disabled=true;co.textContent='⏳ Checking out…';try{await v110SaveOperationalStatus(p,'checked_out');if(typeof v1086MoveCheckedOutStayToPast==='function')v1086MoveCheckedOutStayToPast(card,p);else v110EnsureCareOperationBar(card);showWaffleForegroundPush({title:`👋 ${p.dogName} checked out`,body:'The stay has moved to Past.'});}catch(err){alert('Check Out could not be saved.\n\n'+(err?.message||String(err)));}finally{co.disabled=false;}return;}
+  const ci=e.target.closest('[data-v110-checkin]');if(ci){const card=ci.closest('.directory-card'),p=v110OperationalPayloadFromCard(card);ci.disabled=true;ci.textContent='⏳ Checking in…';try{await v110SaveOperationalStatus(p,'checked_in',card);v110EnsureCareOperationBar(card);showWaffleForegroundPush({title:`🏡 ${p.dogName} checked in`,body:'Operational stay tracking is now active.'});}catch(err){alert('Check In could not be saved.\n\n'+(err?.message||String(err)));}finally{ci.disabled=false;}return;}
+  const co=e.target.closest('[data-v110-checkout]');if(co){const card=co.closest('.directory-card'),p=v110OperationalPayloadFromCard(card);if(!confirm(`Check out ${p.dogName}?`))return;co.disabled=true;co.textContent='⏳ Checking out…';try{await v110SaveOperationalStatus(p,'checked_out',card);if(typeof v1086MoveCheckedOutStayToPast==='function')v1086MoveCheckedOutStayToPast(card,p);else v110EnsureCareOperationBar(card);showWaffleForegroundPush({title:`👋 ${p.dogName} checked out`,body:'The stay has moved to Past.'});}catch(err){alert('Check Out could not be saved.\n\n'+(err?.message||String(err)));}finally{co.disabled=false;}return;}
   const sm=e.target.closest('[data-v110-save-master]');if(sm){await v110SaveMasterFromCard(sm.closest('.directory-card'),sm);return;}
   const retryMaster=e.target.closest('[data-v110-master-retry]');if(retryMaster){v110LoadMasterProfile(retryMaster.closest('.directory-card'),{force:true});return;}
   const mediaToggle=e.target.closest('[data-v110-media-toggle]');if(mediaToggle){const expanded=mediaToggle.getAttribute('aria-expanded')==='true',content=mediaToggle.closest('.v110-media-section')?.querySelector('.v110-media-group-content');mediaToggle.setAttribute('aria-expanded',expanded?'false':'true');if(content)content.hidden=expanded;return;}

@@ -92,8 +92,8 @@
       if (!dates.start || !dates.end || today < dates.start || today > dates.end) return;
       const stayKey = typeof v110StayKeyForEvent === 'function' ? v110StayKeyForEvent(eventRecord) : '';
       if (!stayKey) return;
-      if (typeof v110OperationForStay === 'function' && v110OperationForStay(stayKey)?.status === 'checked_out') return;
-      unique.set(stayKey, eventRecord);
+      if (typeof v110OperationForStay === 'function' && v110OperationForStay(eventRecord)?.status === 'checked_out') return;
+      unique.set(typeof v110EventUniqueKey === 'function' ? v110EventUniqueKey(eventRecord, stayKey) : stayKey, eventRecord);
     });
 
     return Array.from(unique.values()).sort((a, b) =>

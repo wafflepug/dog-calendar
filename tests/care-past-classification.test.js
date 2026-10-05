@@ -32,7 +32,8 @@ const sandbox = {
   v110MakeStayKey(name, start, end) {
     return [String(name).toLowerCase(), start, end].join('|');
   },
-  v110OperationForStay(key) {
+  v110OperationForStay(booking) {
+    const key = typeof booking === 'object' ? booking.stayKey : booking;
     return sandbox.v110OperationsMap[key] || null;
   }
 };
@@ -110,9 +111,11 @@ const backendSandbox = {
   Utilities: { formatDate: () => '2026-09-23' },
   normalizeDateValue_: value => String(value || ''),
   makeGuestStayKey_: (name, start, end) => [String(name).toLowerCase(), start, end].join('|'),
-  readStayOperations_(keys) {
-    return keys.includes(checkedOutToday.stayKey)
-      ? [{ stayKey: checkedOutToday.stayKey, status: 'checked_out' }]
+  readStayOperations_(query) {
+    const keys = Array.isArray(query) ? query : (query?.stayKeys || []);
+    const ids = Array.isArray(query) ? [] : (query?.stayIds || []);
+    return keys.includes(checkedOutToday.stayKey) || ids.includes('00000000-0000-4000-8000-000000000001')
+      ? [{ stayId:'00000000-0000-4000-8000-000000000001', stayKey: checkedOutToday.stayKey, status: 'checked_out' }]
       : [];
   },
   readBelongingsSummaryRecords_: () => [],

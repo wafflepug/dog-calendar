@@ -1,6 +1,6 @@
 /* Waffle House Boarding — recovery service worker */
 
-const WAFFLE_SW_VERSION = 'v11.4.65-stay-identity-2026.10.05.08';
+const WAFFLE_SW_VERSION = 'v11.4.66-stay-operations-2026.10.06.01';
 const WAFFLE_CACHE_PREFIX = 'waffle-house-';
 const APP_SHELL_CACHE = `${WAFFLE_CACHE_PREFIX}shell-${WAFFLE_SW_VERSION}`;
 const RUNTIME_CACHE = `${WAFFLE_CACHE_PREFIX}runtime-${WAFFLE_SW_VERSION}`;
@@ -13,12 +13,12 @@ const APP_SHELL = [
   './audit.html',
   './maintenance.html',
   './system-status.html',
-  './system-status-sync.js?build=2026.08.28.01&rev=2026.10.05.08',
+  './system-status-sync.js?build=2026.08.28.01&rev=2026.10.06.01',
   './waffle-build.json',
   './waffle-release.json',
-'./waffle-bootstrap.js?v=2026.08.28.01&rev=2026.10.05.08',
+'./waffle-bootstrap.js?v=2026.08.28.01&rev=2026.10.06.01',
   './waffle-diagnostics.js?build=2026.08.28.01',
-  './waffle-csv.js?build=2026.08.28.01&rev=2026.10.05.08',
+  './waffle-csv.js?build=2026.08.28.01&rev=2026.10.06.01',
   './calendar.js?build=2026.08.28.01',
   './care.js?build=2026.08.28.01',
   './organiser.js?build=2026.08.28.01',
@@ -34,7 +34,7 @@ const APP_SHELL = [
   './phase4-booking.js?build=2026.08.28.01',
   './phase4-operations.js?build=2026.08.28.01',
   './phase4-ai-actions.js?build=2026.08.28.01',
-'./waffle-runtime.css?v=2026.08.28.01&rev=2026.10.05.08',
+'./waffle-runtime.css?v=2026.08.28.01&rev=2026.10.06.01',
   './waffle-maintenance-v2.webp?v=2026.08.28.02',
   './waffle-logo.png',
   './waffle-logo-dark.png',

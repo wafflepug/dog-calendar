@@ -2062,7 +2062,7 @@ function getGuestDirectoryPayload_() {
     legacyIntakes:
       legacyIntakes,
     operations:
-      readStayOperations_(stayKeys)
+      readStayOperations_({stayKeys:stayKeys,stayIds:bookings.map(function(booking){return booking.stayId;})})
   };
 }
 
@@ -2328,12 +2328,11 @@ function getPastGuestDirectoryPayload_(data) {
       }
     );
 
-  var candidateOperations =
-    readStayOperations_(
-      candidateStayKeys
-    );
-
+  var candidateStayIds = bookings.map(function(booking) { return booking.stayId; });
+  var candidateOperations = readStayOperations_({ stayKeys: candidateStayKeys, stayIds: candidateStayIds });
+  var candidateOperationsByStayId = {};
   var candidateOperationsByStayKey = {};
+  var operationStayKeyCounts = {};
 
   (candidateOperations || []).forEach(
     function(operation) {
@@ -2344,9 +2343,10 @@ function getPastGuestDirectoryPayload_(data) {
           ""
         );
 
-      if (stayKey) {
-        candidateOperationsByStayKey[stayKey] =
-          operation;
+      if (stayKey && !operation.identityConflict) {
+        operationStayKeyCounts[stayKey] = (operationStayKeyCounts[stayKey] || 0) + 1;
+        if (operation.stayId) candidateOperationsByStayId[String(operation.stayId).toLowerCase()] = operation;
+        candidateOperationsByStayKey[stayKey] = operation;
       }
     }
   );
@@ -2356,10 +2356,9 @@ function getPastGuestDirectoryPayload_(data) {
   bookings =
     bookings.filter(
       function(booking) {
-        var operation =
-          candidateOperationsByStayKey[
-            booking.stayKey
-          ];
+        var operation = booking.stayId
+          ? candidateOperationsByStayId[String(booking.stayId).toLowerCase()]
+          : operationStayKeyCounts[booking.stayKey] === 1 ? candidateOperationsByStayKey[booking.stayKey] : null;
 
         var isCheckedOut =
           String(
@@ -2450,7 +2449,7 @@ function getPastGuestDirectoryPayload_(data) {
     today:
       todayStr,
     operations:
-      readStayOperations_(stayKeys)
+      readStayOperations_({stayKeys:stayKeys,stayIds:bookings.map(function(booking){return booking.stayId;})})
   };
 }
 
@@ -2580,6 +2579,10 @@ function waffleReadVariant_(action, data) {
             .map(String)
             .sort()
         : [],
+    stayIds:
+      Array.isArray(data.stayIds)
+        ? data.stayIds.map(String).sort()
+        : [],
     limit:
       Number(data.limit || 0),
     dogName:
@@ -2607,6 +2610,10 @@ function waffleReadVariant_(action, data) {
           )
         : ""
   };
+
+  if (["get_stay_operations", "get_guest_directory", "get_past_guest_directory"].indexOf(actionName) !== -1) {
+    variantPayload.stayOperationIdentityVersion = typeof STAY_OPERATION_IDENTITY_VERSION_V11226_ === "undefined" ? 0 : STAY_OPERATION_IDENTITY_VERSION_V11226_;
+  }
 
   return waffleCacheFingerprint_(
     JSON.stringify(variantPayload)
@@ -3133,7 +3140,8 @@ function processReadOnlySheetAction_(data) {
       result: "success",
       action: action,
       versions: Object.assign({}, getWaffleDataVersions_(), {
-        stableStayIdentityVersion: STABLE_STAY_IDENTITY_VERSION_V11225_
+        stableStayIdentityVersion: STABLE_STAY_IDENTITY_VERSION_V11225_,
+        stayOperationIdentityVersion: STAY_OPERATION_IDENTITY_VERSION_V11226_
       })
     };
   }
@@ -3281,7 +3289,7 @@ function processReadOnlySheetAction_(data) {
   }
 
   if (action === "get_stay_operations") {
-    return getVersionedWaffleRead_("directory",action,data,20,function(){return {records:readStayOperations_(data.stayKeys)};});
+    return getVersionedWaffleRead_("directory",action,data,20,function(){return {records:readStayOperations_({stayKeys:data.stayKeys,stayIds:data.stayIds})};});
   }
 
   if (action === "get_dog_master_profile") {
@@ -4001,6 +4009,9 @@ function updateV108BoardingDates_(data) {
   if (!start || !end || end < start) throw new Error("New boarding dates are invalid.");
   var stayId=ensureStableStayIdV11225_(sheet,row);
   var oldStayKey = makeGuestStayKey_(before.dogName, before.startDate, before.endDate);
+  if (typeof bindLegacyStayOperationToIdV11226_ === "function") {
+    bindLegacyStayOperationToIdV11226_(sheet, oldStayKey, row, stayId);
+  }
   updateStableStayRowV11225_(sheet,row,{4:start,5:end},String(data.clientMutationId||""));
   var newStayKey = makeGuestStayKey_(before.dogName, start, end);
   if (oldStayKey !== newStayKey) {
@@ -4286,11 +4297,11 @@ function getStayOperationsSheet_() {
   var name=String(props.getProperty("STAY_OPERATIONS_SHEET_NAME")||"Stay_Operations").trim();
   var sh=ss.getSheetByName(name)||ss.insertSheet(name);
   var h=getStayOperationsHeaders_();
-  if(sh.getMaxColumns()<h.length) sh.insertColumnsAfter(sh.getMaxColumns(),h.length-sh.getMaxColumns());
-  var cur=sh.getLastRow()>0?sh.getRange(1,1,1,h.length).getValues()[0]:[];
-  var needs=cur.length!==h.length;
-  if(!needs){for(var i=0;i<h.length;i++){if(String(cur[i]||"")!==h[i]){needs=true;break;}}}
-  if(needs){sh.getRange(1,1,1,h.length).setValues([h]);sh.setFrozenRows(1);}
+  if(sh.getLastRow()===0) {
+    if(sh.getMaxColumns()<h.length) sh.insertColumnsAfter(sh.getMaxColumns(),h.length-sh.getMaxColumns());
+    sh.getRange(1,1,1,h.length).setValues([h]);
+    sh.setFrozenRows(1);
+  }
   return sh;
 }
 function findStayOperationRow_(sh,stayKey){
@@ -4446,6 +4457,10 @@ function processSheetAction_(data) {
       "Another Waffle House update is currently being saved. Please try this update again in a few seconds."
     );
   }
+
+  var previousOperationsLockFlag = typeof WAFFLE_STAY_OPERATIONS_LOCK_HELD_V11226_ === "undefined"
+    ? false : WAFFLE_STAY_OPERATIONS_LOCK_HELD_V11226_;
+  WAFFLE_STAY_OPERATIONS_LOCK_HELD_V11226_ = true;
 
   try {
     if (data.action === "backfill_stay_ids") {
@@ -5307,6 +5322,7 @@ function processSheetAction_(data) {
     return result;
 
   } finally {
+    WAFFLE_STAY_OPERATIONS_LOCK_HELD_V11226_ = previousOperationsLockFlag;
     if (ownsLock) {
       try {
         lock.releaseLock();

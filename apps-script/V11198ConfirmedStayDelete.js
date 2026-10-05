@@ -44,6 +44,10 @@ function deleteConfirmedStayV11198Unlocked_(data) {
   before.stayId = stayId;
   var reference = sheet.getName() + "!A" + row;
 
+  if (typeof bindLegacyStayOperationToIdV11226_ === "function") {
+    bindLegacyStayOperationToIdV11226_(sheet, makeGuestStayKey_(before.dogName, before.startDate, before.endDate), row, stayId);
+  }
+
   sheet.deleteRow(row);
 
   if (typeof touchWaffleDataVersion_ === "function") {

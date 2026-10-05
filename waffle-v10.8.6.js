@@ -34,34 +34,41 @@ function v1086PastOperationForBooking(
             )
         );
 
-    const responseOperation =
+    const responseOperations =
         (Array.isArray(response?.operations)
             ? response.operations
             : []
-        ).find(
-            operation =>
-                String(
-                    operation?.stayKey ||
-                    ''
-                ) === stayKey
-        );
+        ).filter(operation => (booking?.stayId
+            ? String(operation?.stayId || operation?.identityStayId || operation?.sourceStayId || '').toLowerCase() === String(booking.stayId).toLowerCase()
+            : String(operation?.stayKey || '') === stayKey));
 
-    if (responseOperation) {
-        return responseOperation;
+    const stayId = String(booking?.stayId || '').trim().toLowerCase();
+    if (stayId && typeof v110ValidStayId === 'function' && !v110ValidStayId(stayId)) return null;
+    if (typeof v110OperationIdentityConflicts === 'object' &&
+        (v110OperationIdentityConflicts[stayId] || (!stayId && v110OperationIdentityConflicts[`key:${stayKey}`]))) return null;
+    if (!stayId && typeof v110IsCheckoutCollision === 'function' && v110IsCheckoutCollision(stayKey)) return null;
+
+    if (responseOperations.some(operation => operation?.identityConflict === true) || responseOperations.length > 1) return null;
+
+    // The shared index already combines this response with a proven local write.
+    // A cached directory snapshot must not put a checked-out stay back in Staying.
+    if (stayKey && typeof v110OperationForStay === 'function') {
+        const indexedOperation = v110OperationForStay(booking);
+        if (indexedOperation) return indexedOperation;
     }
+
+    if (responseOperations.length === 1) return responseOperations[0];
 
     if (
         stayKey &&
         typeof v110OperationForStay ===
             'function'
     ) {
-        return v110OperationForStay(
-            stayKey
-        );
+        return v110OperationForStay(booking);
     }
 
     return (
-        stayKey &&
+        stayKey && !booking?.stayId &&
         typeof v110OperationsMap ===
             'object'
             ? v110OperationsMap[stayKey]

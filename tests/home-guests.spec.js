@@ -10,10 +10,9 @@ const app = read('waffle-app.js');
 const source = read('waffle-v11.1.js');
 const selector = source.slice(source.indexOf('function v111CurrentDogEvents()'), source.indexOf('function v111EnsureQuickPhotoModal()'));
 const operations = read('waffle-v11.0.js');
-// The isolated Home fixture starts at the helper boundary rather than loading
-// the full V11.0 script. Seed the collision evidence dependency introduced by
-// the checkout guard so operation lookup exercises the same runtime path.
-const identity = 'let v110CheckoutCollisionMap = {};\n' + operations.slice(operations.indexOf('function v110NormaliseStayDate'), operations.indexOf('function v110FormatTime'));
+// Load the complete operations module so its identity indexes and cache state
+// have the same lifetime as production rather than manually seeding internals.
+const identity = operations;
 const sections = read('index.html').match(/<section class="wh-home-guests"[\s\S]*?<\/section>/g);
 const html = sections[0];
 const css = read('waffle-runtime.css').split('/* Sitter Home:')[1];
@@ -112,6 +111,9 @@ async function setup(page, options = {}) {
     window.globalCalendar = { getEvents: () => window.fixtureEvents };
     window.v110LatestCalendarEvents = [];
     window.v110OperationsMap = operations || {};
+    window.WAFFLE_PAGE = 'home';
+    window.renderV10OperationsHome = () => {};
+    window.applyGuestDirectoryResponse = () => {};
     window.getLocalTodayDateString = () => localToday;
     window.v10EventRawDates = e => ({ start: e.extendedProps.rawStartDate, end: e.extendedProps.rawEndDate });
     window.queryAppsScript = async payload => {
@@ -129,6 +131,7 @@ async function setup(page, options = {}) {
     if (loaded) localStorage.setItem('boardingDataCache', 'fixture');
   }, { events: options.events || guests, loaded: options.loaded !== false, failure: !!options.failure, localToday: options.today || today, operations: options.operations, fallback: !!options.fallback, progressive: !!options.progressive });
   await page.addScriptTag({ content: identity + '\n' + selector });
+  await page.evaluate(records => v110IndexOperations(Object.entries(records || {}).map(([stayKey, record]) => ({ stayKey, ...record }))), options.operations);
   if (options.checkedOut) await page.evaluate(key => { v110OperationsMap[key] = { status: 'checked_out' }; }, options.checkedOut);
   await page.addScriptTag({ content: ui });
 }
@@ -191,6 +194,20 @@ test('empty, pending data, photo error and refreshed checkout remain truthful', 
   await page.evaluate(() => { v110OperationsMap['coco|2026-09-01|2026-09-10'] = { status: 'checked_out' }; WAFFLE_HOME_GUESTS.refresh(); });
   await expect(page.locator('[data-home-stay]')).toHaveCount(3);
   await expect(page.getByRole('link', { name: /Open Coco/ })).toHaveCount(0);
+});
+test('same-name stays keep separate Home cards and Care destinations after one checkout', async ({ page }) => {
+  const idA = '00000000-0000-4000-8000-000000000001';
+  const idB = '00000000-0000-4000-8000-000000000002';
+  await setup(page, { events: [event('Coco', '2026-09-01', '2026-09-10', { stayId: idA, ownerName: 'Ada' }), event('Coco', '2026-09-01', '2026-09-10', { stayId: idB, ownerName: 'Lee' })] });
+  await expect(page.locator('#whHomeGuests [data-home-stay]')).toHaveCount(2);
+  await expect(page.locator(`[data-home-stay-id="${idA}"]`)).toHaveAttribute('href', new RegExp('stayId=' + idA));
+  await expect(page.locator(`[data-home-stay-id="${idB}"]`)).toHaveAttribute('href', new RegExp('stayId=' + idB));
+  await page.evaluate(stayId => {
+    v110IndexOperations([{ stayId, stayKey: 'coco|2026-09-01|2026-09-10', dogName: 'Coco', status: 'checked_out', actualCheckoutDate: '2026-09-08' }]);
+    WAFFLE_HOME_GUESTS.refresh();
+  }, idA);
+  await expect(page.locator('#whHomeGuests [data-home-stay]')).toHaveCount(1);
+  await expect(page.locator(`[data-home-stay-id="${idB}"]`)).toBeVisible();
 });
 
 test('portraits stay circular and the row scrolls without page overflow', async ({ page }, testInfo) => {
