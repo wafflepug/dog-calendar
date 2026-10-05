@@ -125,6 +125,8 @@
     const originalStartDate = String(card.dataset.directoryStartDate || card.dataset.startDate || '').trim();
     const originalEndDate = String(card.dataset.directoryEndDate || card.dataset.endDate || originalStartDate).trim();
     const sourceRow = Number(card.dataset.directorySourceRow || 0);
+    const stayId = String(card.dataset.directoryStayId || '').trim();
+    const dogId = String(card.dataset.directoryDogId || '').trim();
     const breed = String(
       card.dataset.v1088Breed ||
       card.querySelector('.directory-primary-breed')?.textContent ||
@@ -160,6 +162,9 @@
     try {
       const response = await window.sendPayloadToAppsScript({
         action: 'update_boarding_dates',
+        stayId,
+        stayIdentityVersion: 1,
+        dogId,
         dogName,
         originalDogName: dogName,
         originalStartDate,
@@ -174,6 +179,22 @@
         source: 'Dog Profile'
       });
       if (!response || response.result !== 'success') throw new Error(response?.error || 'Stay dates could not be updated.');
+      const savedStayId = String(response?.stayId || response?.booking?.stayId || stayId).trim();
+      if (savedStayId) {
+        const displayEnd = new Date(`${endDate}T00:00:00`);
+        displayEnd.setDate(displayEnd.getDate() + 1);
+        const displayEndDate = `${displayEnd.getFullYear()}-${String(displayEnd.getMonth() + 1).padStart(2, '0')}-${String(displayEnd.getDate()).padStart(2, '0')}`;
+        const overlay = {
+          id: `stable_${savedStayId}`, title: dogName, start: startDate, end: displayEndDate, allDay: true,
+          extendedProps: { isPotential: false, isMeetGreet: false, stayId: savedStayId, dogId, dogName, breed, owner: ownerName, ownerName, phone, rawStartDate: startDate, rawEndDate: endDate, pendingOriginalStartDate: originalStartDate, pendingOriginalEndDate: originalEndDate, bookingType: 'Confirmed Boarding', dateUpdatePending: true }
+        };
+        try {
+          const local = JSON.parse(localStorage.getItem('temporaryConfirmedStays') || '[]');
+          const retained = (Array.isArray(local) ? local : []).filter(event => String(event?.extendedProps?.stayId || '').trim().toLowerCase() !== savedStayId.toLowerCase());
+          retained.push(overlay);
+          localStorage.setItem('temporaryConfirmedStays', JSON.stringify(retained));
+        } catch (_) {}
+      }
       if (typeof window.invalidateWaffleClientCaches === 'function') {
         await window.invalidateWaffleClientCaches(['directory', 'audit']);
       }
@@ -186,8 +207,11 @@
       if (!nextStayKey && typeof window.v110MakeStayKey === 'function') {
         try { nextStayKey = window.v110MakeStayKey(dogName, startDate, endDate); } catch (_) {}
       }
+      const nextStayId = String(response?.stayId || response?.booking?.stayId || stayId).trim();
       setTimeout(() => {
-        window.location.href = nextStayKey
+        window.location.href = nextStayId
+          ? `directory.html?stayId=${encodeURIComponent(nextStayId)}&stayKey=${encodeURIComponent(nextStayKey)}`
+          : nextStayKey
           ? `directory.html?stayKey=${encodeURIComponent(nextStayKey)}`
           : 'directory.html';
       }, 550);

@@ -47,6 +47,8 @@ The eleven versioned Waffle AI provider, health, Gemini-repair and calendar-fast
 
 ## Canonical ownership rules
 
+Booking identity is separate from dog identity and legacy Care/media keys. `apps-script/StableStayIdentity.js` owns additive Stay ID headers, durable booking receipts and verified recovery helpers; `apps-script/Code.js` owns their mutation/read integration. `Stable Stay Identity` runs executable backend/frontend fixtures before release, and deployment verifies the read-only `get_data_versions` capability. Historical operational status continues to use its existing guarded lookup until the separate Stay ID operations rollout.
+
 - Calendar UI changes belong in `calendar.js`.
 - Care/Guest Directory UI changes belong in `care.js`.
 - Organiser UI/interaction changes belong in `organiser.js` and `organiser.css`.

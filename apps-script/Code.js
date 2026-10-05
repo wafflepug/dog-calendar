@@ -1990,6 +1990,8 @@ function getGuestDirectoryPayload_() {
             ),
       stayKey:
         stayKey,
+      stayId:
+        stableStayIdAtV11225_(rows, i),
       dogId:
         v108DogIdentityAt_(rows,i).dogId,
       dogNumber:
@@ -2248,6 +2250,8 @@ function getPastGuestDirectoryPayload_(data) {
           startDate,
           endDate
         ),
+      stayId:
+        stableStayIdAtV11225_(rows, i),
       dogName:
         dogName,
       breed:
@@ -2960,6 +2964,8 @@ function readPotentialStayRecords_() {
       id:
         "sheet_pot_" +
         String(i + 1),
+      stayId:
+        stableStayIdAtV11225_(rows, i),
       row:
         i + 1,
       timestamp:
@@ -3126,8 +3132,9 @@ function processReadOnlySheetAction_(data) {
     return {
       result: "success",
       action: action,
-      versions:
-        getWaffleDataVersions_()
+      versions: Object.assign({}, getWaffleDataVersions_(), {
+        stableStayIdentityVersion: STABLE_STAY_IDENTITY_VERSION_V11225_
+      })
     };
   }
 
@@ -3799,7 +3806,6 @@ function findV108BoardingRowForUpdate_(rows, data) {
   var owner = normalizeV108Identity_(data.ownerName || data.originalOwnerName);
   var breed = normalizeV108Identity_(data.breed || data.originalBreed);
   var phone = String(data.phone || data.originalPhone || "").replace(/\D/g, "");
-  var requestedRow = Number(data.sourceRow || 0);
   var exact = [];
   var relaxed = [];
 
@@ -3826,10 +3832,6 @@ function findV108BoardingRowForUpdate_(rows, data) {
     if (candidate.endMatches) exact.push(candidate);
   }
 
-  var sourceCandidate = relaxed.filter(function(candidate) {
-    return requestedRow >= 2 && candidate.row === requestedRow;
-  });
-  if (sourceCandidate.length === 1) return sourceCandidate[0].row;
   if (exact.length === 1) return exact[0].row;
   if (exact.length > 1 || relaxed.length > 1) {
     throw new Error("Multiple confirmed boardings match this dog and date. Refresh Care and choose the exact stay again.");
@@ -3971,9 +3973,13 @@ function createV108Boarding_(data) {
     assertV108DogNameMatchesId_(rows, selectedDogId, dogName);
   }
   if(copyRequested && selectedDogId) validateV108DogProfileCopy_(dogName, dogId, rows);
-  ensureV108DogIdColumn_(sheet);
-  sheet.appendRow([new Date(),dogName,breed,start,end,owner,phone,"","",String(data.notes||"").trim(),"","Confirmed Boarding"]);
-  var row=sheet.getLastRow();
+  var dogColumns=ensureV108DogIdColumn_(sheet);
+  var appendData=[new Date(),dogName,breed,start,end,owner,phone,"","",String(data.notes||"").trim(),"","Confirmed Boarding"];
+  var headerCols=stableStayHeadersV11225_(sheet,true);
+  while(appendData.length<headerCols.width)appendData.push("");
+  appendData[dogColumns.id] = dogId;
+  var appended=appendStableStayRowV11225_(sheet,appendData,String(data.stayId||""),String(data.clientMutationId||""));
+  var row=appended.row;
   var dogIdentity=assignV108DogIdentity_(sheet,row,dogId);
   var stayKey=makeGuestStayKey_(dogName,start,end);
   var copied={copied:false};
@@ -3984,17 +3990,18 @@ function createV108Boarding_(data) {
   logAuditEvent_({category:"Boarding",action:"Booking Created",dogName:dogName,bookingType:"Confirmed Boarding",reference:sheet.getName()+"!A"+row,summary:"Confirmed boarding created for "+dogName+" from the Waffle House popup.",changedFields:["New record","Intake Link"],after:after,source:"Web App"});
   after.dogId=dogId;
   after.dogNumber=dogIdentity.dogNumber;
-  return {result:"success",action:"create_boarding",row:row,stayKey:stayKey,dogId:dogIdentity.dogId,dogNumber:dogIdentity.dogNumber,booking:after,intake:intake,copiedPreviousProfile:copied,copySkippedReason:copySkippedReason};
+  return {result:"success",action:"create_boarding",row:row,stayId:appended.stayId,stayKey:stayKey,dogId:dogIdentity.dogId,dogNumber:dogIdentity.dogNumber,booking:after,intake:intake,copiedPreviousProfile:copied,copySkippedReason:copySkippedReason};
 }
 
 function updateV108BoardingDates_(data) {
   var sheet=getTargetSheet_(), rows=sheet.getDataRange().getValues();
-  var row=findV108BoardingRowForUpdate_(rows,data);
+  var row=String(data.stayId||"").trim()?findStayRowByIdV11225_(sheet,data.stayId):findV108BoardingRowForUpdate_(rows,data);
   if (row === -1) throw new Error("Confirmed boarding could not be found.");
   var before=auditBookingSnapshotFromSheetRow_(sheet,row), start=normalizeDateValue_(data.startDate), end=normalizeDateValue_(data.endDate||data.startDate);
   if (!start || !end || end < start) throw new Error("New boarding dates are invalid.");
+  var stayId=ensureStableStayIdV11225_(sheet,row);
   var oldStayKey = makeGuestStayKey_(before.dogName, before.startDate, before.endDate);
-  sheet.getRange(row,4).setValue(start); sheet.getRange(row,5).setValue(end);
+  updateStableStayRowV11225_(sheet,row,{4:start,5:end},String(data.clientMutationId||""));
   var newStayKey = makeGuestStayKey_(before.dogName, start, end);
   if (oldStayKey !== newStayKey) {
     migrateBelongingsIdentityForGuest_(sheet.getParent(), oldStayKey, newStayKey, before.dogName);
@@ -4002,7 +4009,7 @@ function updateV108BoardingDates_(data) {
   }
   var after=auditBookingSnapshotFromSheetRow_(sheet,row);
   logAuditEvent_({category:"Boarding",action:"Booking Dates Moved",dogName:after.dogName,bookingType:after.bookingType,reference:sheet.getName()+"!A"+row,summary:after.dogName+" moved to "+start+" – "+end+" from the calendar.",changedFields:["Start Date","End Date"],before:before,after:after,source:"Calendar Drag"});
-  return {result:"success",action:"update_boarding_dates",row:row,booking:after};
+  return {result:"success",action:"update_boarding_dates",row:row,stayId:stayId,booking:after};
 }
 
 function updateV108MeetGreetSchedule_(data) {
@@ -4069,11 +4076,85 @@ function saveV108MutationReceipt_(id) {
 }
 function processSheetActionWithV108Receipt_(data) {
   assertWaffleActionAllowedDuringMaintenance_(data && data.action);
-  data=data&&typeof data==="object"?data:{};
+  data=data&&typeof data==="object"?Object.assign({},data):{};
   var id=String(data.clientMutationId||"").trim();
   if(!id || isReadOnlySheetAction_(data.action)) return processSheetAction_(data);
-  if(getV108MutationReceipts_()[id]) return {result:"success",action:data.action,duplicate:true,clientMutationId:id};
-  var result=processSheetAction_(data); saveV108MutationReceipt_(id); result.clientMutationId=id; return result;
+  if (id.length > 128 || !/^[A-Za-z0-9_-]+$/.test(id)) throw new Error("The booking retry ID is invalid. Refresh and try again.");
+  if (!STAY_IDENTITY_ACTIONS_V11225_[String(data.action || "")]) {
+    if(getV108MutationReceipts_()[id]) return {result:"success",action:data.action,duplicate:true,clientMutationId:id};
+    var legacyResult=processSheetAction_(data); saveV108MutationReceipt_(id); legacyResult.clientMutationId=id; return legacyResult;
+  }
+
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(5000)) throw new Error("Another Waffle House update is currently being saved. Please try this update again in a few seconds.");
+  var previousLockFlag = WAFFLE_V11225_RECEIPT_LOCK_HELD_;
+  WAFFLE_V11225_RECEIPT_LOCK_HELD_ = true;
+  try {
+    var receiptSheet = stayMutationReceiptSheetV11225_();
+    var receiptRow = findStayMutationReceiptV11225_(receiptSheet, id);
+    var digest = canonicalStayMutationPayloadV11225_(data);
+    var receipt = receiptRow < 0 ? null : getStayMutationReceiptV11225_(receiptSheet, receiptRow);
+    if (receipt && receipt.digest !== digest) throw new Error("This retry ID was already used with different booking details. Refresh the booking; no change was repeated.");
+    if (receipt && receipt.state === "succeeded") {
+      var saved = JSON.parse(receipt.responseJson || "{}");
+      saved.duplicate = true;
+      return saved;
+    }
+    if (receipt && receipt.state === "pending") {
+      if (receipt.action === "create_boarding" || receipt.action === "create_potential") {
+        return recoverCreatedStayMutationV11225_(receiptSheet, receipt, getTargetSheet_());
+      }
+      return recoverStayMutationV11225_(receiptSheet, receipt, getTargetSheet_());
+    }
+    if (receipt) throw new Error("The saved booking receipt has an unknown state. The retry was not replayed.");
+
+    // The former timestamp-only receipt table cannot reproduce a response.
+    // Refuse a retained legacy ID rather than replaying a possibly committed write.
+    if (getV108MutationReceipts_()[id]) throw new Error("This retry ID belongs to an older booking receipt without a saved result. Refresh the booking before retrying.");
+    if ((data.action === "create_boarding" || data.action === "create_potential") &&
+        (Number(data.stayIdentityVersion) !== STABLE_STAY_IDENTITY_VERSION_V11225_ || !validStayIdV11225_(data.stayId))) {
+      throw new Error("A stable Stay ID is required for this create request. Refresh to update the booking form before retrying.");
+    }
+
+    var bookingSheet = getTargetSheet_();
+    var createsStay = data.action === "create_boarding" || data.action === "create_potential";
+    var row = createsStay ? -1 : resolveStayMutationRowV11225_(bookingSheet, data);
+    if (!createsStay && row < 2) throw new Error("The booking could not be uniquely identified. Refresh and try again.");
+    var stayId = createsStay ? String(data.stayId || "").trim() : ensureStableStayIdV11225_(bookingSheet, row);
+    if (!validStayIdV11225_(stayId)) throw new Error("A valid Stay ID is required for this booking change.");
+    stayId = stayId.toLowerCase();
+    if (createsStay) {
+      stableStayHeadersV11225_(bookingSheet, true);
+      if (findStayRowByIdV11225_(bookingSheet, stayId) >= 2) throw new Error("This Stay ID is already assigned to another booking. Refresh before retrying.");
+      if (stayIdAlreadyReceiptedV11225_(receiptSheet, stayId)) throw new Error("This Stay ID already has a mutation receipt, including a deleted or pending booking. A new create cannot reuse it.");
+    }
+    if (!createsStay) recoverPendingStayForTargetV11225_(receiptSheet, bookingSheet, stayId);
+
+    data.stayId = stayId;
+    var pending = { id: id, action: String(data.action || ""), digest: digest, state: "pending", stayId: stayId };
+    reserveStayMutationV11225_(receiptSheet, pending, row, data);
+    var result;
+    try {
+      result = processSheetAction_(data);
+    } catch (primaryError) {
+      try {
+        var pendingReceipt = getStayMutationReceiptV11225_(receiptSheet, pending.row);
+        if (createsStay) return recoverCreatedStayMutationV11225_(receiptSheet, pendingReceipt, bookingSheet);
+        return recoverStayMutationV11225_(receiptSheet, pendingReceipt, bookingSheet);
+      } catch (recoveryError) {
+        throw new Error("The booking change may have committed but its receipt is still pending. It was not replayed. Action: " + String(primaryError && primaryError.message || "unknown failure") + ". Recovery: " + String(recoveryError && recoveryError.message || "unavailable"));
+      }
+    }
+    result = stableStayMutationResponseV11225_(data, result, stayId);
+    pending.state = "succeeded";
+    pending.responseJson = JSON.stringify(result);
+    writeStayMutationReceiptV11225_(receiptSheet, pending.row, pending);
+    saveV108MutationReceipt_(id);
+    return result;
+  } finally {
+    WAFFLE_V11225_RECEIPT_LOCK_HELD_ = previousLockFlag;
+    lock.releaseLock();
+  }
 }
 
 
@@ -4357,17 +4438,19 @@ function processSheetAction_(data) {
    * Reads remain lock-free so a photo upload/profile save cannot block
    * Guest Directory, Audit, Reminders or status loading.
    */
-  var lock =
-    LockService
-      .getScriptLock();
+  var ownsLock = !WAFFLE_V11225_RECEIPT_LOCK_HELD_;
+  var lock = ownsLock ? LockService.getScriptLock() : null;
 
-  if (!lock.tryLock(5000)) {
+  if (ownsLock && !lock.tryLock(5000)) {
     throw new Error(
       "Another Waffle House update is currently being saved. Please try this update again in a few seconds."
     );
   }
 
   try {
+    if (data.action === "backfill_stay_ids") {
+      return backfillStableStayIdsV11225_();
+    }
     var sheet =
       getTargetSheet_();
 
@@ -4507,7 +4590,7 @@ function processSheetAction_(data) {
     else if (data.action === "create_potential") {
       validatePotentialPayload_(data);
 
-      sheet.appendRow([
+      var potentialAppend = appendStableStayRowV11225_(sheet, [
         new Date(),
         data.dogName || "",                    // B Dog Name
         data.breed || "",                      // C Breed
@@ -4520,9 +4603,10 @@ function processSheetAction_(data) {
         data.notes || "",                      // J Notes
         "",                                    // K Edit Link
         "Potential Stay"                       // L Booking Type
-      ]);
+      ], String(data.stayId || ""), String(data.clientMutationId || ""));
 
-      result.row = sheet.getLastRow();
+      result.row = potentialAppend.row;
+      result.stayId = potentialAppend.stayId;
       result.bookingType = "Potential Stay";
 
       var potentialCreated = auditBookingSnapshotFromSheetRow_(
@@ -4552,13 +4636,9 @@ function processSheetAction_(data) {
     else if (data.action === "update_potential") {
       validatePotentialPayload_(data);
 
-      var updateRow = findBookingRow_(
-        rows,
-        "Potential Stay",
-        data.originalDogName || data.dogName,
-        data.originalStartDate || data.startDate,
-        data.originalEndDate || data.endDate
-      );
+      var updateRow = String(data.stayId || "").trim()
+        ? findStayRowByIdV11225_(sheet, data.stayId)
+        : safeLegacyStayRowV11225_(rows, data.action, data);
 
       if (updateRow === -1) {
         throw new Error("Potential Stay could not be found for update.");
@@ -4569,17 +4649,15 @@ function processSheetAction_(data) {
         updateRow
       );
 
-      sheet.getRange(updateRow, 2).setValue(data.dogName || "");
-      sheet.getRange(updateRow, 3).setValue(data.breed || "");
-      sheet.getRange(updateRow, 4).setValue(data.startDate || "");
-      sheet.getRange(updateRow, 5).setValue(data.endDate || data.startDate || "");
-      sheet.getRange(updateRow, 6).setValue(data.ownerName || "");
-      sheet.getRange(updateRow, 7).setValue(data.phone || "");
-      sheet.getRange(updateRow, 10).setValue(data.notes || "");
-      sheet.getRange(updateRow, 12).setValue("Potential Stay");
+      updateStableStayRowV11225_(sheet, updateRow, {
+        2: data.dogName || "", 3: data.breed || "", 4: data.startDate || "",
+        5: data.endDate || data.startDate || "", 6: data.ownerName || "",
+        7: data.phone || "", 10: data.notes || "", 12: "Potential Stay"
+      }, String(data.clientMutationId || ""));
 
       result.row = updateRow;
       result.bookingType = "Potential Stay";
+      result.stayId = ensureStableStayIdV11225_(sheet, updateRow);
 
       var potentialAfter = auditBookingSnapshotFromSheetRow_(
         sheet,
@@ -4615,13 +4693,9 @@ function processSheetAction_(data) {
     else if (data.action === "confirm_potential") {
       validatePotentialPayload_(data);
 
-      var confirmRow = findBookingRow_(
-        rows,
-        "Potential Stay",
-        data.originalDogName || data.dogName,
-        data.originalStartDate || data.startDate,
-        data.originalEndDate || data.endDate
-      );
+      var confirmRow = String(data.stayId || "").trim()
+        ? findStayRowByIdV11225_(sheet, data.stayId)
+        : safeLegacyStayRowV11225_(rows, data.action, data);
 
       if (confirmRow === -1) {
         throw new Error("Potential Stay could not be found for confirmation.");
@@ -4633,20 +4707,18 @@ function processSheetAction_(data) {
       );
 
       // Save any edits in the modal, then mark the SAME row confirmed.
-      sheet.getRange(confirmRow, 2).setValue(data.dogName || "");
-      sheet.getRange(confirmRow, 3).setValue(data.breed || "");
-      sheet.getRange(confirmRow, 4).setValue(data.startDate || "");
-      sheet.getRange(confirmRow, 5).setValue(data.endDate || data.startDate || "");
-      sheet.getRange(confirmRow, 6).setValue(data.ownerName || "");
-      sheet.getRange(confirmRow, 7).setValue(data.phone || "");
-      sheet.getRange(confirmRow, 10).setValue(data.notes || "");
-      sheet.getRange(confirmRow, 12).setValue("Confirmed Boarding");
+      updateStableStayRowV11225_(sheet, confirmRow, {
+        2: data.dogName || "", 3: data.breed || "", 4: data.startDate || "",
+        5: data.endDate || data.startDate || "", 6: data.ownerName || "",
+        7: data.phone || "", 10: data.notes || "", 12: "Confirmed Boarding"
+      }, String(data.clientMutationId || ""));
       ensureV108DogIdColumn_(sheet);
       var confirmedIdentity=assignV108DogIdentity_(sheet,confirmRow,"");
       var confirmedDogId=confirmedIdentity.dogId;
 
       result.row = confirmRow;
       result.bookingType = "Confirmed Boarding";
+      result.stayId = ensureStableStayIdV11225_(sheet, confirmRow);
       result.dogId = confirmedDogId;
       result.dogNumber = confirmedIdentity.dogNumber;
 
@@ -4682,13 +4754,9 @@ function processSheetAction_(data) {
     // 5. DELETE POTENTIAL STAY
     // ----------------------------------------------------
     else if (data.action === "delete_potential") {
-      var deletePotentialRow = findBookingRow_(
-        rows,
-        "Potential Stay",
-        data.originalDogName || data.dogName,
-        data.originalStartDate || data.startDate,
-        data.originalEndDate || data.endDate
-      );
+      var deletePotentialRow = String(data.stayId || "").trim()
+        ? findStayRowByIdV11225_(sheet, data.stayId)
+        : safeLegacyStayRowV11225_(rows, data.action, data);
 
       if (deletePotentialRow === -1) {
         throw new Error("Potential Stay could not be found for deletion.");
@@ -4698,9 +4766,12 @@ function processSheetAction_(data) {
         sheet,
         deletePotentialRow
       );
+      deletedPotential.stayId = ensureStableStayIdV11225_(sheet, deletePotentialRow);
 
       sheet.deleteRow(deletePotentialRow);
       result.row = deletePotentialRow;
+      result.stayId = deletedPotential.stayId;
+      result.deletedBooking = deletedPotential;
 
       logAuditEvent_({
         category: "Potential Stay",
@@ -5236,10 +5307,12 @@ function processSheetAction_(data) {
     return result;
 
   } finally {
-    try {
-      lock.releaseLock();
-    } catch (releaseError) {
-      // Ignore release errors.
+    if (ownsLock) {
+      try {
+        lock.releaseLock();
+      } catch (releaseError) {
+        // Ignore release errors.
+      }
     }
   }
 }
@@ -5558,10 +5631,10 @@ function auditBookingSnapshotFromValues_(row) {
 
 function auditBookingSnapshotFromSheetRow_(sheet, rowNumber) {
   if (!sheet || !rowNumber || rowNumber < 2) return null;
-
-  return auditBookingSnapshotFromValues_(
-    sheet.getRange(rowNumber, 1, 1, 12).getValues()[0]
-  );
+  var snapshot = auditBookingSnapshotFromValues_(sheet.getRange(rowNumber, 1, 1, 12).getValues()[0]);
+  var cols = stableStayHeadersV11225_(sheet, false);
+  snapshot.stayId = cols.stayId ? String(sheet.getRange(rowNumber, cols.stayId).getValue() || "").trim() : "";
+  return snapshot;
 }
 
 
