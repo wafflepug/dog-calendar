@@ -25,20 +25,6 @@
     return pageName() === 'directory';
   }
 
-  function decodeCsvCell(value) {
-    let text = String(value == null ? '' : value);
-    if (text.startsWith('"') && text.endsWith('"')) {
-      text = text.slice(1, -1).replace(/""/g, '"');
-    }
-    return text.trim();
-  }
-
-  function splitCsvRow(line) {
-    return String(line || '')
-      .split(/,(?=(?:(?:[^\"]*\"){2})*[^\"]*$)/)
-      .map(decodeCsvCell);
-  }
-
   function fallbackDateKey(value) {
     const text = String(value || '').trim();
     if (!text) return '';
@@ -71,57 +57,44 @@
   }
 
   function confirmedEventsFromCsv(csvText) {
-    const lines = String(csvText || '').split(/\r?\n/);
+    const parsed = window.WaffleCsv?.parse(String(csvText || ''));
     const events = [];
-
-    for (let i = 1; i < lines.length; i += 1) {
-      if (!lines[i].trim()) continue;
-      const cells = splitCsvRow(lines[i]);
-      while (cells.length < 12) cells.push('');
-
-      const dogName = String(cells[1] || '').trim();
-      const breed = String(cells[2] || '').trim();
-      const startDate = dateKey(cells[3]);
-      const endDate = dateKey(cells[4]) || startDate;
-      const ownerName = String(cells[5] || '').trim();
-      const phone = String(cells[6] || '').trim();
-      const notes = String(cells[9] || '').trim();
-      const editLink = String(cells[10] || '').trim();
-      const bookingType = String(cells[11] || 'Boarding').trim();
-      const lowerType = bookingType.toLowerCase();
-
-      if (!dogName || !startDate) continue;
-      if (lowerType === 'meet & greet' || lowerType === 'potential stay') continue;
-
-      events.push({
-        id: `care_cache_${i}_${dogName}_${startDate}`,
-        title: dogName,
-        start: startDate,
-        end: endDate,
-        allDay: true,
-        extendedProps: {
-          isMeetGreet: false,
-          isPotential: false,
-          dogName,
-          breed,
-          owner: ownerName,
-          ownerName,
-          phone,
-          notes: notes || 'None',
-          rawStartDate: startDate,
-          rawEndDate: endDate,
-          sourceRow: i + 1,
-          bookingType: bookingType || 'Boarding',
-          editLink
-        }
-      });
+    if (parsed?.ok) {
+      for (let i = 1; i < parsed.records.length; i += 1) {
+        const row = parsed.records[i];
+        if (!row.raw.trim()) continue;
+        const cells = row.cells.slice();
+        while (cells.length < 12) cells.push('');
+        const dogName = String(cells[1] || '').trim();
+        const breed = String(cells[2] || '').trim();
+        const startDate = dateKey(cells[3]);
+        const endDate = dateKey(cells[4]) || startDate;
+        const ownerName = String(cells[5] || '').trim();
+        const phone = String(cells[6] || '').trim();
+        const notes = String(cells[9] || '').trim();
+        const editLink = String(cells[10] || '').trim();
+        const bookingType = String(cells[11] || 'Boarding').trim();
+        const lowerType = bookingType.toLowerCase();
+        if (!dogName || !startDate || lowerType === 'meet & greet' || lowerType === 'potential stay') continue;
+        events.push({
+          id: 'care_cache_' + i + '_' + dogName + '_' + startDate,
+          title: dogName,
+          start: startDate,
+          end: endDate,
+          allDay: true,
+          extendedProps: {
+            isMeetGreet: false, isPotential: false, dogName, breed,
+            owner: ownerName, ownerName, phone, notes: notes || 'None',
+            rawStartDate: startDate, rawEndDate: endDate, sourceRow: i + 1,
+            bookingType: bookingType || 'Boarding', editLink
+          }
+        });
+      }
     }
-
     try {
       const localConfirmed = JSON.parse(localStorage.getItem('temporaryConfirmedStays') || '[]');
       if (Array.isArray(localConfirmed)) events.push(...localConfirmed);
     } catch (_) {}
-
     return events;
   }
 

@@ -97,18 +97,8 @@
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(rows.slice(-80))); } catch (_) {}
   }
 
-  function decodeCsvCell(value) {
-    let text = String(value == null ? '' : value);
-    if (text.startsWith('"') && text.endsWith('"')) {
-      text = text.slice(1, -1).replace(/""/g, '"');
-    }
-    return text.trim();
-  }
-
-  function csvRowIdentity(line) {
-    const cells = String(line || '')
-      .split(/,(?=(?:(?:[^\"]*\"){2})*[^\"]*$)/)
-      .map(decodeCsvCell);
+  function csvRowIdentity(cells) {
+    cells = Array.isArray(cells) ? cells.slice() : [];
     while (cells.length < 12) cells.push('');
     const bookingType = String(cells[11] || '').trim().toLowerCase();
     if (bookingType === 'meet & greet' || bookingType === 'potential stay') return null;
@@ -124,17 +114,21 @@
     try {
       const csv = localStorage.getItem('boardingDataCache') || '';
       if (!csv) return;
-      const lines = csv.split(/\r?\n/);
-      if (lines.length < 2) return;
+      const parsed = window.WaffleCsv?.parse(csv);
+      if (!parsed?.ok || parsed.records.length < 2) return;
       const wanted = identityKey(identity);
-      const kept = [lines[0]];
-      for (let i = 1; i < lines.length; i += 1) {
-        if (!lines[i].trim()) continue;
-        const rowIdentity = csvRowIdentity(lines[i]);
+      const kept = [parsed.records[0]];
+      for (let i = 1; i < parsed.records.length; i += 1) {
+        const row = parsed.records[i];
+        if (!row.raw.trim()) {
+          kept.push(row);
+          continue;
+        }
+        const rowIdentity = csvRowIdentity(row.cells);
         if (rowIdentity && identityKey(rowIdentity) === wanted) continue;
-        kept.push(lines[i]);
+        kept.push(row);
       }
-      localStorage.setItem('boardingDataCache', kept.join('\n'));
+      localStorage.setItem('boardingDataCache', window.WaffleCsv.serialize(kept));
     } catch (_) {}
   }
 
