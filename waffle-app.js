@@ -6346,6 +6346,10 @@ registerWaffleServiceWorker();
                 if (!csvText || csvText.trim().length < 20 || !csvText.includes(',')) {
                     throw new Error("Corrupted spreadsheet payload.");
                 }
+                const parsedCsv = window.WaffleCsv?.parse(csvText);
+                if (!parsedCsv?.ok) {
+                    throw new Error("Malformed spreadsheet CSV.");
+                }
                 return csvText;
             });
     }
@@ -13181,9 +13185,12 @@ registerWaffleServiceWorker();
     function refreshCalendarData() {
         if (!globalCalendar) return;
 
+        const csvText = localStorage.getItem('boardingDataCache') || "";
+        const parsedCsv = window.WaffleCsv?.parse(csvText);
+        if (!parsedCsv?.ok) return false;
+
         globalCalendar.getEventSources().forEach(source => source.remove());
 
-        const csvText = localStorage.getItem('boardingDataCache') || "";
         dailyCapacityCounts = {}; 
 
         const spreadsheetEvents = parseCSVToEvents(csvText);

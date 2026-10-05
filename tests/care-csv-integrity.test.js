@@ -121,6 +121,49 @@ function meetGreetCacheReader(storage) {
   return sandbox.reader;
 }
 
+function spreadsheetSync(storage, responseText, calendarRefresh) {
+  const sandbox = {
+    window: { WaffleCsv },
+    localStorage: storage,
+    SHEET_CSV_URL: 'https://example.invalid/export.csv',
+    fetch: async () => ({ ok: true, text: async () => responseText }),
+    Date,
+    console: { error() {} },
+    reconcileTemporaryEvents() {},
+    directoryPhotoRecordsCache: {},
+    directoryIntakeStatusCache: {},
+    directoryLegacyIntakeCache: {},
+    refreshCalendarData: calendarRefresh,
+    loadCareRiskDashboard: async () => {},
+    setTimeout() {}
+  };
+  const source = section(appSource, '    function fetchSpreadsheetCsv()', '    function scheduleSpreadsheetSync()');
+  vm.runInNewContext(`${source}\nthis.sync = syncSpreadsheetData;`, sandbox);
+  return sandbox.sync();
+}
+
+function extractedCalendarRefresh(storage, state) {
+  const sandbox = {
+    window: { WaffleCsv },
+    localStorage: storage,
+    globalCalendar: {
+      getEventSources() { return [{ remove() { state.removed += 1; } }]; },
+      addEventSource() { state.added += 1; }
+    },
+    dailyCapacityCounts: state.capacity,
+    parseCSVToEvents: () => [],
+    getLocalArray: () => [],
+    updateFullyBookedPanel() {},
+    updateTodayMeetGreetPanel() {},
+    updateUpcomingSevenDaysPanel() {},
+    renderV10OperationsHome() {},
+    applyCurrentSearchFilter() {}
+  };
+  const source = section(appSource, '    function refreshCalendarData()', '    function updateFullyBookedPanel()');
+  vm.runInNewContext(`${source}\nthis.refresh = refreshCalendarData;`, sandbox);
+  return sandbox.refresh();
+}
+
 const header = 'Timestamp,Dog Name,Breed,Start Date,End Date,Owner,Phone,Likes,Dislikes,Notes,Edit Link,Booking Type,Dog ID,Dog Number';
 function booking({ dogName = 'Milo', start, end, owner, phone, notes, id = '', number = '' }) {
   return [
@@ -159,6 +202,34 @@ test('malformed quoted exports fail closed without yielding partial rows', () =>
     assert.deepEqual(parsed.records, []);
     assert.match(parsed.error, /quote/i);
   }
+});
+
+test('malformed spreadsheet fetch keeps the valid cache and rejects before sync side effects', async () => {
+  const backup = `${header}\n${booking({ start: '2026-10-05', end: '2026-10-09', owner: 'Saved Owner', phone: '0400 000 001', notes: 'Saved note' })}`;
+  const malformed = `${header}\n"Milo,unfinished`;
+  const storage = storageWith(backup);
+  let refreshes = 0;
+  await assert.rejects(spreadsheetSync(storage, malformed, () => { refreshes += 1; }), /Malformed spreadsheet CSV/);
+  assert.equal(storage.getItem('boardingDataCache'), backup);
+  assert.equal(refreshes, 1, 'existing catch path refreshes from the preserved valid backup');
+});
+
+test('valid spreadsheet fetch retains its existing cache update path', async () => {
+  const valid = `${header}\n${booking({ start: '2026-10-05', end: '2026-10-09', owner: 'New Owner', phone: '0400 000 002', notes: 'Valid paragraph\nsecond line' })}`;
+  const storage = storageWith('');
+  let refreshes = 0;
+  assert.equal(await spreadsheetSync(storage, valid, () => { refreshes += 1; }), valid);
+  assert.equal(storage.getItem('boardingDataCache'), valid);
+  assert.equal(refreshes, 1);
+});
+
+test('malformed calendar cache preserves event sources and capacity state', () => {
+  const malformed = `${header}\n"Milo,unfinished`;
+  const state = { removed: 0, added: 0, capacity: { '2026-10-05': 3 } };
+  assert.equal(extractedCalendarRefresh(storageWith(malformed), state), false);
+  assert.equal(state.removed, 0);
+  assert.equal(state.added, 0);
+  assert.deepEqual(state.capacity, { '2026-10-05': 3 });
 });
 
 test('actual Care cache patcher updates only the exact stay and preserves neighboring records', () => {
