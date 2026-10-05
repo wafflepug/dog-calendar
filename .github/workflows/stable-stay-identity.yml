@@ -27,3 +27,9 @@ jobs:
           node --check waffle-v11.0.5-core.js
           node --check waffle-sitter-navigation.js
           node --test tests/stable-stay-backend.test.js tests/stable-stay-frontend.test.js tests/dog-id-backend.test.js tests/care-past-classification.test.js tests/stay-date-update.test.js tests/potential-confirm-dog-id.test.js
+          node --check apps-script/V11217EarlyCheckout.js
+          node --check apps-script/V11198ConfirmedStayDelete.js
+          node --check waffle-v11.0.js
+          node --check waffle-v10.8.6.js
+          node --check waffle-v11.2.17.js
+          node --test tests/stay-operation-backend.test.js tests/stay-operation-frontend.test.js

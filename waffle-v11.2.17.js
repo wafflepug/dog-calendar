@@ -44,6 +44,7 @@
       return window.v110OperationalPayloadFromCard(card);
     }
     return {
+      stayId: String(card?.dataset?.directoryStayId || ''),
       stayKey: String(card?.dataset?.directoryStayKey || card?.dataset?.stayKey || ''),
       dogName: String(card?.dataset?.directoryDogName || card?.dataset?.dogName || ''),
       startDate: String(card?.dataset?.directoryStartDate || card?.dataset?.startDate || ''),
@@ -57,7 +58,7 @@
   function operationForCard(card) {
     const payload = payloadForCard(card);
     if (!payload.stayKey || typeof window.v110OperationForStay !== 'function') return null;
-    return window.v110OperationForStay(payload.stayKey) || null;
+    return window.v110OperationForStay(payload) || null;
   }
 
   function isEarlyOperation(operation) {
@@ -358,19 +359,16 @@
       if (typeof window.v110SaveOperationalStatus !== 'function') {
         throw new Error('Stay operations service is unavailable.');
       }
-      const response = await window.v110SaveOperationalStatus(payload, 'checked_out');
-      if (response?.queued) {
-        if (typeof window.showWaffleForegroundPush === 'function') {
-          window.showWaffleForegroundPush({
-            title: `↻ ${p.dogName} early checkout queued`,
-            body: 'The owner-requested early checkout will sync when online.'
-          });
-        }
-        closeModal();
-        return;
-      }
+      const response = await window.v110SaveOperationalStatus(payload, 'checked_out', card);
+      if (response?.queued) throw new Error('Early checkout cannot be queued offline. Nothing was saved.');
 
-      allCards().filter(candidate => payloadForCard(candidate).stayKey === p.stayKey).forEach(decorateCard);
+      if (response?.record?.stayId && !p.stayId && String(response.record.stayKey || '') === p.stayKey) {
+        p.stayId = String(response.record.stayId);
+        if (card.dataset) card.dataset.directoryStayId = p.stayId;
+      }
+      allCards().filter(candidate => p.stayId
+        ? payloadForCard(candidate).stayId.toLowerCase() === p.stayId.toLowerCase()
+        : payloadForCard(candidate).stayKey === p.stayKey).forEach(decorateCard);
       if (typeof window.renderV10OperationsHome === 'function') {
         try {
           const events = window.globalCalendar?.getEvents?.() || window.v110LatestCalendarEvents || [];
@@ -388,6 +386,7 @@
           detail: {
             version: VERSION,
             stayKey: p.stayKey,
+            stayId: p.stayId,
             dogName: p.dogName,
             actualCheckoutDate: actualDate,
             originalEndDate: p.endDate,

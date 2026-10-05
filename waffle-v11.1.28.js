@@ -167,6 +167,7 @@
     const props = event?.extendedProps || {};
     const dates = eventDates(event);
     return {
+      stayId: String(props.stayId || ''),
       stayKey: String(stayKeyForEvent(event) || ''),
       dogName: dogName(event),
       breed: String(props.breed || ''),
@@ -287,25 +288,22 @@
     }
   }
 
-  async function saveCheckout(payload) {
+  async function saveCheckout(payload, target) {
     try {
       if (typeof window.v110SaveOperationalStatus === 'function') {
-        return await window.v110SaveOperationalStatus(payload, 'checked_out');
+        return await window.v110SaveOperationalStatus(payload, 'checked_out', target);
       }
     } catch (error) {
       throw error;
     }
     try {
       if (typeof v110SaveOperationalStatus === 'function') {
-        return await v110SaveOperationalStatus(payload, 'checked_out');
+        return await v110SaveOperationalStatus(payload, 'checked_out', target);
       }
     } catch (error) {
       throw error;
     }
-    if (typeof window.sendPayloadToAppsScript === 'function') {
-      return window.sendPayloadToAppsScript({ action: 'checkout_stay', ...payload, source: 'V11.1.28 Departures' });
-    }
-    throw new Error('Checkout service is not ready yet.');
+    throw new Error('Stay ID checkout service is not ready yet.');
   }
 
   async function checkoutDeparture(button) {
@@ -318,7 +316,8 @@
     button.textContent = '⏳ Checking out…';
 
     try {
-      await saveCheckout(operationalPayload(event));
+      const payload = operationalPayload(event);
+      await saveCheckout(payload, event);
       try {
         if (typeof window.v110LoadOperations === 'function') await window.v110LoadOperations({ noRender: true });
       } catch (_) {}

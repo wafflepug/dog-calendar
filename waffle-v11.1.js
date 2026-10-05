@@ -192,7 +192,7 @@ function v111ArrivalEvents() {
         const props = event?.extendedProps || {};
         if (props.isPotential === true || props.isMeetGreet === true) return false;
         const dates = v10EventRawDates(event);
-        const operation = v110OperationForStay(v110StayKeyForEvent(event));
+        const operation = v110OperationForStay(event);
         return dates.start === today && !['checked_in', 'checked_out'].includes(String(operation?.status || ''));
     });
 }
@@ -235,6 +235,7 @@ function v111EnsureArrivalModal() {
 
         try {
             await v110SaveOperationalStatus({
+                stayId: props.stayId || '',
                 stayKey: v110StayKeyForEvent(eventRecord),
                 dogName,
                 breed: props.breed || '',
@@ -242,7 +243,7 @@ function v111EnsureArrivalModal() {
                 endDate: dates.end,
                 ownerName: props.ownerName || props.owner || '',
                 phone: props.phone || ''
-            }, 'checked_in');
+            }, 'checked_in', eventRecord);
 
             await v111RenderArrivalModal();
             if (typeof renderV10OperationsHome === 'function') {
@@ -332,8 +333,8 @@ function v111CurrentDogEvents() {
         const dates = v10EventRawDates(event);
         if (!dates.start || !dates.end || today < dates.start || today > dates.end) return;
         const key = v110StayKeyForEvent(event);
-        if (!key || v110OperationForStay(key)?.status === 'checked_out') return;
-        unique.set(key, event);
+        if (!key || v110OperationForStay(event)?.status === 'checked_out') return;
+        unique.set(v110EventUniqueKey(event, key), event);
     });
 
     return Array.from(unique.values()).sort((a, b) => {

@@ -101,7 +101,7 @@
   }
   function statusFor(event) {
     const props = event.extendedProps || {};
-    return String(v110OperationForStay(v110StayKeyForEvent(event))?.status || props.status || props.bookingStatus || '').toLowerCase();
+    return String(v110OperationForStay(event)?.status || props.status || props.bookingStatus || '').toLowerCase();
   }
   function isBoarding(event) {
     const props = event?.extendedProps || {};
@@ -126,7 +126,7 @@
       const dates = v10EventRawDates(event);
       if (!/^\d{4}-\d{2}-\d{2}$/.test(dates.start || '') || !dates.end || dates.end < dates.start || dates.start < today || dates.start > end) return;
       // Mirrors Arriving Today: today's boarding stays remain expected until check-in.
-      unique.set(v110StayKeyForEvent(event), event);
+      unique.set(typeof v110EventUniqueKey === 'function' ? v110EventUniqueKey(event, v110StayKeyForEvent(event)) : v110StayKeyForEvent(event), event);
     });
     return Array.from(unique.values()).sort((a, b) => v10EventRawDates(a).start.localeCompare(v10EventRawDates(b).start)
       || String(a.extendedProps?.dogName || a.title).localeCompare(String(b.extendedProps?.dogName || b.title))

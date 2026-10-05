@@ -321,6 +321,14 @@ function waffleReadRequestKey(payload) {
                     .map(String)
                     .sort()
                 : [],
+        stayIds:
+            Array.isArray(
+                payload?.stayIds
+            )
+                ? [...payload.stayIds]
+                    .map(String)
+                    .sort()
+                : [],
         limit:
             Number(
                 payload?.limit ||

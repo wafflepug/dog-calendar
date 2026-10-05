@@ -173,9 +173,9 @@
       if (!dates.start || !dates.end || today < dates.start || today > dates.end) return;
       const stayKey = typeof v110StayKeyForEvent === 'function' ? v110StayKeyForEvent(eventRecord) : '';
       if (!stayKey) return;
-      const operation = typeof v110OperationForStay === 'function' ? v110OperationForStay(stayKey) : null;
+      const operation = typeof v110OperationForStay === 'function' ? v110OperationForStay(eventRecord) : null;
       if (String(operation && operation.status || '') === 'checked_out') return;
-      unique.set(stayKey, eventRecord);
+      unique.set(typeof v110EventUniqueKey === 'function' ? v110EventUniqueKey(eventRecord, stayKey) : stayKey, eventRecord);
     });
 
     return Array.from(unique.values());
