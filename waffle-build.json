@@ -1,8 +1,9 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.10.05.05",
-  "releaseName": "Care Contact & Handover",
+  "assetRevision": "2026.10.05.06",
+  "releaseName": "Care CSV Integrity",
   "runtime": "waffle-bootstrap.js",
+  "sharedCsvReader": "waffle-csv.js",
   "styles": "waffle-runtime.css",
   "phase": "phase-4-sitter-workflow-expansion",
   "releaseHardeningPhase": "phase-3d-release-regression-observability",
