@@ -6,7 +6,14 @@ module.exports = defineConfig({
   timeout: 30000,
   workers: 2,
   reporter: 'list',
-  use: { browserName: 'chromium', timezoneId: 'Australia/Sydney', serviceWorkers: 'block' },
+  webServer: {
+    command: 'python -m http.server 44972 --bind 127.0.0.1',
+    cwd: __dirname,
+    port: 44972,
+    reuseExistingServer: !process.env.CI,
+    timeout: 10000
+  },
+  use: { baseURL: 'http://127.0.0.1:44972', browserName: 'chromium', timezoneId: 'Australia/Sydney', serviceWorkers: 'block' },
   projects: [
     { name: 'desktop', use: { viewport: { width: 1440, height: 900 }, colorScheme: 'light' } },
     { name: 'mobile', use: { viewport: { width: 390, height: 844 }, colorScheme: 'light' } },
