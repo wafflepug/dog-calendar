@@ -20,7 +20,7 @@ jobs:
         run: |
           set -euo pipefail
           for file in \
-            waffle-bootstrap.js waffle-csv.js waffle-v11.0.5.js calendar.js care.js organiser.js logs.js \
+            waffle-bootstrap.js waffle-csv.js system-status-sync.js waffle-v11.0.5.js calendar.js care.js organiser.js logs.js \
             waffle-ui.js waffle-ai.js phase4.js phase4-core.js phase4-booking.js \
             phase4-operations.js phase4-ai-actions.js service-worker.js; do
             test -f "$file"
@@ -94,6 +94,8 @@ jobs:
               assert not style_pattern.findall(text), f'{page}: direct historical CSS tag remains'
 
           bootstrap = Path('waffle-bootstrap.js').read_text(encoding='utf-8')
+          assert manifest.get('syncStatusAdapter') == 'system-status-sync.js'
+          assert bootstrap.index('"system-status-sync.js"') < bootstrap.index('"waffle-app.js"'), 'Sync metadata hook must load before its consumers'
           assert manifest.get('sharedCsvReader') == 'waffle-csv.js'
           assert bootstrap.index('"waffle-csv.js"') < bootstrap.index('"waffle-app.js"'), 'CSV reader must load before its consumers'
           approved_base = [

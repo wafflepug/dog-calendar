@@ -1,6 +1,6 @@
 /* ============================================================
    WAFFLE HOUSE — AUTHORITATIVE RUNTIME BOOTSTRAP
-   Build 2026.08.28.01 · Care CSV Integrity
+   Build 2026.08.28.01 · Care Clarity & Sync
    ------------------------------------------------------------
    This is the only local JavaScript entry point app HTML should load.
    Privacy-preserving diagnostics load first, followed by the approved
@@ -13,12 +13,13 @@
 
   const BUILD = '2026.08.28.01';
   // Increment with coordinated shell releases so entry pages and SW stay aligned.
-  const ASSET_REVISION = '2026.10.05.06';
+  const ASSET_REVISION = '2026.10.05.07';
   window.WAFFLE_ASSET_REVISION = ASSET_REVISION;
   const ENDPOINT = 'https://script.google.com/macros/s/AKfycbwn4HL49K9c3AZbXJRUjPw3UYWxJt8DmqXwMnTytyqdSstj3ZIJwWdDEC2IsBjetOf3pw/exec';
   const RUNTIME = [
       "waffle-diagnostics.js",
       "waffle-firebase-config.js",
+      "system-status-sync.js",
       "waffle-csv.js",
       "waffle-app.js",
       "waffle-v10.8.js",

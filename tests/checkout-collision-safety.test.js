@@ -47,6 +47,23 @@ test('same-name/date bookings with different confirmed identities are a collisio
   assert.equal(sandbox.api.checkedOut(first), false);
 });
 
+test('nonboarding history does not create a checkout collision; legacy missing type remains supported', () => {
+  const confirmed = event('Alex Smith', '0400 111 111');
+  const cancelled = event('Jordan Smith', '0400 222 222', { bookingType:'Cancelled' });
+  sandbox.api.evidence([confirmed, cancelled], { replace:true });
+  assert.doesNotThrow(() => sandbox.api.guard({ stayKey:sandbox.api.eventKey(confirmed) }));
+  const legacy = event('Jordan Smith', '0400 222 222', { bookingType:'' });
+  sandbox.api.evidence([confirmed, legacy], { replace:true });
+  assert.throws(() => sandbox.api.guard({ stayKey:sandbox.api.eventKey(confirmed) }), /Review duplicate bookings/);
+});
+
+test('two conflicting persisted Dog IDs quarantine the legacy operation even when owners match', () => {
+  const first = event('Alex Smith', '0400 111 111', { dogId:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' });
+  const second = event('Alex Smith', '0400 111 111', { dogId:'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb' });
+  sandbox.api.evidence([first, second], { replace:true });
+  assert.throws(() => sandbox.api.guard({ stayKey:sandbox.api.eventKey(first) }), /Review duplicate bookings/);
+});
+
 test('the shared write path rejects a collision before Apps Script is called', async () => {
   const first = event('Alex Smith', '0400 111 111');
   const second = event('Jordan Smith', '0400 222 222');
@@ -116,6 +133,17 @@ test('Care cards provide collision evidence without a calendar instance', async 
   const before = sandbox.sendCalls;
   await assert.rejects(sandbox.api.save({ stayKey: 'milo|2026-09-20|2026-09-22' }, 'checked_out'), /Checkout is paused/);
   assert.equal(sandbox.sendCalls, before);
+  delete sandbox.document;
+});
+
+test('Care cards carry persisted Dog IDs into checkout collision evidence', () => {
+  const card = dogId => ({
+    dataset: { directoryStayKey:'milo|2026-09-20|2026-09-22', directoryDogId:dogId, directoryDogName:'Milo', directoryStartDate:'2026-09-20', directoryEndDate:'2026-09-22', v1088OwnerName:'Alex Smith', v1088Phone:'0400 111 111' },
+    querySelector: () => null
+  });
+  sandbox.document = { querySelectorAll: () => [card('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'), card('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb')] };
+  sandbox.api.captureCare();
+  assert.throws(() => sandbox.api.guard({ stayKey:'milo|2026-09-20|2026-09-22' }), /Review duplicate bookings/);
   delete sandbox.document;
 });
 

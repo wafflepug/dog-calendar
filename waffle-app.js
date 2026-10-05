@@ -439,6 +439,25 @@ async function queryAppsScriptSWR(
                 options
             );
 
+        if (cacheKey === 'directory:stay-operations' &&
+            (response?.result === 'success' || (response?.unchanged && cached?.payload?.result === 'success'))) {
+            try {
+                window.WaffleStatusSync?.recordAttempt(
+                    'operations',
+                    true,
+                    { source: 'stay-operations', version: response?.version || cached?.version }
+                );
+            } catch (_) { /* Status metadata must never affect the read. */ }
+        } else if (cacheKey === 'directory:stay-operations') {
+            try {
+                window.WaffleStatusSync?.recordAttempt(
+                    'operations',
+                    false,
+                    { source: 'stay-operations' }
+                );
+            } catch (_) { /* Status metadata must never affect the read. */ }
+        }
+
         if (
             response?.unchanged &&
             cached?.payload
@@ -482,6 +501,15 @@ async function queryAppsScriptSWR(
         };
 
     } catch (error) {
+        if (cacheKey === 'directory:stay-operations') {
+            try {
+                window.WaffleStatusSync?.recordAttempt(
+                    'operations',
+                    false,
+                    { source: 'stay-operations' }
+                );
+            } catch (_) { /* Status metadata must never affect the read. */ }
+        }
         if (cached?.payload) {
             console.warn(
                 'Network refresh failed; using cached Waffle data:',
@@ -5813,7 +5841,8 @@ registerWaffleServiceWorker();
             const original = {
                 dogName: activeEditingPotential.dogName,
                 startDate: activeEditingPotential.rawStartDate,
-                endDate: activeEditingPotential.rawEndDate
+                endDate: activeEditingPotential.rawEndDate,
+                dogId: activeEditingPotential.dogId || ''
             };
 
             const payload = {
@@ -5851,30 +5880,21 @@ registerWaffleServiceWorker();
                 setLocalArray('temporaryPotentialStays', localPotentials);
 
                 let localConfirmed = getLocalArray('temporaryConfirmedStays');
-                const confirmedKey = makePotentialKey(dogName, startDate, endDate);
-
-                localConfirmed = localConfirmed.filter(item => {
-                    const props = item.extendedProps || {};
-                    const itemKey = makePotentialKey(
-                        props.dogName || item.title || "",
-                        props.rawStartDate || item.start || "",
-                        props.rawEndDate || props.rawStartDate || item.start || ""
-                    );
-                    return itemKey !== confirmedKey;
-                });
-
-                localConfirmed.push(
-                    buildConfirmedEvent(
-                        'confirmed_' + Date.now(),
-                        dogName,
-                        breed,
-                        startDate,
-                        endDate,
-                        ownerName,
-                        phone,
-                        notes
-                    )
+                const confirmedEvent = buildConfirmedEvent(
+                    'confirmed_' + Date.now(),
+                    dogName,
+                    breed,
+                    startDate,
+                    endDate,
+                    ownerName,
+                    phone,
+                    notes,
+                    original.dogId
                 );
+                localConfirmed.push(confirmedEvent);
+                if (typeof v1105DedupeConfirmedStays === 'function') {
+                    localConfirmed = v1105DedupeConfirmedStays(localConfirmed);
+                }
                 setLocalArray('temporaryConfirmedStays', localConfirmed);
 
                 refreshCalendarData();
@@ -6080,6 +6100,7 @@ registerWaffleServiceWorker();
             rawEndDate: props.rawEndDate || props.rawStartDate || event.startStr,
             ownerName: props.owner || props.ownerName || "",
             phone: props.phone || "",
+            dogId: props.dogId || "",
             notes: props.notes || ""
         };
 
@@ -6172,7 +6193,7 @@ registerWaffleServiceWorker();
         };
     }
 
-    function buildConfirmedEvent(id, dogName, breed, startDate, endDate, ownerName, phone, notes) {
+    function buildConfirmedEvent(id, dogName, breed, startDate, endDate, ownerName, phone, notes, dogId = '') {
         return {
             id: id,
             title: dogName,
@@ -6189,6 +6210,7 @@ registerWaffleServiceWorker();
                 owner: ownerName,
                 ownerName: ownerName,
                 phone: phone,
+                dogId: dogId,
                 notes: notes || "Confirmed from Potential Stay",
                 rawStartDate: startDate,
                 rawEndDate: endDate,
@@ -6246,11 +6268,14 @@ registerWaffleServiceWorker();
     }
 
     function getCsvBookingRecords(csvText) {
-        if (!csvText) return [];
+        if (!csvText) return null;
 
         const parsedCsv = window.WaffleCsv?.parse(csvText);
-        if (!parsedCsv?.ok || !parsedCsv.records.length) return [];
+        if (!parsedCsv?.ok || !parsedCsv.records.length) return null;
         const records = [];
+        const header = parsedCsv.records[0].cells.map(value => String(value || '').trim().toLowerCase());
+        const dogIdColumn = header.indexOf('dog id');
+        let invalidBookingRow = false;
 
         for (let i = 1; i < parsedCsv.records.length; i++) {
             const row = parsedCsv.records[i];
@@ -6265,19 +6290,37 @@ registerWaffleServiceWorker();
             if (dogName && startDate) {
                 records.push({
                     dogName,
+                    breed: String(columns[2] || '').trim(),
                     startDate,
                     endDate,
+                    ownerName: String(columns[5] || '').trim(),
+                    phone: String(columns[6] || '').trim(),
+                    dogId: dogIdColumn >= 0 && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(columns[dogIdColumn] || '').trim())
+                        ? String(columns[dogIdColumn] || '').trim()
+                        : '',
                     bookingType,
                     key: makePotentialKey(dogName, startDate, endDate)
                 });
-            }
+            } else invalidBookingRow = true;
         }
 
-        return records;
+        return records.length && !invalidBookingRow ? records : null;
     }
 
     function reconcileTemporaryEvents(csvText) {
         const records = getCsvBookingRecords(csvText);
+        // A failed or malformed snapshot is not evidence that optimistic
+        // bookings disappeared. In particular, do not clear pending hides.
+        if (!records) return false;
+
+        const confirmedIdentity = event =>
+            typeof v1105ConfirmedStayIdentity === 'function'
+                ? v1105ConfirmedStayIdentity(event)
+                : '';
+        const sameConfirmedIdentity = (left, right) =>
+            typeof v1105SameConfirmedStayIdentity === 'function'
+                ? v1105SameConfirmedStayIdentity(left, right)
+                : '';
 
         const sheetPotentialKeys = new Set(
             records
@@ -6285,13 +6328,36 @@ registerWaffleServiceWorker();
                 .map(r => r.key)
         );
 
-        const sheetBoardingKeys = new Set(
+        const sheetBoardingEvents = new Map(
             records
                 .filter(r => {
                     const type = r.bookingType.toLowerCase();
                     return type === 'boarding' || type === 'confirmed boarding';
                 })
-                .map(r => r.key)
+                .map(r => ({
+                    key: r.key,
+                    event: {
+                        title: r.dogName,
+                        start: r.startDate,
+                        end: r.endDate,
+                        extendedProps: {
+                            dogName: r.dogName,
+                            breed: r.breed,
+                            dogId: r.dogId,
+                            owner: r.ownerName,
+                            ownerName: r.ownerName,
+                            phone: r.phone,
+                            rawStartDate: r.startDate,
+                            rawEndDate: r.endDate,
+                            bookingType: 'Confirmed Boarding'
+                        }
+                    }
+                }))
+                .reduce((map, r) => {
+                    if (!map.has(r.key)) map.set(r.key, new Set());
+                    map.get(r.key).add(r.event);
+                    return map;
+                }, new Map())
         );
 
         const meetKeys = new Set(
@@ -6318,7 +6384,22 @@ registerWaffleServiceWorker();
                 props.rawStartDate || event.start,
                 props.rawEndDate || props.rawStartDate || event.start
             );
-            return !sheetBoardingKeys.has(key);
+            const matches = sheetBoardingEvents.get(key);
+            if (!matches) return true;
+            const identity = confirmedIdentity(event);
+            if (!identity) return true;
+            const sameIdentityRows = [...matches].filter(authoritative => confirmedIdentity(authoritative) === identity);
+            const knownDogIds = new Set(sameIdentityRows.map(row => String(row?.extendedProps?.dogId || '').trim().toLowerCase()).filter(Boolean));
+            const localDogId = String(props.dogId || '').trim().toLowerCase();
+            if (localDogId && knownDogIds.size && !knownDogIds.has(localDogId)) return true;
+            if (knownDogIds.size > 1 && !localDogId) return true;
+            const candidates = knownDogIds.size > 1
+                ? sameIdentityRows.filter(authoritative => {
+                    const authoritativeDogId = String(authoritative?.extendedProps?.dogId || '').trim().toLowerCase();
+                    return authoritativeDogId && authoritativeDogId === localDogId;
+                })
+                : sameIdentityRows;
+            return !candidates.some(authoritative => sameConfirmedIdentity(event, authoritative));
         });
         setLocalArray('temporaryConfirmedStays', localConfirmed);
 
@@ -6331,6 +6412,7 @@ registerWaffleServiceWorker();
 
         const stillPending = getPendingPotentialRemovals().filter(key => sheetPotentialKeys.has(key));
         setLocalArray('pendingPotentialRemovals', stillPending);
+        return true;
     }
 
     function fetchSpreadsheetCsv() {
@@ -6384,9 +6466,24 @@ registerWaffleServiceWorker();
                     }, 2000);
                 }
 
+                try {
+                    window.WaffleStatusSync?.recordAttempt(
+                        'boarding',
+                        true,
+                        { source: 'spreadsheet' }
+                    );
+                } catch (_) { /* Status metadata must never affect the spreadsheet read. */ }
+
                 return csvText;
             })
             .catch(error => {
+                try {
+                    window.WaffleStatusSync?.recordAttempt(
+                        'boarding',
+                        false,
+                        { source: 'spreadsheet' }
+                    );
+                } catch (_) { /* Status metadata must never affect the spreadsheet read. */ }
                 console.error(error);
 
                 if (backupCache) {
@@ -8593,9 +8690,7 @@ registerWaffleServiceWorker();
         if (profileCard && !safetyReadFailed) {
             renderDirectoryCareProfile(
                 profileCard,
-                record || {
-                    riskFlags: {}
-                }
+                record
             );
             renderDirectoryCareBrief(profileCard);
         }
@@ -8613,6 +8708,12 @@ registerWaffleServiceWorker();
                 safetyHost.dataset.state = 'pending';
                 safetyHost.innerHTML = '<span class="care-brief-state is-pending">Safety status unavailable</span>';
             }
+            const safetySummary = profileCard?.querySelector('[data-care-category-summary="safety"]');
+            if (safetySummary) {
+                const summary = directoryCareCategorySummary('safety', {}, 'saved', null, 'error');
+                safetySummary.textContent = summary.text;
+                safetySummary.dataset.state = summary.state;
+            }
             refreshDirectoryCareSummary();
             return;
         }
@@ -8623,6 +8724,12 @@ registerWaffleServiceWorker();
             container.innerHTML =
                 '<strong class="directory-record-kicker">Safety record</strong><span class="directory-care-unset">🛡️ Care profile not set</span>';
             updateDirectoryRosterStatus(stayKey, 'Care not set', 'is-unset');
+            const safetySummary = profileCard?.querySelector('[data-care-category-summary="safety"]');
+            if (safetySummary) {
+                const summary = directoryCareCategorySummary('safety', {}, 'saved', null, 'not-set');
+                safetySummary.textContent = summary.text;
+                safetySummary.dataset.state = summary.state;
+            }
             refreshDirectoryCareSummary();
             return;
         }
@@ -10722,6 +10829,65 @@ registerWaffleServiceWorker();
         `;
     }
 
+    function directoryCareCategorySummary(tabKey, attributes, profileState, safetyRecord, safetyState) {
+        if (tabKey === 'safety') {
+            if (safetyState === 'error') return { text: 'Safety status unavailable', state: 'unknown' };
+            if (safetyState === 'loading') return { text: 'Loading safety status…', state: 'unknown' };
+            if (safetyState === 'not-set') return { text: 'Care profile not set', state: 'unknown' };
+            if (!safetyRecord || !safetyRecord.riskFlags || typeof safetyRecord.riskFlags !== 'object') return { text: 'Safety status not loaded', state: 'unknown' };
+            if (Array.isArray(safetyRecord.riskFlags)) return { text: 'Safety status unavailable', state: 'unknown' };
+            const malformedFlag = CARE_SAFETY_FLAGS.some(flag =>
+                Object.prototype.hasOwnProperty.call(safetyRecord.riskFlags, flag.key) &&
+                typeof safetyRecord.riskFlags[flag.key] !== 'boolean'
+            );
+            if (malformedFlag) return { text: 'Safety status unavailable', state: 'unknown' };
+            const activeFlags = CARE_SAFETY_FLAGS.filter(flag => safetyRecord.riskFlags[flag.key] === true);
+            return activeFlags.length
+                ? { text: `${activeFlags.length} active ${activeFlags.length === 1 ? 'alert' : 'alerts'} · ${activeFlags.slice(0, 2).map(flag => flag.label).join(', ')}`, state: 'attention' }
+                : { text: 'No active alerts', state: 'clear' };
+        }
+
+        const priorities = {
+            foodWalks: [
+                ['feedingTimes', 'Feed'], ['foodAmount', 'Amount'], ['walksPerDay', 'Walks'],
+                ['walkDuration', 'Walk'], ['foodBrandType', 'Food'], ['foodAllergies', 'Allergy'],
+                ['allowedTreats', 'Treats'], ['offLeashAllowed', 'Off-leash'], ['pullsOnLeash', 'Leash pulling']
+            ],
+            behaviour: [
+                ['triggersFears', 'Triggers & handling'], ['aggression', 'Aggression'], ['foodAggression', 'Food guarding'],
+                ['separationAnxiety', 'Separation'], ['escapeAttempts', 'Escape attempts'],
+                ['indoorAccidents', 'Indoor accidents'], ['chewingFurniture', 'Chewing'],
+                ['friendlyDogs', 'Dogs'], ['friendlyCats', 'Cats'], ['friendlyChildren', 'Children'],
+                ['friendlyStrangers', 'Strangers']
+            ],
+            healthHome: [
+                ['medicationInstructions', 'Medication'], ['medicalConditions', 'Conditions'],
+                ['sleepLocation', 'Sleep'], ['crateTrained', 'Crate trained'],
+                ['canBeLeftAlone', 'Left alone'], ['aloneDuration', 'Alone for'],
+                ['regularVetClinic', 'Vet']
+            ]
+        };
+        const saved = priorities[tabKey] || [];
+        const values = saved
+            .map(([key, label]) => [key, label, String(attributes?.[key] ?? '').trim().replace(/\s+/g, ' ')])
+            .filter(([, , value]) => value);
+        if (tabKey === 'behaviour') {
+            const trigger = values.filter(([key]) => key === 'triggersFears');
+            const riskKeys = new Set(['aggression', 'foodAggression', 'separationAnxiety', 'escapeAttempts', 'indoorAccidents', 'chewingFurniture']);
+            const affirmativeRisks = values.filter(([key, , value]) => riskKeys.has(key) && /^(yes|true)$/i.test(value));
+            const descriptiveRisks = values.filter(([key, , value]) => riskKeys.has(key) && !/^(yes|true|no|false)$/i.test(value));
+            const otherSaved = values.filter(([key]) => key !== 'triggersFears' && !riskKeys.has(key));
+            const negativeRisks = values.filter(([key, , value]) => riskKeys.has(key) && /^(no|false)$/i.test(value));
+            values.splice(0, values.length, ...trigger, ...affirmativeRisks, ...descriptiveRisks, ...otherSaved, ...negativeRisks);
+        }
+        const selected = values.slice(0, 3)
+            .map(([, label, value]) => `${label}: ${value.length > 54 ? `${value.slice(0, 51)}…` : value}`);
+        if (selected.length) return { text: selected.join(' · '), state: 'saved' };
+        if (profileState === 'loading') return { text: 'Loading care details…', state: 'unknown' };
+        if (profileState === 'error') return { text: 'Care details unavailable', state: 'unknown' };
+        return { text: 'No details saved yet', state: 'empty' };
+    }
+
     function renderDirectoryIntakeAttributes(card, record) {
         const host =
             card.querySelector(
@@ -10782,8 +10948,15 @@ registerWaffleServiceWorker();
 
         const selectedSubTab = String(card.dataset.profileSubTab || '');
         const expandedSubTabs = new Set(String(card.dataset.profileSubTabs || selectedSubTab).split(',').map(value => value.trim()).filter(Boolean));
+        const profileDetails = card.querySelector('[data-directory-detail="profile"]');
+        const profileReadState = profileDetails?.dataset.profileReadState || (record ? 'saved' : 'loading');
+        const stayKey = String(card.dataset.stayKey || card.dataset.directoryStayKey || '').trim();
+        const safetyRecord = careRiskRecordsCache[stayKey] || directorySummaryRecordsCache[stayKey] || belongingsRecordsCache[stayKey] || null;
+        const safetyState = directorySafetyReadFailures.has(stayKey) ? 'error' : safetyRecord?.riskFlags && typeof safetyRecord.riskFlags === 'object' ? 'saved' : 'loading';
+        const categoryIdPrefix = String(card.dataset.directorySourceRow || stayKey || card.id || 'profile').replace(/[^a-zA-Z0-9_-]/g, '-');
         const cardsHtml = DIRECTORY_PROFILE_SECONDARY_TABS.map((tab, index) => {
             const active = expandedSubTabs.has(tab.key);
+            const categoryId = `care-category-${categoryIdPrefix}-${tab.key}-${index}`;
             const groupsHtml = tab.groups.map(groupTitle => {
                 const group = INTAKE_ATTRIBUTE_UI_GROUPS.find(item => item.title === groupTitle);
                 if (!group) return '';
@@ -10793,35 +10966,20 @@ registerWaffleServiceWorker();
                     .join('');
                 return `<section class="intake-profile-group"><div class="intake-profile-group-title">${escapeDashboardHtml(group.title)}</div><div class="intake-profile-grid">${fieldsHtml}</div></section>`;
             }).join('');
-            let summary = '';
-            let summaryState = '';
-            if (tab.key === 'safety') {
-                const activeFlags = CARE_SAFETY_FLAGS.filter(flag => !!record?.riskFlags?.[flag.key]);
-                summary = activeFlags.length ? `${activeFlags.length} active ${activeFlags.length === 1 ? 'alert' : 'alerts'} · ${activeFlags.slice(0, 2).map(flag => flag.label).join(', ')}` : 'No active alerts';
-                summaryState = activeFlags.length ? 'attention' : 'clear';
-            } else {
-                const fields = INTAKE_ATTRIBUTE_UI_GROUPS.flatMap(group => group.fields).filter(field => tab.fields.includes(field.key));
-                const filled = fields.filter(field => String(attributes[field.key] ?? '').trim());
-                summary = filled.length
-                    ? `${filled.slice(0, 2).map(field => {
-                        const value = String(attributes[field.key]).trim().replace(/\s+/g, ' ');
-                        return `${field.label}: ${value.length > 36 ? `${value.slice(0, 33)}…` : value}`;
-                    }).join(' · ')}${filled.length > 2 ? ` · +${filled.length - 2} more` : ''}`
-                    : 'No details saved yet';
-            }
+            const summary = directoryCareCategorySummary(tab.key, attributes, profileReadState, safetyRecord, safetyState);
             const content = tab.key === 'safety'
                 ? '<div class="directory-profile-care-host" data-directory-profile-care><div class="intake-profile-empty">Loading safety settings…</div></div>'
                 : groupsHtml;
             return `
                 <section class="care-category-card${active ? ' is-expanded' : ''}" data-care-category="${escapeDashboardHtml(tab.key)}">
                     <h5 class="care-category-heading">
-                        <button type="button" class="care-category-toggle directory-profile-subtab${active ? ' is-expanded' : ''}" id="care-category-${escapeDashboardHtml(tab.key)}-${index}" aria-expanded="${active ? 'true' : 'false'}" aria-controls="care-category-panel-${escapeDashboardHtml(tab.key)}-${index}" data-profile-subtab="${escapeDashboardHtml(tab.key)}">
+                        <button type="button" class="care-category-toggle directory-profile-subtab${active ? ' is-expanded' : ''}" id="${escapeDashboardHtml(categoryId)}" aria-expanded="${active ? 'true' : 'false'}" aria-controls="${escapeDashboardHtml(categoryId)}-panel" data-profile-subtab="${escapeDashboardHtml(tab.key)}">
                             <span class="care-category-title"><span aria-hidden="true">${escapeDashboardHtml(tab.icon)}</span><span>${escapeDashboardHtml(tab.label)}</span></span>
-                            <span class="care-category-summary" data-care-category-summary="${escapeDashboardHtml(tab.key)}"${summaryState ? ` data-state="${summaryState}"` : ''}>${escapeDashboardHtml(summary)}</span>
+                            <span class="care-category-summary" data-care-category-summary="${escapeDashboardHtml(tab.key)}" data-state="${escapeDashboardHtml(summary.state)}">${escapeDashboardHtml(summary.text)}</span>
                             <span class="care-category-chevron" aria-hidden="true">⌄</span>
                         </button>
                     </h5>
-                    <div class="care-category-panel" id="care-category-panel-${escapeDashboardHtml(tab.key)}-${index}" role="region" aria-labelledby="care-category-${escapeDashboardHtml(tab.key)}-${index}" data-profile-subpanel="${escapeDashboardHtml(tab.key)}"${active ? '' : ' hidden'}>${content}</div>
+                    <div class="care-category-panel" id="${escapeDashboardHtml(categoryId)}-panel" role="region" aria-labelledby="${escapeDashboardHtml(categoryId)}" data-profile-subpanel="${escapeDashboardHtml(tab.key)}"${active ? '' : ' hidden'}>${content}</div>
                 </section>`;
         }).join('');
 
@@ -10863,10 +11021,7 @@ registerWaffleServiceWorker();
             ] ||
             belongingsRecordsCache[
                 card.dataset.stayKey
-            ] ||
-            {
-                riskFlags: {}
-            }
+            ] || null
         );
 
         restoreDirectoryProfileEditDraft(card, { checkConflict: true });
@@ -10924,12 +11079,13 @@ registerWaffleServiceWorker();
         `;
 
         const safetySummary = host.closest('[data-care-category]')?.querySelector('[data-care-category-summary="safety"]');
-        const activeFlags = CARE_SAFETY_FLAGS.filter(flag => !!riskFlags[flag.key]);
+        const stayKey = String(card.dataset.stayKey || card.dataset.directoryStayKey || '').trim();
+        const savedSafetyRecord = careRiskRecordsCache[stayKey] || directorySummaryRecordsCache[stayKey] || belongingsRecordsCache[stayKey] || (record?.riskFlags ? record : null);
+        const safetyState = directorySafetyReadFailures.has(stayKey) ? 'error' : savedSafetyRecord?.riskFlags && typeof savedSafetyRecord.riskFlags === 'object' ? 'saved' : 'loading';
         if (safetySummary) {
-            safetySummary.textContent = activeFlags.length
-                ? `${activeFlags.length} active ${activeFlags.length === 1 ? 'alert' : 'alerts'} · ${activeFlags.slice(0, 2).map(flag => flag.label).join(', ')}`
-                : 'No active alerts';
-            safetySummary.dataset.state = activeFlags.length ? 'attention' : 'clear';
+            const summary = directoryCareCategorySummary('safety', {}, 'saved', savedSafetyRecord, safetyState);
+            safetySummary.textContent = summary.text;
+            safetySummary.dataset.state = summary.state;
         }
 
         restoreDirectoryProfileEditDraft(card, { checkConflict: true });

@@ -1,9 +1,10 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.10.05.06",
-  "releaseName": "Care CSV Integrity",
+  "assetRevision": "2026.10.05.07",
+  "releaseName": "Care Clarity & Sync",
   "runtime": "waffle-bootstrap.js",
   "sharedCsvReader": "waffle-csv.js",
+  "syncStatusAdapter": "system-status-sync.js",
   "styles": "waffle-runtime.css",
   "phase": "phase-4-sitter-workflow-expansion",
   "releaseHardeningPhase": "phase-3d-release-regression-observability",

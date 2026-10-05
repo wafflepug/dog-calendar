@@ -1,6 +1,6 @@
 /* ============================================================
    WAFFLE HOUSE — FINAL UI CONTRACT
-   Version 11.1.54 · Care CSV Integrity
+   Version 11.1.54 · Care Clarity & Sync
 
    Purpose
    -------

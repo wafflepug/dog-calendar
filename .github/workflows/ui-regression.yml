@@ -17,6 +17,12 @@ on:
       - 'tests/care-overview-refinement.browser.spec.js'
       - 'tests/care-state-preservation.test.js'
       - 'tests/care-csv-integrity.test.js'
+      - 'tests/care-confirmed-reconciliation.test.js'
+      - 'tests/potential-confirm-dog-id.test.js'
+      - 'tests/checkout-collision-safety.test.js'
+      - 'tests/confirmed-stay-identity.test.js'
+      - 'tests/system-status-sync.test.js'
+      - 'tests/system-status-sync.browser.spec.js'
       - 'playwright.care-profile.config.js'
       - 'playwright.care-mobile-hierarchy.config.js'
       - 'tests/care-mobile-hierarchy.browser.spec.js'
@@ -49,6 +55,12 @@ on:
       - 'tests/care-overview-refinement.browser.spec.js'
       - 'tests/care-state-preservation.test.js'
       - 'tests/care-csv-integrity.test.js'
+      - 'tests/care-confirmed-reconciliation.test.js'
+      - 'tests/potential-confirm-dog-id.test.js'
+      - 'tests/checkout-collision-safety.test.js'
+      - 'tests/confirmed-stay-identity.test.js'
+      - 'tests/system-status-sync.test.js'
+      - 'tests/system-status-sync.browser.spec.js'
       - 'playwright.care-profile.config.js'
       - 'playwright.care-mobile-hierarchy.config.js'
       - 'tests/care-mobile-hierarchy.browser.spec.js'
@@ -97,6 +109,8 @@ jobs:
           node --test tests/care-profile-readiness.test.js
           node --test tests/care-state-preservation.test.js
           node --test tests/care-csv-integrity.test.js
+          node --test tests/care-confirmed-reconciliation.test.js tests/confirmed-stay-identity.test.js tests/potential-confirm-dog-id.test.js tests/checkout-collision-safety.test.js
+          node --test tests/system-status-sync.test.js
           node --test tests/care-navigation-continuity.test.js
           node node_modules/@playwright/test/cli.js install --with-deps chromium firefox webkit
           node node_modules/@playwright/test/cli.js test --config=playwright.care-profile.config.js

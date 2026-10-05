@@ -9,10 +9,11 @@ const careFlags = appSource.slice(appSource.indexOf('const CARE_SAFETY_FLAGS'), 
 const intakeGroups = appSource.slice(appSource.indexOf('const INTAKE_ATTRIBUTE_UI_GROUPS'), appSource.indexOf('];', appSource.indexOf('const INTAKE_ATTRIBUTE_UI_GROUPS')) + 2);
 const profileTabs = appSource.slice(appSource.indexOf('const DIRECTORY_PROFILE_SECONDARY_TABS'), appSource.indexOf('];', appSource.indexOf('const DIRECTORY_PROFILE_SECONDARY_TABS')) + 2);
 const intakeControl = appSource.slice(appSource.indexOf('function intakeAttributeControlHtml'), appSource.indexOf('function renderDirectoryIntakeAttributes'));
+const categorySummary = appSource.slice(appSource.indexOf('function directoryCareCategorySummary'), appSource.indexOf('function renderDirectoryIntakeAttributes'));
 const intakeRenderer = appSource.slice(appSource.indexOf('function renderDirectoryIntakeAttributes'), appSource.indexOf('function renderDirectoryCareProfile'));
 const careRenderer = appSource.slice(appSource.indexOf('function renderDirectoryCareProfile'), appSource.indexOf('function renderDirectoryBelongings'));
 const profileSubtabSwitch = appSource.slice(appSource.indexOf('function switchDirectoryProfileSubTab'), appSource.indexOf('async function openDirectoryGuestProfile'));
-const actualRenderer = `${careFlags}\n${intakeGroups}\n${profileTabs}\nlet careRiskRecordsCache = {};\nconst directorySummaryRecordsCache = {};\nconst belongingsRecordsCache = {};\nconst applyDirectoryProfileEditMode = () => {};\nconst restoreDirectoryProfileEditDraft = () => {};\nfunction escapeDashboardHtml(value){return String(value == null ? '' : value).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');}\n${profileSubtabSwitch}\n${intakeControl}\n${intakeRenderer}\n${careRenderer}\nwindow.renderDirectoryIntakeAttributes = renderDirectoryIntakeAttributes;`;
+const actualRenderer = `${careFlags}\n${intakeGroups}\n${profileTabs}\nlet careRiskRecordsCache = {};\nconst directorySafetyReadFailures = new Set();\nconst directorySummaryRecordsCache = {};\nconst belongingsRecordsCache = {};\nconst applyDirectoryProfileEditMode = () => {};\nconst restoreDirectoryProfileEditDraft = () => {};\nfunction escapeDashboardHtml(value){return String(value == null ? '' : value).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');}\n${categorySummary}\n${profileSubtabSwitch}\n${intakeControl}\n${intakeRenderer}\n${careRenderer}\nwindow.renderDirectoryIntakeAttributes = renderDirectoryIntakeAttributes;\nwindow.setCategorySafetyRecord = (key, record) => { careRiskRecordsCache[key] = record; directorySafetyReadFailures.delete(key); };\nwindow.setCategorySafetyFailure = key => directorySafetyReadFailures.add(key);\nwindow.summarizeCareCategory = directoryCareCategorySummary;`;
 const briefRenderer = appSource.slice(appSource.indexOf('function renderDirectoryCareBrief(card)'), appSource.indexOf('function openCareReadinessTarget'));
 const belongingsItems = appSource.slice(appSource.indexOf('const BELONGINGS_ITEMS'), appSource.indexOf('];', appSource.indexOf('const BELONGINGS_ITEMS')) + 2);
 const belongingsRenderer = appSource.slice(appSource.indexOf('function renderDirectoryBelongings'), appSource.indexOf('function renderDirectoryOperationalSections'));
@@ -56,10 +57,10 @@ const briefTestCode = `
 function fixture(theme = '') {
   return `<!doctype html><html><head><style>
     ${css}
-  </style></head><body class="${theme}"><main class="directory-card is-profile-active"><div class="directory-profile-content">
+  </style></head><body class="${theme}"><main class="directory-card is-profile-active" data-stay-key="stay-a" data-directory-source-row="4"><div class="directory-profile-content">
     <header class="directory-card-header"><div class="directory-photo-shell"><div class="directory-photo-media">🐶</div></div><div class="directory-card-identity"><button class="directory-dog-name-btn">A very long dog name that must wrap without clipping</button><button class="directory-primary-breed">Border Collie</button><div class="directory-stay-dates">📅 20 Sep 2026 – 22 Sep 2026</div></div></header>
     <div class="directory-attributes-grid directory-core-attributes"><button class="directory-attribute"><span class="directory-field-label">Owner</span><span class="directory-field-value">Alexandria Peterson-Smith with a very long family name</span></button><button class="directory-attribute"><span class="directory-field-label">Contact</span><span class="directory-field-value">0400 123 456</span></button><button class="directory-attribute directory-attribute-wide"><span class="directory-field-label">Notes</span><span class="directory-field-value">Long care notes wrap here and remain discoverable for the sitter.</span></button></div>
-    <section class="directory-profile-section"><div class="directory-profile-section-heading"><div><span class="directory-profile-section-kicker">Guest profile</span><h4>📋 Profile &amp; Care</h4></div><div class="directory-profile-section-tools"><button class="directory-profile-edit-toggle">✏️ Edit</button></div></div><div data-directory-detail="profile"><div data-intake-profile-summary></div><div data-directory-intake-attributes><div>Loading profile…</div></div></div></section>
+    <section class="directory-profile-section"><div class="directory-profile-section-heading"><div><span class="directory-profile-section-kicker">Guest profile</span><h4>📋 Profile &amp; Care</h4></div><div class="directory-profile-section-tools"><button class="directory-profile-edit-toggle">✏️ Edit</button></div></div><div data-directory-detail="profile" data-directory-main-panel="profile"><div data-intake-profile-summary></div><div data-directory-intake-attributes><div>Loading profile…</div></div></div></section>
   </div></main></body></html>`;
 }
 
@@ -108,6 +109,169 @@ test('Care overview wraps long values and keeps controls usable at phone widths'
     await page.locator('button').first().focus();
     expect(await page.locator('button').first().evaluate(el => getComputedStyle(el).outlineStyle)).toBe('solid');
     await page.screenshot({ path: `test-results/care-overview-${width}.png`, fullPage: true });
+  }
+});
+
+test('curated Care summaries surface sitter instructions and keep disclosures readable at every target width', async ({ page }) => {
+  const attributes = {
+    feedingTimes: '06:30 before the morning walk and 18:00 after the evening walk',
+    foodAmount: '1 cup at each meal',
+    walksPerDay: '2 walks',
+    walkDuration: '30 minutes each',
+    triggersFears: '<b>Thunder</b> and unfamiliar delivery workers; give a little space and approach slowly. '.repeat(2),
+    aggression: 'No',
+    foodAggression: 'No',
+    separationAnxiety: 'Yes',
+    medicationInstructions: 'Give with dinner and call the owner if appetite changes. '.repeat(3),
+    medicalConditions: 'Seasonal allergies; watch for itching. '.repeat(2),
+    sleepLocation: 'On the mat beside the bedroom door',
+    offLeashAllowed: 'No',
+    crateTrained: 'Yes',
+    emergencyContact: 'Owner details should not appear in the health summary',
+    emergencyPhone: '0400 123 456'
+  };
+
+  for (const theme of ['', 'dark-theme']) {
+    for (const width of [320, 390, 1440]) {
+      await page.setViewportSize({ width, height: 820 });
+      await page.setContent(fixture(theme));
+      await page.addScriptTag({ content: actualRenderer });
+      const card = page.locator('.directory-card').first();
+      await page.evaluate(() => setCategorySafetyRecord('stay-a', { riskFlags: { foodAllergy: true } }));
+      await page.evaluate(profile => renderDirectoryIntakeAttributes(document.querySelector('.directory-card'), { intakeAttributes: profile, intakeAttributesSource: 'Saved profile' }), attributes);
+      const safetyCacheState = await page.evaluate(() => ({ failed: directorySafetyReadFailures.has('stay-a'), record: careRiskRecordsCache['stay-a'], cardKey: document.querySelector('.directory-card').dataset.stayKey }));
+      expect(safetyCacheState.failed, JSON.stringify(safetyCacheState)).toBe(false);
+
+      const food = page.locator('[data-care-category-summary="foodWalks"]');
+      const behaviour = page.locator('[data-care-category-summary="behaviour"]');
+      const health = page.locator('[data-care-category-summary="healthHome"]');
+      await expect(food).toContainText('Feed:');
+      await expect(food).toContainText('Amount:');
+      await expect(food).toContainText('Walks:');
+      await expect(behaviour).toContainText('Triggers & handling:');
+      await expect(behaviour).toContainText('Separation: Yes');
+      await expect(health).toContainText('Medication:');
+      await expect(health).toContainText('Conditions:');
+      await expect(health).toContainText('Sleep:');
+      await expect(health).not.toContainText('Owner details');
+      await expect(page.locator('[data-care-category-summary="safety"]')).toContainText('Food Allergy');
+      expect(await behaviour.evaluate(node => node.textContent)).toContain('<b>Thunder</b>');
+      expect(await behaviour.locator('b').count()).toBe(0);
+
+      await page.locator('[data-profile-subtab="foodWalks"]').click();
+      const savedFoodSummary = await food.textContent();
+      await page.locator('[data-intake-attribute="feedingTimes"]').fill('Unsaved draft time');
+      await expect(food).toHaveText(savedFoodSummary);
+
+      const disclosure = page.locator('[data-profile-subtab="foodWalks"]');
+      const box = await disclosure.boundingBox();
+      expect(box.height).toBeGreaterThanOrEqual(44);
+      expect(box.x).toBeGreaterThanOrEqual(0);
+      expect(box.x + box.width).toBeLessThanOrEqual(width);
+      expect(await food.evaluate(node => Number.parseFloat(getComputedStyle(node).fontSize))).toBeGreaterThanOrEqual(12);
+      await disclosure.focus();
+      await expect(disclosure).toHaveCSS('outline-style', 'solid');
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
+
+      const summaryGeometry = await food.evaluate(node => {
+        const summary = node.getBoundingClientRect();
+        const chevron = node.closest('.care-category-toggle').querySelector('.care-category-chevron').getBoundingClientRect();
+        const cardBackground = getComputedStyle(node.closest('.care-category-card')).backgroundColor;
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d', { willReadFrequently: true });
+        const luminance = color => {
+          context.clearRect(0, 0, 1, 1);
+          context.fillStyle = color;
+          context.fillRect(0, 0, 1, 1);
+          const channels = [...context.getImageData(0, 0, 1, 1).data].slice(0, 3).map(value => value / 255).map(value => value <= .04045 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4);
+          return .2126 * channels[0] + .7152 * channels[1] + .0722 * channels[2];
+        };
+        const foreground = luminance(getComputedStyle(node).color);
+        const background = luminance(cardBackground);
+        return { width: summary.width, height: summary.height, right: summary.right, chevronLeft: chevron.left, contrast: (Math.max(foreground, background) + .05) / (Math.min(foreground, background) + .05) };
+      });
+      expect(summaryGeometry.width).toBeGreaterThanOrEqual(80);
+      expect(summaryGeometry.height).toBeGreaterThan(0);
+      expect(summaryGeometry.right).toBeLessThanOrEqual(summaryGeometry.chevronLeft - 4);
+      expect(summaryGeometry.contrast).toBeGreaterThanOrEqual(4.5);
+      const wrap = await behaviour.evaluate(node => {
+        const range = document.createRange();
+        range.selectNodeContents(node);
+        const lines = new Set([...range.getClientRects()].map(rect => Math.round(rect.top)));
+        return { whiteSpace: getComputedStyle(node).whiteSpace, lineCount: lines.size };
+      });
+      expect(wrap.whiteSpace).toBe('normal');
+      expect(wrap.lineCount).toBeGreaterThanOrEqual(width <= 390 ? 2 : 1);
+
+      const select = page.locator('select.intake-profile-control').first();
+      await page.locator('select.intake-profile-control').evaluateAll(nodes => nodes.forEach(node => { node.disabled = true; }));
+      const selectContrast = await select.evaluate(node => {
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d', { willReadFrequently: true });
+        const rgba = color => {
+          context.clearRect(0, 0, 1, 1);
+          context.fillStyle = color;
+          context.fillRect(0, 0, 1, 1);
+          return [...context.getImageData(0, 0, 1, 1).data];
+        };
+        let surface = node;
+        let background = rgba(getComputedStyle(surface).backgroundColor);
+        while (background[3] < 250 && surface.parentElement) {
+          surface = surface.parentElement;
+          background = rgba(getComputedStyle(surface).backgroundColor);
+        }
+        const luminance = channels => channels.slice(0, 3).map(value => value / 255).map(value => value <= .04045 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4).reduce((sum, value, index) => sum + value * [0.2126, 0.7152, 0.0722][index], 0);
+        const foreground = luminance(rgba(getComputedStyle(node).color));
+        const backdrop = luminance(background);
+        return { ratio: (Math.max(foreground, backdrop) + .05) / (Math.min(foreground, backdrop) + .05), foreground: getComputedStyle(node).color, background: getComputedStyle(surface).backgroundColor };
+      });
+      expect(selectContrast.ratio, JSON.stringify(selectContrast)).toBeGreaterThanOrEqual(4.5);
+
+      if (width === 320 || width === 1440) {
+        await page.screenshot({ path: `test-results/care-summaries-${theme ? 'dark' : 'light'}-${width}.png`, fullPage: true });
+      }
+
+      await card.evaluate(node => {
+        const clone = node.cloneNode(true);
+        clone.dataset.stayKey = 'stay-b';
+        clone.dataset.directorySourceRow = '5';
+        node.parentElement.appendChild(clone);
+      });
+      const second = page.locator('.directory-card').nth(1);
+      await second.evaluate(node => renderDirectoryIntakeAttributes(node, { intakeAttributes: { feedingTimes: 'Once daily' } }));
+      const ids = await page.locator('.care-category-toggle').evaluateAll(nodes => nodes.map(node => node.id));
+      expect(new Set(ids).size).toBe(ids.length);
+      for (const toggle of await page.locator('.care-category-toggle').all()) {
+        const panelId = await toggle.getAttribute('aria-controls');
+        await expect(page.locator(`#${panelId}`)).toHaveAttribute('aria-labelledby', await toggle.getAttribute('id'));
+      }
+
+      const statuses = await page.evaluate(() => ({
+        partial: window.summarizeCareCategory('safety', {}, 'saved', {}, 'saved'),
+        explicitClear: window.summarizeCareCategory('safety', {}, 'saved', { riskFlags: {} }, 'saved'),
+        malformedFlags: window.summarizeCareCategory('safety', {}, 'saved', { riskFlags: [] }, 'saved'),
+        malformedValue: window.summarizeCareCategory('safety', {}, 'saved', { riskFlags: { foodAllergy: 'false' } }, 'saved'),
+        failed: window.summarizeCareCategory('safety', {}, 'saved', null, 'error'),
+        loading: window.summarizeCareCategory('foodWalks', {}, 'loading', null, 'loading'),
+        profileError: window.summarizeCareCategory('healthHome', {}, 'error', null, 'loading'),
+        customRisk: window.summarizeCareCategory('behaviour', { aggression: 'Reactive near food' }, 'saved', null, 'loading')
+      }));
+      expect(statuses.partial.text).toBe('Safety status not loaded');
+      expect(statuses.explicitClear.text).toBe('No active alerts');
+      expect(statuses.malformedFlags.text).toBe('Safety status unavailable');
+      expect(statuses.malformedValue.text).toBe('Safety status unavailable');
+      expect(statuses.failed.text).toBe('Safety status unavailable');
+      expect(statuses.loading.text).toBe('Loading care details…');
+      expect(statuses.profileError.text).toBe('Care details unavailable');
+      expect(statuses.customRisk.text).toContain('Aggression: Reactive near food');
+
+      await page.locator('[data-directory-detail="profile"]').first().evaluate(node => { node.dataset.profileReadState = 'error'; });
+      await page.evaluate(() => renderDirectoryIntakeAttributes(document.querySelector('.directory-card'), { intakeAttributes: {} }));
+      await expect(page.locator('[data-care-category-summary="healthHome"]').first()).toHaveText('Care details unavailable');
+      await page.evaluate(() => setCategorySafetyFailure('stay-a'));
+      await page.evaluate(() => renderDirectoryIntakeAttributes(document.querySelector('.directory-card'), { intakeAttributes: {} }));
+      await expect(page.locator('[data-care-category-summary="safety"]').first()).toHaveText('Safety status unavailable');
+    }
   }
 });
 

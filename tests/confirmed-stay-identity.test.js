@@ -19,7 +19,7 @@ const sandbox = {
     getPendingPotentialRemovals: () => [],
     dailyCapacityCounts: {}
 };
-vm.runInNewContext(`${appSource.slice(capacityStart, capacityEnd)}\n${source.slice(start, composeEnd)}\nthis.identity = v1105ConfirmedStayIdentity;\nthis.dedupe = v1105DedupeConfirmedStays;`, sandbox);
+vm.runInNewContext(`${appSource.slice(capacityStart, capacityEnd)}\n${source.slice(start, composeEnd)}\nthis.identity = v1105ConfirmedStayIdentity;\nthis.sameIdentity = v1105SameConfirmedStayIdentity;\nthis.dedupe = v1105DedupeConfirmedStays;`, sandbox);
 
 function stay(overrides = {}) {
     return {
@@ -138,4 +138,33 @@ test('conflicting aliases and different partial source identities are preserved 
 
 test('delimiters in identity fields cannot produce a false collision', () => {
     assert.notEqual(sandbox.identity(stay({ breed: 'a|b', ownerName: 'c' })), sandbox.identity(stay({ breed: 'a', ownerName: 'b|c' })));
+});
+
+test('different persisted dog IDs preserve same-name/date dogs with otherwise matching identity', () => {
+    const first = stay({ dogId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' });
+    const second = stay({ dogId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb' });
+    assert.equal(sandbox.dedupe([first, second]).length, 2);
+    assert.equal(sandbox.sameIdentity(first, second), false);
+});
+
+test('same or missing dog ID copies still reconcile only when the existing identity is complete', () => {
+    const withId = stay({ dogId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' });
+    const sameId = stay({ dogId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' });
+    const noId = stay({});
+    assert.equal(sandbox.dedupe([withId, sameId]).length, 1);
+    assert.equal(sandbox.dedupe([noId, withId]).length, 1);
+    assert.equal(sandbox.dedupe([stay({ ownerName: '', phone: '' }), stay({ dogId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', ownerName: '', phone: '' })]).length, 2);
+});
+
+test('an ID-less copy cannot bridge two distinct persisted Dog IDs in any source order', () => {
+    const noId = stay({});
+    const first = stay({ dogId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' });
+    const second = stay({ dogId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb' });
+    for (const events of [[noId, first, second], [first, noId, second], [first, second, noId]]) {
+        const deduped = sandbox.dedupe(events);
+        assert.equal(deduped.length, 3);
+        assert.equal(deduped.includes(noId), true);
+        assert.equal(deduped.includes(first), true);
+        assert.equal(deduped.includes(second), true);
+    }
 });
