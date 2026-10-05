@@ -5633,6 +5633,9 @@ registerWaffleServiceWorker();
                     filterGuestDirectoryCards
                 );
 
+            const searchInput = document.getElementById('guestDirectorySearch');
+            setupDirectorySearchControls(searchInput);
+
             const rosterFilters = document.querySelector('.directory-roster-filters');
             if (rosterFilters) {
                 const rosterSummaryObserver = new MutationObserver(
@@ -8545,8 +8548,10 @@ registerWaffleServiceWorker();
     }
 
     function normalizeDirectoryPhoneForTel(value) {
-        const phone = String(value || '').trim();
-        if (!phone || !/^[+\d\s().-]+$/.test(phone)) return '';
+        const rawPhone = String(value || '');
+        if (!rawPhone || /[\u0000-\u001f\u007f]/.test(rawPhone)) return '';
+        const phone = rawPhone.trim();
+        if (!phone || !/^[+\d ().-]+$/.test(phone)) return '';
         const digits = phone.replace(/\D/g, '');
         if (digits.length < 7 || digits.length > 15) return '';
         if (phone.includes('+') && !/^\s*\+/.test(phone)) return '';
@@ -8672,8 +8677,9 @@ registerWaffleServiceWorker();
         }
 
         if (callActionHost) {
+            const phoneField = card.querySelector('[data-directory-edit-field="phone"]');
             const phone = normalizeDirectoryPhoneForTel(
-                card.querySelector('[data-directory-edit-field="phone"]')?.dataset.directoryCurrentValue || card.dataset.v1088Phone
+                phoneField ? phoneField.dataset.directoryCurrentValue : card.dataset.v1088Phone
             );
             callActionHost.innerHTML = phone
                 ? `<a class="directory-care-brief-action" href="tel:${escapeDashboardHtml(phone)}" aria-label="Call owner">Call owner</a>`
@@ -10732,6 +10738,30 @@ registerWaffleServiceWorker();
     }
 
 
+    function setupDirectorySearchControls(searchInput) {
+        const toolbar = searchInput?.closest('.guest-directory-toolbar');
+        if (!toolbar || toolbar.querySelector('[data-directory-search-clear]')) return;
+        const clearSearch = document.createElement('button');
+        clearSearch.type = 'button';
+        clearSearch.className = 'directory-search-clear';
+        clearSearch.dataset.directorySearchClear = '';
+        clearSearch.textContent = 'Clear search';
+        clearSearch.hidden = true;
+        clearSearch.addEventListener('click', () => {
+            searchInput.value = '';
+            filterGuestDirectoryCards();
+            searchInput.focus();
+        });
+        toolbar.append(clearSearch);
+        const feedback = document.createElement('p');
+        feedback.className = 'directory-search-feedback';
+        feedback.dataset.directorySearchFeedback = '';
+        feedback.setAttribute('role', 'status');
+        feedback.setAttribute('aria-live', 'polite');
+        feedback.hidden = true;
+        toolbar.append(feedback);
+    }
+
     function filterGuestDirectoryCards() {
         const search =
             String(
@@ -10759,10 +10789,10 @@ registerWaffleServiceWorker();
             'current'
         );
 
+        let visibleCount = 0;
+
         document
-            .querySelectorAll(
-                '.directory-card'
-            )
+            .querySelectorAll('.directory-card[data-directory-stay-key]')
             .forEach(card => {
                 if (profileMode) {
                     card.style.display =
@@ -10784,20 +10814,44 @@ registerWaffleServiceWorker();
                     ? isPast
                     : !isPast && (activeView === 'future' ? isFuture : !isFuture);
 
-                card.style.display =
-                    matchesView && (!search ||
-                    card.innerText
-                        .toLowerCase()
-                        .includes(search))
-                        ? 'block'
-                        : 'none';
+                const searchable = String([
+                    card.dataset.directoryDogName,
+                    (() => {
+                        const ownerField = card.querySelector('[data-directory-edit-field="ownerName"]');
+                        return ownerField ? ownerField.dataset.directoryCurrentValue : card.dataset.v1088OwnerName;
+                    })(),
+                    card.dataset.directoryDogNumber,
+                    card.dataset.directoryDogId
+                ].filter(Boolean).join(' ')).toLowerCase();
+                const matchesSearch = !search || searchable.includes(search);
+                const visible = matchesView && matchesSearch;
+                card.style.display = visible ? 'block' : 'none';
+                if (visible) visibleCount += 1;
             });
 
-        updateDirectoryRosterSummary();
+        updateDirectoryRosterSummary({ search, activeView, visibleCount, profileMode });
     }
 
-    function updateDirectoryRosterSummary() {
+    function updateDirectoryRosterSummary(options = {}) {
         const summary = document.getElementById('directory-roster-summary');
+        const search = String(options.search ?? document.getElementById('guestDirectorySearch')?.value ?? '').trim();
+        const visibleCount = options.visibleCount ?? Array.from(document.querySelectorAll('.directory-card[data-directory-stay-key]'))
+            .filter(card => card.style.display !== 'none' && card.getClientRects().length > 0).length;
+        const clearSearch = document.querySelector('[data-directory-search-clear]');
+        if (clearSearch) clearSearch.hidden = !search || options.profileMode === true;
+
+        const activeView = String(options.activeView ?? document.querySelector('[data-v1082-stay-tab].is-active')?.dataset.v1082StayTab ?? 'current');
+        const feedback = document.querySelector('[data-directory-search-feedback]');
+        if (feedback) {
+            const searching = Boolean(search) && options.profileMode !== true;
+            feedback.hidden = !searching;
+            feedback.textContent = searching
+                ? Number(visibleCount) === 0
+                    ? `${activeView === 'future' ? 'No currently loaded arriving stays match' : `No ${activeView === 'past' ? 'past ' : ''}stays match`} “${search}”.`
+                    : `${visibleCount} matching ${visibleCount === 1 ? 'stay' : 'stays'}`
+                : '';
+        }
+
         if (!summary) return;
         const staying = document.getElementById('v1082CurrentStayCount')?.textContent || '0';
         const arriving = document.getElementById('v1082FutureStayCount')?.textContent || '0';
@@ -15719,16 +15773,14 @@ registerWaffleServiceWorker();
                                                 <span class="directory-contact-edit-hint" aria-hidden="true">Edit</span>
                                             </button>
 
-                                            <button
-                                                type="button"
-                                                class="directory-attribute"
-                                                data-directory-edit-field="phone"
-                                                data-directory-current-value="${escapeDashboardHtml(cleanPhone)}"
-                                                aria-label="Edit ${escapeDashboardHtml(dogName.trim())} contact">
+                                            <div class="directory-attribute directory-phone-attribute">
                                                 <span class="directory-field-label">Contact</span>
                                                 <span class="directory-field-value">${escapeDashboardHtml(cleanPhone || 'Contact not provided')}</span>
-                                                <span class="directory-contact-edit-hint" aria-hidden="true">Edit</span>
-                                            </button>
+                                                <span class="directory-phone-actions">
+                                                    ${normalizeDirectoryPhoneForTel(cleanPhone) ? `<a class="directory-phone-call" href="tel:${escapeDashboardHtml(normalizeDirectoryPhoneForTel(cleanPhone))}" aria-label="Call ${escapeDashboardHtml(dogName.trim())}'s owner">Call</a>` : ''}
+                                                    <button type="button" class="directory-phone-edit" data-directory-edit-field="phone" data-directory-current-value="${escapeDashboardHtml(cleanPhone)}" aria-label="Edit ${escapeDashboardHtml(dogName.trim())} contact">Edit</button>
+                                                </span>
+                                            </div>
 
                                             <button
                                                 type="button"

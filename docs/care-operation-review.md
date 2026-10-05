@@ -1,0 +1,9 @@
+# Selected Care stay record review
+
+A known conflicted stay displays “Stay changes paused” with one “Review records” action. Healthy roster cards receive no new badge or eager request. Activating the action reads only the selected Stay ID or exact legacy Stay Key through `get_stay_operation_review`. It does not modify, repair, reassign, delete, create sheets or backfill records.
+
+The backend checks complete booking and operation inventories before selecting evidence. Physical quarantined IDs, per-record reasons, booked dates, original/actual checkout dates and relevant candidate bookings remain separate. Raw-ID candidate matches include non-confirmed booking types as conflict evidence, explicitly marked as ineligible operation owners. Unknown owners remain unknown; placeholder Dog IDs are hidden. Each response list is limited to 20 with explicit truncation. UUID scope cannot broaden through a contradictory key.
+
+The modal distinguishes loading, offline, failed, stale saved and no matching conflict results. Refreshing it cannot unlock a stay or claim repair. Close and Escape restore focus and page position. Long values wrap, the review body scrolls, and its Close action remains reachable on narrow mobile screens.
+
+Verification: run `node --test tests/care-operation-review-backend.test.js tests/stay-operation-frontend.test.js`, then Playwright with `playwright.care-operation-review.config.js`. Fixtures cover selected identity, malformed IDs, duplicate IDs across booking types, legacy ambiguity, missing records/sheets, truncation, stale responses, failed/offline reads, Retry, selection mismatch, close races, responsive geometry and full Care boot. Production review requires deployed backend capability `stayOperationReviewVersion: 1`; the deployment workflow verifies it with a read-only request.

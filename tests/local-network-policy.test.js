@@ -8,6 +8,8 @@ test('allows established read actions', () => {
   assert.equal(localBackendRequestPolicy({ method: 'GET', action: 'maintenance_status' }).allowed, true);
   assert.equal(localBackendRequestPolicy({ method: 'HEAD', action: 'maintenance_status' }).allowed, true);
   assert.equal(localBackendRequestPolicy({ method: 'GET', action: 'get_guest_directory' }).allowed, true);
+  assert.equal(localBackendRequestPolicy({ method: 'GET', action: 'get_stay_operation_review' }).allowed, true);
+  assert.equal(localBackendRequestPolicy({ method: 'POST', action: 'get_stay_operation_review' }).allowed, false);
 });
 
 test('blocks writes and unknown GET actions in local UI runs', () => {

@@ -12,15 +12,16 @@ const bookings = [
 ];
 const keyFor = b => `${b.dogName.toLowerCase()}|${b.startDate}|${b.endDate}`;
 const dateCell = value => { const [year, month, day] = value.split('-'); return `${day}/${month}/${year}`; };
-const csv = () => ['Timestamp,Dog Name,Breed,Start Date,End Date,Owner,Phone,Likes,Dislikes,Notes,Edit Link,Booking Type', ...bookings.map(b => [b.timestamp, b.dogName, b.breed, dateCell(b.startDate), dateCell(b.endDate), b.ownerName, b.phone, '', '', b.notes, '', b.bookingType].map(value => /[",\r\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value).join(','))].join('\r\n');
+const csv = (items = bookings) => ['Timestamp,Dog Name,Breed,Start Date,End Date,Owner,Phone,Likes,Dislikes,Notes,Edit Link,Booking Type', ...items.map(b => [b.timestamp, b.dogName, b.breed, dateCell(b.startDate), dateCell(b.endDate), b.ownerName, b.phone, '', '', b.notes, '', b.bookingType].map(value => /[",\r\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value).join(','))].join('\r\n');
 
-function installFixture(page) {
+function installFixture(page, options = {}) {
+  const fixtureBookings = options.bookings || bookings;
   const handler = async route => {
     const request = route.request();
     const url = request.url();
     if (!['GET', 'HEAD'].includes(request.method())) return route.fulfill({ status: 405, body: 'Read-only fixture blocked mutation' });
     if (url.startsWith('http://127.0.0.1:44972/')) return route.continue();
-    if (url.includes('docs.google.com/spreadsheets') && url.includes('output=csv')) return route.fulfill({ status: 200, contentType: 'text/csv', body: csv() });
+    if (url.includes('docs.google.com/spreadsheets') && url.includes('output=csv')) return route.fulfill({ status: 200, contentType: 'text/csv', body: csv(fixtureBookings) });
     if (url.includes('cdn.jsdelivr.net') && url.includes('fullcalendar')) return route.fulfill({ status: 200, contentType: 'application/javascript', body: fullCalendar });
     if (url.includes('script.google.com')) {
       const params = new URL(url).searchParams;
@@ -30,9 +31,9 @@ function installFixture(page) {
       const resolved = resolveLocalBackendAction({ method: request.method(), url });
       const action = String(resolved.action || payload.action || params.get('action') || '');
       if (!resolved.policy.allowed) return route.fulfill({ status: 403, body: `Unapproved backend action blocked: ${resolved.policy.reason}` });
-      const records = bookings.map(b => ({ ...b, stayKey: keyFor(b) }));
+      const records = fixtureBookings.map(b => ({ ...b, stayKey: keyFor(b) }));
       let response = { result: 'success', records: [], enabled: false };
-      if (action === 'get_guest_directory') response = { result: 'success', bookings, summaries: records.map(b => ({ stayKey: b.stayKey, riskFlags: {} })), digitalIntakes: [], legacyIntakes: [] };
+      if (action === 'get_guest_directory') response = { result: 'success', bookings: fixtureBookings, summaries: records.map(b => ({ stayKey: b.stayKey, riskFlags: {} })), digitalIntakes: [], legacyIntakes: [] };
       if (action === 'get_intake_statuses') response = { result: 'success', records: [] };
       if (action === 'get_legacy_intake_statuses') response = { result: 'success', records: [] };
       if (action === 'get_belongings') response = { result: 'success', records: [] };
@@ -76,13 +77,23 @@ test('stay contact and handover is readable, editable and tied to the selected d
     expect(await page.evaluate(() => document.body.classList.contains('dark-theme'))).toBe(theme === 'dark');
     await expect(contact.locator('.directory-field-label')).toHaveText(['Owner', 'Contact', 'Handover note']);
     await expect(contact.locator('[data-directory-edit-field="ownerName"] .directory-field-value')).toHaveText(bookings[0].ownerName);
+    const phone = contact.locator('.directory-phone-attribute');
+    await expect(phone.locator('.directory-field-value')).toHaveText(bookings[0].phone);
+    await expect(phone.locator('[data-directory-edit-field="phone"]')).toHaveAttribute('aria-label', 'Edit Milo contact');
+    await expect(phone.locator('.directory-phone-call')).toHaveAttribute('href', 'tel:0400000001');
+    await expect(phone.locator('.directory-phone-call')).toHaveAttribute('aria-label', "Call Milo's owner");
+    await expect(card.locator('[data-care-brief-call-owner] a')).toHaveAttribute('href', 'tel:0400000001');
     await expect(contact.locator('[data-directory-edit-field="notes"]')).toHaveAttribute('data-directory-current-value', selectedNote);
     await expect(contact.locator('[data-directory-edit-field="notes"] .directory-field-value')).toHaveText(selectedNote);
     await expect(contact.locator('[data-directory-edit-field="notes"] .directory-field-value')).toHaveCSS('white-space', 'pre-wrap');
     await expect(contact.locator('[data-directory-edit-field="notes"]')).toHaveAttribute('aria-label', 'Edit Milo handover note');
-    for (const width of [320, 390, 1440]) {
+    for (const width of [320, 390, 768, 1440]) {
       await page.setViewportSize({ width, height: 900 });
-      const layout = await contact.evaluate(root => ({ overflow: root.scrollWidth > root.clientWidth, buttons: [...root.querySelectorAll('button')].map(button => { const r = button.getBoundingClientRect(); return [r.width, r.height]; }) }));
+      await page.evaluate(() => {
+        document.documentElement.style.setProperty('--wh-accent', '#eab308');
+        document.documentElement.style.setProperty('--wh-accent-contrast', '#0f3550');
+      });
+      const layout = await contact.evaluate(root => ({ overflow: root.scrollWidth > root.clientWidth, buttons: [...root.querySelectorAll('button, a.directory-phone-call')].map(button => { const r = button.getBoundingClientRect(); return [r.width, r.height]; }) }));
       expect(layout.overflow).toBe(false);
       expect(layout.buttons.every(([w, h]) => Math.round(w * 100) / 100 >= 44 && Math.round(h * 100) / 100 >= 44)).toBe(true);
       let readable;
@@ -115,6 +126,22 @@ test('stay contact and handover is readable, editable and tied to the selected d
       expect(readable.values.every(size => size >= 14)).toBe(true);
       expect(readable.hints.every(size => size >= 12)).toBe(true);
       expect(readable.contrast.every(value => value.ratio >= 4.5), JSON.stringify(readable)).toBe(true);
+      const actionContrast = await contact.evaluate(root => {
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d', { willReadFrequently: true });
+        const luminance = color => {
+          context.fillStyle = color;
+          context.fillRect(0, 0, 1, 1);
+          return [...context.getImageData(0, 0, 1, 1).data].slice(0, 3).map(value => value / 255).map(value => value <= .04045 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4).reduce((sum, value, index) => sum + value * [.2126, .7152, .0722][index], 0);
+        };
+        return [...root.querySelectorAll('.directory-phone-call, .directory-phone-edit')].map(el => {
+          const background = getComputedStyle(el).backgroundColor;
+          const foreground = getComputedStyle(el).color;
+          const a = luminance(background), b = luminance(foreground);
+          return (Math.max(a, b) + .05) / (Math.min(a, b) + .05);
+        });
+      });
+      expect(actionContrast.every(ratio => ratio >= 4.5), JSON.stringify(actionContrast)).toBe(true);
     }
   }
   const note = contact.locator('[data-directory-edit-field="notes"]');
@@ -139,7 +166,39 @@ test('stay contact and handover is readable, editable and tied to the selected d
   await emptyContact.locator('summary').click();
   await expect(emptyContact).toContainText('Owner not provided');
   await expect(emptyContact).toContainText('Contact not provided');
+  await expect(emptyContact.locator('.directory-phone-call')).toHaveCount(0);
+  await expect(emptyContact.locator('[data-directory-edit-field="phone"]')).toBeVisible();
   await expect(emptyContact).toContainText('No handover note provided');
   await expect(emptyContact.locator('[data-directory-edit-field="ownerName"]')).toHaveAttribute('data-directory-current-value', '');
   await expect(emptyContact.locator('[data-directory-edit-field="notes"]')).toHaveAttribute('data-directory-current-value', '');
+});
+
+test('same-name Care profiles call the selected stay owner using that stay phone', async ({ page, baseURL }) => {
+  const sameNameStays = [
+    { ...bookings[0], ownerName: 'First Owner', phone: '+61 (400) 000-0001', startDate: '2026-01-01', endDate: '2026-11-01' },
+    { ...bookings[0], ownerName: 'Second Owner', phone: '0400-999-0002', startDate: '2026-02-01', endDate: '2026-12-01' }
+  ];
+  await page.route('**/*', installFixture(page, { bookings: sameNameStays }));
+  await page.setViewportSize({ width: 390, height: 900 });
+  await page.clock.setFixedTime(new Date('2026-10-05T12:00:00Z'));
+  await page.addInitScript(mode => localStorage.setItem('theme', mode), 'light');
+  await page.goto(`${baseURL}/directory.html`, { waitUntil: 'domcontentloaded' });
+  await page.waitForFunction(() => document.documentElement.dataset.waffleUiReady === 'true');
+  const first = page.locator('.directory-card[data-v1088-owner-name="First Owner"]');
+  const second = page.locator('.directory-card[data-v1088-owner-name="Second Owner"]');
+  await expect(first).toBeVisible();
+  await expect(second).toBeVisible();
+
+  await first.locator('[data-open-directory-profile]').click();
+  const firstContact = first.locator('[data-directory-stay-contact]');
+  await firstContact.locator('summary').click();
+  await expect(firstContact.locator('.directory-phone-call')).toHaveAttribute('href', 'tel:+614000000001');
+  await expect(first.locator('[data-care-brief-call-owner] a')).toHaveAttribute('href', 'tel:+614000000001');
+
+  await page.locator('#directoryBackToGuestsBtn').click();
+  await second.locator('[data-open-directory-profile]').click();
+  const secondContact = second.locator('[data-directory-stay-contact]');
+  await secondContact.locator('summary').click();
+  await expect(secondContact.locator('.directory-phone-call')).toHaveAttribute('href', 'tel:04009990002');
+  await expect(second.locator('[data-care-brief-call-owner] a')).toHaveAttribute('href', 'tel:04009990002');
 });

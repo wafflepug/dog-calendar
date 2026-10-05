@@ -2573,6 +2573,10 @@ function waffleReadVariant_(action, data) {
       actionName,
     stayKey:
       String(data.stayKey || ""),
+    reviewStayId:
+      actionName === "get_stay_operation_review" ? String(data.stayId || "") : "",
+    reviewStayKey:
+      actionName === "get_stay_operation_review" ? String(data.stayKey || "") : "",
     stayKeys:
       Array.isArray(data.stayKeys)
         ? data.stayKeys
@@ -2613,6 +2617,9 @@ function waffleReadVariant_(action, data) {
 
   if (["get_stay_operations", "get_guest_directory", "get_past_guest_directory"].indexOf(actionName) !== -1) {
     variantPayload.stayOperationIdentityVersion = typeof STAY_OPERATION_IDENTITY_VERSION_V11226_ === "undefined" ? 0 : STAY_OPERATION_IDENTITY_VERSION_V11226_;
+  }
+  if (actionName === "get_stay_operation_review") {
+    variantPayload.stayOperationReviewVersion = typeof STAY_OPERATION_REVIEW_VERSION_V11217_ === "undefined" ? 0 : STAY_OPERATION_REVIEW_VERSION_V11217_;
   }
 
   return waffleCacheFingerprint_(
@@ -2852,6 +2859,7 @@ var READ_ONLY_SHEET_ACTIONS_ = {
   get_guest_profile: true,
   get_guest_belongings: true,
   get_stay_operations: true,
+  get_stay_operation_review: true,
   get_dog_master_profile: true,
   list_dog_identities: true,
   list_dog_stays_for_linking: true,
@@ -3142,7 +3150,8 @@ function processReadOnlySheetAction_(data) {
       deployment: typeof getWaffleDeploymentIdentity_ === "function" ? getWaffleDeploymentIdentity_() : null,
       versions: Object.assign({}, getWaffleDataVersions_(), {
         stableStayIdentityVersion: STABLE_STAY_IDENTITY_VERSION_V11225_,
-        stayOperationIdentityVersion: STAY_OPERATION_IDENTITY_VERSION_V11226_
+        stayOperationIdentityVersion: STAY_OPERATION_IDENTITY_VERSION_V11226_,
+        stayOperationReviewVersion: typeof STAY_OPERATION_REVIEW_VERSION_V11217_ === "undefined" ? 0 : STAY_OPERATION_REVIEW_VERSION_V11217_
       })
     };
   }
@@ -3291,6 +3300,10 @@ function processReadOnlySheetAction_(data) {
 
   if (action === "get_stay_operations") {
     return getVersionedWaffleRead_("directory",action,data,20,function(){return {records:readStayOperations_({stayKeys:data.stayKeys,stayIds:data.stayIds})};});
+  }
+
+  if (action === "get_stay_operation_review") {
+    return {result:"success",action:action,review:getStayOperationReviewV11217_(data)};
   }
 
   if (action === "get_dog_master_profile") {

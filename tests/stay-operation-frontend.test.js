@@ -45,7 +45,8 @@ function harness() {
     this.api={resolve:v110OperationForStay,index:v110IndexOperations,merge:v110MergeOperationRead,
       evidence:v110IndexCheckoutEvidence,apply:v110ApplyEffectiveCheckoutDates,save:v110SaveOperationalStatus,
       guard:v110CheckoutGuard,payload:v110OperationalPayloadFromCard,checked:v110IsCheckedOutEvent,
-      load:v110LoadOperations,unique:v110EventUniqueKey,past:v1086IsCheckedOutBooking,current:v1086ExcludeCheckedOutCurrent};`, h);
+      load:v110LoadOperations,unique:v110EventUniqueKey,past:v1086IsCheckedOutBooking,current:v1086ExcludeCheckedOutCurrent,
+      reviewEvidence:v110ReviewEvidenceForStay};`, h);
   return h;
 }
 test('homonymous stays keep separate status and effective Calendar end dates', async () => {
@@ -70,6 +71,17 @@ test('duplicate, malformed and quarantined UUIDs fail closed without a key fallb
   assert.equal(h.api.resolve(event()), null);
   h.api.index([{ ...payload(), dogName: 'Another dog', status: 'checked_in' }]);
   assert.equal(h.api.resolve(event()), null, 'a corrupt cached ID cannot apply another dog\'s status');
+});
+test('selected-stay review evidence keeps identity scoped and does not expose healthy stays', () => {
+  const h = harness();
+  const reviewCard = stayId => ({ dataset: { directoryStayId: stayId, directoryStayKey: key, directoryDogName: 'Milo', directoryStartDate: '2026-10-01', directoryEndDate: '2026-10-10' }, querySelector: () => null });
+  h.api.index([{ identityStayId: idA, stayKey: key, identityConflict: true, identityConflictReason: 'duplicate_stay_id' }]);
+  assert.equal(JSON.stringify(h.api.reviewEvidence(reviewCard(idA))), JSON.stringify({ stayId: idA, stayKey: key, reasonCode: 'duplicate_stay_id' }));
+  assert.equal(h.api.reviewEvidence(reviewCard(idB)), null, 'same legacy key does not make another valid Stay ID conflicted');
+  h.api.index([{ stayId: 'malformed', stayKey: key, identityConflict: true, identityConflictReason: 'invalid_stay_id' }]);
+  assert.equal(JSON.stringify(h.api.reviewEvidence(reviewCard('malformed'))), JSON.stringify({ stayId: 'malformed', stayKey: key, reasonCode: 'invalid_stay_id' }));
+  h.api.index([{ stayId: idA, stayKey: key, status: 'checked_in' }]);
+  assert.equal(h.api.reviewEvidence(reviewCard(idA)), null);
 });
 test('a first legacy write propagates the proven returned ID to the selected Care card', async () => {
   const h = harness();

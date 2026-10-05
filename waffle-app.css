@@ -5917,6 +5917,48 @@ body.dark-theme .directory-care-records-body .directory-intake-action.is-primary
     overflow-wrap: anywhere;
 }
 
+.directory-care-contact-body .directory-phone-attribute {
+    cursor: default;
+}
+
+.directory-phone-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 2px;
+}
+
+.directory-phone-call,
+.directory-phone-edit {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 48px;
+    min-height: 44px;
+    padding: 6px 12px;
+    border: 1px solid var(--wh-border, #cbd5e1);
+    border-radius: 8px;
+    background: var(--wh-surface, #fff);
+    color: var(--wh-accent-contrast, var(--wh-primary, #0f3550));
+    font: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.directory-phone-call:focus-visible,
+.directory-phone-edit:focus-visible {
+    outline: 3px solid var(--wh-focus, var(--wh-primary, #0f3550));
+    outline-offset: 2px;
+}
+
+body.dark-theme .directory-phone-call,
+body.dark-theme .directory-phone-edit {
+    background: var(--wh-surface-soft, #1e293b);
+    color: var(--wh-text, #e2e8f0);
+}
+
 .directory-care-contact-body .directory-field-value {
     display: block !important;
     overflow: visible !important;
@@ -9502,6 +9544,58 @@ body[data-waffle-page="directory"] #directoryTabPanel.app-tab-panel.active {
 .directory-roster-heading .guest-directory-search:focus-visible {
     outline: 3px solid color-mix(in srgb, var(--wh75-accent, var(--wh-accent, #7562db)) 30%, transparent);
     outline-offset: 2px;
+}
+
+.directory-roster-heading .guest-directory-toolbar {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+}
+
+.directory-roster-heading .guest-directory-search {
+    grid-column: 1;
+    grid-row: 1;
+    width: 100%;
+}
+
+.directory-search-clear {
+    grid-column: 2;
+    grid-row: 1;
+    min-height: 44px;
+    padding: 8px 12px;
+    border: 1px solid var(--wh-border, #dbe3ea);
+    border-radius: 10px;
+    background: var(--wh-surface, #fff);
+    color: var(--wh-text, #172033);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 650;
+    cursor: pointer;
+}
+
+.directory-search-clear:focus-visible {
+    outline: 3px solid var(--wh-focus, var(--wh-primary, #0f3550));
+    outline-offset: 2px;
+}
+
+.directory-search-empty {
+    margin: 0 0 14px;
+    padding: 14px;
+    border: 1px solid var(--wh-border, #dbe3ea);
+    border-radius: 10px;
+    background: var(--wh-surface, #fff);
+    color: var(--wh-text, #172033);
+    font-size: 14px;
+}
+
+.directory-search-feedback {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    margin: 0;
+    padding: 0 2px;
+    color: var(--wh-text-muted, #64748b);
+    font-size: 13px;
+    line-height: 1.35;
 }
 
 .directory-roster-filters {

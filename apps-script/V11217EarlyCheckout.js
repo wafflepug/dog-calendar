@@ -366,9 +366,17 @@ function stayOperationValueV11226_(row, headers, name, fallbackIndex) {
   return headers.width ? '' : row[fallbackIndex];
 }
 
-function readStayOperationsV11226_(filters) {
-  var sh = getStayOperationsSheet_(), schema = stayOperationHeaderMapV11226_(sh, false);
-  if (sh.getLastRow() < 2) return [];
+function getExistingStayOperationsSheetV11217_() {
+  var ss = getTargetSheet_().getParent();
+  var props = PropertiesService.getScriptProperties();
+  var name = String(props.getProperty('STAY_OPERATIONS_SHEET_NAME') || 'Stay_Operations').trim();
+  return ss.getSheetByName(name) || null;
+}
+
+function readStayOperationsV11226_(filters, readOnlyMissingSafe) {
+  var sh = readOnlyMissingSafe ? getExistingStayOperationsSheetV11217_() : getStayOperationsSheet_();
+  if (!sh || sh.getLastRow() < 2) return [];
+  var schema = stayOperationHeaderMapV11226_(sh, false);
   var rows = sh.getRange(2, 1, sh.getLastRow() - 1, Math.max(schema.width, 15)).getValues();
   var inventory = stayOperationBookingIndexV11226_(), raw = [];
   rows.forEach(function(row, offset) {
@@ -436,6 +444,141 @@ function readStayOperationsV11226_(filters) {
     : raw.filter(function(record) { return keys[record.stayKey] || (record._filterStayId && ids[record._filterStayId.toLowerCase()]) || (record.identityStayId && ids[record.identityStayId.toLowerCase()]) || (record.stayId && ids[record.stayId.toLowerCase()]); });
   filtered.forEach(function(record) { delete record._filterStayId; });
   return filtered;
+}
+
+var STAY_OPERATION_REVIEW_VERSION_V11217_ = 1;
+var STAY_OPERATION_REVIEW_LIMIT_V11217_ = 20;
+
+/* Pure read projection for a user-opened conflict review. Keep this separate
+ * from the mutation-oriented booking index: a review must never create headers
+ * or columns, and it must inspect every booking row before applying scope. */
+function stayOperationReviewBookingRowsV11217_() {
+  var rows = getTargetSheet_().getDataRange().getValues() || [];
+  var header = rows[0] || [], stayIdColumn = -1;
+  for (var h = 0; h < header.length; h++) {
+    if (String(header[h] || '').trim().toLowerCase() === 'stay id') { stayIdColumn = h; break; }
+  }
+  return { rows: rows, stayIdColumn: stayIdColumn };
+}
+
+function stayOperationReviewCandidateV11217_(rows, rowIndex, stayIdColumn) {
+  var row = rows[rowIndex] || [], type = String(row[11] || 'Boarding').trim();
+  var identity = v108DogIdentityAt_(rows, rowIndex);
+  var stayId = stayIdColumn < 0 ? '' : String(row[stayIdColumn] || '').trim();
+  return {
+    _inventoryRowIndex: rowIndex,
+    stayId: stayId,
+    dogName: String(row[1] || '').trim(),
+    dogId: identity.dogId || '',
+    ownerName: String(row[5] || '').trim(),
+    startDate: normalizeDateValue_(row[3]),
+    endDate: normalizeDateValue_(row[4] || row[3]),
+    bookingType: type,
+    eligibleOperationOwner: /^(confirmed boarding|boarding)$/i.test(type)
+  };
+}
+
+function stayOperationReviewInventoryV11217_(inventory) {
+  var rows = inventory.rows, byStayId = Object.create(null), byStayKey = Object.create(null);
+  for (var i = 1; i < rows.length; i++) {
+    var candidate = stayOperationReviewCandidateV11217_(rows, i, inventory.stayIdColumn);
+    if (candidate.stayId) (byStayId[candidate.stayId.toLowerCase()] || (byStayId[candidate.stayId.toLowerCase()] = [])).push(candidate);
+    if (candidate.eligibleOperationOwner && candidate.dogName && candidate.startDate && candidate.endDate) {
+      var key = makeGuestStayKey_(candidate.dogName, candidate.startDate, candidate.endDate);
+      (byStayKey[key] || (byStayKey[key] = [])).push(candidate);
+    }
+  }
+  return { byStayId: byStayId, byStayKey: byStayKey };
+}
+
+function getStayOperationReviewV11217_(request) {
+  request = request && typeof request === 'object' && !Array.isArray(request) ? request : {};
+  if (request.stayId != null && typeof request.stayId !== 'string') throw new Error('Stay ID is invalid for this review.');
+  if (request.stayKey != null && typeof request.stayKey !== 'string') throw new Error('Stay Key is invalid for this review.');
+  var rawId = request.stayId == null ? '' : String(request.stayId).trim();
+  var key = request.stayKey == null ? '' : String(request.stayKey).trim();
+  if (rawId.length > 128 || key.length > 512) throw new Error('Stay operation review request is invalid.');
+  if (rawId && !validStayIdV11225_(rawId)) throw new Error('Stay ID is malformed; no review was loaded.');
+  if (!rawId && !key) throw new Error('Stay ID or Stay Key is required for this review.');
+
+  // An explicit UUID is the canonical scope. A stale/contradictory key can
+  // never broaden the response to other same-key stays.
+  var selected = rawId ? readStayOperations_({ stayIds: [rawId] }, true) : readStayOperations_({ stayKeys: [key] }, true);
+  var conflicts = (selected || []).filter(function(record) { return record && record.identityConflict === true; });
+  var limit = STAY_OPERATION_REVIEW_LIMIT_V11217_, bookingInventory = stayOperationReviewBookingRowsV11217_();
+  var inventoryIndex = stayOperationReviewInventoryV11217_(bookingInventory);
+  var operations = [], allCandidates = [], candidateSeen = Object.create(null), candidateCount = 0;
+  function addReviewCandidate(candidate, sourceStayId, sourceStayKey) {
+    var rowKey = String(candidate._inventoryRowIndex);
+    if (candidateSeen[rowKey]) return;
+    candidateSeen[rowKey] = true;
+    candidateCount++;
+    if (allCandidates.length < limit) allCandidates.push({
+      sourceOperationStayId: sourceStayId || '',
+      sourceOperationStayKey: sourceStayKey || '',
+      stayId: candidate.stayId,
+      dogName: candidate.dogName,
+      dogId: candidate.dogId,
+      ownerName: candidate.ownerName,
+      startDate: candidate.startDate,
+      endDate: candidate.endDate,
+      bookingType: candidate.bookingType,
+      eligibleOperationOwner: candidate.eligibleOperationOwner
+    });
+  }
+  conflicts.slice(0, limit).forEach(function(record) {
+    var id = String(record.identityStayId || record.stayId || '').trim();
+    var operation = {
+      identityStayId: id,
+      stayKey: String(record.stayKey || '').trim(),
+      identityConflictReason: String(record.identityConflictReason || 'unknown_conflict'),
+      updatedAt: record.updatedAt || '',
+      status: String(record.status || ''),
+      startDate: record.startDate || '',
+      endDate: record.endDate || '',
+      checkoutType: record.checkoutType || '',
+      originalEndDate: record.originalEndDate || '',
+      actualCheckoutDate: record.actualCheckoutDate || ''
+    };
+    if (operations.length < limit) operations.push(operation);
+
+    var keyCandidates = [];
+    var isLegacy = !String(record.stayId || '').trim() && !id;
+    if (isLegacy) {
+      keyCandidates = inventoryIndex.byStayKey[operation.stayKey] || [];
+    } else {
+      keyCandidates = inventoryIndex.byStayId[id.toLowerCase()] || [];
+    }
+    keyCandidates.forEach(function(candidate) { addReviewCandidate(candidate, operation.identityStayId, operation.stayKey); });
+  });
+
+  var bookingOnlyReason = '';
+  if (rawId) {
+    var idCandidates = inventoryIndex.byStayId[rawId.toLowerCase()] || [];
+    if (idCandidates.length > 1 && !conflicts.length) bookingOnlyReason = 'duplicate_booking_stay_id';
+    if (idCandidates.length > 1) idCandidates.forEach(function(candidate) { addReviewCandidate(candidate, '', ''); });
+  } else {
+    var keyCandidates = inventoryIndex.byStayKey[key] || [];
+    if (keyCandidates.length > 1 && !conflicts.length) bookingOnlyReason = 'ambiguous_legacy_stay';
+    if (keyCandidates.length > 1) keyCandidates.forEach(function(candidate) { addReviewCandidate(candidate, '', ''); });
+  }
+
+  var reasons = Object.create(null);
+  conflicts.forEach(function(record) { reasons[String(record.identityConflictReason || 'unknown_conflict')] = true; });
+  if (bookingOnlyReason) reasons[bookingOnlyReason] = true;
+  var reasonCodes = Object.keys(reasons);
+  return {
+    hasConflict: conflicts.length > 0 || !!bookingOnlyReason,
+    reasonCode: reasonCodes.length === 1 ? reasonCodes[0] : reasonCodes.length ? 'multiple_conflicts' : null,
+    reasonCodes: reasonCodes,
+    target: { stayId: rawId || '', stayKey: key || '' },
+    operations: operations,
+    candidateBookings: allCandidates,
+    truncated: {
+      operations: conflicts.length > operations.length,
+      candidateBookings: candidateCount > allCandidates.length || conflicts.length > operations.length
+    }
+  };
 }
 
 function resolveStayOperationTargetV11226_(data) {
@@ -548,5 +691,5 @@ function bindLegacyStayOperationToIdV11226_(sheet, oldStayKey, bookingRow, stayI
 }
 
 /* These assignments intentionally follow the legacy V11.2.17 assignments. */
-readStayOperations_ = function(filters) { return readStayOperationsV11226_(filters); };
+readStayOperations_ = function(filters, readOnlyMissingSafe) { return readStayOperationsV11226_(filters, readOnlyMissingSafe); };
 setStayOperationalStatus_ = function(data, status) { return setStayOperationalStatusV11226_(data, status); };

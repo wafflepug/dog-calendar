@@ -14,6 +14,10 @@ on:
       - 'tests/waffle-bootstrap-lifecycle.test.js'
       - 'tests/care-profile-readiness.test.js'
       - 'tests/care-profile-readiness.browser.spec.js'
+      - 'tests/care-operation-review.browser.spec.js'
+      - 'playwright.care-operation-review.config.js'
+      - 'tests/care-contact-handover.browser.spec.js'
+      - 'tests/care-roster.spec.js'
       - 'tests/care-overview-refinement.browser.spec.js'
       - 'tests/stable-stay-queue.browser.spec.js'
       - 'playwright.care-overview.config.js'
@@ -54,6 +58,10 @@ on:
       - 'tests/waffle-bootstrap-lifecycle.test.js'
       - 'tests/care-profile-readiness.test.js'
       - 'tests/care-profile-readiness.browser.spec.js'
+      - 'tests/care-operation-review.browser.spec.js'
+      - 'playwright.care-operation-review.config.js'
+      - 'tests/care-contact-handover.browser.spec.js'
+      - 'tests/care-roster.spec.js'
       - 'tests/care-overview-refinement.browser.spec.js'
       - 'tests/stable-stay-queue.browser.spec.js'
       - 'playwright.care-overview.config.js'
@@ -122,6 +130,9 @@ jobs:
           node node_modules/@playwright/test/cli.js test --config=playwright.care-mobile-hierarchy.config.js
           node node_modules/@playwright/test/cli.js test --config=playwright.care-loading-feedback.config.js
           node node_modules/@playwright/test/cli.js test --config=playwright.care-navigation-continuity.config.js
+          node --check care-operation-review.js
+          node node_modules/@playwright/test/cli.js test --config=playwright.care-operation-review.config.js
+          node node_modules/@playwright/test/cli.js test --config=playwright.care-roster.config.js
           node node_modules/@playwright/test/cli.js test --config=playwright.care-overview.config.js
           node node_modules/@playwright/test/cli.js test --config=playwright.runtime-review.config.js
 
