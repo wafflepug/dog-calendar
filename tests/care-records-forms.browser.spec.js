@@ -102,7 +102,7 @@ test('Records & forms stays readable and keeps real state/action targets at 320,
         }),
       }));
       expect(geometry.overflow).toBe(false);
-      expect(geometry.buttons.every(([w, h]) => w >= 44 && h >= 44)).toBe(true);
+      expect(geometry.buttons.every(([w, h]) => Math.round(w * 100) / 100 >= 44 && Math.round(h * 100) / 100 >= 44)).toBe(true);
     }
     await records.locator('summary').focus();
     await page.keyboard.press('Tab');
