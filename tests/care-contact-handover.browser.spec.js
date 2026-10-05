@@ -55,6 +55,7 @@ test('stay contact and handover is readable, editable and tied to the selected d
   await page.addInitScript(mode => localStorage.setItem('theme', mode), 'light');
   await page.goto(`${baseURL}/directory.html`, { waitUntil: 'domcontentloaded' });
   await page.waitForFunction(() => document.documentElement.dataset.waffleUiReady === 'true');
+  await expect(page.locator('.directory-card[data-directory-stay-key]')).toHaveCount(2);
   const emptyCard = page.locator(`.directory-card[data-directory-stay-key="${keyFor(bookings[1])}"]`);
   await expect(emptyCard.locator('[data-open-directory-profile]')).toBeVisible();
   // Both stays cover the test date; status filtering is tested separately.
@@ -124,6 +125,11 @@ test('stay contact and handover is readable, editable and tied to the selected d
   await expect(page.locator('#guestDetailEditDog')).toContainText('Milo');
   await expect(page.locator('#guestDetailEditTextarea')).toHaveValue(selectedNote);
   await page.locator('#cancelGuestDetailEdit').click();
+
+  // Malformed data must not clear the already rendered guest profile.
+  await page.evaluate(() => parseCSVToEvents('Timestamp,Dog Name\n"Unclosed guest'));
+  await expect(page.locator('.directory-card[data-directory-stay-key]')).toHaveCount(2);
+  await expect(contact.locator('[data-directory-edit-field="notes"]')).toHaveAttribute('data-directory-current-value', selectedNote);
 
   await page.locator('#directoryBackToGuestsBtn').click();
   await page.getByRole('tab', { name: /Staying/ }).click();
