@@ -13464,8 +13464,8 @@ registerWaffleServiceWorker();
             multiline: false
         },
         notes: {
-            label: 'Notes',
-            placeholder: 'General guest notes',
+            label: 'Handover note',
+            placeholder: 'Handover note for this stay',
             multiline: true
         }
     };
@@ -15225,6 +15225,9 @@ registerWaffleServiceWorker();
                                     ? 'Checked out'
                                     : (isCurrentlyAtHome ? 'Staying' : 'Arriving');
                                 const rosterInitials = dogName.trim().split(/\s+/).slice(0, 2).map(part => part.charAt(0)).join('');
+                                const cleanOwnerName = String(ownerName || '').trim();
+                                const cleanPhone = String(phone || '').trim();
+                                const cleanHandoverNote = String(notes || '').trim();
 
                                 directoryCardsHTML.push(`
                                     <div
@@ -15474,7 +15477,7 @@ registerWaffleServiceWorker();
                                             <summary>
                                                 <span>
                                                     <strong>Stay contact &amp; handover</strong>
-                                                    <small>Edit owner details and the handover note</small>
+                                                    <small>Owner details and handover note</small>
                                                 </span>
                                                 <span class="directory-care-records-chevron" aria-hidden="true">⌄</span>
                                             </summary>
@@ -15483,30 +15486,33 @@ registerWaffleServiceWorker();
                                                 type="button"
                                                 class="directory-attribute"
                                                 data-directory-edit-field="ownerName"
-                                                data-directory-current-value="${escapeDashboardHtml(ownerName ? ownerName.trim() : '')}"
-                                                title="Tap to edit Owner">
+                                                data-directory-current-value="${escapeDashboardHtml(cleanOwnerName)}"
+                                                aria-label="Edit ${escapeDashboardHtml(dogName.trim())} owner">
                                                 <span class="directory-field-label">Owner</span>
-                                                <span class="directory-field-value">${escapeDashboardHtml(ownerName ? ownerName.trim() : 'N/A')}</span>
+                                                <span class="directory-field-value">${escapeDashboardHtml(cleanOwnerName || 'Owner not provided')}</span>
+                                                <span class="directory-contact-edit-hint" aria-hidden="true">Edit</span>
                                             </button>
 
                                             <button
                                                 type="button"
                                                 class="directory-attribute"
                                                 data-directory-edit-field="phone"
-                                                data-directory-current-value="${escapeDashboardHtml(phone ? phone.trim() : '')}"
-                                                title="Tap to edit Contact">
+                                                data-directory-current-value="${escapeDashboardHtml(cleanPhone)}"
+                                                aria-label="Edit ${escapeDashboardHtml(dogName.trim())} contact">
                                                 <span class="directory-field-label">Contact</span>
-                                                <span class="directory-field-value">${escapeDashboardHtml(phone ? phone.trim() : 'N/A')}</span>
+                                                <span class="directory-field-value">${escapeDashboardHtml(cleanPhone || 'Contact not provided')}</span>
+                                                <span class="directory-contact-edit-hint" aria-hidden="true">Edit</span>
                                             </button>
 
                                             <button
                                                 type="button"
                                                 class="directory-attribute directory-attribute-wide"
                                                 data-directory-edit-field="notes"
-                                                data-directory-current-value="${escapeDashboardHtml(notes ? notes.trim() : '')}"
-                                                title="Tap to edit Notes">
-                                                <span class="directory-field-label">Notes</span>
-                                                <span class="directory-field-value">${escapeDashboardHtml(notes ? notes.trim() : 'None')}</span>
+                                                data-directory-current-value="${escapeDashboardHtml(cleanHandoverNote)}"
+                                                aria-label="Edit ${escapeDashboardHtml(dogName.trim())} handover note">
+                                                <span class="directory-field-label">Handover note</span>
+                                                <span class="directory-field-value">${escapeDashboardHtml(cleanHandoverNote || 'No handover note provided')}</span>
+                                                <span class="directory-contact-edit-hint" aria-hidden="true">Edit</span>
                                             </button>
                                         </div>
                                         </details>

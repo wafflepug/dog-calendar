@@ -5911,6 +5911,63 @@ body.dark-theme .directory-care-records-body .directory-intake-action.is-primary
     border-top: 1px solid var(--wh-border-soft, #e2e8f0);
 }
 
+.directory-care-contact-body .directory-attribute {
+    min-height: 44px;
+    overflow: visible;
+    overflow-wrap: anywhere;
+}
+
+.directory-care-contact-body .directory-field-value {
+    display: block !important;
+    overflow: visible !important;
+    -webkit-line-clamp: unset !important;
+    color: var(--wh-text, #334155);
+    font-size: 14px;
+    line-height: 1.45;
+}
+
+.directory-care-contact-body .directory-field-label {
+    color: #475569;
+    font-size: 12px;
+    line-height: 1.35;
+}
+
+.directory-care-contact-body [data-directory-edit-field="notes"] .directory-field-value {
+    white-space: pre-wrap;
+}
+
+.directory-contact-edit-hint {
+    align-self: flex-end;
+    color: #334155;
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1.2;
+}
+
+.directory-care-contact-body .directory-attribute:focus,
+.directory-care-contact-body .directory-attribute:focus-visible,
+.directory-care-contact-disclosure > summary:focus,
+.directory-care-contact-disclosure > summary:focus-visible {
+    outline: 3px solid var(--wh-accent, #2563eb);
+    outline-offset: 2px;
+}
+
+body.dark-theme .directory-care-contact-body .directory-attribute {
+    color: var(--wh-text, #e2e8f0);
+}
+
+body.dark-theme .directory-care-contact-body .directory-field-value {
+    color: var(--wh-text, #e2e8f0);
+}
+
+body.dark-theme .directory-care-contact-body .directory-field-label {
+    color: #f8fafc;
+}
+
+body.dark-theme .directory-care-contact-body .directory-contact-edit-hint {
+    color: #f8fafc;
+}
+
 .directory-care-contact-body > :first-child {
     margin-top: 2px;
 }
