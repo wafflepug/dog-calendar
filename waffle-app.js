@@ -5432,6 +5432,7 @@ registerWaffleServiceWorker();
                 if (!['intake', 'legacy'].includes(kind)) return;
                 recordsRetry.disabled = true;
                 recordsRetry.textContent = 'Retrying…';
+                recordsRetry.closest('[data-directory-intake], [data-directory-legacy]')?.setAttribute('aria-busy', 'true');
                 const retry = kind === 'intake'
                     ? hydrateDirectoryIntakeStatuses({ force: true, stayKeys: [stayKey] })
                     : hydrateDirectoryLegacyIntakes({ force: true, stayKeys: [stayKey] });
