@@ -8,9 +8,14 @@ on:
     paths:
       - 'apps-script/**'
       - '.github/workflows/deploy-apps-script.yml'
+      - 'scripts/generate-backend-deployment.js'
 
 permissions:
   contents: read
+
+concurrency:
+  group: apps-script-production
+  cancel-in-progress: false
 
 jobs:
   deploy:
@@ -41,6 +46,7 @@ jobs:
         run: |
           set -euo pipefail
           node --check apps-script/Code.js
+          node --test tests/deployment-attribution.test.js
           node --check apps-script/StableStayIdentity.js
           node --test tests/stable-stay-backend.test.js
           node --check apps-script/V11217EarlyCheckout.js
@@ -58,7 +64,10 @@ jobs:
           grep -q 'function waffleAiTryFastCalendarAnswerV11150_' apps-script/WaffleAICalendarFast.js
           grep -q 'function getWaffleAiHealthResponseV11157_' apps-script/WaffleAIHealth.js
 
-      - name: Push exact committed source to Google Apps Script
+      - name: Generate public backend deployment identity
+        run: node scripts/generate-backend-deployment.js
+
+      - name: Push committed source with generated deployment attribution to Google Apps Script
         working-directory: apps-script
         run: clasp push --force
 
@@ -89,9 +98,13 @@ jobs:
           except Exception:
               sys.exit(1)
           versions = payload.get('versions') or {}
+          deployment = payload.get('deployment') or {}
           if payload.get('result') != 'success' or versions.get('stableStayIdentityVersion') != 1 or versions.get('stayOperationIdentityVersion') != 1:
               sys.exit(1)
+          if deployment.get('commitSha') != os.environ.get('GITHUB_SHA') or str(deployment.get('workflowRunId')) != os.environ.get('GITHUB_RUN_ID'):
+              sys.exit(1)
           print('Live stable stay and operation identity capabilities verified with a read-only request.')
+          print('Live backend deployment SHA and workflow run identity verified.')
           PY
             then
               exit 0

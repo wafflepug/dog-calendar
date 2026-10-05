@@ -41,14 +41,21 @@ async function expectCanonical(page, marker) {
 }
 
 test('release metadata and system status assets are deployed', async ({ request }) => {
-  const [build, release, status] = await Promise.all([
+  const [build, release, status, deployment] = await Promise.all([
     request.get(`${BASE}/waffle-build.json?_=${Date.now()}`),
     request.get(`${BASE}/waffle-release.json?_=${Date.now()}`),
-    request.get(`${BASE}/system-status.html?_=${Date.now()}`)
+    request.get(`${BASE}/system-status.html?_=${Date.now()}`),
+    request.get(`${BASE}/waffle-deployment.json?_=${Date.now()}`)
   ]);
   expect(build.ok()).toBeTruthy();
   expect(release.ok()).toBeTruthy();
   expect(status.ok()).toBeTruthy();
+  expect(deployment.ok()).toBeTruthy();
+  const identity = await deployment.json();
+  expect(identity.schemaVersion).toBe(1);
+  expect(identity.artifact.commitSha).toMatch(/^[a-f0-9]{40}$/);
+  expect(Number.isFinite(Date.parse(identity.artifact.generatedAt))).toBe(true);
+  if (process.env.GITHUB_SHA) expect(identity.artifact.commitSha).toBe(process.env.GITHUB_SHA);
   const releaseJson = await release.json();
   expect(releaseJson.phase).toBe('phase-3d-release-regression-observability');
   expect(releaseJson.productionWritesInSmokeTests).toBe(false);
