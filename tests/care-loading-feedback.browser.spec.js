@@ -211,8 +211,9 @@ test('cold profile failure renders exactly one status retry and succeeds after r
   await expect(status.locator('[data-retry-directory-profile-read]')).toHaveCount(1);
   await expect(details.locator('[data-retry-directory-profile-read], [data-retry-directory-detail="profile"]')).toHaveCount(1);
   const target = await status.locator('[data-retry-directory-profile-read]').boundingBox();
-  expect(target.height).toBeGreaterThanOrEqual(44);
-  expect(target.width).toBeGreaterThanOrEqual(44);
+  // Layout engines can report a 44px CSS target as 43.999877px.
+  expect(Math.round(target.height * 100) / 100).toBeGreaterThanOrEqual(44);
+  expect(Math.round(target.width * 100) / 100).toBeGreaterThanOrEqual(44);
   await status.locator('[data-retry-directory-profile-read]').focus();
   await expect(status.locator('[data-retry-directory-profile-read]')).toBeFocused();
   await status.locator('[data-retry-directory-profile-read]').click();
@@ -309,10 +310,12 @@ test('Records & forms shows resolved safety and document states with one primary
   const legacy = records.locator('[data-directory-legacy]');
   await expect(safety).toContainText('Food Allergy');
   await expect(intake).toContainText('Awaiting owner');
-  await expect(intake).toContainText('Next: send the intake link.');
+  await expect(intake.locator('.directory-record-kicker')).toHaveText('Digital intake');
   await expect(intake.locator('[data-create-intake-link]')).toHaveAttribute('aria-label', 'Copy Milo intake link');
   await expect(legacy).toContainText('Legacy PDF on file');
-  await expect(legacy).toContainText('Next: review the saved PDF and extracted details.');
+  await expect(legacy.locator('.directory-record-kicker')).toHaveText('Legacy PDFs');
+  await expect(legacy).toContainText(/Review/i);
+  await expect(records.locator('.directory-record-next')).toHaveCount(0);
   await expect(legacy.locator('[data-care-record-upload]')).toHaveText('Upload PDF for OCR');
   await expect(legacy.locator('.is-primary')).toHaveCount(1);
   await expect(records).not.toContainText(/not uploaded|not sent/i);
@@ -329,7 +332,7 @@ test('Records & forms shows resolved safety and document states with one primary
     };
   });
   expect(narrowGeometry.fits).toBe(true);
-  expect(narrowGeometry.targets.every(rect => rect.width >= 44 && rect.height >= 44)).toBe(true);
+  expect(narrowGeometry.targets.every(rect => Math.round(rect.width * 100) / 100 >= 44 && Math.round(rect.height * 100) / 100 >= 44)).toBe(true);
 });
 
 test('missing records resolve to truthful empty states and preserve create/upload actions', async ({ page, baseURL }) => {

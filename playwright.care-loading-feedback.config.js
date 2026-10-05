@@ -9,7 +9,7 @@ module.exports = defineConfig({
     command: 'python -m http.server 44972 --bind 127.0.0.1',
     cwd: __dirname,
     port: 44972,
-    reuseExistingServer: false,
+    reuseExistingServer: !process.env.CI,
     timeout: 10_000
   },
   use: {

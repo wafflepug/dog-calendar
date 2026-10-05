@@ -11,6 +11,7 @@ let directorySelectedProfileStayKey = '';
  * profile shell is open and is never written to cache or persistent storage. */
 let directoryProfileNavigationOrigin = null;
 let directorySummaryRecordsCache = {};
+const directorySafetyReadFailures = new Set();
 let directoryProfileDetailCache = {};
 let directoryBelongingsDetailCache = {};
 
@@ -5420,6 +5421,25 @@ registerWaffleServiceWorker();
                 return;
             }
 
+            const recordsRetry = event.target.closest('[data-care-record-retry]');
+            if (recordsRetry) {
+                event.preventDefault();
+                event.stopPropagation();
+                const card = recordsRetry.closest('.directory-card');
+                const stayKey = String(card?.dataset.directoryStayKey || '');
+                if (!card || !stayKey || stayKey !== String(recordsRetry.dataset.stayKey || '')) return;
+                const kind = recordsRetry.dataset.careRecordRetry;
+                if (!['intake', 'legacy'].includes(kind)) return;
+                recordsRetry.disabled = true;
+                recordsRetry.textContent = 'Retrying…';
+                recordsRetry.closest('[data-directory-intake], [data-directory-legacy]')?.setAttribute('aria-busy', 'true');
+                const retry = kind === 'intake'
+                    ? hydrateDirectoryIntakeStatuses({ force: true, stayKeys: [stayKey] })
+                    : hydrateDirectoryLegacyIntakes({ force: true, stayKeys: [stayKey] });
+                retry.catch(error => console.error('Care record retry failed:', error));
+                return;
+            }
+
             const editTrigger = event.target.closest(
                 '[data-directory-edit-field]'
             );
@@ -8543,13 +8563,27 @@ registerWaffleServiceWorker();
         ) || null;
     }
 
+    function renderDirectoryRecordReadFailure(host, stayKey, kind, label) {
+        if (!host) return;
+        host.setAttribute('aria-busy', 'false');
+        host.innerHTML = `
+            <div class="directory-record-error" role="status">
+                <strong>${escapeDashboardHtml(label)} unavailable</strong>
+                <span>Could not load this record.</span>
+            </div>
+            <button type="button" class="directory-intake-action" data-care-record-retry="${escapeDashboardHtml(kind)}" data-stay-key="${escapeDashboardHtml(stayKey)}">Retry</button>
+        `;
+    }
+
     function setDirectoryCareFlags(stayKey, record) {
+        if (record) directorySafetyReadFailures.delete(String(stayKey || ''));
+        const safetyReadFailed = !record && directorySafetyReadFailures.has(String(stayKey || ''));
         const profileCard =
             getDirectoryProfileCard(
                 stayKey
             );
 
-        if (profileCard) {
+        if (profileCard && !safetyReadFailed) {
             renderDirectoryCareProfile(
                 profileCard,
                 record || {
@@ -8563,11 +8597,24 @@ registerWaffleServiceWorker();
         if (!container) return;
         container.setAttribute('aria-busy', 'false');
 
+        if (safetyReadFailed) {
+            container.classList.remove('has-alerts', 'care-clear', 'care-unset');
+            container.innerHTML = '<div class="directory-record-error" role="status"><strong>Safety record unavailable</strong><span>Could not load this record.</span></div>';
+            updateDirectoryRosterStatus(stayKey, 'Safety unavailable', 'is-unset');
+            const safetyHost = profileCard?.querySelector('[data-care-brief-safety]');
+            if (safetyHost) {
+                safetyHost.dataset.state = 'pending';
+                safetyHost.innerHTML = '<span class="care-brief-state is-pending">Safety status unavailable</span>';
+            }
+            refreshDirectoryCareSummary();
+            return;
+        }
+
         if (!record) {
             container.classList.remove('has-alerts', 'care-clear');
             container.classList.add('care-unset');
             container.innerHTML =
-                '<span class="directory-care-unset">🛡️ Care profile not set</span>';
+                '<strong class="directory-record-kicker">Safety record</strong><span class="directory-care-unset">🛡️ Care profile not set</span>';
             updateDirectoryRosterStatus(stayKey, 'Care not set', 'is-unset');
             refreshDirectoryCareSummary();
             return;
@@ -8579,7 +8626,7 @@ registerWaffleServiceWorker();
             container.classList.remove('has-alerts', 'care-unset');
             container.classList.add('care-clear');
             container.innerHTML =
-                '<span class="directory-care-clear">✓ No active care alerts</span>';
+                '<strong class="directory-record-kicker">Safety record</strong><span class="directory-care-clear">✓ No active care alerts</span>';
             updateDirectoryRosterStatus(stayKey, 'Ready', 'is-ready');
             refreshDirectoryCareSummary();
             return;
@@ -8588,7 +8635,7 @@ registerWaffleServiceWorker();
         container.classList.remove('care-clear', 'care-unset');
         container.classList.add('has-alerts');
 
-        container.innerHTML = activeFlags.map(flag => `
+        container.innerHTML = `<strong class="directory-record-kicker">Safety record</strong>${activeFlags.map(flag => `
             <span
                 class="care-alert-badge directory-care-badge ${escapeDashboardHtml(flag.className)}"
                 data-directory-care-alert
@@ -8598,7 +8645,7 @@ registerWaffleServiceWorker();
                 </span>
                 <span>${escapeDashboardHtml(flag.label)}</span>
             </span>
-        `).join('');
+        `).join('')}`;
 
         updateDirectoryRosterStatus(
             stayKey,
@@ -8643,14 +8690,16 @@ registerWaffleServiceWorker();
         }, 0);
 
         if (!totalAlerts) {
-            summary.textContent = 'No active care alerts';
+            const unavailable = document.querySelectorAll('.directory-care-strip .directory-record-error').length > 0;
+            summary.textContent = unavailable ? 'Safety status unavailable' : 'No active care alerts';
             summary.classList.remove('has-alerts');
             return;
         }
 
         summary.textContent =
             `${totalAlerts} ${totalAlerts === 1 ? 'alert' : 'alerts'} · ` +
-            `${flaggedCards.length} ${flaggedCards.length === 1 ? 'dog' : 'dogs'}`;
+            `${flaggedCards.length} ${flaggedCards.length === 1 ? 'dog' : 'dogs'}` +
+            (document.querySelector('.directory-care-strip .directory-record-error') ? ' · safety status unavailable' : '');
 
         summary.classList.add('has-alerts');
     }
@@ -8711,9 +8760,20 @@ registerWaffleServiceWorker();
 
             careRiskRecordsCache = nextCareRiskRecordsCache;
 
+            stays.forEach(stay => directorySafetyReadFailures.delete(String(stay.stayKey)));
+
             renderCareRiskDashboard(stays);
         } catch (error) {
             console.error('Care & Safety alert load failed:', error);
+            stays.forEach(stay => {
+                const cached = careRiskRecordsCache[stay.stayKey] || directorySummaryRecordsCache[stay.stayKey];
+                if (cached) {
+                    setDirectoryCareFlags(stay.stayKey, cached);
+                    return;
+                }
+                directorySafetyReadFailures.add(String(stay.stayKey));
+                setDirectoryCareFlags(stay.stayKey, null);
+            });
 
             const list = document.getElementById('care-alert-list');
             const count = document.getElementById('care-alert-count');
@@ -14170,9 +14230,9 @@ registerWaffleServiceWorker();
         if (!record) {
             strip.innerHTML = `
                 <div class="directory-intake-state">
+                    <strong class="directory-record-kicker">Digital intake</strong>
                     <span class="directory-intake-dot is-not-sent"></span>
                     <span>No digital intake on file</span>
-                    <span class="directory-record-next">Next: create and send the intake link.</span>
                 </div>
                 <button
                     type="button"
@@ -14198,11 +14258,11 @@ registerWaffleServiceWorker();
         if (status === 'Complete') {
             strip.innerHTML = `
                 <div class="directory-intake-state">
+                    <strong class="directory-record-kicker">Digital intake</strong>
                     <span class="directory-intake-dot is-complete"></span>
                     <span>
                         Intake complete${record.storedProfileFallback ? ' · Stored profile' : ''}${submitted ? ` · ${escapeDashboardHtml(submitted)}` : ''}
                     </span>
-                    <span class="directory-record-next">Next: review the submitted intake.</span>
                 </div>
                 <div class="directory-intake-actions">
                     ${record.pdfUrl ? `
@@ -14240,9 +14300,9 @@ registerWaffleServiceWorker();
 
         strip.innerHTML = `
             <div class="directory-intake-state">
+                <strong class="directory-record-kicker">Digital intake</strong>
                 <span class="directory-intake-dot is-awaiting"></span>
                 <span>Awaiting owner</span>
-                <span class="directory-record-next">Next: send the intake link.</span>
             </div>
             <button
                 type="button"
@@ -14269,11 +14329,12 @@ registerWaffleServiceWorker();
     async function hydrateDirectoryIntakeStatuses(options = {}) {
         const force = options.force === true;
 
+        const requestedKeys = Array.isArray(options.stayKeys) ? new Set(options.stayKeys.map(String)) : null;
         const cards = Array.from(
             document.querySelectorAll(
                 '.directory-card[data-directory-stay-key]'
             )
-        );
+        ).filter(card => !requestedKeys || requestedKeys.has(String(card.dataset.directoryStayKey || '')));
 
         if (!cards.length) return;
 
@@ -14358,6 +14419,12 @@ registerWaffleServiceWorker();
                 'Digital intake status could not be loaded:',
                 error
             );
+            keysToFetch.forEach(key => {
+                if (!directoryIntakeStatusCache[key]) {
+                    const host = Array.from(document.querySelectorAll('[data-directory-intake]')).find(item => String(item.dataset.directoryIntake || '') === key);
+                    renderDirectoryRecordReadFailure(host, key, 'intake', 'Digital intake');
+                }
+            });
         }
     }
 
@@ -14579,8 +14646,8 @@ registerWaffleServiceWorker();
 
             strip.innerHTML = `
                 <div class="directory-legacy-state">
+                    <strong class="directory-record-kicker">Legacy PDFs</strong>
                     <span>📚 No legacy PDF on file</span>
-                    <span class="directory-record-next">Next: upload the signed PDF for OCR.</span>
                 </div>
                 <button
                     type="button"
@@ -14649,11 +14716,11 @@ registerWaffleServiceWorker();
 
         strip.innerHTML = `
             <div class="directory-legacy-state">
+                <strong class="directory-record-kicker">Legacy PDFs</strong>
                 <span>📚 Legacy PDF on file ·
                 ${count} ${count === 1 ? 'file' : 'files'}
                 ${uploaded ? ` · ${escapeDashboardHtml(uploaded)}` : ''}
                 ${aiStatusHtml}</span>
-                <span class="directory-record-next">${aiStatus === 'Review Required' || aiStatus === 'AI Failed' ? 'Next: review the saved PDF and extracted details.' : 'Next: check the saved PDF.'}</span>
             </div>
             <div class="directory-legacy-actions">
                 ${latest.pdfUrl ? `
@@ -14695,11 +14762,12 @@ registerWaffleServiceWorker();
         const force =
             options.force === true;
 
+        const requestedKeys = Array.isArray(options.stayKeys) ? new Set(options.stayKeys.map(String)) : null;
         const cards = Array.from(
             document.querySelectorAll(
                 '.directory-card[data-directory-stay-key]'
             )
-        );
+        ).filter(card => !requestedKeys || requestedKeys.has(String(card.dataset.directoryStayKey || '')));
 
         if (!cards.length) return;
 
@@ -14802,6 +14870,12 @@ registerWaffleServiceWorker();
                 'Legacy intake status could not be loaded:',
                 error
             );
+            keysToFetch.forEach(key => {
+                if (!directoryLegacyIntakeCache[key]) {
+                    const host = Array.from(document.querySelectorAll('[data-directory-legacy]')).find(item => String(item.dataset.directoryLegacy || '') === key);
+                    renderDirectoryRecordReadFailure(host, key, 'legacy', 'Legacy PDFs');
+                }
+            });
         }
     }
 

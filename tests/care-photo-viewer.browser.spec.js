@@ -39,8 +39,8 @@ test('viewer is named, focus trapped, closes by Escape/backdrop and restores foc
 
 test('responsive safe image bounds and dark theme remain legible', async ({ page }) => {
   await setup(page);
-  await page.route('https://images.test/**', route => route.fulfill({status:200,contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="3000"></svg>'}));
-  await page.evaluate(() => openViewer('https://images.test/a.jpg',null,'Portrait'));
+  const portrait = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="3000"><rect width="1600" height="3000" fill="teal"/></svg>');
+  await page.evaluate(url => openViewer(url,null,'Portrait'), portrait);
   await expect.poll(() => page.locator('#v110PhotoViewer img').evaluate(img => img.complete && img.naturalWidth > 0)).toBeTruthy();
   for (const [width,height] of [[320,800],[390,320],[390,800],[1440,800]]) {
     await page.setViewportSize({ width,height });

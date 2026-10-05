@@ -1,6 +1,6 @@
 /* ============================================================
    WAFFLE HOUSE — FINAL UI CONTRACT
-   Version 11.1.54 · Care Photo Viewer
+   Version 11.1.54 · Care Records & Forms
 
    Purpose
    -------
