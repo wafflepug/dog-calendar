@@ -5735,8 +5735,10 @@ registerWaffleServiceWorker();
                 ? activeEditingPotentialId
                 : 'pot_' + Date.now();
 
+            const stayId = String(activeEditingPotential?.stayId || '').trim();
             const payload = isEditing && original ? {
                 action: "update_potential",
+                stayId,
                 originalDogName: original.dogName,
                 originalStartDate: original.startDate,
                 originalEndDate: original.endDate,
@@ -5751,6 +5753,7 @@ registerWaffleServiceWorker();
             } : {
                 action: "create_potential",
                 id: potId,
+                stayId: typeof window.v108StayId === 'function' ? window.v108StayId() : '',
                 dogName: dogName,
                 breed: breed,
                 startDate: startDate,
@@ -5768,7 +5771,8 @@ registerWaffleServiceWorker();
             try {
                 // The UI is only updated after Apps Script confirms that the
                 // Google Sheet write actually succeeded.
-                await sendPayloadToAppsScript(payload);
+                const savedResponse = await sendPayloadToAppsScript(payload);
+                const savedStayId = String(savedResponse?.stayId || savedResponse?.booking?.stayId || payload.stayId || '').trim();
 
                 if (isEditing && original) {
                     addPendingPotentialRemoval(
@@ -5790,7 +5794,8 @@ registerWaffleServiceWorker();
                         endDate,
                         ownerName,
                         phone,
-                        notes
+                        notes,
+                        savedStayId
                     )
                 );
                 setLocalArray('temporaryPotentialStays', localPotentials);
@@ -5842,11 +5847,13 @@ registerWaffleServiceWorker();
                 dogName: activeEditingPotential.dogName,
                 startDate: activeEditingPotential.rawStartDate,
                 endDate: activeEditingPotential.rawEndDate,
-                dogId: activeEditingPotential.dogId || ''
+                dogId: activeEditingPotential.dogId || '',
+                stayId: String(activeEditingPotential.stayId || '').trim()
             };
 
             const payload = {
                 action: "confirm_potential",
+                stayId: original.stayId,
                 originalDogName: original.dogName,
                 originalStartDate: original.startDate,
                 originalEndDate: original.endDate,
@@ -5867,13 +5874,15 @@ registerWaffleServiceWorker();
             try {
                 // Do not remove the Potential Stay from the UI until the
                 // database confirms the same row was changed successfully.
-                await sendPayloadToAppsScript(payload);
+                const confirmResponse = await sendPayloadToAppsScript(payload);
+                const confirmedStayId = String(confirmResponse?.stayId || confirmResponse?.booking?.stayId || original.stayId || '').trim();
 
                 document.getElementById('potentialStayModal').style.display = "none";
 
                 addPendingPotentialRemoval(
                     makePotentialKey(original.dogName, original.startDate, original.endDate)
                 );
+                if (original.stayId && typeof v1105AddPotentialStayRemoval === 'function') v1105AddPotentialStayRemoval(original.stayId, activeEditingPotential);
 
                 let localPotentials = getLocalArray('temporaryPotentialStays');
                 localPotentials = localPotentials.filter(p => p.id !== activeEditingPotentialId);
@@ -5889,7 +5898,8 @@ registerWaffleServiceWorker();
                     ownerName,
                     phone,
                     notes,
-                    original.dogId
+                    original.dogId,
+                    confirmedStayId
                 );
                 localConfirmed.push(confirmedEvent);
                 if (typeof v1105DedupeConfirmedStays === 'function') {
@@ -5925,11 +5935,13 @@ registerWaffleServiceWorker();
             const original = {
                 dogName: activeEditingPotential.dogName,
                 startDate: activeEditingPotential.rawStartDate,
-                endDate: activeEditingPotential.rawEndDate
+                endDate: activeEditingPotential.rawEndDate,
+                stayId: String(activeEditingPotential.stayId || '').trim()
             };
 
             const payload = {
                 action: "delete_potential",
+                stayId: original.stayId,
                 originalDogName: original.dogName,
                 originalStartDate: original.startDate,
                 originalEndDate: original.endDate,
@@ -5948,6 +5960,7 @@ registerWaffleServiceWorker();
                 addPendingPotentialRemoval(
                     makePotentialKey(original.dogName, original.startDate, original.endDate)
                 );
+                if (original.stayId && typeof v1105AddPotentialStayRemoval === 'function') v1105AddPotentialStayRemoval(original.stayId, activeEditingPotential);
 
                 let localPotentials = getLocalArray('temporaryPotentialStays');
                 localPotentials = localPotentials.filter(p => p.id !== activeEditingPotentialId);
@@ -6101,6 +6114,7 @@ registerWaffleServiceWorker();
             ownerName: props.owner || props.ownerName || "",
             phone: props.phone || "",
             dogId: props.dogId || "",
+            stayId: props.stayId || "",
             notes: props.notes || ""
         };
 
@@ -6168,7 +6182,7 @@ registerWaffleServiceWorker();
             String(dateObj.getDate()).padStart(2, '0');
     }
 
-    function buildPotentialEvent(id, dogName, breed, startDate, endDate, ownerName, phone, notes) {
+    function buildPotentialEvent(id, dogName, breed, startDate, endDate, ownerName, phone, notes, stayId = '') {
         return {
             id: id,
             title: `❓ Potential: ${dogName}`,
@@ -6179,6 +6193,7 @@ registerWaffleServiceWorker();
             extendedProps: {
                 isPotential: true,
                 isMeetGreet: false,
+                stayId: String(stayId || ''),
                 dogName: dogName,
                 breed: breed,
                 owner: ownerName,
@@ -6193,7 +6208,7 @@ registerWaffleServiceWorker();
         };
     }
 
-    function buildConfirmedEvent(id, dogName, breed, startDate, endDate, ownerName, phone, notes, dogId = '') {
+    function buildConfirmedEvent(id, dogName, breed, startDate, endDate, ownerName, phone, notes, dogId = '', stayId = '') {
         return {
             id: id,
             title: dogName,
@@ -6211,6 +6226,7 @@ registerWaffleServiceWorker();
                 ownerName: ownerName,
                 phone: phone,
                 dogId: dogId,
+                stayId: String(stayId || ''),
                 notes: notes || "Confirmed from Potential Stay",
                 rawStartDate: startDate,
                 rawEndDate: endDate,
@@ -6275,6 +6291,7 @@ registerWaffleServiceWorker();
         const records = [];
         const header = parsedCsv.records[0].cells.map(value => String(value || '').trim().toLowerCase());
         const dogIdColumn = header.indexOf('dog id');
+        const stayIdColumn = header.indexOf('stay id');
         let invalidBookingRow = false;
 
         for (let i = 1; i < parsedCsv.records.length; i++) {
@@ -6290,6 +6307,7 @@ registerWaffleServiceWorker();
             if (dogName && startDate) {
                 records.push({
                     dogName,
+                    stayId: stayIdColumn >= 0 ? String(columns[stayIdColumn] || '').trim() : '',
                     breed: String(columns[2] || '').trim(),
                     startDate,
                     endDate,
@@ -6312,7 +6330,6 @@ registerWaffleServiceWorker();
         // A failed or malformed snapshot is not evidence that optimistic
         // bookings disappeared. In particular, do not clear pending hides.
         if (!records) return false;
-
         const confirmedIdentity = event =>
             typeof v1105ConfirmedStayIdentity === 'function'
                 ? v1105ConfirmedStayIdentity(event)
@@ -6342,6 +6359,7 @@ registerWaffleServiceWorker();
                         end: r.endDate,
                         extendedProps: {
                             dogName: r.dogName,
+                            stayId: r.stayId,
                             breed: r.breed,
                             dogId: r.dogId,
                             owner: r.ownerName,
@@ -6384,6 +6402,21 @@ registerWaffleServiceWorker();
                 props.rawStartDate || event.start,
                 props.rawEndDate || props.rawStartDate || event.start
             );
+            const stayId = String(props.stayId || '').trim();
+            // Keep the optimistic date edit while the stale CSV still shows
+            // the same stable booking at its old dates. Do not merge payloads.
+            const matchingStableStay = stayId && records.some(record => {
+                if (String(record.stayId || '').trim().toLowerCase() !== stayId.toLowerCase()) return false;
+                const type = record.bookingType.toLowerCase();
+                if (type !== 'boarding' && type !== 'confirmed boarding') return false;
+                const authoritative = { title: record.dogName, start: record.startDate, end: record.endDate, extendedProps: {
+                    dogName: record.dogName, stayId: record.stayId, dogId: record.dogId, breed: record.breed,
+                    owner: record.ownerName, ownerName: record.ownerName, phone: record.phone,
+                    rawStartDate: record.startDate, rawEndDate: record.endDate
+                } };
+                return typeof v1105StableStayCompatible === 'function' && v1105StableStayCompatible(event, authoritative, true);
+            });
+            if (props.dateUpdatePending && stayId && matchingStableStay) return true;
             const matches = sheetBoardingEvents.get(key);
             if (!matches) return true;
             const identity = confirmedIdentity(event);
@@ -6410,6 +6443,23 @@ registerWaffleServiceWorker();
         });
         setLocalArray('temporaryMeetGreets', localMeets);
 
+        // Drop an optimistic date overlay only once authoritative raw dates
+        // for the same stay ID match the edited dates.
+        const dateOverlays = getLocalArray('temporaryConfirmedStays').map(event => {
+            const props = event.extendedProps || {};
+            if (!props.dateUpdatePending || !props.stayId) return event;
+            const match = records.find(record => String(record.stayId || '').trim().toLowerCase() === String(props.stayId || '').trim().toLowerCase() &&
+                record.startDate === String(props.rawStartDate || '').slice(0, 10) &&
+                record.endDate === String(props.rawEndDate || '').slice(0, 10) &&
+                typeof v1105StableStayCompatible === 'function' && v1105StableStayCompatible(event, {
+                    title: record.dogName, start: record.startDate, end: record.endDate,
+                    extendedProps: { dogName: record.dogName, stayId: record.stayId, dogId: record.dogId, breed: record.breed, owner: record.ownerName, ownerName: record.ownerName, phone: record.phone, rawStartDate: record.startDate, rawEndDate: record.endDate }
+                }, false));
+            if (!match) return event;
+            const next = { ...event, extendedProps: { ...props, dateUpdatePending: false } };
+            return next;
+        });
+        setLocalArray('temporaryConfirmedStays', dateOverlays);
         const stillPending = getPendingPotentialRemovals().filter(key => sheetPotentialKeys.has(key));
         setLocalArray('pendingPotentialRemovals', stillPending);
         return true;
@@ -15252,6 +15302,7 @@ registerWaffleServiceWorker();
         const headerColumns = csvRows[0].cells
             .map(value => String(value || '').trim().toLowerCase());
         const dogIdColumn = headerColumns.indexOf('dog id');
+        const stayIdColumn = headerColumns.indexOf('stay id');
         const dogNumberColumn = headerColumns.indexOf('dog number');
         const localTodayStr = getLocalTodayDateString(); const today = new Date(localTodayStr + 'T00:00:00');
         const sevenDaysFromNow = new Date(today.getTime()); sevenDaysFromNow.setDate(today.getDate() + 7); sevenDaysFromNow.setHours(23,59,59,999);
@@ -15279,6 +15330,8 @@ registerWaffleServiceWorker();
                 ? String(columns[dogIdColumn] || '').trim() : '';
             const dogId = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rawDogId)
                 ? rawDogId : '';
+            const stayId = stayIdColumn >= 0 ? String(columns[stayIdColumn] || '').trim() : '';
+            if (stayId && typeof v1105IsStableStayTombstoned === 'function' && v1105IsStableStayTombstoned(stayId, { dogName, dogId, ownerName, phone })) continue;
             const rawDogNumber = dogNumberColumn >= 0 && columns[dogNumberColumn]
                 ? String(columns[dogNumberColumn] || '').trim() : '';
             const dogNumber = dogId && /^#?\d{1,5}$/.test(rawDogNumber)
@@ -15286,6 +15339,7 @@ registerWaffleServiceWorker();
             
             const isMeetGreetType = (bookingType.toLowerCase() === 'meet & greet');
             const isPotentialType = (bookingType.toLowerCase() === 'potential stay');
+            if (isPotentialType && stayId && typeof v1105IsPotentialStayTombstoned === 'function' && v1105IsPotentialStayTombstoned(stayId)) continue;
 
             if (dogName && startDate) {
                 let startParsed = "", endParsed = "";
@@ -15344,7 +15398,7 @@ registerWaffleServiceWorker();
                                 classNames: ['fc-event-potential'],
                                 extendedProps: {
                                     isPotential: true, dogName: dogName.trim(), breed: breedTxt,
-                                    dogId,
+                                    dogId, stayId,
                                     owner: ownerName ? ownerName.trim() : "", ownerName: ownerName ? ownerName.trim() : "",
                                     phone: phone ? phone.trim() : "",
                                     rawStartDate: startParsed, rawEndDate: endParsed, notes: notes.trim(), bookingType: "Potential Stay", editLink: editLink.trim()
@@ -15398,6 +15452,7 @@ registerWaffleServiceWorker();
                                         data-directory-stay-key="${escapeDashboardHtml(directoryStayKey)}"
                                         data-directory-dog-name="${escapeDashboardHtml(dogName.trim())}"
                                         data-directory-dog-id="${escapeDashboardHtml(dogId)}"
+                                        data-directory-stay-id="${escapeDashboardHtml(stayId)}"
                                         data-directory-dog-number="${escapeDashboardHtml(dogNumber)}"
                                         data-directory-start-date="${escapeDashboardHtml(startParsed)}"
                                         data-directory-end-date="${escapeDashboardHtml(endParsed)}"
@@ -15774,7 +15829,7 @@ registerWaffleServiceWorker();
 
                         events.push({
                             title: dogName.trim(), start: startParsed, end: forcedDisplayEnd, allDay: true, backgroundColor: stringToColor(dogName.trim()), textColor: '#ffffff',
-                            extendedProps: { isMeetGreet: false, isPotential: false, sourceRow: i + 1, breed: breedTxt, dogName: dogName.trim(), owner: ownerName ? ownerName.trim() : "N/A", ownerName: ownerName ? ownerName.trim() : "N/A", phone: phone ? phone.trim() : "N/A", notes: notes ? notes.trim() : "None", rawStartDate: startParsed, rawEndDate: endParsed, bookingType: bookingType || "Boarding", editLink: editLink.trim() }
+                            extendedProps: { isMeetGreet: false, isPotential: false, stayId, sourceRow: i + 1, dogId, breed: breedTxt, dogName: dogName.trim(), owner: ownerName ? ownerName.trim() : "N/A", ownerName: ownerName ? ownerName.trim() : "N/A", phone: phone ? phone.trim() : "N/A", notes: notes ? notes.trim() : "None", rawStartDate: startParsed, rawEndDate: endParsed, bookingType: bookingType || "Boarding", editLink: editLink.trim() }
                         });
                     }
                 }

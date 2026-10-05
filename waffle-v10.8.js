@@ -18,6 +18,8 @@ let v108QueueSyncing = false;
 let v108CalendarFilter = 'all';
 let v108GalleryStayKey = '';
 let v108ReturningTimer = null;
+let v108StableStayCapabilityPromise = null;
+const V108_STABLE_STAY_ACTIONS = new Set(['create_boarding','create_potential','update_potential','confirm_potential','delete_potential','delete_confirmed_stay','update_boarding_dates']);
 
 /* ---------------- Offline write queue ---------------- */
 function v108OpenQueueDb() {
@@ -42,6 +44,41 @@ function v108OpenQueueDb() {
 
 function v108MutationId() {
     return window.crypto?.randomUUID?.() || `v108_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+}
+
+function v108StayId() {
+    if (window.crypto?.randomUUID) return window.crypto.randomUUID();
+    if (!window.crypto?.getRandomValues) throw new Error('A secure stay ID could not be generated. Update this browser before creating a booking.');
+    const bytes = new Uint8Array(16);
+    window.crypto.getRandomValues(bytes);
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+    const hex = [...bytes].map(value => value.toString(16).padStart(2, '0')).join('');
+    return `${hex.slice(0,8)}-${hex.slice(8,12)}-${hex.slice(12,16)}-${hex.slice(16,20)}-${hex.slice(20)}`;
+}
+
+function v108PrepareMutation(payload) {
+    const prepared = { ...payload, stayIdentityVersion: 1, clientMutationId: payload.clientMutationId || v108MutationId() };
+    // A create gets its stable identity once, before either the online send or
+    // offline enqueue. Existing bookings must never be assigned a guessed ID.
+    if (['create_boarding', 'create_potential'].includes(String(prepared.action || '')) && !prepared.stayId) {
+        prepared.stayId = v108StayId();
+    }
+    return prepared;
+}
+
+async function v108RequireStableStayBackend() {
+    if (!v108StableStayCapabilityPromise) {
+        v108StableStayCapabilityPromise = v108RawQueryAppsScript({ action: 'get_data_versions' }, { maxAttempts: 1, timeoutMs: 15000, dedupe: false })
+            .then(response => Number(response?.versions?.stableStayIdentityVersion) === 1)
+            .catch(error => { v108StableStayCapabilityPromise = null; throw error; });
+    }
+    const supported = await v108StableStayCapabilityPromise;
+    if (!supported) {
+        v108StableStayCapabilityPromise = null;
+        throw new Error('Stable stay IDs are not available on the connected server yet. The booking was not sent.');
+    }
+    return true;
 }
 
 async function v108QueuePut(entry) {
@@ -84,20 +121,45 @@ function v108NetworkError(error) {
 }
 
 async function v108QueueMutation(payload, transport) {
-    const prepared = { ...payload, clientMutationId: payload.clientMutationId || v108MutationId() };
+    const prepared = v108PrepareMutation(payload);
     await v108QueuePut({ id: prepared.clientMutationId, payload: prepared, transport, status: 'queued', attempts: 0, createdAt: Date.now(), lastError: '' });
     await v108RefreshQueueBadge();
-    return { result: 'success', action: prepared.action, queued: true, offline: true, clientMutationId: prepared.clientMutationId };
+    return { result: 'success', action: prepared.action, queued: true, offline: true, clientMutationId: prepared.clientMutationId, clientStayId: prepared.stayId || '' };
+}
+
+function v108ShowMutationFollowUp(response) {
+    if (!response?.followUpNeeded) return;
+    try {
+        showWaffleForegroundPush({
+            title: 'Saved; follow-up needed',
+            body: 'The booking was saved, but related Care setup needs review.'
+        });
+    } catch (_) {}
 }
 
 async function v108MutationCall(raw, payload, options, transport) {
     const action = String(payload?.action || '');
-    if (!V108_QUEUE_ACTIONS.has(action)) return raw(payload, options);
-    const prepared = { ...payload, clientMutationId: payload.clientMutationId || v108MutationId() };
-    if (navigator.onLine === false) return v108QueueMutation(prepared, transport);
-    try { return await raw(prepared, options); }
+    const queueable = V108_QUEUE_ACTIONS.has(action);
+    if (!queueable && !V108_STABLE_STAY_ACTIONS.has(action)) return raw(payload, options);
+    const prepared = v108PrepareMutation(payload);
+    if (navigator.onLine === false) {
+        if (!queueable) throw new Error('Connect to the internet before deleting a confirmed stay.');
+        return v108QueueMutation(prepared, transport);
+    }
+    if (V108_STABLE_STAY_ACTIONS.has(action)) {
+        try { await v108RequireStableStayBackend(); }
+        catch (error) {
+            if (queueable && v108NetworkError(error)) return v108QueueMutation(prepared, transport);
+            throw error;
+        }
+    }
+    try {
+        const response = await raw(prepared, options);
+        v108ShowMutationFollowUp(response);
+        return response;
+    }
     catch (error) {
-        if (v108NetworkError(error)) return v108QueueMutation(prepared, transport);
+        if (queueable && v108NetworkError(error)) return v108QueueMutation(prepared, transport);
         throw error;
     }
 }
@@ -114,7 +176,7 @@ function v108QueueActionName(action) {
     return ({
         create_boarding:'New Boarding',create_potential:'New Potential Stay',update_potential:'Potential Stay Update',
         confirm_potential:'Confirm Potential Stay',delete_potential:'Delete Potential Stay',create:'New Meet & Greet',
-        update:'Meet & Greet Update',delete:'Delete Meet & Greet',update_boarding_dates:'Move Boarding',
+        update:'Meet & Greet Update',delete:'Delete Meet & Greet',delete_confirmed_stay:'Delete Boarding',update_boarding_dates:'Move Boarding',
         update_meet_greet_schedule:'Move Meet & Greet',save_reminder_note:'Reminder / Note',
         set_reminder_note_done:'Reminder Status',delete_reminder_note:'Delete Reminder',update_guest_detail:'Guest Detail',
         save_belongings:'Profile / Belongings',set_primary_dog_photo:'Profile Photo',delete_dog_photo:'Delete Dog Photo',reorder_dog_photos:'Photo Order'
@@ -141,6 +203,10 @@ async function v108RefreshQueueBadge() {
     const badge = v108EnsureQueueUi();
     const entries = await v108QueueAll();
     const conflicts = entries.filter(x => x.status === 'conflict').length;
+    document.querySelectorAll('[data-wh-sitter-sync-review]').forEach(button => {
+        button.hidden = entries.length === 0;
+        button.setAttribute('aria-label', conflicts ? `Review ${conflicts} queued updates needing attention` : `Review ${entries.length} queued updates`);
+    });
     badge.hidden = entries.length === 0;
     if (!entries.length) return;
     badge.dataset.mode = conflicts ? 'conflict' : (navigator.onLine === false ? 'offline' : 'queued');
@@ -179,12 +245,28 @@ async function v108ProcessQueue() {
     try {
         const entries = await v108QueueAll();
         for (const entry of entries) {
+            // A conflict needs human review; periodic online replay must not
+            // repeatedly submit a mutation the server explicitly rejected.
+            if (entry.status === 'conflict') continue;
+            if (['create_boarding', 'create_potential'].includes(String(entry.payload?.action || '')) && !String(entry.payload?.stayId || '').trim()) {
+                await v108QueuePut({ ...entry, status: 'conflict', lastError: 'This older create has no stable stay ID and needs review before replay.' });
+                continue;
+            }
+            if (V108_STABLE_STAY_ACTIONS.has(String(entry.payload?.action || ''))) {
+                try { await v108RequireStableStayBackend(); }
+                catch (error) {
+                    await v108QueuePut({ ...entry, status: 'queued', lastError: String(error?.message || error) });
+                    if (!v108NetworkError(error)) break;
+                    break;
+                }
+            }
             await v108QueuePut({...entry,status:'syncing',attempts:Number(entry.attempts||0)+1});
             try {
                 const response = entry.transport === 'send'
                     ? await v108RawSendPayloadToAppsScript(entry.payload)
                     : await v108RawQueryAppsScript(entry.payload,{maxAttempts:1,timeoutMs:30000,dedupe:false});
                 if (!response || response.result !== 'success') throw new Error(response?.error || 'Queued update was rejected.');
+                v108ShowMutationFollowUp(response);
                 await v108QueueDelete(entry.id);
             } catch (error) {
                 if (v108NetworkError(error)) { await v108QueuePut({...entry,status:'queued',lastError:String(error?.message||error)}); break; }
@@ -231,10 +313,24 @@ async function v108SaveCalendarMove(info) {
     const dog=String(p.dogName||event.title||'Guest');
     if(!window.confirm(`Move ${dog}?\n\n${oldDates.start} → ${oldDates.end}\nNew: ${newDates.start} → ${newDates.end}`)){info.revert();return;}
     let payload;
-    if(p.isPotential){payload={action:'update_potential',originalDogName:op.dogName||dog,originalStartDate:oldDates.start,originalEndDate:oldDates.end,dogName:p.dogName||dog,breed:p.breed||'N/A',startDate:newDates.start,endDate:newDates.end,ownerName:p.owner||p.ownerName||'',phone:p.phone||'',notes:p.notes||''};}
+    if(p.isPotential){payload={action:'update_potential',stayId:p.stayId||'',originalDogName:op.dogName||dog,originalStartDate:oldDates.start,originalEndDate:oldDates.end,dogName:p.dogName||dog,breed:p.breed||'N/A',startDate:newDates.start,endDate:newDates.end,ownerName:p.owner||p.ownerName||'',phone:p.phone||'',notes:p.notes||''};}
     else if(p.isMeetGreet){payload={action:'update_meet_greet_schedule',originalDogName:op.dogName||dog,originalStartDate:oldDates.start,dogName:p.dogName||dog,startDate:newDates.start,time:p.time||'10:00'};}
-    else{payload={action:'update_boarding_dates',originalDogName:op.dogName||dog,originalStartDate:oldDates.start,originalEndDate:oldDates.end,dogName:p.dogName||dog,startDate:newDates.start,endDate:newDates.end};}
-    try { const response=await sendPayloadToAppsScript(payload); event.setExtendedProp('rawStartDate',newDates.start);event.setExtendedProp('rawEndDate',newDates.end); if(response?.queued) showWaffleForegroundPush({title:'↻ Saved for sync',body:`${dog} will sync when online.`}); }
+    else{payload={action:'update_boarding_dates',stayId:p.stayId||'',dogId:p.dogId||'',breed:p.breed||'',ownerName:p.ownerName||p.owner||'',phone:p.phone||'',originalDogName:op.dogName||dog,originalStartDate:oldDates.start,originalEndDate:oldDates.end,dogName:p.dogName||dog,startDate:newDates.start,endDate:newDates.end};}
+    try {
+        const response=await sendPayloadToAppsScript(payload);
+        const stayId=String(response?.stayId||response?.booking?.stayId||p.stayId||'').trim();
+        event.setExtendedProp('rawStartDate',newDates.start);event.setExtendedProp('rawEndDate',newDates.end);event.setExtendedProp('dateUpdatePending',!!stayId);
+        if(stayId)event.setExtendedProp('stayId',stayId);
+        const collection=p.isPotential?'temporaryPotentialStays':'temporaryConfirmedStays';
+        if(stayId&&typeof getLocalArray==='function'&&typeof setLocalArray==='function'){
+            const displayEnd=new Date(`${newDates.end}T00:00:00`);displayEnd.setDate(displayEnd.getDate()+1);
+            const displayEndDate=`${displayEnd.getFullYear()}-${String(displayEnd.getMonth()+1).padStart(2,'0')}-${String(displayEnd.getDate()).padStart(2,'0')}`;
+            const updated={id:event.id,title:event.title,start:newDates.start,end:displayEndDate,allDay:event.allDay!==false,extendedProps:{...p,stayId,rawStartDate:newDates.start,rawEndDate:newDates.end,pendingOriginalStartDate:oldDates.start,pendingOriginalEndDate:oldDates.end,dateUpdatePending:true}};
+            const existing=getLocalArray(collection).filter(item=>String(item?.extendedProps?.stayId||'').trim().toLowerCase()!==stayId.toLowerCase());
+            existing.push(updated);setLocalArray(collection,existing);
+        }
+        if(response?.queued)showWaffleForegroundPush({title:'↻ Saved for sync',body:`${dog} will sync when online.`});
+    }
     catch(error){info.revert();alert('Calendar move could not be saved.\n\n'+(error?.message||String(error)));}
 }
 
@@ -258,7 +354,7 @@ function v108EnhanceCalendar() {
         const p=info.event.extendedProps||{};
         if(p.isPotential){openEditPotentialModal(info.event);return;}
         if(p.isMeetGreet){v108OpenMeet(info.event);return;}
-        window.location.href='directory.html?stayKey='+encodeURIComponent(v108StayKey(info.event));
+        window.location.href='directory.html?stayKey='+encodeURIComponent(v108StayKey(info.event))+'&stayId='+encodeURIComponent(String(p.stayId||''));
     });
     globalCalendar.setOption('eventDrop',info=>v108SaveCalendarMove(info));
     globalCalendar.setOption('eventResize',info=>v108SaveCalendarMove(info));

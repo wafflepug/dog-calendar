@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.10.05.07",
-  "releaseName": "Care Clarity & Sync",
+  "assetRevision": "2026.10.05.08",
+  "releaseName": "Stable Stay Identity",
   "runtime": "waffle-bootstrap.js",
   "sharedCsvReader": "waffle-csv.js",
   "syncStatusAdapter": "system-status-sync.js",

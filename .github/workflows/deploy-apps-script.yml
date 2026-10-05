@@ -41,6 +41,8 @@ jobs:
         run: |
           set -euo pipefail
           node --check apps-script/Code.js
+          node --check apps-script/StableStayIdentity.js
+          node --test tests/stable-stay-backend.test.js
           node --check apps-script/WaffleAIProvider.js
           node --check apps-script/WaffleAICalendarFast.js
           node --check apps-script/WaffleAIHealth.js
@@ -66,6 +68,35 @@ jobs:
           clasp create-deployment \
             --deploymentId "$APPS_SCRIPT_DEPLOYMENT_ID" \
             --description "GitHub main ${GITHUB_SHA::7}"
+
+      - name: Verify live stable stay identity capability
+        env:
+          APPS_SCRIPT_WEBAPP_URL: https://script.google.com/macros/s/AKfycbwn4HL49K9c3AZbXJRUjPw3UYWxJt8DmqXwMnTytyqdSstj3ZIJwWdDEC2IsBjetOf3pw/exec
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 12); do
+            response="$(curl -fsSLG --max-time 20 "$APPS_SCRIPT_WEBAPP_URL" \
+              --data-urlencode 'payload={"action":"get_data_versions"}' || true)"
+            if RESPONSE="$response" python3 - <<'PY'
+          import json
+          import os
+          import sys
+          try:
+              payload = json.loads(os.environ.get('RESPONSE', ''))
+          except Exception:
+              sys.exit(1)
+          versions = payload.get('versions') or {}
+          if payload.get('result') != 'success' or versions.get('stableStayIdentityVersion') != 1:
+              sys.exit(1)
+          print('Live stable stay identity capability verified with a read-only request.')
+          PY
+            then
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Stable stay identity capability verification failed."
+          exit 1
 
       - name: Verify live Waffle maintenance safety state
         env:

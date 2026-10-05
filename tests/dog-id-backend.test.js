@@ -6,6 +6,7 @@ const crypto = require('node:crypto');
 const uuid = n => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
 
 const backend = fs.readFileSync(path.join(__dirname, '..', 'apps-script', 'Code.js'), 'utf8');
+const stayIdentity = fs.readFileSync(path.join(__dirname, '..', 'apps-script', 'StableStayIdentity.js'), 'utf8');
 const careUi = fs.readFileSync(path.join(__dirname, '..', 'care.js'), 'utf8');
 const helperStart = backend.indexOf('// Identity fields are discovered by header');
 const helperEnd = backend.indexOf('function findV108BoardingRowForUpdate_', helperStart);
@@ -22,10 +23,16 @@ function makeHarness(initialRows, priorProfiles = []) {
   const cells = new Map();
   const sheet = {
     getName() { return 'Bookings'; },
+    getParent() { return { getSheetByName: () => ({
+      getLastRow: () => 1,
+      getMaxColumns: () => 8,
+      getRange: () => ({ getValues: () => [['Client Mutation ID', 'Action', 'Payload Digest', 'State', 'Stay ID', 'Response JSON', 'Created At', 'Updated At']] })
+    }) }; },
     getDataRange() { return { getValues: () => rows }; },
     getRange(row, col, numRows, numCols) {
       return {
         getValue() { return cells.get(`${row}:${col}`) || (rows[row - 1] || [])[col - 1] || ''; },
+        getValues() { return Array.from({ length: numRows || 1 }, (_, r) => Array.from({ length: numCols || 1 }, (_, c) => cells.get(`${row + r}:${col + c}`) ?? ((rows[row + r - 1] || [])[col + c - 1] || ''))); },
         getDisplayValues() { return [(rows[row - 1] || []).slice(col - 1, col - 1 + (numCols || 1)).map(value => String(value || ''))]; },
         setValue(value) {
           cells.set(`${row}:${col}`, value);
@@ -76,7 +83,7 @@ function makeHarness(initialRows, priorProfiles = []) {
   };
   vm.createContext(sandbox);
   const prefillStart = backend.indexOf('function getV108ReturningGuestPrefill_');
-  vm.runInContext(`${backend.slice(helperStart, helperEnd)}\n${backend.slice(prefillStart, copyEnd)}\n${backend.slice(createStart, createEnd)}\nthis.api = { resolve: resolveV108DogRows_, identityAt: v108DogIdentityAt_, create: createV108Boarding_, createIntake: createV108IntakeBooking_, prefill: getV108ReturningGuestPrefill_, backfill: backfillV108DogIds_, link: linkV108StayToDog_, linkable: listV108DogStaysForLinking_ };`, sandbox);
+  vm.runInContext(`${stayIdentity}\n${backend.slice(helperStart, helperEnd)}\n${backend.slice(prefillStart, copyEnd)}\n${backend.slice(createStart, createEnd)}\nthis.api = { resolve: resolveV108DogRows_, identityAt: v108DogIdentityAt_, create: createV108Boarding_, createIntake: createV108IntakeBooking_, prefill: getV108ReturningGuestPrefill_, backfill: backfillV108DogIds_, link: linkV108StayToDog_, linkable: listV108DogStaysForLinking_ };`, sandbox);
   return { api: sandbox.api, rows, writes, versionTouches, underActionLock(fn) { if (sandboxLockHeld) throw new Error('test action lock already held'); sandboxLockHeld=true; try { return fn(); } finally { sandboxLockHeld=false; } } };
 }
 
@@ -89,7 +96,7 @@ const booking = (name, owner, id = '') => ['', name, 'Cavoodle', '2026-10-01', '
   const result = h.underActionLock(() => h.api.create({ dogName: 'Coco', breed: 'Cavoodle', ownerName: 'C', phone: '0400000000', startDate: '2026-10-03', endDate: '2026-10-04' }));
   assert.equal(result.dogId, uuid(1));
   assert.equal(h.rows[3][12], uuid(1));
-  assert.equal(h.rows[3].length, 14, 'Dog ID and Dog Number are appended after the unchanged A:L booking fields');
+  assert.equal(h.rows[3].length, 16, 'Dog ID and Dog Number remain in their existing columns; Stay ID and marker append after them');
   const oldClient = h.api.create({ dogName: 'Coco', breed: 'Cavoodle', ownerName: 'D', phone: '0400000000', startDate: '2026-10-05', endDate: '2026-10-06', copyPreviousProfile: true });
   assert.ok(oldClient.dogId);
   assert.equal(oldClient.copiedPreviousProfile.copied, false);
@@ -367,7 +374,10 @@ console.log('Dog master profile identity tests passed.');
   const cacheActionStart = backend.indexOf('if (action === "list_dog_identities")');
   assert.ok(invalidationStart >= 0 && invalidationEnd > invalidationStart && cacheActionStart >= 0);
   assert.match(backend.slice(cacheActionStart, cacheActionStart + 180), /getVersionedWaffleRead_\("directory", action/);
-  assert.match(backend.slice(backend.indexOf('var result = processSheetActionWithV108Receipt_(data)'), backend.indexOf('if (\n      data.action === "upload_belongings_photo"')), /invalidateWaffleForAction_\(/);
+  const mutationStart = backend.indexOf('var result = processSheetActionWithV108Receipt_(data)');
+  const mutationEnd = backend.indexOf('return jsonResponse_(result)', mutationStart);
+  assert.ok(mutationStart >= 0 && mutationEnd > mutationStart);
+  assert.match(backend.slice(mutationStart, mutationEnd), /invalidateWaffleForAction_\(/);
   const touches = [];
   const sandbox = { touchWaffleDataVersion_: scope => touches.push(scope) };
   vm.createContext(sandbox);

@@ -106,6 +106,7 @@
         .wh-sitter-sidebar-brand strong{display:block;font-size:15px;font-weight:950;letter-spacing:-.02em}.wh-sitter-sidebar-brand small{display:block;margin-top:2px;color:var(--wh75-muted,#64748b);font-size:9px;font-weight:700}
         .wh-sitter-sidebar-heading{padding:0 9px 5px;color:var(--wh75-muted,#64748b);font-size:9px;font-weight:950;letter-spacing:.11em;text-transform:uppercase}.wh-sitter-sidebar-nav{display:grid;gap:4px}
         .wh-sitter-sidebar-item{min-height:46px;display:grid;grid-template-columns:32px minmax(0,1fr);gap:9px;align-items:center;padding:7px 9px;border:0;border-radius:12px;background:transparent;color:var(--wh75-text,#172033);text-decoration:none;text-align:left;font:inherit;font-size:12px;font-weight:850;cursor:pointer}.wh-sitter-sidebar-item:hover{background:var(--wh75-shell-2,#f8fafc)}.wh-sitter-sidebar-item.is-active{background:var(--wh75-accent-soft,#f3e8ff);color:var(--wh75-accent-ink,#4c1d95);box-shadow:inset 3px 0 0 var(--wh75-accent,#7c3aed)}.wh-sitter-sidebar-item:focus-visible{outline:3px solid var(--wh75-ring,rgba(124,58,237,.22));outline-offset:2px}
+        [data-wh-sitter-sync-review][hidden],#whSitterDesktopTools>button[data-wh-sitter-sync-review][hidden]{display:none!important}
         .wh-sitter-sidebar-icon{width:32px;height:32px;display:grid;place-items:center;border-radius:10px;background:var(--wh75-shell-2,#f8fafc);font-size:16px}.wh-sitter-sidebar-item.is-active .wh-sitter-sidebar-icon{background:color-mix(in srgb,var(--wh75-accent,#7c3aed) 16%,var(--wh75-shell,#fff))}.wh-sitter-sidebar-account{margin-top:auto;padding-top:14px;border-top:1px solid var(--wh75-line,#e2e8f0)}
         #whSitterDesktopTools{display:grid;gap:4px}
         #whSitterDesktopTools>button{width:100%!important;min-width:0!important;min-height:46px!important;height:auto!important;margin:0!important;padding:7px 9px!important;display:grid!important;grid-template-columns:32px minmax(0,1fr)!important;gap:9px!important;align-items:center!important;justify-content:stretch!important;border:0!important;border-radius:12px!important;background:transparent!important;color:var(--wh75-text,#172033)!important;box-shadow:none!important;text-align:left!important;font:inherit!important;font-size:12px!important;font-weight:850!important;cursor:pointer!important}
@@ -209,6 +210,16 @@
     }
     const tools = document.getElementById('whSitterDesktopTools');
     if (!tools) return;
+    if (!tools.querySelector('[data-wh-sitter-sync-review]')) {
+      const sync = document.createElement('button');
+      sync.type = 'button';
+      sync.hidden = true;
+      sync.setAttribute('data-wh-sitter-sync-review', '');
+      sync.innerHTML = '<span aria-hidden="true">↻</span><span>Review queued updates</span>';
+      sync.addEventListener('click', () => window.v108OpenQueueModal?.());
+      tools.appendChild(sync);
+      window.v108RefreshQueueBadge?.();
+    }
     const actions = [
       ['notification', document.getElementById('waffleNotificationButton')],
       ['search', document.querySelector('[data-v1118-search-open]')]
@@ -238,6 +249,11 @@
   }
 
   function triggerMobileHeaderAction(kind) {
+    if (kind === 'sync') {
+      closeMobileDrawer();
+      window.setTimeout(() => window.v108OpenQueueModal?.(), 0);
+      return true;
+    }
     const source = mobileHeaderAction(kind);
     closeMobileDrawer();
     if (!(source instanceof HTMLElement)) return false;
@@ -258,6 +274,14 @@
     section.id = 'whSitterMobileHeaderTools';
     section.className = 'wh75-nav-section';
     section.innerHTML = `<div class="wh75-nav-heading">Tools</div><div class="wh75-nav-list">${mobileToolButton('search', MOBILE_SEARCH_AVATAR, 'Search', 'Find')}${mobileToolButton('notification', MOBILE_NOTIFICATION_AVATAR, 'Notifications', 'Alerts')}</div>`;
+    const sync = document.createElement('button');
+    sync.type = 'button';
+    sync.className = 'wh75-nav-item';
+    sync.hidden = true;
+    sync.setAttribute('data-wh-sitter-sync-review', '');
+    sync.dataset.whSitterMobileAction = 'sync';
+    sync.innerHTML = '<span class="wh75-nav-icon" aria-hidden="true">↻</span><span>Review queued updates</span>';
+    section.querySelector('.wh75-nav-list').appendChild(sync);
 
     const accountHeading = Array.from(drawer.querySelectorAll('.wh75-nav-heading'))
       .find(node => String(node.textContent || '').trim().toLowerCase() === 'account');
@@ -268,6 +292,7 @@
     section.querySelectorAll('[data-wh-sitter-mobile-action]').forEach(button => {
       button.addEventListener('click', () => triggerMobileHeaderAction(button.dataset.whSitterMobileAction));
     });
+    window.v108RefreshQueueBadge?.();
   }
 
   function signature(node) {

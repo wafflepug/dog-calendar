@@ -173,7 +173,7 @@
 
   function eventKey(event) {
     const dates = eventDates(event);
-    return [eventType(event), String(event?.id || ''), dogName(event), dates.start, dates.end, eventTime(event)].join('|');
+    return [eventType(event), String(event?.id || ''), dogName(event), dates.start, dates.end, eventTime(event), String(event?.extendedProps?.stayId || '')].join('|');
   }
 
   function intersects(event, startIso, endIso) {

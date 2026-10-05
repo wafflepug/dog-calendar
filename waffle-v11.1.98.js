@@ -55,10 +55,13 @@
     if (parts.length < 6) return null;
 
     const type = String(parts[0] || '');
-    const time = String(parts[parts.length - 1] || '');
-    const endDate = String(parts[parts.length - 2] || '');
-    const startDate = String(parts[parts.length - 3] || '');
-    const dogName = parts.slice(2, parts.length - 3).join('|').trim();
+    const hasStayIdField = parts.length >= 7;
+    const stayId = hasStayIdField ? String(parts[parts.length - 1] || '') : '';
+    const timeIndex = parts.length - (hasStayIdField ? 2 : 1);
+    const time = String(parts[timeIndex] || '');
+    const endDate = String(parts[timeIndex - 1] || '');
+    const startDate = String(parts[timeIndex - 2] || '');
+    const dogName = parts.slice(2, timeIndex - 2).join('|').trim();
 
     if (type !== 'confirmed' || !dogName || !startDate) return null;
     return {
@@ -67,6 +70,7 @@
       dogName,
       startDate,
       endDate: endDate || startDate,
+      stayId,
       time
     };
   }
@@ -85,6 +89,7 @@
     url.searchParams.set('dogName', record.dogName);
     url.searchParams.set('startDate', record.startDate);
     url.searchParams.set('endDate', record.endDate);
+    if (record.stayId) url.searchParams.set('stayId', record.stayId);
     url.searchParams.set('stayView', stayViewFor(record.startDate, record.endDate));
     window.location.href = url.href;
   }
@@ -113,10 +118,12 @@
     const startDate = String(params.get('startDate') || '').trim();
     const endDate = String(params.get('endDate') || startDate || '').trim();
     const requestedView = String(params.get('stayView') || '').trim();
+    const stayId = String(params.get('stayId') || '').trim();
 
-    if (!stayKey && !(dogName && startDate)) return null;
+    if (!stayId && !stayKey && !(dogName && startDate)) return null;
     return {
       stayKey,
+      stayId,
       dogName,
       startDate,
       endDate,
@@ -129,6 +136,10 @@
   function cardStayIdentity(card) {
     return {
       stayKey: String(card?.dataset?.directoryStayKey || card?.dataset?.stayKey || '').trim(),
+      stayId: String(card?.dataset?.directoryStayId || '').trim(),
+      dogId: String(card?.dataset?.directoryDogId || '').trim(),
+      ownerName: String(card?.dataset?.v1088OwnerName || '').trim(),
+      phone: String(card?.dataset?.v1088Phone || '').trim(),
       dogName: String(card?.dataset?.directoryDogName || card?.dataset?.dogName || '').trim(),
       startDate: String(card?.dataset?.directoryStartDate || card?.dataset?.startDate || '').slice(0, 10),
       endDate: String(card?.dataset?.directoryEndDate || card?.dataset?.endDate || '').slice(0, 10)
@@ -144,6 +155,10 @@
 
   function findRequestedCard(identity) {
     const cards = candidateCards(identity.stayView);
+    if (identity.stayId) {
+      const exactStays = cards.filter(card => String(card.dataset.directoryStayId || '').toLowerCase() === identity.stayId.toLowerCase());
+      return exactStays.length === 1 ? exactStays[0] : null;
+    }
     if (identity.stayKey) {
       const exact = cards.find(card =>
         String(card.dataset.directoryStayKey || card.dataset.stayKey || '') === identity.stayKey
@@ -330,6 +345,11 @@
     adapterEvents().forEach(event => {
       const props = event?.extendedProps || {};
       if (props.isPotential === true || props.isMeetGreet === true) return;
+      if (identity.stayId) {
+        if (String(props.stayId || '').trim().toLowerCase() !== identity.stayId.toLowerCase()) return;
+        try { event.remove?.(); } catch (_) {}
+        return;
+      }
       const item = eventIdentity(event);
       if (normalizeIdentity(item.dogName) !== wantedDog) return;
       if (item.startDate !== identity.startDate) return;
@@ -345,6 +365,7 @@
       const wantedDog = normalizeIdentity(identity.dogName);
       const filtered = rows.filter(row => {
         const props = row?.extendedProps || row || {};
+        if (identity.stayId) return String(props.stayId || '').trim().toLowerCase() !== identity.stayId.toLowerCase();
         const dogName = String(props.dogName || row?.title || '').trim();
         const startDate = String(props.rawStartDate || props.startDate || row?.start || '').slice(0, 10);
         const endDate = String(props.rawEndDate || props.endDate || row?.end || startDate || '').slice(0, 10);
@@ -409,7 +430,12 @@
 
       const response = await window.queryAppsScript({
         action: 'delete_confirmed_stay',
+        stayId: identity.stayId,
+        stayIdentityVersion: 1,
         stayKey: identity.stayKey,
+        dogId: identity.dogId,
+        ownerName: identity.ownerName,
+        phone: identity.phone,
         dogName: identity.dogName,
         startDate: identity.startDate,
         endDate: identity.endDate || identity.startDate
@@ -421,6 +447,10 @@
       if (!response || response.result !== 'success') {
         throw new Error(response?.error || 'The confirmed stay could not be deleted.');
       }
+
+      const deletedStayId = String(response.stayId || response.deletedBooking?.stayId || identity.stayId || '').trim();
+      if (deletedStayId && typeof window.v1105AddStableStayRemoval === 'function') window.v1105AddStableStayRemoval(deletedStayId, identity);
+      if (deletedStayId) identity.stayId = deletedStayId;
 
       try {
         if (typeof window.closeDirectoryGuestProfile === 'function') {

@@ -35,6 +35,13 @@ function v1104PotentialKeyFromEvent(
         event?.extendedProps ||
         {};
 
+    const stayId = String(props.stayId || '').trim().toLowerCase();
+    if (/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(stayId)) {
+        const norm = value => String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+        const digits = value => String(value || '').replace(/\D/g, '');
+        return `stay:${stayId}|${norm(props.dogName || event?.title)}|${norm(props.dogId)}|${norm(props.breed)}|${norm(props.ownerName || props.owner)}|${digits(props.phone)}`;
+    }
+
     return makePotentialKey(
         props.dogName ||
             event?.title ||
@@ -92,7 +99,8 @@ function v1104PotentialEventFromRecord(
         String(
             record?.notes ||
             ''
-        ).trim()
+        ).trim(),
+        String(record?.stayId || '').trim()
     );
 }
 
@@ -141,12 +149,7 @@ async function v1104QueuedPotentialSaveKeys() {
                         entry.payload ||
                         {};
 
-                    return makePotentialKey(
-                        payload.dogName,
-                        payload.startDate,
-                        payload.endDate ||
-                            payload.startDate
-                    );
+                    return v1104PotentialKeyFromEvent({ title: payload.dogName, extendedProps: payload });
                 })
                 .filter(Boolean)
         );
@@ -180,6 +183,22 @@ async function v1104ReconcileLocalPotentialCache() {
                 v1104PotentialKeyFromEvent(
                     event
                 );
+
+            const stayId = String(event?.extendedProps?.stayId || '').trim().toLowerCase();
+            const sameStayAuthoritative = stayId && v1104SharedPotentialEvents.find(candidate => String(candidate?.extendedProps?.stayId || '').trim().toLowerCase() === stayId);
+            if (sameStayAuthoritative) {
+                const a = event?.extendedProps || {};
+                const b = sameStayAuthoritative?.extendedProps || {};
+                const normalize = value => String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+                const digits = value => String(value || '').replace(/\D/g, '');
+                const matches = normalize(a.dogName || event?.title) === normalize(b.dogName || sameStayAuthoritative?.title) &&
+                    normalize(a.breed) === normalize(b.breed) &&
+                    String(a.rawStartDate || event?.start).slice(0, 10) === String(b.rawStartDate || sameStayAuthoritative?.start).slice(0, 10) &&
+                    String(a.rawEndDate || a.rawStartDate || event?.start).slice(0, 10) === String(b.rawEndDate || b.rawStartDate || sameStayAuthoritative?.start).slice(0, 10) &&
+                    normalize(a.dogId) === normalize(b.dogId) && normalize(a.ownerName || a.owner) === normalize(b.ownerName || b.owner) &&
+                    digits(a.phone) === digits(b.phone) && normalize(a.notes) === normalize(b.notes);
+                return !matches;
+            }
 
             return (
                 serverKeys.has(

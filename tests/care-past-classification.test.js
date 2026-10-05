@@ -87,14 +87,15 @@ assert.deepEqual(
 );
 
 const backendSource = fs.readFileSync(path.join(root, 'apps-script', 'Code.js'), 'utf8');
+const stayIdentitySource = fs.readFileSync(path.join(root, 'apps-script', 'StableStayIdentity.js'), 'utf8');
 const backendStart = backendSource.indexOf('function getPastGuestDirectoryPayload_');
 const backendEnd = backendSource.indexOf('var WAFFLE_CACHE_NAMESPACE_', backendStart);
 assert.ok(backendStart >= 0 && backendEnd > backendStart, 'Past directory backend function is present');
 const backendRows = [
-  ['Timestamp', 'Dog', 'Breed', 'Start', 'End', 'Owner', 'Phone', '', '', 'Notes', 'Edit', 'Type'],
-  ['2026-09-20', 'Jed', 'Staffy', '2026-09-20', '2026-09-30', 'Ada', '', '', '', '', '', 'Boarding'],
-  ['2026-09-21', 'Coco', 'Poodle', '2026-09-21', '2026-09-25', 'Lee', '', '', '', '', '', 'Boarding'],
-  ['2026-08-01', 'Waffle', 'Pug', '2026-08-01', '2026-08-05', 'Ray', '', '', '', '', '', 'Boarding']
+  ['Timestamp', 'Dog', 'Breed', 'Start', 'End', 'Owner', 'Phone', '', '', 'Notes', 'Edit', 'Type', 'Stay ID', 'Last Stay Mutation ID'],
+  ['2026-09-20', 'Jed', 'Staffy', '2026-09-20', '2026-09-30', 'Ada', '', '', '', '', '', 'Boarding', '00000000-0000-4000-8000-000000000001', ''],
+  ['2026-09-21', 'Coco', 'Poodle', '2026-09-21', '2026-09-25', 'Lee', '', '', '', '', '', 'Boarding', '00000000-0000-4000-8000-000000000002', ''],
+  ['2026-08-01', 'Waffle', 'Pug', '2026-08-01', '2026-08-05', 'Ray', '', '', '', '', '', 'Boarding', '00000000-0000-4000-8000-000000000003', '']
 ];
 const backendSandbox = {
   getTargetSheet_() {
@@ -120,12 +121,13 @@ const backendSandbox = {
   getLegacyIntakeStatusRecords_: () => []
 };
 vm.createContext(backendSandbox);
-vm.runInContext(`${backendSource.slice(backendStart, backendEnd)}\nthis.result = getPastGuestDirectoryPayload_({ limit: 250 });`, backendSandbox);
+vm.runInContext(`${stayIdentitySource}\n${backendSource.slice(backendStart, backendEnd)}\nthis.result = getPastGuestDirectoryPayload_({ limit: 250 });`, backendSandbox);
 assert.deepEqual(
   Array.from(backendSandbox.result.bookings, booking => booking.stayKey),
   [checkedOutToday.stayKey, completed.stayKey]
 );
 assert.equal(backendSandbox.result.diagnostics.checkedOutIncluded, 1);
+assert.equal(backendSandbox.result.bookings.find(booking => booking.dogName === 'Waffle').stayId, '00000000-0000-4000-8000-000000000003');
 
 sandbox.v1082PastResponse = {
   bookings: [completed],

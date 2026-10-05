@@ -57,6 +57,7 @@ function confirmationHarness(existing = []) {
   ]);
   const fields = new Map();
   let submit;
+  let sentPayload = null;
   const confirmButton = { disabled:false, innerText:'Confirm Stay', style:{}, addEventListener(type, listener) { if (type === 'click') submit = listener; } };
   const document = {
     getElementById(id) {
@@ -75,16 +76,16 @@ function confirmationHarness(existing = []) {
     makePotentialKey:(dog,start,end)=>`${String(dog||'').trim().toLowerCase()}|${start}|${end||start}`,
     addPendingPotentialRemoval(key){const pending=JSON.parse(values.get('pendingPotentialRemovals')||'[]');if(!pending.includes(key))pending.push(key);values.set('pendingPotentialRemovals',JSON.stringify(pending));},
     refreshCalendarData(){}, confirm:()=>true, alert(message){throw new Error(message);},
-    sendPayloadToAppsScript:async payload=>({result:'success',payload}),
+    sendPayloadToAppsScript:async payload=>{sentPayload=payload;return {result:'success',payload};},
     stringToColor:()=>'#123456',buildDisplayEndDate:date=>date,
     Date,String,Number,Math,Array,Object,Set,Map,JSON,console
   };
   vm.runInNewContext(`${core.slice(identityStart, identityEnd)}\n${app.slice(editStart, editEnd)}\n${app.slice(buildStart, buildEnd)}\n${app.slice(clickStart, clickEnd)}\nthis.open=openEditPotentialModal;`, sandbox);
-  return {sandbox, open:sandbox.open, submit:()=>submit.call(confirmButton), read:key=>JSON.parse(values.get(key)||'[]')};
+  return {sandbox, open:sandbox.open, submit:()=>submit.call(confirmButton), read:key=>JSON.parse(values.get(key)||'[]'), sent:()=>sentPayload};
 }
 
-function potential(dogId='') {
-  return {id:'potential-row',startStr:'2026-10-05',extendedProps:{dogName:'Milo',breed:'Labrador',rawStartDate:'2026-10-05',rawEndDate:'2026-10-09',owner:'Alex Owner',phone:'0400 111 222',dogId}};
+function potential(dogId='', stayId='') {
+  return {id:'potential-row',startStr:'2026-10-05',extendedProps:{dogName:'Milo',breed:'Labrador',rawStartDate:'2026-10-05',rawEndDate:'2026-10-09',owner:'Alex Owner',phone:'0400 111 222',dogId,stayId}};
 }
 
 function localConfirmed(dogId='', owner='Alex Owner', phone='0400 111 222') {
@@ -123,4 +124,13 @@ test('actual confirmation click carries the selected Dog ID into a newly created
   assert.equal(stays[0].extendedProps.dogId, dogId);
   assert.equal(stays[0].extendedProps.rawStartDate, '2026-10-05');
   assert.equal(stays[0].extendedProps.rawEndDate, '2026-10-09');
+});
+
+test('actual confirmation request targets the same stable stay and preserves it locally', async () => {
+  const stayId = '33333333-3333-4333-8333-333333333333';
+  const api = confirmationHarness();
+  api.open(potential('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', stayId));
+  await api.submit();
+  assert.equal(api.sent().stayId, stayId);
+  assert.equal(api.read('temporaryConfirmedStays')[0].extendedProps.stayId, stayId);
 });

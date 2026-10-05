@@ -1,0 +1,29 @@
+name: Stable Stay Identity
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  identity-and-receipts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Validate booking runtime and backend
+        run: |
+          set -euo pipefail
+          node --check apps-script/Code.js
+          node --check apps-script/StableStayIdentity.js
+          node --check waffle-app.js
+          node --check waffle-v10.8.js
+          node --check waffle-v11.0.5-core.js
+          node --check waffle-sitter-navigation.js
+          node --test tests/stable-stay-backend.test.js tests/stable-stay-frontend.test.js tests/dog-id-backend.test.js tests/care-past-classification.test.js tests/stay-date-update.test.js tests/potential-confirm-dog-id.test.js

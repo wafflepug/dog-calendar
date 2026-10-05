@@ -86,6 +86,74 @@ function v1105ClearServerConfirmedTombstones(
     return serverKeys;
 }
 
+function v1105PendingStableStayRemovals() {
+    try {
+        const parsed = JSON.parse(localStorage.getItem('pendingStableStayRemovals') || '[]');
+        return Array.isArray(parsed) ? parsed.map(value => typeof value === 'string' ? { stayId: value } : value).filter(value => /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(String(value?.stayId || '').trim().toLowerCase())) : [];
+    } catch (_) { return []; }
+}
+
+function v1105SetStableStayRemovals(ids) {
+    try { localStorage.setItem('pendingStableStayRemovals', JSON.stringify(ids)); } catch (_) {}
+}
+
+function v1105AddStableStayRemoval(stayId, identity = {}) {
+    const id = String(stayId || '').trim().toLowerCase();
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(id)) return false;
+    const record = { stayId: id, dogName: String(identity.dogName || '').trim(), dogId: String(identity.dogId || '').trim().toLowerCase(), ownerName: String(identity.ownerName || identity.owner || '').trim(), phone: String(identity.phone || '').trim() };
+    v1105SetStableStayRemovals([...v1105PendingStableStayRemovals().filter(item => item.stayId !== id), record]);
+    return true;
+}
+
+function v1105RemovalIdentityMatches(removal, candidate = {}) {
+    const wantedDogId = String(removal?.dogId || '').trim().toLowerCase();
+    const actualDogId = String(candidate?.dogId || '').trim().toLowerCase();
+    if (wantedDogId || actualDogId) return !!wantedDogId && wantedDogId === actualDogId;
+    const norm = value => String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+    const wantedName = norm(removal?.dogName);
+    const actualName = norm(candidate?.dogName || candidate?.title);
+    if (!wantedName || wantedName !== actualName) return false;
+    const wantedOwner = norm(removal?.ownerName);
+    const actualOwner = norm(candidate?.ownerName || candidate?.owner);
+    const digits = value => String(value || '').replace(/\D/g, '');
+    const wantedPhone = digits(removal?.phone);
+    const actualPhone = digits(candidate?.phone);
+    if (wantedOwner && actualOwner && wantedOwner !== actualOwner) return false;
+    if (wantedPhone && actualPhone && wantedPhone !== actualPhone) return false;
+    return !!((wantedOwner && actualOwner) || (wantedPhone && actualPhone));
+}
+
+function v1105PendingPotentialStayRemovals() {
+    try {
+        const parsed = JSON.parse(localStorage.getItem('pendingPotentialStayRemovals') || '[]');
+        return Array.isArray(parsed) ? parsed.map(value => typeof value === 'string' ? { stayId: value } : value).filter(value => /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(String(value?.stayId || '').trim().toLowerCase())) : [];
+    } catch (_) { return []; }
+}
+
+function v1105SetPotentialStayRemovals(ids) {
+    try { localStorage.setItem('pendingPotentialStayRemovals', JSON.stringify(ids)); } catch (_) {}
+}
+
+function v1105AddPotentialStayRemoval(stayId, identity = {}) {
+    const id = String(stayId || '').trim().toLowerCase();
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(id)) return false;
+    const record = { stayId: id, dogName: String(identity.dogName || '').trim(), dogId: String(identity.dogId || '').trim().toLowerCase(), ownerName: String(identity.ownerName || identity.owner || '').trim(), phone: String(identity.phone || '').trim() };
+    v1105SetPotentialStayRemovals([...v1105PendingPotentialStayRemovals().filter(item => item.stayId !== id), record]);
+    return true;
+}
+
+function v1105IsPotentialStayTombstoned(stayId) {
+    const id = String(stayId || '').trim().toLowerCase();
+    const removal = v1105PendingPotentialStayRemovals().find(item => String(item.stayId || '').trim().toLowerCase() === id);
+    return !!removal && v1105RemovalIdentityMatches(removal, arguments[1] || {});
+}
+
+function v1105IsStableStayTombstoned(stayId, candidate = {}) {
+    const id = String(stayId || '').trim().toLowerCase();
+    const removal = v1105PendingStableStayRemovals().find(item => String(item.stayId || '').trim().toLowerCase() === id);
+    return !!removal && v1105RemovalIdentityMatches(removal, candidate);
+}
+
 
 /*
  * Clear stale device-local suppression BEFORE V11.0.4 builds the shared event
@@ -122,8 +190,9 @@ v1104ApplyPotentialResponse =
         v1105PotentialSyncState.lastError =
             '';
 
+        const visibleRecords = records.filter(record => !v1105IsStableStayTombstoned(record?.stayId, record) && !v1105IsPotentialStayTombstoned(record?.stayId));
         return v1105BaseApplyPotentialResponse(
-            response,
+            { ...response, records: visibleRecords },
             options
         );
     };
@@ -165,12 +234,67 @@ function v1105ConfirmedStayIdentity(event) {
     return JSON.stringify([dogName, startDate, endDate, breed, owner, phone]);
 }
 
+function v1105StableStayCompatible(left, right, allowDateChange = false) {
+    const leftStayId = String(left?.extendedProps?.stayId || '').trim().toLowerCase();
+    const rightStayId = String(right?.extendedProps?.stayId || '').trim().toLowerCase();
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(leftStayId) || leftStayId !== rightStayId) return false;
+        const leftProps = left?.extendedProps || {};
+        const rightProps = right?.extendedProps || {};
+        const leftDates = [leftProps.rawStartDate || left.start, leftProps.rawEndDate || leftProps.rawStartDate || left.start].map(value => String(value || '').slice(0, 10));
+        const rightDates = [rightProps.rawStartDate || right.start, rightProps.rawEndDate || rightProps.rawStartDate || right.start].map(value => String(value || '').slice(0, 10));
+        if (!allowDateChange && (leftDates[0] !== rightDates[0] || leftDates[1] !== rightDates[1])) return false;
+        const norm = value => String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+        const leftName = norm(leftProps.dogName || left.title);
+        const rightName = norm(rightProps.dogName || right.title);
+        if (leftName && rightName && leftName !== rightName) return false;
+        const leftBreed = norm(leftProps.breed);
+        const rightBreed = norm(rightProps.breed);
+        if (leftBreed && rightBreed && leftBreed !== rightBreed && leftBreed !== 'n/a' && rightBreed !== 'n/a') return false;
+        const leftDogId = String(leftProps.dogId || '').trim().toLowerCase();
+        const rightDogId = String(rightProps.dogId || '').trim().toLowerCase();
+        if (leftDogId && rightDogId && leftDogId !== rightDogId) return false;
+        const leftOwners = [leftProps.ownerName, leftProps.owner].map(norm).filter(Boolean);
+        const rightOwners = [rightProps.ownerName, rightProps.owner].map(norm).filter(Boolean);
+        const digits = value => String(value || '').replace(/\D/g, '');
+        const leftPhones = [leftProps.phone, leftProps.contact, leftProps.ownerPhone].map(digits).filter(Boolean);
+        const rightPhones = [rightProps.phone, rightProps.contact, rightProps.ownerPhone].map(digits).filter(Boolean);
+        if (new Set([...leftOwners, ...rightOwners]).size > 1 || new Set([...leftPhones, ...rightPhones]).size > 1) return false;
+        return true;
+}
+
 function v1105SameConfirmedStayIdentity(left, right) {
+    const leftStayId = String(left?.extendedProps?.stayId || '').trim();
+    const rightStayId = String(right?.extendedProps?.stayId || '').trim();
+    if (leftStayId || rightStayId) return v1105StableStayCompatible(left, right, false);
     const leftIdentity = v1105ConfirmedStayIdentity(left);
     if (!leftIdentity || leftIdentity !== v1105ConfirmedStayIdentity(right)) return false;
     const leftDogId = String(left?.extendedProps?.dogId || '').trim().toLowerCase();
     const rightDogId = String(right?.extendedProps?.dogId || '').trim().toLowerCase();
     return !leftDogId || !rightDogId || leftDogId === rightDogId;
+}
+
+function v1105LegacyDateSourceMatches(source, optimistic) {
+    const sourceProps = source?.extendedProps || {};
+    const optimisticProps = optimistic?.extendedProps || {};
+    if (String(sourceProps.stayId || '').trim() || !optimisticProps.dateUpdatePending) return false;
+    const sourceDates = [sourceProps.rawStartDate || source.start, sourceProps.rawEndDate || sourceProps.rawStartDate || source.start].map(value => String(value || '').slice(0, 10));
+    if (sourceDates[0] !== String(optimisticProps.pendingOriginalStartDate || '').slice(0, 10) || sourceDates[1] !== String(optimisticProps.pendingOriginalEndDate || '').slice(0, 10)) return false;
+    const norm = value => String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+    if (norm(sourceProps.dogName || source.title) !== norm(optimisticProps.dogName || optimistic.title)) return false;
+    const sourceDogId = String(sourceProps.dogId || '').trim().toLowerCase();
+    const optimisticDogId = String(optimisticProps.dogId || '').trim().toLowerCase();
+    if ((sourceDogId || optimisticDogId) && sourceDogId !== optimisticDogId) return false;
+    const sourceOwner = norm(sourceProps.ownerName || sourceProps.owner);
+    const optimisticOwner = norm(optimisticProps.ownerName || optimisticProps.owner);
+    const digits = value => String(value || '').replace(/\D/g, '');
+    const sourcePhone = digits(sourceProps.phone);
+    const optimisticPhone = digits(optimisticProps.phone);
+    if (sourceOwner && optimisticOwner && sourceOwner !== optimisticOwner) return false;
+    if (sourcePhone && optimisticPhone && sourcePhone !== optimisticPhone) return false;
+    const sourceBreed = norm(sourceProps.breed);
+    const optimisticBreed = norm(optimisticProps.breed);
+    if (sourceBreed && optimisticBreed && sourceBreed !== optimisticBreed && sourceBreed !== 'n/a' && optimisticBreed !== 'n/a') return false;
+    return sourceDogId ? !!optimisticDogId : !!(sourceOwner && optimisticOwner && sourcePhone && optimisticPhone);
 }
 
 function v1105DedupeConfirmedStays(events) {
@@ -275,6 +399,7 @@ v1104ComposeCalendarEvents =
             v1104SharedPotentialEvents
                 .forEach(
                     event => {
+                        if (v1105IsPotentialStayTombstoned(event?.extendedProps?.stayId)) return;
                         const key =
                             v1104PotentialKeyFromEvent(
                                 event
@@ -335,6 +460,7 @@ v1104ComposeCalendarEvents =
         localPotentialList
             .forEach(
                 event => {
+                    if (v1105IsPotentialStayTombstoned(event?.extendedProps?.stayId)) return;
                     const key =
                         v1104PotentialKeyFromEvent(
                             event
@@ -357,8 +483,30 @@ v1104ComposeCalendarEvents =
                 }
             );
 
+        const pendingDateEdits = confirmed.filter(event => event?.extendedProps?.dateUpdatePending && String(event?.extendedProps?.stayId || '').trim());
+        const sheetWithoutStaleDateRows = baseSheet.filter(event => {
+            const stayId = String(event?.extendedProps?.stayId || '').trim();
+            const optimistic = stayId
+                ? pendingDateEdits.find(candidate => String(candidate?.extendedProps?.stayId || '').trim() === stayId)
+                : pendingDateEdits.find(candidate => v1105LegacyDateSourceMatches(event, candidate));
+            if (!optimistic) return true;
+            if (!stayId) {
+                const matchingSourceRows = baseSheet.filter(candidate => v1105LegacyDateSourceMatches(candidate, optimistic));
+                return matchingSourceRows.length !== 1;
+            }
+            if (!v1105StableStayCompatible(event, optimistic, true)) return true;
+            const sameStayRows = baseSheet.filter(candidate => String(candidate?.extendedProps?.stayId || '').trim() === stayId);
+            const knownDogIds = new Set(sameStayRows.map(candidate => String(candidate?.extendedProps?.dogId || '').trim().toLowerCase()).filter(Boolean));
+            const optimisticDogId = String(optimistic?.extendedProps?.dogId || '').trim().toLowerCase();
+            if (knownDogIds.size > 1 && (!optimisticDogId || !knownDogIds.has(optimisticDogId))) return true;
+            const sourceProps = event?.extendedProps || {};
+            const optimisticProps = optimistic?.extendedProps || {};
+            const sourceDates = [sourceProps.rawStartDate || event.start, sourceProps.rawEndDate || sourceProps.rawStartDate || event.start].map(value => String(value || '').slice(0, 10));
+            const optimisticDates = [optimisticProps.rawStartDate || optimistic.start, optimisticProps.rawEndDate || optimisticProps.rawStartDate || optimistic.start].map(value => String(value || '').slice(0, 10));
+            return sourceDates[0] === optimisticDates[0] && sourceDates[1] === optimisticDates[1];
+        });
         const allEvents =
-            v1105DedupeConfirmedStays(baseSheet.concat(
+            v1105DedupeConfirmedStays(sheetWithoutStaleDateRows.concat(
                 meets,
                 Array.from(
                     potentialMap.values()

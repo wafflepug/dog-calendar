@@ -1,6 +1,6 @@
 /* ============================================================
    WAFFLE HOUSE — FINAL UI CONTRACT
-   Version 11.1.54 · Care Clarity & Sync
+   Version 11.1.54 · Stable Stay Identity
 
    Purpose
    -------
