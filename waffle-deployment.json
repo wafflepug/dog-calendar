@@ -1,0 +1,10 @@
+---
+layout: null
+---
+{
+  "schemaVersion": 1,
+  "artifact": {
+    "commitSha": {{ site.github.build_revision | jsonify }},
+    "generatedAt": {{ site.time | date_to_xmlschema | jsonify }}
+  }
+}

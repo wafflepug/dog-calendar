@@ -115,6 +115,7 @@ jobs:
           node --test tests/care-csv-integrity.test.js
           node --test tests/care-confirmed-reconciliation.test.js tests/confirmed-stay-identity.test.js tests/potential-confirm-dog-id.test.js tests/checkout-collision-safety.test.js
           node --test tests/system-status-sync.test.js
+          node --test tests/system-status-release.test.js
           node --test tests/care-navigation-continuity.test.js
           node node_modules/@playwright/test/cli.js install --with-deps chromium firefox webkit
           node node_modules/@playwright/test/cli.js test --config=playwright.care-profile.config.js

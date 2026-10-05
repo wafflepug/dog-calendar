@@ -38,17 +38,21 @@ jobs:
           base="https://wafflepug.github.io/dog-calendar"
           for attempt in $(seq 1 24); do
             release="$(curl -fsSL --max-time 20 "$base/waffle-release.json?_=${GITHUB_RUN_ID}-${attempt}" || true)"
-            if RELEASE="$release" EXPECTED_RELEASE="$EXPECTED_RELEASE" python3 - <<'PY'
+            deployment="$(curl -fsSL --max-time 20 "$base/waffle-deployment.json?_=${GITHUB_RUN_ID}-${attempt}" || true)"
+            if RELEASE="$release" DEPLOYMENT="$deployment" EXPECTED_RELEASE="$EXPECTED_RELEASE" python3 - <<'PY'
           import json, os, sys
           try:
               payload=json.loads(os.environ.get('RELEASE',''))
+              deployment=json.loads(os.environ.get('DEPLOYMENT',''))
           except Exception:
               sys.exit(1)
           if payload.get('release') != os.environ['EXPECTED_RELEASE']:
               sys.exit(1)
+          if deployment.get('schemaVersion') != 1 or (deployment.get('artifact') or {}).get('commitSha') != os.environ.get('GITHUB_SHA'):
+              sys.exit(1)
           PY
             then
-              echo "Phase 3D release assets are live on Pages."
+              echo "Phase 3D release assets and exact commit manifest are live on Pages."
               exit 0
             fi
             echo "Pages release assets not current yet ($attempt/24); waiting..."

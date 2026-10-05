@@ -44,7 +44,11 @@ jobs:
             echo 'Apps Script deploy must not mutate source before clasp push.'
             exit 1
           fi
-          grep -q 'Push exact committed source to Google Apps Script' .github/workflows/deploy-apps-script.yml
+          # Runtime business source remains committed; the only generated source
+          # is the public attribution placeholder, never a deploy-time AI patch.
+          grep -q 'Push committed source with generated deployment attribution to Google Apps Script' .github/workflows/deploy-apps-script.yml
+          grep -q 'node scripts/generate-backend-deployment.js' .github/workflows/deploy-apps-script.yml
+          node --test tests/deployment-attribution.test.js
           grep -q 'clasp push --force' .github/workflows/deploy-apps-script.yml
 
           for retired in \

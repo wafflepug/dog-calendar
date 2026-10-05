@@ -3139,6 +3139,7 @@ function processReadOnlySheetAction_(data) {
     return {
       result: "success",
       action: action,
+      deployment: typeof getWaffleDeploymentIdentity_ === "function" ? getWaffleDeploymentIdentity_() : null,
       versions: Object.assign({}, getWaffleDataVersions_(), {
         stableStayIdentityVersion: STABLE_STAY_IDENTITY_VERSION_V11225_,
         stayOperationIdentityVersion: STAY_OPERATION_IDENTITY_VERSION_V11226_

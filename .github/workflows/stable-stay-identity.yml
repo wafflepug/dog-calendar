@@ -33,3 +33,6 @@ jobs:
           node --check waffle-v10.8.6.js
           node --check waffle-v11.2.17.js
           node --test tests/stay-operation-backend.test.js tests/stay-operation-frontend.test.js
+          node --check apps-script/DeploymentIdentity.js
+          node --check scripts/generate-backend-deployment.js
+          node --test tests/deployment-attribution.test.js
