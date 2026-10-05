@@ -12,4 +12,8 @@ Acceptance and testing matrix:
 
 Run the actual-renderer browser checks and existing Care state-preservation tests. Physical iPhone/Fold checks remain a manual follow-up after deployment.
 
-Next bounded backlog: simplify Detailed Care category summaries. Show a concise saved summary for feeding, walks, behaviour and health while retaining individually collapsible sections and existing edit controls. Verify long and missing information, same-named dogs, keyboard/touch access and draft restoration; do not introduce profile reads or mutations.
+Next bounded backlog: repair quoted multiline CSV records. The current parser splits physical lines before reading quoted fields, which can omit a guest when a handover note contains a newline. Add a shared CSV row reader with quoted commas, escaped quotes, CRLF and multiline fields; verify guest identity, dates and notes remain intact.
+
+Following UI iteration: simplify Detailed Care category summaries. Show a concise saved summary for feeding, walks, behaviour and health while retaining individually collapsible sections and existing edit controls. Verify long and missing information, same-named dogs, keyboard/touch access and draft restoration; do not introduce profile reads or mutations.
+
+Automated browser coverage: long unbroken notes, empty/whitespace values, editor prefill, light/dark contrast, focus and 320/390/1440px geometry in Chromium and WebKit. Multiline data import remains unverified until the CSV reader backlog item is completed; same-name write protection is covered by the existing Care state-preservation suite.
