@@ -5855,6 +5855,7 @@ body.dark-theme .care-brief-alert {
     color: var(--wh-accent-on, #ffffff);
 }
 
+.directory-care-records-body .directory-intake-action:focus,
 .directory-care-records-body .directory-intake-action:focus-visible,
 .directory-care-records-disclosure > summary:focus-visible {
     outline: 3px solid var(--wh-accent, #1d4ed8);
