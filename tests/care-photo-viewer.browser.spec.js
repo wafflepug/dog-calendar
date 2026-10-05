@@ -31,7 +31,7 @@ test('viewer is named, focus trapped, closes by Escape/backdrop and restores foc
   expect(await page.evaluate(() => [document.documentElement.style.overflow,document.body.style.overflow,window.scrollY])).toEqual(['auto','clip',180]);
   await expect(page.locator('#trigger')).toBeFocused();
   await page.evaluate(() => openViewer('https://images.test/a.jpg',document.querySelector('#trigger'),'Mabel at the park'));
-  await page.locator('.v110-photo-viewer img').click({ position: { x: 1,y: 1 }, force: true }).catch(()=>{});
+  await page.locator('.v110-photo-viewer img').dispatchEvent('click');
   await expect(dialog).toBeVisible();
   await page.locator('#v110PhotoViewer').click({ position: { x: 4,y: 4 } });
   await expect(dialog).toBeHidden();
@@ -39,9 +39,11 @@ test('viewer is named, focus trapped, closes by Escape/backdrop and restores foc
 
 test('responsive safe image bounds and dark theme remain legible', async ({ page }) => {
   await setup(page);
+  await page.route('https://images.test/**', route => route.fulfill({status:200,contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="3000"></svg>'}));
   await page.evaluate(() => openViewer('https://images.test/a.jpg',null,'Portrait'));
-  for (const width of [320,390,1440]) {
-    await page.setViewportSize({ width,height:800 });
+  await expect.poll(() => page.locator('#v110PhotoViewer img').evaluate(img => img.complete && img.naturalWidth > 0)).toBeTruthy();
+  for (const [width,height] of [[320,800],[390,320],[390,800],[1440,800]]) {
+    await page.setViewportSize({ width,height });
     const bounds=await page.locator('.v110-photo-viewer').evaluate(v=>{const img=v.querySelector('img'),r=img.getBoundingClientRect(),c=v.querySelector('.v110-photo-viewer-close').getBoundingClientRect();return {right:r.right,bottom:r.bottom,closeRight:c.right,closeTop:c.top,viewportWidth:innerWidth,viewportHeight:innerHeight};});
     expect(bounds.right).toBeLessThanOrEqual(bounds.viewportWidth);
     expect(bounds.bottom).toBeLessThanOrEqual(bounds.viewportHeight);
@@ -51,20 +53,42 @@ test('responsive safe image bounds and dark theme remain legible', async ({ page
   await expect(page.getByRole('button',{name:'Close photo'})).toHaveCSS('background-color','rgb(17, 17, 17)');
 });
 
-test('late A error cannot replace B; failure retry requests same image once without app calls', async ({ page }) => {
+test('late A events cannot replace B; retry requests only the current image', async ({ page }) => {
   await setup(page);
-  const requests=[];
-  await page.route('https://images.test/**', route=>{requests.push(route.request().url());return route.fulfill({status:200,contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="2" height="2"></svg>'});});
-  await page.evaluate(() => { window.appCalls=0; openViewer('https://images.test/a.jpg',null,'A'); window.oldImage=document.querySelector('#v110PhotoViewer img'); });
-  await page.evaluate(() => openViewer('https://images.test/b.jpg',null,'B'));
-  await page.evaluate(() => window.oldImage.dispatchEvent(new Event('error')));
+  const requests=[];let failNext=false;
+  await page.route('https://images.test/**', route=>{
+    requests.push(route.request().url());
+    if(failNext){failNext=false;return route.fulfill({status:503,body:'Unavailable'});}
+    return route.fulfill({status:200,contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="2" height="2"></svg>'});
+  });
+  await page.evaluate(() => {
+    window.appCalls=0;window.queryAppsScript=()=>{window.appCalls++;};
+    openViewer('https://images.test/a.jpg',null,'A');window.oldImage=document.querySelector('#v110PhotoViewer img');
+    openViewer('https://images.test/b.jpg',null,'B');
+  });
+  await expect.poll(()=>page.locator('#v110PhotoViewer img').evaluate(img=>img.naturalWidth)).toBe(2);
+  await page.evaluate(()=>window.oldImage.dispatchEvent(new Event('error')));
   await expect(page.getByRole('status').filter({hasText:'Photo unavailable'})).toBeHidden();
-  await page.locator('#v110PhotoViewer img').dispatchEvent('error');
+  failNext=true;
+  await page.evaluate(()=>openViewer('https://images.test/b.jpg?failed=1',null,'B'));
   await expect(page.getByRole('status').filter({hasText:'Photo unavailable'})).toBeVisible();
   const before=requests.length;
   await page.getByRole('button',{name:'Retry'}).click();
-  await expect.poll(()=>requests.length).toBeGreaterThan(before);
-  expect(requests.slice(before).every(url=>new URL(url).origin==='https://images.test'&&new URL(url).pathname==='/b.jpg'&&new URL(url).searchParams.has('_waffleRetry'))).toBeTruthy();
+  await expect.poll(()=>requests.length).toBe(before+1);
+  expect(new URL(requests.at(-1)).pathname).toBe('/b.jpg');
+  expect(new URL(requests.at(-1)).searchParams.get('_waffleRetry')).toBe('1');
+  await expect(page.getByRole('button',{name:'Close photo'})).toBeFocused();
   expect(await page.evaluate(()=>window.appCalls)).toBe(0);
-  await expect(page.locator('#v110PhotoViewer img')).toHaveAttribute('src',/https:\/\/images\.test\/b\.jpg\?_waffleRetry=1/);
+});
+
+test('stalled image has a bounded retry state and late completion cannot clear it', async ({ page }) => {
+  await setup(page);await page.clock.install();
+  await page.route('https://images.test/**',()=>new Promise(()=>{}));
+  await page.evaluate(()=>openViewer('https://images.test/stalled.jpg',null,'Stalled'));
+  await page.clock.fastForward(15001);
+  await expect(page.getByRole('button',{name:'Retry'})).toBeVisible();
+  await page.locator('#v110PhotoViewer img').dispatchEvent('load');
+  await expect(page.getByRole('button',{name:'Retry'})).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog')).toBeHidden();
 });

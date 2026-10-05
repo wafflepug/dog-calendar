@@ -75,8 +75,10 @@ test('Care gallery uses bounded Drive previews, wraps captions, loads originals 
     expect(noPageOverflow).toBeTruthy();
   }
   await page.locator('body').evaluate(body => body.classList.add('dark-theme'));
-  await page.keyboard.press('Tab');
+  await page.evaluate(() => v110ClosePhotoViewer());
   await page.locator('.v110-media-view').first().focus();
+  await page.keyboard.press('Tab');
+  await page.keyboard.press('Shift+Tab');
   await expect(page.locator('.v110-media-view').first()).toHaveCSS('outline-style', 'solid');
   await expect.poll(() => requestedImages.some(url => new URL(url).searchParams.get('sz') === 'w1600')).toBeTruthy();
 });
