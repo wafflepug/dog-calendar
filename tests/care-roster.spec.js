@@ -218,3 +218,13 @@ test('legacy Care sort controls are retired', async () => {
   expect(carePolishJs).not.toContain('data-v1118-sort');
   expect(carePolishJs).toContain('removeCareSort');
 });
+
+test('Arriving no-match feedback states whether cached later arrivals have been searched', async ({ page }) => {
+  await page.setContent('<div class="directory-dashboard-fused"><button class="is-active" data-v1082-stay-tab="future">Arriving</button><input id="guestDirectorySearch" value="Missing dog"><p data-directory-search-feedback></p></div>');
+  await page.evaluate(source => { window.eval(source); window.expanded = false; window.WAFFLE_V11196_FUTURE_RANGE = { isExpanded: () => window.expanded }; updateDirectoryRosterSummary({ search: 'Missing dog', activeView: 'future', visibleCount: 0 }); }, rosterFilters);
+  await expect(page.locator('[data-directory-search-feedback]')).toContainText('No currently loaded arriving stays match');
+  await page.evaluate(() => { window.expanded = true; updateDirectoryRosterSummary({ search: 'Missing dog', activeView: 'future', visibleCount: 0 }); });
+  await expect(page.locator('[data-directory-search-feedback]')).toContainText('No cached arrivals in the next six months match');
+  await page.evaluate(() => updateDirectoryRosterSummary({ search: 'Missing dog', activeView: 'current', visibleCount: 0 }));
+  await expect(page.locator('[data-directory-search-feedback]')).toHaveText('No stays match “Missing dog”.');
+});

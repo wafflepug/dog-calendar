@@ -21,6 +21,11 @@ on:
       - 'tests/care-overview-refinement.browser.spec.js'
       - 'tests/stable-stay-queue.browser.spec.js'
       - 'playwright.care-overview.config.js'
+      - 'tests/care-future-arrivals-lazy.browser.spec.js'
+      - 'playwright.care-future-arrivals.config.js'
+      - 'waffle-v11.1.96.js'
+      - 'waffle-v11.1.96.css'
+      - 'waffle-v11.1.99.js'
       - 'tests/care-state-preservation.test.js'
       - 'tests/care-csv-integrity.test.js'
       - 'tests/care-confirmed-reconciliation.test.js'
@@ -65,6 +70,11 @@ on:
       - 'tests/care-overview-refinement.browser.spec.js'
       - 'tests/stable-stay-queue.browser.spec.js'
       - 'playwright.care-overview.config.js'
+      - 'tests/care-future-arrivals-lazy.browser.spec.js'
+      - 'playwright.care-future-arrivals.config.js'
+      - 'waffle-v11.1.96.js'
+      - 'waffle-v11.1.96.css'
+      - 'waffle-v11.1.99.js'
       - 'tests/care-state-preservation.test.js'
       - 'tests/care-csv-integrity.test.js'
       - 'tests/care-confirmed-reconciliation.test.js'
@@ -134,6 +144,7 @@ jobs:
           node node_modules/@playwright/test/cli.js test --config=playwright.care-operation-review.config.js
           node node_modules/@playwright/test/cli.js test --config=playwright.care-roster.config.js
           node node_modules/@playwright/test/cli.js test --config=playwright.care-overview.config.js
+          node node_modules/@playwright/test/cli.js test --config=playwright.care-future-arrivals.config.js
           node node_modules/@playwright/test/cli.js test --config=playwright.runtime-review.config.js
 
       - name: Run cross-device UI placement regression

@@ -20,6 +20,7 @@
   let cachedFutureEvents = [];
   let cacheReady = false;
   let expanded = false;
+  let laterSearchRevision = 0;
 
   function pageName() {
     return String(window.WAFFLE_PAGE || document.body?.dataset?.wafflePage || '');
@@ -130,6 +131,54 @@
     return [name.toLowerCase(), dates.start, dates.end].join('|');
   }
 
+  function eventIdentityFor(event) {
+    const props = event?.extendedProps || {};
+    const stayId = String(props.stayId || '').trim().toLowerCase();
+    const dogId = String(props.dogId || '').trim().toLowerCase();
+    const dates = eventDates(event);
+    if (stayId) return `stay:${stayId}`;
+    if (dogId) return `dog:${dogId}|${dates.start}|${dates.end}`;
+    return `key:${stayKeyFor(event)}`;
+  }
+
+  function cardIdentityFor(card) {
+    const stayId = String(card?.dataset?.directoryStayId || '').trim().toLowerCase();
+    const dogId = String(card?.dataset?.directoryDogId || '').trim().toLowerCase();
+    const start = parseDateKey(card?.dataset?.directoryStartDate || card?.dataset?.startDate || '');
+    const end = parseDateKey(card?.dataset?.directoryEndDate || card?.dataset?.endDate || '');
+    if (stayId) return `stay:${stayId}`;
+    if (dogId) return `dog:${dogId}|${start}|${end}`;
+    return `key:${String(card?.dataset?.directoryStayKey || '')}`;
+  }
+
+  function findEventCard(event, events) {
+    const identity = eventIdentityFor(event);
+    const cards = allCareCards();
+    const exact = cards.find(card => cardIdentityFor(card) === identity);
+    if (exact) return exact;
+
+    /* Legacy cards may not yet have IDs attached. Reuse one only where the
+       old name/date key is unambiguous on both sides. */
+    const legacyKey = stayKeyFor(event);
+    const sameEventKey = events.filter(candidate => stayKeyFor(candidate) === legacyKey);
+    if (sameEventKey.length !== 1) return null;
+    const eventProps = event?.extendedProps || {};
+    const eventDog = String(eventProps.dogId || '').trim().toLowerCase();
+    const eventStay = String(eventProps.stayId || '').trim().toLowerCase();
+    const eventOwner = String(eventProps.ownerName || eventProps.owner || '').trim().toLowerCase();
+    const compatibleCards = cards.filter(card => {
+      if (String(card.dataset.directoryStayKey || '') !== legacyKey) return false;
+      const cardDog = String(card.dataset.directoryDogId || '').trim().toLowerCase();
+      const cardStay = String(card.dataset.directoryStayId || '').trim().toLowerCase();
+      const cardOwner = String(card.dataset.v1088OwnerName || '').trim().toLowerCase();
+      if (eventDog && cardDog && eventDog !== cardDog) return false;
+      if (eventStay && cardStay && eventStay !== cardStay) return false;
+      if (eventOwner && cardOwner && eventOwner !== cardOwner) return false;
+      return true;
+    });
+    return compatibleCards.length === 1 ? compatibleCards[0] : null;
+  }
+
   function isConfirmedFutureEvent(event) {
     const props = event?.extendedProps || {};
     if (props.isMeetGreet === true || props.isPotential === true) return false;
@@ -154,7 +203,7 @@
     return events
       .filter(isConfirmedFutureEvent)
       .filter(event => {
-        const key = stayKeyFor(event);
+        const key = eventIdentityFor(event);
         if (!key || seen.has(key)) return false;
         seen.add(key);
         return true;
@@ -172,7 +221,7 @@
     cachedFutureEvents = (Array.isArray(events) ? events : [])
       .filter(isConfirmedFutureEvent)
       .filter(event => {
-        const key = stayKeyFor(event);
+        const key = eventIdentityFor(event);
         if (!key || seen.has(key)) return false;
         seen.add(key);
         return true;
@@ -196,25 +245,22 @@
     return Array.from(host.querySelectorAll(':scope > .directory-card[data-directory-stay-key]'));
   }
 
-  function cardKeys() {
-    return new Set(allCareCards().map(card => String(card.dataset.directoryStayKey || '')));
-  }
-
   function laterEvents() {
-    const keys = cardKeys();
     return cachedFutureEvents.filter(event => {
       const start = eventDates(event).start;
-      return start > sevenDayKey() && !keys.has(stayKeyFor(event));
+      return start > sevenDayKey() && !findEventCard(event, cachedFutureEvents);
     });
   }
 
   function totalFutureCount() {
     if (!cacheReady) return null;
-    const keys = new Set(cachedFutureEvents.map(stayKeyFor));
+    const keys = new Set(cachedFutureEvents.map(eventIdentityFor));
     allCareCards().forEach(card => {
       const start = parseDateKey(card.dataset.directoryStartDate || card.dataset.startDate || '');
-      const key = String(card.dataset.directoryStayKey || '');
-      if (start > todayKey() && key) keys.add(key);
+      if (start <= todayKey()) return;
+      if (keys.has(cardIdentityFor(card))) return;
+      if (cachedFutureEvents.some(event => findEventCard(event, cachedFutureEvents) === card)) return;
+      keys.add(cardIdentityFor(card));
     });
     return keys.size;
   }
@@ -249,6 +295,8 @@
         data-directory-start-date="${escapeHtml(dates.start)}"
         data-directory-end-date="${escapeHtml(dates.end)}"
         data-directory-source-row="${escapeHtml(props.sourceRow || '')}"
+        data-directory-dog-id="${escapeHtml(props.dogId || '')}"
+        data-directory-stay-id="${escapeHtml(props.stayId || '')}"
         data-v1088-breed="${escapeHtml(breed)}"
         data-v1088-owner-name="${escapeHtml(owner)}"
         data-v1088-phone="${escapeHtml(phone)}"
@@ -417,7 +465,7 @@
     allCareCards()
       .filter(card => card.dataset.v11196SyntheticFuture === 'true')
       .forEach(card => {
-        const key = String(card.dataset.directoryStayKey || '');
+        const key = cardIdentityFor(card);
         if (!validKeys.has(key)) card.remove();
       });
   }
@@ -426,12 +474,12 @@
     const host = grid();
     if (!host) return;
 
-    const validKeys = new Set(events.map(stayKeyFor));
+    const validKeys = new Set(events.map(eventIdentityFor));
     removeStaleSyntheticCards(validKeys);
 
     const cardsByKey = new Map();
     allCareCards().forEach(card => {
-      const key = String(card.dataset.directoryStayKey || '');
+      const key = cardIdentityFor(card);
       if (!key) return;
       if (!cardsByKey.has(key)) cardsByKey.set(key, []);
       cardsByKey.get(key).push(card);
@@ -446,8 +494,7 @@
     });
 
     events.forEach(event => {
-      const key = stayKeyFor(event);
-      const existing = allCareCards().find(card => String(card.dataset.directoryStayKey || '') === key);
+      const existing = findEventCard(event, events);
       if (existing) return;
       const card = createFutureCard(event);
       if (card) host.appendChild(card);
@@ -500,6 +547,87 @@
     button.dataset.v11196Action = 'expand';
   }
 
+  function updateLaterSearchControl() {
+    const search = document.getElementById('guestDirectorySearch');
+    const feedback = document.querySelector('[data-directory-search-feedback]');
+    const toolbar = search?.closest('.guest-directory-toolbar');
+    if (!toolbar || !search || !feedback) return;
+    let button = toolbar.querySelector('[data-v11196-search-later]');
+    if (!button) {
+      button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'v11196-search-later-button';
+      button.dataset.v11196SearchLater = '';
+      button.textContent = 'Search later arrivals';
+      button.hidden = true;
+      feedback.insertAdjacentElement('afterend', button);
+      button.addEventListener('click', () => {
+        const revision = ++laterSearchRevision;
+        const query = String(search.value || '').trim();
+        const activeTab = document.querySelector('[data-v1082-stay-tab].is-active')?.dataset.v1082StayTab || 'current';
+        if (!query || activeTab !== 'future' || (!laterEvents().length && button.dataset.v11196Retry !== 'true')) return;
+        button.disabled = true;
+        button.textContent = 'Searching later arrivals…';
+        button.setAttribute('aria-busy', 'true');
+        requestAnimationFrame(() => {
+          if (revision !== laterSearchRevision || search.value.trim() !== query ||
+              (document.querySelector('[data-v1082-stay-tab].is-active')?.dataset.v1082StayTab || 'current') !== activeTab) {
+            button.disabled = false;
+            button.removeAttribute('aria-busy');
+            button.textContent = 'Search later arrivals';
+            updateLaterSearchControl();
+            return;
+          }
+          const cardsBeforeSearch = new Set(allCareCards());
+          const wasExpanded = expanded;
+          try {
+            activateLaterArrivals();
+            if (typeof filterGuestDirectoryCards === 'function') filterGuestDirectoryCards();
+            button.textContent = 'Search later arrivals';
+            button.removeAttribute('aria-busy');
+            button.disabled = false;
+            delete button.dataset.v11196Retry;
+            updateLaterSearchControl();
+          } catch (_) {
+            expanded = wasExpanded;
+            allCareCards().forEach(card => {
+              if (!cardsBeforeSearch.has(card) && card.dataset.v11196SyntheticFuture === 'true') card.remove();
+            });
+            try {
+              groupFutureCardsByMonth();
+              refreshExistingCareHooks();
+              updateMonthHeadingVisibility();
+            } catch (_) {}
+            button.removeAttribute('aria-busy');
+            button.disabled = false;
+            button.dataset.v11196Retry = 'true';
+            feedback.textContent = 'Later arrivals could not be shown.';
+            updateLaterSearchControl();
+          }
+        });
+      });
+    }
+    const query = String(search.value || '').trim();
+    const activeTab = document.querySelector('[data-v1082-stay-tab].is-active')?.dataset.v1082StayTab || 'current';
+    const queryChanged = button.dataset.v11196Query !== query || button.dataset.v11196Tab !== activeTab;
+    if (queryChanged) {
+      delete button.dataset.v11196Retry;
+    }
+    if (button.disabled && queryChanged) {
+      laterSearchRevision++;
+      button.disabled = false;
+      button.removeAttribute('aria-busy');
+      button.textContent = 'Search later arrivals';
+    }
+    button.dataset.v11196Query = query;
+    button.dataset.v11196Tab = activeTab;
+    if (button.dataset.v11196Retry === 'true' && query && activeTab === 'future') {
+      feedback.textContent = 'Later arrivals could not be shown.';
+    }
+    button.hidden = !(query && activeTab === 'future' && (laterEvents().length > 0 || button.dataset.v11196Retry === 'true'));
+    if (!button.disabled) button.textContent = button.dataset.v11196Retry === 'true' ? 'Retry later arrivals search' : 'Search later arrivals';
+  }
+
   function removeDeferredSyntheticCards() {
     allCareCards().forEach(card => {
       if (card.dataset.v11196SyntheticFuture !== 'true') return;
@@ -524,6 +652,7 @@
       mutating = false;
     }
     updateRangeControl();
+    updateLaterSearchControl();
     window.WAFFLE_V11201_CARE_COUNT_CONSISTENCY?.reconcileCounts?.();
   }
 
@@ -541,6 +670,7 @@
       mutating = false;
     }
     updateRangeControl();
+    updateLaterSearchControl();
     window.WAFFLE_V11201_CARE_COUNT_CONSISTENCY?.reconcileCounts?.();
   }
 
@@ -673,6 +803,7 @@
       mutating = false;
     }
     updateRangeControl();
+    updateLaterSearchControl();
     window.WAFFLE_V11201_CARE_COUNT_CONSISTENCY?.reconcileCounts?.();
   }
 
@@ -698,12 +829,20 @@
 
     document.addEventListener('click', event => {
       if (event.target?.closest?.('[data-v1082-stay-tab="future"]')) {
+        laterSearchRevision++;
         setTimeout(() => {
           updateFutureRangeCopy();
           updateMonthHeadingVisibility();
           updateRangeControl();
+          updateLaterSearchControl();
         }, 0);
       }
+      const otherTab = event.target?.closest?.('[data-v1082-stay-tab]:not([data-v1082-stay-tab="future"])');
+      if (otherTab) {
+        laterSearchRevision++;
+        setTimeout(updateLaterSearchControl, 0);
+      }
+      if (event.target?.closest?.('[data-directory-search-clear]')) setTimeout(updateLaterSearchControl, 0);
       const rangeButton = event.target?.closest?.('[data-v11196-expand-later]');
       if (rangeButton) {
         if (rangeButton.dataset.v11196Action === 'collapse') showNextSevenDaysOnly();
@@ -712,25 +851,10 @@
     }, true);
 
     document.getElementById('guestDirectorySearch')?.addEventListener('input', event => {
-      const query = String(event.target?.value || '').trim().toLocaleLowerCase();
-      if (query) {
-        if (!cacheReady) {
-          const bridgeEvents = window.WAFFLE_V11199_FUTURE_DATA_BRIDGE?.readConfirmedEvents?.();
-          cacheEvents(Array.isArray(bridgeEvents) ? bridgeEvents : futureEvents());
-        }
-        const matchesDistantStay = cachedFutureEvents.some(item => {
-          const props = item.extendedProps || {};
-          const haystack = [eventDogName(item), props.ownerName, props.owner, props.breed]
-            .join(' ').toLocaleLowerCase();
-          return eventDates(item).start > sevenDayKey() && haystack.includes(query);
-        });
-        if (matchesDistantStay) {
-          activateLaterArrivals();
-          document.querySelector('[data-v1082-stay-tab="future"]')?.click();
-        }
-      }
+      laterSearchRevision++;
       requestAnimationFrame(updateMonthHeadingVisibility);
       requestAnimationFrame(updateRangeControl);
+      requestAnimationFrame(updateLaterSearchControl);
     });
 
     window.addEventListener('pageshow', scheduleMaintain);
@@ -749,6 +873,7 @@
     },
     activateLaterArrivals,
     showNextSevenDaysOnly,
+    isExpanded: () => expanded,
     totalFutureCount,
     deferredCount: () => laterEvents().length,
     maintain

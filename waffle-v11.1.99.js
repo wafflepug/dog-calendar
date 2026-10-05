@@ -60,11 +60,14 @@
     const parsed = window.WaffleCsv?.parse(String(csvText || ''));
     const events = [];
     if (parsed?.ok) {
+      const headers = (parsed.records[0]?.cells || []).map(value => String(value || '').trim().toLowerCase());
+      const dogIdIndex = headers.indexOf('dog id');
+      const stayIdIndex = headers.indexOf('stay id');
       for (let i = 1; i < parsed.records.length; i += 1) {
         const row = parsed.records[i];
         if (!row.raw.trim()) continue;
         const cells = row.cells.slice();
-        while (cells.length < 12) cells.push('');
+        while (cells.length < 14) cells.push('');
         const dogName = String(cells[1] || '').trim();
         const breed = String(cells[2] || '').trim();
         const startDate = dateKey(cells[3]);
@@ -74,6 +77,8 @@
         const notes = String(cells[9] || '').trim();
         const editLink = String(cells[10] || '').trim();
         const bookingType = String(cells[11] || 'Boarding').trim();
+        const dogId = String(dogIdIndex >= 0 ? cells[dogIdIndex] : '').trim();
+        const stayId = String(stayIdIndex >= 0 ? cells[stayIdIndex] : '').trim();
         const lowerType = bookingType.toLowerCase();
         if (!dogName || !startDate || lowerType === 'meet & greet' || lowerType === 'potential stay') continue;
         events.push({
@@ -85,6 +90,7 @@
           extendedProps: {
             isMeetGreet: false, isPotential: false, dogName, breed,
             owner: ownerName, ownerName, phone, notes: notes || 'None',
+            dogId, stayId,
             rawStartDate: startDate, rawEndDate: endDate, sourceRow: i + 1,
             bookingType: bookingType || 'Boarding', editLink
           }

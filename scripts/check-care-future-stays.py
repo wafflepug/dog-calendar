@@ -47,7 +47,7 @@ require('waffle-v11.1.96.js', "button.textContent = 'Show next 7 days only'")
 require('waffle-v11.1.96.js', 'View ${deferredCount} later arrivals')
 require('waffle-v11.1.96.js', 'updateEvents(events)')
 require('waffle-v11.1.96.js', 'totalFutureCount')
-require('waffle-v11.1.96.js', 'matchesDistantStay')
+require('waffle-v11.1.96.js', 'updateLaterSearchControl')
 require('waffle-v11.1.96.js', 'requestedDeepLinkKey')
 require('waffle-v11.1.96.css', '.v11196-future-range-button')
 require('waffle-v11.1.96.css', '@media (forced-colors: active)')
@@ -121,10 +121,10 @@ if maintain_body.find('requestedDeepLinkKey()') > maintain_body.find('const init
     errors.append('waffle-v11.1.96.js: expand a requested distant stay before choosing the initial seven-day event set')
 
 for path in ('index.html', 'directory.html', 'reminders.html', 'audit.html'):
-    require(path, 'rev=2026.10.06.03')
-require('waffle-bootstrap.js', "ASSET_REVISION = '2026.10.06.03'")
-require('service-worker.js', 'v11.4.68-care-record-review-2026.10.06.03')
-require('waffle-build.json', 'Care Record Review & Quick Access')
+    require(path, 'rev=2026.10.06.04')
+require('waffle-bootstrap.js', "ASSET_REVISION = '2026.10.06.04'")
+require('service-worker.js', 'v11.4.69-care-later-arrival-search-2026.10.06.04')
+require('waffle-build.json', 'Care Later Arrival Search')
 require('waffle-release.json', 'Stay Operation Identity')
 
 # V11.2.01 is the final count-consistency guard. Current and Future share the
