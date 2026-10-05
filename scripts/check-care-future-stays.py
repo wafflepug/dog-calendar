@@ -121,11 +121,11 @@ if maintain_body.find('requestedDeepLinkKey()') > maintain_body.find('const init
     errors.append('waffle-v11.1.96.js: expand a requested distant stay before choosing the initial seven-day event set')
 
 for path in ('index.html', 'directory.html', 'reminders.html', 'audit.html'):
-    require(path, 'rev=2026.10.05.01')
-require('waffle-bootstrap.js', "ASSET_REVISION = '2026.10.05.01'")
-require('service-worker.js', 'v11.4.58-photo-resume-2026.10.05.01')
-require('waffle-build.json', 'Care Photo Resume')
-require('waffle-release.json', 'Care Photo Resume')
+    require(path, 'rev=2026.10.05.02')
+require('waffle-bootstrap.js', "ASSET_REVISION = '2026.10.05.02'")
+require('service-worker.js', 'v11.4.59-care-gallery-2026.10.05.02')
+require('waffle-build.json', 'Care Gallery Refinement')
+require('waffle-release.json', 'Care Gallery Refinement')
 
 # V11.2.01 is the final count-consistency guard. Current and Future share the
 # same DOM grid, so any legacy cards.length write must be replaced/reconciled

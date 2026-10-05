@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.10.05.01",
-  "releaseName": "Care Photo Resume",
+  "assetRevision": "2026.10.05.02",
+  "releaseName": "Care Gallery Refinement",
   "runtime": "waffle-bootstrap.js",
   "styles": "waffle-runtime.css",
   "phase": "phase-4-sitter-workflow-expansion",
