@@ -2,8 +2,8 @@
    Build: 2026.08.27.04
    Historical base styles remain compatibility sources during Phase 3A, but pages no longer
    reference them individually. Preserve this import order until modules are folded in. */
-@import url("waffle-app.css?build=2026.08.27.04&rev=2026.10.06.02");
-@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.10.06.02");
+@import url("waffle-app.css?build=2026.08.27.04&rev=2026.10.06.05");
+@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.10.06.05");
 @import url("waffle-v10.8.2.css?build=2026.08.27.04");
 @import url("waffle-v10.8.3.css?build=2026.08.27.04");
 @import url("waffle-v10.8.5.css?build=2026.08.27.04");
@@ -11,12 +11,12 @@
 @import url("waffle-v10.8.7.css?build=2026.08.27.04");
 @import url("waffle-v10.8.8.css?build=2026.08.27.04");
 @import url("waffle-v10.8.9.css?build=2026.08.27.04");
-@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.10.06.02");
+@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.10.06.05");
 @import url("waffle-v11.0.3.css?build=2026.08.27.04");
 @import url("waffle-v11.0.5.css?build=2026.08.27.04");
-@import url("waffle-v11.1.94.css?build=2026.10.06.02");
-@import url("waffle-v11.1.95.css?build=2026.10.06.02");
-@import url("waffle-v11.1.96.css?build=2026.10.06.02&rev=2026.10.06.02");
+@import url("waffle-v11.1.94.css?build=2026.10.06.05");
+@import url("waffle-v11.1.95.css?build=2026.10.06.05");
+@import url("waffle-v11.1.96.css?build=2026.10.06.05&rev=2026.10.06.05");
 
 /* ============================================================
    MOBILE FIRST-PAINT STABILITY GATE
@@ -1033,3 +1033,26 @@ body.dark-theme .v110-media-section{background:#111827}body.dark-theme .v110-med
 @media(max-width:768px){.v110-media-heading{align-items:stretch;padding:14px}.v110-add-stay-photo{width:100%;min-height:52px}.v110-media-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.v110-media-section-title{min-height:62px}.v110-media-group-content{padding:0 9px 10px}}
 @media(forced-colors:active){.v110-media-section,.v110-media-photo,.v110-media-empty{border:1px solid CanvasText}.v110-media-section-title,.v110-media-section-title .v110-media-count,.v110-add-stay-photo,.v110-media-photo-meta button,.v110-panel-error button{forced-color-adjust:auto;color:ButtonText;background:ButtonFace;border:1px solid ButtonText}.v110-media-panel button:focus-visible{outline:3px solid Highlight;outline-offset:2px}}
 @media(prefers-reduced-motion:reduce){.v110-panel-spinner{animation:none!important}}
+
+/* Returning-dog review shares Care's readable type and touch targets. */
+#p4Modal [data-p4-panel="booking"] { font-size: 14px; line-height: 1.45; }
+#p4Modal [data-p4-panel="booking"] .p4-field > span { font-size: 12px; text-transform: none; letter-spacing: normal; color: var(--wh-text, #172033); }
+#p4Modal [data-p4-panel="booking"] .p4-field input,
+#p4Modal [data-p4-panel="booking"] .p4-field select,
+#p4Modal [data-p4-panel="booking"] .p4-field textarea { font-size: 16px; min-height: 44px; }
+#p4Modal [data-p4-panel="booking"] .p4-return,
+#p4Modal [data-p4-panel="booking"] .p4-empty,
+#p4Modal [data-p4-panel="booking"] .p4-section p,
+#p4Modal [data-p4-panel="booking"] small { font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; }
+#p4Modal [data-p4-panel="booking"] .p4-return { display: grid; gap: 10px; min-width: 0; }
+#p4Modal [data-p4-panel="booking"] .p4-grid { min-width: 0; }
+#p4Modal [data-p4-panel="booking"] .p4-field { min-width: 0; }
+#p4Modal [data-p4-panel="booking"] button,
+#v108BoardingModal [data-v108-choose-returning] { min-height: 44px; max-width: 100%; padding: 9px 12px; font: inherit; font-weight: 750; white-space: normal; overflow-wrap: anywhere; border: 1px solid var(--wh-border, #cbd5e1); border-radius: 10px; color: var(--wh-text, #172033); background: var(--wh-surface, #fff); cursor: pointer; }
+#p4Modal [data-p4-panel="booking"] button.primary { color: #fff; background: var(--wh75-accent, #7c3aed); }
+#p4Modal [data-p4-panel="booking"] button small { display: block; margin-top: 3px; }
+#p4Modal [data-p4-panel="booking"] button:focus-visible,
+#v108BoardingModal [data-v108-choose-returning]:focus-visible { outline: 3px solid var(--wh75-accent, #7c3aed); outline-offset: 3px; }
+@media(max-width:600px) { #p4Modal [data-p4-panel="booking"] .p4-grid { grid-template-columns: minmax(0, 1fr); } }
+
+#p4Modal [data-p4-panel="booking"] .p4-care-confirm { display: flex; align-items: center; gap: 8px; min-height: 44px; }

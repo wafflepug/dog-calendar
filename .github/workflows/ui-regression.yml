@@ -15,6 +15,7 @@ on:
       - 'tests/care-profile-readiness.test.js'
       - 'tests/care-profile-readiness.browser.spec.js'
       - 'tests/care-overview-refinement.browser.spec.js'
+      - 'tests/returning-dog-inheritance.spec.js'
       - 'tests/stable-stay-queue.browser.spec.js'
       - 'playwright.care-overview.config.js'
       - 'tests/care-state-preservation.test.js'
@@ -55,6 +56,7 @@ on:
       - 'tests/care-profile-readiness.test.js'
       - 'tests/care-profile-readiness.browser.spec.js'
       - 'tests/care-overview-refinement.browser.spec.js'
+      - 'tests/returning-dog-inheritance.spec.js'
       - 'tests/stable-stay-queue.browser.spec.js'
       - 'playwright.care-overview.config.js'
       - 'tests/care-state-preservation.test.js'
@@ -123,6 +125,7 @@ jobs:
           node node_modules/@playwright/test/cli.js test --config=playwright.care-loading-feedback.config.js
           node node_modules/@playwright/test/cli.js test --config=playwright.care-navigation-continuity.config.js
           node node_modules/@playwright/test/cli.js test --config=playwright.care-overview.config.js
+          node node_modules/@playwright/test/cli.js test --config=playwright.returning-dogs.config.js
           node node_modules/@playwright/test/cli.js test --config=playwright.runtime-review.config.js
 
       - name: Run cross-device UI placement regression

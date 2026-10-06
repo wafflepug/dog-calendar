@@ -15,8 +15,10 @@ test('confirmed booking defaults to new identity and labels exact existing choic
   assert.match(booking, /Dog ID \$\{number\}/);
   assert.match(booking, /item\.ownerName/);
   assert.match(booking, /item\.maskedPhoneTail/);
-  assert.match(booking, /if\(v\.dogId\)payload\.dogId=v\.dogId/);
-  assert.match(booking, /copyPreviousProfile:!!v\.dogId/);
+  assert.match(booking, /if\(v\.dogId\)\{payload\.dogId=v\.dogId;payload\.inheritDogPhoto=true\}/);
+  assert.match(booking, /inheritCareReview=care/);
+  assert.match(booking, /reviewedCarePayload/);
+  assert.doesNotMatch(booking, /copyPreviousProfile:!!v\.dogId/);
   assert.doesNotMatch(booking, /function updateDecision\(\)[^\n]*returning\(/);
   assert.doesNotMatch(booking, /get_returning_guest_prefill/);
   assert.match(booking, /sameName\.length>1/);

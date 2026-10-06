@@ -190,6 +190,10 @@ function reserveStayMutationV11225_(receiptSheet, receipt, row, data) {
       bookingType: receipt.action === 'create_potential' ? 'Potential Stay' : 'Confirmed Boarding'
     };
     if (String(data.dogId || '').trim()) expectedCreate.dogId = String(data.dogId).trim();
+    if (data.inheritDogPhoto === true) expectedCreate.inheritDogPhoto = true;
+    if (data.inheritCareReview && data.inheritCareReview.confirmed === true) {
+      expectedCreate.inheritCareReview = data.inheritCareReview;
+    }
     responseJson = JSON.stringify({ recoveryPlan: { expected: expectedCreate } });
   } else {
     var sourceSheet = getTargetSheet_();
@@ -263,12 +267,26 @@ function recoverCreatedStayMutationV11225_(receiptSheet, receipt, bookingSheet) 
   }
   if (!dog.dogId) throw new Error('The created booking is missing its assigned Dog ID; receipt recovery stopped.');
   dog = assignV108DogIdentity_(bookingSheet, row, dog.dogId);
+  if (expected.inheritCareReview && typeof applyReviewedCareInheritanceV11225_ === 'function') {
+    applyReviewedCareInheritanceV11225_(expected.inheritCareReview, dog.dogId, expected.dogName,
+      makeGuestStayKey_(expected.dogName, expected.startDate, expected.endDate), expected.startDate, expected.endDate);
+  }
+  var dogPhotoSync = { applied:false, reason:expected.inheritDogPhoto ? 'photo-sync-unavailable' : 'not-requested' };
+  if (expected.inheritDogPhoto === true && typeof seedDogStayPhotoForConfirmedBookingV11208_ === 'function') {
+    dogPhotoSync = seedDogStayPhotoForConfirmedBookingV11208_({
+      dogId:dog.dogId, dogName:expected.dogName, breed:expected.breed,
+      stayKey:makeGuestStayKey_(expected.dogName, expected.startDate, expected.endDate), stayId:receipt.stayId
+    });
+    if (dogPhotoSync && dogPhotoSync.reason === 'photo-source-unavailable') {
+      throw new Error('The booking exists, but its selected Dog ID photo source is temporarily unavailable. Retry the same booking request to finish photo inheritance.');
+    }
+  }
   rows = bookingSheet.getDataRange().getValues();
   var booking = auditBookingSnapshotFromSheetRow_(bookingSheet, row) || {};
   booking.stayId = receipt.stayId;
   var response = { result: 'success', action: receipt.action, row: row, stayId: receipt.stayId,
     booking: booking, dogId: dog.dogId || '', dogNumber: dog.dogNumber || '',
-    clientMutationId: receipt.id, recovered: true, followUpNeeded: true };
+    clientMutationId: receipt.id, recovered: true, followUpNeeded: true, dogPhotoSync:dogPhotoSync };
   writeStayMutationReceiptV11225_(receiptSheet, receipt.row, { id: receipt.id, action: receipt.action,
     digest: receipt.digest, state: 'succeeded', stayId: receipt.stayId,
     responseJson: JSON.stringify(response), createdAt: receipt.createdAt });

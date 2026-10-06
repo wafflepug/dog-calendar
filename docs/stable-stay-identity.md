@@ -102,10 +102,15 @@ Old read clients can still read sheets without the new columns. Direct legacy
 web creates without a client mutation ID may receive a generated Stay ID, but
 those direct calls do not have a retry receipt guarantee. Legacy update/delete
 fallbacks require unique name/date evidence and fail closed when ambiguous.
-External Google Form submissions and `onFormSubmit`/`save_intake` paths are not
-assigned Stay IDs by this web-app integration; they need a separately reviewed
-trigger integration or later explicit backfill. IDs are not automatically
-assigned to historical records on reads.
+Legacy web `save_intake` creates now append Dog ID (when available) and a
+generated Stay ID in the booking row write. The installed form-submit trigger
+assigns a Stay ID to the exact newly submitted boarding or potential row after
+validating its dog and date range; it never resolves Dog ID by name. If the
+trigger cannot acquire the lock or the row fails validation, it leaves the row
+untouched and logs the enrollment failure for explicit repair. These legacy
+paths do not gain the web booking receipt guarantee unless a client mutation
+ID is supplied through the receipt wrapper. Historical rows still receive IDs
+only through the explicit `backfill_stay_ids` action, never on reads.
 
 `Stay_Operations` remains keyed by legacy `stayKey` in this slice. Existing
 operation rows are not migrated or assigned to an owner. Unique historical
@@ -113,6 +118,24 @@ early checkout behavior remains on the existing reader; ambiguous legacy
 operations stay quarantined under the current collision policy. Moving
 operation records to Stay ID needs a separate migration with ambiguity and
 rollback handling. Care/media/profile keys also remain unchanged.
+
+`get_dog_history` now includes each booking's `stayId` and `dogId`. It adds
+checkout status, timestamp, and actual checkout date only when the operations
+reader proves one exact Stay ID match or one unique legacy stay-key match.
+History also reports dated care-record provenance without claiming a field
+change audit. `latestCompletedProfile` is separate from the legacy
+`latestProfile`; it includes source Stay ID (when present), Dog ID, stay key,
+dates, and saved care values only for one unambiguous completed stay.
+
+Confirmed booking creation accepts `inheritCareReview` only after an explicit
+review. The server verifies the source booking and dog, requires a completed
+stay and saved care record, and rejects ambiguous stay keys or values outside
+the source fields. Legacy sources without Stay IDs are accepted only when
+Stay Key, end date, and Dog ID identify exactly one booking. Reviewed values
+merge into the destination record without clearing omitted fields. The review
+is checked before the booking append and is part of the durable create receipt,
+so recovery can safely finish a committed append without making another stay.
+The older `copyPreviousProfile` request is no longer applied automatically.
 
 The deploy workflow pushes to Apps Script and creates a live deployment when
 the matching source reaches `main`; it verifies protocol version 1 through a

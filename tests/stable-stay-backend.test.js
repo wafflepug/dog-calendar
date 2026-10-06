@@ -11,6 +11,7 @@ const deleteSource = fs.readFileSync(path.join(root, 'apps-script', 'V11198Confi
 const wrapperStart = code.indexOf('function processSheetActionWithV108Receipt_(data) {');
 const wrapperEnd = code.indexOf('function ensureBelongingsRecordForPhoto_(data)', wrapperStart);
 const createStart = code.indexOf('function createV108Boarding_(data) {');
+const inheritanceStart = code.indexOf('function validateReviewedCareInheritanceV11225_(review, dogId) {');
 const createEnd = code.indexOf('function updateV108BoardingDates_(data)', createStart);
 const updateStart = createEnd;
 const updateEnd = code.indexOf('function updateV108MeetGreetSchedule_(data)', updateStart);
@@ -172,7 +173,7 @@ function makeHarness(options = {}) {
   vm.createContext(sandbox);
   const loaded = `${helperSource}\n${code.slice(wrapperStart, wrapperEnd)}\n${code.slice(createStart, createEnd)}\n${code.slice(updateStart, updateEnd)}\n` +
     (options.actualCore ? `${code.slice(coreStart, coreEnd)}\n${deleteSource}\n` : '') +
-    `${code.slice(currentReadStart, currentReadEnd)}\n${code.slice(potentialReadStart, potentialReadEnd)}\n` +
+  `${code.slice(inheritanceStart, createStart)}\n${code.slice(currentReadStart, currentReadEnd)}\n${code.slice(potentialReadStart, potentialReadEnd)}\n` +
     'this.createV108Boarding_ = createV108Boarding_; this.updateV108BoardingDates_ = updateV108BoardingDates_;';
   vm.runInContext(loaded, sandbox);
   return { sandbox, bookings, ss, props, get lockHeld() { return lockHeld; }, get lockAttempts() { return lockAttempts; } };
@@ -188,6 +189,17 @@ function potentialRequest(action, id, stayId, values = {}) {
   return { action, clientMutationId: id, stayIdentityVersion: 1, stayId,
     dogName: 'Nori', breed: 'Poodle', ownerName: 'Bea', phone: '0400000001',
     startDate: '2026-12-01', endDate: '2026-12-03', notes: 'quiet room', ...values };
+}
+
+// Explicit care inheritance is validated before the booking append so an
+// invalid or stale review cannot leave a new booking behind.
+{
+  const h = makeHarness();
+  assert.throws(() => h.sandbox.createV108Boarding_(request('unused', stayA, {
+    inheritCareReview: { confirmed: true, sourceStayId: 'stale', sourceStayKey: 'milo|2026-10-01|2026-10-02',
+      sourceEndDate: '2026-10-02', profile: {}, riskFlags: {} }
+  })), /source stay identity is incomplete/i);
+  assert.equal(h.bookings.getLastRow(), 1, 'failed review validation leaves no booking row');
 }
 
 // Real receipt wrapper + real create handler: a crash after atomic append is

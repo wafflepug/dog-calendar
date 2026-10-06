@@ -36,3 +36,5 @@ jobs:
           node --check apps-script/DeploymentIdentity.js
           node --check scripts/generate-backend-deployment.js
           node --test tests/deployment-attribution.test.js
+      - name: Verify returning-dog and Care integration fixtures
+        run: node --test tests/*.test.js

@@ -3748,16 +3748,23 @@ function createV108IntakeBooking_(data, sheet) {
   sheet = sheet || getTargetSheet_();
   var rows = sheet.getDataRange().getValues();
   var dogName = String(data.dogName || "").trim();
+  var startDate = normalizeDateValue_(data.startDate), endDate = normalizeDateValue_(data.endDate || data.startDate);
+  if (!dogName || !validStableStayDateV11225_(startDate) || !validStableStayDateV11225_(endDate) || endDate < startDate) {
+    throw new Error("A valid dog name and boarding date range are required.");
+  }
   var dogId = String(data.dogId || "").trim();
   if (dogId) {
     resolveV108DogRows_(rows, {dogId:dogId}, "saving this booking");
     assertV108DogNameMatchesId_(rows, dogId, dogName);
   } else dogId = newV108DogId_();
-  ensureV108DogIdColumn_(sheet);
-  sheet.appendRow([new Date(),data.dogName||"",data.breed||"",data.startDate||"",data.endDate||"",data.ownerName||"",data.phone||"",data.likes||"",data.dislikes||"",data.notes||"","","Boarding"]);
-  var row = sheet.getLastRow();
+  var dogColumns = ensureV108DogIdColumn_(sheet), stableColumns = stableStayHeadersV11225_(sheet, true);
+  var rowData = [new Date(),dogName,data.breed||"",startDate,endDate,data.ownerName||"",data.phone||"",data.likes||"",data.dislikes||"",data.notes||"","","Boarding"];
+  while (rowData.length < stableColumns.width) rowData.push("");
+  rowData[dogColumns.id] = dogId;
+  var appended = appendStableStayRowV11225_(sheet, rowData, String(data.stayId || ""), String(data.clientMutationId || ""));
+  var row = appended.row;
   var identity=assignV108DogIdentity_(sheet,row,dogId);
-  return {row:row,dogId:identity.dogId,dogNumber:identity.dogNumber};
+  return {row:row,stayId:appended.stayId,dogId:identity.dogId,dogNumber:identity.dogNumber};
 }
 
 function indexV108BookingStayKeys_(rows) {
@@ -3881,21 +3888,84 @@ function getV108DogHistory_(data) {
     owners[normalizeV108Identity_(ownerName) + "|" + phoneTailV108_(phone)] = {ownerName: ownerName, phone: phone};
     stays.push({
       stayKey: makeGuestStayKey_(String(rows[i][1] || ""), start, end),
+      stayId: stableStayIdAtV11225_(rows, i),
+      dogId: v108DogIdentityAt_(rows, i).dogId || "",
       dogName: String(rows[i][1] || ""), breed: String(rows[i][2] || ""),
       startDate: start, endDate: end, ownerName: ownerName, phone: phone,
       notes: String(rows[i][9] || ""), bookingType: type || "Boarding"
     });
   }
   stays.sort(function(a,b){ return String(b.endDate || b.startDate).localeCompare(String(a.endDate || a.startDate)); });
+  // Enrich history only from operations records whose UUID (or unique legacy
+  // stay key) the operations reader has already verified against one booking.
+  var operationRecords = stays.length ? readStayOperations_({
+    stayKeys: stays.map(function(stay) { return stay.stayKey; }),
+    stayIds: stays.map(function(stay) { return stay.stayId; }).filter(Boolean)
+  }) : [];
+  stays.forEach(function(stay) {
+    var operation = operationRecords.filter(function(record) {
+      if (record.identityConflict) return false;
+      if (stay.stayId) return String(record.stayId || "").toLowerCase() === stay.stayId.toLowerCase();
+      return !record.stayId && record.stayKey === stay.stayKey;
+    });
+    if (operation.length !== 1) return;
+    stay.status = operation[0].status || "";
+    stay.checkedOutAt = operation[0].checkedOutAt || "";
+    stay.actualCheckoutDate = operation[0].actualCheckoutDate || "";
+  });
   var staySet = {};
   var stayIndex = indexV108BookingStayKeys_(rows);
+  var historyKeyCounts = {};
+  stays.forEach(function(stay) { historyKeyCounts[stay.stayKey] = (historyKeyCounts[stay.stayKey] || 0) + 1; });
+  var careRecords = stays.length ? readBelongingsRecords_(getBelongingsSheet_(), stays.map(function(stay) { return stay.stayKey; })) : [];
   stays.forEach(function(stay) {
     var owners = stayIndex[stay.stayKey] || {};
     if (Object.keys(owners).length === 1 && (identity.dogId ? owners[identity.dogId] : owners["legacy-row-" + identity.rows[0]])) staySet[stay.stayKey] = true;
+    if (historyKeyCounts[stay.stayKey] !== 1 || !staySet[stay.stayKey]) return;
+    var matches = careRecords.filter(function(record) { return String(record.stayKey || "") === stay.stayKey; });
+    if (matches.length !== 1) return;
+    var care = matches[0], careValues = care.intakeAttributes || {}, riskValues = care.riskFlags || {};
+    if (!hasHistoryCareValues(careValues, false) && !hasHistoryCareValues(riskValues, true)) return;
+    stay.careChanges = [{
+      updatedAt: care.updatedAt instanceof Date ? care.updatedAt.toISOString() : String(care.updatedAt || ""),
+      source: String(care.intakeAttributesSource || "").trim()
+    }];
   });
   var records = readBelongingsRecords_(getBelongingsSheet_(), []).filter(function(r){ return staySet[String(r.stayKey || "")] === true; });
   records.sort(function(a,b){ return String(b.endDate || b.startDate || "").localeCompare(String(a.endDate || a.startDate || "")); });
   var latest = records.length ? records[0] : null;
+  var today = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd");
+  var completedStayByKey = {};
+  stays.forEach(function(stay) {
+    if (historyKeyCounts[stay.stayKey] !== 1 || !staySet[stay.stayKey]) return;
+    var completed = !!stay.endDate && stay.endDate < today;
+    var actualCheckout = normalizeDateValue_(stay.actualCheckoutDate || "");
+    if (!completed && stay.status === "checked_out" && actualCheckout && actualCheckout <= today) completed = true;
+    if (completed) completedStayByKey[stay.stayKey] = stay;
+  });
+  var latestCompletedCare = null;
+  function hasHistoryCareValues(values, riskFlagsOnly) {
+    return Object.keys(values || {}).some(function(key) {
+      var value = values[key];
+      if (riskFlagsOnly) return value === true || String(value || "").trim().toLowerCase() === "true";
+      return typeof value === "boolean" || (value !== null && value !== undefined && String(value).trim() !== "");
+    });
+  }
+  for (var completedIndex = 0; completedIndex < records.length; completedIndex++) {
+    var completedRecord = records[completedIndex], completedStay = completedStayByKey[String(completedRecord.stayKey || "")];
+    if (!completedStay) continue;
+    var completedProfile = completedRecord.intakeAttributes || {}, completedFlags = completedRecord.riskFlags || {};
+    if (!hasHistoryCareValues(completedProfile, false) && !hasHistoryCareValues(completedFlags, true)) continue;
+    latestCompletedCare = {
+      sourceStayId: completedStay.stayId || "", sourceDogId: completedStay.dogId || "",
+      sourceStayKey: completedStay.stayKey, sourceStartDate: completedStay.startDate,
+      sourceEndDate: completedStay.endDate,
+      updatedAt: completedRecord.updatedAt instanceof Date ? completedRecord.updatedAt.toISOString() : String(completedRecord.updatedAt || ""),
+      intakeAttributes: completedProfile, intakeAttributesSource: completedRecord.intakeAttributesSource || "",
+      riskFlags: completedFlags
+    };
+    break;
+  }
   return {
     dogName: dogName,
     dogId: identity.dogId,
@@ -3903,7 +3973,8 @@ function getV108DogHistory_(data) {
     stayCount: stays.length,
     previousStays: stays,
     owners: Object.keys(owners).map(function(k){ return owners[k]; }).filter(function(o){ return o.ownerName || o.phone; }),
-    latestProfile: latest ? {stayKey: latest.stayKey, intakeAttributes: latest.intakeAttributes || {}, intakeAttributesSource: latest.intakeAttributesSource || "", riskFlags: latest.riskFlags || {}, dogPhoto: latest.dogPhoto || null, dogPhotoGallery: latest.dogPhotoGallery || []} : null
+    latestProfile: latest ? {stayKey: latest.stayKey, intakeAttributes: latest.intakeAttributes || {}, intakeAttributesSource: latest.intakeAttributesSource || "", riskFlags: latest.riskFlags || {}, dogPhoto: latest.dogPhoto || null, dogPhotoGallery: latest.dogPhotoGallery || []} : null,
+    latestCompletedProfile: latestCompletedCare
   };
 }
 
@@ -3971,6 +4042,110 @@ function copyV108PreviousProfile_(dogName, dogId, newStayKey, startDate, endDate
   return {copied:true,sourceStayKey:previous.stayKey};
 }
 
+function validateReviewedCareInheritanceV11225_(review, dogId) {
+  if (!review || review.confirmed !== true) return null;
+  if (!review.profile || typeof review.profile !== "object" || Array.isArray(review.profile) ||
+      !review.riskFlags || typeof review.riskFlags !== "object" || Array.isArray(review.riskFlags)) {
+    throw new Error("Reviewed care details are incomplete. Refresh the review before saving.");
+  }
+  var sourceId = String(review.sourceStayId || "").trim();
+  var sourceKey = String(review.sourceStayKey || "").trim();
+  var sourceEnd = normalizeDateValue_(review.sourceEndDate);
+  if ((sourceId && !validStayIdV11225_(sourceId)) || !sourceKey || !validStableStayDateV11225_(sourceEnd)) {
+    throw new Error("Reviewed source stay identity is incomplete. Refresh the stay history before saving.");
+  }
+  var sheet = getTargetSheet_(), rows = sheet.getDataRange().getValues(), sourceRow = -1, sourceMatches = [];
+  if (sourceId) sourceRow = findStayRowByIdV11225_(sheet, sourceId);
+  else {
+    // Legacy history may be used only with exact key, dates and Dog ID proof;
+    // any duplicate candidate remains unresolved.
+    for (var i = 1; i < rows.length; i++) {
+      if (makeGuestStayKey_(String(rows[i][1] || ""), normalizeDateValue_(rows[i][3]), normalizeDateValue_(rows[i][4] || rows[i][3])) !== sourceKey ||
+          normalizeDateValue_(rows[i][4] || rows[i][3]) !== sourceEnd) continue;
+      if (String(v108DogIdentityAt_(rows, i).dogId || "").trim() === String(dogId || "").trim()) sourceMatches.push(i + 1);
+    }
+    if (sourceMatches.length === 1) sourceRow = sourceMatches[0];
+  }
+  if (sourceRow < 2) throw new Error("Reviewed source stay is missing or ambiguous. Refresh the stay history before saving.");
+  var matchingSourceRows = [];
+  for (var sourceIndex = 1; sourceIndex < rows.length; sourceIndex++) {
+    if (makeGuestStayKey_(String(rows[sourceIndex][1] || ""), normalizeDateValue_(rows[sourceIndex][3]), normalizeDateValue_(rows[sourceIndex][4] || rows[sourceIndex][3])) === sourceKey &&
+        normalizeDateValue_(rows[sourceIndex][4] || rows[sourceIndex][3]) === sourceEnd) matchingSourceRows.push(sourceIndex + 1);
+  }
+  if (matchingSourceRows.length !== 1 || matchingSourceRows[0] !== sourceRow) {
+    throw new Error("Reviewed source stay key is ambiguous. Refresh the stay history before saving.");
+  }
+  var source = auditBookingSnapshotFromSheetRow_(sheet, sourceRow) || {};
+  var sourceDog = v108DogIdentityAt_(rows, sourceRow - 1);
+  if (source.bookingType && normalizeV108Identity_(source.bookingType) !== "confirmed boarding" && normalizeV108Identity_(source.bookingType) !== "boarding") {
+    throw new Error("Reviewed source is not a confirmed boarding stay.");
+  }
+  if (sourceId && source.stayId && String(source.stayId).toLowerCase() !== sourceId.toLowerCase()) throw new Error("Reviewed source Stay ID changed. Refresh the stay history.");
+  if (makeGuestStayKey_(source.dogName, source.startDate, source.endDate) !== sourceKey || normalizeDateValue_(source.endDate) !== sourceEnd) {
+    throw new Error("Reviewed source stay dates changed. Refresh the stay history before saving.");
+  }
+  if (!dogId || !sourceDog.dogId || String(sourceDog.dogId).trim() !== String(dogId).trim()) {
+    throw new Error("Reviewed care details do not belong to the selected dog record.");
+  }
+  var sourceCare = readBelongingsRecords_(getBelongingsSheet_(), [sourceKey]).filter(function(record) { return record.stayKey === sourceKey; });
+  function hasMeaningfulValues(values, riskFlagsOnly) {
+    return Object.keys(values || {}).some(function(key) {
+      var value = values[key];
+      if (riskFlagsOnly) return value === true || String(value || "").trim().toLowerCase() === "true";
+      return typeof value === "boolean" || (value !== null && value !== undefined && String(value).trim() !== "");
+    });
+  }
+  if (sourceCare.length !== 1 || !(hasMeaningfulValues(sourceCare[0].intakeAttributes, false) || hasMeaningfulValues(sourceCare[0].riskFlags, true))) {
+    throw new Error("Reviewed source has no saved care details. Refresh the stay history before saving.");
+  }
+  var reviewedFields = validateDogCareInheritanceReviewV1_(review, {
+    sourceStayId:source.stayId || "", sourceDogId:String(dogId), sourceStayKey:sourceKey, sourceEndDate:sourceEnd
+  });
+  var today = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd");
+  var isCompleted = sourceEnd < today;
+  var sourceOperations = readStayOperations_({ stayKeys:[sourceKey], stayIds:sourceId?[sourceId]:[] }).filter(function(operation) {
+    if (operation.identityConflict) return false;
+    return sourceId ? String(operation.stayId || "").toLowerCase() === sourceId.toLowerCase() : (!operation.stayId && operation.stayKey === sourceKey);
+  });
+  if (!isCompleted && sourceOperations.length === 1 && sourceOperations[0].status === "checked_out") {
+    var actualCheckout = normalizeDateValue_(sourceOperations[0].actualCheckoutDate || sourceOperations[0].checkedOutAt || "");
+    if (actualCheckout && actualCheckout <= today) isCompleted = true;
+  }
+  if (!isCompleted) throw new Error("Reviewed care source must be a completed stay.");
+  var sourceProfile = sourceCare[0].intakeAttributes || {}, sourceFlags = sourceCare[0].riskFlags || {};
+  var safeProfile = {}, safeFlags = {};
+  Object.keys(reviewedFields.profile).forEach(function(key) {
+    if (!Object.prototype.hasOwnProperty.call(sourceProfile, key)) throw new Error("Reviewed care profile contains a field absent from its source stay.");
+    var value = reviewedFields.profile[key];
+    if (typeof value !== "string" && typeof value !== "boolean") throw new Error("Reviewed care profile contains an unsupported value.");
+    if (String(value).trim()) safeProfile[key] = value;
+  });
+  Object.keys(reviewedFields.riskFlags).forEach(function(key) {
+    if (!Object.prototype.hasOwnProperty.call(sourceFlags, key)) throw new Error("Reviewed risk details contain a field absent from its source stay.");
+    var value = reviewedFields.riskFlags[key];
+    if (typeof value === "string" && /^(true|false)$/i.test(value.trim())) value = value.trim().toLowerCase() === "true";
+    if (typeof value !== "boolean") throw new Error("Reviewed risk details must be true or false.");
+    safeFlags[key] = value;
+  });
+  if (review.sourceDogId && String(review.sourceDogId).trim() !== String(dogId).trim()) throw new Error("Reviewed source Dog ID does not match the selected dog record.");
+  return {sourceId:sourceId.toLowerCase(), sourceKey:sourceKey, sourceEnd:sourceEnd, sourceRow:sourceRow,
+    review:{confirmed:true,sourceStayId:sourceId,sourceDogId:String(dogId),sourceStayKey:sourceKey,sourceEndDate:sourceEnd,profile:safeProfile,riskFlags:safeFlags}};
+}
+
+function applyReviewedCareInheritanceV11225_(review, dogId, dogName, newStayKey, startDate, endDate) {
+  var validated = validateReviewedCareInheritanceV11225_(review, dogId);
+  if (!validated) return {copied:false};
+  var destinationRows = readBelongingsRecords_(getBelongingsSheet_(), [newStayKey]);
+  var destinationRecord = destinationRows.filter(function(record) { return record.stayKey === newStayKey; })[0] || {};
+  var mergedProfile = mergeReviewedDogCareFieldsV1_(destinationRecord.intakeAttributes || {}, validated.review.profile);
+  var mergedFlags = mergeReviewedDogCareFieldsV1_(destinationRecord.riskFlags || {}, validated.review.riskFlags);
+  var destination = upsertBelongingsRecord_(getBelongingsSheet_(), {
+    stayKey: newStayKey, dogName: dogName, startDate: startDate, endDate: endDate,
+    intakeAttributes: mergedProfile, intakeAttributesSource: "Reviewed from previous stay", riskFlags: mergedFlags
+  });
+  return {copied:true, sourceStayId:validated.sourceId, sourceStayKey:validated.sourceKey, row:destination};
+}
+
 function createV108Boarding_(data) {
   var dogName=String(data.dogName||"").trim(), breed=String(data.breed||"").trim(), owner=String(data.ownerName||"").trim(), phone=String(data.phone||"").trim();
   var start=normalizeDateValue_(data.startDate), end=normalizeDateValue_(data.endDate||data.startDate);
@@ -3979,13 +4154,21 @@ function createV108Boarding_(data) {
   var sheet=getTargetSheet_();
   var rows=sheet.getDataRange().getValues();
   var selectedDogId=String(data.dogId||"").trim();
-  var copyRequested=(data.copyPreviousProfile === true || String(data.copyPreviousProfile).toLowerCase()==="true");
-  var copySkippedReason=copyRequested&&!selectedDogId?"Select an existing dog record to copy its profile.":"";
+  var copyRequested=!!(data.inheritCareReview && data.inheritCareReview.confirmed === true);
+  var photoRequested=data.inheritDogPhoto === true;
+  var copySkippedReason=!copyRequested && (data.copyPreviousProfile === true || String(data.copyPreviousProfile).toLowerCase()==="true") ? "review-required" : "";
   var dogId=selectedDogId||newV108DogId_();
+  if (photoRequested && !selectedDogId) throw new Error("Select an exact Dog ID before carrying its photo to this stay.");
   if(selectedDogId) {
     var selected=resolveV108DogRows_(rows,{dogId:selectedDogId,dogName:dogName},"creating this booking");
     if(!selected.rows.length) throw dogIdError_("DOG_ID_NOT_FOUND","Selected dog record is no longer available.");
     assertV108DogNameMatchesId_(rows, selectedDogId, dogName);
+  }
+  if (copyRequested) {
+    validateReviewedCareInheritanceV11225_(data.inheritCareReview, dogId);
+    var existingDestinationCare = readBelongingsRecords_(getBelongingsSheet_(), [makeGuestStayKey_(dogName,start,end)])
+      .filter(function(record) { return record.stayKey === makeGuestStayKey_(dogName,start,end); });
+    if (existingDestinationCare.length > 1) throw new Error("Destination care details have duplicate stay keys; no booking was created.");
   }
   if(copyRequested && selectedDogId) validateV108DogProfileCopy_(dogName, dogId, rows);
   var dogColumns=ensureV108DogIdColumn_(sheet);
@@ -3998,14 +4181,19 @@ function createV108Boarding_(data) {
   var dogIdentity=assignV108DogIdentity_(sheet,row,dogId);
   var stayKey=makeGuestStayKey_(dogName,start,end);
   var copied={copied:false};
-  if (copyRequested && selectedDogId) copied=copyV108PreviousProfile_(dogName,dogId,stayKey,start,end,rows);
+  if (copyRequested) copied=applyReviewedCareInheritanceV11225_(data.inheritCareReview,dogId,dogName,stayKey,start,end);
+  var dogPhotoSync={applied:false,reason:photoRequested?"photo-sync-unavailable":"not-requested"};
+  if (photoRequested && typeof seedDogStayPhotoForConfirmedBookingV11208_ === "function") {
+    dogPhotoSync=seedDogStayPhotoForConfirmedBookingV11208_({dogId:dogId,dogName:dogName,breed:breed,stayKey:stayKey});
+    if (dogPhotoSync && dogPhotoSync.reason === "photo-source-unavailable") throw new Error("The stay was saved, but its existing dog photo could not be checked yet. Retry this same save to finish photo syncing.");
+  }
   var intake=createIntakeLinkForBooking_(sheet,sheet.getDataRange().getValues(),{dogName:dogName,startDate:start,endDate:end});
   var after=auditBookingSnapshotFromSheetRow_(sheet,row);
   after.dogNumber=dogIdentity.dogNumber;
   logAuditEvent_({category:"Boarding",action:"Booking Created",dogName:dogName,bookingType:"Confirmed Boarding",reference:sheet.getName()+"!A"+row,summary:"Confirmed boarding created for "+dogName+" from the Waffle House popup.",changedFields:["New record","Intake Link"],after:after,source:"Web App"});
   after.dogId=dogId;
   after.dogNumber=dogIdentity.dogNumber;
-  return {result:"success",action:"create_boarding",row:row,stayId:appended.stayId,stayKey:stayKey,dogId:dogIdentity.dogId,dogNumber:dogIdentity.dogNumber,booking:after,intake:intake,copiedPreviousProfile:copied,copySkippedReason:copySkippedReason};
+  return {result:"success",action:"create_boarding",row:row,stayId:appended.stayId,stayKey:stayKey,dogId:dogIdentity.dogId,dogNumber:dogIdentity.dogNumber,booking:after,intake:intake,copiedPreviousProfile:copied,copySkippedReason:copySkippedReason,dogPhotoSync:dogPhotoSync};
 }
 
 function updateV108BoardingDates_(data) {
@@ -4583,6 +4771,7 @@ function processSheetAction_(data) {
     if (data.action === "save_intake") {
       var intakeBooking = createV108IntakeBooking_(data, sheet);
       result.row = intakeBooking.row;
+      result.stayId = intakeBooking.stayId;
       result.dogId = intakeBooking.dogId;
 
       var boardingAfter = auditBookingSnapshotFromSheetRow_(
@@ -6012,6 +6201,38 @@ function verifyWaffleHouseAuditLog() {
 }
 
 
+function enrollFormBookingStayIdV11225_(sheet, rowNumber) {
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(5000)) throw new Error("Stay ID enrollment could not acquire the booking lock.");
+  try {
+    var headers = stableStayHeadersV11225_(sheet, true);
+    var values = sheet.getRange(rowNumber, 1, 1, Math.max(12, headers.width)).getValues()[0] || [];
+    var type = String(values[11] || "Boarding").trim().toLowerCase();
+    if (["boarding", "confirmed boarding", "potential", "potential stay"].indexOf(type) === -1) return "";
+    if (!String(values[1] || "").trim() || !validStableStayDateV11225_(values[3]) ||
+        !validStableStayDateV11225_(values[4] || values[3]) || normalizeDateValue_(values[4] || values[3]) < normalizeDateValue_(values[3])) {
+      throw new Error("Form booking has incomplete dog or stay dates; no Stay ID was assigned.");
+    }
+    var existing = String(sheet.getRange(rowNumber, headers.stayId).getValue() || "").trim();
+    if (existing) {
+      if (!validStayIdV11225_(existing) || findStayRowByIdV11225_(sheet, existing) !== rowNumber) {
+        throw new Error("Form booking has a malformed or duplicated Stay ID.");
+      }
+      return existing.toLowerCase();
+    }
+    var id = "";
+    for (var attempt = 0; attempt < 3; attempt++) {
+      var candidate = String(Utilities.getUuid() || "").trim().toLowerCase();
+      if (validStayIdV11225_(candidate) && findStayRowByIdV11225_(sheet, candidate) < 0) { id = candidate; break; }
+    }
+    if (!id) throw new Error("A unique Stay ID could not be generated for the form booking.");
+    sheet.getRange(rowNumber, headers.stayId).setValue(id);
+    touchWaffleDataVersion_("directory");
+    touchWaffleDataVersion_("calendar");
+    return id;
+  } finally { lock.releaseLock(); }
+}
+
 function waffleAuditOnFormSubmit(e) {
   try {
     if (!e || !e.range) return;
@@ -6021,6 +6242,9 @@ function waffleAuditOnFormSubmit(e) {
 
     if (eventSheet.getSheetId() !== mainSheet.getSheetId()) return;
     if (e.range.getRow() < 2) return;
+
+    try { enrollFormBookingStayIdV11225_(mainSheet, e.range.getRow()); }
+    catch (identityError) { console.error("Form booking Stay ID enrollment failed:", identityError); }
 
     var snapshot = auditBookingSnapshotFromSheetRow_(
       mainSheet,

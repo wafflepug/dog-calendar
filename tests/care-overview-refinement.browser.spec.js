@@ -5,6 +5,10 @@ const { test, expect } = require('@playwright/test');
 const root = path.resolve(__dirname, '..');
 const css = fs.readFileSync(path.join(root, 'waffle-app.css'), 'utf8');
 const appSource = fs.readFileSync(path.join(root, 'waffle-app.js'), 'utf8');
+const historySource = fs.readFileSync(path.join(root, 'waffle-v10.8.js'), 'utf8');
+const historyCss = fs.readFileSync(path.join(root, 'waffle-v10.8.css'), 'utf8');
+const evidenceDir = path.join(root, 'evidence', 'care-overview');
+fs.mkdirSync(evidenceDir, { recursive: true });
 const careFlags = appSource.slice(appSource.indexOf('const CARE_SAFETY_FLAGS'), appSource.indexOf('];', appSource.indexOf('const CARE_SAFETY_FLAGS')) + 2);
 const intakeGroups = appSource.slice(appSource.indexOf('const INTAKE_ATTRIBUTE_UI_GROUPS'), appSource.indexOf('];', appSource.indexOf('const INTAKE_ATTRIBUTE_UI_GROUPS')) + 2);
 const profileTabs = appSource.slice(appSource.indexOf('const DIRECTORY_PROFILE_SECONDARY_TABS'), appSource.indexOf('];', appSource.indexOf('const DIRECTORY_PROFILE_SECONDARY_TABS')) + 2);
@@ -52,24 +56,28 @@ const briefTestCode = `
   function normalizeDirectoryPhoneForTel(value) { return String(value || '').replace(/[^+\\d]/g, ''); }
   ${briefRenderer}
   window.renderBrief = renderDirectoryCareBrief;
+  window.seedBriefFixture = card => { directoryProfileDetailCache['stay-a'] = { intakeAttributes: { feedingTimes: '7 am', foodAmount: '1 cup', medicationInstructions: 'With dinner' }, intakeAttributesSource: 'Saved profile' }; careRiskRecordsCache['stay-a'] = { riskFlags: { foodAllergy: true } }; card.dataset.intakeMethod = 'legacy'; renderDirectoryCareBrief(card); card.dataset.briefDebug = JSON.stringify({ key: card.dataset.stayKey, safety: card.querySelector('[data-care-brief-safety]')?.innerText, flags: careRiskRecordsCache['stay-a'] }); };
 `;
-
 function fixture(theme = '') {
   return `<!doctype html><html><head><style>
     ${css}
   </style></head><body class="${theme}"><main class="directory-card is-profile-active" data-stay-key="stay-a" data-directory-source-row="4"><div class="directory-profile-content">
-    <header class="directory-card-header"><div class="directory-photo-shell"><div class="directory-photo-media">🐶</div></div><div class="directory-card-identity"><button class="directory-dog-name-btn">A very long dog name that must wrap without clipping</button><button class="directory-primary-breed">Border Collie</button><div class="directory-stay-dates">📅 20 Sep 2026 – 22 Sep 2026</div></div></header>
+    <header class="directory-card-header"><div class="directory-photo-shell"><div class="directory-photo-media"><img class="directory-dog-photo" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Crect width='80' height='80' fill='%23cbd5e1'/%3E%3C/svg%3E" alt="Milo"></div></div><div class="directory-card-identity"><div class="directory-name-row"><button class="directory-dog-name-btn">A very long dog name that must wrap without clipping</button><span class="directory-dog-id">Dog ID #00017</span><span class="directory-status-tag tag-checked-out">Checked Out</span></div><button class="directory-primary-breed">Border Collie</button><div class="directory-stay-dates">📅 20 Sep 2026 – 22 Sep 2026</div></div></header>
+    <section class="directory-care-brief" data-directory-care-brief aria-label="Care readiness"><div class="directory-care-brief-heading"><div><span class="directory-profile-section-kicker">Selected guest</span><h3>Care overview</h3></div><span class="directory-care-brief-freshness" data-care-brief-freshness role="status" aria-live="polite">Care details available · Saved profile</span></div><div class="directory-care-brief-grid"><section class="directory-care-brief-item directory-care-brief-safety" data-state="attention"><div class="directory-care-brief-note-heading"><h4>Safety</h4><button class="directory-care-brief-note-edit" data-care-readiness-action="safety">Review</button></div><div class="directory-care-brief-value" data-care-brief-safety data-state="attention"><span class="care-brief-alert">⚠ Food allergy</span></div></section><section class="directory-care-brief-item"><h4>Feeding</h4><p class="directory-care-brief-value" data-care-brief-feeding>7 am · 1 cup</p></section><section class="directory-care-brief-item"><h4>Medication</h4><p class="directory-care-brief-value" data-care-brief-medication>With dinner</p></section><section class="directory-care-brief-item"><h4>Owner</h4><p class="directory-care-brief-value directory-care-brief-contact"><strong>Alexandria Peterson-Smith</strong><span>0400 123 456</span></p></section><section class="directory-care-brief-item directory-care-brief-note"><div class="directory-care-brief-note-heading"><h4>Handover note</h4><button class="directory-care-brief-note-edit" data-care-brief-action="handover">Update</button></div><p class="directory-care-brief-value">Call before pickup.\nMedication is in the blue bag.</p></section></div><details class="directory-care-readiness"><summary><span>Other setup checks</span><strong data-care-readiness-summary>1 to review</strong></summary><div class="directory-care-readiness-list" data-care-readiness-list><div data-care-readiness-item="intake"><span data-care-readiness-status></span><small data-care-readiness-detail></small></div><div data-care-readiness-item="handover"><span data-care-readiness-status></span><small data-care-readiness-detail></small></div></div></details><div class="directory-care-brief-actions"><button class="directory-care-brief-action is-primary">Care details</button><a class="directory-care-brief-action" href="tel:+61400123456">Call owner</a><details class="directory-care-more-actions"><summary>More actions</summary></details></div></section>
     <div class="directory-attributes-grid directory-core-attributes"><button class="directory-attribute"><span class="directory-field-label">Owner</span><span class="directory-field-value">Alexandria Peterson-Smith with a very long family name</span></button><button class="directory-attribute"><span class="directory-field-label">Contact</span><span class="directory-field-value">0400 123 456</span></button><button class="directory-attribute directory-attribute-wide"><span class="directory-field-label">Notes</span><span class="directory-field-value">Long care notes wrap here and remain discoverable for the sitter.</span></button></div>
     <section class="directory-profile-section"><div class="directory-profile-section-heading"><div><span class="directory-profile-section-kicker">Guest profile</span><h4>📋 Profile &amp; Care</h4></div><div class="directory-profile-section-tools"><button class="directory-profile-edit-toggle">✏️ Edit</button></div></div><div data-directory-detail="profile" data-directory-main-panel="profile"><div data-intake-profile-summary></div><div data-directory-intake-attributes><div>Loading profile…</div></div></div></section>
   </div></main></body></html>`;
 }
 
 test('Care overview wraps long values and keeps controls usable at phone widths', async ({ page }) => {
-  for (const width of [390, 412, 768, 1440]) {
+  for (const theme of ['', 'dark-theme']) for (const width of [390, 412, 768, 1440]) {
     await page.setViewportSize({ width, height: 900 });
-    await page.setContent(fixture());
+    await page.setContent(fixture(theme));
     await page.addScriptTag({ content: actualRenderer });
     await page.evaluate(() => renderDirectoryIntakeAttributes(document.querySelector('.directory-card'), { intakeAttributes: { medicationInstructions: 'Give after dinner; call owner if appetite changes.' }, intakeAttributesSource: 'Synthetic saved fixture' }));
+    await expect(page.locator('[data-care-brief-safety]')).toContainText('Food allergy');
+    await expect(page.locator('[data-care-brief-feeding]')).toContainText('7 am');
+    if ([390, 412, 1440].includes(width)) await page.screenshot({ path: path.join(evidenceDir, `care-overview-${theme || 'light'}-${width}.png`), fullPage: true });
     await expect(page.locator('.directory-profile-section-heading h4')).toHaveCSS('font-size', '16px');
     await expect(page.locator('.directory-field-value').first()).toHaveCSS('font-size', '14px');
     await expect(page.locator('.intake-profile-control').first()).toHaveAttribute('placeholder', 'Not provided');
@@ -106,9 +114,22 @@ test('Care overview wraps long values and keeps controls usable at phone widths'
       });
     });
     expect(identityLayout.every(item => item.scrollWidth <= item.width + 1 && item.scrollHeight <= item.height + 2 && item.textOverflow !== 'ellipsis' && item.whiteSpace !== 'nowrap')).toBeTruthy();
+    const cardMetrics = await page.evaluate(() => ({
+      photo: document.querySelector('.directory-photo-shell').getBoundingClientRect(),
+      dogPhotoObjectFit: getComputedStyle(document.querySelector('.directory-dog-photo')).objectFit,
+      nameFontSize: getComputedStyle(document.querySelector('.directory-dog-name-btn')).fontSize,
+      chips: [...document.querySelectorAll('.directory-name-row > .directory-dog-id, .directory-name-row > .directory-status-tag')].map(node => ({ box: node.getBoundingClientRect(), fontSize: getComputedStyle(node).fontSize, whiteSpace: getComputedStyle(node).whiteSpace })),
+      scrollWidth: document.documentElement.scrollWidth
+    }));
+    expect(cardMetrics.photo.width).toBe(width <= 520 ? 72 : 88);
+    expect(cardMetrics.dogPhotoObjectFit).toBe('cover');
+    expect(cardMetrics.nameFontSize).toBe('22px');
+    expect(cardMetrics.chips.every(chip => chip.fontSize === '11px' && chip.whiteSpace !== 'nowrap')).toBeTruthy();
+    expect(cardMetrics.chips.every(chip => chip.box.right <= width && chip.whiteSpace !== 'nowrap')).toBeTruthy();
+    expect(cardMetrics.scrollWidth).toBeLessThanOrEqual(width);
     await page.locator('button').first().focus();
     expect(await page.locator('button').first().evaluate(el => getComputedStyle(el).outlineStyle)).toBe('solid');
-    await page.screenshot({ path: `test-results/care-overview-${width}.png`, fullPage: true });
+    if ([390, 412, 1440].includes(width)) await page.screenshot({ path: path.join(evidenceDir, `care-details-${theme || 'light'}-${width}.png`), fullPage: true });
   }
 });
 
@@ -472,4 +493,51 @@ test('readiness actions expand the correct category and focus its existing field
   }
   await expect(page.locator('.directory-care-records-disclosure')).toHaveAttribute('open', '');
   await expect(page.locator('[data-directory-stay-contact]')).toHaveAttribute('open', '');
+});
+
+test('Care overview leads with essentials and history distinguishes actual from scheduled checkout', async ({ page }) => {
+  const start = historySource.indexOf('function v108RenderHistory(');
+  const end = historySource.indexOf('\n', start);
+  const renderer = historySource.slice(start, end);
+  for (const theme of ['', 'dark-theme']) {
+    await page.setContent(`<style>${css}\n${historyCss}</style><body class="${theme}"><main class="directory-card is-profile-active"><div class="directory-profile-content"><section class="directory-care-brief"><div class="directory-care-brief-heading"><h3>Care overview</h3><span class="directory-care-brief-freshness">Care details available · Verified profile source with a deliberately long label</span></div><div class="directory-care-brief-grid"><section class="directory-care-brief-item directory-care-brief-safety"><h4>Safety</h4><span class="care-brief-alert">⚠ Food allergy</span></section><section class="directory-care-brief-item"><h4>Feeding</h4><p class="directory-care-brief-value">Long feeding directions wrap cleanly and remain readable.</p></section><section class="directory-care-brief-item"><h4>Medication</h4><p class="directory-care-brief-value">With dinner.</p></section><section class="directory-care-brief-item directory-care-brief-note"><h4>Handover note</h4><p class="directory-care-brief-value">Call before pickup.</p></section></div><details class="directory-care-readiness"><summary>Other setup checks</summary></details></section><section class="v108-history-panel"><div data-history></div></section></div></main></body>`);
+    await page.addScriptTag({ content: `function escapeDashboardHtml(v){return String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;')} function v10FormatDateLabel(v){return String(v||'')}\n${renderer}` });
+    await page.evaluate(() => v108RenderHistory(document.querySelector('[data-history]'), {
+    dogNumber: '00017', stayCount: 3, previousStays: [
+      { startDate: '2026-08-01', endDate: '2026-08-05', notes: 'Safety monitor appetite.', careChanges: [{ source: 'care profile' }] },
+      { startDate: '2026-06-01', endDate: '2026-06-05', actualCheckoutDate: '2026-06-03', status: 'checked_out', notes: 'Owner requested early pickup.', careChanges: [{ updatedAt: '2026-06-02T10:12:00Z', source: 'care profile' }] },
+      { startDate: '2026-03-01', endDate: '2026-03-02' }
+    ]
+    }));
+    await expect(page.locator('.v108-history-summary')).toContainText('Dog ID #00017');
+    const cards = page.locator('.v108-stay-history');
+    await expect(cards).toHaveCount(3);
+    await expect(cards.nth(0)).toContainText('Scheduled start 2026-08-01');
+    await expect(cards.nth(0)).toContainText('Scheduled checkout 2026-08-05');
+    await expect(cards.nth(0)).not.toContainText('Undated change');
+    await expect(cards.nth(1)).toContainText('Checked out 2026-06-03');
+    await expect(cards.nth(1)).toContainText('Originally scheduled 2026-06-05');
+    await expect(cards.nth(1)).toContainText('Care record updates2026-06-02 · care profile');
+    await expect(cards.nth(0)).toContainText('Safety monitor appetite.');
+    expect(appSource.indexOf('class="directory-care-brief-grid"')).toBeLessThan(appSource.indexOf('<details class="directory-care-readiness">'));
+    expect(appSource).toContain("'<span class=\"directory-status-tag tag-checked-out\">Checked Out</span>'");
+    expect(appSource).not.toContain("class=\"directory-status-tag\" style=\"background:#e2e8f0");
+    for (const width of [390, 412, 1440]) {
+      await page.setViewportSize({ width, height: 844 });
+      const layout = await page.evaluate(() => ({
+        documentWidth: document.documentElement.scrollWidth,
+        viewportWidth: innerWidth,
+        brief: document.querySelector('.directory-care-brief').getBoundingClientRect(),
+        freshness: document.querySelector('.directory-care-brief-freshness').getBoundingClientRect(),
+        safety: document.querySelector('.directory-care-brief-safety').getBoundingClientRect(),
+        note: document.querySelector('.directory-care-brief-note').getBoundingClientRect()
+      }));
+      expect(layout.documentWidth).toBeLessThanOrEqual(layout.viewportWidth);
+      expect(layout.freshness.left).toBeGreaterThanOrEqual(layout.brief.left);
+      expect(layout.freshness.right).toBeLessThanOrEqual(layout.brief.right);
+      expect(layout.safety.width).toBeGreaterThanOrEqual(200);
+      expect(layout.note.width).toBeGreaterThanOrEqual(200);
+      await page.screenshot({ path: path.join(evidenceDir, `history-${theme || 'light'}-${width}.png`), fullPage: true });
+    }
+  }
 });
