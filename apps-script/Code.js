@@ -4135,8 +4135,8 @@ function validateReviewedCareInheritanceV11225_(review, dogId) {
 function confirmedBookingRowsForStayKeyV11225_(sheet, stayKey) {
   var rows = sheet.getDataRange().getValues(), matches = [];
   for (var i = 1; i < rows.length; i++) {
-    var type = String(rows[i][11] || "").trim().toLowerCase();
-    if (type !== "confirmed boarding" && type !== "boarding") continue;
+    var type = String(rows[i][11] || "Boarding").trim().toLowerCase();
+    if (type === "potential stay" || type === "meet & greet") continue;
     var start = normalizeDateValue_(rows[i][3]), end = normalizeDateValue_(rows[i][4] || rows[i][3]);
     if (start && makeGuestStayKey_(String(rows[i][1] || ""), start, end) === stayKey) matches.push(i + 1);
   }

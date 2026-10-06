@@ -183,6 +183,12 @@ const booking = (name, owner, id = '') => ['', name, 'Cavoodle', '2026-10-01', '
   assert.equal(occupied.rows.length,occupiedBefore,'existing Dog B booking is not duplicated');
   assert.equal(occupied.writes.some(item=>item.profile),false,'Dog B care profile is not overwritten');
 
+  const legacyBlankTypeTarget=target.slice(); legacyBlankTypeTarget[11]='';
+  const blankType=makeHarness([header,source,legacyBlankTypeTarget],[records[0]]), blankTypeBefore=blankType.rows.length;
+  assert.throws(()=>blankType.api.create({dogName:'Coco',dogId:uuid(106),breed:'Cavoodle',ownerName:'A',phone:'0400000000',startDate:'2026-10-07',endDate:'2026-10-08',inheritCareReview:review}),/already uses this stay key/i);
+  assert.equal(blankType.rows.length,blankTypeBefore,'legacy blank booking type defaults to Boarding for collision checks');
+  assert.equal(blankType.writes.some(item=>item.profile),false,'blank-type Dog B care is not overwritten');
+
   const orphan=makeHarness([header,source],records), orphanBefore=orphan.rows.length;
   assert.throws(()=>orphan.api.create({dogName:'Coco',dogId:uuid(106),breed:'Cavoodle',ownerName:'A',phone:'0400000000',startDate:'2026-10-07',endDate:'2026-10-08',inheritCareReview:review}),/unassigned details/i);
   assert.equal(orphan.rows.length,orphanBefore,'orphan destination care key is not adopted by a new booking');
