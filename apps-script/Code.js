@@ -2583,6 +2583,12 @@ function waffleReadVariant_(action, data) {
       Array.isArray(data.stayIds)
         ? data.stayIds.map(String).sort()
         : [],
+    // Dog and stay IDs are authoritative identity inputs. Include them in
+    // the cache variant so same-name records can never share a response.
+    dogId:
+      String(data.dogId || ""),
+    stayId:
+      String(data.stayId || ""),
     limit:
       Number(data.limit || 0),
     dogName:
