@@ -2,8 +2,8 @@
    Build: 2026.08.27.04
    Historical base styles remain compatibility sources during Phase 3A, but pages no longer
    reference them individually. Preserve this import order until modules are folded in. */
-@import url("waffle-app.css?build=2026.08.27.04&rev=2026.10.06.09");
-@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.10.06.09");
+@import url("waffle-app.css?build=2026.08.27.04&rev=2026.10.07.01");
+@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.10.07.01");
 @import url("waffle-v10.8.2.css?build=2026.08.27.04");
 @import url("waffle-v10.8.3.css?build=2026.08.27.04");
 @import url("waffle-v10.8.5.css?build=2026.08.27.04");
@@ -11,12 +11,12 @@
 @import url("waffle-v10.8.7.css?build=2026.08.27.04");
 @import url("waffle-v10.8.8.css?build=2026.08.27.04");
 @import url("waffle-v10.8.9.css?build=2026.08.27.04");
-@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.10.06.09");
+@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.10.07.01");
 @import url("waffle-v11.0.3.css?build=2026.08.27.04");
 @import url("waffle-v11.0.5.css?build=2026.08.27.04");
-@import url("waffle-v11.1.94.css?build=2026.10.06.09");
-@import url("waffle-v11.1.95.css?build=2026.10.06.09");
-@import url("waffle-v11.1.96.css?build=2026.10.06.09&rev=2026.10.06.09");
+@import url("waffle-v11.1.94.css?build=2026.10.07.01");
+@import url("waffle-v11.1.95.css?build=2026.10.07.01");
+@import url("waffle-v11.1.96.css?build=2026.10.07.01&rev=2026.10.07.01");
 
 /* ============================================================
    MOBILE FIRST-PAINT STABILITY GATE
@@ -1375,4 +1375,165 @@ body[data-waffle-page="directory"] .guest-detail-edit-save:disabled {
   body[data-waffle-page="directory"] .care-stay-link select:focus-visible {
     outline: 3px solid Highlight;
   }
+}
+
+/* Records & forms: bring secondary state labels up to the same readable size
+   as the named operation status, while keeping the existing renderer intact. */
+body[data-waffle-page="directory"] .directory-care-records-body .directory-record-kicker,
+body[data-waffle-page="directory"] .directory-care-records-body .directory-record-loading,
+body[data-waffle-page="directory"] .directory-care-records-body .directory-record-next,
+body[data-waffle-page="directory"] .directory-care-records-body .directory-record-error span {
+  color: var(--v10-muted, #475569);
+  font-size: 13px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+body.dark-theme[data-waffle-page="directory"] .directory-care-records-body .directory-record-kicker,
+body.dark-theme[data-waffle-page="directory"] .directory-care-records-body .directory-record-loading,
+body.dark-theme[data-waffle-page="directory"] .directory-care-records-body .directory-record-next,
+body.dark-theme[data-waffle-page="directory"] .directory-care-records-body .directory-record-error span {
+  color: var(--v10-muted, #cbd5e1);
+}
+
+/* Notification Centre is presented as a modal feed, so its labels and actions
+   remain readable and tappable at phone widths as well as desktop widths. */
+body:not(.dark-theme) #waffleNotificationModal .v101-notification-copy > span:not(.v101-notification-title-row),
+body:not(.dark-theme) #waffleNotificationModal .v101-notification-copy small,
+body:not(.dark-theme) #waffleNotificationModal .v101-notification-empty small {
+  color: #475569 !important;
+}
+body .v101-notification-tab {
+  min-width: 44px;
+  min-height: 44px;
+  font-size: 14px;
+  line-height: 1.3;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+body .waffle-notification-close {
+  min-width: 44px;
+  min-height: 44px;
+  width: 44px;
+  height: 44px;
+}
+body .waffle-notification-kicker {
+  color: var(--wh75-accent-ink, #4338ca);
+  font-size: 13px;
+  line-height: 1.4;
+}
+body .waffle-notification-heading p,
+body .waffle-notification-message,
+body .waffle-notification-device label,
+body .waffle-notification-options span,
+body .waffle-notification-options small,
+body .waffle-notification-footnote {
+  color: var(--v10-muted, #475569);
+  font-size: 13px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+body .waffle-notification-device input {
+  min-height: 44px;
+  box-sizing: border-box;
+  font-size: 16px;
+}
+body .waffle-notification-options label {
+  min-width: 0;
+  min-height: 62px;
+}
+body .waffle-notification-actions button {
+  min-width: 44px;
+  min-height: 44px;
+  font-size: 14px;
+  line-height: 1.35;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+body.dark-theme .waffle-notification-heading p,
+body.dark-theme .waffle-notification-message,
+body.dark-theme .waffle-notification-device label,
+body.dark-theme .waffle-notification-options span,
+body.dark-theme .waffle-notification-options small,
+body.dark-theme .waffle-notification-footnote {
+  color: var(--v10-muted, #cbd5e1);
+}
+body .v101-notification-tab span {
+  color: var(--v10-text, #172033);
+  font-size: 13px;
+  opacity: 1;
+}
+body .v101-notification-tab.is-active {
+  color: var(--v10-text, #172033);
+}
+body .v101-notification-panel-actions {
+  flex-wrap: wrap;
+  color: var(--v10-muted, #475569);
+  font-size: 13px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+body .v101-notification-panel-actions button {
+  box-sizing: border-box;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 8px 12px;
+  color: var(--wh75-accent-ink, #4338ca);
+  font-size: 14px;
+  line-height: 1.3;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+body .v101-notification-section-heading strong,
+body .v101-notification-section-heading span,
+body .v101-notification-copy strong,
+body .v101-notification-copy > span:not(.v101-notification-title-row),
+body .v101-notification-copy small,
+body .v101-notification-empty small {
+  font-size: 13px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+body .v101-notification-section-heading span {
+  color: var(--v10-text, #172033);
+  background: var(--v10-card-soft, #f8fafc);
+}
+body .v101-notification-copy > span:not(.v101-notification-title-row),
+body .v101-notification-copy small,
+body .v101-notification-empty small {
+  color: var(--v10-muted, #475569);
+}
+body.dark-theme .v101-notification-panel-actions,
+body.dark-theme .v101-notification-copy > span:not(.v101-notification-title-row),
+body.dark-theme .v101-notification-copy small,
+body.dark-theme .v101-notification-empty small {
+  color: var(--v10-muted, #cbd5e1);
+}
+body.dark-theme .v101-notification-section-heading span {
+  color: var(--v10-text, #f1f5f9);
+}
+body .v101-notification-tab:focus-visible,
+body .v101-notification-panel-actions button:focus-visible,
+body .v101-notification-item:focus-visible,
+body .waffle-notification-close:focus-visible {
+  outline: 3px solid var(--wh75-accent-ink, #4338ca);
+  outline-offset: 2px;
+}
+@media (max-width: 520px) {
+  body .v101-notification-panel-actions {
+    align-items: flex-start;
+  }
+  body .v101-notification-panel-actions button {
+    flex: 0 0 auto;
+  }
+  body .v101-notification-title-row {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+}
+/* Resolve inherited legacy notification type sizes at the final cascade. */
+body #waffleNotificationModal .v101-notification-copy strong,
+body #waffleNotificationModal .v101-notification-copy > span:not(.v101-notification-title-row),
+body #waffleNotificationModal .v101-notification-copy small {
+  font-size: 13px !important;
+  line-height: 1.4;
 }

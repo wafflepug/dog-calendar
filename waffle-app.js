@@ -8552,12 +8552,13 @@ registerWaffleServiceWorker();
         if (!brief) return;
 
         const stayKey = String(card.dataset.stayKey || card.dataset.directoryStayKey || '').trim();
-        const profileRecord = getDirectoryCareBriefRecord(stayKey);
-        const safetyRecord =
+        const identityAmbiguous = directoryProfileIdentityIsAmbiguous(card);
+        const profileRecord = identityAmbiguous ? null : getDirectoryCareBriefRecord(stayKey);
+        const safetyRecord = identityAmbiguous ? null : (
             careRiskRecordsCache[stayKey] ||
             belongingsRecordsCache[stayKey] ||
             directorySummaryRecordsCache[stayKey] ||
-            null;
+            null);
         const attributes =
             profileRecord?.intakeAttributes && typeof profileRecord.intakeAttributes === 'object'
                 ? profileRecord.intakeAttributes
@@ -8644,7 +8645,7 @@ registerWaffleServiceWorker();
 
         const medicationText = String(
             attributes?.medicationInstructions ||
-            belongingsRecordsCache[stayKey]?.items?.medication ||
+            (!identityAmbiguous && belongingsRecordsCache[stayKey]?.items?.medication) ||
             ''
         ).trim();
         if (medicationHost) {
@@ -8660,6 +8661,16 @@ registerWaffleServiceWorker();
                 ? (source ? `Care details available · ${source}` : 'Care details available')
                 : 'Stay details ready · care details loading';
             freshnessHost.dataset.state = attributes ? 'available' : 'loading';
+        }
+
+        if (identityAmbiguous) {
+            markDirectoryProfileIdentityConflict(card);
+            if (feedingHost) feedingHost.textContent = 'Care record needs identity review';
+            if (medicationHost) medicationHost.textContent = 'Care record needs identity review';
+            if (freshnessHost) {
+                freshnessHost.textContent = 'Shared name and dates · review the care record identity';
+                freshnessHost.dataset.state = 'identity-conflict';
+            }
         }
 
         if (callActionHost) {
@@ -9325,6 +9336,35 @@ registerWaffleServiceWorker();
         if (retry && typeof onRetry === 'function') retry.addEventListener('click', onRetry, { once: true });
     }
 
+    function directoryProfileIdentityIsAmbiguous(card) {
+        const key = String(card?.dataset?.directoryStayKey || card?.dataset?.stayKey || '').trim();
+        if (!key) return false;
+        const candidates = Array.from(document.querySelectorAll?.('.directory-card[data-directory-stay-key]') || [])
+            .filter(other => other !== card && String(other.dataset.directoryStayKey || other.dataset.stayKey || '').trim() === key);
+        return candidates.some(other => {
+            const stableFields = ['directoryStayId', 'directoryDogId', 'directoryBookingId'];
+            if (stableFields.some(field => {
+                const a = String(card.dataset[field] || '').trim().toLowerCase();
+                const b = String(other.dataset[field] || '').trim().toLowerCase();
+                return a && b && a !== b;
+            })) return true;
+            if (typeof getDirectoryEditorIdentity === 'function' && typeof directoryIdentityConflicts === 'function') {
+                return directoryIdentityConflicts(getDirectoryEditorIdentity(card), getDirectoryEditorIdentity(other));
+            }
+            return false;
+        });
+    }
+
+    function markDirectoryProfileIdentityConflict(card) {
+        const strip = card?.querySelector?.('.directory-care-strip');
+        if (!strip) return;
+        const message = '<div class="directory-record-error" role="status"><strong>Care record identity needs review</strong><span>Shared name and dates · safety details cannot be assigned to this dog.</span></div>';
+        if (strip.innerHTML === message) return;
+        strip.classList.remove('has-alerts');
+        strip.innerHTML = message;
+        if (typeof refreshDirectoryCareSummary === 'function') refreshDirectoryCareSummary();
+    }
+
     async function loadDirectoryProfileDetail(
         card,
         details,
@@ -9338,6 +9378,21 @@ registerWaffleServiceWorker();
             ).trim();
 
         if (!stayKey) return;
+
+        const showIdentityConflict = () => {
+            markDirectoryProfileIdentityConflict(card);
+            details.dataset.detailLoading = 'false';
+            details.dataset.detailLoaded = 'false';
+            const fields = details.querySelector('[data-directory-intake-attributes]');
+            if (fields) fields.hidden = true;
+            setDirectoryProfileReadStatus(details, 'identity-conflict', 'Shared name and dates · review the care record identity before loading details.');
+        };
+        if (directoryProfileIdentityIsAmbiguous(card)) {
+            showIdentityConflict();
+            return;
+        }
+        const profileFields = details.querySelector('[data-directory-intake-attributes]');
+        if (profileFields) profileFields.hidden = false;
 
         if (
             !options.force &&
@@ -9355,7 +9410,7 @@ registerWaffleServiceWorker();
             details.dataset.detailLoaded =
                 'true';
 
-            if (!details.dataset.profileReadState) {
+            if (!details.dataset.profileReadState || details.dataset.profileReadState === 'identity-conflict') {
                 setDirectoryProfileReadStatus(
                     details,
                     'saved',
@@ -9379,13 +9434,18 @@ registerWaffleServiceWorker();
         const cachedRecord =
             directoryProfileDetailCache[stayKey] ||
             null;
-        const profileIsCurrent = () =>
-            card?.isConnected === false ? false :
+        const profileIsCurrent = () => {
+            if (directoryProfileIdentityIsAmbiguous(card)) {
+                showIdentityConflict();
+                return false;
+            }
+            return card?.isConnected === false ? false :
             ((card?.dataset?.directoryStayKey || card?.dataset?.stayKey) &&
                 (card.dataset.directoryStayKey || card.dataset.stayKey) !== stayKey) ? false :
             typeof directorySelectedProfileStayKey === 'undefined' ||
             !directorySelectedProfileStayKey ||
             directorySelectedProfileStayKey === stayKey;
+        };
 
         if (cachedRecord) {
             renderDirectoryIntakeAttributes(
@@ -9414,6 +9474,10 @@ registerWaffleServiceWorker();
 
         const applyRecord =
             record => {
+                if (directoryProfileIdentityIsAmbiguous(card)) {
+                    showIdentityConflict();
+                    return;
+                }
                 directoryProfileDetailCache[
                     stayKey
                 ] = record;

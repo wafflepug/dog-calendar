@@ -81,6 +81,9 @@ async function openRecords(page) {
 }
 
 test('Records & forms stays readable and keeps real state/action targets at 320, 390 and 1440px in both themes', async ({ page, baseURL }) => {
+  // This matrix boots the complete runtime twice; Windows WebKit needs more
+  // setup time than the single-journey cases. Behaviour assertions stay unchanged.
+  test.setTimeout(180_000);
   const fixture = installFixture(page);
   for (const theme of ['light', 'dark']) {
     await openDirectory(page, baseURL, fixture, 390, theme);

@@ -23,7 +23,9 @@ async function mountCareRange(page) {
           <article class="directory-card" data-directory-stay-key="near pup|${nearStart}|${nearEnd}"
             data-directory-dog-name="Near Pup" data-directory-start-date="${nearStart}"
             data-directory-end-date="${nearEnd}" data-start-date="${nearStart}"
-            data-end-date="${nearEnd}" data-stay-key="near pup|${nearStart}|${nearEnd}">
+            data-end-date="${nearEnd}" data-stay-key="near pup|${nearStart}|${nearEnd}"
+            data-directory-dog-id="aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+            data-directory-stay-id="aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaab">
             <button type="button" data-open-directory-profile>Near Pup</button>
           </article>
         </div>
@@ -40,7 +42,7 @@ async function mountCareRange(page) {
       document.querySelector('.directory-dashboard-fused').dataset.v11195StayView = 'future';
     });
     window.fixtureEvents = [
-      { title: 'Near Pup', start: nearStart, end: nearEnd, allDay: true, extendedProps: { dogName: 'Near Pup', rawStartDate: nearStart, rawEndDate: nearEnd } },
+      { title: 'Near Pup', start: nearStart, end: nearEnd, allDay: true, extendedProps: { dogName: 'Near Pup', dogId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', stayId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaab', rawStartDate: nearStart, rawEndDate: nearEnd } },
       { title: 'Distant Pup', start: distantStart, end: distantEnd, allDay: true, extendedProps: { dogName: 'Distant Pup', ownerName: 'Ada Owner', breed: 'Cavoodle', rawStartDate: distantStart, rawEndDate: distantEnd } },
       { title: 'Possible Visit', start: distantStart, end: distantEnd, allDay: true, extendedProps: { dogName: 'Possible Visit', isPotential: true, rawStartDate: distantStart, rawEndDate: distantEnd } }
     ];
@@ -139,4 +141,66 @@ test('search for a deferred arrival expands it and switches to Arriving', async 
   await page.getByLabel('Find dog or owner').fill('Distant Pup');
   await expect(page.locator('#directory-grid [data-v11196-synthetic-future="true"]')).toHaveCount(1);
   await expect(page.locator('.directory-dashboard-fused')).toHaveAttribute('data-v11195-stay-view', 'future');
+});
+
+test('later arrivals keep stable identity conflicts separate and collapse matching copies', async ({ page }) => {
+  await mountCareRange(page);
+  await page.evaluate(() => {
+    const start = window.fixtureEvents[1].start;
+    const end = window.fixtureEvents[1].end;
+    const base = { dogName: 'Milo', rawStartDate: start, rawEndDate: end, ownerName: 'Owner One', breed: 'Cavoodle' };
+    const dogA = '11111111-1111-4111-8111-111111111111';
+    const dogB = '22222222-2222-4222-8222-222222222222';
+    const stayA = { title: 'Milo', start, end, allDay: true, extendedProps: { ...base, dogId: dogA, stayId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaab' } };
+    window.identityFixtures = [
+      stayA,
+      { ...stayA, id: 'copy-a' },
+      { ...stayA, id: 'conflicting-dog', extendedProps: { ...base, dogId: dogB, stayId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaab' } },
+      { ...stayA, id: 'conflicting-stay', extendedProps: { ...base, dogId: dogA, stayId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb' } },
+      { ...stayA, id: 'different-owner', extendedProps: { ...base, ownerName: 'Owner Two', dogId: dogB, stayId: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc' } },
+      { title: 'Legacy Pup', start, end, allDay: true, extendedProps: { dogName: 'Legacy Pup', rawStartDate: start, rawEndDate: end, ownerName: 'Owner Three', phone: '0400 111 111' } },
+      { title: 'Legacy Pup', start, end, allDay: true, extendedProps: { dogName: 'Legacy Pup', rawStartDate: start, rawEndDate: end, ownerName: 'Owner Three', phone: '0400 111 111' } },
+      { title: 'Legacy Pup', start, end, allDay: true, extendedProps: { dogName: 'Legacy Pup', rawStartDate: start, rawEndDate: end, ownerName: 'Owner Three', phone: '0400 222 222' } },
+      { title: 'Row Pup', start, end, allDay: true, extendedProps: { dogName: 'Row Pup', rawStartDate: start, rawEndDate: end, ownerName: 'N/A', sourceRow: '88' } },
+      { title: 'Row Pup', start, end, allDay: true, extendedProps: { dogName: 'Row Pup', rawStartDate: start, rawEndDate: end, ownerName: 'N/A', sourceRow: '88' } },
+      { title: 'Row Pup', start, end, allDay: true, extendedProps: { dogName: 'Row Pup', rawStartDate: start, rawEndDate: end, ownerName: 'N/A', sourceRow: '89' } },
+      { title: 'Unowned Pup', start, end, allDay: true, extendedProps: { dogName: 'Unowned Pup', rawStartDate: start, rawEndDate: end } }
+    ];
+    const anonymous = window.identityFixtures[window.identityFixtures.length - 1];
+    window.identityFixtures.push(anonymous);
+    window.WAFFLE_V11196_FUTURE_RANGE.updateEvents(window.identityFixtures);
+    window.WAFFLE_V11196_FUTURE_RANGE.activateLaterArrivals();
+  });
+
+  const miloCards = page.locator('[data-v11196-synthetic-future="true"][data-directory-dog-name="Milo"]');
+  await expect(miloCards).toHaveCount(4);
+  const identities = await miloCards.evaluateAll(cards => cards.map(card => ({
+    dogId: card.dataset.directoryDogId,
+    stayId: card.dataset.directoryStayId,
+    legacyKey: card.dataset.directoryStayKey,
+    owner: card.dataset.v1088OwnerName
+  })));
+  expect(new Set(identities.map(item => item.legacyKey)).size).toBe(1);
+  expect(identities.map(item => item.dogId)).toContain('11111111-1111-4111-8111-111111111111');
+  expect(identities.map(item => item.dogId)).toContain('22222222-2222-4222-8222-222222222222');
+  expect(identities.map(item => item.stayId)).toContain('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaab');
+  expect(identities.map(item => item.stayId)).toContain('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb');
+  expect(identities.map(item => item.stayId)).toContain('cccccccc-cccc-4ccc-8ccc-cccccccccccc');
+  const openerIdentity = await miloCards.locator('[data-open-directory-profile]').evaluateAll(buttons => buttons.map(button => {
+    const card = button.closest('.directory-card');
+    return { dogId: card.dataset.directoryDogId, stayId: card.dataset.directoryStayId };
+  }));
+  expect(openerIdentity).toEqual(identities.map(({ dogId, stayId }) => ({ dogId, stayId })));
+  await expect(page.locator('[data-v11196-synthetic-future="true"][data-directory-dog-name="Legacy Pup"]')).toHaveCount(2);
+  await expect(page.locator('[data-v11196-synthetic-future="true"][data-directory-dog-name="Row Pup"]')).toHaveCount(2);
+  await expect(page.locator('[data-v11196-synthetic-future="true"][data-directory-dog-name="Unowned Pup"]')).toHaveCount(1);
+  expect(await page.evaluate(() => window.WAFFLE_V11196_FUTURE_RANGE.totalFutureCount())).toBe(10);
+  await expect(page.locator('[data-v11196-synthetic-future="true"] [data-directory-detail="profile"]')).toHaveCount(9);
+  await expect(page.locator('[data-v11196-synthetic-future="true"] [data-directory-detail="profile"][data-detail-loaded="true"]')).toHaveCount(0);
+  await page.evaluate(() => {
+    window.unownedCardBeforeRefresh = document.querySelector('[data-v11196-synthetic-future="true"][data-directory-dog-name="Unowned Pup"]');
+    window.WAFFLE_V11196_FUTURE_RANGE.updateEvents(window.identityFixtures);
+  });
+  await expect(page.locator('[data-v11196-synthetic-future="true"][data-directory-dog-name="Unowned Pup"]')).toHaveCount(1);
+  expect(await page.evaluate(() => document.querySelector('[data-v11196-synthetic-future="true"][data-directory-dog-name="Unowned Pup"]') === window.unownedCardBeforeRefresh)).toBe(true);
 });

@@ -372,43 +372,10 @@
     requestAnimationFrame(maintain);
   }
 
-  const NAVIGATION_MUTATION_ROOTS = '#wh75MobileDrawer,#wh75SettingsPanel,#wh75SettingsBackdrop,#wh80MobileHeaderRail,.calendar-header-branding,.v10-ops-heading,#whSitterDesktopSidebar,#whSitterMobileHeaderTools,#whSitterToolsSettingsSection';
-  const NAVIGATION_OWNED_NODES = '#whSitterDesktopSidebar,#whSitterMobileHeaderTools,#whSitterToolsSettingsSection,#whPalzStayMobileShellBrand,#whPalzStayMobileBrand,#whSitterDesktopTools';
-
-  function isNavigationOwnedNode(node) {
-    return node instanceof Element && (node.matches(NAVIGATION_OWNED_NODES) || !!node.closest(NAVIGATION_OWNED_NODES));
-  }
-
-  function isSitterToolsLauncher(node) {
-    return node instanceof HTMLElement && node.matches('button,a,[role="button"]') && /\bsitter\s+tools\b/i.test(signature(node));
-  }
-
-  function isRelevantNavigationNode(node) {
-    if (!(node instanceof Element) || isNavigationOwnedNode(node)) return false;
-    if (node.matches(NAVIGATION_MUTATION_ROOTS) || node.closest(NAVIGATION_MUTATION_ROOTS)) return true;
-    if (isSitterToolsLauncher(node)) return true;
-    // A newly inserted wrapper can contain a late header, drawer, or settings root.
-    if (node.querySelector(NAVIGATION_MUTATION_ROOTS)) return true;
-    return Array.from(node.querySelectorAll('button,a,[role="button"]')).some(isSitterToolsLauncher);
-  }
-
-  function isRelevantNavigationMutation(record) {
-    const target = record.target instanceof Element ? record.target : record.target.parentElement;
-    // FullCalendar owns this subtree; navigation controls are mounted in the page header, drawer, or Settings panel.
-    if (target?.closest('#calendar')) return false;
-    const changedNodes = [...record.addedNodes, ...record.removedNodes];
-    const meaningfulChanges = changedNodes.filter(node => !isNavigationOwnedNode(node));
-    if (meaningfulChanges.some(isRelevantNavigationNode)) return true;
-    if (!target || isNavigationOwnedNode(target)) return false;
-    return target.matches(NAVIGATION_MUTATION_ROOTS) || !!target.closest(NAVIGATION_MUTATION_ROOTS) || isSitterToolsLauncher(target);
-  }
-
   function start() {
     maintain();
     if (!observer && document.documentElement && typeof MutationObserver === 'function') {
-      observer = new MutationObserver(records => {
-        if (records.some(isRelevantNavigationMutation)) schedule();
-      });
+      observer = new MutationObserver(schedule);
       observer.observe(document.documentElement, { childList:true, subtree:true });
     }
     window.matchMedia?.(DESKTOP_QUERY)?.addEventListener?.('change', schedule);

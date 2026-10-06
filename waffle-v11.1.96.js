@@ -18,6 +18,8 @@
   let scheduled = false;
   let mutating = false;
   let cachedFutureEvents = [];
+  const eventTokens = new WeakMap();
+  let nextEventToken = 0;
   let cacheReady = false;
   let expanded = false;
 
@@ -130,6 +132,121 @@
     return [name.toLowerCase(), dates.start, dates.end].join('|');
   }
 
+  function stableIdentityFor(value) {
+    const props = value?.extendedProps || value?.dataset || {};
+    const pick = (...names) => {
+      for (const name of names) {
+        const candidate = String(props[name] || '').trim();
+        if (!candidate || /^(?:n\/?a|unknown|other|null|undefined)$/i.test(candidate)) continue;
+        const normalized = candidate.toLowerCase();
+        if ((names[0] === 'dogId' || names[0] === 'stayId') && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(candidate)) continue;
+        if (names[0] === 'bookingId' && !/^[a-z0-9][a-z0-9._:-]{7,}$/i.test(candidate)) continue;
+        return normalized;
+      }
+      return '';
+    };
+    return {
+      dogId: pick('dogId', 'directoryDogId'),
+      stayId: pick('stayId', 'directoryStayId'),
+      bookingId: pick('bookingId', 'bookingID', 'sourceBookingId', 'directoryBookingId')
+    };
+  }
+
+  function ownerFor(value) {
+    const props = value?.extendedProps || value?.dataset || {};
+    const owner = String(props.ownerName || props.owner || props.v1088OwnerName || '').trim();
+    return /^(?:n\/?a|unknown|other|null|undefined)$/i.test(owner) ? '' : owner.toLocaleLowerCase();
+  }
+
+  function legacyEvidence(value) {
+    const props = value?.extendedProps || value?.dataset || {};
+    return {
+      owner: ownerFor(value),
+      phone: String(props.phone || props.v1088Phone || '').replace(/\D/g, '').replace(/^0+$/, ''),
+      breed: /^(?:unknown|n\/?a|other|null|undefined)$/i.test(String(props.breed || props.v1088Breed || '').trim()) ? '' : String(props.breed || props.v1088Breed || '').trim().toLocaleLowerCase()
+    };
+  }
+
+  function eventTokenFor(event) {
+    if (!event || typeof event !== 'object') return '';
+    if (!eventTokens.has(event)) eventTokens.set(event, String(++nextEventToken));
+    return eventTokens.get(event);
+  }
+
+  function provenanceFor(value) {
+    const props = value?.extendedProps || value?.dataset || {};
+    return {
+      sourceRow: String(props.sourceRow || props.directorySourceRow || '').trim(),
+      eventToken: String(props.eventToken || props.v11196EventToken || (!value?.dataset ? eventTokenFor(value) : '')).trim(),
+      eventId: String(props.eventId || props.directorySourceEventId || value?.id || '').trim()
+    };
+  }
+
+  function sameArrival(left, right) {
+    if (stayKeyFor(left) !== stayKeyFor(right)) return false;
+    const a = stableIdentityFor(left);
+    const b = stableIdentityFor(right);
+    const fields = ['dogId', 'stayId', 'bookingId'];
+    if (fields.some(field => a[field] && b[field] && a[field] !== b[field])) return false;
+    const shared = fields.some(field => a[field] && b[field] && a[field] === b[field]);
+    if (shared) {
+      if (a.bookingId && a.bookingId === b.bookingId) return true;
+      const leftEvidence = legacyEvidence(left);
+      const rightEvidence = legacyEvidence(right);
+      return !['owner', 'phone', 'breed'].some(field => leftEvidence[field] && rightEvidence[field] && leftEvidence[field] !== rightEvidence[field]);
+    }
+    if (fields.some(field => a[field] || b[field])) return false;
+    const leftEvidence = legacyEvidence(left);
+    const rightEvidence = legacyEvidence(right);
+    if (['owner', 'phone', 'breed'].some(field => leftEvidence[field] && rightEvidence[field] && leftEvidence[field] !== rightEvidence[field])) return false;
+    const leftProvenance = provenanceFor(left);
+    const rightProvenance = provenanceFor(right);
+    if (!!leftProvenance.sourceRow !== !!rightProvenance.sourceRow) return false;
+    if (leftProvenance.sourceRow && rightProvenance.sourceRow && leftProvenance.sourceRow !== rightProvenance.sourceRow) return false;
+    if (leftProvenance.sourceRow && rightProvenance.sourceRow && leftProvenance.sourceRow === rightProvenance.sourceRow) return true;
+    if (leftProvenance.eventToken && rightProvenance.eventToken && leftProvenance.eventToken === rightProvenance.eventToken) return true;
+    if (leftProvenance.eventId && rightProvenance.eventId && leftProvenance.eventId === rightProvenance.eventId) return true;
+    // Legacy rows have no persisted identity. Require matching owner and no conflicting
+    // populated contact or breed evidence; identical homonyms can still be ambiguous.
+    return !!leftEvidence.owner && leftEvidence.owner === rightEvidence.owner;
+  }
+
+  function uniqueArrivals(events) {
+    const unique = [];
+    (Array.isArray(events) ? events : []).forEach(event => {
+      if (!unique.some(existing => sameArrival(existing, event))) unique.push(event);
+    });
+    return unique;
+  }
+
+  function cardIdentity(card) {
+    return {
+      dataset: {
+        directoryDogId: card?.dataset?.directoryDogId,
+        directoryStayId: card?.dataset?.directoryStayId,
+        directoryBookingId: card?.dataset?.directoryBookingId,
+        v1088OwnerName: card?.dataset?.v1088OwnerName || card?.dataset?.directoryOwnerName,
+        v1088Phone: card?.dataset?.v1088Phone,
+        v1088Breed: card?.dataset?.v1088Breed
+      },
+      title: card?.dataset?.directoryDogName || card?.dataset?.dogName,
+      extendedProps: {
+        dogId: card?.dataset?.directoryDogId,
+        stayId: card?.dataset?.directoryStayId,
+        bookingId: card?.dataset?.directoryBookingId,
+        ownerName: card?.dataset?.v1088OwnerName || card?.dataset?.directoryOwnerName,
+        phone: card?.dataset?.v1088Phone,
+        breed: card?.dataset?.v1088Breed,
+        sourceRow: card?.dataset?.directorySourceRow,
+        eventToken: card?.dataset?.v11196EventToken,
+        eventId: card?.dataset?.v11196SourceEventId,
+        dogName: card?.dataset?.directoryDogName || card?.dataset?.dogName,
+        rawStartDate: card?.dataset?.directoryStartDate || card?.dataset?.startDate,
+        rawEndDate: card?.dataset?.directoryEndDate || card?.dataset?.endDate
+      }
+    };
+  }
+
   function isConfirmedFutureEvent(event) {
     const props = event?.extendedProps || {};
     if (props.isMeetGreet === true || props.isPotential === true) return false;
@@ -150,15 +267,8 @@
       return [];
     }
 
-    const seen = new Set();
-    return events
-      .filter(isConfirmedFutureEvent)
-      .filter(event => {
-        const key = stayKeyFor(event);
-        if (!key || seen.has(key)) return false;
-        seen.add(key);
-        return true;
-      })
+    return uniqueArrivals(events.filter(isConfirmedFutureEvent))
+      .filter(event => !!stayKeyFor(event))
       .sort((a, b) => {
         const left = eventDates(a).start;
         const right = eventDates(b).start;
@@ -168,15 +278,9 @@
   }
 
   function cacheEvents(events) {
-    const seen = new Set();
-    cachedFutureEvents = (Array.isArray(events) ? events : [])
-      .filter(isConfirmedFutureEvent)
-      .filter(event => {
-        const key = stayKeyFor(event);
-        if (!key || seen.has(key)) return false;
-        seen.add(key);
-        return true;
-      })
+    cachedFutureEvents = uniqueArrivals((Array.isArray(events) ? events : [])
+      .filter(isConfirmedFutureEvent))
+      .filter(event => !!stayKeyFor(event))
       .sort((a, b) => {
         const left = eventDates(a).start;
         const right = eventDates(b).start;
@@ -196,27 +300,22 @@
     return Array.from(host.querySelectorAll(':scope > .directory-card[data-directory-stay-key]'));
   }
 
-  function cardKeys() {
-    return new Set(allCareCards().map(card => String(card.dataset.directoryStayKey || '')));
-  }
-
   function laterEvents() {
-    const keys = cardKeys();
     return cachedFutureEvents.filter(event => {
       const start = eventDates(event).start;
-      return start > sevenDayKey() && !keys.has(stayKeyFor(event));
+      return start > sevenDayKey() && !allCareCards().some(card => sameArrival(event, cardIdentity(card)));
     });
   }
 
   function totalFutureCount() {
     if (!cacheReady) return null;
-    const keys = new Set(cachedFutureEvents.map(stayKeyFor));
+    const arrivals = [...cachedFutureEvents];
     allCareCards().forEach(card => {
       const start = parseDateKey(card.dataset.directoryStartDate || card.dataset.startDate || '');
       const key = String(card.dataset.directoryStayKey || '');
-      if (start > todayKey() && key) keys.add(key);
+      if (start > todayKey() && key) arrivals.push(cardIdentity(card));
     });
-    return keys.size;
+    return uniqueArrivals(arrivals).length;
   }
 
   function formatStayDate(value) {
@@ -241,6 +340,9 @@
     const dogNumber = /^#?\d{1,5}$/.test(rawDogNumber) ? rawDogNumber.replace(/^#/, '') : '';
     const dogId = String(props.dogId || '').trim();
     const stayId = String(props.stayId || '').trim();
+    const bookingId = String(props.bookingId || props.bookingID || props.sourceBookingId || '').trim();
+    const eventToken = eventTokenFor(event);
+    const eventId = String(event?.id || props.eventId || '').trim();
     const phone = String(props.phone || 'N/A').trim() || 'N/A';
     const notes = String(props.notes || 'None').trim() || 'None';
     const dateLabel = `${formatStayDate(dates.start)} – ${formatStayDate(dates.end)}`;
@@ -255,6 +357,9 @@
         data-directory-source-row="${escapeHtml(props.sourceRow || '')}"
         data-directory-dog-id="${escapeHtml(dogId)}"
         data-directory-stay-id="${escapeHtml(stayId)}"
+        data-directory-booking-id="${escapeHtml(bookingId)}"
+        data-v11196-event-token="${escapeHtml(eventToken)}"
+        data-v11196-source-event-id="${escapeHtml(eventId)}"
         data-directory-dog-number="${escapeHtml(dogNumber)}"
         data-v1088-breed="${escapeHtml(breed)}"
         data-v1088-owner-name="${escapeHtml(owner)}"
@@ -420,41 +525,25 @@
       });
   }
 
-  function removeStaleSyntheticCards(validKeys) {
-    allCareCards()
-      .filter(card => card.dataset.v11196SyntheticFuture === 'true')
-      .forEach(card => {
-        const key = String(card.dataset.directoryStayKey || '');
-        if (!validKeys.has(key)) card.remove();
-      });
-  }
-
   function reconcileFutureCards(events) {
     const host = grid();
     if (!host) return;
 
-    const validKeys = new Set(events.map(stayKeyFor));
-    removeStaleSyntheticCards(validKeys);
-
-    const cardsByKey = new Map();
-    allCareCards().forEach(card => {
-      const key = String(card.dataset.directoryStayKey || '');
-      if (!key) return;
-      if (!cardsByKey.has(key)) cardsByKey.set(key, []);
-      cardsByKey.get(key).push(card);
-    });
-
-    cardsByKey.forEach(cards => {
-      const canonical = cards.find(card => card.dataset.v11196SyntheticFuture !== 'true');
-      if (!canonical) return;
-      cards
-        .filter(card => card !== canonical && card.dataset.v11196SyntheticFuture === 'true')
-        .forEach(card => card.remove());
-    });
+    const validEvents = events;
+    allCareCards()
+      .filter(card => card.dataset.v11196SyntheticFuture === 'true')
+      .forEach(card => {
+        if (!validEvents.some(event => sameArrival(event, cardIdentity(card)))) card.remove();
+      });
+    allCareCards()
+      .filter(card => card.dataset.v11196SyntheticFuture === 'true')
+      .forEach(card => {
+        if (allCareCards().some(other => other !== card && other.dataset.v11196SyntheticFuture !== 'true' && sameArrival(cardIdentity(card), cardIdentity(other)))) card.remove();
+      });
 
     events.forEach(event => {
       const key = stayKeyFor(event);
-      const existing = allCareCards().find(card => String(card.dataset.directoryStayKey || '') === key);
+      const existing = allCareCards().find(card => sameArrival(event, cardIdentity(card)));
       if (existing) return;
       const card = createFutureCard(event);
       if (card) host.appendChild(card);

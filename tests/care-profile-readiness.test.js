@@ -147,3 +147,43 @@ test('late response does not render after the card is rebound to another stay ke
     await pending;
     assert.equal(h.rendered.length, 0);
 });
+
+test('same-name/date stable-ID collision blocks cached and fresh legacy profile reads', async () => {
+    const cached = { intakeAttributes: { medicationInstructions: 'Must not cross between dogs' } };
+    const h = harness({ cache: { 'milo|2026-09-20|2026-09-22': cached } });
+    const strip = { innerHTML: 'No active care alerts', classList: { remove() {} } };
+    h.card.querySelector = selector => selector === '.directory-care-strip' ? strip : null;
+    h.card.dataset.directoryStayKey = h.card.dataset.stayKey;
+    h.card.dataset.directoryStayId = '00000000-0000-4000-8000-000000000001';
+    const other = { dataset: { directoryStayKey: h.card.dataset.stayKey, directoryStayId: '00000000-0000-4000-8000-000000000002' } };
+    h.sandbox.document.querySelectorAll = () => [h.card, other];
+    await h.sandbox.load(h.card, h.details, {});
+    assert.equal(h.calls.length, 0);
+    assert.equal(h.rendered.length, 0);
+    assert.equal(h.details.dataset.profileReadState, 'identity-conflict');
+    assert.match(h.status.innerHTML, /review the care record identity/);
+    assert.doesNotMatch(h.status.innerHTML, /data-retry-directory-profile-read/);
+    assert.match(strip.innerHTML, /identity needs review/);
+    assert.doesNotMatch(strip.innerHTML, /No active care alerts/);
+    assert.equal(h.details.querySelector('intake-attributes').hidden, true);
+    h.sandbox.document.querySelectorAll = () => [h.card];
+    await h.sandbox.load(h.card, h.details, {});
+    assert.equal(h.details.querySelector('intake-attributes').hidden, false);
+    assert.equal(h.details.dataset.profileReadState, 'saved');
+    assert.equal(h.rendered.at(-1), cached);
+});
+
+test('collision discovered during a read cannot apply or mark the response fresh', async () => {
+    const key = 'milo|2026-09-20|2026-09-22';
+    const h = harness({ response: { record: { stayKey: key, intakeAttributes: { allergy: 'Chicken' } } }, delayMs: 25 });
+    h.card.dataset.directoryStayKey = key;
+    h.card.dataset.directoryStayId = '00000000-0000-4000-8000-000000000001';
+    let cards = [h.card];
+    h.sandbox.document.querySelectorAll = () => cards;
+    const pending = h.sandbox.load(h.card, h.details, { force: true });
+    cards = [h.card, { dataset: { directoryStayKey: key, directoryStayId: '00000000-0000-4000-8000-000000000002' } }];
+    await pending;
+    assert.equal(h.rendered.length, 0);
+    assert.equal(h.sandbox.directoryProfileDetailCache[key], undefined);
+    assert.equal(h.details.dataset.profileReadState, 'identity-conflict');
+});

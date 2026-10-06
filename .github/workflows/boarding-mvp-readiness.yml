@@ -1,0 +1,32 @@
+name: Boarding MVP Readiness
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fixture-and-contract-verification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify boarding MVP contracts and local fixtures
+        run: npm run test:mvp
+      - name: Save verification result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: boarding-mvp-readiness
+          path: test-results/mvp-readiness.json
+          if-no-files-found: warn
