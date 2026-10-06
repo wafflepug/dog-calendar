@@ -3,7 +3,8 @@
   "private": true,
   "scripts": {
     "test:ui:local": "node scripts/run-local-ui.js",
-    "test:perf:mobile": "node scripts/run-mobile-performance.js"
+    "test:perf:mobile": "node scripts/run-mobile-performance.js",
+    "test:mvp": "node scripts/check-mvp-readiness.js"
   },
   "devDependencies": {
     "@playwright/test": "1.55.1",

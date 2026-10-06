@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.10.06.09",
-  "releaseName": "Care Inline Editor Polish",
+  "assetRevision": "2026.10.07.01",
+  "releaseName": "Boarding MVP Refinements",
   "careIteration": {
     "returningDogSuggestions": true,
     "reviewedCareInheritance": true,
