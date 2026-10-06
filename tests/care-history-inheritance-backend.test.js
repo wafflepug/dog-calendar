@@ -18,6 +18,7 @@ const dogId = '00000000-0000-4000-8000-000000000101';
 const stayId = '00000000-0000-4000-8000-000000000201';
 const futureStayId = '00000000-0000-4000-8000-000000000202';
 const blankStayId = '00000000-0000-4000-8000-000000000203';
+const destinationStayId = '00000000-0000-4000-8000-000000000204';
 const headers = ['Timestamp','Dog Name','Breed','Start Date','End Date','Owner','Phone','Likes','Dislikes','Notes','Edit Link','Booking Type','Dog ID','Dog Number','Stay ID','Last Stay Mutation ID'];
 const key = (name, start, end) => `${String(name).toLowerCase()}|${start}|${end}`;
 
@@ -116,20 +117,24 @@ function booking(name, start, end, id, bookingDogId=dogId, owner='Ada') {
 // destination-only care values; wrong source dog or a shared legacy key fails.
 {
   const source=booking('Milo','2026-10-01','2026-10-10',stayId);
+  const destination=booking('Milo','2026-10-20','2026-10-21',destinationStayId);
   const sourceKey=key('Milo','2026-10-01','2026-10-10');
   const records=[
     {stayKey:sourceKey,startDate:'2026-10-01',endDate:'2026-10-10',intakeAttributes:{food:'Old',destinationOnly:'Keep'},riskFlags:{needsMedication:false}},
     {stayKey:key('Milo','2026-10-20','2026-10-21'),startDate:'2026-10-20',endDate:'2026-10-21',intakeAttributes:{destinationCare:'Stay specific'},riskFlags:{}}
   ];
   const operations=[{stayId,stayKey:sourceKey,status:'checked_out',checkedOutAt:'2026-10-06T12:00:00+11:00',actualCheckoutDate:'2026-10-06'}];
-  const h=build([headers,source],records,operations);
+  const h=build([headers,source,destination],records,operations);
   const review={confirmed:true,sourceStayId:stayId,sourceDogId:dogId,sourceStayKey:sourceKey,sourceEndDate:'2026-10-10',profile:{food:'Edited'},riskFlags:{needsMedication:true}};
-  const applied=h.sandbox.apply(review,dogId,'Milo',key('Milo','2026-10-20','2026-10-21'),'2026-10-20','2026-10-21');
+  const applied=h.sandbox.apply(review,dogId,'Milo',key('Milo','2026-10-20','2026-10-21'),'2026-10-20','2026-10-21',destinationStayId);
   assert.equal(applied.copied,true);
   const written=h.writes.find(item=>item.profile).profile;
   assert.equal(written.intakeAttributes.food,'Edited');
   assert.equal(written.intakeAttributes.destinationCare,'Stay specific');
   assert.equal(written.riskFlags.needsMedication,true);
+  const replayed=h.sandbox.apply(review,dogId,'Milo',key('Milo','2026-10-20','2026-10-21'),'2026-10-20','2026-10-21',destinationStayId);
+  assert.equal(replayed.copied,true,'receipt recovery may safely replay against its exact destination UUID');
+  assert.equal(records.filter(record=>record.stayKey===key('Milo','2026-10-20','2026-10-21')).length,1,'recovery updates one uniquely owned care row');
 
   assert.throws(()=>h.sandbox.validate({...review,sourceDogId:'00000000-0000-4000-8000-000000000999'},dogId),/source/i);
   const other=booking('Milo','2026-10-01','2026-10-10','', '00000000-0000-4000-8000-000000000303','Lee');

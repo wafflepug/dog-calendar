@@ -4132,11 +4132,36 @@ function validateReviewedCareInheritanceV11225_(review, dogId) {
     review:{confirmed:true,sourceStayId:sourceId,sourceDogId:String(dogId),sourceStayKey:sourceKey,sourceEndDate:sourceEnd,profile:safeProfile,riskFlags:safeFlags}};
 }
 
-function applyReviewedCareInheritanceV11225_(review, dogId, dogName, newStayKey, startDate, endDate) {
+function confirmedBookingRowsForStayKeyV11225_(sheet, stayKey) {
+  var rows = sheet.getDataRange().getValues(), matches = [];
+  for (var i = 1; i < rows.length; i++) {
+    var type = String(rows[i][11] || "").trim().toLowerCase();
+    if (type !== "confirmed boarding" && type !== "boarding") continue;
+    var start = normalizeDateValue_(rows[i][3]), end = normalizeDateValue_(rows[i][4] || rows[i][3]);
+    if (start && makeGuestStayKey_(String(rows[i][1] || ""), start, end) === stayKey) matches.push(i + 1);
+  }
+  return matches;
+}
+
+function applyReviewedCareInheritanceV11225_(review, dogId, dogName, newStayKey, startDate, endDate, destinationStayId) {
   var validated = validateReviewedCareInheritanceV11225_(review, dogId);
   if (!validated) return {copied:false};
+  var bookingSheet = getTargetSheet_(), targetRows = confirmedBookingRowsForStayKeyV11225_(bookingSheet, newStayKey);
+  if (!validStayIdV11225_(destinationStayId) || targetRows.length !== 1) {
+    throw new Error("Destination stay identity is missing or ambiguous; reviewed care was not applied.");
+  }
+  var targetRow = findStayRowByIdV11225_(bookingSheet, destinationStayId);
+  if (targetRow !== targetRows[0]) throw new Error("Destination Stay ID does not uniquely own this care key.");
+  var target = auditBookingSnapshotFromSheetRow_(bookingSheet, targetRow) || {};
+  var targetDog = v108DogIdentityAt_(bookingSheet.getDataRange().getValues(), targetRow - 1);
+  if (String(targetDog.dogId || "").trim() !== String(dogId || "").trim() ||
+      makeGuestStayKey_(target.dogName, target.startDate, target.endDate) !== newStayKey) {
+    throw new Error("Destination stay does not belong to the selected dog; reviewed care was not applied.");
+  }
   var destinationRows = readBelongingsRecords_(getBelongingsSheet_(), [newStayKey]);
-  var destinationRecord = destinationRows.filter(function(record) { return record.stayKey === newStayKey; })[0] || {};
+  var destinationMatches = destinationRows.filter(function(record) { return record.stayKey === newStayKey; });
+  if (destinationMatches.length > 1) throw new Error("Destination care key is ambiguous; reviewed care was not applied.");
+  var destinationRecord = destinationMatches[0] || {};
   var mergedProfile = mergeReviewedDogCareFieldsV1_(destinationRecord.intakeAttributes || {}, validated.review.profile);
   var mergedFlags = mergeReviewedDogCareFieldsV1_(destinationRecord.riskFlags || {}, validated.review.riskFlags);
   var destination = upsertBelongingsRecord_(getBelongingsSheet_(), {
@@ -4164,11 +4189,15 @@ function createV108Boarding_(data) {
     if(!selected.rows.length) throw dogIdError_("DOG_ID_NOT_FOUND","Selected dog record is no longer available.");
     assertV108DogNameMatchesId_(rows, selectedDogId, dogName);
   }
-  if (copyRequested) {
-    validateReviewedCareInheritanceV11225_(data.inheritCareReview, dogId);
-    var existingDestinationCare = readBelongingsRecords_(getBelongingsSheet_(), [makeGuestStayKey_(dogName,start,end)])
-      .filter(function(record) { return record.stayKey === makeGuestStayKey_(dogName,start,end); });
-    if (existingDestinationCare.length > 1) throw new Error("Destination care details have duplicate stay keys; no booking was created.");
+  if (copyRequested) validateReviewedCareInheritanceV11225_(data.inheritCareReview, dogId);
+  if (copyRequested || photoRequested) {
+    var destinationStayKey = makeGuestStayKey_(dogName,start,end);
+    if (confirmedBookingRowsForStayKeyV11225_(sheet, destinationStayKey).length) {
+      throw new Error("A confirmed booking already uses this stay key. Edit that stay instead; no booking was created.");
+    }
+    var existingDestinationCare = readBelongingsRecords_(getBelongingsSheet_(), [destinationStayKey])
+      .filter(function(record) { return record.stayKey === destinationStayKey; });
+    if (existingDestinationCare.length) throw new Error("Destination care key already has unassigned details. Review that stay instead; no booking was created.");
   }
   if(copyRequested && selectedDogId) validateV108DogProfileCopy_(dogName, dogId, rows);
   var dogColumns=ensureV108DogIdColumn_(sheet);
@@ -4181,7 +4210,7 @@ function createV108Boarding_(data) {
   var dogIdentity=assignV108DogIdentity_(sheet,row,dogId);
   var stayKey=makeGuestStayKey_(dogName,start,end);
   var copied={copied:false};
-  if (copyRequested) copied=applyReviewedCareInheritanceV11225_(data.inheritCareReview,dogId,dogName,stayKey,start,end);
+  if (copyRequested) copied=applyReviewedCareInheritanceV11225_(data.inheritCareReview,dogId,dogName,stayKey,start,end,appended.stayId);
   var dogPhotoSync={applied:false,reason:photoRequested?"photo-sync-unavailable":"not-requested"};
   if (photoRequested && typeof seedDogStayPhotoForConfirmedBookingV11208_ === "function") {
     dogPhotoSync=seedDogStayPhotoForConfirmedBookingV11208_({dogId:dogId,dogName:dogName,breed:breed,stayKey:stayKey});

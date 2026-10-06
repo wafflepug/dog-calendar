@@ -269,7 +269,7 @@ function recoverCreatedStayMutationV11225_(receiptSheet, receipt, bookingSheet) 
   dog = assignV108DogIdentity_(bookingSheet, row, dog.dogId);
   if (expected.inheritCareReview && typeof applyReviewedCareInheritanceV11225_ === 'function') {
     applyReviewedCareInheritanceV11225_(expected.inheritCareReview, dog.dogId, expected.dogName,
-      makeGuestStayKey_(expected.dogName, expected.startDate, expected.endDate), expected.startDate, expected.endDate);
+      makeGuestStayKey_(expected.dogName, expected.startDate, expected.endDate), expected.startDate, expected.endDate, receipt.stayId);
   }
   var dogPhotoSync = { applied:false, reason:expected.inheritDogPhoto ? 'photo-sync-unavailable' : 'not-requested' };
   if (expected.inheritDogPhoto === true && typeof seedDogStayPhotoForConfirmedBookingV11208_ === 'function') {

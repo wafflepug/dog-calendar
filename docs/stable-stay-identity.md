@@ -136,6 +136,10 @@ merge into the destination record without clearing omitted fields. The review
 is checked before the booking append and is part of the durable create receipt,
 so recovery can safely finish a committed append without making another stay.
 The older `copyPreviousProfile` request is no longer applied automatically.
+New reviewed-care or photo inheritance also fails closed when the destination
+stay key already has a confirmed booking or belongings row. The caller must
+edit that stay; an orphaned legacy care/photo key is never claimed by a new
+same-name booking without ownership proof.
 
 The deploy workflow pushes to Apps Script and creates a live deployment when
 the matching source reaches `main`; it verifies protocol version 1 through a

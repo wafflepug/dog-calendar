@@ -34,7 +34,7 @@ function makeHarness(initialRows, priorProfiles = []) {
       return {
         getValue() { return cells.get(`${row}:${col}`) || (rows[row - 1] || [])[col - 1] || ''; },
         getValues() { return Array.from({ length: numRows || 1 }, (_, r) => Array.from({ length: numCols || 1 }, (_, c) => cells.get(`${row + r}:${col + c}`) ?? ((rows[row + r - 1] || [])[col + c - 1] || ''))); },
-        getDisplayValues() { return [(rows[row - 1] || []).slice(col - 1, col - 1 + (numCols || 1)).map(value => String(value || ''))]; },
+        getDisplayValues() { return Array.from({length:numRows||1},(_,r)=>(rows[row+r-1]||[]).slice(col-1,col-1+(numCols||1)).map(value=>String(value||''))); },
         setValue(value) {
           cells.set(`${row}:${col}`, value);
           while (rows.length < row) rows.push([]);
@@ -158,14 +158,39 @@ const booking = (name, owner, id = '') => ['', name, 'Cavoodle', '2026-10-01', '
   assert.equal(legacy.copySkippedReason, 'review-required');
   assert.equal(h.writes.some(item => item.profile), false, 'legacy copy flag cannot silently copy care values');
   const review = { confirmed:true, sourceStayId:'', sourceDogId:uuid(107), sourceStayKey:'coco|2025-10-01|2025-10-02', sourceEndDate:'2025-10-02', profile:{food:'Edited B'}, riskFlags:{} };
-  h.api.create({ dogName: 'Coco', dogId: uuid(107), breed: 'Cavoodle', ownerName: 'B', phone: '0400000000', startDate: '2026-10-07', endDate: '2026-10-08', inheritCareReview:review });
-  const copied = h.writes.find(item => item.profile);
+  const reviewed = makeHarness([header, dogA, dogB], profiles);
+  reviewed.api.create({ dogName: 'Coco', dogId: uuid(107), breed: 'Cavoodle', ownerName: 'B', phone: '0400000000', startDate: '2026-10-07', endDate: '2026-10-08', inheritCareReview:review });
+  const copied = reviewed.writes.find(item => item.profile);
   assert.equal(copied.profile.intakeAttributes.food, 'Edited B', 'the explicit review value is applied to the selected dog');
   const legacyB = booking('Coco', 'B'); legacyB[3] = '2025-10-01'; legacyB[4] = '2025-10-02';
   const legacyCollision = makeHarness([header, booking('Coco', 'A', uuid(106)), legacyB], profiles);
   const beforeAmbiguousReview = legacyCollision.rows.length;
   assert.throws(() => legacyCollision.api.create({ dogName: 'Coco', dogId: uuid(106), breed: 'Cavoodle', ownerName: 'A', phone: '0400000000', startDate: '2026-10-07', endDate: '2026-10-08', inheritCareReview:{...review,sourceDogId:uuid(106)} }), /ambiguous|source stay/i);
   assert.equal(legacyCollision.rows.length, beforeAmbiguousReview, 'ambiguous cross-Dog legacy keys fail before booking append');
+}
+
+// A reviewed new stay cannot claim care from an existing same-name/date stay
+// or an orphan belongings key whose owner cannot be proven.
+{
+  const source = booking('Coco','A',uuid(106)); source[3]='2025-10-01'; source[4]='2025-10-02';
+  const target = booking('Coco','B',uuid(107)); target[3]='2026-10-07'; target[4]='2026-10-08';
+  const sourceKey='coco|2025-10-01|2025-10-02', targetKey='coco|2026-10-07|2026-10-08';
+  const review={confirmed:true,sourceStayId:'',sourceDogId:uuid(106),sourceStayKey:sourceKey,sourceEndDate:'2025-10-02',profile:{food:'Reviewed'},riskFlags:{}};
+  const records=[{stayKey:sourceKey,dogName:'Coco',endDate:'2025-10-02',intakeAttributes:{food:'Source'},riskFlags:{}},
+    {stayKey:targetKey,dogName:'Coco',endDate:'2026-10-08',intakeAttributes:{food:'Dog B private'},riskFlags:{}}];
+  const occupied=makeHarness([header,source,target],records), occupiedBefore=occupied.rows.length;
+  assert.throws(()=>occupied.api.create({dogName:'Coco',dogId:uuid(106),breed:'Cavoodle',ownerName:'A',phone:'0400000000',startDate:'2026-10-07',endDate:'2026-10-08',inheritCareReview:review}),/already uses this stay key/i);
+  assert.equal(occupied.rows.length,occupiedBefore,'existing Dog B booking is not duplicated');
+  assert.equal(occupied.writes.some(item=>item.profile),false,'Dog B care profile is not overwritten');
+
+  const orphan=makeHarness([header,source],records), orphanBefore=orphan.rows.length;
+  assert.throws(()=>orphan.api.create({dogName:'Coco',dogId:uuid(106),breed:'Cavoodle',ownerName:'A',phone:'0400000000',startDate:'2026-10-07',endDate:'2026-10-08',inheritCareReview:review}),/unassigned details/i);
+  assert.equal(orphan.rows.length,orphanBefore,'orphan destination care key is not adopted by a new booking');
+  assert.equal(orphan.writes.some(item=>item.profile),false,'orphan care details remain untouched');
+
+  const photoOrphan=makeHarness([header,source],records), photoOrphanBefore=photoOrphan.rows.length;
+  assert.throws(()=>photoOrphan.api.create({dogName:'Coco',dogId:uuid(106),breed:'Cavoodle',ownerName:'A',phone:'0400000000',startDate:'2026-10-07',endDate:'2026-10-08',inheritDogPhoto:true}),/unassigned details/i);
+  assert.equal(photoOrphan.rows.length,photoOrphanBefore,'photo seeding cannot claim an orphan belongings key');
 }
 
 // Explicit backfill assigns one UUID per blank confirmed row, including same-name rows, and is idempotent.

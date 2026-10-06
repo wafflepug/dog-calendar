@@ -123,7 +123,7 @@ for (const [name, viewport, colorScheme] of [['390-light', { width: 390, height:
     await expect(page.locator('.directory-dashboard-fused.is-profile-mode #v11190PdfOcrReviewNote')).toBeHidden();
     await expect(page.locator('.directory-dashboard-fused.is-profile-mode #directory-care-summary')).toBeVisible();
     const careBrief = page.locator('.directory-card.is-profile-active [data-directory-care-brief]');
-    await expect(careBrief.getByRole('heading', { name: 'Care readiness' })).toBeVisible();
+    await expect(careBrief.getByRole('heading', { name: 'Care overview' })).toBeVisible();
     const readiness = careBrief.locator('.directory-care-readiness');
     await expect(readiness).toBeVisible();
     await expect(readiness).not.toHaveAttribute('open', '');
@@ -160,7 +160,7 @@ for (const [name, viewport, colorScheme] of [['390-light', { width: 390, height:
     }
     await expect(page.locator('.directory-card.is-profile-active [data-v108-history] .v108-stay-history')).toContainText('Aug');
     await expect(historyHost).toContainText('Alexandria Peterson-Smith');
-    await expect(historyHost).toContainText('Dog ID 17');
+    await expect(historyHost).toContainText('Dog ID #00017');
     await expect(historyHost.locator('.v108-stay-history details')).not.toHaveAttribute('open', '');
     expect(actionReads.filter(action => action === 'get_dog_history')).toHaveLength(name === '390-light' ? 2 : 1);
     expect(actionReads.payloads.filter(entry => entry.action === 'get_dog_history')[0]?.payload.dogId).toBe(exactDogId);
