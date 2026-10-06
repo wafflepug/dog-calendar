@@ -8828,6 +8828,21 @@ registerWaffleServiceWorker();
         refreshDirectoryCareSummary();
     }
 
+    function directoryProfileAccessibleLabel({ dogName, dogNumber, dogId, stayId, owner, context, stayDates, statusLabel }) {
+        dogName = String(dogName || 'Guest').trim();
+        dogNumber = String(dogNumber || '').trim();
+        if (!/^#?\d{1,5}$/.test(dogNumber)) dogNumber = '';
+        const stableId = String(dogId || stayId || '').trim();
+        owner = String(owner || '').trim();
+        context = String(context || '').trim();
+        stayDates = String(stayDates || '').trim();
+        statusLabel = String(statusLabel || '').trim();
+        const identifier = dogNumber
+            ? `Dog Number ${dogNumber}. `
+            : stableId ? `ID ${stableId}. ` : '';
+        return `Open ${dogName} care profile. ${identifier}${owner ? `${owner}. ` : ''}${context ? `${context}. ` : ''}${stayDates ? `${stayDates}. ` : ''}${statusLabel ? `${statusLabel}.` : ''}`.trim();
+    }
+
     function updateDirectoryRosterStatus(stayKey, label, stateClass) {
         const card = getDirectoryProfileCard(stayKey);
         const status = card?.querySelector('.directory-roster-status');
@@ -8836,14 +8851,23 @@ registerWaffleServiceWorker();
         status.classList.remove('is-ready', 'is-unset', 'is-alert');
         if (stateClass) status.classList.add(stateClass);
         const openButton = card.querySelector('[data-open-directory-profile]');
-        if (openButton) {
-            const dogName = card.dataset.directoryDogName || card.dataset.dogName || 'Guest';
-            const context = card.querySelector('.directory-roster-context')?.textContent || '';
-            openButton.setAttribute(
-                'aria-label',
-                `Open ${dogName} care profile. ${context}. ${label}.`
-            );
-        }
+        const stayDates = [card.dataset.directoryStartDate, card.dataset.directoryEndDate]
+            .filter(Boolean)
+            .map(value => {
+                try { return typeof formatStayDateShort === 'function' ? formatStayDateShort(value) : value; }
+                catch (_) { return value; }
+            })
+            .join(' – ');
+        if (openButton) openButton.setAttribute('aria-label', directoryProfileAccessibleLabel({
+            dogName: card.dataset.directoryDogName || card.dataset.dogName,
+            dogNumber: card.dataset.directoryDogNumber,
+            dogId: card.dataset.directoryDogId,
+            stayId: card.dataset.directoryStayId,
+            owner: card.dataset.v1088OwnerName,
+            context: card.querySelector('.directory-roster-context')?.textContent,
+            stayDates,
+            statusLabel: label
+        }));
     }
 
     function refreshDirectoryCareSummary() {
@@ -10271,6 +10295,11 @@ registerWaffleServiceWorker();
             scrollTop: getDirectoryWindowScrollTop(),
             searchValue: search?.value || '',
             openerStayKey: String(card?.dataset?.directoryStayKey || '').trim(),
+            openerIdentity: Object.fromEntries([
+                'directoryStayId', 'directoryDogId', 'directoryDogNumber',
+                'directorySourceRow', 'v1088OwnerName', 'directoryDogName',
+                'directoryStartDate', 'directoryEndDate'
+            ].map(key => [key, String(card?.dataset?.[key] || '').trim()])),
             opener
         };
     }
@@ -10330,25 +10359,59 @@ registerWaffleServiceWorker();
                 );
             };
             const capturedOpener = origin.opener;
+            const cardMatchesOrigin = card => {
+                if (!card || String(card.dataset.directoryStayKey || '').trim() !== stayKey) return false;
+                const identity = origin.openerIdentity || {};
+                if (identity.directoryStayId) return card.dataset.directoryStayId === identity.directoryStayId;
+                if (identity.directoryDogId) {
+                    return card.dataset.directoryDogId === identity.directoryDogId &&
+                        String(card.dataset.directoryStartDate || '') === identity.directoryStartDate &&
+                        String(card.dataset.directoryEndDate || '') === identity.directoryEndDate;
+                }
+                return ['directoryDogNumber', 'v1088OwnerName', 'directoryDogName',
+                    'directoryStartDate', 'directoryEndDate'].every(key =>
+                    !identity[key] || String(card.dataset[key] || '').trim() === identity[key]
+                );
+            };
             const opener = (
                 capturedOpener?.isConnected &&
-                isVisibleCard(capturedOpener.closest('.directory-card'))
+                isVisibleCard(capturedOpener.closest('.directory-card')) &&
+                cardMatchesOrigin(capturedOpener.closest('.directory-card'))
                     ? capturedOpener
                     : null
-            ) || Array.from(
-                document.querySelectorAll('.directory-card[data-directory-stay-key]')
-            ).find(item =>
-                String(item.dataset.directoryStayKey || '').trim() === stayKey &&
-                isVisibleCard(item)
-            )?.querySelector('[data-open-directory-profile]');
-            const visibleOpener = Array.from(
-                document.querySelectorAll('.directory-card[data-directory-stay-key] [data-open-directory-profile]')
-            ).find(item => {
-                const card = item.closest('.directory-card');
-                return isVisibleCard(card);
-            });
+            ) || (() => {
+                const identity = origin.openerIdentity || {};
+                const candidates = Array.from(
+                    document.querySelectorAll('.directory-card[data-directory-stay-key]')
+                ).filter(isVisibleCard);
+                const unique = items => items.length === 1 ? items[0] : null;
+                const stayId = identity.directoryStayId;
+                const dogId = identity.directoryDogId;
+                let match = stayId
+                    ? unique(candidates.filter(item => item.dataset.directoryStayId === stayId))
+                    : null;
+                if (!stayId && dogId) {
+                    match = unique(candidates.filter(item =>
+                        item.dataset.directoryDogId === dogId &&
+                        String(item.dataset.directoryStartDate || '') === identity.directoryStartDate &&
+                        String(item.dataset.directoryEndDate || '') === identity.directoryEndDate
+                    ));
+                }
+                if (!stayId && !dogId) {
+                    const legacyCandidates = candidates.filter(item =>
+                        String(item.dataset.directoryStayKey || '').trim() === stayKey
+                    );
+                    const fields = [
+                        'directoryDogNumber', 'v1088OwnerName', 'directoryDogName',
+                        'directoryStartDate', 'directoryEndDate'
+                    ].filter(key => identity[key]);
+                    match = unique(legacyCandidates.filter(item =>
+                        fields.every(key => String(item.dataset[key] || '').trim() === identity[key])
+                    ));
+                }
+                return match?.querySelector('[data-open-directory-profile]') || null;
+            })();
             const fallback = opener ||
-                visibleOpener ||
                 document.getElementById('guestDirectorySearch') ||
                 document.querySelector('[data-v1082-stay-tab]') ||
                 document.getElementById('directory-grid');
@@ -15478,7 +15541,7 @@ registerWaffleServiceWorker();
                                             type="button"
                                             class="directory-guest-tile-open"
                                             data-open-directory-profile
-                                            aria-label="Open ${escapeDashboardHtml(dogName.trim())} care profile. ${escapeDashboardHtml(rosterContext)}. ${escapeDashboardHtml(rosterStatus)}.">
+                                            aria-label="${escapeDashboardHtml(directoryProfileAccessibleLabel({ dogName: dogName.trim(), dogNumber, dogId, stayId, owner: ownerName, context: rosterContext, stayDates: stayDateLabel, statusLabel: rosterStatus }))}">
                                             <span
                                                 class="directory-guest-tile-photo"
                                                 data-directory-tile-photo="${escapeDashboardHtml(directoryStayKey)}"

@@ -34,7 +34,9 @@ on:
       - 'tests/care-runtime-review.browser.spec.js'
       - 'playwright.runtime-review.config.js'
       - 'tests/care-navigation-continuity.test.js'
+      - 'tests/care-return-focus-identity.test.js'
       - 'tests/care-navigation-continuity.browser.spec.js'
+      - 'tests/care-future-arrivals-lazy.browser.spec.js'
       - 'playwright.care-navigation-continuity.config.js'
       - 'scripts/local-network-policy.js'
       - 'scripts/run-local-ui.js'
@@ -75,7 +77,9 @@ on:
       - 'tests/care-runtime-review.browser.spec.js'
       - 'playwright.runtime-review.config.js'
       - 'tests/care-navigation-continuity.test.js'
+      - 'tests/care-return-focus-identity.test.js'
       - 'tests/care-navigation-continuity.browser.spec.js'
+      - 'tests/care-future-arrivals-lazy.browser.spec.js'
       - 'playwright.care-navigation-continuity.config.js'
       - 'scripts/local-network-policy.js'
       - 'scripts/run-local-ui.js'
@@ -119,6 +123,7 @@ jobs:
           node --test tests/system-status-sync.test.js
           node --test tests/system-status-release.test.js
           node --test tests/care-navigation-continuity.test.js
+          node --test tests/care-return-focus-identity.test.js
           node node_modules/@playwright/test/cli.js install --with-deps chromium firefox webkit
           node node_modules/@playwright/test/cli.js test --config=playwright.care-profile.config.js
           node node_modules/@playwright/test/cli.js test --config=playwright.care-mobile-hierarchy.config.js
