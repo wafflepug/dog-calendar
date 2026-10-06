@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.10.06.07",
-  "releaseName": "Care Editing UI Polish",
+  "assetRevision": "2026.10.06.08",
+  "releaseName": "Capacity Tracker Clarity",
   "careIteration": {
     "returningDogSuggestions": true,
     "reviewedCareInheritance": true,

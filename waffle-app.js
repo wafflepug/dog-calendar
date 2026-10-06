@@ -1717,21 +1717,12 @@ function renderV10CapacityStrip() {
                         : 'green'
                   );
 
-        const dot =
-            band === 'red'
-                ? '🔴'
-                : (
-                    band === 'amber'
-                        ? '🟠'
-                        : '🟢'
-                  );
-
         cells.push(`
             <div class="v10-capacity-day is-${band}">
                 <span>${escapeDashboardHtml(
                     date.toLocaleDateString('en-AU',{weekday:'short'})
                 )}</span>
-                <strong>${dot} ${count}</strong>
+                <strong>${count}</strong>
                 <small>${date.getDate()}/${date.getMonth()+1}</small>
             </div>
         `);
