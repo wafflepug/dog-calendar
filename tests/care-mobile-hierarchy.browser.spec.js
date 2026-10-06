@@ -47,7 +47,7 @@ async function installReadOnlyFixture(page, options = {}) {
       if (callback) return route.fulfill({ status: 200, contentType: 'application/javascript', body: `${callback}(${JSON.stringify(response)});` });
       return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(response) });
     }
-    if (/^https?:/.test(url) && !url.includes('127.0.0.1:4177')) return route.fulfill({ status: 200, contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="4" height="4"><rect width="4" height="4" fill="#ddd"/></svg>' });
+    if (/^https?:/.test(url) && new URL(url).hostname !== '127.0.0.1') return route.fulfill({ status: 200, contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="4" height="4"><rect width="4" height="4" fill="#ddd"/></svg>' });
     return route.continue();
   });
   Object.defineProperty(actionReads, 'payloads', { value: actionPayloads });
@@ -168,6 +168,36 @@ for (const [name, viewport, colorScheme] of [['390-light', { width: 390, height:
     await sectionNav.locator('[data-v11160-tab="profile"]').click();
     await page.locator('.directory-card.is-profile-active [data-profile-subtab="healthHome"]').click();
     await expect(page.locator('.directory-card.is-profile-active [data-intake-attribute="medicationInstructions"]')).toHaveValue('Safety warning: monitor appetite.');
+    const selectedCard = page.locator('.directory-card.is-profile-active');
+    const editCare = selectedCard.locator('[data-toggle-profile-edit]');
+    await expect(editCare).toBeVisible();
+    expect(await editCare.evaluate(button => button.getBoundingClientRect().height)).toBeGreaterThanOrEqual(44);
+    expect(await editCare.evaluate(button => parseFloat(getComputedStyle(button).fontSize))).toBeGreaterThanOrEqual(14);
+    await editCare.click();
+    const medicationInput = selectedCard.locator('[data-intake-attribute="medicationInstructions"]');
+    await expect(medicationInput).toBeEnabled();
+    expect(await medicationInput.evaluate(input => parseFloat(getComputedStyle(input).fontSize))).toBeGreaterThanOrEqual(16);
+    const discardCare = selectedCard.locator('[data-cancel-profile-edit]');
+    await expect(discardCare).toBeVisible();
+    expect(await discardCare.evaluate(button => button.getBoundingClientRect().height)).toBeGreaterThanOrEqual(44);
+    const profileSave = selectedCard.locator('[data-directory-main-panel="profile"] [data-save-belongings]');
+    await expect(profileSave).toBeVisible();
+    expect(await profileSave.evaluate(button => {
+      const luminance = color => {
+        const values = color.match(/[\d.]+/g).slice(0, 3).map(Number);
+        const channels = color.startsWith('color(srgb') ? values : values.map(value => value / 255);
+        const linear = channels.map(value => value <= .04045 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4);
+        return .2126 * linear[0] + .7152 * linear[1] + .0722 * linear[2];
+      };
+      const style = getComputedStyle(button);
+      const [lighter, darker] = [luminance(style.color), luminance(style.backgroundColor)].sort((a, b) => b - a);
+      return (lighter + .05) / (darker + .05);
+    })).toBeGreaterThanOrEqual(4.5);
+    expect(await profileSave.evaluate(button => button.getBoundingClientRect().height)).toBeGreaterThanOrEqual(44);
+    await discardCare.click();
+    await expect(discardCare).toBeHidden();
+    await expect(profileSave).toBeHidden();
+    await expect(medicationInput).toHaveValue('Safety warning: monitor appetite.');
     await page.locator('.directory-card.is-profile-active [data-profile-subtab="safety"]').scrollIntoViewIfNeeded();
     await page.locator('.directory-card.is-profile-active [data-profile-subtab="safety"]').evaluate(button => button.click());
     await expect(page.locator('.directory-card.is-profile-active [data-profile-subtab="safety"]')).toHaveAttribute('aria-expanded', 'true');

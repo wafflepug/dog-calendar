@@ -2,8 +2,8 @@
    Build: 2026.08.27.04
    Historical base styles remain compatibility sources during Phase 3A, but pages no longer
    reference them individually. Preserve this import order until modules are folded in. */
-@import url("waffle-app.css?build=2026.08.27.04&rev=2026.10.06.06");
-@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.10.06.06");
+@import url("waffle-app.css?build=2026.08.27.04&rev=2026.10.06.07");
+@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.10.06.07");
 @import url("waffle-v10.8.2.css?build=2026.08.27.04");
 @import url("waffle-v10.8.3.css?build=2026.08.27.04");
 @import url("waffle-v10.8.5.css?build=2026.08.27.04");
@@ -11,12 +11,12 @@
 @import url("waffle-v10.8.7.css?build=2026.08.27.04");
 @import url("waffle-v10.8.8.css?build=2026.08.27.04");
 @import url("waffle-v10.8.9.css?build=2026.08.27.04");
-@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.10.06.06");
+@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.10.06.07");
 @import url("waffle-v11.0.3.css?build=2026.08.27.04");
 @import url("waffle-v11.0.5.css?build=2026.08.27.04");
-@import url("waffle-v11.1.94.css?build=2026.10.06.06");
-@import url("waffle-v11.1.95.css?build=2026.10.06.06");
-@import url("waffle-v11.1.96.css?build=2026.10.06.06&rev=2026.10.06.06");
+@import url("waffle-v11.1.94.css?build=2026.10.06.07");
+@import url("waffle-v11.1.95.css?build=2026.10.06.07");
+@import url("waffle-v11.1.96.css?build=2026.10.06.07&rev=2026.10.06.07");
 
 /* ============================================================
    MOBILE FIRST-PAINT STABILITY GATE
@@ -1056,3 +1056,217 @@ body.dark-theme .v110-media-section{background:#111827}body.dark-theme .v110-med
 @media(max-width:600px) { #p4Modal [data-p4-panel="booking"] .p4-grid { grid-template-columns: minmax(0, 1fr); } }
 
 #p4Modal [data-p4-panel="booking"] .p4-care-confirm { display: flex; align-items: center; gap: 8px; min-height: 44px; }
+
+/* Care profile editing and returning-stay linking controls. */
+body[data-waffle-page="directory"] .directory-profile-section-tools {
+  min-width: 0;
+  max-width: 100%;
+}
+body[data-waffle-page="directory"] .directory-profile-edit-toggle,
+body[data-waffle-page="directory"] .directory-profile-edit-cancel {
+  box-sizing: border-box;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 9px 12px;
+  border: 1px solid var(--wh75-accent, #7562db);
+  border-radius: 10px;
+  background: var(--wh75-accent-soft, #ede9fe);
+  color: var(--wh75-accent-ink, #4338ca);
+  font-size: 14px !important;
+  line-height: 1.25;
+  font-weight: 750;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+body[data-waffle-page="directory"] .directory-profile-edit-cancel {
+  border-color: var(--v10-border, #cbd5e1);
+  background: var(--v10-card, #fff);
+  color: var(--v10-text, #172033);
+}
+body[data-waffle-page="directory"] .directory-profile-section-tools button:focus-visible,
+body[data-waffle-page="directory"] .directory-profile-save-bar button:focus-visible,
+body[data-waffle-page="directory"] .directory-profile-intake-section .intake-profile-control:focus-visible {
+  outline: 3px solid var(--wh75-accent-ink, #4338ca);
+  outline-offset: 3px;
+}
+body[data-waffle-page="directory"] .directory-profile-save-bar {
+  min-width: 0;
+  align-items: stretch;
+  justify-content: flex-end;
+  gap: 8px;
+}
+body[data-waffle-page="directory"] .directory-profile-edit-status {
+  min-width: 0;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+body[data-waffle-page="directory"] .directory-profile-save-bar .belongings-save-btn {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 9px 14px;
+  border: 1px solid var(--wh75-accent, #7562db);
+  border-radius: 10px;
+  background: var(--wh75-accent-soft, #ede9fe) !important;
+  color: var(--wh75-accent-ink, #4338ca);
+  font-size: 14px !important;
+  line-height: 1.25;
+  white-space: normal;
+}
+body[data-waffle-page="directory"] .directory-profile-save-bar .belongings-save-btn:disabled {
+  border-color: var(--v10-border, #94a3b8);
+  background: var(--v10-card-soft, #e2e8f0) !important;
+  color: var(--v10-text, #172033);
+  opacity: 1;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-editing .directory-profile-intake-section .intake-profile-field {
+  min-width: 0;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-editing .directory-profile-intake-section .intake-profile-field label {
+  min-width: 0;
+  font-size: 13px !important;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-editing .directory-profile-intake-section .intake-profile-control {
+  box-sizing: border-box;
+  min-width: 0;
+  min-height: 44px !important;
+  font-size: 16px !important;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-editing .directory-profile-intake-section textarea.intake-profile-control {
+  min-height: 72px !important;
+  white-space: pre-wrap;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-editing .directory-profile-intake-section select.intake-profile-control {
+  height: auto;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-editing .directory-profile-intake-section .intake-profile-control:disabled {
+  font-size: 16px;
+}
+body[data-waffle-page="directory"] .directory-profile-edit-status.is-unsaved { color: #92400e; }
+body[data-waffle-page="directory"] .directory-profile-edit-status.is-saving { color: var(--wh75-accent-ink, #075985); }
+body[data-waffle-page="directory"] .directory-profile-edit-status.is-error { color: #991b1b; }
+body[data-waffle-page="directory"] .directory-profile-edit-status.is-success { color: #166534; }
+body.dark-theme[data-waffle-page="directory"] .directory-profile-edit-status.is-unsaved { color: #fcd34d; }
+body.dark-theme[data-waffle-page="directory"] .directory-profile-edit-status.is-error { color: #fca5a5; }
+body.dark-theme[data-waffle-page="directory"] .directory-profile-edit-status.is-success { color: #86efac; }
+body[data-waffle-page="directory"] .care-stay-link-close {
+  flex-basis: 44px;
+  width: 44px;
+  height: 44px;
+  background: var(--v10-card-soft, #f8fafc);
+}
+body[data-waffle-page="directory"] .care-stay-link-review-card {
+  background: var(--v10-card-soft, #f8fafc);
+}
+body[data-waffle-page="directory"] .care-stay-link-header,
+body[data-waffle-page="directory"] .care-stay-link-form,
+body[data-waffle-page="directory"] .care-stay-link-review-card,
+body[data-waffle-page="directory"] .care-stay-link-actions {
+  min-width: 0;
+}
+body[data-waffle-page="directory"] .care-stay-link-header > div,
+body[data-waffle-page="directory"] .care-stay-link-form > label,
+body[data-waffle-page="directory"] .care-stay-link-review-card > * {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+body[data-waffle-page="directory"] .care-stay-link-form label {
+  color: var(--v10-text, #172033);
+  font-size: 13px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+body[data-waffle-page="directory"] .care-stay-link select {
+  min-height: 44px;
+  font-size: 16px;
+}
+body[data-waffle-page="directory"] .care-stay-link-review,
+body[data-waffle-page="directory"] .care-stay-link-actions button {
+  box-sizing: border-box;
+  min-width: 44px;
+  min-height: 44px;
+  font-size: 14px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+body[data-waffle-page="directory"] .care-stay-link-review:not(:disabled),
+body[data-waffle-page="directory"] .care-stay-link-actions [data-care-stay-submit]:not(:disabled) {
+  border-color: var(--wh75-accent, #7562db);
+  background: var(--wh75-accent-soft, #ede9fe);
+  color: var(--wh75-accent-ink, #4338ca);
+}
+body[data-waffle-page="directory"] .care-stay-link-review-card {
+  grid-template-columns: minmax(0, .65fr) minmax(0, 1.35fr);
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+body[data-waffle-page="directory"] .care-stay-link-review-card > strong {
+  color: var(--v10-text, #172033);
+  font-size: 13px;
+  line-height: 1.4;
+}
+body[data-waffle-page="directory"] .care-stay-link-name-check,
+body[data-waffle-page="directory"] .care-stay-link-explicit-check {
+  min-width: 0;
+  min-height: 44px;
+  align-items: center;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+body[data-waffle-page="directory"] .care-stay-link-name-check input,
+body[data-waffle-page="directory"] .care-stay-link-explicit-check input {
+  flex: 0 0 22px;
+  width: 22px;
+  height: 22px;
+}
+body[data-waffle-page="directory"] .care-stay-link-actions {
+  flex-wrap: wrap;
+}
+body[data-waffle-page="directory"] .care-stay-link-status {
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 600px) {
+  body[data-waffle-page="directory"] .directory-profile-section-tools {
+    flex-wrap: wrap;
+  }
+  body[data-waffle-page="directory"] .directory-profile-save-bar {
+    justify-content: stretch;
+  }
+  body[data-waffle-page="directory"] .directory-profile-save-bar .belongings-save-btn {
+    flex: 1 1 100%;
+    width: 100%;
+  }
+  body[data-waffle-page="directory"] .care-stay-link-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  body[data-waffle-page="directory"] .care-stay-link-review {
+    width: 100%;
+  }
+  body[data-waffle-page="directory"] .care-stay-link-review-card {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  body[data-waffle-page="directory"] .care-stay-link-actions button {
+    flex: 1 1 0;
+  }
+}
+@media (forced-colors: active) {
+  body[data-waffle-page="directory"] .directory-profile-section-tools button,
+  body[data-waffle-page="directory"] .directory-profile-save-bar button,
+  body[data-waffle-page="directory"] .care-stay-link button,
+  body[data-waffle-page="directory"] .care-stay-link select {
+    forced-color-adjust: auto;
+    border: 1px solid ButtonText;
+    color: ButtonText;
+    background: ButtonFace;
+  }
+  body[data-waffle-page="directory"] .directory-profile-section-tools button:focus-visible,
+  body[data-waffle-page="directory"] .directory-profile-save-bar button:focus-visible,
+  body[data-waffle-page="directory"] .care-stay-link button:focus-visible,
+  body[data-waffle-page="directory"] .care-stay-link select:focus-visible {
+    outline: 3px solid Highlight;
+  }
+}
