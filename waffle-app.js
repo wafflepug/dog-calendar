@@ -13757,9 +13757,11 @@ registerWaffleServiceWorker();
             return;
         }
 
+        const returnFocusTarget = activeDirectoryEditContext?.trigger;
         modal.classList.remove('open');
         modal.setAttribute('aria-hidden', 'true');
         activeDirectoryEditContext = null;
+        if (returnFocusTarget?.isConnected) returnFocusTarget.focus?.();
 
         const status = document.getElementById('guestDetailEditStatus');
         if (status) {

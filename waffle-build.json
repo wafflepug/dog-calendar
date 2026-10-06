@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.10.06.08",
-  "releaseName": "Capacity Tracker Clarity",
+  "assetRevision": "2026.10.06.09",
+  "releaseName": "Care Inline Editor Polish",
   "careIteration": {
     "returningDogSuggestions": true,
     "reviewedCareInheritance": true,
