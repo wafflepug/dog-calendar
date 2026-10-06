@@ -27,6 +27,8 @@ on:
       - 'tests/system-status-sync.test.js'
       - 'tests/system-status-sync.browser.spec.js'
       - 'playwright.care-profile.config.js'
+      - 'playwright.care-ui-polish.config.js'
+      - 'tests/care-ui-polish.browser.spec.js'
       - 'playwright.care-mobile-hierarchy.config.js'
       - 'tests/care-mobile-hierarchy.browser.spec.js'
       - 'tests/care-loading-feedback.browser.spec.js'
@@ -70,6 +72,8 @@ on:
       - 'tests/system-status-sync.test.js'
       - 'tests/system-status-sync.browser.spec.js'
       - 'playwright.care-profile.config.js'
+      - 'playwright.care-ui-polish.config.js'
+      - 'tests/care-ui-polish.browser.spec.js'
       - 'playwright.care-mobile-hierarchy.config.js'
       - 'tests/care-mobile-hierarchy.browser.spec.js'
       - 'tests/care-loading-feedback.browser.spec.js'
@@ -126,6 +130,7 @@ jobs:
           node --test tests/care-return-focus-identity.test.js
           node node_modules/@playwright/test/cli.js install --with-deps chromium firefox webkit
           node node_modules/@playwright/test/cli.js test --config=playwright.care-profile.config.js
+          node node_modules/@playwright/test/cli.js test --config=playwright.care-ui-polish.config.js
           node node_modules/@playwright/test/cli.js test --config=playwright.care-mobile-hierarchy.config.js
           node node_modules/@playwright/test/cli.js test --config=playwright.care-loading-feedback.config.js
           node node_modules/@playwright/test/cli.js test --config=playwright.care-navigation-continuity.config.js
