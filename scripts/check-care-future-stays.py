@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 from pathlib import Path
+import json
+import re
 
 errors = []
 
@@ -120,11 +122,23 @@ maintain_body = future_range[maintain_start:maintain_end]
 if maintain_body.find('requestedDeepLinkKey()') > maintain_body.find('const initialEvents'):
     errors.append('waffle-v11.1.96.js: expand a requested distant stay before choosing the initial seven-day event set')
 
+# Release metadata is the authority; every entry point and cache must agree.
+manifest = json.loads(Path('waffle-build.json').read_text(encoding='utf-8'))
+revision = manifest.get('assetRevision', '')
+release_name = manifest.get('releaseName', '')
+if not isinstance(revision, str) or not re.fullmatch(r'\d{4}\.\d{2}\.\d{2}\.\d{2}', revision):
+    errors.append('waffle-build.json: invalid asset revision')
+if not isinstance(release_name, str) or not release_name.strip():
+    errors.append('waffle-build.json: missing release name')
 for path in ('index.html', 'directory.html', 'reminders.html', 'audit.html'):
-    require(path, 'rev=2026.10.06.06')
-require('waffle-bootstrap.js', "ASSET_REVISION = '2026.10.06.06'")
-require('service-worker.js', 'v11.4.71-care-arrival-accessibility-2026.10.06.06')
-require('waffle-build.json', 'Care Arrival Accessibility')
+    require(path, f'rev={revision}')
+require('waffle-bootstrap.js', f"ASSET_REVISION = '{revision}'")
+worker = Path('service-worker.js').read_text(encoding='utf-8')
+if not re.search(r"const WAFFLE_SW_VERSION = '[^']+-" + re.escape(str(revision)) + r"';", worker):
+    errors.append('service-worker.js: version must end with the current asset revision')
+release = json.loads(Path('waffle-release.json').read_text(encoding='utf-8'))
+if release.get('currentRelease') != revision or release.get('currentReleaseName') != release_name:
+    errors.append('waffle-release.json: current revision and name must match build metadata')
 require('waffle-release.json', 'Stay Operation Identity')
 
 # V11.2.01 is the final count-consistency guard. Current and Future share the
