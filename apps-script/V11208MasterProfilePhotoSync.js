@@ -183,6 +183,67 @@ function seedDogStayPhotoFromMasterV11208_(data, persistedMaster) {
   };
 }
 
+/* Seed a newly confirmed stay from the selected UUID's existing photo reference. */
+function seedDogStayPhotoForConfirmedBookingV11208_(data) {
+  data = data && typeof data === 'object' ? data : {};
+  var dogId = String(data.dogId || '').trim();
+  var stayKey = String(data.stayKey || '').trim();
+  if (!dogId || !stayKey) return { applied:false, reason:'missing-dog-id-or-stay-key' };
+  var bookings = getTargetSheet_().getDataRange().getValues();
+  var matchingRows = [];
+  var owners = {};
+  for (var i = 1; i < bookings.length; i++) {
+    var type = String(bookings[i][11] || 'Boarding').trim().toLowerCase();
+    if (type === 'potential stay' || type === 'meet & greet') continue;
+    var start = normalizeDateValue_(bookings[i][3]);
+    var end = normalizeDateValue_(bookings[i][4] || bookings[i][3]);
+    if (!start || !end || makeGuestStayKey_(String(bookings[i][1] || ''), start, end) !== stayKey) continue;
+    var identity = v108DogIdentityAt_(bookings, i);
+    owners[String(identity.dogId || ('legacy-row-' + i))] = true;
+    matchingRows.push({ row:i, dogId:String(identity.dogId || ''), startDate:start, endDate:end });
+  }
+  if (matchingRows.length !== 1 || matchingRows[0].dogId !== dogId || Object.keys(owners).length !== 1) {
+    return { applied:false, reason:'destination-stay-identity-ambiguous' };
+  }
+  var sheet = getBelongingsSheet_();
+  var matchingRecords = readBelongingsRecords_(sheet, [stayKey]).filter(function(record) {
+    return String(record.stayKey || '') === stayKey;
+  });
+  if (matchingRecords.length > 1) return { applied:false, reason:'destination-photo-record-ambiguous' };
+  var row = matchingRecords.length ? findBelongingsRow_(sheet, stayKey) : -1;
+  var existing = row > 0 ? usableDogPhotoV11208_(parseDogPhotoJson_(sheet.getRange(row, 30).getValue())) : null;
+  if (existing) return { applied:false, reason:'stay-photo-present', primaryPhoto:existing };
+  if (row <= 0) {
+    row = upsertBelongingsRecord_(sheet, {
+      stayKey:stayKey, dogName:String(bookings[matchingRows[0].row][1] || data.dogName || ''),
+      startDate:matchingRows[0].startDate, endDate:matchingRows[0].endDate
+    });
+  }
+  if (row <= 0) return { applied:false, reason:'stay-row-unavailable' };
+  var source = null;
+  var sourceReadFailed = false;
+  try { source = getDogMasterProfile_({ dogId:dogId, dogName:String(data.dogName || ''), breed:String(data.breed || '') }); } catch (_) { sourceReadFailed = true; }
+  var primary = persistedMasterPhotoCandidateV11208_(source);
+  if (!primary) {
+    try { primary = dogMasterPhotoCandidateV11208_(resolveDogMasterPhotoSourceV11208_({ dogId:dogId })); }
+    catch (_) { return { applied:false, reason:'photo-source-unavailable' }; }
+  }
+  if (!primary) return { applied:false, reason:sourceReadFailed?'photo-source-unavailable':'master-photo-missing' };
+  /* Recheck after reads so an upload completed during the lookup wins. */
+  var latestPrimary = usableDogPhotoV11208_(parseDogPhotoJson_(sheet.getRange(row, 30).getValue()));
+  if (latestPrimary) return { applied:false, reason:'stay-photo-present', primaryPhoto:latestPrimary };
+  var gallery = normalizeV108DogPhotoGallery_(
+    usableDogPhotoGalleryV11208_(parseV108DogPhotoGalleryJson_(sheet.getRange(row, 33).getValue()))
+      .concat(usableDogPhotoGalleryV11208_(source && source.photoGallery)),
+    primary
+  );
+  sheet.getRange(row, 30).setValue(JSON.stringify(primary));
+  sheet.getRange(row, 33).setValue(JSON.stringify(gallery));
+  sheet.getRange(row, 1).setValue(new Date());
+  touchWaffleDataVersion_('directory');
+  return { applied:true, reason:'selected-dog-photo-inherited', primaryPhoto:primary, photoGallery:gallery };
+}
+
 function resolveDogMasterPhotoSourceV11208_(data) {
   data = data && typeof data === 'object' ? data : {};
 
@@ -197,34 +258,77 @@ function resolveDogMasterPhotoSourceV11208_(data) {
 
   var stayKey = String(data.stayKey || '').trim();
   var dogName = String(data.dogName || '').trim();
-  var dogIdentity = normalizeDogMasterIdentity_(dogName);
   var records = readBelongingsRecords_(getBelongingsSheet_(), []);
-
-  var exact = stayKey
-    ? records.filter(function(record) {
-        return String(record.stayKey || '').trim() === stayKey;
-      })[0] || null
+  var bookings = getTargetSheet_().getDataRange().getValues();
+  var requestedDogId = String(data.dogId || '').trim();
+  var safeStayKeys = {};
+  var ownersByStayKey = {};
+  for (var k = 1; k < bookings.length; k++) {
+    var bookingType = String(bookings[k][11] || 'Boarding').trim().toLowerCase();
+    if (bookingType === 'potential stay' || bookingType === 'meet & greet') continue;
+    var bookingStart = normalizeDateValue_(bookings[k][3]);
+    var bookingEnd = normalizeDateValue_(bookings[k][4] || bookings[k][3]);
+    if (!bookingStart || !bookingEnd) continue;
+    var bookingKey = makeGuestStayKey_(String(bookings[k][1] || ''), bookingStart, bookingEnd);
+    var bookingIdentity = v108DogIdentityAt_(bookings, k);
+    var ownerToken = String(bookingIdentity.dogId || ('legacy-row-' + k));
+    ownersByStayKey[bookingKey] = ownersByStayKey[bookingKey] || {};
+    ownersByStayKey[bookingKey][ownerToken] = true;
+  }
+  if (requestedDogId) {
+    /* A UUID is the canonical link. Name equality is deliberately irrelevant. */
+    for (var i = 1; i < bookings.length; i++) {
+      var type = String(bookings[i][11] || 'Boarding').trim().toLowerCase();
+      if (type === 'potential stay' || type === 'meet & greet') continue;
+      var identity = v108DogIdentityAt_(bookings, i);
+      if (String(identity.dogId || '') !== requestedDogId) continue;
+      var start = normalizeDateValue_(bookings[i][3]);
+      var end = normalizeDateValue_(bookings[i][4] || bookings[i][3]);
+      var key = start && end ? makeGuestStayKey_(String(bookings[i][1] || ''), start, end) : '';
+      var owners = ownersByStayKey[key] || {};
+      if (key && Object.keys(owners).length === 1 && owners[requestedDogId]) safeStayKeys[key] = true;
+    }
+  } else {
+    /* Legacy fallback is limited to one fully corroborated, unlinked booking. */
+    var wanted = {
+      name: normalizeDogMasterIdentity_(dogName),
+      breed: normalizeDogMasterIdentity_(data.breed),
+      owner: normalizeDogMasterIdentity_(data.ownerName),
+      phone: phoneTailV108_(data.phone)
+    };
+    if (!wanted.name || !wanted.breed || !wanted.owner || !wanted.phone) return null;
+    var legacy = [];
+    for (var j = 1; j < bookings.length; j++) {
+      var rowType = String(bookings[j][11] || 'Boarding').trim().toLowerCase();
+      if (rowType === 'potential stay' || rowType === 'meet & greet') continue;
+      var rowIdentity = v108DogIdentityAt_(bookings, j);
+      if (rowIdentity.dogId) continue;
+      if (normalizeDogMasterIdentity_(bookings[j][1]) !== wanted.name ||
+          normalizeDogMasterIdentity_(bookings[j][2]) !== wanted.breed ||
+          normalizeDogMasterIdentity_(bookings[j][5]) !== wanted.owner ||
+          phoneTailV108_(bookings[j][6]) !== wanted.phone) continue;
+      legacy.push(j);
+    }
+    if (legacy.length !== 1) return null;
+    var legacyRow = bookings[legacy[0]], legacyStart = normalizeDateValue_(legacyRow[3]), legacyEnd = normalizeDateValue_(legacyRow[4] || legacyRow[3]);
+    var legacyKey = legacyStart && legacyEnd ? makeGuestStayKey_(String(legacyRow[1] || ''), legacyStart, legacyEnd) : '';
+    if (!legacyKey || Object.keys(ownersByStayKey[legacyKey] || {}).length !== 1) return null;
+    safeStayKeys[legacyKey] = true;
+  }
+  /* Validate the exact requested key too; legacy keys can collide across dogs. */
+  var exact = stayKey && safeStayKeys[stayKey]
+    ? records.filter(function(record) { return String(record.stayKey || '').trim() === stayKey; })[0] || null
     : null;
-
   if (dogMasterPhotoCandidateV11208_(exact)) return exact;
-
-  /*
-   * Filter to genuinely renderable photo-bearing records before sorting. A
-   * stale JSON placeholder on a newer/upcoming stay must not outrank an older
-   * stay that actually contains Coco's Drive image.
-   */
-  var candidates = records
-    .filter(function(record) {
-      return dogIdentity &&
-        normalizeDogMasterIdentity_(record.dogName) === dogIdentity &&
-        !!dogMasterPhotoCandidateV11208_(record);
-    })
-    .sort(function(a, b) {
-      var left = String(a.updatedAt || a.endDate || a.startDate || '');
-      var right = String(b.updatedAt || b.endDate || b.startDate || '');
-      return right.localeCompare(left);
-    });
-
+  /* Only completed stays can seed identity photos; future/current rows are not history. */
+  var today = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd');
+  var candidates = records.filter(function(record) {
+    return safeStayKeys[String(record.stayKey || '')] === true &&
+      String(record.endDate || '') < today &&
+      !!dogMasterPhotoCandidateV11208_(record);
+  }).sort(function(a, b) {
+    return String(b.endDate || b.startDate || '').localeCompare(String(a.endDate || a.startDate || ''));
+  });
   return candidates.length ? candidates[0] : exact;
 }
 

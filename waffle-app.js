@@ -15437,7 +15437,7 @@ registerWaffleServiceWorker();
                             if (isUpcoming) upcomingDogs.push('<li><span>⏳ ' + dogName.trim() + '</span> <span class="date-badge">' + (checkStart.getDate() + '/' + (checkStart.getMonth() + 1)) + '</span></li>');
 
                             if ((isCurrentlyAtHome || isUpcoming) && WAFFLE_PAGE === 'directory') {
-                                const statusTag = (isCurrentlyAtHome && !hasBeenPickedUp) ? '<span class="directory-status-tag tag-at-home">At Home</span>' : (hasBeenPickedUp ? '<span class="directory-status-tag" style="background:#e2e8f0; color:#64748b;">Checked Out</span>' : '<span class="directory-status-tag tag-upcoming">Upcoming</span>');
+                                const statusTag = (isCurrentlyAtHome && !hasBeenPickedUp) ? '<span class="directory-status-tag tag-at-home">At Home</span>' : (hasBeenPickedUp ? '<span class="directory-status-tag tag-checked-out">Checked Out</span>' : '<span class="directory-status-tag tag-upcoming">Upcoming</span>');
                                 const cleanName = dogName.trim().replace(/'/g, "\\'"); const cleanLnk = editLink.trim();
 
                                 const directoryStayKey = potentialKey;
@@ -15544,11 +15544,11 @@ registerWaffleServiceWorker();
                                         <section
                                             class="directory-care-brief"
                                             data-directory-care-brief
-                                            aria-label="Care readiness">
+                                            aria-label="Care overview">
                                             <div class="directory-care-brief-heading">
                                                 <div>
                                                     <span class="directory-profile-section-kicker">Selected guest</span>
-                                                    <h3>Care readiness</h3>
+                                                    <h3>Care overview</h3>
                                                 </div>
                                                 <span
                                                     class="directory-care-brief-freshness"
@@ -15560,24 +15560,6 @@ registerWaffleServiceWorker();
                                                 </span>
                                             </div>
 
-                                            <details class="directory-care-readiness">
-                                                <summary>
-                                                    <span>Other setup checks</span>
-                                                    <strong data-care-readiness-summary>Loading</strong>
-                                                </summary>
-                                                <div class="directory-care-readiness-list" data-care-readiness-list>
-                                                    <div class="directory-care-readiness-row" data-care-readiness-item="intake" data-state="attention">
-                                                        <span class="directory-care-readiness-copy"><strong>Owner intake</strong><small data-care-readiness-detail>Owner intake form</small></span>
-                                                        <span class="directory-care-readiness-status" data-care-readiness-status>Not sent</span>
-                                                        <button type="button" data-care-readiness-action="intake" aria-label="Review intake form">Review</button>
-                                                    </div>
-                                                    <div class="directory-care-readiness-row" data-care-readiness-item="handover" data-state="attention">
-                                                        <span class="directory-care-readiness-copy"><strong>Handover</strong><small data-care-readiness-detail>Handover note</small></span>
-                                                        <span class="directory-care-readiness-status" data-care-readiness-status>Add note</span>
-                                                        <button type="button" data-care-readiness-action="handover" aria-label="Review handover note">Review</button>
-                                                    </div>
-                                                </div>
-                                            </details>
                                             <div class="directory-care-brief-grid">
                                                 <section class="directory-care-brief-item directory-care-brief-safety">
                                                     <div class="directory-care-brief-note-heading"><h4>Safety</h4><button type="button" class="directory-care-brief-note-edit" data-care-readiness-action="safety" aria-label="Review safety details">Review</button></div>
@@ -15614,6 +15596,25 @@ registerWaffleServiceWorker();
                                                     </p>
                                                 </section>
                                             </div>
+
+                                            <details class="directory-care-readiness">
+                                                <summary>
+                                                    <span>Other setup checks</span>
+                                                    <strong data-care-readiness-summary>Loading</strong>
+                                                </summary>
+                                                <div class="directory-care-readiness-list" data-care-readiness-list>
+                                                    <div class="directory-care-readiness-row" data-care-readiness-item="intake" data-state="attention">
+                                                        <span class="directory-care-readiness-copy"><strong>Owner intake</strong><small data-care-readiness-detail>Owner intake form</small></span>
+                                                        <span class="directory-care-readiness-status" data-care-readiness-status>Not sent</span>
+                                                        <button type="button" data-care-readiness-action="intake" aria-label="Review intake form">Review</button>
+                                                    </div>
+                                                    <div class="directory-care-readiness-row" data-care-readiness-item="handover" data-state="attention">
+                                                        <span class="directory-care-readiness-copy"><strong>Handover</strong><small data-care-readiness-detail>Handover note</small></span>
+                                                        <span class="directory-care-readiness-status" data-care-readiness-status>Add note</span>
+                                                        <button type="button" data-care-readiness-action="handover" aria-label="Review handover note">Review</button>
+                                                    </div>
+                                                </div>
+                                            </details>
 
                                             <div class="directory-care-brief-actions" aria-label="Care profile actions">
                                                 <button type="button" class="directory-care-brief-action is-primary" data-care-brief-action="full-profile">

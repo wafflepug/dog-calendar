@@ -7,6 +7,7 @@ const uuid = n => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
 
 const backend = fs.readFileSync(path.join(__dirname, '..', 'apps-script', 'Code.js'), 'utf8');
 const stayIdentity = fs.readFileSync(path.join(__dirname, '..', 'apps-script', 'StableStayIdentity.js'), 'utf8');
+const careInheritance = fs.readFileSync(path.join(__dirname, '..', 'apps-script', 'DogCareInheritance.js'), 'utf8');
 const careUi = fs.readFileSync(path.join(__dirname, '..', 'care.js'), 'utf8');
 const helperStart = backend.indexOf('// Identity fields are discovered by header');
 const helperEnd = backend.indexOf('function findV108BoardingRowForUpdate_', helperStart);
@@ -33,7 +34,7 @@ function makeHarness(initialRows, priorProfiles = []) {
       return {
         getValue() { return cells.get(`${row}:${col}`) || (rows[row - 1] || [])[col - 1] || ''; },
         getValues() { return Array.from({ length: numRows || 1 }, (_, r) => Array.from({ length: numCols || 1 }, (_, c) => cells.get(`${row + r}:${col + c}`) ?? ((rows[row + r - 1] || [])[col + c - 1] || ''))); },
-        getDisplayValues() { return [(rows[row - 1] || []).slice(col - 1, col - 1 + (numCols || 1)).map(value => String(value || ''))]; },
+        getDisplayValues() { return Array.from({length:numRows||1},(_,r)=>(rows[row+r-1]||[]).slice(col-1,col-1+(numCols||1)).map(value=>String(value||''))); },
         setValue(value) {
           cells.set(`${row}:${col}`, value);
           while (rows.length < row) rows.push([]);
@@ -73,17 +74,19 @@ function makeHarness(initialRows, priorProfiles = []) {
     normalizeDateValue_: value => String(value || '').slice(0, 10),
     makeGuestStayKey_: (name, start, end) => `${String(name).toLowerCase()}|${start}|${end}`,
     readBelongingsRecords_: () => priorProfiles,
+    readStayOperations_: () => [],
     upsertBelongingsRecord_: (_sheet, record) => { writes.push({ profile: record }); return 2; },
     normalizeV108DogPhotoGallery_: gallery => gallery || [],
     touchWaffleDataVersion_: scope => versionTouches.push(scope),
     createIntakeLinkForBooking_: () => null,
-    auditBookingSnapshotFromSheetRow_: (_sheet, row) => ({ dogName: rows[row - 1][1], dogId: rows[row - 1][12] || '' }),
+    auditBookingSnapshotFromSheetRow_: (_sheet, row) => ({ dogName: rows[row - 1][1], dogId: rows[row - 1][12] || '',
+      startDate: rows[row - 1][3], endDate: rows[row - 1][4], bookingType: rows[row - 1][11], stayId: rows[row - 1][14] || '' }),
     logAuditEvent_: () => {},
     console
   };
   vm.createContext(sandbox);
   const prefillStart = backend.indexOf('function getV108ReturningGuestPrefill_');
-  vm.runInContext(`${stayIdentity}\n${backend.slice(helperStart, helperEnd)}\n${backend.slice(prefillStart, copyEnd)}\n${backend.slice(createStart, createEnd)}\nthis.api = { resolve: resolveV108DogRows_, identityAt: v108DogIdentityAt_, create: createV108Boarding_, createIntake: createV108IntakeBooking_, prefill: getV108ReturningGuestPrefill_, backfill: backfillV108DogIds_, link: linkV108StayToDog_, linkable: listV108DogStaysForLinking_ };`, sandbox);
+  vm.runInContext(`${stayIdentity}\n${careInheritance}\n${backend.slice(helperStart, helperEnd)}\n${backend.slice(prefillStart, copyEnd)}\n${backend.slice(createStart, createEnd)}\nthis.api = { resolve: resolveV108DogRows_, identityAt: v108DogIdentityAt_, create: createV108Boarding_, createIntake: createV108IntakeBooking_, prefill: getV108ReturningGuestPrefill_, backfill: backfillV108DogIds_, link: linkV108StayToDog_, linkable: listV108DogStaysForLinking_ };`, sandbox);
   return { api: sandbox.api, rows, writes, versionTouches, underActionLock(fn) { if (sandboxLockHeld) throw new Error('test action lock already held'); sandboxLockHeld=true; try { return fn(); } finally { sandboxLockHeld=false; } } };
 }
 
@@ -100,7 +103,7 @@ const booking = (name, owner, id = '') => ['', name, 'Cavoodle', '2026-10-01', '
   const oldClient = h.api.create({ dogName: 'Coco', breed: 'Cavoodle', ownerName: 'D', phone: '0400000000', startDate: '2026-10-05', endDate: '2026-10-06', copyPreviousProfile: true });
   assert.ok(oldClient.dogId);
   assert.equal(oldClient.copiedPreviousProfile.copied, false);
-  assert.match(oldClient.copySkippedReason, /Select an existing dog record/);
+  assert.equal(oldClient.copySkippedReason, 'review-required', 'legacy automatic profile-copy requests require the explicit review flow');
 }
 
 // Existing IDs cannot be reused for another name without the explicit rename flow.
@@ -135,27 +138,65 @@ const booking = (name, owner, id = '') => ['', name, 'Cavoodle', '2026-10-01', '
   const created = h.underActionLock(() => h.api.createIntake({ dogName: 'New Dog', breed: 'Pug', startDate: '2026-10-10', endDate: '2026-10-11' }));
   assert.equal(created.dogId, uuid(1));
   assert.equal(h.rows[2][12], uuid(1));
+  assert.equal(h.rows[2][14], uuid(2), 'the direct intake writer also assigns a distinct Stay ID');
+  assert.equal(created.stayId, uuid(2));
   const reused = h.api.createIntake({ dogName: 'Nell', dogId: uuid(105), breed: 'Pug', startDate: '2026-10-12', endDate: '2026-10-13' });
   assert.equal(reused.dogId, uuid(105));
   assert.throws(() => h.api.createIntake({ dogName: 'Other', dogId: uuid(105), breed: 'Pug', startDate: '2026-10-14' }), error => error.code === 'DOG_ID_NAME_MISMATCH');
 }
 
-// Profile copy follows the selected dog's ID and refuses a colliding old stay key.
+// Legacy automatic copy is disabled; an explicit review must name one completed source.
 {
   const profiles = [
-    { stayKey: 'coco|2026-10-01|2026-10-02', dogName: 'Coco', endDate: '2026-10-02', intakeAttributes: { food: 'A' } },
-    { stayKey: 'coco|2026-10-05|2026-10-06', dogName: 'Coco', endDate: '2026-10-06', intakeAttributes: { food: 'B' } }
+    { stayKey: 'coco|2025-10-01|2025-10-02', dogName: 'Coco', endDate: '2025-10-02', intakeAttributes: { food: 'B' }, riskFlags: {} }
   ];
   const dogA = booking('Coco', 'A', uuid(106));
   const dogB = booking('Coco', 'B', uuid(107));
-  dogB[3] = '2026-10-05'; dogB[4] = '2026-10-06';
+  dogB[3] = '2025-10-01'; dogB[4] = '2025-10-02';
   const h = makeHarness([header, dogA, dogB], profiles);
-  h.api.create({ dogName: 'Coco', dogId: uuid(107), breed: 'Cavoodle', ownerName: 'B', phone: '0400000000', startDate: '2026-10-07', endDate: '2026-10-08', copyPreviousProfile: true });
-  const copied = h.writes.find(item => item.profile);
-  assert.equal(copied.profile.intakeAttributes.food, 'B', 'Only the selected dog record supplies the copied profile');
-  const legacyB = booking('Coco', 'B'); legacyB[3] = '2026-10-01'; legacyB[4] = '2026-10-02';
+  const legacy = h.api.create({ dogName: 'Coco', dogId: uuid(107), breed: 'Cavoodle', ownerName: 'B', phone: '0400000000', startDate: '2026-10-07', endDate: '2026-10-08', copyPreviousProfile: true });
+  assert.equal(legacy.copySkippedReason, 'review-required');
+  assert.equal(h.writes.some(item => item.profile), false, 'legacy copy flag cannot silently copy care values');
+  const review = { confirmed:true, sourceStayId:'', sourceDogId:uuid(107), sourceStayKey:'coco|2025-10-01|2025-10-02', sourceEndDate:'2025-10-02', profile:{food:'Edited B'}, riskFlags:{} };
+  const reviewed = makeHarness([header, dogA, dogB], profiles);
+  reviewed.api.create({ dogName: 'Coco', dogId: uuid(107), breed: 'Cavoodle', ownerName: 'B', phone: '0400000000', startDate: '2026-10-07', endDate: '2026-10-08', inheritCareReview:review });
+  const copied = reviewed.writes.find(item => item.profile);
+  assert.equal(copied.profile.intakeAttributes.food, 'Edited B', 'the explicit review value is applied to the selected dog');
+  const legacyB = booking('Coco', 'B'); legacyB[3] = '2025-10-01'; legacyB[4] = '2025-10-02';
   const legacyCollision = makeHarness([header, booking('Coco', 'A', uuid(106)), legacyB], profiles);
-  assert.throws(() => legacyCollision.api.create({ dogName: 'Coco', dogId: uuid(106), breed: 'Cavoodle', ownerName: 'A', phone: '0400000000', startDate: '2026-10-07', endDate: '2026-10-08', copyPreviousProfile: true }), error => error.code === 'DOG_ID_AMBIGUOUS_LEGACY');
+  const beforeAmbiguousReview = legacyCollision.rows.length;
+  assert.throws(() => legacyCollision.api.create({ dogName: 'Coco', dogId: uuid(106), breed: 'Cavoodle', ownerName: 'A', phone: '0400000000', startDate: '2026-10-07', endDate: '2026-10-08', inheritCareReview:{...review,sourceDogId:uuid(106)} }), /ambiguous|source stay/i);
+  assert.equal(legacyCollision.rows.length, beforeAmbiguousReview, 'ambiguous cross-Dog legacy keys fail before booking append');
+}
+
+// A reviewed new stay cannot claim care from an existing same-name/date stay
+// or an orphan belongings key whose owner cannot be proven.
+{
+  const source = booking('Coco','A',uuid(106)); source[3]='2025-10-01'; source[4]='2025-10-02';
+  const target = booking('Coco','B',uuid(107)); target[3]='2026-10-07'; target[4]='2026-10-08';
+  const sourceKey='coco|2025-10-01|2025-10-02', targetKey='coco|2026-10-07|2026-10-08';
+  const review={confirmed:true,sourceStayId:'',sourceDogId:uuid(106),sourceStayKey:sourceKey,sourceEndDate:'2025-10-02',profile:{food:'Reviewed'},riskFlags:{}};
+  const records=[{stayKey:sourceKey,dogName:'Coco',endDate:'2025-10-02',intakeAttributes:{food:'Source'},riskFlags:{}},
+    {stayKey:targetKey,dogName:'Coco',endDate:'2026-10-08',intakeAttributes:{food:'Dog B private'},riskFlags:{}}];
+  const occupied=makeHarness([header,source,target],records), occupiedBefore=occupied.rows.length;
+  assert.throws(()=>occupied.api.create({dogName:'Coco',dogId:uuid(106),breed:'Cavoodle',ownerName:'A',phone:'0400000000',startDate:'2026-10-07',endDate:'2026-10-08',inheritCareReview:review}),/already uses this stay key/i);
+  assert.equal(occupied.rows.length,occupiedBefore,'existing Dog B booking is not duplicated');
+  assert.equal(occupied.writes.some(item=>item.profile),false,'Dog B care profile is not overwritten');
+
+  const legacyBlankTypeTarget=target.slice(); legacyBlankTypeTarget[11]='';
+  const blankType=makeHarness([header,source,legacyBlankTypeTarget],[records[0]]), blankTypeBefore=blankType.rows.length;
+  assert.throws(()=>blankType.api.create({dogName:'Coco',dogId:uuid(106),breed:'Cavoodle',ownerName:'A',phone:'0400000000',startDate:'2026-10-07',endDate:'2026-10-08',inheritCareReview:review}),/already uses this stay key/i);
+  assert.equal(blankType.rows.length,blankTypeBefore,'legacy blank booking type defaults to Boarding for collision checks');
+  assert.equal(blankType.writes.some(item=>item.profile),false,'blank-type Dog B care is not overwritten');
+
+  const orphan=makeHarness([header,source],records), orphanBefore=orphan.rows.length;
+  assert.throws(()=>orphan.api.create({dogName:'Coco',dogId:uuid(106),breed:'Cavoodle',ownerName:'A',phone:'0400000000',startDate:'2026-10-07',endDate:'2026-10-08',inheritCareReview:review}),/unassigned details/i);
+  assert.equal(orphan.rows.length,orphanBefore,'orphan destination care key is not adopted by a new booking');
+  assert.equal(orphan.writes.some(item=>item.profile),false,'orphan care details remain untouched');
+
+  const photoOrphan=makeHarness([header,source],records), photoOrphanBefore=photoOrphan.rows.length;
+  assert.throws(()=>photoOrphan.api.create({dogName:'Coco',dogId:uuid(106),breed:'Cavoodle',ownerName:'A',phone:'0400000000',startDate:'2026-10-07',endDate:'2026-10-08',inheritDogPhoto:true}),/unassigned details/i);
+  assert.equal(photoOrphan.rows.length,photoOrphanBefore,'photo seeding cannot claim an orphan belongings key');
 }
 
 // Explicit backfill assigns one UUID per blank confirmed row, including same-name rows, and is idempotent.
@@ -336,13 +377,15 @@ console.log('Dog stay link UI and route contract tests passed.');
     getTargetSheet_: () => ({ getDataRange: () => ({ getValues: () => rows }) }),
     getBelongingsSheet_: () => ({}),
     readBelongingsRecords_: () => profiles,
+    readStayOperations_: () => [],
     phoneTailV108_: value => String(value || '').replace(/\D/g, '').slice(-4),
     normalizeV108Identity_: value => String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim(),
     normalizeDateValue_: value => String(value || '').slice(0, 10),
-    makeGuestStayKey_: (name, start, end) => `${String(name).toLowerCase()}|${start}|${end}`
+    makeGuestStayKey_: (name, start, end) => `${String(name).toLowerCase()}|${start}|${end}`,
+    Utilities: { formatDate: () => '2026-09-28' }, Session: { getScriptTimeZone: () => 'Australia/Sydney' }
   };
   vm.createContext(sandbox);
-  vm.runInContext(`${backend.slice(helperStart, helperEnd)}\n${backend.slice(historyStart, historyEnd)}\n${backend.slice(masterStart, masterEnd)}\nthis.derive = deriveDogMasterProfile_; this.get = getDogMasterProfile_; this.history = getV108DogHistory_;`, sandbox);
+  vm.runInContext(`${stayIdentity}\n${backend.slice(helperStart, helperEnd)}\n${backend.slice(historyStart, historyEnd)}\n${backend.slice(masterStart, masterEnd)}\nthis.derive = deriveDogMasterProfile_; this.get = getDogMasterProfile_; this.history = getV108DogHistory_;`, sandbox);
   const selected = sandbox.derive('Coco', 'Cavoodle', uuid(107));
   assert.equal(selected.profile.marker, 'B');
   assert.equal(selected.dogId, uuid(107));
