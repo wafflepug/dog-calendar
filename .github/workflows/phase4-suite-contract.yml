@@ -1,6 +1,12 @@
 name: Phase 4 Sitter Workflow Contract
 
 on:
+  pull_request:
+    paths:
+      - 'phase4*.js'
+      - 'waffle-build.json'
+      - 'apps-script/**'
+      - '.github/workflows/phase4-suite-contract.yml'
   push:
     branches: [main]
   workflow_dispatch:
@@ -86,7 +92,9 @@ jobs:
           grep -q 'get_dog_history' phase4-booking.js
           grep -q 'dogId' phase4-booking.js
           grep -Ei 'book again|returning guest' phase4-booking.js >/dev/null
-          grep -q 'copyPreviousProfile' phase4-booking.js
+          grep -q 'inheritCareReview' phase4-booking.js
+          grep -q 'reviewedCarePayload' phase4-booking.js
+          node --test tests/dog-care-inheritance.test.js tests/care-history-inheritance-backend.test.js
           grep -q 'get_returning_guest_prefill' apps-script/Code.js
 
       - name: Validate 4G Smart Reminders
