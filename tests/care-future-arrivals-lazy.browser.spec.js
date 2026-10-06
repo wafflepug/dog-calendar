@@ -73,15 +73,60 @@ test('Care defers later arrivals until requested, keeps total count, and leaves 
   await page.evaluate(() => {
     const near = window.fixtureEvents[0];
     const distant = window.fixtureEvents[1];
+    const addFromDistant = days => {
+      const value = new Date(`${distant.start}T00:00:00Z`);
+      value.setUTCDate(value.getUTCDate() + days);
+      return value.toISOString().slice(0, 10);
+    };
+    const twinFirstStart = addFromDistant(10);
+    const twinFirstEnd = addFromDistant(12);
+    const twinSecondStart = addFromDistant(20);
+    const twinSecondEnd = addFromDistant(22);
+    const invalidNumberStart = addFromDistant(30);
+    const invalidNumberEnd = addFromDistant(32);
     window.WAFFLE_V11196_FUTURE_RANGE.updateEvents([near, distant, {
       ...distant,
       id: 'distant-2',
       title: 'Another Distant Pup',
       extendedProps: { ...distant.extendedProps, dogName: 'Another Distant Pup' }
+    }, {
+      ...distant,
+      id: 'twin-first',
+      title: 'Twin Pup',
+      start: twinFirstStart,
+      end: twinFirstEnd,
+      extendedProps: { ...distant.extendedProps, dogName: 'Twin Pup', ownerName: 'Ada Owner', dogId: '11111111-1111-4111-8111-111111111111', dogNumber: '#00007', rawStartDate: twinFirstStart, rawEndDate: twinFirstEnd }
+    }, {
+      ...distant,
+      id: 'twin-second',
+      title: 'Twin Pup',
+      start: twinSecondStart,
+      end: twinSecondEnd,
+      extendedProps: { ...distant.extendedProps, dogName: 'Twin Pup', ownerName: 'Ada Owner', dogId: '22222222-2222-4222-8222-222222222222', dogNumber: '#00008', rawStartDate: twinSecondStart, rawEndDate: twinSecondEnd }
+    }, {
+      ...distant,
+      id: 'invalid-number',
+      title: 'Invalid Number Pup',
+      start: invalidNumberStart,
+      end: invalidNumberEnd,
+      extendedProps: { ...distant.extendedProps, dogName: 'Invalid Number Pup', ownerName: 'Ada Owner', dogNumber: 'Other', rawStartDate: invalidNumberStart, rawEndDate: invalidNumberEnd }
     }]);
   });
-  await expect(page.getByRole('button', { name: /View 2 later arrivals/ })).toBeVisible();
-  expect(await page.evaluate(() => window.WAFFLE_V11196_FUTURE_RANGE.totalFutureCount())).toBe(3);
+  await expect(page.getByRole('button', { name: /View 5 later arrivals/ })).toBeVisible();
+  expect(await page.evaluate(() => window.WAFFLE_V11196_FUTURE_RANGE.totalFutureCount())).toBe(6);
+  await page.getByRole('button', { name: /View 5 later arrivals/ }).click();
+  const twinButtons = page.locator('[data-v11196-synthetic-future="true"] [data-open-directory-profile][aria-label^="Open Twin Pup"]');
+  await expect(twinButtons).toHaveCount(2);
+  const twinLabels = await twinButtons.evaluateAll(buttons => buttons.map(button => button.getAttribute('aria-label')));
+  expect(twinLabels[0]).toContain('Ada Owner');
+  expect(twinLabels[1]).toContain('Ada Owner');
+  expect(twinLabels[0]).not.toBe(twinLabels[1]);
+  expect(twinLabels[0]).toContain('Dog Number 00007');
+  expect(twinLabels[1]).toContain('Dog Number 00008');
+  const invalidNumberLabel = await page.locator('[data-open-directory-profile][aria-label^="Open Invalid Number Pup"]').getAttribute('aria-label');
+  expect(invalidNumberLabel).not.toContain('Dog Number Other');
+  const lazyDetails = await page.locator('[data-v11196-synthetic-future="true"] [data-directory-detail="profile"]').evaluateAll(details => details.every(detail => detail.dataset.detailLoaded === 'false'));
+  expect(lazyDetails).toBe(true);
 });
 
 test('search for a deferred arrival expands it and switches to Arriving', async ({ page }) => {

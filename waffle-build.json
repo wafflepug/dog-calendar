@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.10.06.05",
-  "releaseName": "Returning Dogs & Care Refinement",
+  "assetRevision": "2026.10.06.06",
+  "releaseName": "Care Arrival Accessibility",
   "careIteration": {
     "returningDogSuggestions": true,
     "reviewedCareInheritance": true,

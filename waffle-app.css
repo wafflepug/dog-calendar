@@ -5106,8 +5106,9 @@ body.dark-theme .directory-lazy-placeholder.is-error {
 }
 
 .directory-guest-tile-open:focus-visible {
-    outline: 3px solid rgba(37, 99, 235, .2);
-    outline-offset: 3px;
+    outline: 3px solid var(--wh75-accent, #7562db);
+    outline-offset: -3px;
+    z-index: 2;
 }
 
 .directory-guest-tile-photo {

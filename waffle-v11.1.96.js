@@ -237,6 +237,10 @@
     const dogName = eventDogName(event);
     const breed = String(props.breed || 'Unknown').trim() || 'Unknown';
     const owner = String(props.ownerName || props.owner || 'N/A').trim() || 'N/A';
+    const rawDogNumber = String(props.dogNumber || props.dogNo || '').trim();
+    const dogNumber = /^#?\d{1,5}$/.test(rawDogNumber) ? rawDogNumber.replace(/^#/, '') : '';
+    const dogId = String(props.dogId || '').trim();
+    const stayId = String(props.stayId || '').trim();
     const phone = String(props.phone || 'N/A').trim() || 'N/A';
     const notes = String(props.notes || 'None').trim() || 'None';
     const dateLabel = `${formatStayDate(dates.start)} – ${formatStayDate(dates.end)}`;
@@ -249,6 +253,9 @@
         data-directory-start-date="${escapeHtml(dates.start)}"
         data-directory-end-date="${escapeHtml(dates.end)}"
         data-directory-source-row="${escapeHtml(props.sourceRow || '')}"
+        data-directory-dog-id="${escapeHtml(dogId)}"
+        data-directory-stay-id="${escapeHtml(stayId)}"
+        data-directory-dog-number="${escapeHtml(dogNumber)}"
         data-v1088-breed="${escapeHtml(breed)}"
         data-v1088-owner-name="${escapeHtml(owner)}"
         data-v1088-phone="${escapeHtml(phone)}"
@@ -263,7 +270,7 @@
           type="button"
           class="directory-guest-tile-open v11196-future-tile"
           data-open-directory-profile
-          aria-label="Open ${escapeHtml(dogName)} future care profile">
+          aria-label="Open ${escapeHtml(dogName)} future care profile. ${dogNumber ? `Dog Number ${escapeHtml(dogNumber)}. ` : dogId ? `Dog ID ${escapeHtml(dogId)}. ` : stayId ? `Stay ID ${escapeHtml(stayId)}. ` : ''}${escapeHtml(owner)}. ${escapeHtml(dateLabel)}.">
           <span
             class="directory-guest-tile-photo"
             data-directory-tile-photo="${escapeHtml(stayKey)}"
