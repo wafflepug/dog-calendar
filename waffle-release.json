@@ -1,7 +1,7 @@
 {
   "release": "phase3d-2026.08.28.01",
-  "currentRelease": "2026.10.07.01",
-  "currentReleaseName": "Boarding MVP Refinements",
+  "currentRelease": "2026.10.07.02",
+  "currentReleaseName": "Identity-safe Care Profile Reads",
   "currentImprovements": ["Clear Records and Forms states", "Readable notifications", "Distinct same-name Care arrivals", "Scoped navigation observer work", "Repeatable boarding MVP verification", "Readable responsive Care inline editors", "Capacity Tracker counts without redundant dots", "Readable Care editing controls", "Touch-friendly profile form fields", "Responsive returning-dog link review", "Distinct accessible names for Care arrivals", "Booking-aware Back focus restoration", "Visible keyboard focus on future profiles", "Evidenced returning-dog suggestions", "Reviewed dated care inheritance", "Identity-based photo inheritance", "Essentials-first Care overview", "Responsive Care cards", "Stable booking creation IDs", "Save-intent retry protection", "Verified checkout history"],
   "latestMergedSha": "41c7d27",
   "latestReleaseDate": "2026-10-07",

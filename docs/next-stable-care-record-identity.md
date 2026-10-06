@@ -27,3 +27,24 @@ Legacy records require a migration map with proven identity evidence. A legacy k
 ## Review deliverables
 
 Provide a narrow source diff, synthetic fixtures, the compatibility/resolution contract, and rollout evidence. The lead reviews the identity policy and deployment order before releasing it. Physical-device and existing Care navigation checks remain part of the MVP acceptance matrix.
+
+## Persisted schema and rollout contract
+
+`Pet_Belongings` has 34 columns. Its identity fields are `Stay Key` (column B) and `Dog Name` (column C); it has no persisted Stay ID or Dog ID column. The booking sheet stores optional `Stay ID` and Dog ID fields discovered by header. This first read-only delivery therefore proves ownership through the current booking rows, then associates one unique legacy Care row with the requested booking key in memory. It does not write an identity map or alter either sheet.
+
+`get_guest_profile` accepts `stayKey` and, when available, `stayId` and `dogId`. A resolved response carries `record.identity` (`stayKey`, validated `stayId` or empty string, and validated `dogId` or empty string) and `record.resolution` (`status: resolved`, with `method: stay-id-unique-legacy-key` or `legacy-key-unique`). A stable-ID request must match exactly one persisted booking; supplied identifiers must agree; the legacy key must identify exactly one booking row across all rows, including rows with missing or malformed IDs; and exactly one Care row must use that key. A no-ID request stays compatible only when the key uniquely identifies one booking and one Care row. Duplicate booking keys, duplicate Care rows, invalid IDs, and conflicting evidence return `status: unresolved` with empty intake/photo fields. Proven identity with no Care row returns `status: not_found`, separately from transport errors.
+
+This mapping cannot resolve two persisted bookings with the same legacy key, even when both have stable IDs: the existing Care row contains no field that says which booking owns its contents. Those records require review and a later separately approved migration design. Profile open and retry remain read-only. Belongings, safety summaries, intake documents, and media are outside this endpoint contract.
+
+### Backend-first copied-sheet rollout and rollback
+
+1. Make a copy of the production spreadsheet and deploy this Apps Script source as a test deployment bound to that copy. Keep the production web app deployment unchanged.
+2. In the copy, check a unique stable-ID stay, a unique legacy stay with no Stay ID, a missing Care row, two bookings sharing a name/date key, duplicate Care rows, an invalid ID, and conflicting Stay/Dog IDs. Confirm unresolved cases return no intake or photo details and no read creates sheets, adds headers, or changes cell values.
+3. Verify both the test deployment and client against the copied spreadsheet, including the no-write assertions, before any production release. Release the Apps Script backend first and confirm the identity/resolution contract and existing Care reads. Publish client code only after that backend is confirmed. Keep the existing ambiguity guard for unresolved responses.
+4. Rollback by restoring the prior Apps Script and client deployment versions. Because profile reads write no identity mapping and change no cells, rollback requires no data cleanup. Records with shared legacy keys remain unresolved after release until separately reviewed.
+
+The repository's current workflows deploy when changes reach the main branch and do not enforce this backend-first sequence. Do not merge a combined backend/client release until copied-sheet evidence is available and deployment ordering is resolved; use separately controlled backend and client releases or add a reviewed deployment gate first. Copied-sheet and test-deployment verification has not been performed in this workspace. No live deployment or migration was run.
+
+## Implementation verification
+
+The candidate passes 212 local Node fixture tests, five source contracts, and 12 targeted desktop/mobile Chromium and WebKit browser cases. Profile fixtures cover separate caches, missing versus unresolved records, safe legacy compatibility, late replies after identity switches, and retained drafts with blocked saves after server identity rejection. Browser emulation does not establish physical iPhone/Fold4 behaviour. Copied-sheet deployment verification and the broader GitHub browser workflow remain separate release gates.
