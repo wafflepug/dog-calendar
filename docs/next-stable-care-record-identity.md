@@ -52,3 +52,7 @@ The candidate passes 212 local Node fixture tests, five source contracts, and 12
 ## Controlled release sequence
 
 After all candidate CI workflows pass and remaining copied-data identity cases are verified, dispatch Deploy Google Apps Script manually on the exact reviewed candidate branch. Verify the production backend echoes the candidate SHA and profile identity/resolution contract before merging the client PR. Only then merge and monitor the main Apps Script and Pages deployments; their normal independent triggers are safe once the compatible backend is already live. If backend verification fails, leave the client PR unmerged and restore the previous backend deployment. Never deploy the private test adapter to production.
+
+## Follow-up Google runtime evidence
+
+The refreshed c4f3161e reader passed the owner-only private editor and version 3 deployed endpoint on 7 October 2026. Seven copied-data memory overlays now cover stable identity, mismatched IDs, duplicate booking/Care keys, reused Stay IDs, and legacy Dog-ID compatibility. No rows were changed. These overlays extend Google runtime evidence without claiming persisted fixture migration or complete mutation integration. See pr195-release-verification.md for exact coverage and limits. Candidate CI and backend-first verification still precede frontend merge.

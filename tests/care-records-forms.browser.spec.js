@@ -22,7 +22,7 @@ function installFixture(page, options = {}) {
     const request = route.request();
     const url = request.url();
     if (!['GET', 'HEAD'].includes(request.method())) return route.fulfill({ status: 405, body: 'Read-only fixture blocked mutation' });
-    if (url.startsWith('http://127.0.0.1:44972/')) return route.continue();
+    if (new URL(url).hostname === '127.0.0.1') return route.continue();
     if (url.includes('docs.google.com/spreadsheets') && url.includes('output=csv')) return route.fulfill({ status: 200, contentType: 'text/csv', body: csv() });
     if (url.includes('cdn.jsdelivr.net') && url.includes('fullcalendar')) return route.fulfill({ status: 200, contentType: 'application/javascript', body: fullCalendar });
     if (url.includes('script.google.com')) {
@@ -46,6 +46,26 @@ function installFixture(page, options = {}) {
         summaries: options.summaryRecords || bookings.map(b => ({ stayKey: stayKey(b), riskFlags: b.dogName === 'Milo' ? { foodAllergy: true } : {} })),
         digitalIntakes: options.digitalIntakes || [], legacyIntakes: options.legacyIntakes || []
       };
+      if (action === 'get_guest_profile') {
+        const requestedStayKey = String(payload.stayKey || params.get('stayKey') || '');
+        const matchingBookings = bookings.filter(booking => stayKey(booking) === requestedStayKey);
+        const uniquelyResolved = matchingBookings.length === 1;
+        response = {
+          result: 'success',
+          record: {
+            stayKey: requestedStayKey,
+            identity: { stayKey: requestedStayKey, stayId: '', dogId: '' },
+            resolution: uniquelyResolved
+              ? { status: 'resolved', method: 'legacy-key-unique' }
+              : { status: 'unresolved', method: 'ambiguous-legacy-key', reason: matchingBookings.length ? 'multiple-bookings-share-stay-key' : 'no-booking-proves-stay-key' },
+            intakeAttributes: {},
+            intakeAttributesSource: '',
+            dogPhoto: null,
+            dogPhotoGallery: [],
+            stayPhotos: []
+          }
+        };
+      }
       if (action === 'get_intake_statuses') response = { result: 'success', records: options.digitalIntakes || [] };
       if (action === 'get_legacy_intake_statuses') response = { result: 'success', records: options.legacyIntakes || [] };
       if (action === 'get_belongings') response = { result: 'success', records: [] };
