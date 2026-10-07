@@ -683,11 +683,12 @@
         gap:8px;
         padding:8px 6px;
         font:inherit;
-        font-size:clamp(9px,1vw,12px);
+        font-size:14px;
         font-weight:800;
         line-height:1.15;
         cursor:pointer;
         transition:background .15s ease,color .15s ease,box-shadow .15s ease;
+        overflow-wrap:anywhere;
       }
       body[data-waffle-page="directory"] .v11160-desktop-tab > span:last-child {
         min-width:0;
@@ -702,27 +703,26 @@
         color:var(--wh-accent-contrast,#fff);
         box-shadow:0 1px 2px rgba(15,23,42,.14);
       }
+      body[data-waffle-page="directory"] .v11160-desktop-tab:focus,
       body[data-waffle-page="directory"] .v11160-desktop-tab:focus-visible {
         outline:2px solid var(--wh-accent,#0f6292);
         outline-offset:2px;
       }
       @media (max-width:768px) {
         body[data-waffle-page="directory"] .v11160-desktop-tabs {
-          display:flex;
+          display:grid;
+          grid-template-columns:repeat(3,minmax(0,1fr));
           gap:4px;
-          overflow-x:auto;
-          overscroll-behavior-x:contain;
-          scrollbar-width:thin;
-          -webkit-overflow-scrolling:touch;
-          scroll-snap-type:x proximity;
           padding:4px;
         }
         body[data-waffle-page="directory"] .v11160-desktop-tab {
-          flex:0 0 auto;
-          min-width:68px;
-          max-width:130px;
-          scroll-snap-align:start;
-          padding:7px 8px;
+          min-width:0;
+          max-width:none;
+          min-height:52px;
+          gap:5px;
+          padding:6px 4px;
+          font-size:13px;
+          line-height:1.2;
         }
       }
       body[data-waffle-page="directory"] .directory-card.v11160-desktop-profile [data-v11160-managed-panel="true"] {

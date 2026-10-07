@@ -20,6 +20,7 @@ const profileSubtabSwitch = appSource.slice(appSource.indexOf('function switchDi
 const actualRenderer = `${careFlags}\n${intakeGroups}\n${profileTabs}\nlet careRiskRecordsCache = {};\nconst directorySafetyReadFailures = new Set();\nconst directorySummaryRecordsCache = {};\nconst belongingsRecordsCache = {};\nconst applyDirectoryProfileEditMode = () => {};\nconst restoreDirectoryProfileEditDraft = () => {};\nfunction escapeDashboardHtml(value){return String(value == null ? '' : value).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');}\n${categorySummary}\n${profileSubtabSwitch}\n${intakeControl}\n${intakeRenderer}\n${careRenderer}\nwindow.renderDirectoryIntakeAttributes = renderDirectoryIntakeAttributes;\nwindow.setCategorySafetyRecord = (key, record) => { careRiskRecordsCache[key] = record; directorySafetyReadFailures.delete(key); };\nwindow.setCategorySafetyFailure = key => directorySafetyReadFailures.add(key);\nwindow.summarizeCareCategory = directoryCareCategorySummary;`;
 const briefIdentityGuard = appSource.slice(appSource.indexOf('function getDirectoryProfileReadIdentity(card)'), appSource.indexOf('async function loadDirectoryProfileDetail('));
 const careBriefRecordHelper = appSource.slice(appSource.indexOf('function getDirectoryCareBriefRecord(card)'), appSource.indexOf('function normalizeDirectoryPhoneForTel'));
+const briefFreshnessHelpers = appSource.slice(appSource.indexOf('function getDirectoryCareBriefFreshness('), appSource.indexOf('function renderDirectoryCareBrief(card)'));
 const briefRenderer = appSource.slice(appSource.indexOf('function renderDirectoryCareBrief(card)'), appSource.indexOf('function openCareReadinessTarget'));
 const belongingsItems = appSource.slice(appSource.indexOf('const BELONGINGS_ITEMS'), appSource.indexOf('];', appSource.indexOf('const BELONGINGS_ITEMS')) + 2);
 const belongingsRenderer = appSource.slice(appSource.indexOf('function renderDirectoryBelongings'), appSource.indexOf('function renderDirectoryOperationalSections'));
@@ -57,6 +58,7 @@ const briefTestCode = `
   function normalizeDirectoryPhoneForTel(value) { return String(value || '').replace(/[^+\\d]/g, ''); }
   ${briefIdentityGuard}
   ${careBriefRecordHelper}
+  ${briefFreshnessHelpers}
   ${briefRenderer}
   window.renderBrief = renderDirectoryCareBrief;
   window.seedBriefFixture = card => { directoryProfileDetailCache['stay-a'] = { stayKey: 'stay-a', intakeAttributes: { feedingTimes: '7 am', foodAmount: '1 cup', medicationInstructions: 'With dinner' }, intakeAttributesSource: 'Saved profile' }; careRiskRecordsCache['stay-a'] = { riskFlags: { foodAllergy: true } }; card.dataset.intakeMethod = 'legacy'; renderDirectoryCareBrief(card); card.dataset.briefDebug = JSON.stringify({ key: card.dataset.stayKey, safety: card.querySelector('[data-care-brief-safety]')?.innerText, flags: careRiskRecordsCache['stay-a'] }); };
@@ -492,7 +494,7 @@ test('server identity conflict blocks legacy profile, belongings, and safety fal
   });
   await expect(page.locator('[data-care-brief-feeding]')).toHaveText('Not provided');
   await expect(page.locator('[data-care-brief-medication]')).toHaveText('Not provided');
-  await expect(page.locator('[data-care-brief-freshness]')).toHaveText('No saved care profile');
+  await expect(page.locator('[data-care-brief-freshness]')).toHaveText('No saved care record');
   await expect(page.locator('[data-care-brief-feeding]')).not.toContainText('identity review');
 });
 

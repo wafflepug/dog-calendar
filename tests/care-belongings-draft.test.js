@@ -193,6 +193,7 @@ function hostedCheckHarness(responses) {
     }]]),
     hostedBelongingsPhotoContext: null,
     directoryProfileEditKey: candidate => candidate.dataset.directoryStayKey,
+    getDirectoryProfileReadIdentity: candidate => ({ valid: true, stayKey: candidate.dataset.directoryStayKey, hasStableIds: false, cacheKey: candidate.dataset.directoryStayKey }),
     directoryProfileEditIdentityConflicts: () => false,
     getDirectoryProfileEditIdentity: () => ({ breed: 'mutt', ownerName: 'owner', phone: '123' }),
     document: { querySelectorAll: () => [card] },
@@ -204,7 +205,7 @@ function hostedCheckHarness(responses) {
     closeHostedBelongingsPhotoUploader() { closed = true; }, console: { error() {} }
   };
   vm.createContext(context);
-  vm.runInContext(`${extractFunction('checkHostedBelongingsPhotoConfirmation')}\nthis.check = checkHostedBelongingsPhotoConfirmation;`, context);
+  vm.runInContext(`${extractFunction('mergeDirectoryCareRecordWithServerTimestamp')}\n${extractFunction('checkHostedBelongingsPhotoConfirmation')}\nthis.check = checkHostedBelongingsPhotoConfirmation;`, context);
   return { context, card, status, button, requests, closed: () => closed };
 }
 
