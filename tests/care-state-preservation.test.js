@@ -128,7 +128,7 @@ function openHarness({ active = false } = {}) {
     restoreDirectoryGuestDetailDraft() {},
     globalCalendar: null
   };
-  vm.runInNewContext(`${source.slice(openStart, closeStart)}\nthis.open = openDirectoryGuestProfile;`, sandbox);
+  vm.runInNewContext(`${source.slice(source.indexOf('    function moveDirectoryRosterBadgesIntoProfileHeader'), source.indexOf('    function restoreDirectoryProfileNavigationOrigin'))}\n${source.slice(openStart, closeStart)}\nthis.open = openDirectoryGuestProfile;`, sandbox);
   return { sandbox, card, calls };
 }
 

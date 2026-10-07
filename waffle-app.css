@@ -6978,6 +6978,14 @@ body.dark-theme .directory-profile-read-status[data-state="error"] {
     letter-spacing: .04em;
 }
 
+.directory-card.is-profile-active .directory-profile-stay-dates.v11113-editable-stay-dates {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
+    margin-inline: 0;
+    padding-inline: 0;
+}
+
 .directory-card.is-profile-active .directory-care-brief {
     margin-top: 10px;
     padding: 12px;
@@ -7272,6 +7280,75 @@ body.dark-theme .directory-care-more-actions > summary { background: #182235; bo
         grid-column: 2;
         grid-row: 1 / span 2;
     }
+}
+
+/* The opened Care profile owns one identity header. Keep request source and
+   care warnings there while the unchanged roster opener is restored on Back. */
+.directory-card.is-profile-active > .directory-guest-tile-open {
+    display: none !important;
+}
+
+.directory-card.is-profile-active .directory-card-header {
+    row-gap: 10px;
+}
+
+.directory-card.is-profile-active .directory-name-row {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    align-items: center;
+}
+
+.directory-card.is-profile-active .directory-dog-name-btn {
+    flex: 0 1 auto;
+    max-width: 100%;
+    overflow: visible;
+    overflow-wrap: anywhere;
+    white-space: normal;
+}
+
+.directory-card.is-profile-active .directory-primary-breed {
+    max-width: 100%;
+    overflow: visible;
+    overflow-wrap: anywhere;
+    white-space: normal;
+    text-align: left;
+}
+
+.directory-card.is-profile-active .directory-profile-roster-badges {
+    display: flex;
+    grid-column: 1 / -1;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 6px;
+    min-width: 0;
+    max-width: 100%;
+}
+
+.directory-card.is-profile-active .directory-profile-roster-badges .v1117-care-source-badge,
+.directory-card.is-profile-active .directory-profile-roster-badges .v1118-care-signal {
+    position: static;
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+.directory-card.is-profile-active .directory-profile-roster-badges .v1118-care-signals {
+    flex: 1 1 100%;
+}
+
+/* The profile's native At Home / Checked Out / Upcoming tag is the single
+   visible stay status; the separate roster chip remains available on Back. */
+.directory-card.is-profile-active .directory-profile-roster-badges [data-v1118-status-chip] {
+    display: none !important;
+}
+
+.directory-card.is-profile-active .directory-care-brief-note .directory-care-brief-value {
+    width: 100%;
+    min-width: 0;
+    margin-inline: 0;
+    text-align: left;
+    text-align: start;
+    overflow-wrap: anywhere;
 }
 @media (forced-colors: active) {
     .care-category-card,
