@@ -2137,6 +2137,15 @@ function directoryProfileEditKey(card) {
     return String(card?.dataset?.directoryStayKey || card?.dataset?.stayKey || '').trim();
 }
 
+function directoryProfileIdentityCacheKey(card) {
+    const stayKey = String(card?.dataset?.directoryStayKey || card?.dataset?.stayKey || '').trim();
+    const stayId = String(card?.dataset?.directoryStayId || '').trim();
+    const dogId = String(card?.dataset?.directoryDogId || '').trim();
+    return stayId || dogId
+        ? `stable:${stayId.toLowerCase()}::${dogId.toLowerCase()}::${stayKey}`
+        : stayKey;
+}
+
 function getDirectoryProfileEditIdentity(card) {
     const currentValue = field => {
         const value = String(card?.querySelector(`[data-directory-edit-field="${field}"]`)?.dataset?.directoryCurrentValue || '').trim().toLowerCase();
@@ -2180,7 +2189,10 @@ function directoryProfileEditIsDirty(card, state = directoryProfileEditDrafts.ge
 
 function validateDirectoryProfileEditContext(card, state) {
     const key = directoryProfileEditKey(card);
-    if (!key) {
+    if (card.dataset.profileIdentityBlocked === directoryProfileIdentityCacheKey(card) && card.dataset.profileIdentityBlockedReason !== 'missing') {
+        state.conflict = true;
+        state.conflictReason = 'This care record identity needs review. Your draft is retained; saving is blocked.';
+    } else if (!key) {
         state.conflict = true;
         state.conflictReason = 'This stay is no longer available. Discard this draft before editing another stay.';
     } else if (Array.from(document.querySelectorAll('.directory-card[data-directory-stay-key]')).filter(candidate =>
@@ -2332,10 +2344,10 @@ function cancelDirectoryProfileEdit(card) {
             ''
         );
 
-    const record =
-        directoryProfileDetailCache[
-            stayKey
-        ];
+    const cacheKey = directoryProfileIdentityCacheKey(card);
+    const hasStableIds = !!(card.dataset.directoryStayId || card.dataset.directoryDogId);
+    const record = directoryProfileDetailCache[cacheKey] ||
+        (!hasStableIds ? directoryProfileDetailCache[stayKey] : null);
 
     if (record) {
         renderDirectoryIntakeAttributes(
@@ -8361,40 +8373,36 @@ registerWaffleServiceWorker();
 
                 const script = document.createElement('script');
                 let finished = false;
-                let lateCallbackTimer = null;
+                let scriptSettled = false;
+                const removeCallback = () => {
+                    try { delete window[callbackName]; } catch (_) { window[callbackName] = undefined; }
+                };
+                const removeScript = () => {
+                    if (script.parentNode) script.parentNode.removeChild(script);
+                };
+                const retireLateCallback = () => {
+                    removeCallback();
+                    removeScript();
+                };
 
                 const cleanup = (retainLateCallback = false) => {
                     if (finished) return;
                     finished = true;
                     clearTimeout(timeoutId);
-                    if (!retainLateCallback) {
-                        try {
-                            delete window[callbackName];
-                        } catch (_) {
-                            window[callbackName] = undefined;
-                        }
+                    if (retainLateCallback && !scriptSettled) {
+                        // A timed-out JSONP request can still execute after the
+                        // caller has retried or failed. Keep a harmless global
+                        // callback until the script's request lifecycle settles.
+                        window[callbackName] = retireLateCallback;
+                    } else {
+                        removeCallback();
+                        removeScript();
                     }
-                    if (script.parentNode) script.parentNode.removeChild(script);
                 };
 
                 const retryOrReject = (message) => {
-                    const isFinalTimeout =
-                        attempt >= maxAttempts &&
-                        message.indexOf('did not respond in time') !== -1;
-
-                    if (isFinalTimeout && Number(options.lateCallbackGraceMs || 0) > 0) {
-                        const graceMs = Number(options.lateCallbackGraceMs);
-                        window[callbackName] = () => {
-                            if (lateCallbackTimer) clearTimeout(lateCallbackTimer);
-                            try { delete window[callbackName]; } catch (_) { window[callbackName] = undefined; }
-                        };
-                        cleanup(true);
-                        lateCallbackTimer = setTimeout(() => {
-                            try { delete window[callbackName]; } catch (_) { window[callbackName] = undefined; }
-                        }, graceMs);
-                    } else {
-                        cleanup();
-                    }
+                    const timedOut = message.indexOf('did not respond in time') !== -1;
+                    cleanup(timedOut);
 
                     if (attempt < maxAttempts) {
                         setTimeout(runAttempt, 1200);
@@ -8419,6 +8427,10 @@ registerWaffleServiceWorker();
                 }, timeoutMs);
 
                 window[callbackName] = response => {
+                    if (finished) {
+                        retireLateCallback();
+                        return;
+                    }
                     cleanup();
 
                     if (response && response.result === 'success') {
@@ -8432,7 +8444,17 @@ registerWaffleServiceWorker();
                     }
                 };
 
+                script.onload = () => {
+                    scriptSettled = true;
+                    if (finished) retireLateCallback();
+                };
+
                 script.onerror = () => {
+                    scriptSettled = true;
+                    if (finished) {
+                        retireLateCallback();
+                        return;
+                    }
                     retryOrReject(
                         'Could not reach the Apps Script Web App.'
                     );
@@ -8526,13 +8548,19 @@ registerWaffleServiceWorker();
         return CARE_SAFETY_FLAGS.filter(flag => riskFlags[flag.key] === true);
     }
 
-    function getDirectoryCareBriefRecord(stayKey) {
-        return (
-            directoryProfileDetailCache[stayKey] ||
-            belongingsRecordsCache[stayKey] ||
-            directorySummaryRecordsCache[stayKey] ||
-            null
-        );
+    function getDirectoryCareBriefRecord(card) {
+        const identity = typeof card === 'string'
+            ? { stayKey: card, hasStableIds: false, valid: true, cacheKey: card }
+            : getDirectoryProfileReadIdentity(card);
+        const ambiguous = typeof card === 'object' && directoryProfileIdentityIsAmbiguous(card) && !identity.hasStableIds;
+        const candidate = directoryProfileDetailCache[identity.cacheKey];
+        const blocked = typeof card === 'object' && card?.dataset?.profileIdentityBlocked === identity.cacheKey;
+        const profile = identity.valid && !ambiguous && !blocked && directoryProfileRecordMatchesIdentity(candidate, identity)
+            ? candidate
+            : null;
+        return profile || (!blocked && !identity.hasStableIds && !ambiguous
+            ? (belongingsRecordsCache[identity.stayKey] || directorySummaryRecordsCache[identity.stayKey] || null)
+            : null);
     }
 
     function normalizeDirectoryPhoneForTel(value) {
@@ -8552,9 +8580,11 @@ registerWaffleServiceWorker();
         if (!brief) return;
 
         const stayKey = String(card.dataset.stayKey || card.dataset.directoryStayKey || '').trim();
-        const identityAmbiguous = directoryProfileIdentityIsAmbiguous(card);
-        const profileRecord = identityAmbiguous ? null : getDirectoryCareBriefRecord(stayKey);
-        const safetyRecord = identityAmbiguous ? null : (
+        const profileIdentity = getDirectoryProfileReadIdentity(card);
+        const identityBlocked = card.dataset.profileIdentityBlocked === profileIdentity.cacheKey;
+        const identityAmbiguous = (directoryProfileIdentityIsAmbiguous(card) && !profileIdentity.hasStableIds) || (identityBlocked && card.dataset.profileIdentityBlockedReason !== 'missing');
+        const profileRecord = getDirectoryCareBriefRecord(card);
+        const safetyRecord = identityBlocked || identityAmbiguous || getDirectoryProfileReadIdentity(card).hasStableIds ? null : (
             careRiskRecordsCache[stayKey] ||
             belongingsRecordsCache[stayKey] ||
             directorySummaryRecordsCache[stayKey] ||
@@ -8637,30 +8667,36 @@ registerWaffleServiceWorker();
                 .filter(Boolean)
             : [];
         if (feedingHost) {
-            feedingHost.textContent = attributes
+            feedingHost.textContent = identityBlocked && card.dataset.profileIdentityBlockedReason === 'missing'
+                ? 'Not provided'
+                : attributes
                 ? (feedingParts.length ? feedingParts.join(' · ') : 'Not provided')
                 : 'Loading with full profile…';
-            feedingHost.classList.toggle('is-pending', !attributes);
+            feedingHost.classList.toggle('is-pending', !attributes && !(identityBlocked && card.dataset.profileIdentityBlockedReason === 'missing'));
         }
 
         const medicationText = String(
             attributes?.medicationInstructions ||
-            (!identityAmbiguous && belongingsRecordsCache[stayKey]?.items?.medication) ||
+            (!identityAmbiguous && !profileIdentity.hasStableIds && belongingsRecordsCache[stayKey]?.items?.medication) ||
             ''
         ).trim();
         if (medicationHost) {
-            medicationHost.textContent = attributes
+            medicationHost.textContent = identityBlocked && card.dataset.profileIdentityBlockedReason === 'missing'
+                ? 'Not provided'
+                : attributes
                 ? (medicationText || 'Not provided')
                 : (medicationText || 'Loading with full profile…');
-            medicationHost.classList.toggle('is-pending', !attributes && !medicationText);
+            medicationHost.classList.toggle('is-pending', !attributes && !medicationText && !(identityBlocked && card.dataset.profileIdentityBlockedReason === 'missing'));
         }
 
         if (freshnessHost) {
             const source = String(profileRecord?.intakeAttributesSource || '').trim();
-            freshnessHost.textContent = attributes
+            freshnessHost.textContent = identityBlocked && card.dataset.profileIdentityBlockedReason === 'missing'
+                ? 'No saved care profile'
+                : attributes
                 ? (source ? `Care details available · ${source}` : 'Care details available')
                 : 'Stay details ready · care details loading';
-            freshnessHost.dataset.state = attributes ? 'available' : 'loading';
+            freshnessHost.dataset.state = identityBlocked && card.dataset.profileIdentityBlockedReason === 'missing' ? 'not-found' : attributes ? 'available' : 'loading';
         }
 
         if (identityAmbiguous) {
@@ -9336,6 +9372,43 @@ registerWaffleServiceWorker();
         if (retry && typeof onRetry === 'function') retry.addEventListener('click', onRetry, { once: true });
     }
 
+    function getDirectoryProfileReadIdentity(card) {
+        const stayKey = String(card?.dataset?.directoryStayKey || card?.dataset?.stayKey || '').trim();
+        const stayId = String(card?.dataset?.directoryStayId || '').trim();
+        const dogId = String(card?.dataset?.directoryDogId || '').trim();
+        const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+        return {
+            stayKey,
+            stayId,
+            dogId,
+            hasStableIds: !!(stayId || dogId),
+            valid: (!stayId || uuidPattern.test(stayId)) && (!dogId || uuidPattern.test(dogId)),
+            cacheKey: stayId || dogId
+                ? `stable:${stayId.toLowerCase()}::${dogId.toLowerCase()}::${stayKey}`
+                : stayKey
+        };
+    }
+
+    function directoryProfileRecordMatchesIdentity(record, identity) {
+        if (!record || !identity?.stayKey) return false;
+        const responseIdentity = record.identity;
+        const resolution = record.resolution;
+        if (identity.hasStableIds) {
+            return ['resolved', 'not_found'].includes(resolution?.status) &&
+                !!responseIdentity &&
+                String(responseIdentity.stayKey || '') === identity.stayKey &&
+                (!identity.stayId || String(responseIdentity.stayId || '').toLowerCase() === identity.stayId.toLowerCase()) &&
+                (!identity.dogId || String(responseIdentity.dogId || '').toLowerCase() === identity.dogId.toLowerCase());
+        }
+        if (['resolved', 'not_found'].includes(resolution?.status)) {
+            return !!responseIdentity && String(responseIdentity.stayKey || '') === identity.stayKey;
+        }
+        // Preserve the old endpoint's unique legacy flow only when the card has
+        // no stable ID evidence and the existing duplicate-key guard is clear.
+        return !identity.hasStableIds && !responseIdentity && !resolution &&
+            String(record.stayKey || '') === identity.stayKey;
+    }
+
     function directoryProfileIdentityIsAmbiguous(card) {
         const key = String(card?.dataset?.directoryStayKey || card?.dataset?.stayKey || '').trim();
         if (!key) return false;
@@ -9370,41 +9443,58 @@ registerWaffleServiceWorker();
         details,
         options = {}
     ) {
-        const stayKey =
-            String(
-                card?.dataset?.stayKey ||
-                card?.dataset?.directoryStayKey ||
-                ''
-            ).trim();
+        const identity = getDirectoryProfileReadIdentity(card);
+        const stayKey = identity.stayKey;
 
         if (!stayKey) return;
 
         const showIdentityConflict = () => {
+            card.dataset.profileIdentityBlocked = identity.cacheKey;
+            card.dataset.profileIdentityBlockedReason = 'conflict';
+            if (card.classList?.contains('is-profile-editing') && typeof restoreDirectoryProfileEditDraft === 'function') restoreDirectoryProfileEditDraft(card);
             markDirectoryProfileIdentityConflict(card);
             details.dataset.detailLoading = 'false';
             details.dataset.detailLoaded = 'false';
             const fields = details.querySelector('[data-directory-intake-attributes]');
             if (fields) fields.hidden = true;
             setDirectoryProfileReadStatus(details, 'identity-conflict', 'Shared name and dates · review the care record identity before loading details.');
+            if (typeof renderDirectoryCareBrief === 'function') renderDirectoryCareBrief(card);
         };
-        if (directoryProfileIdentityIsAmbiguous(card)) {
+        const showMissingProfile = () => {
+            card.dataset.profileIdentityBlocked = identity.cacheKey;
+            card.dataset.profileIdentityBlockedReason = 'missing';
+            delete directoryProfileDetailCache[identity.cacheKey];
+            const fields = details.querySelector('[data-directory-intake-attributes]');
+            if (fields) fields.hidden = false;
+            renderDirectoryIntakeAttributes(card, {
+                stayKey,
+                intakeAttributes: {},
+                intakeAttributesSource: ''
+            });
+            details.dataset.detailLoaded = 'true';
+            setDirectoryProfileReadStatus(details, 'not-found', 'No saved care profile exists for this stay.');
+            if (typeof renderDirectoryCareBrief === 'function') renderDirectoryCareBrief(card);
+        };
+        const ambiguous = directoryProfileIdentityIsAmbiguous(card);
+        if (!identity.valid || (ambiguous && !identity.hasStableIds)) {
             showIdentityConflict();
             return;
         }
+        const cacheKey = identity.cacheKey;
+        const candidateProfileCache = directoryProfileDetailCache[cacheKey] || null;
+        const profileCache = directoryProfileRecordMatchesIdentity(candidateProfileCache, identity)
+            ? candidateProfileCache
+            : null;
         const profileFields = details.querySelector('[data-directory-intake-attributes]');
         if (profileFields) profileFields.hidden = false;
 
         if (
             !options.force &&
-            directoryProfileDetailCache[
-                stayKey
-            ]
+            profileCache
         ) {
             renderDirectoryIntakeAttributes(
                 card,
-                directoryProfileDetailCache[
-                    stayKey
-                ]
+                profileCache
             );
 
             details.dataset.detailLoaded =
@@ -9423,7 +9513,7 @@ registerWaffleServiceWorker();
 
         if (
             details.dataset.detailLoading ===
-            'true'
+            'true' && details.dataset.profileReadIdentity === cacheKey
         ) {
             return;
         }
@@ -9431,14 +9521,15 @@ registerWaffleServiceWorker();
         details.dataset.detailLoading =
             'true';
 
-        const cachedRecord =
-            directoryProfileDetailCache[stayKey] ||
-            null;
+        const cachedRecord = profileCache;
+        const readToken = `${identity.cacheKey}::${Date.now()}::${Math.random()}`;
+        details.dataset.profileReadToken = readToken;
+        details.dataset.profileReadIdentity = identity.cacheKey;
         const profileIsCurrent = () => {
-            if (directoryProfileIdentityIsAmbiguous(card)) {
-                showIdentityConflict();
-                return false;
-            }
+            const currentIdentity = getDirectoryProfileReadIdentity(card);
+            if (!currentIdentity.valid || currentIdentity.cacheKey !== identity.cacheKey) return false;
+            const activeCards = Array.from(document.querySelectorAll?.('.directory-card.is-profile-active') || []);
+            if (activeCards.length && !activeCards.includes(card)) return false;
             return card?.isConnected === false ? false :
             ((card?.dataset?.directoryStayKey || card?.dataset?.stayKey) &&
                 (card.dataset.directoryStayKey || card.dataset.stayKey) !== stayKey) ? false :
@@ -9446,6 +9537,7 @@ registerWaffleServiceWorker();
             !directorySelectedProfileStayKey ||
             directorySelectedProfileStayKey === stayKey;
         };
+        const readIsCurrent = () => profileIsCurrent() && details.dataset.profileReadToken === readToken;
 
         if (cachedRecord) {
             renderDirectoryIntakeAttributes(
@@ -9474,15 +9566,29 @@ registerWaffleServiceWorker();
 
         const applyRecord =
             record => {
-                if (directoryProfileIdentityIsAmbiguous(card)) {
-                    showIdentityConflict();
+                if (details.dataset.profileReadIdentity === identity.cacheKey && details.dataset.profileReadToken !== readToken) return false;
+                if (directoryProfileIdentityIsAmbiguous(card) && !identity.hasStableIds) {
+                    if (readIsCurrent()) showIdentityConflict();
                     return;
                 }
-                directoryProfileDetailCache[
-                    stayKey
-                ] = record;
+                if (!directoryProfileRecordMatchesIdentity(record, identity)) {
+                    if (readIsCurrent()) {
+                        delete directoryProfileDetailCache[cacheKey];
+                        showIdentityConflict();
+                    }
+                    return false;
+                }
+                if (record?.resolution?.status === 'not_found') {
+                    if (readIsCurrent()) showMissingProfile();
+                    return false;
+                }
+                if (readIsCurrent() && card.dataset.profileIdentityBlocked === identity.cacheKey) {
+                    delete card.dataset.profileIdentityBlocked;
+                    delete card.dataset.profileIdentityBlockedReason;
+                }
+                directoryProfileDetailCache[cacheKey] = record;
 
-                if (record?.riskFlags) {
+                if (!identity.hasStableIds && record?.resolution?.method === 'legacy-key-unique' && record?.riskFlags) {
                     const previousCareRecord =
                         careRiskRecordsCache[stayKey] ||
                         directorySummaryRecordsCache[stayKey] ||
@@ -9498,7 +9604,7 @@ registerWaffleServiceWorker();
                     };
                 }
 
-                if (!profileIsCurrent()) return;
+                if (!readIsCurrent()) return true;
 
                 renderDirectoryIntakeAttributes(
                     card,
@@ -9508,10 +9614,13 @@ registerWaffleServiceWorker();
                 details.dataset.detailLoaded =
                     'true';
 
-                reconcileDirectoryDigitalIntakeFromProfile(
-                    stayKey,
-                    record
-                );
+                if (['legacy-key-unique', 'stay-id-unique-legacy-key'].includes(record?.resolution?.method)) {
+                    reconcileDirectoryDigitalIntakeFromProfile(
+                        stayKey,
+                        record
+                    );
+                }
+                return true;
             };
 
         let cachedRendered = false;
@@ -9522,31 +9631,22 @@ registerWaffleServiceWorker();
                     {
                         action:
                             'get_guest_profile',
-                        stayKey
+                        stayKey,
+                        ...(identity.stayId ? { stayId: identity.stayId } : {}),
+                        ...(identity.dogId ? { dogId: identity.dogId } : {})
                     },
                     {
                         cacheKey:
                             'directory:profile:' +
-                            stayKey,
+                            cacheKey,
                         maxAttempts: 1,
                         timeoutMs: 15000,
-                        lateCallbackGraceMs: 5 * 60 * 1000,
                         maxStaleMs:
                             6 * 60 * 60 * 1000,
                         onCached:
                             cachedResponse => {
-                                cachedRendered =
-                                    true;
-
-                                applyRecord(
-                                    cachedResponse.record ||
-                                    {
-                                        stayKey,
-                                        intakeAttributes: {},
-                                        intakeAttributesSource: ''
-                                    }
-                                );
-                                if (profileIsCurrent()) setDirectoryProfileReadStatus(details, 'refreshing', 'Saved details shown · refreshing');
+                                cachedRendered = applyRecord(cachedResponse.record) === true;
+                                if (cachedRendered && readIsCurrent()) setDirectoryProfileReadStatus(details, 'refreshing', 'Saved details shown · refreshing');
                             }
                     }
                 );
@@ -9555,20 +9655,13 @@ registerWaffleServiceWorker();
                 !swr.offlineFallback &&
                 (!swr.unchanged || !cachedRendered)
             ) {
-                applyRecord(
-                    swr.data.record ||
-                    {
-                        stayKey,
-                        intakeAttributes: {},
-                        intakeAttributesSource: ''
-                    }
-                );
-                if (profileIsCurrent()) setDirectoryProfileReadStatus(details, 'fresh', 'Care details updated');
-            } else if (profileIsCurrent() && swr.offlineFallback && typeof navigator !== 'undefined' && navigator.onLine === false) {
+                const applied = applyRecord(swr.data.record);
+                if (applied && readIsCurrent()) setDirectoryProfileReadStatus(details, 'fresh', 'Care details updated');
+            } else if (readIsCurrent() && swr.offlineFallback && typeof navigator !== 'undefined' && navigator.onLine === false) {
                 setDirectoryProfileReadStatus(details, 'error', 'Saved details shown · offline refresh unavailable', () => loadDirectoryProfileDetail(card, details, { force: true }));
-            } else if (profileIsCurrent() && swr.offlineFallback) {
+            } else if (readIsCurrent() && swr.offlineFallback) {
                 setDirectoryProfileReadStatus(details, 'error', 'Unable to refresh saved details', () => loadDirectoryProfileDetail(card, details, { force: true }));
-            } else if (profileIsCurrent()) {
+            } else if (readIsCurrent()) {
                 setDirectoryProfileReadStatus(details, 'fresh', 'Saved details current');
             }
 
@@ -9578,7 +9671,7 @@ registerWaffleServiceWorker();
                 error
             );
 
-            if (!profileIsCurrent()) return;
+            if (!readIsCurrent()) return;
             if (cachedRendered || cachedRecord) {
                 setDirectoryProfileReadStatus(
                     details,
@@ -9610,8 +9703,7 @@ registerWaffleServiceWorker();
             }
 
         } finally {
-            details.dataset.detailLoading =
-                'false';
+            if (details.dataset.profileReadToken === readToken) details.dataset.detailLoading = 'false';
         }
     }
 
@@ -11127,7 +11219,15 @@ registerWaffleServiceWorker();
         const profileDetails = card.querySelector('[data-directory-detail="profile"]');
         const profileReadState = profileDetails?.dataset.profileReadState || (record ? 'saved' : 'loading');
         const stayKey = String(card.dataset.stayKey || card.dataset.directoryStayKey || '').trim();
-        const safetyRecord = careRiskRecordsCache[stayKey] || directorySummaryRecordsCache[stayKey] || belongingsRecordsCache[stayKey] || null;
+        const hasStableIdentity = !!(card.dataset.directoryStayId || card.dataset.directoryDogId);
+        const recordIdentity = record?.identity;
+        const scopedProfileSafety = hasStableIdentity && record?.resolution?.status === 'resolved' &&
+            String(recordIdentity?.stayKey || '') === stayKey &&
+            (!card.dataset.directoryStayId || String(recordIdentity?.stayId || '').toLowerCase() === String(card.dataset.directoryStayId).toLowerCase()) &&
+            (!card.dataset.directoryDogId || String(recordIdentity?.dogId || '').toLowerCase() === String(card.dataset.directoryDogId).toLowerCase());
+        const safetyRecord = (card.dataset.profileIdentityBlocked && card.dataset.profileIdentityBlocked === directoryProfileIdentityCacheKey(card)) || hasStableIdentity
+            ? (scopedProfileSafety && record?.riskFlags ? record : null)
+            : (careRiskRecordsCache[stayKey] || directorySummaryRecordsCache[stayKey] || belongingsRecordsCache[stayKey] || null);
         const safetyState = directorySafetyReadFailures.has(stayKey) ? 'error' : safetyRecord?.riskFlags && typeof safetyRecord.riskFlags === 'object' ? 'saved' : 'loading';
         const categoryIdPrefix = String(card.dataset.directorySourceRow || stayKey || card.id || 'profile').replace(/[^a-zA-Z0-9_-]/g, '-');
         const cardsHtml = DIRECTORY_PROFILE_SECONDARY_TABS.map((tab, index) => {
@@ -11899,19 +11999,20 @@ registerWaffleServiceWorker();
             };
 
             if (payload.intakeAttributes) {
-                directoryProfileDetailCache[
-                    payload.stayKey
-                ] = {
-                    ...(directoryProfileDetailCache[
-                        payload.stayKey
-                    ] || {}),
-                    stayKey: payload.stayKey,
-                    dogName: payload.dogName,
-                    intakeAttributes:
-                        payload.intakeAttributes,
-                    intakeAttributesSource:
-                        'Web App'
-                };
+                const profileIdentity = getDirectoryProfileReadIdentity(card);
+                if (profileIdentity.hasStableIds) {
+                    // save_belongings still writes through the legacy key API;
+                    // force a fresh identity-scoped profile read after that save.
+                    delete directoryProfileDetailCache[profileIdentity.cacheKey];
+                } else {
+                    directoryProfileDetailCache[payload.stayKey] = {
+                        ...(directoryProfileDetailCache[payload.stayKey] || {}),
+                        stayKey: payload.stayKey,
+                        dogName: payload.dogName,
+                        intakeAttributes: payload.intakeAttributes,
+                        intakeAttributesSource: 'Web App'
+                    };
+                }
             }
 
             renderDirectoryCareBrief(card);
@@ -15655,8 +15756,9 @@ registerWaffleServiceWorker();
                                                     ${escapeDashboardHtml(breedTxt)}
                                                 </button>
 
-                                                <div class="directory-stay-dates">
-                                                    📅 ${escapeDashboardHtml(stayDateLabel)}
+                                                <div class="directory-stay-dates directory-profile-stay-dates" aria-label="Stay dates">
+                                                    <span><strong>Check-in</strong> ${escapeDashboardHtml(startParsed ? formatStayDateShort(startParsed) : 'Not recorded')}</span>
+                                                    <span><strong>Check-out</strong> ${escapeDashboardHtml(endParsed ? formatStayDateShort(endParsed) : 'Not recorded')}</span>
                                                 </div>
                                             </div>
                                         </div>

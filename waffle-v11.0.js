@@ -274,8 +274,11 @@ function v110EnsureCareOperationBar(card){
     bar=document.createElement('section');
     bar.className='v110-operation-bar';
     bar.dataset.v110OperationBar='';
-    const tabs=profile.querySelector('.directory-main-profile-tabs');
-    if(tabs)tabs.parentNode.insertBefore(bar,tabs);
+  }
+
+  const identityHeader=profile.querySelector('.directory-card-header');
+  if(identityHeader&&bar.previousElementSibling!==identityHeader){
+    identityHeader.insertAdjacentElement('afterend',bar);
   }
 
   const state=v110OperationDisplayState(card);

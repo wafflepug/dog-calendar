@@ -1693,77 +1693,185 @@ function readBelongingsSummaryRecords_(
 }
 
 
-function getGuestProfileDetail_(
-  stayKey
-) {
-  stayKey =
-    String(
-      stayKey || ""
-    ).trim();
+function readGuestProfileRowsReadOnly_(sheet, stayKey) {
+  if (!sheet || sheet.getLastRow() < 2) return [];
 
-  if (!stayKey) {
-    throw new Error(
-      "Stay Key is required."
-    );
+  var expected = getBelongingsHeaders_();
+  var lastColumn = sheet.getLastColumn ? sheet.getLastColumn() : expected.length;
+  var width = Math.min(expected.length, Math.max(2, Number(lastColumn)));
+  var headers = sheet.getRange(1, 1, 1, width).getValues()[0] || [];
+  for (var headerIndex = 0; headerIndex < width; headerIndex++) {
+    if (String(headers[headerIndex] || "").trim() !== expected[headerIndex]) return null;
   }
 
-  var records =
-    readBelongingsRecords_(
-      getBelongingsSheet_(),
-      [
-        stayKey
-      ]
-    );
+  var rowCount = sheet.getLastRow() - 1;
+  var values = sheet.getRange(2, 1, rowCount, width).getValues();
+  var records = [];
+  values.forEach(function(row) {
+    var rowStayKey = String(row[1] || "").trim();
+    if (rowStayKey !== stayKey) return;
+    records.push({
+      stayKey: rowStayKey,
+      dogName: String(row[2] || ""),
+      updatedAt: row[0] instanceof Date ? row[0].toISOString() : String(row[0] || ""),
+      dogPhoto: parseDogPhotoJson_(row[29]),
+      intakeAttributes: parseIntakeAttributesJson_(row[30]),
+      intakeAttributesSource: String(row[31] || ""),
+      dogPhotoGallery: parseV108DogPhotoGalleryJson_(row[32]),
+      stayPhotos: parseStayPhotosJson_(row[33])
+    });
+  });
+  return records;
+}
 
-  var record =
-    records.length
-      ? records[0]
-      : null;
+function getGuestProfileDetail_(request) {
+  request = request && typeof request === "object" ? request : { stayKey: request };
+  var stayKey = String(request.stayKey || "").trim();
+  var requestedStayId = String(request.stayId || "").trim();
+  var requestedDogId = String(request.dogId || "").trim();
+  var uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-  if (!record) {
+  function emptyProfile(identity, resolution) {
     return {
-      stayKey:
-        stayKey,
-      intakeAttributes:
-        {},
-      intakeAttributesSource:
-        "",
-      dogPhoto:
-        null,
-      dogPhotoGallery:
-        [],
-      stayPhotos:
-        [],
-      updatedAt:
-        ""
+      stayKey: stayKey,
+      identity: identity,
+      resolution: resolution,
+      intakeAttributes: {},
+      intakeAttributesSource: "",
+      dogPhoto: null,
+      dogPhotoGallery: [],
+      stayPhotos: [],
+      updatedAt: ""
     };
   }
 
+  if (!stayKey) {
+    return emptyProfile(
+      { stayKey: "", stayId: "", dogId: "" },
+      { status: "unresolved", method: "identity-conflict", reason: "missing-stay-key" }
+    );
+  }
+  if ((requestedStayId && !validStayIdV11225_(requestedStayId)) ||
+      (requestedDogId && !uuidPattern.test(requestedDogId))) {
+    return emptyProfile(
+      { stayKey: stayKey, stayId: "", dogId: "" },
+      { status: "unresolved", method: "identity-conflict", reason: "invalid-id" }
+    );
+  }
+
+  // Read only: profile resolution never creates tabs, enrolls IDs, or rewrites headers.
+  var bookingSheet = getTargetSheet_();
+  var bookingRows = bookingSheet.getDataRange().getValues();
+  var bookingHeaders = bookingRows[0] || [];
+  var stayIdColumn = -1;
+  var dogIdColumn = -1;
+  var duplicateIdentityHeader = false;
+  bookingHeaders.forEach(function(header, index) {
+    var normalized = String(header || "").trim().toLowerCase();
+    if (normalized === "stay id") {
+      if (stayIdColumn >= 0) duplicateIdentityHeader = true;
+      else stayIdColumn = index;
+    }
+    if (normalized === "dog id") {
+      if (dogIdColumn >= 0) duplicateIdentityHeader = true;
+      else dogIdColumn = index;
+    }
+  });
+  if (duplicateIdentityHeader) {
+    return emptyProfile(
+      { stayKey: stayKey, stayId: "", dogId: "" },
+      { status: "unresolved", method: "identity-conflict", reason: "duplicate-identity-headers" }
+    );
+  }
+
+  var keyRows = [];
+  var idRows = [];
+  var stayIdCounts = {};
+  for (var rowIndex = 1; rowIndex < bookingRows.length; rowIndex++) {
+    var row = bookingRows[rowIndex] || [];
+    var rowKey = makeGuestStayKey_(String(row[1] || ""), row[3], row[4] || row[3]);
+    var rowStayId = stayIdColumn < 0 ? "" : String(row[stayIdColumn] || "").trim();
+    var rowDogId = dogIdColumn < 0 ? "" : String(row[dogIdColumn] || "").trim();
+    if (rowStayId) {
+      var normalizedStayId = rowStayId.toLowerCase();
+      stayIdCounts[normalizedStayId] = (stayIdCounts[normalizedStayId] || 0) + 1;
+    }
+    var candidate = { stayId: rowStayId, dogId: rowDogId, key: rowKey };
+    if (rowKey === stayKey) keyRows.push(candidate);
+    if (requestedStayId && rowStayId.toLowerCase() === requestedStayId.toLowerCase()) idRows.push(candidate);
+  }
+
+  var booking;
+  if (requestedStayId) {
+    var matchedId = idRows.length === 1 ? idRows[0] : null;
+    if (!matchedId || matchedId.key !== stayKey || keyRows.length !== 1 ||
+        (matchedId.dogId && !uuidPattern.test(matchedId.dogId)) ||
+        (requestedDogId && matchedId.dogId.toLowerCase() !== requestedDogId.toLowerCase())) {
+      return emptyProfile(
+        { stayKey: stayKey, stayId: "", dogId: "" },
+        { status: "unresolved", method: "identity-conflict", reason: "stay-id-key-or-dog-id-conflict" }
+      );
+    }
+    booking = matchedId;
+  } else {
+    if (keyRows.length !== 1) {
+      return emptyProfile(
+        { stayKey: stayKey, stayId: "", dogId: "" },
+        { status: "unresolved", method: "ambiguous-legacy-key", reason: keyRows.length ? "multiple-bookings-share-stay-key" : "no-booking-proves-stay-key" }
+      );
+    }
+    booking = keyRows[0];
+    if ((booking.stayId && !validStayIdV11225_(booking.stayId)) ||
+        (booking.stayId && stayIdCounts[booking.stayId.toLowerCase()] !== 1) ||
+        (booking.dogId && !uuidPattern.test(booking.dogId))) {
+      return emptyProfile(
+        { stayKey: stayKey, stayId: "", dogId: "" },
+        { status: "unresolved", method: "identity-conflict", reason: "invalid-persisted-id" }
+      );
+    }
+    if (requestedDogId &&
+        (!booking.dogId || booking.dogId.toLowerCase() !== requestedDogId.toLowerCase())) {
+      return emptyProfile(
+        { stayKey: stayKey, stayId: "", dogId: "" },
+        { status: "unresolved", method: "identity-conflict", reason: "dog-id-key-or-persisted-id-conflict" }
+      );
+    }
+  }
+
+  var identity = {
+    stayKey: stayKey,
+    stayId: validStayIdV11225_(booking.stayId) ? booking.stayId.toLowerCase() : "",
+    dogId: uuidPattern.test(booking.dogId) ? booking.dogId.toLowerCase() : ""
+  };
+  var method = requestedStayId ? "stay-id-unique-legacy-key" : "legacy-key-unique";
+  var properties = PropertiesService.getScriptProperties();
+  var sheetName = String(properties.getProperty("BELONGINGS_SHEET_NAME") || "Pet_Belongings").trim();
+  var careSheet = bookingSheet.getParent().getSheetByName(sheetName);
+  var records = readGuestProfileRowsReadOnly_(careSheet, stayKey);
+  if (records === null) {
+    return emptyProfile(identity, { status: "unresolved", method: "identity-conflict", reason: "invalid-care-sheet-schema" });
+  }
+  if (records.length > 1) {
+    return emptyProfile(identity, { status: "unresolved", method: "ambiguous-legacy-key", reason: "multiple-care-records-share-stay-key" });
+  }
+  if (!records.length) {
+    return emptyProfile(identity, { status: "not_found", method: "missing-record", reason: "missing-care-record" });
+  }
+
+  var record = records[0];
   return {
-    stayKey:
-      record.stayKey,
-    dogName:
-      record.dogName,
-    updatedAt:
-      record.updatedAt,
-    intakeAttributes:
-      record.intakeAttributes ||
-      {},
-    intakeAttributesSource:
-      record.intakeAttributesSource ||
-      "",
-    dogPhoto:
-      record.dogPhoto ||
-      null,
-    dogPhotoGallery:
-      record.dogPhotoGallery ||
-      [],
-    stayPhotos:
-      record.stayPhotos ||
-      []
+    stayKey: record.stayKey,
+    identity: identity,
+    resolution: { status: "resolved", method: method },
+    dogName: record.dogName,
+    updatedAt: record.updatedAt,
+    intakeAttributes: record.intakeAttributes || {},
+    intakeAttributesSource: record.intakeAttributesSource || "",
+    dogPhoto: record.dogPhoto || null,
+    dogPhotoGallery: record.dogPhotoGallery || [],
+    stayPhotos: record.stayPhotos || []
   };
 }
-
 
 function getGuestBelongingsDetail_(
   stayKey
@@ -3271,7 +3379,7 @@ function processReadOnlySheetAction_(data) {
         return {
           record:
             getGuestProfileDetail_(
-              data.stayKey
+              data
             )
         };
       }

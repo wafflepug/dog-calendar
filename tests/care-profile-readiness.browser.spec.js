@@ -65,15 +65,52 @@ test('late JSONP profile response is retired without a page error', async ({ pag
         const callback = new URL(script.src).searchParams.get('callback');
         window.lateCallbackName = callback;
         window[callback]({ result: 'success' });
+        script.dispatchEvent(new Event('load'));
       }, 50);
       return script;
     };
     return window.queryAppsScriptRaw(
       { action: 'get_guest_profile', stayKey: 'milo|2026-09-20|2026-09-22' },
-      { maxAttempts: 1, timeoutMs: 10, lateCallbackGraceMs: 200 }
+      { maxAttempts: 1, timeoutMs: 10, lateCallbackGraceMs: 20 }
     ).catch(() => null);
   });
   await page.waitForTimeout(100);
   expect(pageErrors).toHaveLength(0);
   expect(await page.evaluate(() => window[window.lateCallbackName])).toBeUndefined();
+});
+
+test('a late callback from a timed-out JSONP attempt cannot override its retry', async ({ page }) => {
+  const pageErrors = [];
+  page.on('pageerror', error => pageErrors.push(error));
+  await page.setContent('<main></main>');
+  await page.addScriptTag({ content: `${rawCode}\nwindow.queryAppsScriptRaw = queryAppsScriptRaw;` });
+  const result = await page.evaluate(() => {
+    window.APPS_SCRIPT_WEBAPP_URL = 'https://example.test/exec';
+    window.jsonpScripts = [];
+    window.lateCallbackRetired = false;
+    document.body.appendChild = script => {
+      const attempt = window.jsonpScripts.push(script);
+      const callback = new URL(script.src).searchParams.get('callback');
+      if (attempt === 1) {
+        setTimeout(() => {
+          window[callback]({ result: 'success', source: 'late first attempt' });
+          script.dispatchEvent(new Event('load'));
+          window.lateCallbackRetired = window[callback] === undefined;
+        }, 1500);
+      } else {
+        setTimeout(() => {
+          window[callback]({ result: 'success', source: 'retry' });
+          script.dispatchEvent(new Event('load'));
+        }, 20);
+      }
+      return script;
+    };
+    return window.queryAppsScriptRaw(
+      { action: 'get_guest_profile', stayKey: 'milo|2026-09-20|2026-09-22' },
+      { maxAttempts: 2, timeoutMs: 100 }
+    );
+  });
+  expect(result.source).toBe('retry');
+  await expect.poll(() => page.evaluate(() => window.lateCallbackRetired)).toBe(true);
+  expect(pageErrors).toHaveLength(0);
 });

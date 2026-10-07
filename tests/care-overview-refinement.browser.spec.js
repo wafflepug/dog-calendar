@@ -18,7 +18,8 @@ const intakeRenderer = appSource.slice(appSource.indexOf('function renderDirecto
 const careRenderer = appSource.slice(appSource.indexOf('function renderDirectoryCareProfile'), appSource.indexOf('function renderDirectoryBelongings'));
 const profileSubtabSwitch = appSource.slice(appSource.indexOf('function switchDirectoryProfileSubTab'), appSource.indexOf('async function openDirectoryGuestProfile'));
 const actualRenderer = `${careFlags}\n${intakeGroups}\n${profileTabs}\nlet careRiskRecordsCache = {};\nconst directorySafetyReadFailures = new Set();\nconst directorySummaryRecordsCache = {};\nconst belongingsRecordsCache = {};\nconst applyDirectoryProfileEditMode = () => {};\nconst restoreDirectoryProfileEditDraft = () => {};\nfunction escapeDashboardHtml(value){return String(value == null ? '' : value).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');}\n${categorySummary}\n${profileSubtabSwitch}\n${intakeControl}\n${intakeRenderer}\n${careRenderer}\nwindow.renderDirectoryIntakeAttributes = renderDirectoryIntakeAttributes;\nwindow.setCategorySafetyRecord = (key, record) => { careRiskRecordsCache[key] = record; directorySafetyReadFailures.delete(key); };\nwindow.setCategorySafetyFailure = key => directorySafetyReadFailures.add(key);\nwindow.summarizeCareCategory = directoryCareCategorySummary;`;
-const briefIdentityGuard = appSource.slice(appSource.indexOf('function directoryProfileIdentityIsAmbiguous(card)'), appSource.indexOf('function markDirectoryProfileIdentityConflict(card)'));
+const briefIdentityGuard = appSource.slice(appSource.indexOf('function getDirectoryProfileReadIdentity(card)'), appSource.indexOf('async function loadDirectoryProfileDetail('));
+const careBriefRecordHelper = appSource.slice(appSource.indexOf('function getDirectoryCareBriefRecord(card)'), appSource.indexOf('function normalizeDirectoryPhoneForTel'));
 const briefRenderer = appSource.slice(appSource.indexOf('function renderDirectoryCareBrief(card)'), appSource.indexOf('function openCareReadinessTarget'));
 const belongingsItems = appSource.slice(appSource.indexOf('const BELONGINGS_ITEMS'), appSource.indexOf('];', appSource.indexOf('const BELONGINGS_ITEMS')) + 2);
 const belongingsRenderer = appSource.slice(appSource.indexOf('function renderDirectoryBelongings'), appSource.indexOf('function renderDirectoryOperationalSections'));
@@ -52,13 +53,13 @@ const briefTestCode = `
   const directorySummaryRecordsCache = {};
   const careRiskRecordsCache = {};
   const escapeDashboardHtml = value => String(value == null ? '' : value).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[char]));
-  function getDirectoryCareBriefRecord(key) { return directoryProfileDetailCache[key] || belongingsRecordsCache[key] || directorySummaryRecordsCache[key] || null; }
   function getActiveCareFlags(record) { return [{key:'foodAllergy', label:'Food allergy', icon:'⚠', className:'is-danger'}].filter(flag => record?.riskFlags?.[flag.key]); }
   function normalizeDirectoryPhoneForTel(value) { return String(value || '').replace(/[^+\\d]/g, ''); }
   ${briefIdentityGuard}
+  ${careBriefRecordHelper}
   ${briefRenderer}
   window.renderBrief = renderDirectoryCareBrief;
-  window.seedBriefFixture = card => { directoryProfileDetailCache['stay-a'] = { intakeAttributes: { feedingTimes: '7 am', foodAmount: '1 cup', medicationInstructions: 'With dinner' }, intakeAttributesSource: 'Saved profile' }; careRiskRecordsCache['stay-a'] = { riskFlags: { foodAllergy: true } }; card.dataset.intakeMethod = 'legacy'; renderDirectoryCareBrief(card); card.dataset.briefDebug = JSON.stringify({ key: card.dataset.stayKey, safety: card.querySelector('[data-care-brief-safety]')?.innerText, flags: careRiskRecordsCache['stay-a'] }); };
+  window.seedBriefFixture = card => { directoryProfileDetailCache['stay-a'] = { stayKey: 'stay-a', intakeAttributes: { feedingTimes: '7 am', foodAmount: '1 cup', medicationInstructions: 'With dinner' }, intakeAttributesSource: 'Saved profile' }; careRiskRecordsCache['stay-a'] = { riskFlags: { foodAllergy: true } }; card.dataset.intakeMethod = 'legacy'; renderDirectoryCareBrief(card); card.dataset.briefDebug = JSON.stringify({ key: card.dataset.stayKey, safety: card.querySelector('[data-care-brief-safety]')?.innerText, flags: careRiskRecordsCache['stay-a'] }); };
 `;
 function fixture(theme = '') {
   return `<!doctype html><html><head><style>
@@ -464,6 +465,35 @@ test('readiness checklist updates from cached profile state, prioritizes gaps, a
   await page.emulateMedia({ colorScheme: 'dark', forcedColors: 'active' });
   await page.locator('.directory-care-readiness > summary').click();
   await expect(page.locator('.directory-care-readiness-row').first()).toHaveCSS('border-left-width', '4px');
+});
+
+test('server identity conflict blocks legacy profile, belongings, and safety fallbacks in the care brief', async ({ page }) => {
+  await page.setContent(`<!doctype html><html><body><main class="directory-card" data-stay-key="stay-a" data-directory-stay-key="stay-a">
+    <section class="directory-care-brief" data-directory-care-brief><section data-care-brief-safety></section><p data-care-brief-feeding></p><p data-care-brief-medication></p><span data-care-brief-freshness></span><span data-care-brief-call-owner></span>
+    <div data-directory-intake>Intake not sent</div><button data-directory-edit-field="notes"></button></section></main></body></html>`);
+  await page.addScriptTag({ content: briefTestCode });
+  await page.evaluate(() => {
+    const card = document.querySelector('.directory-card');
+    directoryProfileDetailCache['stay-a'] = { stayKey: 'stay-a', intakeAttributes: { feedingTimes: '7 am', medicationInstructions: 'Private legacy medicine' } };
+    belongingsRecordsCache['stay-a'] = { items: { medication: 'Private belongings medicine' }, riskFlags: { foodAllergy: true } };
+    careRiskRecordsCache['stay-a'] = { riskFlags: { foodAllergy: true } };
+    card.dataset.profileIdentityBlocked = 'stay-a';
+    card.dataset.profileIdentityBlockedReason = 'conflict';
+    window.renderBrief(card);
+  });
+  await expect(page.locator('[data-care-brief-safety]')).toContainText('Safety profile not yet available');
+  await expect(page.locator('[data-care-brief-feeding]')).toContainText('Care record needs identity review');
+  await expect(page.locator('[data-care-brief-medication]')).not.toContainText('Private');
+  await expect(page.locator('[data-care-brief-safety]')).not.toContainText('Food allergy');
+  await page.evaluate(() => {
+    const card = document.querySelector('.directory-card');
+    card.dataset.profileIdentityBlockedReason = 'missing';
+    window.renderBrief(card);
+  });
+  await expect(page.locator('[data-care-brief-feeding]')).toHaveText('Not provided');
+  await expect(page.locator('[data-care-brief-medication]')).toHaveText('Not provided');
+  await expect(page.locator('[data-care-brief-freshness]')).toHaveText('No saved care profile');
+  await expect(page.locator('[data-care-brief-feeding]')).not.toContainText('identity review');
 });
 
 test('readiness actions expand the correct category and focus its existing field', async ({ page }) => {

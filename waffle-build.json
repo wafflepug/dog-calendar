@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.10.07.01",
-  "releaseName": "Boarding MVP Refinements",
+  "assetRevision": "2026.10.07.02",
+  "releaseName": "Identity-safe Care Profile Reads",
   "careIteration": {
     "returningDogSuggestions": true,
     "reviewedCareInheritance": true,

@@ -129,3 +129,18 @@ test('inline Care save freezes controls and preserves the draft with visible fai
   assert.match(status.textContent, /Save failed\. Your draft is still here/);
   assert.equal(sandbox.directoryProfileEditDrafts.has(card.dataset.directoryStayKey), true);
 });
+
+
+test('server-rejected identity retains an inline draft and blocks Save even with one visible card', () => {
+  const h = makeProfileHarness();
+  h.card.dataset.profileIdentityBlocked = h.card.dataset.directoryStayKey;
+  h.card.dataset.profileIdentityBlockedReason = 'conflict';
+  h.sandbox.directoryProfileEditDrafts.set(h.card.dataset.directoryStayKey, {
+    initial: { 'intake:notes': 'Saved note' }, values: { 'intake:notes': 'Typed draft' },
+    initialized: true, conflict: false, failed: false, saving: false
+  });
+  h.sandbox.restore(h.card);
+  assert.equal(h.control.value, 'Typed draft');
+  assert.equal(h.save.disabled, true);
+  assert.match(h.status.textContent, /identity needs review/);
+});
