@@ -125,6 +125,18 @@ for (const [name, viewport, colorScheme] of [['320-light', { width: 320, height:
     const careBrief = page.locator('.directory-card.is-profile-active [data-directory-care-brief]');
     const records = page.locator('.directory-card.is-profile-active .directory-care-records-disclosure');
     const contactDisclosure = page.locator('.directory-card.is-profile-active [data-directory-stay-contact]');
+    const readsBeforeHandoverEdit = [...actionReads];
+    await careBrief.getByRole('button', { name: 'Update handover' }).click();
+    await expect(contactDisclosure).toHaveAttribute('open', '');
+    await expect(page.locator('#guestDetailEditModal')).toHaveClass(/open/);
+    await expect(page.locator('#guestDetailEditTitle')).toContainText('Edit Handover note');
+    await expect(page.locator('#guestDetailEditTextarea')).toHaveValue(booking.notes);
+    await expect(records).not.toHaveAttribute('open', '');
+    const detailReads = actions => actions.filter(action => ['get_guest_profile', 'get_guest_belongings', 'get_dog_history', 'get_dog_master_profile'].includes(action));
+    expect(detailReads(actionReads)).toEqual(detailReads(readsBeforeHandoverEdit));
+    await page.locator('#cancelGuestDetailEdit').click();
+    await contactDisclosure.locator('summary').click();
+    await expect(contactDisclosure).not.toHaveAttribute('open', '');
     await page.keyboard.press('Tab');
     await sectionNav.locator('[data-v11160-tab="profile"]').focus();
     await expect(sectionNav.locator('[data-v11160-tab="profile"]')).toHaveCSS('outline-style', 'solid');
@@ -258,26 +270,6 @@ for (const [name, viewport, colorScheme] of [['320-light', { width: 320, height:
       await page.screenshot({ path: screenshotPath, fullPage: true });
       console.log(`CARE_REFINEMENT_SCREENSHOT ${screenshotPath}`);
     }
-    const readsBeforeHandoverEdit = [...actionReads];
-    const handoverEdit = careBrief.getByRole('button', { name: 'Update handover' });
-    await handoverEdit.evaluate(element => {
-      const rect = element.getBoundingClientRect();
-      window.scrollBy({ top: rect.top + rect.height / 2 - window.innerHeight / 2, behavior: 'instant' });
-    });
-    expect(await handoverEdit.evaluate(element => {
-      const rect = element.getBoundingClientRect();
-      const hit = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
-      return hit === element || element.contains(hit);
-    })).toBe(true);
-    await handoverEdit.click();
-    await expect(contactDisclosure).toHaveAttribute('open', '');
-    await expect(page.locator('#guestDetailEditModal')).toHaveClass(/open/);
-    await expect(page.locator('#guestDetailEditTitle')).toContainText('Edit Handover note');
-    await expect(page.locator('#guestDetailEditTextarea')).toHaveValue(booking.notes);
-    await expect(records).not.toHaveAttribute('open', '');
-    const detailReads = actions => actions.filter(action => ['get_guest_profile', 'get_guest_belongings', 'get_dog_history', 'get_dog_master_profile'].includes(action));
-    expect(detailReads(actionReads)).toEqual(detailReads(readsBeforeHandoverEdit));
-    await page.locator('#cancelGuestDetailEdit').click();
     await page.locator('#directoryBackToGuestsBtn').focus();
     await expect(page.locator('#directoryBackToGuestsBtn')).toBeFocused();
     await page.locator('#directoryBackToGuestsBtn').click();

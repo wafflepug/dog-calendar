@@ -29,4 +29,4 @@ Owner Care Link and Book Again have different purposes: owner information collec
 
 - Verify tab and emergency-contact navigation with VoiceOver and TalkBack on physical phones.
 - Confirm `updatedAt` semantics for imported, inherited and synchronized profile records with the deployed data contract.
-- Add a narrow Fold/tablet viewport pass for profile header and sticky navigation interactions.
+- Investigate returning to overview actions after deep profile scrolling, including fixed-footer clearance on narrow phones and Fold/tablet layouts.
