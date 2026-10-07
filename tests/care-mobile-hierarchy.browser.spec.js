@@ -266,6 +266,7 @@ for (const [name, viewport, colorScheme] of [['320-light', { width: 320, height:
     await expect(page.locator('.directory-card.is-profile-active [data-care-risk-flag="foodAllergy"]')).toBeChecked();
     if (name === '320-light' || name === '1440-light') {
       await sectionNav.scrollIntoViewIfNeeded();
+      await expect(page.locator('#wh75SettingsPanel')).not.toHaveClass(/is-open/);
       const screenshotPath = testInfo.outputPath('care-overview-and-tabs.png');
       await page.screenshot({ path: screenshotPath, fullPage: true });
       console.log(`CARE_REFINEMENT_SCREENSHOT ${screenshotPath}`);

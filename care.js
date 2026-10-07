@@ -703,6 +703,7 @@
         color:var(--wh-accent-contrast,#fff);
         box-shadow:0 1px 2px rgba(15,23,42,.14);
       }
+      body[data-waffle-page="directory"] .v11160-desktop-tab:focus,
       body[data-waffle-page="directory"] .v11160-desktop-tab:focus-visible {
         outline:2px solid var(--wh-accent,#0f6292);
         outline-offset:2px;
