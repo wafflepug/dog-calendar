@@ -8373,40 +8373,36 @@ registerWaffleServiceWorker();
 
                 const script = document.createElement('script');
                 let finished = false;
-                let lateCallbackTimer = null;
+                let scriptSettled = false;
+                const removeCallback = () => {
+                    try { delete window[callbackName]; } catch (_) { window[callbackName] = undefined; }
+                };
+                const removeScript = () => {
+                    if (script.parentNode) script.parentNode.removeChild(script);
+                };
+                const retireLateCallback = () => {
+                    removeCallback();
+                    removeScript();
+                };
 
                 const cleanup = (retainLateCallback = false) => {
                     if (finished) return;
                     finished = true;
                     clearTimeout(timeoutId);
-                    if (!retainLateCallback) {
-                        try {
-                            delete window[callbackName];
-                        } catch (_) {
-                            window[callbackName] = undefined;
-                        }
+                    if (retainLateCallback && !scriptSettled) {
+                        // A timed-out JSONP request can still execute after the
+                        // caller has retried or failed. Keep a harmless global
+                        // callback until the script's request lifecycle settles.
+                        window[callbackName] = retireLateCallback;
+                    } else {
+                        removeCallback();
+                        removeScript();
                     }
-                    if (script.parentNode) script.parentNode.removeChild(script);
                 };
 
                 const retryOrReject = (message) => {
-                    const isFinalTimeout =
-                        attempt >= maxAttempts &&
-                        message.indexOf('did not respond in time') !== -1;
-
-                    if (isFinalTimeout && Number(options.lateCallbackGraceMs || 0) > 0) {
-                        const graceMs = Number(options.lateCallbackGraceMs);
-                        window[callbackName] = () => {
-                            if (lateCallbackTimer) clearTimeout(lateCallbackTimer);
-                            try { delete window[callbackName]; } catch (_) { window[callbackName] = undefined; }
-                        };
-                        cleanup(true);
-                        lateCallbackTimer = setTimeout(() => {
-                            try { delete window[callbackName]; } catch (_) { window[callbackName] = undefined; }
-                        }, graceMs);
-                    } else {
-                        cleanup();
-                    }
+                    const timedOut = message.indexOf('did not respond in time') !== -1;
+                    cleanup(timedOut);
 
                     if (attempt < maxAttempts) {
                         setTimeout(runAttempt, 1200);
@@ -8431,6 +8427,10 @@ registerWaffleServiceWorker();
                 }, timeoutMs);
 
                 window[callbackName] = response => {
+                    if (finished) {
+                        retireLateCallback();
+                        return;
+                    }
                     cleanup();
 
                     if (response && response.result === 'success') {
@@ -8444,7 +8444,17 @@ registerWaffleServiceWorker();
                     }
                 };
 
+                script.onload = () => {
+                    scriptSettled = true;
+                    if (finished) retireLateCallback();
+                };
+
                 script.onerror = () => {
+                    scriptSettled = true;
+                    if (finished) {
+                        retireLateCallback();
+                        return;
+                    }
                     retryOrReject(
                         'Could not reach the Apps Script Web App.'
                     );
@@ -9631,7 +9641,6 @@ registerWaffleServiceWorker();
                             cacheKey,
                         maxAttempts: 1,
                         timeoutMs: 15000,
-                        lateCallbackGraceMs: 5 * 60 * 1000,
                         maxStaleMs:
                             6 * 60 * 60 * 1000,
                         onCached:

@@ -64,7 +64,6 @@ test('cached profile remains visible when refresh fails and exposes scoped retry
     assert.equal(h.status.getAttribute?.('role') || 'status', 'status');
     assert.equal(h.calls[0].options.maxAttempts, 1);
     assert.equal(h.calls[0].options.timeoutMs, 15000);
-    assert.equal(h.calls[0].options.lateCallbackGraceMs, 5 * 60 * 1000);
     assert.equal(h.calls.filter(call => call.type === 'generic-error').length, 0);
 });
 
