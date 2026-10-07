@@ -283,15 +283,17 @@
     const card = directoryCardForStay(stayKey);
     if (!card) return;
     const tile = card.querySelector('.directory-guest-tile-open');
-    if (!tile) return;
+    const host = card.querySelector('[data-directory-profile-roster-badges]') || tile;
+    if (!tile || !host) return;
 
+    host.querySelector('[data-v1117-care-source-badge]')?.remove();
     tile.querySelector('[data-v1117-care-source-badge]')?.remove();
     card.classList.remove('has-request-source');
 
     const html = careSourceBadgeHtml(requestSource);
     if (!html) return;
 
-    tile.insertAdjacentHTML('beforeend', html);
+    host.insertAdjacentHTML('beforeend', html);
     card.classList.add('has-request-source');
   }
 

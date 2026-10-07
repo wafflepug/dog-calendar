@@ -127,7 +127,7 @@
       return;
     }
     var patch = document.createElement("script");
-    patch.src = "waffle-v11.1.8.js?v=11.1.8.1";
+    patch.src = "waffle-v11.1.8.js?v=11.1.8.2&rev=2026.10.08.03";
     patch.async = false;
     patch.setAttribute("data-waffle-v1118", "js");
     patch.addEventListener("load", loadV1119Script, { once: true });
@@ -142,7 +142,7 @@
       return;
     }
     var patch = document.createElement("script");
-    patch.src = "waffle-v11.1.7.js?v=11.1.7.2";
+    patch.src = "waffle-v11.1.7.js?v=11.1.7.3&rev=2026.10.08.03";
     patch.async = false;
     patch.setAttribute("data-waffle-v1117", "js");
     patch.addEventListener("load", loadV1118Script, { once: true });

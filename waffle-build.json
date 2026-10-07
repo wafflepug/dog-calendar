@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.10.08.02",
-  "releaseName": "Care Search & Access Clarity",
+  "assetRevision": "2026.10.08.03",
+  "releaseName": "Care Profile Header Clarity",
   "careIteration": {
     "returningDogSuggestions": true,
     "reviewedCareInheritance": true,

@@ -420,29 +420,47 @@
   function decorateCareCard(card) {
     const button = card?.querySelector('.directory-guest-tile-open');
     if (!button) return;
+    const host = card.querySelector('[data-directory-profile-roster-badges]') || button;
     const status = careCardStatus(card);
-    let chip = button.querySelector('[data-v1118-status-chip]');
+    let chip = host.querySelector('[data-v1118-status-chip]');
     if (!chip) {
       chip = document.createElement('span');
       chip.dataset.v1118StatusChip = '';
-      button.appendChild(chip);
+      host.appendChild(chip);
     }
     chip.className = 'v1118-status-chip v1118-care-status ' + statusClass(status);
     chip.textContent = status;
-    const signals = careSignals(card);
-    let host = button.querySelector('[data-v1118-care-signals]');
-    if (!host) {
-      host = document.createElement('span');
-      host.dataset.v1118CareSignals = '';
-      host.className = 'v1118-care-signals';
-      button.appendChild(host);
+    const profileStatus = card.classList.contains('is-profile-active')
+      ? card.querySelector('.directory-card-header .directory-status-tag')
+      : null;
+    if (profileStatus) {
+      const labels = {
+        'AT HOME': 'At Home',
+        'ARRIVING TODAY': 'Arriving Today',
+        'LEAVING TODAY': 'Leaving Today',
+        'CHECKED OUT': 'Checked Out',
+        'PAST STAY': 'Past Stay',
+        'UPCOMING': 'Upcoming'
+      };
+      const label = labels[status] || status;
+      const tagClass = status === 'AT HOME' ? 'tag-at-home' : status === 'CHECKED OUT' || status === 'PAST STAY' ? 'tag-checked-out' : 'tag-upcoming';
+      profileStatus.className = 'directory-status-tag ' + tagClass;
+      if (profileStatus.textContent !== label) profileStatus.textContent = label;
     }
-    host.innerHTML = signals.map(signal => `
+    const signals = careSignals(card);
+    let signalsHost = host.querySelector('[data-v1118-care-signals]');
+    if (!signalsHost) {
+      signalsHost = document.createElement('span');
+      signalsHost.dataset.v1118CareSignals = '';
+      signalsHost.className = 'v1118-care-signals';
+      host.appendChild(signalsHost);
+    }
+    signalsHost.innerHTML = signals.map(signal => `
       <span class="v1118-care-signal" title="${esc(signal.label)}">
         <span class="v1118-care-signal-icon" aria-hidden="true">${esc(signal.icon)}</span>
         <span>${esc(signal.label)}</span>
       </span>`).join('');
-    host.hidden = signals.length === 0;
+    signalsHost.hidden = signals.length === 0;
     card.classList.toggle('has-v1118-care-signals', signals.length > 0);
     card.dataset.v1118PriorityScore = String(signals.reduce((sum, signal) => sum + signal.weight, 0));
   }

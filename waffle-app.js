@@ -10531,6 +10531,39 @@ registerWaffleServiceWorker();
         };
     }
 
+    function moveDirectoryRosterBadgesIntoProfileHeader(card) {
+        const button = card?.querySelector('.directory-guest-tile-open');
+        const header = card?.querySelector('.directory-card-header');
+        if (!button || !header) return;
+        let host = header.querySelector('[data-directory-profile-roster-badges]');
+        if (!host) {
+            host = document.createElement('div');
+            host.className = 'directory-profile-roster-badges';
+            host.dataset.directoryProfileRosterBadges = '';
+            host.setAttribute('role', 'group');
+            host.setAttribute('aria-label', 'Booking source and care warnings');
+            header.appendChild(host);
+        }
+        button.querySelectorAll('.v1117-care-source-badge, [data-v1118-status-chip], [data-v1118-care-signals]').forEach(badge => {
+            if (badge.parentElement === host) return;
+            badge.__directoryRosterBadgeNextSibling = badge.nextSibling;
+            host.appendChild(badge);
+        });
+    }
+
+    function restoreDirectoryRosterBadgesToList(card) {
+        const button = card?.querySelector('.directory-guest-tile-open');
+        const host = card?.querySelector('[data-directory-profile-roster-badges]');
+        if (!button || !host) return;
+        Array.from(host.children).reverse().forEach(badge => {
+            const next = badge.__directoryRosterBadgeNextSibling;
+            if (next?.parentNode === button) button.insertBefore(badge, next);
+            else button.appendChild(badge);
+            delete badge.__directoryRosterBadgeNextSibling;
+        });
+        host.remove();
+    }
+
 
     function restoreDirectoryProfileNavigationOrigin(options = {}) {
         const origin = directoryProfileNavigationOrigin;
@@ -10814,6 +10847,7 @@ registerWaffleServiceWorker();
             )
             .forEach(otherCard => {
                 if (otherCard !== card) {
+                    restoreDirectoryRosterBadgesToList(otherCard);
                     otherCard.classList.remove(
                         'is-profile-active'
                     );
@@ -10823,6 +10857,7 @@ registerWaffleServiceWorker();
         card.classList.add(
             'is-profile-active'
         );
+        moveDirectoryRosterBadgesIntoProfileHeader(card);
         card.dataset.profileVisited = 'true';
 
         dashboard?.classList.add(
@@ -10943,11 +10978,12 @@ registerWaffleServiceWorker();
             .querySelectorAll(
                 '.directory-card.is-profile-active'
             )
-            .forEach(card =>
+            .forEach(card => {
+                restoreDirectoryRosterBadgesToList(card);
                 card.classList.remove(
                     'is-profile-active'
-                )
-            );
+                );
+            });
 
         if (backBar) {
             backBar.hidden = true;
@@ -15957,9 +15993,7 @@ registerWaffleServiceWorker();
                                                         <h4>Handover note</h4>
                                                         <button type="button" class="directory-care-brief-note-edit" data-care-brief-action="handover" aria-label="Update handover">Update</button>
                                                     </div>
-                                                    <p class="directory-care-brief-value">
-                                                        ${escapeDashboardHtml(notes ? notes.trim() : 'No handover note recorded')}
-                                                    </p>
+                                                    <p class="directory-care-brief-value">${escapeDashboardHtml(notes ? notes.trim() : 'No handover note recorded')}</p>
                                                 </section>
                                             </div>
 

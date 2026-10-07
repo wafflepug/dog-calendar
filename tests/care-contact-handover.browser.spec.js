@@ -7,12 +7,12 @@ test.setTimeout(90_000);
 
 const fullCalendar = fs.readFileSync(path.join(__dirname, 'fixtures', 'fullcalendar.global.min.js'), 'utf8');
 const bookings = [
-  { timestamp: '2026-10-05', dogName: 'Milo', breed: 'Border Collie', startDate: '2026-01-01', endDate: '2027-01-01', ownerName: 'Alex "A", Owner', phone: '0400000001', notes: `handover-${'verylongword'.repeat(12)}\nBring the "blue", blanket\nLeave at 7pm`, bookingType: 'Boarding' },
+  { timestamp: '2026-10-05', dogName: 'Milo', breed: 'Border Collie', startDate: '2026-01-01', endDate: '2027-01-01', ownerName: 'Alex "A", Owner', phone: '0400000001', notes: `handover-${'verylongword'.repeat(12)}\nBring the "blue", blanket\nLeave at 7pm`, bookingType: 'Boarding', requestSource: 'MadPaws', dogId: '11111111-1111-4111-8111-111111111111', dogNumber: 17 },
   { timestamp: '2026-10-05', dogName: 'Nala', breed: 'Labrador', startDate: '2026-01-01', endDate: '2027-01-01', ownerName: '   ', phone: '  ', notes: '  ', bookingType: 'Boarding' }
 ];
 const keyFor = b => `${b.dogName.toLowerCase()}|${b.startDate}|${b.endDate}`;
 const dateCell = value => { const [year, month, day] = value.split('-'); return `${day}/${month}/${year}`; };
-const csv = () => ['Timestamp,Dog Name,Breed,Start Date,End Date,Owner,Phone,Likes,Dislikes,Notes,Edit Link,Booking Type', ...bookings.map(b => [b.timestamp, b.dogName, b.breed, dateCell(b.startDate), dateCell(b.endDate), b.ownerName, b.phone, '', '', b.notes, '', b.bookingType].map(value => /[",\r\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value).join(','))].join('\r\n');
+const csv = () => ['Timestamp,Dog Name,Breed,Start Date,End Date,Owner,Phone,Likes,Dislikes,Notes,Edit Link,Booking Type,Dog ID,Dog Number', ...bookings.map(b => [b.timestamp, b.dogName, b.breed, dateCell(b.startDate), dateCell(b.endDate), b.ownerName, b.phone, '', '', b.notes, '', b.bookingType, b.dogId || '', b.dogNumber || ''].map(value => /[",\r\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value).join(','))].join('\r\n');
 
 function installFixture(page) {
   const handler = async route => {
@@ -32,7 +32,7 @@ function installFixture(page) {
       if (!resolved.policy.allowed) return route.fulfill({ status: 403, body: `Unapproved backend action blocked: ${resolved.policy.reason}` });
       const records = bookings.map(b => ({ ...b, stayKey: keyFor(b) }));
       let response = { result: 'success', records: [], enabled: false };
-      if (action === 'get_guest_directory') response = { result: 'success', bookings, summaries: records.map(b => ({ stayKey: b.stayKey, riskFlags: {} })), digitalIntakes: [], legacyIntakes: [] };
+      if (action === 'get_guest_directory') response = { result: 'success', bookings: records, summaries: records.map(b => ({ stayKey: b.stayKey, requestSource: b.requestSource || '', riskFlags: b.dogName === 'Milo' ? { medicated: true, foodAllergy: true } : {} })), digitalIntakes: [], legacyIntakes: [] };
       if (action === 'get_intake_statuses') response = { result: 'success', records: [] };
       if (action === 'get_legacy_intake_statuses') response = { result: 'success', records: [] };
       if (action === 'get_belongings') response = { result: 'success', records: [] };
@@ -61,8 +61,53 @@ test('stay contact and handover is readable, editable and tied to the selected d
   // Both stays cover the test date; status filtering is tested separately.
   const card = page.locator('.directory-card[data-directory-dog-name="Milo"]');
   await expect(card.locator('[data-open-directory-profile]')).toBeVisible();
+  await expect(card.locator('[data-v1117-care-source-badge]')).toContainText('MadPaws');
+  await expect(card.locator('[data-v1118-care-signals]')).toContainText('Medication');
+  await expect(card.locator('[data-v1118-care-signals]')).toContainText('Food allergy');
+  const rosterIdentity = await card.locator('.directory-roster-copy').evaluate(node => node.textContent.replace(/\s+/g, ' ').trim());
   const selectedNote = bookings[0].notes;
   await card.locator('[data-open-directory-profile]').click();
+  await expect(card.locator('[data-open-directory-profile]')).toBeHidden();
+  const profileHeader = card.locator('.directory-card-header');
+  await expect(profileHeader.locator('[data-directory-edit-field="dogName"]')).toHaveText('Milo');
+  await expect(profileHeader.locator('.directory-dog-id')).toHaveCount(1);
+  await expect(profileHeader.locator('.directory-status-tag')).toHaveCount(1);
+  await expect(profileHeader.locator('.directory-stay-dates')).toContainText('Check-in');
+  await expect(profileHeader.locator('.directory-stay-dates')).toContainText('Check-out');
+  await expect(profileHeader.locator('[data-upload-dog-photo]')).toBeVisible();
+  await expect(profileHeader.locator('[data-v1117-care-source-badge]')).toContainText('MadPaws');
+  await expect(profileHeader.locator('[data-v1118-care-signals]')).toContainText('Medication');
+  await expect(profileHeader.locator('[data-v1118-care-signals]')).toContainText('Food allergy');
+  await expect(profileHeader.locator('[data-v1118-status-chip]')).toHaveCount(1);
+  await expect(profileHeader.locator('[data-v1118-status-chip]')).toBeHidden();
+  const refreshedBookings = bookings.map(b => ({ ...b, stayKey: keyFor(b), requestSource: b.dogName === 'Milo' ? 'Updated source' : '' }));
+  const refreshedSummaries = refreshedBookings.map(b => ({ stayKey: b.stayKey, requestSource: b.requestSource, riskFlags: b.dogName === 'Milo' ? { escapeRisk: true } : {} }));
+  await page.evaluate(({ updatedBookings, updatedSummaries }) => {
+    if (typeof applyGuestDirectoryResponse !== 'function') throw new Error('Directory response handler is unavailable');
+    applyGuestDirectoryResponse({ result: 'success', bookings: updatedBookings, summaries: updatedSummaries, digitalIntakes: [], legacyIntakes: [] }, { quiet: true });
+  }, { updatedBookings: refreshedBookings, updatedSummaries: refreshedSummaries });
+  await expect(profileHeader.locator('[data-v1117-care-source-badge]')).toContainText('Updated source');
+  await expect(profileHeader.locator('[data-v1118-care-signals]')).toContainText('Escape risk');
+  await expect(profileHeader.locator('[data-v1118-care-signals]')).not.toContainText('Medication');
+  await expect(profileHeader.locator('[data-v1118-care-signals]')).not.toContainText('Food allergy');
+  await expect(profileHeader.locator('[data-v1118-status-chip]')).toHaveCount(1);
+  await page.evaluate(() => {
+    const activeCard = document.querySelector('.directory-card.is-profile-active');
+    activeCard.dataset.directoryEndDate = '2026-10-05';
+    window.WAFFLE_V1118.decorateAllCareCards();
+  });
+  await expect(profileHeader.locator('.directory-status-tag')).toHaveText('Leaving Today');
+  await expect(profileHeader.locator('[data-v1118-status-chip]')).toHaveText('LEAVING TODAY');
+  await page.evaluate(() => {
+    const activeCard = document.querySelector('.directory-card.is-profile-active');
+    activeCard.dataset.directoryEndDate = '2027-01-01';
+    window.WAFFLE_V1118.decorateAllCareCards();
+  });
+  await expect(profileHeader.locator('.directory-status-tag')).toHaveText('At Home');
+  const handover = card.locator('.directory-care-brief-note .directory-care-brief-value');
+  await expect(handover).toHaveText(selectedNote);
+  expect(await handover.textContent()).toBe(selectedNote);
+  await expect(handover).toHaveCSS('text-align', 'start');
   const contact = card.locator('[data-directory-stay-contact]');
   await contact.locator('summary').click();
   for (const theme of ['light', 'dark']) {
@@ -71,6 +116,8 @@ test('stay contact and handover is readable, editable and tied to the selected d
       const settings = page.getByRole('dialog', { name: 'Settings' });
       if (await settings.isVisible().catch(() => false)) await page.evaluate(() => document.querySelector('[data-wh75-close-settings]').click());
       await expect(settings).not.toHaveClass(/is-open/);
+      await expect(page.locator('#wh75SettingsBackdrop')).not.toHaveClass(/is-open/);
+      await expect.poll(() => settings.evaluate(element => getComputedStyle(element).opacity)).toBe('0');
     }
     await page.emulateMedia({ colorScheme: theme });
     expect(await page.evaluate(() => document.body.classList.contains('dark-theme'))).toBe(theme === 'dark');
@@ -82,6 +129,23 @@ test('stay contact and handover is readable, editable and tied to the selected d
     await expect(contact.locator('[data-directory-edit-field="notes"]')).toHaveAttribute('aria-label', 'Edit Milo handover note');
     for (const width of [320, 390, 1440]) {
       await page.setViewportSize({ width, height: 900 });
+      const screenshotDir = process.env.CARE_HEADER_SCREENSHOTS_DIR;
+      if (screenshotDir && ((theme === 'light' && width === 390) || (theme === 'dark' && width === 320) || (theme === 'light' && width === 1440))) {
+        fs.mkdirSync(screenshotDir, { recursive: true });
+        const suffix = `${width}-${theme}`;
+        await profileHeader.screenshot({ path: path.join(screenshotDir, `care-ui-polish-profile-header-${suffix}.png`) });
+      }
+      const headerLayout = await profileHeader.evaluate(element => {
+        const rect = element.getBoundingClientRect();
+        const descendants = [...element.querySelectorAll('*')].map(node => {
+          const box = node.getBoundingClientRect();
+          const style = getComputedStyle(node);
+          return { selector: `${node.tagName.toLowerCase()}${node.id ? `#${node.id}` : ''}${node.className && typeof node.className === 'string' ? `.${node.className.trim().replace(/\s+/g, '.')}` : ''}`, text: (node.textContent || '').trim().slice(0, 45), left: Math.round(box.left), right: Math.round(box.right), width: Math.round(box.width), scrollWidth: node.scrollWidth, clientWidth: node.clientWidth, position: style.position, overflow: style.overflow, whiteSpace: style.whiteSpace };
+        });
+        return { bounds: { left: Math.round(rect.left), right: Math.round(rect.right), width: Math.round(rect.width) }, clientWidth: element.clientWidth, scrollWidth: element.scrollWidth, descendants: descendants.filter(node => node.right > rect.right + 1 || node.left < rect.left - 1 || node.scrollWidth > node.clientWidth + 1) };
+      });
+      expect(headerLayout.scrollWidth <= headerLayout.clientWidth + 1, JSON.stringify({ width, theme, headerLayout })).toBe(true);
+      expect(await handover.evaluate(element => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
       const layout = await contact.evaluate(root => ({ overflow: root.scrollWidth > root.clientWidth, buttons: [...root.querySelectorAll('button')].map(button => { const r = button.getBoundingClientRect(); return [r.width, r.height]; }) }));
       expect(layout.overflow).toBe(false);
       expect(layout.buttons.every(([w, h]) => Math.round(w * 100) / 100 >= 44 && Math.round(h * 100) / 100 >= 44)).toBe(true);
@@ -132,6 +196,13 @@ test('stay contact and handover is readable, editable and tied to the selected d
   await expect(contact.locator('[data-directory-edit-field="notes"]')).toHaveAttribute('data-directory-current-value', selectedNote);
 
   await page.locator('#directoryBackToGuestsBtn').click();
+  await expect(card.locator('[data-open-directory-profile]')).toBeVisible();
+  expect(await card.locator('.directory-roster-copy').evaluate(node => node.textContent.replace(/\s+/g, ' ').trim())).toBe(rosterIdentity);
+  await expect(card.locator('[data-open-directory-profile] [data-v1117-care-source-badge]')).toHaveCount(1);
+  await expect(card.locator('[data-open-directory-profile] [data-v1117-care-source-badge]')).toContainText('Updated source');
+  await expect(card.locator('[data-open-directory-profile] [data-v1118-care-signals]')).toHaveCount(1);
+  await expect(card.locator('[data-open-directory-profile] [data-v1118-care-signals]')).toContainText('Escape risk');
+  await expect(card.locator('[data-open-directory-profile] [data-v1118-status-chip]')).toHaveCount(1);
   await page.getByRole('tab', { name: /Staying/ }).click();
   await expect(emptyCard.locator('[data-open-directory-profile]')).toBeVisible();
   await emptyCard.locator('[data-open-directory-profile]').click();
