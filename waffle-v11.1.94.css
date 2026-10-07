@@ -55,7 +55,7 @@
 
 @media (hover: hover) {
   .v10-stat-card:hover,
-  .directory-card:hover {
+  .directory-card:not(.is-profile-active):hover {
     transform: translateY(-2px);
     box-shadow: 0 8px 20px rgba(15, 23, 42, 0.09);
   }
@@ -71,7 +71,7 @@
 .wh65-btn:active,
 .wh69-view-btn:active,
 .v1082-stay-tab:active,
-.directory-card:active {
+.directory-card:not(.is-profile-active):active {
   transform: translateY(0) scale(0.985) !important;
 }
 

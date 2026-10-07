@@ -42,6 +42,7 @@
   const TAB_KEYS = new Set(TABS.map(item => item.key));
   const wrapped = new Set();
   let prepareTimer = 0;
+  let cardAccessibilityId = 0;
 
   function pageName() {
     return String(window.WAFFLE_PAGE || document.body?.dataset?.wafflePage || 'calendar');
@@ -169,9 +170,13 @@
     nav.setAttribute('aria-label', 'Care profile sections');
     nav.innerHTML = TABS.map(item => `
       <button type="button" class="v11160-desktop-tab" role="tab"
-        data-v11160-tab="${item.key}" aria-selected="false" tabindex="-1">
+        id="care-tab-${card.dataset.v11160A11yId || (card.dataset.v11160A11yId = String(++cardAccessibilityId))}-${item.key}"
+        data-v11160-tab="${item.key}" aria-controls="care-panel-${card.dataset.v11160A11yId}-${item.key}"
+        aria-selected="false" tabindex="-1">
         <span aria-hidden="true">${item.icon}</span><span>${item.label}</span>
       </button>`).join('');
+
+    syncPanelSemantics(card, nav);
 
     if (legacy) legacy.insertAdjacentElement('beforebegin', nav);
     else host.insertBefore(nav, host.firstChild);
@@ -208,9 +213,27 @@
     return nav;
   }
 
+  function syncPanelSemantics(card, nav) {
+    if (!card || !nav) return;
+    const cardId = card.dataset.v11160A11yId || (card.dataset.v11160A11yId = String(++cardAccessibilityId));
+    TABS.forEach(item => {
+      const tab = nav.querySelector(`[data-v11160-tab="${item.key}"]`);
+      const content = panel(card, item.key);
+      if (!tab || !content) return;
+      const tabId = `care-tab-${cardId}-${item.key}`;
+      const panelId = `care-panel-${cardId}-${item.key}`;
+      tab.id = tabId;
+      tab.setAttribute('aria-controls', panelId);
+      content.id = panelId;
+      content.setAttribute('role', 'tabpanel');
+      content.setAttribute('aria-labelledby', tabId);
+    });
+  }
+
   function setVisualState(card, key) {
     const nav = newNav(card);
     if (!nav) return;
+    syncPanelSemantics(card, nav);
 
     nav.querySelectorAll('[data-v11160-tab]').forEach(button => {
       const active = button.dataset.v11160Tab === key;

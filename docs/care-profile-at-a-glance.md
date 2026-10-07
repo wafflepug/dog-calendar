@@ -25,8 +25,12 @@ Owner Care Link and Book Again have different purposes: owner information collec
 - Five section tabs remain visible in a wrapped three-column phone layout with keyboard selection and focus feedback.
 - The overview reports the validated care record update time and separates freshness, loading, refresh errors, missing records and unresolved identity.
 
+- Timestamp semantics for imports, reviewed inheritance and synchronization are documented in `care-record-update-contract.md` and covered by isolated source contract tests.
+- Each Care tab controls a uniquely identified, labelled panel; keyboard navigation retains drafts.
+
+- Open profiles no longer scale on press; deep category and handover actions keep stable pointer targets. Compact and reduced-motion Care action navigation uses immediate scrolling.
+
 ## Next backlog
 
 - Verify tab and emergency-contact navigation with VoiceOver and TalkBack on physical phones.
-- Confirm `updatedAt` semantics for imported, inherited and synchronized profile records with the deployed data contract.
-- Investigate returning to overview actions after deep profile scrolling, including fixed-footer clearance on narrow phones and Fold/tablet layouts.
+- Improve Care search clarity for dog ID and owner matches while retaining on-demand future arrivals.
