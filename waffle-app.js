@@ -15747,8 +15747,9 @@ registerWaffleServiceWorker();
                                                     ${escapeDashboardHtml(breedTxt)}
                                                 </button>
 
-                                                <div class="directory-stay-dates">
-                                                    📅 ${escapeDashboardHtml(stayDateLabel)}
+                                                <div class="directory-stay-dates directory-profile-stay-dates" aria-label="Stay dates">
+                                                    <span><strong>Check-in</strong> ${escapeDashboardHtml(startParsed ? formatStayDateShort(startParsed) : 'Not recorded')}</span>
+                                                    <span><strong>Check-out</strong> ${escapeDashboardHtml(endParsed ? formatStayDateShort(endParsed) : 'Not recorded')}</span>
                                                 </div>
                                             </div>
                                         </div>

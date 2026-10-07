@@ -79,6 +79,24 @@ for (const [name, viewport, colorScheme] of [['390-light', { width: 390, height:
     if (name.startsWith('390')) {
       await expect.poll(() => page.evaluate(() => window.__directoryProfileScrollBehaviors)).toContain('auto');
     }
+    const selectedProfile = page.locator('.directory-card.is-profile-active');
+    await expect(selectedProfile.locator('.directory-guest-tile-photo')).toBeHidden();
+    await expect(selectedProfile.locator('.directory-photo-shell')).toBeVisible();
+    await expect(selectedProfile.locator('.directory-profile-stay-dates')).toContainText('Check-in');
+    await expect(selectedProfile.locator('.directory-profile-stay-dates')).toContainText('Check-out');
+    await expect(selectedProfile.locator('[data-v110-operation-bar]')).toBeVisible();
+    await expect.poll(() => selectedProfile.locator('.directory-profile-content').evaluate(profile => {
+      const header = profile.querySelector('.directory-card-header');
+      const operations = profile.querySelector('[data-v110-operation-bar]');
+      const overview = profile.querySelector('.directory-care-brief');
+      return Boolean(header && operations && overview && header.nextElementSibling === operations && (operations.compareDocumentPosition(overview) & Node.DOCUMENT_POSITION_FOLLOWING));
+    })).toBe(true);
+    const bookingTools = selectedProfile.locator('.p4-directory-actions');
+    await expect(bookingTools.locator('summary')).toBeVisible();
+    await bookingTools.locator('summary').click();
+    await expect(bookingTools.locator('[data-p4-dir="owner"]')).toBeVisible();
+    await expect(bookingTools.locator('[data-p4-dir="again"]')).toBeVisible();
+    await bookingTools.locator('summary').click();
     const sectionNav = page.locator('.directory-card.is-profile-active .v11160-desktop-tabs');
     await expect(sectionNav).toBeVisible();
     await expect(sectionNav.locator('[role="tab"]')).toHaveCount(5);
