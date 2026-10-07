@@ -11,14 +11,22 @@ Owner Care Link and Book Again have different purposes: owner information collec
 ## Manual acceptance
 
 1. Open a staying, arriving, and past guest on phone and desktop. Verify one portrait in the selected profile and labeled dates before the Care overview.
-2. Check 360px/390px phone widths, desktop, light/dark mode, and each configured accent. Names, IDs, dates and action labels wrap without horizontal overlap.
+2. Check 320px/360px/390px phone widths, desktop, light/dark mode, and each configured accent. Names, IDs, dates, five section tabs and action labels wrap without horizontal overlap; tab selection and keyboard focus remain visible.
 3. Review a guest with medication, a safety alert and a long note. Confirm alerts and saved content stay readable; missing data is not shown as safe or complete.
 4. Open booking tools. Owner Care Link selects the exact current dog/stay; Book Again opens a new booking flow without saving immediately.
 5. Close/reopen the profile and switch guests. Verify one header, one booking-tools group, preserved section navigation and no stale identity details.
 6. Expand detailed care, records and photo editing. Confirm existing edits, uploads and draft retention remain available, with footer-safe scrolling.
+7. Confirm the overview presents the owner once, offers a valid Call owner action, and reports an unavailable action when no valid number exists. Open Emergency contact and verify the saved name and number remain reachable in Health & Home; owner and phone editing remain available in stay contact details.
+8. Confirm the overview timestamp comes from the validated care record's `updatedAt`. Loading, refresh failure, missing records, unresolved identity, absent/invalid timestamps and saved timestamps must remain distinct; a retrieval time must never appear as a record update time.
 
-## Next refinements
+## Completed in the Care profile refinements
 
-- Review the owner/contact presentation to avoid repeated phone details while preserving emergency contact access.
-- Review the five section tabs for readable mobile labels and consistent selected/focus states.
-- Add clear last-updated information beside care summaries, with transport failures separate from missing records.
+- The overview keeps the owner name and a single Call owner action; emergency contact opens the existing Health & Home section.
+- Five section tabs remain visible in a wrapped three-column phone layout with keyboard selection and focus feedback.
+- The overview reports the validated care record update time and separates freshness, loading, refresh errors, missing records and unresolved identity.
+
+## Next backlog
+
+- Verify tab and emergency-contact navigation with VoiceOver and TalkBack on physical phones.
+- Confirm `updatedAt` semantics for imported, inherited and synchronized profile records with the deployed data contract.
+- Add a narrow Fold/tablet viewport pass for profile header and sticky navigation interactions.

@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.10.07.02",
-  "releaseName": "Identity-safe Care Profile Reads",
+  "assetRevision": "2026.10.07.03",
+  "releaseName": "Care Profile Clarity",
   "careIteration": {
     "returningDogSuggestions": true,
     "reviewedCareInheritance": true,

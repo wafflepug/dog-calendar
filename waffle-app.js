@@ -5100,6 +5100,11 @@ registerWaffleServiceWorker();
                 const card = careBriefAction.closest('.directory-card');
                 const action = careBriefAction.dataset.careBriefAction;
 
+                if (action === 'emergency-contact') {
+                    openCareReadinessTarget(card, action);
+                    return;
+                }
+
                 if (action === 'handover') {
                     const unifiedOverviewTab = card?.querySelector('[data-v11160-tab="profile"]');
                     if (unifiedOverviewTab) unifiedOverviewTab.click();
@@ -8563,6 +8568,17 @@ registerWaffleServiceWorker();
             : null);
     }
 
+    function getDirectoryValidatedCareProfileRecord(card) {
+        const identity = getDirectoryProfileReadIdentity(card);
+        if (!identity.valid || !identity.stayKey) return null;
+        if (card?.dataset?.profileIdentityBlocked === identity.cacheKey) return null;
+        if (directoryProfileIdentityIsAmbiguous(card) && !identity.hasStableIds) return null;
+        const candidate = directoryProfileDetailCache[identity.cacheKey];
+        return directoryProfileRecordMatchesIdentity(candidate, identity) && candidate?.resolution?.status !== 'not_found'
+            ? candidate
+            : null;
+    }
+
     function normalizeDirectoryPhoneForTel(value) {
         const phone = String(value || '').trim();
         if (!phone || !/^[+\d\s().-]+$/.test(phone)) return '';
@@ -8571,6 +8587,36 @@ registerWaffleServiceWorker();
         if (phone.includes('+') && !/^\s*\+/.test(phone)) return '';
         if ((phone.match(/\+/g) || []).length > 1) return '';
         return `${phone.trim().startsWith('+') ? '+' : ''}${digits}`;
+    }
+
+    function getDirectoryCareBriefFreshness(record, readState, identityState) {
+        if (identityState === 'missing' || readState === 'not-found') return { text: 'No saved care record', state: 'missing' };
+        if (identityState === 'unresolved' || readState === 'identity-conflict') return { text: 'Care record identity needs review', state: 'unresolved' };
+        const updatedDate = record?.updatedAt ? new Date(record.updatedAt) : null;
+        const validUpdatedDate = updatedDate && Number.isFinite(updatedDate.getTime()) ? updatedDate : null;
+        const formattedUpdatedAt = validUpdatedDate
+            ? new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(validUpdatedDate)
+            : '';
+        if (readState === 'error') {
+            return validUpdatedDate
+                ? { text: `Refresh failed · saved record updated ${formattedUpdatedAt}`, state: 'error' }
+                : { text: record ? 'Refresh failed · saved record update time not recorded' : 'Care record could not be loaded', state: 'error' };
+        }
+        if (readState === 'loading' || readState === 'refreshing' || !record) {
+            return readState === 'refreshing' && record
+                ? { text: `Refreshing saved care record${validUpdatedDate ? ` · updated ${formattedUpdatedAt}` : ' · update time not recorded'}`, state: 'refreshing' }
+                : { text: 'Loading care record…', state: 'loading' };
+        }
+        return validUpdatedDate
+            ? { text: `Record updated ${formattedUpdatedAt}`, state: 'fresh' }
+            : { text: 'Saved care record · update time not recorded', state: 'saved' };
+    }
+
+    function mergeDirectoryCareRecordWithServerTimestamp(record, serverUpdatedAt) {
+        const merged = { ...(record && typeof record === 'object' ? record : {}) };
+        if (serverUpdatedAt) merged.updatedAt = serverUpdatedAt;
+        else delete merged.updatedAt;
+        return merged;
     }
 
     function renderDirectoryCareBrief(card) {
@@ -8584,6 +8630,8 @@ registerWaffleServiceWorker();
         const identityBlocked = card.dataset.profileIdentityBlocked === profileIdentity.cacheKey;
         const identityAmbiguous = (directoryProfileIdentityIsAmbiguous(card) && !profileIdentity.hasStableIds) || (identityBlocked && card.dataset.profileIdentityBlockedReason !== 'missing');
         const profileRecord = getDirectoryCareBriefRecord(card);
+        const validatedProfileRecord = getDirectoryValidatedCareProfileRecord(card);
+        const ownerNameHost = brief.querySelector('[data-care-brief-owner-name]');
         const safetyRecord = identityBlocked || identityAmbiguous || getDirectoryProfileReadIdentity(card).hasStableIds ? null : (
             careRiskRecordsCache[stayKey] ||
             belongingsRecordsCache[stayKey] ||
@@ -8642,6 +8690,14 @@ registerWaffleServiceWorker();
         const freshnessHost = brief.querySelector('[data-care-brief-freshness]');
         const callActionHost = brief.querySelector('[data-care-brief-call-owner]');
 
+        if (ownerNameHost) {
+            const ownerField = card.querySelector('[data-directory-edit-field="ownerName"]');
+            const ownerValue = ownerField
+                ? ownerField.dataset.directoryCurrentValue
+                : (card.dataset.v1088OwnerName || ownerNameHost.textContent);
+            ownerNameHost.textContent = String(ownerValue || '').trim() || 'Not provided';
+        }
+
         if (safetyHost) {
             if (!safetyRecord) {
                 safetyHost.dataset.state = 'pending';
@@ -8690,13 +8746,16 @@ registerWaffleServiceWorker();
         }
 
         if (freshnessHost) {
-            const source = String(profileRecord?.intakeAttributesSource || '').trim();
-            freshnessHost.textContent = identityBlocked && card.dataset.profileIdentityBlockedReason === 'missing'
-                ? 'No saved care profile'
-                : attributes
-                ? (source ? `Care details available · ${source}` : 'Care details available')
-                : 'Stay details ready · care details loading';
-            freshnessHost.dataset.state = identityBlocked && card.dataset.profileIdentityBlockedReason === 'missing' ? 'not-found' : attributes ? 'available' : 'loading';
+            const readState = card.querySelector('[data-directory-detail="profile"]')?.dataset.profileReadState || 'loading';
+            const missingRecord = (identityBlocked && card.dataset.profileIdentityBlockedReason === 'missing') || readState === 'not-found';
+            const unresolvedIdentity = identityAmbiguous || (identityBlocked && !missingRecord) || readState === 'identity-conflict';
+            const freshness = getDirectoryCareBriefFreshness(
+                validatedProfileRecord,
+                readState,
+                missingRecord ? 'missing' : unresolvedIdentity ? 'unresolved' : 'resolved'
+            );
+            freshnessHost.textContent = freshness.text;
+            freshnessHost.dataset.state = freshness.state;
         }
 
         if (identityAmbiguous) {
@@ -8710,8 +8769,9 @@ registerWaffleServiceWorker();
         }
 
         if (callActionHost) {
+            const phoneField = card.querySelector('[data-directory-edit-field="phone"]');
             const phone = normalizeDirectoryPhoneForTel(
-                card.querySelector('[data-directory-edit-field="phone"]')?.dataset.directoryCurrentValue || card.dataset.v1088Phone
+                phoneField ? phoneField.dataset.directoryCurrentValue : card.dataset.v1088Phone
             );
             callActionHost.innerHTML = phone
                 ? `<a class="directory-care-brief-action" href="tel:${escapeDashboardHtml(phone)}" aria-label="Call owner">Call owner</a>`
@@ -8738,6 +8798,9 @@ registerWaffleServiceWorker();
             setDirectoryProfileEditMode(card, true);
             switchDirectoryProfileSubTab(card, 'safety');
             target = card.querySelector('[data-directory-detail="profile"] [data-care-risk-flag]');
+        } else if (action === 'emergency-contact') {
+            target = card.querySelector('[data-profile-subtab="healthHome"]');
+            if (target?.getAttribute('aria-expanded') !== 'true') target?.click();
         } else {
             const profileSection = card.querySelector('[data-directory-detail="profile"]');
             setDirectoryProfileEditMode(card, true);
@@ -9370,6 +9433,8 @@ registerWaffleServiceWorker();
         status.innerHTML = `<span class="directory-profile-read-status-message">${escapeDashboardHtml(message || '')}</span>${state === 'error' ? '<button type="button" class="directory-intake-action directory-profile-read-retry" data-retry-directory-profile-read>↻ Retry</button>' : ''}`;
         const retry = status.querySelector('[data-retry-directory-profile-read]');
         if (retry && typeof onRetry === 'function') retry.addEventListener('click', onRetry, { once: true });
+        const card = details.closest?.('.directory-card');
+        if (card && typeof renderDirectoryCareBrief === 'function') renderDirectoryCareBrief(card);
     }
 
     function getDirectoryProfileReadIdentity(card) {
@@ -11969,6 +12034,14 @@ registerWaffleServiceWorker();
                 riskFlags: payload.riskFlags
             };
 
+            const savedProfileIdentity = getDirectoryProfileReadIdentity(card);
+            if (directoryProfileDetailCache[savedProfileIdentity.cacheKey]) {
+                directoryProfileDetailCache[savedProfileIdentity.cacheKey] = mergeDirectoryCareRecordWithServerTimestamp(
+                    directoryProfileDetailCache[savedProfileIdentity.cacheKey],
+                    ''
+                );
+            }
+
             directoryBelongingsDetailCache[
                 payload.stayKey
             ] = {
@@ -12006,7 +12079,7 @@ registerWaffleServiceWorker();
                     delete directoryProfileDetailCache[profileIdentity.cacheKey];
                 } else {
                     directoryProfileDetailCache[payload.stayKey] = {
-                        ...(directoryProfileDetailCache[payload.stayKey] || {}),
+                        ...mergeDirectoryCareRecordWithServerTimestamp(directoryProfileDetailCache[payload.stayKey], ''),
                         stayKey: payload.stayKey,
                         dogName: payload.dogName,
                         intakeAttributes: payload.intakeAttributes,
@@ -12526,12 +12599,19 @@ registerWaffleServiceWorker();
             directoryPhotoRecordsCache[pending.stayKey] = record;
             directoryBelongingsDetailCache[pending.stayKey] = record;
             directoryProfileDetailCache[pending.stayKey] = {
-                ...(directoryProfileDetailCache[pending.stayKey] || {}),
+                ...mergeDirectoryCareRecordWithServerTimestamp(directoryProfileDetailCache[pending.stayKey], record.updatedAt),
                 stayKey: pending.stayKey,
                 dogPhoto: record.dogPhoto || null,
                 dogPhotoGallery: record.dogPhotoGallery || [],
                 stayPhotos: record.stayPhotos || []
             };
+            const confirmedProfileIdentity = getDirectoryProfileReadIdentity(currentCard);
+            if (confirmedProfileIdentity.hasStableIds && directoryProfileDetailCache[confirmedProfileIdentity.cacheKey]) {
+                directoryProfileDetailCache[confirmedProfileIdentity.cacheKey] = mergeDirectoryCareRecordWithServerTimestamp(
+                    directoryProfileDetailCache[confirmedProfileIdentity.cacheKey],
+                    ''
+                );
+            }
             directorySummaryRecordsCache[pending.stayKey] = {
                 ...(directorySummaryRecordsCache[pending.stayKey] || {}),
                 stayKey: pending.stayKey,
@@ -15804,8 +15884,7 @@ registerWaffleServiceWorker();
                                                 <section class="directory-care-brief-item">
                                                     <h4>Owner</h4>
                                                     <p class="directory-care-brief-value directory-care-brief-contact">
-                                                        <strong>${escapeDashboardHtml(ownerName ? ownerName.trim() : 'Not provided')}</strong>
-                                                        <span>${escapeDashboardHtml(phone ? phone.trim() : 'No contact number')}</span>
+                                                        <strong data-care-brief-owner-name>${escapeDashboardHtml(ownerName ? ownerName.trim() : 'Not provided')}</strong>
                                                     </p>
                                                 </section>
                                                 <section class="directory-care-brief-item directory-care-brief-note">
@@ -15845,6 +15924,7 @@ registerWaffleServiceWorker();
                                                 <span data-care-brief-call-owner>
                                                     <span class="directory-care-brief-action is-unavailable" aria-disabled="true">Call owner unavailable</span>
                                                 </span>
+                                                <button type="button" class="directory-care-brief-action" data-care-brief-action="emergency-contact">Emergency contact</button>
                                                 <details class="directory-care-more-actions">
                                                     <summary aria-label="More care actions">More actions</summary>
                                                 <button type="button" class="directory-care-brief-action" data-care-brief-action="belongings">

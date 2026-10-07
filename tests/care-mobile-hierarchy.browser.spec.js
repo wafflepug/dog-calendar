@@ -37,7 +37,7 @@ async function installReadOnlyFixture(page, options = {}) {
       const stayKey = `${booking.dogName.toLowerCase()}|2026-09-17|2026-09-22`;
       if (action === 'get_guest_belongings') response = { result: 'success', record: { stayKey: payload.stayKey || stayKey, dogPhotoGallery: [{ id: 'profile-1', label: 'Profile portrait', previewUrl: 'https://photos.test/profile.jpg' }], stayPhotos: [{ id: 'stay-1', label: 'Playtime', previewUrl: 'https://photos.test/stay.jpg' }], photos: [] } };
       if (action === 'get_guest_directory') response = { result: 'success', bookings: [fixtureBooking], summaries: [{ stayKey, riskFlags: { foodAllergy: true } }] };
-      if (action === 'get_guest_profile') response = { result: 'success', record: { stayKey: payload.stayKey || stayKey, identity: { stayKey: payload.stayKey || stayKey, stayId: '', dogId: fixtureBooking.dogId }, resolution: { status: 'resolved', method: 'legacy-key-unique' }, intakeAttributes: { medicationInstructions: 'Safety warning: monitor appetite.' }, riskFlags: { foodAllergy: true } } };
+      if (action === 'get_guest_profile') response = { result: 'success', record: { stayKey: payload.stayKey || stayKey, identity: { stayKey: payload.stayKey || stayKey, stayId: '', dogId: fixtureBooking.dogId }, resolution: { status: 'resolved', method: 'legacy-key-unique' }, intakeAttributes: { medicationInstructions: 'Safety warning: monitor appetite.', emergencyContact: 'Jordan Emergency', emergencyPhone: '0400111222' }, updatedAt: options.updatedAt === undefined ? '2026-09-17T08:30:00.000Z' : options.updatedAt, riskFlags: { foodAllergy: true } } };
       if (action === 'get_dog_history') {
         historyCalls++;
         response = historyCalls <= Number(options.historyFailureCount || 0)
@@ -54,8 +54,8 @@ async function installReadOnlyFixture(page, options = {}) {
   return actionReads;
 }
 
-for (const [name, viewport, colorScheme] of [['390-light', { width: 390, height: 844 }, 'light'], ['390-dark', { width: 390, height: 844 }, 'dark'], ['1440-light', { width: 1440, height: 900 }, 'light']]) {
-  test(`selected profile hierarchy ${name}`, async ({ page, baseURL }) => {
+for (const [name, viewport, colorScheme] of [['320-light', { width: 320, height: 844 }, 'light'], ['360-light', { width: 360, height: 844 }, 'light'], ['390-light', { width: 390, height: 844 }, 'light'], ['390-dark', { width: 390, height: 844 }, 'dark'], ['1440-light', { width: 1440, height: 900 }, 'light']]) {
+  test(`selected profile hierarchy ${name}`, async ({ page, baseURL }, testInfo) => {
     await page.setViewportSize(viewport);
     await page.emulateMedia({ colorScheme });
     await page.clock.install({ time: new Date('2026-09-18T12:00:00Z') });
@@ -80,6 +80,11 @@ for (const [name, viewport, colorScheme] of [['390-light', { width: 390, height:
       await expect.poll(() => page.evaluate(() => window.__directoryProfileScrollBehaviors)).toContain('auto');
     }
     const selectedProfile = page.locator('.directory-card.is-profile-active');
+    await expect(selectedProfile.locator('[data-care-brief-freshness]')).toHaveAttribute('data-state', 'fresh');
+    await expect(selectedProfile.locator('[data-care-brief-freshness]')).toContainText('Record updated');
+    await expect(selectedProfile.locator('[data-directory-care-brief]')).not.toContainText('0400123456');
+    await expect(selectedProfile.locator('[data-care-brief-owner-name]')).toHaveText('Alexandria Peterson-Smith');
+    await expect(selectedProfile.locator('[data-care-brief-call-owner] a')).toHaveAttribute('href', 'tel:0400123456');
     await expect(selectedProfile.locator('.directory-guest-tile-photo')).toBeHidden();
     await expect(selectedProfile.locator('.directory-photo-shell')).toBeVisible();
     await expect(selectedProfile.locator('.directory-profile-stay-dates')).toContainText('Check-in');
@@ -105,17 +110,43 @@ for (const [name, viewport, colorScheme] of [['390-light', { width: 390, height:
     }
     await expect(page.locator('.directory-card.is-profile-active .directory-main-profile-tabs')).toBeHidden();
     await expect(sectionNav.locator('[data-v11160-tab="profile"]')).toHaveAttribute('aria-selected', 'true');
-    await expect(page.locator('.directory-card.is-profile-active [data-directory-main-panel="profile"]')).toBeVisible();
     const readsAfterProfileOpen = [...actionReads];
     expect(actionReads).not.toContain('get_dog_history');
     expect(actionReads).not.toContain('get_guest_belongings');
     expect(actionReads).not.toContain('get_dog_master_profile');
+    const sectionTabBoxes = await sectionNav.locator('[role="tab"]').evaluateAll(tabs => tabs.map(tab => {
+      const box = tab.getBoundingClientRect();
+      return { right: box.right, bottom: box.bottom, width: box.width, height: box.height, fontSize: parseFloat(getComputedStyle(tab).fontSize), label: tab.querySelector('span:last-child')?.textContent.trim() || '' };
+    }));
+    expect(sectionTabBoxes.every(tab => tab.width >= 40 && tab.height >= 44 && tab.fontSize >= 13 && tab.right <= viewport.width + 1)).toBeTruthy();
+    expect(sectionTabBoxes.map(tab => tab.label)).toEqual(['Overview', 'Items', 'Photos', 'Stay history', 'Dog record']);
+    expect(await sectionNav.evaluate(nav => nav.scrollWidth <= nav.clientWidth + 1)).toBeTruthy();
+    await expect(page.locator('.directory-card.is-profile-active [data-directory-main-panel="profile"]')).toBeVisible();
+    const careBrief = page.locator('.directory-card.is-profile-active [data-directory-care-brief]');
+    const records = page.locator('.directory-card.is-profile-active .directory-care-records-disclosure');
+    const contactDisclosure = page.locator('.directory-card.is-profile-active [data-directory-stay-contact]');
+    await page.keyboard.press('Tab');
+    await sectionNav.locator('[data-v11160-tab="profile"]').focus();
+    await expect(sectionNav.locator('[data-v11160-tab="profile"]')).toHaveCSS('outline-style', 'solid');
+    await sectionNav.locator('[data-v11160-tab="profile"]').press('ArrowRight');
+    await expect(sectionNav.locator('[data-v11160-tab="belongings"]')).toHaveAttribute('aria-selected', 'true');
+    await expect(sectionNav.locator('[data-v11160-tab="belongings"]')).toBeFocused();
+    await sectionNav.locator('[data-v11160-tab="belongings"]').press('ArrowLeft');
+    await expect(sectionNav.locator('[data-v11160-tab="profile"]')).toHaveAttribute('aria-selected', 'true');
+    await expect(sectionNav.locator('[data-v11160-tab="profile"]')).toBeFocused();
     await sectionNav.locator('[data-v11160-tab="belongings"]').click();
     await expect(sectionNav.locator('[data-v11160-tab="belongings"]')).toHaveAttribute('aria-selected', 'true');
     await expect(page.locator('.directory-card.is-profile-active [data-directory-main-panel="belongings"]')).toBeVisible();
     await sectionNav.locator('[data-v11160-tab="profile"]').click();
     await expect(sectionNav.locator('[data-v11160-tab="profile"]')).toHaveAttribute('aria-selected', 'true');
     await expect(page.locator('.directory-card.is-profile-active [data-directory-main-panel="profile"]')).toBeVisible();
+    await selectedProfile.locator('[data-profile-subtab="foodWalks"]').click();
+    await expect(selectedProfile.locator('[data-profile-subtab="foodWalks"]')).toHaveAttribute('aria-expanded', 'true');
+    await selectedProfile.locator('[data-care-brief-action="emergency-contact"]').click();
+    await expect(selectedProfile.locator('[data-profile-subtab="healthHome"]')).toHaveAttribute('aria-expanded', 'true');
+    await expect(selectedProfile.locator('[data-profile-subtab="foodWalks"]')).toHaveAttribute('aria-expanded', 'true');
+    await expect(selectedProfile.locator('[data-intake-attribute="emergencyContact"]')).toHaveValue('Jordan Emergency');
+    await expect(selectedProfile.locator('[data-intake-attribute="emergencyPhone"]')).toHaveValue('0400111222');
     expect(actionReads).not.toContain('get_dog_history');
     expect(actionReads).not.toContain('get_dog_master_profile');
     expect(actionReads.filter(action => action === 'get_guest_belongings').length).toBeLessThanOrEqual(1);
@@ -140,7 +171,6 @@ for (const [name, viewport, colorScheme] of [['390-light', { width: 390, height:
     await expect(page.locator('.directory-dashboard-fused.is-profile-mode #v11190ScanIntakePdfBtn')).toBeHidden();
     await expect(page.locator('.directory-dashboard-fused.is-profile-mode #v11190PdfOcrReviewNote')).toBeHidden();
     await expect(page.locator('.directory-dashboard-fused.is-profile-mode #directory-care-summary')).toBeVisible();
-    const careBrief = page.locator('.directory-card.is-profile-active [data-directory-care-brief]');
     await expect(careBrief.getByRole('heading', { name: 'Care overview' })).toBeVisible();
     const readiness = careBrief.locator('.directory-care-readiness');
     await expect(readiness).toBeVisible();
@@ -152,13 +182,15 @@ for (const [name, viewport, colorScheme] of [['390-light', { width: 390, height:
     await expect(careBrief.getByRole('heading', { name: 'Handover note', exact: true })).toBeVisible();
     await readiness.locator('summary').click();
     await expect(readiness).toHaveAttribute('open', '');
-    const records = page.locator('.directory-card.is-profile-active .directory-care-records-disclosure');
     await expect(records).toBeVisible();
     await expect(records).not.toHaveAttribute('open', '');
-    const contactDisclosure = page.locator('.directory-card.is-profile-active [data-directory-stay-contact]');
     await expect(contactDisclosure).toBeVisible();
     await expect(contactDisclosure).not.toHaveAttribute('open', '');
     await expect(contactDisclosure.locator('[data-directory-edit-field]')).toHaveCount(3);
+    await contactDisclosure.locator('summary').click();
+    await expect(contactDisclosure.locator('[data-directory-edit-field="ownerName"]')).toBeVisible();
+    await expect(contactDisclosure.locator('[data-directory-edit-field="phone"]')).toBeVisible();
+    await contactDisclosure.locator('summary').click();
     await expect(careBrief.getByRole('link', { name: 'Call owner' })).toHaveAttribute('href', 'tel:0400123456');
     expect(await careBrief.locator('.directory-care-brief-action:visible').evaluateAll(buttons => buttons.every(button => button.getBoundingClientRect().height >= 44))).toBeTruthy();
     const moreActions = careBrief.locator('.directory-care-more-actions');
@@ -184,7 +216,7 @@ for (const [name, viewport, colorScheme] of [['390-light', { width: 390, height:
     expect(actionReads.payloads.filter(entry => entry.action === 'get_dog_history')[0]?.payload.dogId).toBe(exactDogId);
     await expect(historyHost.locator('.v108-stay-history a')).toHaveAttribute('href', 'tel:0400123456');
     await sectionNav.locator('[data-v11160-tab="profile"]').click();
-    await page.locator('.directory-card.is-profile-active [data-profile-subtab="healthHome"]').click();
+    await expect(page.locator('.directory-card.is-profile-active [data-profile-subtab="healthHome"]')).toHaveAttribute('aria-expanded', 'true');
     await expect(page.locator('.directory-card.is-profile-active [data-intake-attribute="medicationInstructions"]')).toHaveValue('Safety warning: monitor appetite.');
     const selectedCard = page.locator('.directory-card.is-profile-active');
     const editCare = selectedCard.locator('[data-toggle-profile-edit]');
@@ -220,8 +252,24 @@ for (const [name, viewport, colorScheme] of [['390-light', { width: 390, height:
     await page.locator('.directory-card.is-profile-active [data-profile-subtab="safety"]').evaluate(button => button.click());
     await expect(page.locator('.directory-card.is-profile-active [data-profile-subtab="safety"]')).toHaveAttribute('aria-expanded', 'true');
     await expect(page.locator('.directory-card.is-profile-active [data-care-risk-flag="foodAllergy"]')).toBeChecked();
+    if (name === '320-light' || name === '1440-light') {
+      await sectionNav.scrollIntoViewIfNeeded();
+      const screenshotPath = testInfo.outputPath('care-overview-and-tabs.png');
+      await page.screenshot({ path: screenshotPath, fullPage: true });
+      console.log(`CARE_REFINEMENT_SCREENSHOT ${screenshotPath}`);
+    }
     const readsBeforeHandoverEdit = [...actionReads];
-    await careBrief.getByRole('button', { name: 'Update handover' }).click();
+    const handoverEdit = careBrief.getByRole('button', { name: 'Update handover' });
+    await handoverEdit.evaluate(element => {
+      const rect = element.getBoundingClientRect();
+      window.scrollBy({ top: rect.top + rect.height / 2 - window.innerHeight / 2, behavior: 'instant' });
+    });
+    expect(await handoverEdit.evaluate(element => {
+      const rect = element.getBoundingClientRect();
+      const hit = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
+      return hit === element || element.contains(hit);
+    })).toBe(true);
+    await handoverEdit.click();
     await expect(contactDisclosure).toHaveAttribute('open', '');
     await expect(page.locator('#guestDetailEditModal')).toHaveClass(/open/);
     await expect(page.locator('#guestDetailEditTitle')).toContainText('Edit Handover note');
