@@ -43,6 +43,8 @@ on:
       - 'tests/care-navigation-continuity.test.js'
       - 'tests/care-return-focus-identity.test.js'
       - 'tests/care-navigation-continuity.browser.spec.js'
+      - 'tests/care-roster.spec.js'
+      - 'playwright.care-roster.config.js'
       - 'tests/care-future-arrivals-lazy.browser.spec.js'
       - 'tests/mvp-records-notifications.browser.spec.js'
       - 'tests/care-records-forms.browser.spec.js'
@@ -99,6 +101,8 @@ on:
       - 'tests/care-navigation-continuity.test.js'
       - 'tests/care-return-focus-identity.test.js'
       - 'tests/care-navigation-continuity.browser.spec.js'
+      - 'tests/care-roster.spec.js'
+      - 'playwright.care-roster.config.js'
       - 'tests/care-future-arrivals-lazy.browser.spec.js'
       - 'tests/mvp-records-notifications.browser.spec.js'
       - 'tests/care-records-forms.browser.spec.js'
@@ -153,6 +157,7 @@ jobs:
           node node_modules/@playwright/test/cli.js install --with-deps chromium firefox webkit
           node node_modules/@playwright/test/cli.js test --config=playwright.care-profile.config.js
           node node_modules/@playwright/test/cli.js test --config=playwright.care-ui-polish.config.js
+          node node_modules/@playwright/test/cli.js test --config=playwright.care-roster.config.js
           node node_modules/@playwright/test/cli.js test --config=playwright.care-ui-refinements.config.js
           node node_modules/@playwright/test/cli.js test --config=playwright.care-navigation-accessibility.config.js
           node node_modules/@playwright/test/cli.js test --config=playwright.care-scroll-access.config.js

@@ -69,7 +69,7 @@ for (const [name, viewport, colorScheme, reducedMotion] of [
   test(`late handover pointer access ${name}`, async ({ page, baseURL }) => {
     await page.setViewportSize(viewport);
     await page.emulateMedia({ colorScheme, reducedMotion });
-    await page.clock.install({ time: new Date('2026-09-18T12:00:00Z') });
+    await page.clock.setFixedTime(new Date('2026-09-18T12:00:00Z'));
     await page.addInitScript(mode => {
       localStorage.setItem('theme', mode);
       window.__careActionScrollBehaviors = [];
@@ -83,10 +83,15 @@ for (const [name, viewport, colorScheme, reducedMotion] of [
       };
       for (const type of ['pointerdown', 'pointerup', 'click']) {
         document.addEventListener(type, event => {
-          const target = event.target instanceof Element
-            ? event.target.closest('[data-profile-subtab="safety"]')
-            : null;
-          if (target) window.__careSafetyPointerEvents.push({ type, target: target.dataset.profileSubtab });
+          const target = event.target instanceof Element ? event.target : null;
+          const safetyTarget = target?.closest('[data-profile-subtab="safety"]');
+          const hit = document.elementFromPoint(event.clientX, event.clientY);
+          const safetyHit = hit?.closest('[data-profile-subtab="safety"]');
+          window.__careSafetyPointerEvents.push({
+            type,
+            target: safetyTarget ? 'safety' : target?.tagName.toLowerCase(),
+            hit: safetyHit ? 'safety' : hit?.tagName.toLowerCase()
+          });
         }, true);
       }
     }, colorScheme);
@@ -119,6 +124,9 @@ for (const [name, viewport, colorScheme, reducedMotion] of [
     await expect(healthHome).toHaveAttribute('aria-expanded', 'true');
     const safety = profile.locator('[data-profile-subtab="safety"]');
     await safety.scrollIntoViewIfNeeded();
+    // Hover performs a real mouse move and waits for the target to be actionable.
+    // Measure after it so the explicit press uses the target's settled geometry.
+    await safety.hover();
     const safetyBox = await safety.boundingBox();
     expect(safetyBox).not.toBeNull();
     const safetyHitTest = await safety.evaluate(button => {
@@ -136,7 +144,7 @@ for (const [name, viewport, colorScheme, reducedMotion] of [
     });
     expect(safetyHitTest.hitsSafety).toBe(true);
     if (safetyHitTest.footerVisible) expect(safetyHitTest.buttonBottom).toBeLessThan(safetyHitTest.footerTop);
-    await page.mouse.move(safetyBox.x + safetyBox.width / 2, safetyBox.y + safetyBox.height / 2);
+    await page.evaluate(() => { window.__careSafetyPointerEvents.length = 0; });
     await page.mouse.down();
     const profileTransform = await profile.evaluate(card => {
       const transform = getComputedStyle(card).transform;
@@ -148,9 +156,11 @@ for (const [name, viewport, colorScheme, reducedMotion] of [
     expect(profileTransform.c).toBeCloseTo(0, 5);
     expect(profileTransform.d).toBeCloseTo(1, 5);
     await page.mouse.up();
+    const safetyPointerEvents = await page.evaluate(() => window.__careSafetyPointerEvents);
+    expect(safetyPointerEvents.map(event => event.type)).toEqual(['pointerdown', 'pointerup', 'click']);
+    expect(safetyPointerEvents.every(event => event.target === 'safety' && event.hit === 'safety')).toBe(true);
     await expect(safety).toHaveAttribute('aria-expanded', 'true');
     await expect(profile.locator('[data-care-risk-flag="foodAllergy"]')).toBeChecked();
-    await expect.poll(() => page.evaluate(() => window.__careSafetyPointerEvents.map(event => event.type))).toEqual(['pointerdown', 'pointerup', 'click']);
     const detailReadActions = ['get_guest_profile', 'get_guest_belongings', 'get_dog_history', 'get_dog_master_profile'];
     const detailReadsBeforeLateHandover = actionReads.filter(action => detailReadActions.includes(action));
 

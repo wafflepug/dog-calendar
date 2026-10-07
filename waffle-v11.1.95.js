@@ -195,7 +195,7 @@
     const legacyUpload = document.getElementById('openLegacyIntakeUploadBtn');
 
     if (search) {
-      search.placeholder = 'Find dog or owner';
+      search.placeholder = 'Find dog, owner or Dog ID';
     }
     if (note) {
       note.textContent = 'Future stays use the same full Care profile. Prepare intake, care details, belongings and photos before arrival.';

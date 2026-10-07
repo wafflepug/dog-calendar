@@ -2,6 +2,11 @@ const { test, expect } = require('@playwright/test');
 const fs = require('node:fs');
 
 const futureRange = fs.readFileSync('waffle-v11.1.96.js', 'utf8');
+const app = fs.readFileSync('waffle-app.js', 'utf8');
+const filterStart = app.indexOf('function ensureDirectorySearchStatus()');
+const filterEnd = app.indexOf('function intakeAttributeControlHtml(', filterStart);
+const rosterFilters = app.slice(filterStart, filterEnd);
+if (filterStart < 0 || filterEnd < 0) throw new Error('Could not locate Care search runtime functions.');
 
 function addDays(date, days) {
   const next = new Date(date);
@@ -30,20 +35,28 @@ async function mountCareRange(page) {
           </article>
         </div>
       </section>
-      <nav><button type="button" data-v1082-stay-tab="future">Arriving</button></nav>
-      <input id="guestDirectorySearch" aria-label="Find dog or owner">
+      <nav><button type="button" data-v1082-stay-tab="current" class="is-active">Staying</button><button type="button" data-v1082-stay-tab="future">Arriving</button></nav>
+      <div class="guest-directory-toolbar"><input id="guestDirectorySearch" aria-label="Find dog or owner"></div>
       <p class="guest-directory-toolbar-note"></p>
     </main>
   </body></html>`);
 
   await page.evaluate(({ nearStart, nearEnd, distantStart, distantEnd }) => {
     window.WAFFLE_PAGE = 'directory';
-    document.querySelector('[data-v1082-stay-tab="future"]').addEventListener('click', () => {
-      document.querySelector('.directory-dashboard-fused').dataset.v11195StayView = 'future';
+    // The isolated range fixture must wire the base app's search input handler
+    // as well as the later-arrival controller; otherwise observer timing can
+    // accidentally substitute for the filtering event being tested.
+    document.getElementById('guestDirectorySearch').addEventListener('input', () => {
+      if (typeof filterGuestDirectoryCards === 'function') filterGuestDirectoryCards();
     });
+    document.querySelectorAll('[data-v1082-stay-tab]').forEach(tab => tab.addEventListener('click', () => {
+      document.querySelectorAll('[data-v1082-stay-tab]').forEach(item => item.classList.toggle('is-active', item === tab));
+      document.querySelector('.directory-dashboard-fused').dataset.v11195StayView = tab.dataset.v1082StayTab;
+      if (typeof filterGuestDirectoryCards === 'function') filterGuestDirectoryCards();
+    }));
     window.fixtureEvents = [
       { title: 'Near Pup', start: nearStart, end: nearEnd, allDay: true, extendedProps: { dogName: 'Near Pup', dogId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', stayId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaab', rawStartDate: nearStart, rawEndDate: nearEnd } },
-      { title: 'Distant Pup', start: distantStart, end: distantEnd, allDay: true, extendedProps: { dogName: 'Distant Pup', ownerName: 'Ada Owner', breed: 'Cavoodle', rawStartDate: distantStart, rawEndDate: distantEnd } },
+      { title: 'Distant Pup', start: distantStart, end: distantEnd, allDay: true, extendedProps: { dogName: 'Distant Pup', ownerName: 'Ada Owner', dogId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', dogNumber: '17', rawStartDate: distantStart, rawEndDate: distantEnd } },
       { title: 'Possible Visit', start: distantStart, end: distantEnd, allDay: true, extendedProps: { dogName: 'Possible Visit', isPotential: true, rawStartDate: distantStart, rawEndDate: distantEnd } }
     ];
   }, { nearStart, nearEnd, distantStart, distantEnd });
@@ -131,16 +144,38 @@ test('Care defers later arrivals until requested, keeps total count, and leaves 
   expect(lazyDetails).toBe(true);
 });
 
-test('search for a deferred arrival expands it and switches to Arriving', async ({ page }) => {
+test('Care search stays lazy until requested and reports identity matches across expanded arrivals', async ({ page }) => {
   await mountCareRange(page);
   await page.locator('.directory-dashboard-fused').evaluate(node => { node.dataset.v11195StayView = 'current'; });
-  await page.getByLabel('Find dog or owner').fill('Near Pup');
+  await page.evaluate(filters => {
+    window.getLocalTodayDateString = () => new Date().toISOString().slice(0, 10);
+    window.eval(filters);
+    filterGuestDirectoryCards();
+  }, rosterFilters);
+  await page.getByLabel('Find dog or owner').fill('Distant Pup');
   await expect(page.locator('#directory-grid [data-v11196-synthetic-future="true"]')).toHaveCount(0);
   await expect(page.locator('.directory-dashboard-fused')).toHaveAttribute('data-v11195-stay-view', 'current');
 
+  await page.locator('[data-v1082-stay-tab="future"]').click();
+  await expect(page.getByRole('button', { name: /View 1 later arrivals/ })).toBeVisible();
+  await expect(page.locator('#directory-search-status')).toContainText('No loaded arrivals match');
+  await page.getByLabel('Find dog or owner').fill('Near Pup');
+  await expect(page.locator('#directory-search-status')).toContainText('1 match in Arriving · next 7 days');
   await page.getByLabel('Find dog or owner').fill('Distant Pup');
+  await page.getByRole('button', { name: /View 1 later arrivals/ }).click();
   await expect(page.locator('#directory-grid [data-v11196-synthetic-future="true"]')).toHaveCount(1);
-  await expect(page.locator('.directory-dashboard-fused')).toHaveAttribute('data-v11195-stay-view', 'future');
+  await page.getByLabel('Find dog or owner').fill('Ada Owner');
+  await expect(page.locator('#directory-search-status')).toContainText('1 match in Arriving');
+  await page.getByLabel('Find dog or owner').fill('#00017');
+  await expect(page.locator('#directory-search-status')).toContainText('1 match in Arriving');
+  await expect(page.locator('.v11196-month-heading:visible')).toHaveCount(1);
+  await page.locator('[data-directory-search-clear]').click();
+  await expect(page.getByLabel('Find dog or owner')).toBeFocused();
+  await expect(page.locator('#directory-grid .directory-card:visible')).toHaveCount(2);
+  await expect(page.locator('.v11196-month-heading:visible')).toHaveCount(2);
+  await page.getByRole('button', { name: 'Show next 7 days only' }).click();
+  await page.getByLabel('Find dog or owner').fill('Distant Pup');
+  await expect(page.locator('#directory-search-status')).toContainText('Later arrivals are not included');
 });
 
 test('later arrivals keep stable identity conflicts separate and collapse matching copies', async ({ page }) => {

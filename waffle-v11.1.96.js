@@ -807,24 +807,7 @@
       }
     }, true);
 
-    document.getElementById('guestDirectorySearch')?.addEventListener('input', event => {
-      const query = String(event.target?.value || '').trim().toLocaleLowerCase();
-      if (query) {
-        if (!cacheReady) {
-          const bridgeEvents = window.WAFFLE_V11199_FUTURE_DATA_BRIDGE?.readConfirmedEvents?.();
-          cacheEvents(Array.isArray(bridgeEvents) ? bridgeEvents : futureEvents());
-        }
-        const matchesDistantStay = cachedFutureEvents.some(item => {
-          const props = item.extendedProps || {};
-          const haystack = [eventDogName(item), props.ownerName, props.owner, props.breed]
-            .join(' ').toLocaleLowerCase();
-          return eventDates(item).start > sevenDayKey() && haystack.includes(query);
-        });
-        if (matchesDistantStay) {
-          activateLaterArrivals();
-          document.querySelector('[data-v1082-stay-tab="future"]')?.click();
-        }
-      }
+    document.getElementById('guestDirectorySearch')?.addEventListener('input', () => {
       requestAnimationFrame(updateMonthHeadingVisibility);
       requestAnimationFrame(updateRangeControl);
     });
@@ -847,6 +830,7 @@
     showNextSevenDaysOnly,
     totalFutureCount,
     deferredCount: () => laterEvents().length,
+    isExpanded: () => expanded,
     maintain
   });
 

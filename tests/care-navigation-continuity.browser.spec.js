@@ -12,14 +12,19 @@ const booking = {
 };
 const dogId = 'f5f57ca3-fb50-4e19-8590-10dab77398b1';
 const stayId = 'bb942e2d-2c4c-4be5-a943-f7a9e0ae402c';
+const pastBookings = [
+  { dogId: '11111111-1111-4111-8111-111111111111', dogNumber: '17', ownerName: 'Owner A' },
+  { dogId: '22222222-2222-4222-8222-222222222222', dogNumber: '#00018', ownerName: 'Owner B' }
+].map((identity, index) => ({
+  ...identity, row: index + 2, stayKey: 'twin pup|2026-08-01|2026-08-03',
+  dogName: 'Twin Pup', breed: 'Cavoodle', startDate: '2026-08-01', endDate: '2026-08-03', phone: '0400000000'
+}));
 
 test.describe.configure({ mode: 'serial' });
 
-test('Back restores the filtered list and opener focus', async ({ page, baseURL }) => {
+async function installContinuityFixture(page) {
   let profileReadCount = 0;
-  await page.clock.install({ time: new Date('2026-09-18T12:00:00Z') });
-  const originalViewport = page.viewportSize();
-  await page.setViewportSize({ width: 320, height: 740 });
+  await page.clock.setFixedTime(new Date('2026-09-18T12:00:00Z'));
   await page.route('**/*', async route => {
     const request = route.request();
     if (!['GET', 'HEAD'].includes(request.method())) return route.fulfill({ status: 405, body: 'fixture' });
@@ -40,18 +45,30 @@ test('Back restores the filtered list and opener focus', async ({ page, baseURL 
       if (policy.action === 'get_guest_profile') profileReadCount += 1;
       const response = policy.action === 'get_guest_directory'
         ? { result: 'success', bookings: [booking], summaries: [{ stayKey }] }
+        : policy.action === 'get_past_guest_directory'
+        ? { result: 'success', bookings: pastBookings, summaries: [] }
         : { result: 'success', record: { stayKey: payload.stayKey || stayKey, intakeAttributes: {} } };
       if (callback) return route.fulfill({ status: 200, contentType: 'application/javascript', body: `${callback}(${JSON.stringify(response)});` });
       return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(response) });
     }
+    if (/^https?:/.test(url) && new URL(url).hostname !== '127.0.0.1') {
+      const type = request.resourceType();
+      return route.fulfill({ status: 200, contentType: type === 'stylesheet' ? 'text/css' : type === 'script' ? 'application/javascript' : 'image/svg+xml', body: type === 'stylesheet' || type === 'script' ? '' : '<svg xmlns="http://www.w3.org/2000/svg" width="4" height="4"/>' });
+    }
     return route.continue();
   });
+  return () => profileReadCount;
+}
+
+test('Back restores the filtered list and opener focus', async ({ page, baseURL }) => {
+  const originalViewport = page.viewportSize();
+  await page.setViewportSize({ width: 320, height: 740 });
+  const readProfileCount = await installContinuityFixture(page);
   await page.goto(`${baseURL}/directory.html`, { waitUntil: 'domcontentloaded' });
   await page.waitForFunction(() => document.documentElement.dataset.waffleUiReady === 'true');
-  await expect(page.locator('[data-open-directory-profile]')).toHaveCount(1);
-  expect(profileReadCount).toBe(0);
+  await expect(page.locator('#directory-grid [data-open-directory-profile]')).toHaveCount(1);
+  expect(readProfileCount()).toBe(0);
   await page.locator('#guestDirectorySearch').fill('continuity');
-  expect(profileReadCount).toBe(0);
   for (const dark of [false, true]) {
     const pageWidths = await page.evaluate(isDark => {
       document.body.classList.toggle('dark-theme', isDark);
@@ -65,7 +82,7 @@ test('Back restores the filtered list and opener focus', async ({ page, baseURL 
     expect(pageWidths.card).toBeLessThanOrEqual(pageWidths.viewport);
   }
   await page.setViewportSize(originalViewport);
-  const openerLabel = await page.locator('[data-open-directory-profile]').getAttribute('aria-label');
+  const openerLabel = await page.locator('#directory-grid [data-open-directory-profile]').getAttribute('aria-label');
   expect(openerLabel).toContain('00001');
   expect(openerLabel).toContain('Casey');
   expect(openerLabel).toContain('17 Sept');
@@ -77,11 +94,14 @@ test('Back restores the filtered list and opener focus', async ({ page, baseURL 
     const documentY = opener ? opener.getBoundingClientRect().top + window.scrollY : 520;
     window.scrollTo(0, Math.max(0, documentY - 160));
   });
-  const openerBefore = await page.locator('[data-open-directory-profile]').boundingBox();
+  const openerBefore = await page.locator('#directory-grid [data-open-directory-profile]').boundingBox();
   expect(openerBefore?.y).toBeGreaterThanOrEqual(0);
   expect((openerBefore?.y || 0) + (openerBefore?.height || 0)).toBeLessThanOrEqual(page.viewportSize()?.height || 0);
-  await page.locator('[data-open-directory-profile]').focus();
-  await expect.poll(() => page.locator('[data-open-directory-profile]').evaluate(element => {
+  // Clear search was activated with a pointer above. Establish keyboard
+  // modality before checking the opener's keyboard-only focus indication.
+  await page.keyboard.press('Tab');
+  await page.locator('#directory-grid [data-open-directory-profile]').focus();
+  await expect.poll(() => page.locator('#directory-grid [data-open-directory-profile]').evaluate(element => {
     const style = getComputedStyle(element);
     return style.outlineStyle !== 'none' && style.outlineColor !== style.backgroundColor;
   })).toBe(true);
@@ -114,10 +134,10 @@ test('Back restores the filtered list and opener focus', async ({ page, baseURL 
   // Let compatibility layers finish their selected-profile work, then prove
   // the Back path itself does not initiate another profile read.
   await page.waitForTimeout(750);
-  const refreshedOpenerLabel = await page.locator('[data-open-directory-profile]').getAttribute('aria-label');
+  const refreshedOpenerLabel = await page.locator('#directory-grid [data-open-directory-profile]').getAttribute('aria-label');
   expect(refreshedOpenerLabel).toContain('00001');
   expect(refreshedOpenerLabel).toContain('Casey');
-  const readsBeforeBack = profileReadCount;
+  const readsBeforeBack = readProfileCount();
   await page.locator('#directoryBackToGuestsBtn').evaluate(button => button.click());
   await expect(page.locator('.directory-dashboard-fused.is-profile-mode')).toHaveCount(0);
   await expect(page.locator('#guestDirectorySearch')).toHaveValue('continuity');
@@ -126,15 +146,15 @@ test('Back restores the filtered list and opener focus', async ({ page, baseURL 
     active: document.activeElement?.outerHTML?.slice(0, 220) || ''
   }))).toMatchObject({ isOpener: true });
   await page.waitForTimeout(200);
-  expect(profileReadCount).toBe(readsBeforeBack);
+  expect(readProfileCount()).toBe(readsBeforeBack);
 
   // Replacing the opener while the profile is open must restore the matching
   // identity when another card with the same stay key appears first.
-  await page.locator('.directory-card').evaluate(card => {
+  await page.locator('#directory-grid .directory-card').evaluate(card => {
     card.dataset.directoryDogId = 'f5f57ca3-fb50-4e19-8590-10dab77398b1';
     card.dataset.directoryStayId = 'bb942e2d-2c4c-4be5-a943-f7a9e0ae402c';
   });
-  await page.locator('[data-open-directory-profile]').focus();
+  await page.locator('#directory-grid [data-open-directory-profile]').focus();
   await page.keyboard.press('Enter');
   await page.locator('.directory-card.is-profile-active').evaluate(card => {
     const opener = card.querySelector('[data-open-directory-profile]');
@@ -162,7 +182,7 @@ test('Back restores the filtered list and opener focus', async ({ page, baseURL 
 
   // If a refresh removes the original stay while its profile is open, Back
   // clamps the scroll position and moves focus to the retained list controls.
-  await page.locator('[data-open-directory-profile]').click();
+  await page.locator('#directory-grid [data-open-directory-profile]').click();
   await page.locator('.directory-card.is-profile-active').evaluate(element => element.remove());
   await page.locator('#directoryBackToGuestsBtn').evaluate(button => button.click());
   await expect(page.locator('#guestDirectorySearch')).toBeFocused();
@@ -171,4 +191,60 @@ test('Back restores the filtered list and opener focus', async ({ page, baseURL 
     max: Math.max(0, document.documentElement.scrollHeight - window.innerHeight)
   }));
   expect(removedOriginScroll.y).toBeLessThanOrEqual(removedOriginScroll.max + 2);
+
+});
+
+test('Loaded search uses identity fields and clears without profile reads', async ({ page, baseURL }) => {
+  const readProfileCount = await installContinuityFixture(page);
+  await page.goto(baseURL + '/directory.html', { waitUntil: 'domcontentloaded' });
+  await page.waitForFunction(() => document.documentElement.dataset.waffleUiReady === 'true');
+  await page.locator('#guestDirectorySearch').fill('#00001');
+  await expect(page.locator('#directory-search-status')).toContainText('1 match in Staying');
+  await expect(page.locator('#directory-grid [data-open-directory-profile]')).toBeVisible();
+  await page.locator('#directory-grid .directory-card').evaluate(card => {
+    const note = document.createElement('div');
+    note.className = 'directory-profile-content';
+    note.textContent = 'Private note canary detail';
+    card.appendChild(note);
+  });
+  await page.locator('#guestDirectorySearch').fill('canary detail');
+  await expect(page.locator('#directory-search-status')).toContainText('No guests match');
+  await expect(page.locator('#directory-grid [data-open-directory-profile]')).toBeHidden();
+  await page.locator('[data-directory-search-clear]').click();
+  await expect(page.locator('#guestDirectorySearch')).toBeFocused();
+  await expect(page.locator('#directory-grid [data-open-directory-profile]')).toBeVisible();
+  await page.locator('#guestDirectorySearch').fill('casey');
+  await expect(page.locator('#directory-search-status')).toContainText('1 match in Staying');
+  await page.locator('#guestDirectorySearch').fill('continuity');
+  expect(readProfileCount()).toBe(0);
+});
+
+test('Past search keeps same-name dogs distinct through the production loader', async ({ page, baseURL }) => {
+  const readProfileCount = await installContinuityFixture(page);
+  await page.goto(`${baseURL}/directory.html`, { waitUntil: 'domcontentloaded' });
+  await page.waitForFunction(() => document.documentElement.dataset.waffleUiReady === 'true');
+  // Use the production Past loader and compatibility renderer, not manually
+  // inserted cards, to prove same-name/breed dogs keep their saved identities.
+  await page.locator('[data-v1082-stay-tab="past"]').click();
+  await page.locator('#guestDirectorySearch').fill('Twin Pup');
+  await expect(page.locator('#past-directory-grid .directory-card:visible')).toHaveCount(2);
+  await expect(page.locator('#directory-search-status')).toContainText('2 matches in Past');
+  const readsBeforePastSearch = readProfileCount();
+  for (const [query, expectedId] of [
+    ['#00017', pastBookings[0].dogId],
+    ['00018', pastBookings[1].dogId],
+    ['Owner A', pastBookings[0].dogId],
+    [pastBookings[1].dogId, pastBookings[1].dogId]
+  ]) {
+    await page.locator('#guestDirectorySearch').fill(query);
+    const result = page.locator('#past-directory-grid .directory-card:visible');
+    await expect(result).toHaveCount(1);
+    await expect(result).toHaveAttribute('data-directory-dog-id', expectedId);
+    await expect(page.locator('#directory-search-status')).toContainText('1 match in Past');
+  }
+  await page.locator('[data-directory-search-clear]').click();
+  await expect(page.locator('#guestDirectorySearch')).toBeFocused();
+  await expect(page.locator('[data-v1082-stay-tab="past"]')).toHaveClass(/is-active/);
+  await expect(page.locator('#past-directory-grid .directory-card:visible')).toHaveCount(2);
+  expect(readProfileCount()).toBe(readsBeforePastSearch);
 });

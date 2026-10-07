@@ -33,4 +33,5 @@ Owner Care Link and Book Again have different purposes: owner information collec
 ## Next backlog
 
 - Verify tab and emergency-contact navigation with VoiceOver and TalkBack on physical phones.
-- Improve Care search clarity for dog ID and owner matches while retaining on-demand future arrivals.
+- Search now uses loaded dog/owner identity fields and valid dog identifiers, with selected-filter results and a Clear search action. Later arrivals remain an explicit choice; see `care-search-clarity.md`.
+- Inspect and simplify repeated empty detail messages in a bounded follow-up; see `next-care-empty-states.md`.
