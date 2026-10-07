@@ -87,10 +87,21 @@ for (const [name, viewport, colorScheme, reducedMotion] of [
           const safetyTarget = target?.closest('[data-profile-subtab="safety"]');
           const hit = document.elementFromPoint(event.clientX, event.clientY);
           const safetyHit = hit?.closest('[data-profile-subtab="safety"]');
+          const footer = document.getElementById('wh75MobileBottomNav');
+          const footerBox = footer?.getBoundingClientRect();
+          const footerStyle = footer ? getComputedStyle(footer) : null;
+          const buttonBox = safetyTarget?.getBoundingClientRect();
+          const profile = document.querySelector('.directory-card.is-profile-active');
+          const transform = profile ? getComputedStyle(profile).transform : 'none';
+          const matrix = transform === 'none' ? new DOMMatrixReadOnly() : new DOMMatrixReadOnly(transform);
           window.__careSafetyPointerEvents.push({
             type,
             target: safetyTarget ? 'safety' : target?.tagName.toLowerCase(),
-            hit: safetyHit ? 'safety' : hit?.tagName.toLowerCase()
+            hit: safetyHit ? 'safety' : hit?.tagName.toLowerCase(),
+            profileTransform: { a: matrix.a, b: matrix.b, c: matrix.c, d: matrix.d },
+            buttonBottom: buttonBox?.bottom ?? null,
+            footerTop: footerBox?.top ?? null,
+            footerVisible: Boolean(footerBox?.height && footerStyle?.display !== 'none' && footerStyle?.visibility !== 'hidden')
           });
         }, true);
       }
@@ -123,42 +134,19 @@ for (const [name, viewport, colorScheme, reducedMotion] of [
     await healthHome.click();
     await expect(healthHome).toHaveAttribute('aria-expanded', 'true');
     const safety = profile.locator('[data-profile-subtab="safety"]');
-    await safety.scrollIntoViewIfNeeded();
-    // Hover performs a real mouse move and waits for the target to be actionable.
-    // Measure after it so the explicit press uses the target's settled geometry.
-    await safety.hover();
-    const safetyBox = await safety.boundingBox();
-    expect(safetyBox).not.toBeNull();
-    const safetyHitTest = await safety.evaluate(button => {
-      const box = button.getBoundingClientRect();
-      const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
-      const footer = document.getElementById('wh75MobileBottomNav');
-      const footerBox = footer?.getBoundingClientRect();
-      const footerStyle = footer ? getComputedStyle(footer) : null;
-      return {
-        hitsSafety: hit?.closest('[data-profile-subtab="safety"]') === button,
-        buttonBottom: box.bottom,
-        footerTop: footerBox?.top ?? null,
-        footerVisible: Boolean(footerBox?.height && footerStyle?.display !== 'none' && footerStyle?.visibility !== 'hidden')
-      };
-    });
-    expect(safetyHitTest.hitsSafety).toBe(true);
-    if (safetyHitTest.footerVisible) expect(safetyHitTest.buttonBottom).toBeLessThan(safetyHitTest.footerTop);
     await page.evaluate(() => { window.__careSafetyPointerEvents.length = 0; });
-    await page.mouse.down();
-    const profileTransform = await profile.evaluate(card => {
-      const transform = getComputedStyle(card).transform;
-      const matrix = transform === 'none' ? new DOMMatrixReadOnly() : new DOMMatrixReadOnly(transform);
-      return { a: matrix.a, b: matrix.b, c: matrix.c, d: matrix.d };
-    });
-    expect(profileTransform.a).toBeCloseTo(1, 5);
-    expect(profileTransform.b).toBeCloseTo(0, 5);
-    expect(profileTransform.c).toBeCloseTo(0, 5);
-    expect(profileTransform.d).toBeCloseTo(1, 5);
-    await page.mouse.up();
+    // Locator click remains a real pointer action and checks actionability at press time.
+    await safety.click();
     const safetyPointerEvents = await page.evaluate(() => window.__careSafetyPointerEvents);
     expect(safetyPointerEvents.map(event => event.type)).toEqual(['pointerdown', 'pointerup', 'click']);
     expect(safetyPointerEvents.every(event => event.target === 'safety' && event.hit === 'safety')).toBe(true);
+    for (const event of safetyPointerEvents) {
+      expect(event.profileTransform.a).toBeCloseTo(1, 5);
+      expect(event.profileTransform.b).toBeCloseTo(0, 5);
+      expect(event.profileTransform.c).toBeCloseTo(0, 5);
+      expect(event.profileTransform.d).toBeCloseTo(1, 5);
+      if (event.footerVisible) expect(event.buttonBottom).toBeLessThan(event.footerTop);
+    }
     await expect(safety).toHaveAttribute('aria-expanded', 'true');
     await expect(profile.locator('[data-care-risk-flag="foodAllergy"]')).toBeChecked();
     const detailReadActions = ['get_guest_profile', 'get_guest_belongings', 'get_dog_history', 'get_dog_master_profile'];
