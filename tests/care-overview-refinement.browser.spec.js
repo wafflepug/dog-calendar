@@ -483,6 +483,7 @@ test('server identity conflict blocks legacy profile, belongings, and safety fal
     card.dataset.profileIdentityBlockedReason = 'conflict';
     window.renderBrief(card);
   });
+  await expect(page.locator('[data-care-brief-freshness]')).toHaveAttribute('aria-description', /shared saved record.*intake imports, photos and booking changes/i);
   await expect(page.locator('[data-care-brief-safety]')).toContainText('Safety profile not yet available');
   await expect(page.locator('[data-care-brief-feeding]')).toContainText('Care record needs identity review');
   await expect(page.locator('[data-care-brief-medication]')).not.toContainText('Private');

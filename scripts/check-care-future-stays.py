@@ -38,6 +38,7 @@ require('waffle-v11.1.95.css', '#directory-grid')
 
 # V11.1.96 must source confirmed events beyond the historical seven-day Care
 # subset, retain the existing Care profile machinery and group arrivals by month.
+future_range = Path('waffle-v11.1.96.js').read_text(encoding='utf-8')
 require('waffle-v11.1.96.js', 'FULL_MONTHS_AHEAD = 6')
 require('waffle-v11.1.96.js', 'getCalendarAdapter')
 require('waffle-v11.1.96.js', 'props.isMeetGreet === true || props.isPotential === true')
@@ -49,7 +50,18 @@ require('waffle-v11.1.96.js', "button.textContent = 'Show next 7 days only'")
 require('waffle-v11.1.96.js', 'View ${deferredCount} later arrivals')
 require('waffle-v11.1.96.js', 'updateEvents(events)')
 require('waffle-v11.1.96.js', 'totalFutureCount')
-require('waffle-v11.1.96.js', 'matchesDistantStay')
+require('waffle-v11.1.96.js', "document.getElementById('guestDirectorySearch')?.addEventListener('input'")
+require('waffle-v11.1.96.js', 'requestAnimationFrame(updateMonthHeadingVisibility)')
+require('waffle-v11.1.96.js', 'requestAnimationFrame(updateRangeControl)')
+require('waffle-v11.1.96.js', 'isExpanded: () => expanded')
+forbid('waffle-v11.1.96.js', 'matchesDistantStay')
+
+search_listener_start = future_range.index("document.getElementById('guestDirectorySearch')?.addEventListener('input'")
+search_listener_end = future_range.index('});', search_listener_start)
+search_listener = future_range[search_listener_start:search_listener_end]
+for forbidden in ('activateLaterArrivals()', 'readConfirmedEvents()', "[data-v1082-stay-tab='future']"):
+    if forbidden in search_listener:
+        errors.append(f'waffle-v11.1.96.js: typing in Care search must remain lazy and keep the selected tab ({forbidden})')
 require('waffle-v11.1.96.js', 'requestedDeepLinkKey')
 require('waffle-v11.1.96.css', '.v11196-future-range-button')
 require('waffle-v11.1.96.css', '@media (forced-colors: active)')
@@ -115,7 +127,6 @@ require('waffle-v11.1.99.js', 'REFRESH_MS = 15000')
 forbid('waffle-v11.1.99.js', 'parseCSVToEvents(')
 forbid('waffle-v11.1.99.js', 'globalCalendar = bridge')
 
-future_range = Path('waffle-v11.1.96.js').read_text(encoding='utf-8')
 maintain_start = future_range.index('function maintain()')
 maintain_end = future_range.index('function scheduleMaintain()', maintain_start)
 maintain_body = future_range[maintain_start:maintain_end]

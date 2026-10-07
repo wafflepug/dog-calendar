@@ -32,6 +32,9 @@ on:
       - 'playwright.care-mobile-hierarchy.config.js'
       - 'playwright.care-ui-refinements.config.js'
       - 'tests/care-overview-freshness.test.js'
+      - 'tests/care-record-update-contract.test.js'
+      - 'tests/care-navigation-accessibility.browser.spec.js'
+      - 'tests/care-scroll-access.browser.spec.js'
       - 'tests/care-mobile-hierarchy.browser.spec.js'
       - 'tests/care-loading-feedback.browser.spec.js'
       - 'playwright.care-loading-feedback.config.js'
@@ -40,6 +43,8 @@ on:
       - 'tests/care-navigation-continuity.test.js'
       - 'tests/care-return-focus-identity.test.js'
       - 'tests/care-navigation-continuity.browser.spec.js'
+      - 'tests/care-roster.spec.js'
+      - 'playwright.care-roster.config.js'
       - 'tests/care-future-arrivals-lazy.browser.spec.js'
       - 'tests/mvp-records-notifications.browser.spec.js'
       - 'tests/care-records-forms.browser.spec.js'
@@ -85,6 +90,9 @@ on:
       - 'playwright.care-mobile-hierarchy.config.js'
       - 'playwright.care-ui-refinements.config.js'
       - 'tests/care-overview-freshness.test.js'
+      - 'tests/care-record-update-contract.test.js'
+      - 'tests/care-navigation-accessibility.browser.spec.js'
+      - 'tests/care-scroll-access.browser.spec.js'
       - 'tests/care-mobile-hierarchy.browser.spec.js'
       - 'tests/care-loading-feedback.browser.spec.js'
       - 'playwright.care-loading-feedback.config.js'
@@ -93,6 +101,8 @@ on:
       - 'tests/care-navigation-continuity.test.js'
       - 'tests/care-return-focus-identity.test.js'
       - 'tests/care-navigation-continuity.browser.spec.js'
+      - 'tests/care-roster.spec.js'
+      - 'playwright.care-roster.config.js'
       - 'tests/care-future-arrivals-lazy.browser.spec.js'
       - 'tests/mvp-records-notifications.browser.spec.js'
       - 'tests/care-records-forms.browser.spec.js'
@@ -118,7 +128,7 @@ concurrency:
 jobs:
   ui-regression:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 50
 
     steps:
       - name: Check out repository
@@ -136,7 +146,7 @@ jobs:
           node --test tests/local-ui-runner.test.js
           node --test tests/local-network-policy.test.js
           node --test tests/waffle-bootstrap-lifecycle.test.js
-          node --test tests/care-profile-readiness.test.js tests/care-overview-freshness.test.js
+          node --test tests/care-profile-readiness.test.js tests/care-overview-freshness.test.js tests/care-record-update-contract.test.js
           node --test tests/care-state-preservation.test.js
           node --test tests/care-csv-integrity.test.js
           node --test tests/care-confirmed-reconciliation.test.js tests/confirmed-stay-identity.test.js tests/potential-confirm-dog-id.test.js tests/checkout-collision-safety.test.js
@@ -147,7 +157,10 @@ jobs:
           node node_modules/@playwright/test/cli.js install --with-deps chromium firefox webkit
           node node_modules/@playwright/test/cli.js test --config=playwright.care-profile.config.js
           node node_modules/@playwright/test/cli.js test --config=playwright.care-ui-polish.config.js
+          node node_modules/@playwright/test/cli.js test --config=playwright.care-roster.config.js
           node node_modules/@playwright/test/cli.js test --config=playwright.care-ui-refinements.config.js
+          node node_modules/@playwright/test/cli.js test --config=playwright.care-navigation-accessibility.config.js
+          node node_modules/@playwright/test/cli.js test --config=playwright.care-scroll-access.config.js
           node node_modules/@playwright/test/cli.js test --config=playwright.care-loading-feedback.config.js
           node node_modules/@playwright/test/cli.js test --config=playwright.care-navigation-continuity.config.js
           node node_modules/@playwright/test/cli.js test --config=tests/mvp-records-notifications.config.js

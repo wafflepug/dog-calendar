@@ -4,6 +4,8 @@ const { test, expect } = require('@playwright/test');
 
 const root = path.resolve(__dirname, '..');
 const app = fs.readFileSync(path.join(root, 'waffle-app.js'), 'utf8');
+const pastSource = fs.readFileSync(path.join(root, 'waffle-v10.8.2.js'), 'utf8');
+const pastGroupingSource = fs.readFileSync(path.join(root, 'waffle-v10.8.8.js'), 'utf8');
 const css = fs.readFileSync(path.join(root, 'waffle-app.css'), 'utf8');
 const sourceBadgeCss = fs.readFileSync(path.join(root, 'waffle-v11.1.7.css'), 'utf8');
 const carePolishCss = fs.readFileSync(path.join(root, 'waffle-v11.1.8.css'), 'utf8');
@@ -13,7 +15,21 @@ const careRuntimeStart = runtimeCss.indexOf('/* Care roster refinement:');
 const careRuntimeEnd = runtimeCss.indexOf('/* Keep mobile scrolling', careRuntimeStart);
 if (careRuntimeStart < 0 || careRuntimeEnd < 0) throw new Error('Could not locate the responsive Care refinements.');
 const careRuntimeStyles = runtimeCss.slice(careRuntimeStart, careRuntimeEnd);
-const start = app.indexOf('function filterGuestDirectoryCards()');
+const pastCardStart = pastSource.indexOf('function v1082Escape(value)');
+const pastCardEnd = pastSource.indexOf('function v1082ApplyPastReadOnly(', pastCardStart);
+if (pastCardStart < 0 || pastCardEnd < 0) throw new Error('Could not locate past Care card renderer.');
+const renderPastCard = new Function('escapeDashboardHtml', 'formatStayDateShort', `${pastSource.slice(pastCardStart, pastCardEnd)}; return v1082PastCardHtml;`)(
+  value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character])),
+  value => String(value || '')
+);
+const groupPastBookings = new Function(`${pastGroupingSource.slice(pastGroupingSource.indexOf('function v1088NormaliseDogKey('), pastGroupingSource.indexOf('v1082PastCardHtml ='))}; return v1088GroupPastBookings;`)();
+const pastWrapperStart = pastGroupingSource.indexOf('v1082PastCardHtml =');
+const pastWrapperEnd = pastGroupingSource.indexOf('v1082ApplyPastResponse =', pastWrapperStart);
+const renderPastCardWithMetadata = new Function('v1088BasePastCardHtml', 'v1082Escape', `let v1082PastCardHtml; ${pastGroupingSource.slice(pastWrapperStart, pastWrapperEnd)}; return v1082PastCardHtml;`)(
+  renderPastCard,
+  value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character]))
+);
+const start = app.indexOf('function ensureDirectorySearchStatus()');
 const end = app.indexOf('function intakeAttributeControlHtml(', start);
 if (start < 0 || end < 0) throw new Error('Could not locate the Care roster filter functions.');
 const rosterFilters = app.slice(start, end);
@@ -22,20 +38,21 @@ if (cssStart < 0) throw new Error('Could not locate the Care roster styles.');
 const rosterStyles = css.slice(cssStart);
 
 test('Care roster filters keep staying, arriving, past, search, and profile mode aligned', async ({ page }) => {
-  await page.setContent(`<!doctype html><html><body>
+  await page.setContent(`<!doctype html><html><head><style>body{margin:0}\n${rosterStyles}</style></head><body>
     <div class="directory-dashboard-fused">
       <button data-v1082-stay-tab="current" class="is-active">Staying <strong id="v1082CurrentStayCount">1</strong></button>
       <button data-v1082-stay-tab="future">Arriving <strong id="v1082FutureStayCount">1</strong></button>
       <button data-v1082-stay-tab="past">Past <strong id="v1082PastStayCount">1</strong></button>
-      <p id="directory-roster-summary"></p>
+      <div class="directory-roster-heading"><div><p id="directory-roster-summary"></p></div>
+        <div class="guest-directory-toolbar"><input id="guestDirectorySearch"></div>
+      </div>
       <div id="directory-grid">
-        <div class="directory-card" data-directory-start-date="2026-09-20"><button>Maple</button><div class="directory-profile-content">owner: Ada</div></div>
-        <div class="directory-card" data-directory-start-date="2026-10-10"><button>Ravioli</button></div>
+        <div class="directory-card" data-directory-dog-name="Maple" data-directory-dog-number="00001" data-v1088-owner-name="Ada" data-directory-start-date="2026-09-20"><button>Maple</button><div class="directory-profile-content">Sensitive profile note: medication schedule</div></div>
+        <div class="directory-card" data-directory-dog-name="Ravioli" data-v1088-owner-name="Sam" data-directory-start-date="2026-10-10"><button>Ravioli</button></div>
       </div>
       <div id="past-directory-grid">
         <div class="directory-card" data-v1082-past-stay="true" data-directory-start-date="2026-08-10"><button>Juniper</button></div>
       </div>
-      <input id="guestDirectorySearch">
     </div>
   </body></html>`);
   await page.evaluate(rosterFilters => {
@@ -60,10 +77,41 @@ test('Care roster filters keep staying, arriving, past, search, and profile mode
   await page.locator('#guestDirectorySearch').fill('Ada');
   await page.evaluate(() => filterGuestDirectoryCards());
   await expect.poll(visibleNames).toEqual(['Maple']);
+  await expect(page.locator('#directory-search-status')).toHaveText(/1 match in Staying/);
+
+  await page.locator('#guestDirectorySearch').fill('00001');
+  await page.evaluate(() => filterGuestDirectoryCards());
+  await expect.poll(visibleNames).toEqual(['Maple']);
+
+  await page.locator('#guestDirectorySearch').fill('medication schedule');
+  await page.evaluate(() => filterGuestDirectoryCards());
+  await expect.poll(visibleNames).toEqual([]);
+  await expect(page.locator('#directory-search-status')).toContainText('No guests match');
+  await page.locator('[data-directory-search-clear]').click();
+  await expect(page.locator('#guestDirectorySearch')).toBeFocused();
+  await expect(page.locator('#guestDirectorySearch')).toHaveValue('');
+  await expect.poll(visibleNames).toEqual(['Maple']);
+  await expect(page.locator('[data-v1082-stay-tab="current"]')).toHaveClass(/is-active/);
+  await page.locator('#guestDirectorySearch').fill('Ada');
+  await page.evaluate(() => filterGuestDirectoryCards());
+  const clearSize = await page.locator('[data-directory-search-clear]').evaluate(node => {
+    const box = node.getBoundingClientRect();
+    return { width: box.width, height: box.height };
+  });
+  expect(clearSize.width).toBeGreaterThanOrEqual(44);
+  expect(clearSize.height).toBeGreaterThanOrEqual(44);
+
+  await page.setViewportSize({ width: 320, height: 700 });
+  const searchOverflow = await page.locator('#directory-search-status').evaluate(node => ({
+    right: node.getBoundingClientRect().right,
+    width: document.documentElement.scrollWidth
+  }));
+  expect(searchOverflow.right).toBeLessThanOrEqual(321);
+  expect(searchOverflow.width).toBeLessThanOrEqual(320);
 
   await page.locator('.directory-dashboard-fused').evaluate(node => node.classList.add('is-profile-mode'));
   await page.locator('.directory-card').first().evaluate(node => node.classList.add('is-profile-active'));
-  await page.locator('#guestDirectorySearch').fill('no match');
+  await page.locator('#guestDirectorySearch').evaluate(input => { input.value = 'no match'; });
   await page.evaluate(() => filterGuestDirectoryCards());
   await expect.poll(visibleNames).toEqual(['Maple']);
 });
@@ -119,6 +167,36 @@ test('Care roster stays compact and fits a narrow mobile viewport', async ({ pag
   const [copy, source, status, signals] = boxes;
   expect(copy.right).toBeLessThanOrEqual(source.left);
   expect(status.bottom).toBeLessThanOrEqual(signals.top);
+});
+
+test('past Care search reads only API-provided Dog ID and Dog Number metadata', async ({ page }) => {
+  const bookings = groupPastBookings([
+    { stayKey: 'twin|2026-08-01|2026-08-03', dogName: 'Twin Pup', breed: 'Cavoodle', startDate: '2026-08-01', endDate: '2026-08-03', dogId: '11111111-1111-4111-8111-111111111111', dogNumber: '17', ownerName: 'Owner A' },
+    { stayKey: 'twin|2026-08-01|2026-08-03', dogName: 'Twin Pup', breed: 'Cavoodle', startDate: '2026-08-01', endDate: '2026-08-03', dogId: '22222222-2222-4222-8222-222222222222', dogNumber: '18', ownerName: 'Owner B' }
+  ]);
+  expect(bookings).toHaveLength(2);
+  const cards = bookings.map(renderPastCardWithMetadata).join('');
+  await page.setContent(`<!doctype html><body>
+    <main class="directory-dashboard-fused">
+      <button data-v1082-stay-tab="past" class="is-active">Past</button>
+      <div class="guest-directory-toolbar"><input id="guestDirectorySearch"></div>
+      <div id="past-directory-grid">${cards}</div>
+    </main>
+  </body>`);
+  await page.evaluate(filters => {
+    window.getLocalTodayDateString = () => '2026-08-10';
+    window.eval(filters);
+  }, rosterFilters);
+  await page.locator('#guestDirectorySearch').fill('#00017');
+  await page.evaluate(() => filterGuestDirectoryCards());
+  await expect(page.locator('#past-directory-grid .directory-card:visible')).toHaveCount(1);
+  await expect(page.locator('#directory-search-status')).toContainText('1 match in Past');
+  await expect(page.locator('#past-directory-grid .directory-card:visible')).toHaveAttribute('data-directory-dog-id', '11111111-1111-4111-8111-111111111111');
+  await page.locator('#guestDirectorySearch').fill('Owner B');
+  await page.evaluate(() => filterGuestDirectoryCards());
+  await expect(page.locator('#past-directory-grid .directory-card:visible')).toHaveCount(1);
+  await expect(page.locator('#past-directory-grid .directory-card:visible')).toHaveAttribute('data-directory-dog-id', '22222222-2222-4222-8222-222222222222');
+  await expect(page.locator('#directory-search-status')).toContainText('1 match in Past');
 });
 
 test('Care stay-link controls and profile actions remain usable on desktop and mobile', async ({ page }) => {

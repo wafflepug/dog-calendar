@@ -5099,6 +5099,13 @@ registerWaffleServiceWorker();
 
                 const card = careBriefAction.closest('.directory-card');
                 const action = careBriefAction.dataset.careBriefAction;
+                const prefersReducedMotion =
+                    typeof window.matchMedia === 'function' &&
+                    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+                const actionScrollBehavior =
+                    Number(window.innerWidth || 0) <= 768 || prefersReducedMotion
+                        ? 'auto'
+                        : 'smooth';
 
                 if (action === 'emergency-contact') {
                     openCareReadinessTarget(card, action);
@@ -5113,7 +5120,7 @@ registerWaffleServiceWorker();
                     const contactDisclosure = card?.querySelector('[data-directory-stay-contact]');
                     if (contactDisclosure) contactDisclosure.open = true;
                     const notesControl = contactDisclosure?.querySelector('[data-directory-edit-field="notes"]');
-                    contactDisclosure?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    contactDisclosure?.scrollIntoView({ behavior: actionScrollBehavior, block: 'start' });
                     if (notesControl) {
                         window.setTimeout(() => notesControl.click(), 0);
                     }
@@ -5125,7 +5132,7 @@ registerWaffleServiceWorker();
                     if (unifiedItemsTab) unifiedItemsTab.click();
                     else switchDirectoryProfileMainTab(card, 'belongings');
                     card?.querySelector('[data-directory-main-panel="belongings"]')
-                        ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        ?.scrollIntoView({ behavior: actionScrollBehavior, block: 'start' });
                     return;
                 }
 
@@ -5138,7 +5145,7 @@ registerWaffleServiceWorker();
                 }
 
                 const profileSection = card?.querySelector('[data-directory-detail="profile"]');
-                profileSection?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                profileSection?.scrollIntoView({ behavior: actionScrollBehavior, block: 'start' });
                 const focusTarget = action === 'edit'
                     ? profileSection?.querySelector('[data-intake-attribute], [data-care-risk-flag]')
                     : profileSection?.querySelector('.directory-profile-section-heading h4');
@@ -8756,6 +8763,7 @@ registerWaffleServiceWorker();
             );
             freshnessHost.textContent = freshness.text;
             freshnessHost.dataset.state = freshness.state;
+            freshnessHost.setAttribute('aria-description', 'Update time refers to the shared saved record, including intake imports, photos and booking changes; it does not confirm care instructions were reviewed.');
         }
 
         if (identityAmbiguous) {
@@ -8811,7 +8819,14 @@ registerWaffleServiceWorker();
             target = profileSection?.querySelector(selector);
         }
 
-        target?.closest('section, details, [data-directory-detail]')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        const prefersReducedMotion =
+            typeof window.matchMedia === 'function' &&
+            window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const actionScrollBehavior =
+            Number(window.innerWidth || 0) <= 768 || prefersReducedMotion
+                ? 'auto'
+                : 'smooth';
+        target?.closest('section, details, [data-directory-detail]')?.scrollIntoView({ behavior: actionScrollBehavior, block: 'start' });
         if (target && action !== 'handover') {
             try { target.focus({ preventScroll: true }); }
             catch (_) { target.focus(); }
@@ -11007,16 +11022,31 @@ registerWaffleServiceWorker();
     }
 
 
+    function ensureDirectorySearchStatus() {
+        const input = document.getElementById('guestDirectorySearch');
+        const toolbar = input?.closest('.guest-directory-toolbar');
+        if (!input || !toolbar) return null;
+        let status = document.getElementById('directory-search-status');
+        if (!status) {
+            status = document.createElement('div');
+            status.id = 'directory-search-status';
+            status.className = 'directory-search-status';
+            status.hidden = true;
+            status.innerHTML = '<span data-directory-search-message role="status" aria-live="polite"></span><button type="button" data-directory-search-clear>Clear search</button>';
+            toolbar.appendChild(status);
+            status.querySelector('[data-directory-search-clear]').addEventListener('click', () => {
+                input.value = '';
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+                filterGuestDirectoryCards();
+                input.focus();
+            });
+        }
+        return status;
+    }
+
     function filterGuestDirectoryCards() {
-        const search =
-            String(
-                document.getElementById(
-                    'guestDirectorySearch'
-                )?.value ||
-                ''
-            )
-                .toLowerCase()
-                .trim();
+        const input = document.getElementById('guestDirectorySearch');
+        const search = String(input?.value || '').toLowerCase().trim();
 
         const profileMode =
             document
@@ -11034,6 +11064,7 @@ registerWaffleServiceWorker();
             'current'
         );
 
+        let visibleMatches = 0;
         document
             .querySelectorAll(
                 '.directory-card'
@@ -11059,16 +11090,50 @@ registerWaffleServiceWorker();
                     ? isPast
                     : !isPast && (activeView === 'future' ? isFuture : !isFuture);
 
+                const dogNumber = String(card.dataset.directoryDogNumber || '').trim();
+                const dogNumberIdentity = /^#?\d{1,5}$/.test(dogNumber)
+                    ? [dogNumber, dogNumber.replace(/^#/, ''), `#${dogNumber.replace(/^#/, '').padStart(5, '0')}`]
+                    : [];
+                const identity = [
+                    card.dataset.directoryDogName,
+                    card.dataset.v1088OwnerName,
+                    ...dogNumberIdentity,
+                    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(card.dataset.directoryDogId || '') ? card.dataset.directoryDogId : ''
+                ].map(value => String(value || '').trim())
+                    .filter(value => value && !/^(?:unknown|n\/a|not provided|none|-)$/i.test(value))
+                    .join(' ').toLowerCase();
+                const matchesSearch = !search || identity.includes(search);
+                if (matchesView && matchesSearch) visibleMatches += 1;
+
                 card.style.display =
-                    matchesView && (!search ||
-                    card.innerText
-                        .toLowerCase()
-                        .includes(search))
+                    matchesView && matchesSearch
                         ? 'block'
                         : 'none';
             });
 
         updateDirectoryRosterSummary();
+        const status = ensureDirectorySearchStatus();
+        if (status) {
+            status.hidden = !search || profileMode;
+            status.closest('.guest-directory-toolbar')?.classList.toggle('has-search-status', Boolean(search) && !profileMode);
+            const label = activeView === 'future' ? 'Arriving' : activeView === 'past' ? 'Past' : 'Staying';
+            const message = status.querySelector('[data-directory-search-message]');
+            if (message && search) {
+                const deferredControl = activeView === 'future' && document.querySelector('[data-v11196-expand-later]:not([hidden])');
+                const range = window.WAFFLE_V11196_FUTURE_RANGE;
+                const rangeStateKnown = typeof range?.isExpanded === 'function' && typeof range?.deferredCount === 'function';
+                const deferredArrivals = activeView === 'future' && (rangeStateKnown
+                    ? Number(range.deferredCount()) > 0 && !range.isExpanded()
+                    : deferredControl?.dataset?.v11196Action === 'expand');
+                const nextMessage = visibleMatches
+                    ? `${visibleMatches} ${visibleMatches === 1 ? 'match' : 'matches'} in ${label}${deferredArrivals ? ' · next 7 days' : ''}`
+                    : deferredArrivals
+                        ? `No loaded arrivals match “${input.value.trim()}”. Later arrivals are not included until opened.`
+                        : `No guests match “${input.value.trim()}” in ${label}.`;
+                if (message && message.textContent !== nextMessage) message.textContent = nextMessage;
+            }
+            status.classList.toggle('is-empty', Boolean(search) && visibleMatches === 0);
+        }
     }
 
     function updateDirectoryRosterSummary() {

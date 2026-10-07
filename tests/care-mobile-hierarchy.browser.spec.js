@@ -82,6 +82,7 @@ for (const [name, viewport, colorScheme] of [['320-light', { width: 320, height:
     const selectedProfile = page.locator('.directory-card.is-profile-active');
     await expect(selectedProfile.locator('[data-care-brief-freshness]')).toHaveAttribute('data-state', 'fresh');
     await expect(selectedProfile.locator('[data-care-brief-freshness]')).toContainText('Record updated');
+    await expect(selectedProfile.locator('[data-care-brief-freshness]')).toHaveAttribute('aria-description', /shared saved record.*does not confirm care instructions were reviewed/);
     await expect(selectedProfile.locator('[data-directory-care-brief]')).not.toContainText('0400123456');
     await expect(selectedProfile.locator('[data-care-brief-owner-name]')).toHaveText('Alexandria Peterson-Smith');
     await expect(selectedProfile.locator('[data-care-brief-call-owner] a')).toHaveAttribute('href', 'tel:0400123456');

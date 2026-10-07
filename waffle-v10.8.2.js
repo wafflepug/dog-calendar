@@ -23,6 +23,10 @@ function v1082PastCardHtml(booking) {
             ''
         );
 
+    const dogId = String(booking.dogId || '').trim();
+    const stayId = String(booking.stayId || '').trim();
+    const dogNumber = String(booking.dogNumber || '').trim();
+
     const dogName =
         String(
             booking.dogName ||
@@ -74,6 +78,9 @@ function v1082PastCardHtml(booking) {
             class="directory-card directory-card-fused belongings-pet-card v1082-past-card"
             data-directory-stay-key="${v1082Escape(stayKey)}"
             data-directory-dog-name="${v1082Escape(dogName)}"
+            data-directory-dog-id="${v1082Escape(dogId)}"
+            data-directory-stay-id="${v1082Escape(stayId)}"
+            data-directory-dog-number="${v1082Escape(dogNumber)}"
             data-directory-start-date="${v1082Escape(startDate)}"
             data-directory-end-date="${v1082Escape(endDate)}"
             data-stay-key="${v1082Escape(stayKey)}"
@@ -672,7 +679,7 @@ function v1082SwitchStayView(view, options = {}) {
 
     if (search) {
         search.placeholder =
-            'Find dog or owner';
+            'Find dog, owner or Dog ID';
     }
 
     if (note) {
