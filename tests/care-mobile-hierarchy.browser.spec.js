@@ -37,7 +37,7 @@ async function installReadOnlyFixture(page, options = {}) {
       const stayKey = `${booking.dogName.toLowerCase()}|2026-09-17|2026-09-22`;
       if (action === 'get_guest_belongings') response = { result: 'success', record: { stayKey: payload.stayKey || stayKey, dogPhotoGallery: [{ id: 'profile-1', label: 'Profile portrait', previewUrl: 'https://photos.test/profile.jpg' }], stayPhotos: [{ id: 'stay-1', label: 'Playtime', previewUrl: 'https://photos.test/stay.jpg' }], photos: [] } };
       if (action === 'get_guest_directory') response = { result: 'success', bookings: [fixtureBooking], summaries: [{ stayKey, riskFlags: { foodAllergy: true } }] };
-      if (action === 'get_guest_profile') response = { result: 'success', record: { stayKey: payload.stayKey || stayKey, intakeAttributes: { medicationInstructions: 'Safety warning: monitor appetite.' }, riskFlags: { foodAllergy: true } } };
+      if (action === 'get_guest_profile') response = { result: 'success', record: { stayKey: payload.stayKey || stayKey, identity: { stayKey: payload.stayKey || stayKey, stayId: '', dogId: fixtureBooking.dogId }, resolution: { status: 'resolved', method: 'legacy-key-unique' }, intakeAttributes: { medicationInstructions: 'Safety warning: monitor appetite.' }, riskFlags: { foodAllergy: true } } };
       if (action === 'get_dog_history') {
         historyCalls++;
         response = historyCalls <= Number(options.historyFailureCount || 0)

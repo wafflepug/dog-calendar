@@ -306,6 +306,9 @@ function potentialRequest(action, id, stayId, values = {}) {
   const current = ['', 'Milo', 'Cavoodle', '2026-10-05', '2026-10-06', 'Ari', '0412345678', '', '', '', '', 'Confirmed Boarding', '', '', stayA, ''];
   const potential = ['', 'Nori', 'Poodle', '2026-10-06', '2026-10-07', 'Bea', '0400000001', '', '', '', '', 'Potential Stay', '', '', stayB, ''];
   const h = makeHarness({ rows: [columns, current, potential] });
+  h.sandbox.Date = class extends Date {
+    constructor(...args) { super(...(args.length ? args : ['2026-10-06T12:00:00Z'])); }
+  };
   const currentResult = h.sandbox.getGuestDirectoryPayload_();
   assert.equal(currentResult.bookings[0].stayId, stayA);
   assert.equal(currentResult.bookings[0].stayKey, 'milo|2026-10-05|2026-10-06');

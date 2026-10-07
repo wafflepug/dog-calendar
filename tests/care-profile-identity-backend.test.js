@@ -116,6 +116,52 @@ test('unique no-ID legacy booking remains readable without migration', () => {
   assert.equal(record.intakeAttributes.medicationInstructions, 'Fixture care detail');
 });
 
+test('Dog ID proves a unique legacy booking when its persisted Stay ID is absent', () => {
+  const h = harness({ bookings: [booking('', ids.dogA.toUpperCase())] });
+  const record = h.read({ stayKey: key, dogId: ids.dogA });
+  assert.equal(record.resolution.status, 'resolved');
+  assert.equal(record.resolution.method, 'legacy-key-unique');
+  assert.deepEqual(JSON.parse(JSON.stringify(record.identity)), { stayKey: key, stayId: '', dogId: ids.dogA });
+  assert.equal(record.intakeAttributes.medicationInstructions, 'Fixture care detail');
+  assert.deepEqual(h.writes, []);
+});
+
+test('Dog ID cannot resolve a legacy row with a missing or different persisted Dog ID', () => {
+  const missing = harness({ bookings: [booking('', '')] }).read({ stayKey: key, dogId: ids.dogA });
+  assert.equal(missing.resolution.status, 'unresolved');
+  assert.equal(missing.resolution.reason, 'dog-id-key-or-persisted-id-conflict');
+  assert.deepEqual(JSON.parse(JSON.stringify(missing.intakeAttributes)), {});
+  const different = harness({ bookings: [booking('', ids.b)] }).read({ stayKey: key, dogId: ids.dogA });
+  assert.equal(different.resolution.status, 'unresolved');
+  assert.equal(different.resolution.reason, 'dog-id-key-or-persisted-id-conflict');
+  assert.deepEqual(JSON.parse(JSON.stringify(different.intakeAttributes)), {});
+});
+
+test('same dog across different stays still requires the exact unique Stay ID', () => {
+  const otherKey = 'milo|2026-10-05|2026-10-07';
+  const h = harness({ bookings: [
+    booking(ids.a, ids.dogA),
+    booking(ids.b, ids.dogA, 'Milo', '2026-10-05', '2026-10-07')
+  ], care: [
+    { stayKey: key, dogName: 'Milo' },
+    { stayKey: otherKey, dogName: 'Milo' }
+  ] });
+  const record = h.read({ stayKey: otherKey, stayId: ids.b, dogId: ids.dogA });
+  assert.equal(record.resolution.status, 'resolved');
+  assert.equal(record.resolution.method, 'stay-id-unique-legacy-key');
+  assert.equal(record.identity.stayId, ids.b);
+  assert.equal(h.read({ stayKey: otherKey, stayId: ids.a, dogId: ids.dogA }).resolution.status, 'unresolved');
+  assert.equal(h.read({ stayKey: otherKey, dogId: ids.dogA }).resolution.status, 'resolved');
+});
+
+test('Dog ID does not disambiguate duplicate legacy stay keys', () => {
+  const h = harness({ bookings: [booking('', ids.dogA), booking('', ids.dogA)] });
+  const record = h.read({ stayKey: key, dogId: ids.dogA });
+  assert.equal(record.resolution.status, 'unresolved');
+  assert.equal(record.resolution.reason, 'multiple-bookings-share-stay-key');
+  assert.deepEqual(JSON.parse(JSON.stringify(record.intakeAttributes)), {});
+});
+
 test('missing, duplicate, or altered Care rows never return shared details', () => {
   const missing = harness({ bookings: [booking(ids.a)], care: [] }).read({ stayKey: key, stayId: ids.a });
   assert.equal(missing.resolution.status, 'not_found');

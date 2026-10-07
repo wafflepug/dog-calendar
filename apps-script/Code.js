@@ -1814,12 +1814,6 @@ function getGuestProfileDetail_(request) {
     }
     booking = matchedId;
   } else {
-    if (requestedDogId) {
-      return emptyProfile(
-        { stayKey: stayKey, stayId: "", dogId: "" },
-        { status: "unresolved", method: "identity-conflict", reason: "dog-id-requires-stay-id" }
-      );
-    }
     if (keyRows.length !== 1) {
       return emptyProfile(
         { stayKey: stayKey, stayId: "", dogId: "" },
@@ -1833,6 +1827,13 @@ function getGuestProfileDetail_(request) {
       return emptyProfile(
         { stayKey: stayKey, stayId: "", dogId: "" },
         { status: "unresolved", method: "identity-conflict", reason: "invalid-persisted-id" }
+      );
+    }
+    if (requestedDogId &&
+        (!booking.dogId || booking.dogId.toLowerCase() !== requestedDogId.toLowerCase())) {
+      return emptyProfile(
+        { stayKey: stayKey, stayId: "", dogId: "" },
+        { status: "unresolved", method: "identity-conflict", reason: "dog-id-key-or-persisted-id-conflict" }
       );
     }
   }
