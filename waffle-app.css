@@ -10296,6 +10296,25 @@ body.dark-theme .directory-card.is-profile-active select.intake-profile-control 
     font-weight: 550;
 }
 
+/* Keep the selected profile's provenance and curated category details readable. */
+.directory-card.is-profile-active .intake-profile-source {
+    max-width: 100%;
+    min-width: 0;
+    font-size: 12px;
+    line-height: 1.4;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+.directory-card.is-profile-active .care-category-summary {
+    font-size: 13px;
+    line-height: 1.45;
+    display: block;
+    -webkit-line-clamp: unset;
+    line-clamp: unset;
+    overflow: visible;
+}
+
 @media (max-width: 480px) {
     .care-category-toggle {
         grid-template-columns: minmax(0, 1fr) 24px;

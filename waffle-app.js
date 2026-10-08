@@ -8724,18 +8724,30 @@ registerWaffleServiceWorker();
             safetyHost.closest('.directory-care-brief-safety')?.setAttribute('data-state', safetyHost.dataset.state);
         }
 
+        const profileReadState = card.querySelector('[data-directory-detail="profile"]')?.dataset.profileReadState || (attributes ? 'saved' : 'loading');
+        const missingProfile = (identityBlocked && card.dataset.profileIdentityBlockedReason === 'missing') || profileReadState === 'not-found';
+        const profileIdentityNeedsReview = identityAmbiguous || (identityBlocked && !missingProfile) || profileReadState === 'identity-conflict';
         const feedingParts = attributes
-            ? [attributes.feedingTimes, attributes.foodAmount, attributes.foodBrandType]
-                .map(value => String(value || '').trim())
-                .filter(Boolean)
+            ? [
+                ['Times', attributes.feedingTimes],
+                ['Amount', attributes.foodAmount],
+                ['Food', attributes.foodBrandType]
+            ]
+                .map(([label, value]) => [label, String(value || '').trim()])
+                .filter(([, value]) => value)
+                .map(([label, value]) => `${label}: ${value}`)
             : [];
         if (feedingHost) {
-            feedingHost.textContent = identityBlocked && card.dataset.profileIdentityBlockedReason === 'missing'
-                ? 'Not provided'
+            feedingHost.textContent = profileIdentityNeedsReview
+                ? 'Care record needs identity review'
+                : missingProfile
+                    ? 'No saved feeding instructions'
                 : attributes
-                ? (feedingParts.length ? feedingParts.join(' · ') : 'Not provided')
-                : 'Loading with full profile…';
-            feedingHost.classList.toggle('is-pending', !attributes && !(identityBlocked && card.dataset.profileIdentityBlockedReason === 'missing'));
+                    ? (feedingParts.length ? feedingParts.join(' · ') : 'No feeding instructions saved')
+                    : profileReadState === 'error'
+                        ? 'Feeding details unavailable'
+                        : 'Loading with full profile…';
+            feedingHost.classList.toggle('is-pending', !attributes && !missingProfile && !profileIdentityNeedsReview && profileReadState !== 'error');
         }
 
         const medicationText = String(
@@ -8744,21 +8756,26 @@ registerWaffleServiceWorker();
             ''
         ).trim();
         if (medicationHost) {
-            medicationHost.textContent = identityBlocked && card.dataset.profileIdentityBlockedReason === 'missing'
-                ? 'Not provided'
-                : attributes
-                ? (medicationText || 'Not provided')
-                : (medicationText || 'Loading with full profile…');
-            medicationHost.classList.toggle('is-pending', !attributes && !medicationText && !(identityBlocked && card.dataset.profileIdentityBlockedReason === 'missing'));
+            medicationHost.textContent = profileIdentityNeedsReview
+                ? 'Care record needs identity review'
+                : missingProfile
+                    ? 'No saved medication instructions'
+                : medicationText
+                    ? medicationText
+                    : attributes
+                        ? 'No medication instructions saved'
+                        : profileReadState === 'error'
+                            ? 'Medication details unavailable'
+                            : 'Loading with full profile…';
+            medicationHost.classList.toggle('is-pending', !attributes && !medicationText && !missingProfile && !profileIdentityNeedsReview && profileReadState !== 'error');
         }
 
         if (freshnessHost) {
-            const readState = card.querySelector('[data-directory-detail="profile"]')?.dataset.profileReadState || 'loading';
-            const missingRecord = (identityBlocked && card.dataset.profileIdentityBlockedReason === 'missing') || readState === 'not-found';
-            const unresolvedIdentity = identityAmbiguous || (identityBlocked && !missingRecord) || readState === 'identity-conflict';
+            const missingRecord = missingProfile;
+            const unresolvedIdentity = profileIdentityNeedsReview;
             const freshness = getDirectoryCareBriefFreshness(
                 validatedProfileRecord,
-                readState,
+                profileReadState,
                 missingRecord ? 'missing' : unresolvedIdentity ? 'unresolved' : 'resolved'
             );
             freshnessHost.textContent = freshness.text;
@@ -8766,7 +8783,7 @@ registerWaffleServiceWorker();
             freshnessHost.setAttribute('aria-description', 'Update time refers to the shared saved record, including intake imports, photos and booking changes; it does not confirm care instructions were reviewed.');
         }
 
-        if (identityAmbiguous) {
+        if (profileIdentityNeedsReview) {
             markDirectoryProfileIdentityConflict(card);
             if (feedingHost) feedingHost.textContent = 'Care record needs identity review';
             if (medicationHost) medicationHost.textContent = 'Care record needs identity review';
@@ -11324,7 +11341,14 @@ registerWaffleServiceWorker();
         if (selected.length) return { text: selected.join(' · '), state: 'saved' };
         if (profileState === 'loading') return { text: 'Loading care details…', state: 'unknown' };
         if (profileState === 'error') return { text: 'Care details unavailable', state: 'unknown' };
-        return { text: 'No details saved yet', state: 'empty' };
+        if (profileState === 'not-found') return { text: 'No saved care profile', state: 'unknown' };
+        if (profileState === 'identity-conflict') return { text: 'Review care record identity', state: 'unknown' };
+        const emptySummaries = {
+            foodWalks: 'No food or walk details saved',
+            behaviour: 'No behaviour details saved',
+            healthHome: 'No health or home details saved'
+        };
+        return { text: emptySummaries[tabKey] || 'No care details saved', state: 'empty' };
     }
 
     function renderDirectoryIntakeAttributes(card, record) {
@@ -16166,13 +16190,15 @@ registerWaffleServiceWorker();
                                                     <button
                                                         type="button"
                                                         class="directory-profile-edit-toggle"
-                                                        data-toggle-profile-edit>
+                                                        data-toggle-profile-edit
+                                                        aria-label="Edit detailed care for ${escapeDashboardHtml(dogName.trim())}">
                                                         ✏️ Edit
                                                     </button>
                                                     <button
                                                         type="button"
                                                         class="directory-profile-edit-cancel"
                                                         data-cancel-profile-edit
+                                                        aria-label="Discard detailed care changes for ${escapeDashboardHtml(dogName.trim())}"
                                                         hidden>
                                                         Discard changes
                                                     </button>
