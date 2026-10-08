@@ -2,6 +2,8 @@
 
 The resolved empty Detailed care section keeps one body status and its existing Edit action. Its duplicate zero-field heading summary is hidden; populated profiles retain their saved-field count and source. Loading, failed refresh, missing profile and unresolved identity remain separate states. No backend read or write is added.
 
+Cross-device regression also exposed a WebKit pointer-target mismatch while scrolling between expanded Care categories. The category panels no longer apply CSS content containment, avoiding a separate contained layout/paint boundary around these interactive sections. Real pointer assertions and event-time diagnostics remain in the regression fixture.
+
 ## Manual verification
 
 1. Open a guest whose resolved intake has no saved fields or source. Detailed care must show one empty intake status and an available Edit action.

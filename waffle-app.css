@@ -6798,7 +6798,6 @@ html.waffle-standalone
 
 .care-category-panel {
     padding: 0 11px 11px;
-    contain: content;
 }
 
 .care-category-panel[hidden] {
