@@ -155,3 +155,171 @@ test('empty and failed notification reads keep their existing status messaging',
   await page.evaluate(() => { waffleNotificationCentreItems = []; renderWaffleNotificationCentre(); });
   await expect(page.locator('.v101-notification-empty:not(.is-error)')).toContainText('Nothing needs your attention');
 });
+
+test('notification tabs expose reciprocal panel semantics and support keyboard navigation', async ({ page, baseURL }) => {
+  await openReadOnlyRuntime(page, baseURL);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`${baseURL}/directory.html`, { waitUntil: 'domcontentloaded' });
+  await page.waitForFunction(() => document.documentElement.dataset.waffleUiReady === 'true' && typeof renderWaffleNotificationCentre === 'function');
+
+  const state = await page.evaluate(() => {
+    const modal = ensureWaffleNotificationModal();
+    modal.hidden = false;
+    const tabs = [...modal.querySelectorAll('[role="tab"]')];
+    const panels = [...modal.querySelectorAll('[role="tabpanel"]')];
+    return {
+      tabs: tabs.map(tab => ({ id: tab.id, controls: tab.getAttribute('aria-controls'), selected: tab.getAttribute('aria-selected'), tabIndex: tab.tabIndex })),
+      panels: panels.map(panel => ({ id: panel.id, labelledBy: panel.getAttribute('aria-labelledby'), hidden: panel.hidden }))
+    };
+  });
+  expect(state.tabs).toHaveLength(2);
+  expect(state.panels).toHaveLength(2);
+  for (const tab of state.tabs) {
+    expect(tab.id).toBeTruthy();
+    expect(state.panels.some(panel => panel.id === tab.controls && panel.labelledBy === tab.id)).toBe(true);
+  }
+  expect(state.tabs.map(tab => tab.tabIndex).sort()).toEqual([-1, 0]);
+  expect(state.tabs.filter(tab => tab.selected === 'true')).toHaveLength(1);
+  expect(state.panels.filter(panel => !panel.hidden)).toHaveLength(1);
+
+  const inbox = page.getByRole('tab', { name: /Inbox/ });
+  const settings = page.getByRole('tab', { name: 'Settings' });
+  await inbox.focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(settings).toBeFocused();
+  await expect(settings).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('[role="tabpanel"]:visible')).toHaveCount(1);
+  await page.keyboard.press('Home');
+  await expect(inbox).toBeFocused();
+  await expect(inbox).toHaveAttribute('aria-selected', 'true');
+  await page.keyboard.press('End');
+  await expect(settings).toBeFocused();
+  await page.keyboard.press('ArrowLeft');
+  await expect(inbox).toBeFocused();
+});
+
+test('notification dialog focuses on open, traps Tab at both ends, and restores focus on close paths', async ({ page, baseURL }) => {
+  await openReadOnlyRuntime(page, baseURL);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(baseURL + '/directory.html', { waitUntil: 'domcontentloaded' });
+  await page.waitForFunction(() => document.documentElement.dataset.waffleUiReady === 'true' && typeof openWaffleNotificationCentre === 'function');
+
+  await page.evaluate(() => {
+    const opener = document.createElement('button');
+    opener.id = 'notificationLifecycleTestOpener';
+    opener.textContent = 'Open notification centre';
+    document.body.appendChild(opener);
+    opener.focus();
+    openWaffleNotificationCentre();
+  });
+  const modal = page.locator('#waffleNotificationModal');
+  const tabs = modal.getByRole('tab');
+  const close = modal.getByRole('button', { name: 'Close notifications' });
+  const lastItem = modal.locator('[data-notification-item-id="fixture-read"]');
+  await expect(modal.getByRole('dialog')).toBeVisible();
+  await expect(tabs.first()).toBeFocused();
+  await page.keyboard.press('Shift+Tab');
+  await expect(close).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(tabs.first()).toBeFocused();
+  await expect(lastItem).toBeVisible();
+  await lastItem.focus();
+  await page.keyboard.press('Tab');
+  await expect(close).toBeFocused();
+  await page.keyboard.press('Shift+Tab');
+  await expect(lastItem).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(modal).toBeHidden();
+  await expect(page.locator('#notificationLifecycleTestOpener')).toBeFocused();
+
+  for (const closePath of ['close', 'backdrop']) {
+    await page.evaluate(() => {
+      document.getElementById('notificationLifecycleTestOpener').focus();
+      openWaffleNotificationCentre();
+    });
+    if (closePath === 'close') await close.click();
+    else await modal.click({ position: { x: 4, y: 4 } });
+    await expect(modal).toBeHidden();
+    await expect(page.locator('#notificationLifecycleTestOpener')).toBeFocused();
+  }
+});
+
+test('notification dialog ignores nested Escape and restores focus when its opener is hidden or removed', async ({ page, baseURL }) => {
+  await openReadOnlyRuntime(page, baseURL);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(baseURL + '/directory.html', { waitUntil: 'domcontentloaded' });
+  await page.waitForFunction(() => document.documentElement.dataset.waffleUiReady === 'true' && typeof openWaffleNotificationCentre === 'function');
+  await page.evaluate(() => {
+    const opener = document.createElement('button');
+    opener.id = 'notificationFallbackTestOpener';
+    opener.textContent = 'Open notifications';
+    document.body.appendChild(opener);
+    opener.focus();
+    openWaffleNotificationCentre();
+    const nested = document.createElement('div');
+    nested.setAttribute('role', 'dialog');
+    nested.setAttribute('aria-modal', 'true');
+    nested.innerHTML = '<button id="nestedDialogAction">Nested action</button>';
+    document.querySelector('#waffleNotificationModal [role="dialog"]').appendChild(nested);
+    nested.querySelector('button').focus();
+  });
+  const modal = page.locator('#waffleNotificationModal');
+  await page.keyboard.press('Escape');
+  await expect(modal).toBeVisible();
+  await expect(page.locator('#nestedDialogAction')).toBeFocused();
+  await modal.getByRole('button', { name: 'Close notifications' }).click();
+  await expect(modal).toBeHidden();
+  await expect(page.locator('#notificationFallbackTestOpener')).toBeFocused();
+
+  for (const disposition of ['hidden', 'removed']) {
+    await page.evaluate(disposition => {
+      const opener = document.getElementById('notificationFallbackTestOpener');
+      opener.hidden = false;
+      opener.focus();
+      openWaffleNotificationCentre();
+      if (disposition === 'hidden') opener.hidden = true;
+      else opener.remove();
+    }, disposition);
+    await page.keyboard.press('Escape');
+    await expect(modal).toBeHidden();
+    await expect(page.locator('#wh75MenuButton')).toBeFocused();
+  }
+});
+
+test('notification Settings action remains reachable above mobile navigation in short landscape', async ({ page, baseURL }) => {
+  await openReadOnlyRuntime(page, baseURL);
+  await page.setViewportSize({ width: 844, height: 390 });
+  await page.goto(baseURL + '/directory.html', { waitUntil: 'domcontentloaded' });
+  await page.waitForFunction(() => document.documentElement.dataset.waffleUiReady === 'true' && typeof openWaffleNotificationCentre === 'function');
+  await page.evaluate(() => openWaffleNotificationCentre('settings'));
+
+  const modal = page.locator('#waffleNotificationModal');
+  const settingsTab = modal.getByRole('tab', { name: 'Settings' });
+  await settingsTab.click();
+  const action = modal.locator('.waffle-notification-actions button:not([hidden]):not([disabled])').last();
+  await expect(action).toBeVisible();
+
+  for (const viewport of [{ width: 844, height: 390 }, { width: 390, height: 390 }]) {
+    await page.setViewportSize(viewport);
+    await action.scrollIntoViewIfNeeded();
+    const geometry = await page.evaluate(() => {
+      const modal = document.querySelector('#waffleNotificationModal');
+      const dialog = modal.querySelector('[role="dialog"]');
+      const action = [...dialog.querySelectorAll('.waffle-notification-actions button:not([hidden]):not([disabled])')].filter(el => el.getClientRects().length).at(-1);
+      const nav = document.getElementById('wh75MobileBottomNav');
+      const actionRect = action.getBoundingClientRect();
+      const navRect = nav?.getBoundingClientRect();
+      const navVisible = !!nav && getComputedStyle(nav).display !== 'none' && navRect.height > 0;
+      const intersectsNav = navVisible && actionRect.bottom > navRect.top && actionRect.top < navRect.bottom;
+      return {
+        viewport: [innerWidth, innerHeight],
+        action: [actionRect.top, actionRect.bottom],
+        actionInViewport: actionRect.height > 0 && actionRect.top >= 0 && actionRect.bottom <= innerHeight,
+        intersectsNav,
+        modalAboveNav: !intersectsNav || Number(getComputedStyle(modal).zIndex) > Number(getComputedStyle(nav).zIndex)
+      };
+    });
+    expect(geometry.actionInViewport, JSON.stringify(geometry)).toBe(true);
+    expect(geometry.modalAboveNav, JSON.stringify(geometry)).toBe(true);
+  }
+});

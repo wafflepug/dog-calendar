@@ -612,6 +612,8 @@ let waffleNotificationCentreItems =
 let waffleNotificationCentreActiveTab =
     'inbox';
 
+let waffleNotificationCentreOpener = null;
+
 
 function getWaffleSeenNotificationIds() {
     try {
@@ -931,70 +933,52 @@ function renderWaffleNotificationCentre() {
 }
 
 
-function switchWaffleNotificationCentreTab(
-    tabName
-) {
-    tabName =
-        tabName ===
-        'settings'
-            ? 'settings'
-            : 'inbox';
+function switchWaffleNotificationCentreTab(tabName) {
+    tabName = tabName === 'settings' ? 'settings' : 'inbox';
+    waffleNotificationCentreActiveTab = tabName;
+    const modal = ensureWaffleNotificationModal();
+    modal.querySelectorAll('[data-notification-centre-tab]').forEach(button => {
+        const active = button.dataset.notificationCentreTab === tabName;
+        button.classList.toggle('is-active', active);
+        button.setAttribute('aria-selected', active ? 'true' : 'false');
+        button.tabIndex = active ? 0 : -1;
+    });
+    modal.querySelectorAll('[data-notification-centre-panel]').forEach(panel => {
+        panel.hidden = panel.dataset.notificationCentrePanel !== tabName;
+    });
+    if (tabName === 'inbox') loadWaffleNotificationCentre().catch(error => console.warn('Notification Centre refresh failed:', error));
+}
 
-    waffleNotificationCentreActiveTab =
-        tabName;
+function activateWaffleNotificationCentreTab(tabName) {
+    switchWaffleNotificationCentreTab(tabName);
+    if (tabName === 'settings') hydrateWaffleNotificationSettings().catch(error => console.warn(error));
+}
 
-    const modal =
-        ensureWaffleNotificationModal();
+function isWaffleNotificationFocusTargetVisible(element) {
+    if (!(element instanceof HTMLElement) || !element.isConnected || element.disabled) return false;
+    if (element.closest('[hidden], [inert], [aria-hidden="true"]')) return false;
+    const style = getComputedStyle(element);
+    return style.display !== 'none' && style.visibility !== 'hidden' && element.getClientRects().length > 0;
+}
 
-    modal
-        .querySelectorAll(
-            '[data-notification-centre-tab]'
-        )
-        .forEach(button => {
-            const active =
-                button.dataset
-                    .notificationCentreTab ===
-                tabName;
+function getWaffleNotificationDialogFocusTargets(dialog) {
+    const selector = ['a[href]', 'button:not([disabled])', 'input:not([disabled]):not([type="hidden"])', 'select:not([disabled])', 'textarea:not([disabled])', '[tabindex]:not([tabindex="-1"])'].join(',');
+    return Array.from(dialog.querySelectorAll(selector)).filter(element => element.tabIndex >= 0 && isWaffleNotificationFocusTargetVisible(element));
+}
 
-            button.classList.toggle(
-                'is-active',
-                active
-            );
+function focusWaffleNotificationCentreOpener() {
+    const candidates = [waffleNotificationCentreOpener, document.getElementById('wh75MenuButton'), document.getElementById('waffleNotificationButton'), document.querySelector('#wh80MobileHeaderRail [data-wh80-role="notification"]'), document.querySelector('[data-wh-sitter-mobile-action="notification"]')];
+    const target = candidates.find(isWaffleNotificationFocusTargetVisible);
+    if (target) { target.focus(); return; }
+    if (!document.body.hasAttribute('tabindex')) document.body.setAttribute('tabindex', '-1');
+    document.body.focus();
+}
 
-            button.setAttribute(
-                'aria-selected',
-                active
-                    ? 'true'
-                    : 'false'
-            );
-        });
-
-    modal
-        .querySelectorAll(
-            '[data-notification-centre-panel]'
-        )
-        .forEach(panel => {
-            const active =
-                panel.dataset
-                    .notificationCentrePanel ===
-                tabName;
-
-            panel.hidden =
-                !active;
-        });
-
-    if (
-        tabName ===
-        'inbox'
-    ) {
-        loadWaffleNotificationCentre()
-            .catch(error =>
-                console.warn(
-                    'Notification Centre refresh failed:',
-                    error
-                )
-            );
-    }
+function closeWaffleNotificationCentre() {
+    const modal = document.getElementById('waffleNotificationModal');
+    if (!modal || modal.hidden) return;
+    modal.hidden = true;
+    focusWaffleNotificationCentreOpener();
 }
 
 
@@ -1112,35 +1096,21 @@ function markWaffleNotificationCentreRead() {
 }
 
 
-function openWaffleNotificationCentre(
-    tabName = 'inbox'
-) {
-    const modal =
-        ensureWaffleNotificationModal();
-
-    modal.hidden =
-        false;
-
-    switchWaffleNotificationCentreTab(
-        tabName
-    );
-
-    if (
-        tabName ===
-        'settings'
-    ) {
-        hydrateWaffleNotificationSettings()
-            .catch(error =>
-                console.warn(error)
-            );
-    }
+function openWaffleNotificationCentre(tabName = 'inbox', opener = null) {
+    const triggerEvent = tabName instanceof Event ? tabName : null;
+    if (triggerEvent) tabName = 'inbox';
+    const modal = ensureWaffleNotificationModal();
+    const activeElement = document.activeElement;
+    const trigger = triggerEvent?.currentTarget || opener || activeElement;
+    if (trigger instanceof HTMLElement && !modal.contains(trigger)) waffleNotificationCentreOpener = trigger;
+    modal.hidden = false;
+    activateWaffleNotificationCentreTab(tabName);
+    modal.querySelector('[data-notification-centre-tab][aria-selected="true"]')?.focus();
 }
 
 
 function refreshWaffleNotificationCentreBadge() {
-    loadWaffleNotificationCentre({
-        quiet: true
-    }).catch(() => {});
+    loadWaffleNotificationCentre({ quiet: true }).catch(() => {});
 }
 
 
@@ -2668,8 +2638,11 @@ function ensureWaffleNotificationModal() {
                 <button
                     type="button"
                     class="v101-notification-tab is-active"
+                    id="waffleNotificationInboxTab"
                     role="tab"
                     aria-selected="true"
+                    aria-controls="waffleNotificationInboxPanel"
+                    tabindex="0"
                     data-notification-centre-tab="inbox">
                     Inbox
                     <span data-notification-centre-count>Up to date</span>
@@ -2677,15 +2650,22 @@ function ensureWaffleNotificationModal() {
                 <button
                     type="button"
                     class="v101-notification-tab"
+                    id="waffleNotificationSettingsTab"
                     role="tab"
                     aria-selected="false"
+                    aria-controls="waffleNotificationSettingsPanel"
+                    tabindex="-1"
                     data-notification-centre-tab="settings">
                     Settings
                 </button>
             </nav>
 
             <section
+                id="waffleNotificationInboxPanel"
                 class="v101-notification-panel"
+                role="tabpanel"
+                aria-labelledby="waffleNotificationInboxTab"
+                tabindex="0"
                 data-notification-centre-panel="inbox">
                 <div class="v101-notification-panel-actions">
                     <span>Recent operations and activity</span>
@@ -2704,7 +2684,11 @@ function ensureWaffleNotificationModal() {
             </section>
 
             <section
+                id="waffleNotificationSettingsPanel"
                 class="v101-notification-panel"
+                role="tabpanel"
+                aria-labelledby="waffleNotificationSettingsTab"
+                tabindex="0"
                 data-notification-centre-panel="settings"
                 hidden>
 
@@ -2808,62 +2792,45 @@ function ensureWaffleNotificationModal() {
         modal
     );
 
-    modal
-        .querySelector(
-            '.waffle-notification-close'
-        )
-        ?.addEventListener(
-            'click',
-            () => {
-                modal.hidden =
-                    true;
-            }
-        );
+    modal.querySelector('.waffle-notification-close')?.addEventListener('click', closeWaffleNotificationCentre);
 
-    modal.addEventListener(
-        'click',
-        event => {
-            if (
-                event.target ===
-                modal
-            ) {
-                modal.hidden =
-                    true;
-            }
-        }
-    );
+    modal.addEventListener('keydown', event => {
+        const dialog = modal.querySelector('[role="dialog"]');
+        if (!dialog || modal.hidden) return;
+        const nested = event.target?.closest?.('[role="dialog"][aria-modal="true"]');
+        if (nested && nested !== dialog) return;
+        if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); closeWaffleNotificationCentre(); return; }
+        if (event.key !== 'Tab') return;
+        const targets = getWaffleNotificationDialogFocusTargets(dialog);
+        if (!targets.length) { event.preventDefault(); dialog.tabIndex = -1; dialog.focus(); return; }
+        const first = targets[0], last = targets[targets.length - 1];
+        if (event.shiftKey && (document.activeElement === first || !dialog.contains(document.activeElement))) { event.preventDefault(); last.focus(); }
+        else if (!event.shiftKey && (document.activeElement === last || !dialog.contains(document.activeElement))) { event.preventDefault(); first.focus(); }
+    });
 
-    modal
-        .querySelectorAll(
-            '[data-notification-centre-tab]'
-        )
-        .forEach(button => {
-            button.addEventListener(
-                'click',
-                () => {
-                    switchWaffleNotificationCentreTab(
-                        button.dataset
-                            .notificationCentreTab
-                    );
+    modal.addEventListener('click', event => {
+        if (event.target === modal) closeWaffleNotificationCentre();
+    });
 
-                    if (
-                        button.dataset
-                            .notificationCentreTab ===
-                        'settings'
-                    ) {
-                        hydrateWaffleNotificationSettings()
-                            .catch(error =>
-                                console.warn(error)
-                            );
-                    }
-                }
-            );
-        });
+    modal.querySelectorAll('[data-notification-centre-tab]').forEach(button => {
+        button.addEventListener('click', () => activateWaffleNotificationCentreTab(button.dataset.notificationCentreTab));
+    });
+    modal.querySelector('.v101-notification-tabs')?.addEventListener('keydown', event => {
+        if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+        const tabs = Array.from(modal.querySelectorAll('[data-notification-centre-tab]'));
+        const currentIndex = tabs.indexOf(event.target.closest('[data-notification-centre-tab]'));
+        if (currentIndex < 0 || !tabs.length) return;
+        let nextIndex = currentIndex;
+        if (event.key === 'Home') nextIndex = 0;
+        else if (event.key === 'End') nextIndex = tabs.length - 1;
+        else if (event.key === 'ArrowRight') nextIndex = (currentIndex + 1) % tabs.length;
+        else nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
+        event.preventDefault();
+        activateWaffleNotificationCentreTab(tabs[nextIndex].dataset.notificationCentreTab);
+        tabs[nextIndex].focus();
+    });
 
-    modal
-        .querySelector(
-            '[data-notification-mark-read]'
-        )
+    modal.querySelector('[data-notification-mark-read]')
         ?.addEventListener(
             'click',
             markWaffleNotificationCentreRead
@@ -14908,9 +14875,10 @@ registerWaffleServiceWorker();
                 <div class="directory-intake-state">
                     <strong class="directory-record-kicker">Digital intake</strong>
                     <span class="directory-intake-dot is-complete"></span>
-                    <span>
-                        Intake complete${record.storedProfileFallback ? ' · Stored profile' : ''}${submitted ? ` · ${escapeDashboardHtml(submitted)}` : ''}
-                    </span>
+                    <span class="directory-record-status">Intake complete</span>
+                    ${record.storedProfileFallback || submitted ? `
+                        <span class="directory-record-meta">${record.storedProfileFallback ? 'Stored profile' : ''}${record.storedProfileFallback && submitted ? ' · ' : ''}${submitted ? escapeDashboardHtml(submitted) : ''}</span>
+                    ` : ''}
                 </div>
                 <div class="directory-intake-actions">
                     ${record.pdfUrl ? `
@@ -15335,27 +15303,36 @@ registerWaffleServiceWorker();
 
         let aiStatusHtml = '';
 
-        if (
-            aiStatus ===
-            'Review Required'
-        ) {
+        if (aiStatus === 'Review Required') {
+            const reviewCount = conflictCount
+                ? `${conflictCount} ${conflictCount === 1 ? 'item' : 'items'} to review`
+                : 'Needs review';
             aiStatusHtml =
-                `<span class="directory-legacy-ai-status review">⚠️ ${conflictCount || ''} review</span>`;
+                `<span class="directory-legacy-ai-status review directory-record-status">⚠️ OCR needs review${conflictCount ? ` · ${reviewCount}` : ''}</span>`;
+        } else if (aiStatus === 'Complete') {
+            aiStatusHtml =
+                '<span class="directory-legacy-ai-status directory-record-status">✓ OCR complete</span>';
+        } else if (aiStatus === 'AI Failed') {
+            aiStatusHtml =
+                '<span class="directory-legacy-ai-status failed directory-record-status">⚠️ OCR failed</span>';
+        } else if (aiStatus === 'Retry Needed') {
+            aiStatusHtml =
+                '<span class="directory-legacy-ai-status failed directory-record-status">⚠️ OCR delayed</span>';
+        } else if (aiStatus === 'Queued') {
+            aiStatusHtml =
+                '<span class="directory-legacy-ai-status directory-record-status">⏳ OCR queued</span>';
+        } else if (aiStatus === 'Saved · Ready for Free OCR') {
+            aiStatusHtml =
+                '<span class="directory-legacy-ai-status directory-record-status">OCR not started</span>';
         } else if (
-            aiStatus ===
-            'AI Failed'
+            aiStatus === 'Saved · Pending AI' ||
+            aiStatus === 'Processing'
         ) {
             aiStatusHtml =
-                '<span class="directory-legacy-ai-status failed">⚠️ AI retry</span>';
-        } else if (
-            aiStatus ===
-            'Complete'
-        ) {
-            aiStatusHtml =
-                '<span class="directory-legacy-ai-status">✨ AI read</span>';
+                '<span class="directory-legacy-ai-status directory-record-status">⏳ OCR processing</span>';
         } else {
             aiStatusHtml =
-                '<span class="directory-legacy-ai-status">✨ Read available</span>';
+                '<span class="directory-legacy-ai-status directory-record-status">OCR status unavailable</span>';
         }
 
         strip.classList.add(
@@ -15365,10 +15342,9 @@ registerWaffleServiceWorker();
         strip.innerHTML = `
             <div class="directory-legacy-state">
                 <strong class="directory-record-kicker">Legacy PDFs</strong>
-                <span>📚 Legacy PDF on file ·
-                ${count} ${count === 1 ? 'file' : 'files'}
-                ${uploaded ? ` · ${escapeDashboardHtml(uploaded)}` : ''}
-                ${aiStatusHtml}</span>
+                <span class="directory-record-status">📚 Legacy PDF on file</span>
+                <span class="directory-record-meta">${count} ${count === 1 ? 'file' : 'files'}${uploaded ? ` · ${escapeDashboardHtml(uploaded)}` : ''}</span>
+                ${aiStatusHtml}
             </div>
             <div class="directory-legacy-actions">
                 ${latest.pdfUrl ? `
