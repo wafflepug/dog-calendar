@@ -81,6 +81,7 @@ test('Back restores the filtered list and opener focus', async ({ page, baseURL 
     expect(pageWidths.content).toBeLessThanOrEqual(pageWidths.viewport);
     expect(pageWidths.card).toBeLessThanOrEqual(pageWidths.viewport);
   }
+  await page.locator('#guestDirectorySearch').evaluate(input => input.blur());
   await page.setViewportSize(originalViewport);
   const openerLabel = await page.locator('#directory-grid [data-open-directory-profile]').getAttribute('aria-label');
   expect(openerLabel).toContain('00001');
@@ -92,15 +93,49 @@ test('Back restores the filtered list and opener focus', async ({ page, baseURL 
     if (grid) grid.style.marginTop = '700px';
     const opener = document.querySelector('[data-open-directory-profile]');
     const documentY = opener ? opener.getBoundingClientRect().top + window.scrollY : 520;
-    window.scrollTo(0, Math.max(0, documentY - 160));
+    window.scrollTo({ top: Math.max(0, documentY - 160), behavior: 'instant' });
   });
   const openerLocator = page.locator('#directory-grid [data-open-directory-profile]');
-  // CSS scroll behavior may animate this fixture scroll; wait for the target to enter the viewport before measuring it.
-  await expect.poll(async () => {
-    const box = await openerLocator.boundingBox();
-    const viewportHeight = page.viewportSize()?.height || 0;
-    return Boolean(box && box.y >= 0 && box.y + box.height <= viewportHeight);
-  }).toBe(true);
+  // Keep the visibility check before measuring geometry across browser engines.
+  try {
+    await expect.poll(async () => {
+      const box = await openerLocator.boundingBox();
+      const viewportHeight = page.viewportSize()?.height || 0;
+      return Boolean(box && box.y >= 0 && box.y + box.height <= viewportHeight);
+    }).toBe(true);
+  } catch (error) {
+    let diagnostic = {};
+    try {
+      const openerBoundingBox = await openerLocator.boundingBox();
+      const browserState = await page.evaluate(() => {
+        const htmlStyle = getComputedStyle(document.documentElement);
+        const bodyStyle = getComputedStyle(document.body);
+        const settingsDialog = document.querySelector('[id*="setting"] [role="dialog"], [id*="setting"][role="dialog"]');
+        const dialogIsOpen = element => Boolean(element && getComputedStyle(element).display !== 'none' && getComputedStyle(element).visibility !== 'hidden' && element.getAttribute('aria-hidden') !== 'true');
+        return {
+          innerHeight: window.innerHeight,
+          scrollY: window.scrollY,
+          scrollingElement: {
+            scrollHeight: document.scrollingElement?.scrollHeight ?? null,
+            clientHeight: document.scrollingElement?.clientHeight ?? null
+          },
+          activeElement: {
+            tag: document.activeElement?.tagName ?? null,
+            id: document.activeElement?.id ?? null
+          },
+          htmlOverflow: { x: htmlStyle.overflowX, y: htmlStyle.overflowY },
+          bodyOverflow: { x: bodyStyle.overflowX, y: bodyStyle.overflowY },
+          bodyPosition: bodyStyle.position,
+          settingsDialogOpen: dialogIsOpen(settingsDialog)
+        };
+      });
+      diagnostic = { openerBoundingBox, configuredViewport: page.viewportSize(), ...browserState };
+    } catch (diagnosticError) {
+      diagnostic = { diagnosticError: String(diagnosticError) };
+    }
+    console.log(`[care-navigation-continuity] viewport visibility diagnostic: ${JSON.stringify(diagnostic)}`);
+    throw error;
+  }
   const openerBefore = await openerLocator.boundingBox();
   expect(openerBefore?.y).toBeGreaterThanOrEqual(0);
   expect((openerBefore?.y || 0) + (openerBefore?.height || 0)).toBeLessThanOrEqual(page.viewportSize()?.height || 0);
