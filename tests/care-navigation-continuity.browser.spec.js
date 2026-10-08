@@ -92,10 +92,10 @@ test('Back restores the filtered list and opener focus', async ({ page, baseURL 
     if (grid) grid.style.marginTop = '700px';
     const opener = document.querySelector('[data-open-directory-profile]');
     const documentY = opener ? opener.getBoundingClientRect().top + window.scrollY : 520;
-    window.scrollTo(0, Math.max(0, documentY - 160));
+    window.scrollTo({ top: Math.max(0, documentY - 160), behavior: 'instant' });
   });
   const openerLocator = page.locator('#directory-grid [data-open-directory-profile]');
-  // CSS scroll behavior may animate this fixture scroll; wait for the target to enter the viewport before measuring it.
+  // Keep the visibility check before measuring geometry across browser engines.
   await expect.poll(async () => {
     const box = await openerLocator.boundingBox();
     const viewportHeight = page.viewportSize()?.height || 0;
