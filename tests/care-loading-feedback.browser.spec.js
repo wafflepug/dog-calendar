@@ -350,3 +350,96 @@ test('missing records resolve to truthful empty states and preserve create/uploa
   await expect(records.locator('[data-directory-legacy] [data-care-record-upload]')).toHaveText('Upload PDF for OCR');
   await expect(records.locator('[aria-busy="true"]')).toHaveCount(0);
 });
+
+test('successful empty intake stays concise while the profile read is lazy and the existing edit action remains available', async ({ page, baseURL }) => {
+  test.setTimeout(90_000);
+  const key = stayKey(bookings[0]);
+  let profileStage = 'empty';
+  const fixture = installReadOnlyRuntimeFixture(page, {
+    profileBehavior: (requestedKey, call) => ({
+      kind: 'success',
+      hold: call === 1,
+      record: {
+        stayKey: requestedKey,
+        intakeAttributes: profileStage === 'populated' ? { feedingTimes: '7 am and 5 pm' } : {},
+        intakeAttributesSource: profileStage === 'populated' ? 'Synthetic saved profile' : ''
+      }
+    })
+  });
+  await openDirectory(page, baseURL, fixture);
+  const card = await openProfile(page);
+  const details = card.locator('[data-directory-detail="profile"]');
+  const summary = details.locator('[data-intake-profile-summary]');
+  const body = details.locator('[data-directory-intake-attributes]');
+  const edit = details.locator('[data-toggle-profile-edit]');
+  await expect(summary).toHaveText('Loading profile…');
+  await expect(summary).toBeVisible();
+  await expect(details.locator('[data-directory-profile-read-status]')).toHaveAttribute('data-state', 'loading');
+  await expect(body).toContainText('Loading intake profile');
+  await expect(body).toContainText("Only this dog's details are being requested.");
+  await expect(edit).toBeVisible();
+  fixture.release(key);
+  await expect(details.locator('[data-directory-profile-read-status]')).toHaveAttribute('data-state', 'fresh');
+  await expect(summary).toBeHidden();
+  await expect(body.locator('.directory-profile-source-line')).toContainText('No intake saved yet');
+
+  const foodTab = details.locator('[data-profile-subtab="foodWalks"]');
+  for (const theme of ['light', 'dark']) {
+    await page.locator('body').evaluate((element, isDark) => element.classList.toggle('dark-theme', isDark), theme === 'dark');
+    for (const width of [320, 390, 768, 1440]) {
+      await page.setViewportSize({ width, height: width >= 768 ? 900 : 844 });
+      const headingBounds = await details.locator('.directory-profile-section-heading').evaluate(element => {
+        const rect = element.getBoundingClientRect();
+        return { left: rect.left, right: rect.right };
+      });
+      expect(headingBounds.left).toBeGreaterThanOrEqual(-1);
+      expect(headingBounds.right).toBeLessThanOrEqual(width + 1);
+      await foodTab.focus();
+      await page.keyboard.press('Shift+Tab');
+      await expect(edit).toBeFocused();
+      const editFocus = await edit.evaluate(element => {
+        const style = getComputedStyle(element);
+        return { visible: element.getClientRects().length > 0, outline: style.outlineStyle, width: style.outlineWidth };
+      });
+      expect(editFocus.visible).toBe(true);
+      expect(editFocus.outline).not.toBe('none');
+      expect(parseFloat(editFocus.width)).toBeGreaterThan(0);
+    }
+  }
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.locator('body').evaluate(element => element.classList.remove('dark-theme'));
+
+  await foodTab.click();
+  await expect(foodTab).toHaveAttribute('aria-expanded', 'true');
+  await edit.click();
+  const draft = details.locator('[data-intake-attribute="feedingTimes"]');
+  await draft.fill('Unsubmitted feeding draft');
+  await foodTab.click();
+  await expect(foodTab).toHaveAttribute('aria-expanded', 'false');
+  await foodTab.click();
+  await expect(foodTab).toHaveAttribute('aria-expanded', 'true');
+  await expect(draft).toHaveValue('Unsubmitted feeding draft');
+
+  profileStage = 'populated';
+  await page.evaluate(async () => {
+    const card = document.querySelector('.directory-card[data-directory-dog-name="Milo"]');
+    await loadDirectoryProfileDetail(card, card.querySelector('[data-directory-detail="profile"]'), { force: true });
+  });
+  expect(fixture.profileCalls.get(key)).toBeGreaterThan(1);
+  await expect(summary).toBeVisible();
+  await expect(summary).toHaveText('1 fields · Synthetic saved profile');
+  await expect(details.locator('[data-profile-subtab="foodWalks"]')).toHaveAttribute('aria-expanded', 'true');
+  await expect(details.locator('[data-intake-attribute="feedingTimes"]')).toHaveValue('Unsubmitted feeding draft');
+
+  profileStage = 'empty';
+  await page.evaluate(async () => {
+    const card = document.querySelector('.directory-card[data-directory-dog-name="Milo"]');
+    await loadDirectoryProfileDetail(card, card.querySelector('[data-directory-detail="profile"]'), { force: true });
+  });
+  await expect(summary).toBeHidden();
+  await expect(body.locator('.directory-profile-source-line')).toContainText('No intake saved yet');
+  await expect(details.locator('[data-profile-subtab="foodWalks"]')).toHaveAttribute('aria-expanded', 'true');
+  await expect(details.locator('[data-intake-attribute="feedingTimes"]')).toHaveValue('Unsubmitted feeding draft');
+  await expect(details.locator('[data-cancel-profile-edit]')).toBeVisible();
+  expect(fixture.profileCalls.get(key)).toBeGreaterThan(1);
+});
