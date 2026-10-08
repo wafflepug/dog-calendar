@@ -15,7 +15,7 @@ The `fixtures` matrix runs all 13 existing Playwright config invocations, groupe
 | navigation | `playwright.care-scroll-access.config.js`, `playwright.care-loading-feedback.config.js`, `playwright.care-navigation-accessibility.config.js` |
 | records | `playwright.care-navigation-continuity.config.js`, `tests/mvp-records-notifications.config.js`, `playwright.mvp-observer.config.js`, `playwright.runtime-review.config.js` |
 
-Each configuration remains a separate Playwright invocation, preserving its configured projects, assertions, timeout, retry, and worker behavior. Fixture jobs install Chromium and WebKit, the engines these configurations use.
+Each configuration remains a separate Playwright invocation, preserving its configured projects, assertions, timeout, retry, and worker behavior. Fixture jobs install Chromium, Firefox, and WebKit to retain the full browser and native dependency environment used by the original serial workflow, including for configs whose projects select only Chromium and WebKit.
 
 The `placement` matrix runs the existing `npm run test:ui:local` command with `--shard=1/3`, `2/3`, or `3/3`. Each shard installs Chromium, Firefox, and WebKit to cover the existing cross-device projects. The local runner retains its existing reporters and suite behavior.
 
@@ -23,7 +23,7 @@ The final required check remains named `ui-regression`. It waits for all three j
 
 ## Runtime expectations
 
-Parallel jobs should reduce elapsed wall-clock time because the previously serial fixture suites and placement shards overlap. A 10–15 minute wall-clock run is an estimate, not a measured result. Total runner minutes may increase because each independent job has its own checkout, dependency installation, and browser setup. The previous run shows browser installation was about 50 seconds; caching the npm package download reduces repeat dependency setup where the hosted runner cache is available. Browser binaries are installed per job. Trial run 37836187524 exposed a separate infrastructure delay: three runners spent over ten minutes downloading apt packages from azure.archive.ubuntu.com before any tests started. Browser jobs now replace that mirror hostname with archive.ubuntu.com in existing Ubuntu apt source files, retaining the same package signatures and repositories. Each dependency/browser installation step has a separate five-minute timeout: an infrastructure stall fails promptly with logs instead of consuming the entire 30-minute test job. Test dependency setup uses npm ci --no-audit --no-fund to avoid optional audit/funding requests; test assertions and merge gates are unchanged.
+Parallel jobs should reduce elapsed wall-clock time because the previously serial fixture suites and placement shards overlap. A 10–15 minute wall-clock run is an estimate, not a measured result. Total runner minutes may increase because each independent job has its own checkout, dependency installation, and browser setup. The previous run shows browser installation was about 50 seconds; caching the npm package download reduces repeat dependency setup where the hosted runner cache is available. Browser binaries are installed per job. Trial run 37836187524 exposed a separate infrastructure delay: three runners spent over ten minutes downloading apt packages from azure.archive.ubuntu.com before any tests started. Browser jobs now replace that hostname with archive.ubuntu.com in `/etc/apt/sources.list` and matching `.list` or `.sources` files under `/etc/apt/sources.list.d/`, retaining the same package signatures and repositories. Each dependency/browser installation step has a separate five-minute timeout: an infrastructure stall fails promptly with logs instead of consuming the entire 30-minute test job. Test dependency setup uses npm ci --no-audit --no-fund to avoid optional audit/funding requests; test assertions and merge gates are unchanged.
 
 ## Artifacts and local diagnosis
 
@@ -33,7 +33,7 @@ To reproduce one fixture group locally, run the commands from the workflow with 
 
 ```sh
 npm ci
-npx playwright install chromium webkit
+npx playwright install chromium firefox webkit
 node node_modules/@playwright/test/cli.js test --config=playwright.care-overview.config.js --output=test-results/overview-playwright.care-overview
 ```
 

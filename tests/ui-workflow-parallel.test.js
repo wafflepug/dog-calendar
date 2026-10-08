@@ -24,7 +24,7 @@ test('parallel fixture matrix retains every existing configuration exactly once'
   for (const name of ['contracts', 'fixtures', 'placement']) assert.doesNotMatch(jobs[name], /\bneeds:/);
   assert.match(jobs.fixtures, /fail-fast: false/);
   assert.match(jobs.fixtures, /--config="\$config" --output="test-results\/\$FIXTURE_GROUP-\$name"/);
-  assert.match(jobs.fixtures, /install --with-deps chromium webkit/);
+  assert.match(jobs.fixtures, /install --with-deps chromium firefox webkit/);
 });
 
 test('contract job preserves existing Node checks', () => {
@@ -71,7 +71,7 @@ test('browser installation stalls fail within five minutes', () => {
 
 test('browser setup avoids the Azure Ubuntu mirror without changing package signatures', () => {
   for (const name of ['fixtures', 'placement']) {
-    assert.ok(jobs[name].includes('/etc/apt/sources.list.d/ubuntu.sources'));
+    assert.ok(jobs[name].includes('/etc/apt/sources.list.d/*.sources'));
     assert.ok(jobs[name].includes('s|azure.archive.ubuntu.com|archive.ubuntu.com|g'));
     assert.doesNotMatch(jobs[name], /--allow-unauthenticated|trusted=yes|Check-Valid-Until=false/);
   }
