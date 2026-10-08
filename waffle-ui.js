@@ -713,9 +713,11 @@
     document.querySelectorAll('[data-wh75-colour]').forEach(button => button.addEventListener('click', () => applyColourStyle(button.dataset.wh75Colour, true)));
     document.querySelectorAll('#wh75MobileDrawer a').forEach(link => link.addEventListener('click', () => closeDrawer(false)));
     window.addEventListener('keydown', event => {
-      if (event.key !== 'Escape') return;
+      if (event.key !== 'Escape' || event.defaultPrevented) return;
+      // Dialogs own Escape; a closed navigation drawer must not steal focus.
+      if (event.target?.closest?.('[role="dialog"][aria-modal="true"]')) return;
       if (document.getElementById('wh75SettingsPanel')?.classList.contains('is-open')) closeSettings();
-      else closeDrawer(true);
+      else if (document.getElementById('wh75MobileDrawer')?.classList.contains('is-open')) closeDrawer(true);
     });
   }
 

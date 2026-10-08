@@ -2,8 +2,8 @@
    Build: 2026.08.27.04
    Historical base styles remain compatibility sources during Phase 3A, but pages no longer
    reference them individually. Preserve this import order until modules are folded in. */
-@import url("waffle-app.css?build=2026.08.27.04&rev=2026.10.08.06");
-@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.10.08.06");
+@import url("waffle-app.css?build=2026.08.27.04&rev=2026.10.09.01");
+@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.10.09.01");
 @import url("waffle-v10.8.2.css?build=2026.08.27.04");
 @import url("waffle-v10.8.3.css?build=2026.08.27.04");
 @import url("waffle-v10.8.5.css?build=2026.08.27.04");
@@ -11,12 +11,12 @@
 @import url("waffle-v10.8.7.css?build=2026.08.27.04");
 @import url("waffle-v10.8.8.css?build=2026.08.27.04");
 @import url("waffle-v10.8.9.css?build=2026.08.27.04");
-@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.10.08.06");
+@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.10.09.01");
 @import url("waffle-v11.0.3.css?build=2026.08.27.04");
 @import url("waffle-v11.0.5.css?build=2026.08.27.04");
-@import url("waffle-v11.1.94.css?build=2026.10.08.06");
-@import url("waffle-v11.1.95.css?build=2026.10.08.06");
-@import url("waffle-v11.1.96.css?build=2026.10.08.06&rev=2026.10.08.06");
+@import url("waffle-v11.1.94.css?build=2026.10.09.01");
+@import url("waffle-v11.1.95.css?build=2026.10.09.01");
+@import url("waffle-v11.1.96.css?build=2026.10.09.01&rev=2026.10.09.01");
 
 /* ============================================================
    MOBILE FIRST-PAINT STABILITY GATE
@@ -1536,4 +1536,52 @@ body #waffleNotificationModal .v101-notification-copy > span:not(.v101-notificat
 body #waffleNotificationModal .v101-notification-copy small {
   font-size: 13px !important;
   line-height: 1.4;
+}
+
+/* Records & forms status hierarchy. */
+body[data-waffle-page="directory"] .directory-care-records-body .directory-record-status {
+  display: block;
+  min-width: 0;
+  color: var(--v10-text, #172033);
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+body[data-waffle-page="directory"] .directory-care-records-body .directory-record-meta {
+  display: block;
+  min-width: 0;
+  color: var(--v10-muted, #475569);
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+body[data-waffle-page="directory"] .directory-care-records-body .directory-legacy-ai-status.directory-record-status {
+  display: inline-flex;
+  max-width: 100%;
+  white-space: normal;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+body[data-waffle-page="directory"] .directory-care-records-body .directory-intake-dot {
+  display: none;
+}
+body.dark-theme[data-waffle-page="directory"] .directory-care-records-body .directory-record-status {
+  color: var(--v10-text, #f1f5f9);
+}
+body.dark-theme[data-waffle-page="directory"] .directory-care-records-body .directory-record-meta {
+  color: var(--v10-muted, #cbd5e1);
+}
+body[data-waffle-page="directory"] .directory-care-records-body .directory-legacy-ai-status.review.directory-record-status {
+  color: #92400e;
+}
+body[data-waffle-page="directory"] .directory-care-records-body .directory-legacy-ai-status.failed.directory-record-status {
+  color: #991b1b;
+}
+body.dark-theme[data-waffle-page="directory"] .directory-care-records-body .directory-legacy-ai-status.review.directory-record-status {
+  color: #fef3c7;
+}
+body.dark-theme[data-waffle-page="directory"] .directory-care-records-body .directory-legacy-ai-status.failed.directory-record-status {
+  color: #fee2e2;
 }

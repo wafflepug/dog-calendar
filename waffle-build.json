@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.10.08.06",
-  "releaseName": "Care Booking Tools",
+  "assetRevision": "2026.10.09.01",
+  "releaseName": "Care Records & Notification Access",
   "careIteration": {
     "returningDogSuggestions": true,
     "reviewedCareInheritance": true,

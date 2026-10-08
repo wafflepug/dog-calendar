@@ -15,6 +15,18 @@ const bookings = [
 const stayKey = booking => `${booking.dogName.toLowerCase()}|${booking.startDate}|${booking.endDate}`;
 const csv = () => ['Timestamp,Dog Name,Breed,Start Date,End Date,Owner,Phone,Likes,Dislikes,Notes,Edit Link,Booking Type', ...bookings.map(b => [b.timestamp, b.dogName, b.breed, '17/09/2026', '22/09/2026', b.ownerName, b.phone, '', '', b.notes, '', b.bookingType].join(','))].join('\n');
 
+function contrastRatio(foreground, background) {
+  const luminance = value => {
+    const parts = value.match(/[\d.]+/g)?.map(Number) || [];
+    const [r, g, b] = parts.slice(0, 3).map(channel => {
+      const srgb = channel / 255;
+      return srgb <= 0.04045 ? srgb / 12.92 : ((srgb + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  };
+  const a = luminance(foreground), b = luminance(background);
+  return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+}
 function installFixture(page, options = {}) {
   const calls = new Map();
   const requests = new Map();
@@ -177,6 +189,7 @@ test('failed legacy read retries only the selected stay', async ({ page, baseURL
   await expect(legacy).toContainText('No legacy PDF on file');
   expect(fixture.requests.get('get_legacy_intake_statuses').at(-1).stayKeys).toEqual([await card.getAttribute('data-directory-stay-key')]);
   await expect(legacy.locator('[data-care-record-upload]')).toHaveText('Upload PDF for OCR');
+  const legacyStatusReads = fixture.calls.get('get_legacy_intake_statuses') || 0;
 });
 
 test('resolved digital and legacy records keep their status, PDF link, review and upload actions', async ({ page, baseURL }) => {
@@ -198,6 +211,106 @@ test('resolved digital and legacy records keep their status, PDF link, review an
   await expect(page.locator('[data-reassign-legacy-intake][data-legacy-document-id="legacy-milo"]').first()).toBeAttached();
 });
 
+test('legacy OCR labels are truthful and stay separate from file metadata', async ({ page, baseURL }) => {
+  const key = stayKey(bookings[0]);
+  const fixture = installFixture(page, {
+    digitalIntakes: [{ stayKey: key, status: 'Complete', storedProfileFallback: true, submittedAt: '2026-09-18T10:00:00Z' }],
+    legacyIntakes: [{ stayKey: key, count: 3, latest: { stayKey: key, documentId: 'legacy-milo', uploadedAt: '2026-09-18T10:00:00Z', aiStatus: 'Complete', pdfUrl: 'https://example.test/milo.pdf' } }]
+  });
+  await openDirectory(page, baseURL, fixture, 390, 'light');
+  const { records } = await openRecords(page);
+  const digital = records.locator('[data-directory-intake]');
+  await expect(digital.locator('.directory-record-status')).toHaveText('Intake complete');
+  await expect(digital.locator('.directory-record-meta')).toContainText('Stored profile');
+  await expect(digital.locator('.directory-record-meta')).toContainText(/18.*2026/);
+
+  const legacy = records.locator('[data-directory-legacy]');
+  await expect(legacy.locator('.directory-record-status').first()).toContainText('Legacy PDF on file');
+  await expect(legacy.locator('.directory-record-meta')).toContainText('3 files');
+  await expect(legacy.locator('.directory-record-meta')).toContainText(/18.*2026/);
+  await expect(legacy.locator('.directory-legacy-ai-status')).toHaveText(/OCR complete/i);
+  await expect(legacy.locator('.directory-record-status').first()).not.toContainText(/files|18\/09/);
+
+  const legacyStatusReads = fixture.calls.get('get_legacy_intake_statuses') || 0;
+  const labels = await page.evaluate(stayKey => {
+    const states = [
+      ['Review Required', 2], ['AI Failed', 0], ['Processing', 0],
+      ['Queued', 0], ['', 0], ['Unrecognized future state', 0],
+      ['Saved · Ready for Free OCR', 0], ['Saved · Pending AI', 0], ['Retry Needed', 0]
+    ];
+    return states.map(([aiStatus, conflictCount]) => {
+      setDirectoryLegacyIntakeStatus(stayKey, {
+        count: 1,
+        latest: { stayKey, documentId: 'legacy-milo', aiStatus, conflictCount }
+      });
+      const root = document.querySelector(`[data-directory-legacy="${CSS.escape(stayKey)}"]`);
+      return {
+        aiStatus,
+        label: root.querySelector('.directory-legacy-ai-status')?.textContent.trim(),
+        retryAction: !!root.querySelector('[data-care-record-retry="legacy"]'),
+        primary: root.querySelector('.directory-record-status')?.textContent.trim()
+      };
+    });
+  }, key);
+  expect(labels.map(item => item.label)).toEqual([
+    '⚠️ OCR needs review · 2 items to review', '⚠️ OCR failed', '⏳ OCR processing',
+    '⏳ OCR queued', 'OCR status unavailable', 'OCR status unavailable',
+    'OCR not started', '⏳ OCR processing', '⚠️ OCR delayed'
+  ]);
+  expect(labels.every(item => !item.retryAction)).toBe(true);
+  expect(labels.every(item => item.primary.includes('Legacy PDF on file'))).toBe(true);
+  await expect(legacy.locator('[data-care-record-upload]')).toHaveText('Upload PDF for OCR');
+  for (const theme of ['light', 'dark']) {
+    for (const palette of ['waffle-purple', 'coastal-blue', 'eucalyptus', 'sunset-coral', 'warm-honey']) {
+      for (const width of [320, 390, 1440]) {
+        await page.setViewportSize({ width, height: 900 });
+        const geometry = await page.evaluate(({ theme, palette }) => {
+          document.body.classList.toggle('dark-theme', theme === 'dark');
+          document.body.setAttribute('data-waffle-colour-style', palette);
+          document.documentElement.setAttribute('data-waffle-colour-style', palette);
+          const root = document.querySelector('[data-directory-legacy]');
+          const primary = root.querySelector('.directory-record-status');
+          const meta = root.querySelector('.directory-record-meta');
+          const p = primary.getBoundingClientRect();
+          const m = meta.getBoundingClientRect();
+          const opaqueBackground = element => {
+            const chain = [];
+            for (let node = element; node; node = node.parentElement) {
+              chain.push(getComputedStyle(node).backgroundColor);
+              if (node === document.body) break;
+            }
+            let bg = [255, 255, 255];
+            for (const value of chain.reverse()) {
+              const parts = value.match(/[\d.]+/g)?.map(Number) || [];
+              if (parts.length < 3) continue;
+              const alpha = parts.length > 3 ? parts[3] : 1;
+              bg = parts.slice(0, 3).map((channel, i) => Math.round(channel * alpha + bg[i] * (1 - alpha)));
+            }
+            return `rgb(${bg.join(', ')})`;
+          };
+          const contrast = element => [getComputedStyle(element).color, opaqueBackground(element)];
+          return {
+            overflow: root.scrollWidth > root.clientWidth,
+            statusAndMetadataSeparate: m.top >= p.bottom - 1,
+            status: primary.textContent.trim(),
+            metadata: meta.textContent.trim(),
+            contrast: [contrast(primary), contrast(meta)],
+            actions: [...root.querySelectorAll('.directory-intake-action')].filter(el => el.getClientRects().length).map(el => {
+              const r = el.getBoundingClientRect(); return [r.width, r.height];
+            })
+          };
+        }, { theme, palette });
+        expect(geometry.overflow, `${theme}/${palette}/${width}: record overflow`).toBe(false);
+        expect(geometry.statusAndMetadataSeparate, `${theme}/${palette}/${width}: status and metadata overlap`).toBe(true);
+        expect(geometry.status).toContain('Legacy PDF on file');
+        expect(geometry.metadata).toContain('1 file');
+        expect(geometry.contrast.every(([foreground, background]) => contrastRatio(foreground, background) >= 4.5), `${theme}/${palette}/${width}: status contrast ${JSON.stringify(geometry.contrast)}`).toBe(true);
+        expect(geometry.actions.every(([w, h]) => w >= 44 && h >= 44), `${theme}/${palette}/${width}: action targets ${JSON.stringify(geometry.actions)}`).toBe(true);
+      }
+    }
+  }
+  expect(fixture.calls.get('get_legacy_intake_statuses') || 0).toBe(legacyStatusReads);
+});
 test('a failed safety refresh preserves cached alerts and marks uncached stays unavailable', async ({ page, baseURL }) => {
   const fixture = installFixture(page, { failOnce: 'get_belongings', summaryRecords: [{ stayKey: stayKey(bookings[0]), riskFlags: { foodAllergy: true } }] });
   await openDirectory(page, baseURL, fixture, 390, 'light');

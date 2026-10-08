@@ -5,6 +5,8 @@ Reviewed 17 September 2026. Repository: `wafflepug/dog-calendar`; always start i
 
 ## Owner priority: Care UI refinements next
 
+Completed 9 October 2026: four Records & forms and notification-access refinements: accurate OCR labels, separate intake metadata, keyboard tab navigation and dialog focus/return. See [Care Records & Notification Access](care-records-notification-access.md). Next inspect cached notification refresh recovery without adding polling.
+
 Prepared 8 October 2026: five Booking tools refinements covering readable actions, guest-specific labels, source context, dialog focus and immediate identity-safe rebooking. See [Care Booking Tools](care-booking-tools.md). Next inspect Records & forms responsive document/action states without changing OCR or adding initial reads.
 
 Completed 8 October 2026: six selected-profile refinements covering medication states, labeled feeding, category-specific empty states, contextual Edit/Discard names, readable source/count badges and unclipped curated summaries. See [Care routine clarity](care-routine-clarity.md) for acceptance checks and the next bounded action-layout item.
