@@ -10,6 +10,11 @@ const booking = {
   startDate: '2026-09-17', endDate: '2026-09-22', ownerName: 'Alexandria Peterson-Smith', phone: '0400123456', notes: 'Safety warning remains visible.', bookingType: 'Boarding', dogId: exactDogId
 };
 
+async function settlePointerTargetAfterScroll(page, locator) {
+  await locator.scrollIntoViewIfNeeded();
+  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+}
+
 async function installReadOnlyFixture(page, options = {}) {
   const fixtureBooking = { ...booking, phone: options.phone ?? booking.phone };
   const actionReads = [];
@@ -23,6 +28,14 @@ async function installReadOnlyFixture(page, options = {}) {
       return route.fulfill({ status: 200, contentType: 'text/csv', body: 'Timestamp,Dog Name,Breed,Start Date,End Date,Owner,Phone,Likes,Dislikes,Notes,Edit Link,Booking Type,Source,Dog ID,Dog Number\n' + [fixtureBooking.timestamp, fixtureBooking.dogName, fixtureBooking.breed, '17/09/2026', '22/09/2026', fixtureBooking.ownerName, fixtureBooking.phone, '', '', fixtureBooking.notes, '', fixtureBooking.bookingType, 'Other', fixtureBooking.dogId, '#00017'].join(',') });
     }
     if (url.includes('cdn.jsdelivr.net') && url.includes('fullcalendar')) return route.fulfill({ status: 200, contentType: 'application/javascript', body: fullCalendar });
+    if (new URL(url).pathname.endsWith('/waffle-app.js')) {
+      const response = await route.fetch();
+      const source = await response.text();
+      const marker = 'function renderDirectoryIntakeAttributes(card, record) {';
+      if (!source.includes(marker)) throw new Error('Could not instrument renderDirectoryIntakeAttributes in fixture source');
+      const instrumented = source.replace(marker, `${marker}\n        window.__careCategoryRenderCalls?.push({ time: performance.now(), stack: new Error().stack });`);
+      return route.fulfill({ response, body: instrumented });
+    }
     if (url.includes('script.google')) {
       const resolved = resolveLocalBackendAction({ method: request.method(), url });
       if (!resolved.policy.allowed) return route.fulfill({ status: 403, body: 'Read-only fixture blocked backend action' });
@@ -74,6 +87,26 @@ for (const [name, viewport, colorScheme, reducedMotion] of [
       localStorage.setItem('theme', mode);
       window.__careActionScrollBehaviors = [];
       window.__careSafetyPointerEvents = [];
+      window.__careCategoryRenderCalls = [];
+      window.__careCategoryMutations = [];
+      window.__careSafetyPointerTarget = null;
+      const scrollables = element => {
+        const result = [];
+        for (let node = element?.parentElement; node && node !== document.documentElement; node = node.parentElement) {
+          const style = getComputedStyle(node);
+          if (/(auto|scroll|overlay)/.test(`${style.overflowY} ${style.overflow}`) && node.scrollHeight > node.clientHeight + 1) {
+            result.push({ tag: node.tagName.toLowerCase(), id: node.id, className: String(node.className || '').slice(0, 100), top: node.scrollTop, height: node.clientHeight, scrollHeight: node.scrollHeight });
+          }
+        }
+        return result;
+      };
+      new MutationObserver(records => {
+        for (const record of records) {
+          const removedSafety = [...record.removedNodes].some(node => node instanceof Element && (node.matches('[data-profile-subtab="safety"]') || node.querySelector('[data-profile-subtab="safety"]')));
+          const addedSafety = [...record.addedNodes].some(node => node instanceof Element && (node.matches('[data-profile-subtab="safety"]') || node.querySelector('[data-profile-subtab="safety"]')));
+          if (removedSafety || addedSafety) window.__careCategoryMutations.push({ time: performance.now(), removedSafety, addedSafety, host: record.target?.className || record.target?.id || record.target?.tagName });
+        }
+      }).observe(document, { subtree: true, childList: true });
       const scrollIntoView = Element.prototype.scrollIntoView;
       Element.prototype.scrollIntoView = function(options) {
         if (this.matches?.('[data-directory-stay-contact], [data-directory-detail="profile"]')) {
@@ -91,13 +124,29 @@ for (const [name, viewport, colorScheme, reducedMotion] of [
           const footerBox = footer?.getBoundingClientRect();
           const footerStyle = footer ? getComputedStyle(footer) : null;
           const buttonBox = safetyTarget?.getBoundingClientRect();
+          if (type === 'pointerdown' && safetyTarget) window.__careSafetyPointerTarget = safetyTarget;
+          const originalButton = window.__careSafetyPointerTarget;
+          const originalBox = originalButton?.isConnected ? originalButton.getBoundingClientRect() : null;
+          const visualViewport = window.visualViewport;
           const profile = document.querySelector('.directory-card.is-profile-active');
           const transform = profile ? getComputedStyle(profile).transform : 'none';
           const matrix = transform === 'none' ? new DOMMatrixReadOnly() : new DOMMatrixReadOnly(transform);
           window.__careSafetyPointerEvents.push({
             type,
+            time: performance.now(),
+            clientX: event.clientX,
+            clientY: event.clientY,
             target: safetyTarget ? 'safety' : target?.tagName.toLowerCase(),
             hit: safetyHit ? 'safety' : hit?.tagName.toLowerCase(),
+            hitTag: hit?.tagName.toLowerCase(),
+            hitText: hit?.textContent?.trim().slice(0, 80),
+            activeElement: document.activeElement?.tagName.toLowerCase(),
+            activeElementText: document.activeElement?.textContent?.trim().slice(0, 80),
+            documentScroll: { x: window.scrollX, y: window.scrollY },
+            visualViewport: visualViewport ? { offsetTop: visualViewport.offsetTop, offsetLeft: visualViewport.offsetLeft, pageTop: visualViewport.pageTop, height: visualViewport.height, scale: visualViewport.scale } : null,
+            scrollables: scrollables(originalButton?.isConnected ? originalButton : target),
+            originalButtonConnected: Boolean(originalButton?.isConnected),
+            originalButtonRect: originalBox ? { x: originalBox.x, y: originalBox.y, top: originalBox.top, right: originalBox.right, bottom: originalBox.bottom, left: originalBox.left } : null,
             profileTransform: { a: matrix.a, b: matrix.b, c: matrix.c, d: matrix.d },
             buttonBottom: buttonBox?.bottom ?? null,
             footerTop: footerBox?.top ?? null,
@@ -131,15 +180,17 @@ for (const [name, viewport, colorScheme, reducedMotion] of [
     await expect(historyHost).toContainText('Dog ID #00017');
     await sectionNav.locator('[data-v11160-tab="profile"]').click();
     const healthHome = profile.locator('[data-profile-subtab="healthHome"]');
+    await settlePointerTargetAfterScroll(page, healthHome);
     await healthHome.click();
     await expect(healthHome).toHaveAttribute('aria-expanded', 'true');
     const safety = profile.locator('[data-profile-subtab="safety"]');
-    await page.evaluate(() => { window.__careSafetyPointerEvents.length = 0; });
+    await page.evaluate(() => { window.__careSafetyPointerEvents.length = 0; window.__careCategoryRenderCalls.length = 0; window.__careCategoryMutations.length = 0; });
     // Locator click remains a real pointer action and checks actionability at press time.
+    await settlePointerTargetAfterScroll(page, safety);
     await safety.click();
     const safetyPointerEvents = await page.evaluate(() => window.__careSafetyPointerEvents);
     expect(safetyPointerEvents.map(event => event.type)).toEqual(['pointerdown', 'pointerup', 'click']);
-    expect(safetyPointerEvents.every(event => event.target === 'safety' && event.hit === 'safety')).toBe(true);
+    expect(safetyPointerEvents.every(event => event.target === 'safety' && event.hit === 'safety'), JSON.stringify({ safetyPointerEvents, categoryRenderCalls: await page.evaluate(() => window.__careCategoryRenderCalls), categoryMutations: await page.evaluate(() => window.__careCategoryMutations) }, null, 2)).toBe(true);
     for (const event of safetyPointerEvents) {
       expect(event.profileTransform.a).toBeCloseTo(1, 5);
       expect(event.profileTransform.b).toBeCloseTo(0, 5);

@@ -9268,14 +9268,9 @@ registerWaffleServiceWorker();
                 '[data-intake-profile-summary]'
             );
 
-        if (profileChip) {
-            profileChip.textContent =
-                fieldCount
-                    ? `${fieldCount} fields · ${source || 'Stored profile'}`
-                    : (
-                        source ||
-                        'No intake saved yet'
-                    );
+        if (profileChip && fieldCount) {
+            profileChip.hidden = false;
+            profileChip.textContent = `${fieldCount} fields · ${source || 'Stored profile'}`;
         }
 
         const profileDetails =
@@ -9443,6 +9438,16 @@ registerWaffleServiceWorker();
         }
         status.dataset.state = state;
         details.dataset.profileReadState = state;
+        const summaryChip = details.querySelector('[data-intake-profile-summary]');
+        if (summaryChip && details.dataset.detailLoaded !== 'true') {
+            if ((state === 'loading' || state === 'refreshing') && !summaryChip.textContent.trim()) {
+                summaryChip.hidden = false;
+                summaryChip.textContent = 'Loading profile…';
+            } else if (state === 'error' || state === 'identity-conflict') {
+                summaryChip.hidden = true;
+                summaryChip.textContent = '';
+            }
+        }
         const content = details.querySelector('[data-directory-intake-attributes]');
         if (content) content.setAttribute('aria-busy', state === 'loading' || state === 'refreshing' ? 'true' : 'false');
         status.innerHTML = `<span class="directory-profile-read-status-message">${escapeDashboardHtml(message || '')}</span>${state === 'error' ? '<button type="button" class="directory-intake-action directory-profile-read-retry" data-retry-directory-profile-read>↻ Retry</button>' : ''}`;
@@ -11374,10 +11379,8 @@ registerWaffleServiceWorker();
             );
 
         if (summaryChip) {
-            summaryChip.textContent =
-                populatedCount
-                    ? `${populatedCount} fields · ${sourceLabel}`
-                    : sourceLabel;
+            summaryChip.hidden = populatedCount === 0;
+            summaryChip.textContent = populatedCount ? `${populatedCount} fields · ${sourceLabel}` : '';
         }
 
         const selectedSubTab = String(card.dataset.profileSubTab || '');
