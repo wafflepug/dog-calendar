@@ -19,4 +19,6 @@ Six bounded improvements clarify the selected guest profile without adding backe
 
 Automated fixtures block live writes. Physical-phone and screen-reader checks remain manual.
 
+The scroll-access fixture waits for three consecutive animation frames with stable button geometry and a matching hit target after scrolling. Its deterministic booking date uses a Date-only override rather than Playwright's clock, which also replaces performance timing and animation frames. A failing WebKit trace showed non-monotonic pointer timestamps and native hit targets disagreeing with JavaScript hit tests. Native pointer-down, pointer-up and click target assertions remain unchanged; scrolling and rendering use native timing.
+
 Next backlog item: make Owner Care Link and Book Again clearly distinct in the selected-profile actions, retaining the compact identity header and existing navigation.
