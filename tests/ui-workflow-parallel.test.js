@@ -76,3 +76,7 @@ test('browser setup avoids the Azure Ubuntu mirror without changing package sign
     assert.doesNotMatch(jobs[name], /--allow-unauthenticated|trusted=yes|Check-Valid-Until=false/);
   }
 });
+
+test('reruns upload separate artifacts for each attempt', () => {
+  for (const name of ['fixtures', 'placement']) assert.ok(jobs[name].includes('${{ github.run_attempt }}'));
+});

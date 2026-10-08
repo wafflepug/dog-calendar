@@ -27,7 +27,7 @@ Parallel jobs should reduce elapsed wall-clock time because the previously seria
 
 ## Artifacts and local diagnosis
 
-Every fixture group uploads a separate artifact named `ui-regression-fixtures-<group>-<run id>`. Placement uploads one artifact per shard named `cross-device-ui-regression-shard-<number>-<run id>`. Artifacts retain the Playwright reports, summary and JSON report when produced, plus `test-results` evidence for 14 days. Fixture configurations receive a unique output directory under `test-results/` so one config cannot overwrite another config's evidence within its job. Placement artifacts are shard-local.
+Every fixture group uploads a separate artifact named `ui-regression-fixtures-<group>-<run id>-<run attempt>`. Placement uploads one artifact per shard named `cross-device-ui-regression-shard-<number>-<run id>-<run attempt>`. Including the run attempt keeps artifacts from reruns separate from immutable artifacts created by earlier attempts. Artifacts retain the Playwright reports, summary and JSON report when produced, plus `test-results` evidence for 14 days. Fixture configurations receive a unique output directory under `test-results/` so one config cannot overwrite another config's evidence within its job. Placement artifacts are shard-local.
 
 To reproduce one fixture group locally, run the commands from the workflow with that group's configuration list, for example:
 
