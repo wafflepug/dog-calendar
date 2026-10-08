@@ -10,6 +10,11 @@ const booking = {
   startDate: '2026-09-17', endDate: '2026-09-22', ownerName: 'Alexandria Peterson-Smith', phone: '0400123456', notes: 'Safety warning remains visible.', bookingType: 'Boarding', dogId: exactDogId
 };
 
+async function settlePointerTargetAfterScroll(page, locator) {
+  await locator.scrollIntoViewIfNeeded();
+  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+}
+
 async function installReadOnlyFixture(page, options = {}) {
   const fixtureBooking = { ...booking, phone: options.phone ?? booking.phone };
   const actionReads = [];
@@ -175,11 +180,13 @@ for (const [name, viewport, colorScheme, reducedMotion] of [
     await expect(historyHost).toContainText('Dog ID #00017');
     await sectionNav.locator('[data-v11160-tab="profile"]').click();
     const healthHome = profile.locator('[data-profile-subtab="healthHome"]');
+    await settlePointerTargetAfterScroll(page, healthHome);
     await healthHome.click();
     await expect(healthHome).toHaveAttribute('aria-expanded', 'true');
     const safety = profile.locator('[data-profile-subtab="safety"]');
     await page.evaluate(() => { window.__careSafetyPointerEvents.length = 0; window.__careCategoryRenderCalls.length = 0; window.__careCategoryMutations.length = 0; });
     // Locator click remains a real pointer action and checks actionability at press time.
+    await settlePointerTargetAfterScroll(page, safety);
     await safety.click();
     const safetyPointerEvents = await page.evaluate(() => window.__careSafetyPointerEvents);
     expect(safetyPointerEvents.map(event => event.type)).toEqual(['pointerdown', 'pointerup', 'click']);
