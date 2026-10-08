@@ -10,6 +10,7 @@ on:
       - 'playwright.ui.config.js'
       - 'tests/ui-regression.spec.js'
       - 'tests/local-ui-runner.test.js'
+      - 'tests/ui-workflow-parallel.test.js'
       - 'tests/local-network-policy.test.js'
       - 'tests/waffle-bootstrap-lifecycle.test.js'
       - 'tests/care-profile-readiness.test.js'
@@ -71,6 +72,7 @@ on:
       - 'playwright.ui.config.js'
       - 'tests/ui-regression.spec.js'
       - 'tests/local-ui-runner.test.js'
+      - 'tests/ui-workflow-parallel.test.js'
       - 'tests/local-network-policy.test.js'
       - 'tests/waffle-bootstrap-lifecycle.test.js'
       - 'tests/care-profile-readiness.test.js'
@@ -132,23 +134,25 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  ui-regression:
+  contracts:
     runs-on: ubuntu-latest
-    timeout-minutes: 50
-
+    timeout-minutes: 15
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
-
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-
-      - name: Install Playwright and browser engines
+          cache: npm
+      - name: Install contract dependencies
+        timeout-minutes: 5
         run: |
           set -euo pipefail
-          npm ci
+          npm ci --no-audit --no-fund
+      - name: Run Node contract checks
+        run: |
+          set -euo pipefail
           node --test tests/local-ui-runner.test.js
           node --test tests/local-network-policy.test.js
           node --test tests/waffle-bootstrap-lifecycle.test.js
@@ -160,40 +164,111 @@ jobs:
           node --test tests/system-status-release.test.js
           node --test tests/care-navigation-continuity.test.js
           node --test tests/care-return-focus-identity.test.js
-          node node_modules/@playwright/test/cli.js install --with-deps chromium firefox webkit
-          node node_modules/@playwright/test/cli.js test --config=playwright.care-profile.config.js
-          node node_modules/@playwright/test/cli.js test --config=playwright.care-ui-polish.config.js
-          node node_modules/@playwright/test/cli.js test --config=playwright.care-roster.config.js
-          node node_modules/@playwright/test/cli.js test --config=playwright.care-ui-refinements.config.js
-          node node_modules/@playwright/test/cli.js test --config=playwright.care-navigation-accessibility.config.js
-          node node_modules/@playwright/test/cli.js test --config=playwright.care-scroll-access.config.js
-          node node_modules/@playwright/test/cli.js test --config=playwright.care-loading-feedback.config.js
-          node node_modules/@playwright/test/cli.js test --config=playwright.care-navigation-continuity.config.js
-          node node_modules/@playwright/test/cli.js test --config=tests/mvp-records-notifications.config.js
-          node node_modules/@playwright/test/cli.js test --config=playwright.mvp-observer.config.js
-          node node_modules/@playwright/test/cli.js test --config=playwright.care-overview.config.js
-          node node_modules/@playwright/test/cli.js test --config=playwright.returning-dogs.config.js
-          node node_modules/@playwright/test/cli.js test --config=playwright.runtime-review.config.js
+          node --test tests/ui-workflow-parallel.test.js
 
+  fixtures:
+    name: Fixture suite (${{ matrix.group }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - group: overview
+            configs: playwright.care-overview.config.js
+          - group: refinements
+            configs: playwright.care-ui-refinements.config.js playwright.care-profile.config.js playwright.care-ui-polish.config.js playwright.care-roster.config.js playwright.returning-dogs.config.js
+          - group: navigation
+            configs: playwright.care-scroll-access.config.js playwright.care-loading-feedback.config.js playwright.care-navigation-accessibility.config.js
+          - group: records
+            configs: playwright.care-navigation-continuity.config.js tests/mvp-records-notifications.config.js playwright.mvp-observer.config.js playwright.runtime-review.config.js
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - name: Install dependencies and fixture browsers
+        timeout-minutes: 5
+        run: |
+          set -euo pipefail
+          npm ci --no-audit --no-fund
+          for source in /etc/apt/sources.list /etc/apt/sources.list.d/*.list /etc/apt/sources.list.d/*.sources /etc/apt/apt-mirrors*.txt; do
+            if [[ -f "$source" ]]; then
+              sudo sed -i 's|azure.archive.ubuntu.com|archive.ubuntu.com|g' "$source"
+            fi
+          done
+          node node_modules/@playwright/test/cli.js install --with-deps chromium firefox webkit
+      - name: Run fixture configurations
+        env:
+          FIXTURE_CONFIGS: ${{ matrix.configs }}
+          FIXTURE_GROUP: ${{ matrix.group }}
+        run: |
+          set -euo pipefail
+          for config in $FIXTURE_CONFIGS; do
+            name="${config##*/}"
+            name="${name%.js}"
+            node node_modules/@playwright/test/cli.js test --config="$config" --output="test-results/$FIXTURE_GROUP-$name"
+          done
+      - name: Upload fixture reports and evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-regression-fixtures-${{ matrix.group }}-${{ github.run_id }}-${{ github.run_attempt }}
+          if-no-files-found: warn
+          retention-days: 14
+          path: |
+            ui-regression-report.json
+            ui-regression-summary.md
+            playwright-report/
+            test-results/
+            evidence/
+
+  placement:
+    name: Placement shard ${{ matrix.shard }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - name: Install dependencies and placement browsers
+        timeout-minutes: 5
+        run: |
+          set -euo pipefail
+          npm ci --no-audit --no-fund
+          for source in /etc/apt/sources.list /etc/apt/sources.list.d/*.list /etc/apt/sources.list.d/*.sources /etc/apt/apt-mirrors*.txt; do
+            if [[ -f "$source" ]]; then
+              sudo sed -i 's|azure.archive.ubuntu.com|archive.ubuntu.com|g' "$source"
+            fi
+          done
+          node node_modules/@playwright/test/cli.js install --with-deps chromium firefox webkit
       - name: Run cross-device UI placement regression
-        id: ui
         env:
           WAFFLE_BASE_URL: http://127.0.0.1:4173
         run: |
           set -euo pipefail
           set +e
-          npm run test:ui:local
+          npm run test:ui:local -- --shard=${{ matrix.shard }}/3
           test_exit=$?
           set -e
-          echo "test_exit=$test_exit" >> "$GITHUB_OUTPUT"
           node scripts/summarize-ui-regression.js
-          exit 0
-
-      - name: Upload UI regression report and failure evidence
+          exit "$test_exit"
+      - name: Upload placement report and failure evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: cross-device-ui-regression-${{ github.run_id }}
+          name: cross-device-ui-regression-shard-${{ matrix.shard }}-${{ github.run_id }}-${{ github.run_attempt }}
           if-no-files-found: warn
           retention-days: 14
           path: |
@@ -202,8 +277,20 @@ jobs:
             playwright-report/
             test-results/
 
-      - name: Fail workflow when UI regression fails
-        if: steps.ui.outputs.test_exit != '0'
+  ui-regression:
+    name: ui-regression
+    if: always()
+    needs: [contracts, fixtures, placement]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require all regression jobs to succeed
+        env:
+          CONTRACTS_RESULT: ${{ needs.contracts.result }}
+          FIXTURES_RESULT: ${{ needs.fixtures.result }}
+          PLACEMENT_RESULT: ${{ needs.placement.result }}
         run: |
-          echo "One or more cross-device UI regression checks failed. See ui-regression-summary.md and the Playwright artifact for explanations, screenshots, traces and video."
-          exit 1
+          set -euo pipefail
+          if [[ "$CONTRACTS_RESULT" != success || "$FIXTURES_RESULT" != success || "$PLACEMENT_RESULT" != success ]]; then
+            echo "Cross-device UI regression failed: contracts=$CONTRACTS_RESULT fixtures=$FIXTURES_RESULT placement=$PLACEMENT_RESULT"
+            exit 1
+          fi
