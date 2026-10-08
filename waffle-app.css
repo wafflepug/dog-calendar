@@ -7012,36 +7012,55 @@ body.dark-theme .directory-profile-read-status[data-state="error"] {
     min-height: 0;
 }
 
-.p4-directory-actions {
-    margin: 10px 0 0;
+.p4-booking-context[hidden] { display: none; }
+.p4-booking-context {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 7px;
+    margin: 0 0 10px;
+    padding: 10px 12px;
+    border: 1px solid color-mix(in srgb, var(--wh75-accent, #7c3aed) 35%, var(--wh-border, #cbd5e1));
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--wh75-accent, #7c3aed) 9%, var(--wh-surface, #fff));
     color: var(--wh-text, #172033);
+    font-size: 13px;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
 }
+
+.p4-booking-context strong,
+.p4-booking-context [data-p4-context-dog] { font-weight: 800; }
+
+.p4-booking-context [data-p4-context-number],
+.p4-booking-context [data-p4-context-stay],
+.p4-booking-context [data-p4-context-new-dates] {
+    color: var(--wh-text-muted, #475569);
+    font-size: 13px;
+}
+
+.p4-directory-actions { margin: 10px 0 0; color: var(--wh-text, #172033); }
 
 .p4-directory-actions > summary {
     width: fit-content;
     min-height: 44px;
     display: flex;
     align-items: center;
-    padding: 0 10px;
+    padding: 0 12px;
     border: 1px solid var(--wh-border, #cbd5e1);
     border-radius: 9px;
     color: var(--wh-text-muted, #475569);
     background: var(--wh-surface, #fff);
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 800;
     cursor: pointer;
 }
 
-.p4-directory-action-list {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    padding-top: 8px;
-}
+.p4-directory-action-list { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 8px; }
 
-.p4-directory-action-list button {
+.directory-card.is-profile-active .p4-directory-actions .p4-directory-action-list button {
     display: grid;
-    gap: 3px;
+    gap: 4px;
     min-width: min(220px, 100%);
     min-height: 48px;
     padding: 8px 10px;
@@ -7051,30 +7070,27 @@ body.dark-theme .directory-profile-read-status[data-state="error"] {
     color: var(--wh-text, #172033);
     text-align: left;
     font: inherit;
-    font-size: 13px;
+    font-size: 13px !important;
     font-weight: 800;
     cursor: pointer;
 }
 
-.p4-directory-action-list button small {
+.directory-card.is-profile-active .p4-directory-actions .p4-directory-action-list button small {
     color: var(--wh-text-muted, #475569);
-    font-size: 11px;
+    font-size: 13px !important;
+    line-height: 1.35;
     font-weight: 600;
 }
 
 .p4-directory-actions > summary:focus-visible,
-.p4-directory-action-list button:focus-visible {
-    outline: 2px solid var(--wh-focus, #2563eb);
-    outline-offset: 2px;
-}
+.p4-directory-action-list button:focus-visible { outline: 2px solid var(--wh-focus, #2563eb); outline-offset: 2px; }
 
 @media (max-width: 520px) {
     .p4-directory-actions { margin-top: 8px; }
     .p4-directory-actions > summary { width: 100%; box-sizing: border-box; }
     .p4-directory-action-list { display: grid; grid-template-columns: minmax(0, 1fr); }
-    .p4-directory-action-list button { width: 100%; box-sizing: border-box; }
+    .directory-card.is-profile-active .p4-directory-actions .p4-directory-action-list button { width: 100%; box-sizing: border-box; }
 }
-
 .directory-card.is-profile-active .directory-photo-shell {
     width: 88px !important;
     height: 88px !important;

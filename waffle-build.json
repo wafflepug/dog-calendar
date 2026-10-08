@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.10.08.05",
-  "releaseName": "Care Routine Clarity",
+  "assetRevision": "2026.10.08.06",
+  "releaseName": "Care Booking Tools",
   "careIteration": {
     "returningDogSuggestions": true,
     "reviewedCareInheritance": true,
