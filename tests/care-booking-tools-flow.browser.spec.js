@@ -182,3 +182,20 @@ test('stale generic identity failure cannot reset a newer Book Again action', as
   await page.evaluate(rows => window.pendingReads[1].resolve({ identities: rows }), [{ dogId: dogA, dogNumber: '00001', dogName: 'Luna', breed: 'Pug', ownerName: 'Alex' }]);
   await expect(page.locator('#p4DogIdentity')).toHaveValue(dogA);
 });
+
+test('post-save identity refresh failure blocks another confirmed save', async ({ page }) => {
+  await setup(page);
+  await page.evaluate(dogA => { let lists = 0; window.identityRead = payload => {
+    if (payload.action === 'list_dog_identities') { lists++; return lists === 1 ? Promise.resolve({ identities: [{ dogId: dogA, dogNumber: '00001', dogName: 'Luna', breed: 'Pug', ownerName: 'Alex' }] }) : Promise.reject(new Error('registry offline after save')); }
+    return Promise.resolve({ history: { dogId: payload.dogId, previousStays: [], stayCount: 0 } });
+  }; window.WAFFLE_PHASE4_BOOKING.openReturningBooking({ dogName: 'Luna', dogId: dogA }); }, dogA);
+  await expect(page.locator('#p4DogIdentity')).toHaveValue(dogA);
+  await page.locator('#p4Start').fill('2026-12-10');
+  await page.locator('#p4End').fill('2026-12-12');
+  await page.locator('#p4SaveConfirmed').click();
+  await expect.poll(() => page.evaluate(() => window.fixtureWrites.length)).toBe(1);
+  await expect(page.locator('#p4DogIdentityStatus')).toContainText('Dog ID refresh failed');
+  await expect(page.locator('#p4SaveConfirmed')).toBeDisabled();
+  await page.evaluate(() => window.WAFFLE_PHASE4_BOOKING.save('confirmed'));
+  expect(await page.evaluate(() => window.fixtureWrites.length)).toBe(1);
+});
