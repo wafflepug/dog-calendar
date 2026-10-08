@@ -195,6 +195,11 @@ jobs:
         run: |
           set -euo pipefail
           npm ci --no-audit --no-fund
+          for source in /etc/apt/sources.list /etc/apt/sources.list.d/ubuntu.sources; do
+            if [[ -f "$source" ]]; then
+              sudo sed -i 's|azure.archive.ubuntu.com|archive.ubuntu.com|g' "$source"
+            fi
+          done
           node node_modules/@playwright/test/cli.js install --with-deps chromium webkit
       - name: Run fixture configurations
         env:
@@ -242,6 +247,11 @@ jobs:
         run: |
           set -euo pipefail
           npm ci --no-audit --no-fund
+          for source in /etc/apt/sources.list /etc/apt/sources.list.d/ubuntu.sources; do
+            if [[ -f "$source" ]]; then
+              sudo sed -i 's|azure.archive.ubuntu.com|archive.ubuntu.com|g' "$source"
+            fi
+          done
           node node_modules/@playwright/test/cli.js install --with-deps chromium firefox webkit
       - name: Run cross-device UI placement regression
         env:

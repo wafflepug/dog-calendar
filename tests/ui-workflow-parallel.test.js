@@ -68,3 +68,11 @@ test('browser installation stalls fail within five minutes', () => {
     assert.match(jobs[name], /npm ci --no-audit --no-fund/);
   }
 });
+
+test('browser setup avoids the Azure Ubuntu mirror without changing package signatures', () => {
+  for (const name of ['fixtures', 'placement']) {
+    assert.ok(jobs[name].includes('/etc/apt/sources.list.d/ubuntu.sources'));
+    assert.ok(jobs[name].includes('s|azure.archive.ubuntu.com|archive.ubuntu.com|g'));
+    assert.doesNotMatch(jobs[name], /--allow-unauthenticated|trusted=yes|Check-Valid-Until=false/);
+  }
+});
