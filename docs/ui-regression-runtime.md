@@ -23,7 +23,7 @@ The final required check remains named `ui-regression`. It waits for all three j
 
 ## Runtime expectations
 
-Parallel jobs should reduce elapsed wall-clock time because the previously serial fixture suites and placement shards overlap. A 10–15 minute wall-clock run is an estimate, not a measured result. Total runner minutes may increase because each independent job has its own checkout, dependency installation, and browser setup. The previous run shows browser installation was about 50 seconds; caching the npm package download reduces repeat dependency setup where the hosted runner cache is available. Browser binaries are installed per job.
+Parallel jobs should reduce elapsed wall-clock time because the previously serial fixture suites and placement shards overlap. A 10–15 minute wall-clock run is an estimate, not a measured result. Total runner minutes may increase because each independent job has its own checkout, dependency installation, and browser setup. The previous run shows browser installation was about 50 seconds; caching the npm package download reduces repeat dependency setup where the hosted runner cache is available. Browser binaries are installed per job. Each dependency/browser installation step has a separate five-minute timeout: an infrastructure stall fails promptly with logs instead of consuming the entire 30-minute test job. Test dependency setup uses npm ci --no-audit --no-fund to avoid optional audit/funding requests; test assertions and merge gates are unchanged.
 
 ## Artifacts and local diagnosis
 

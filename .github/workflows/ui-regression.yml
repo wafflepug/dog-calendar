@@ -145,10 +145,14 @@ jobs:
         with:
           node-version: '20'
           cache: npm
+      - name: Install contract dependencies
+        timeout-minutes: 5
+        run: |
+          set -euo pipefail
+          npm ci --no-audit --no-fund
       - name: Run Node contract checks
         run: |
           set -euo pipefail
-          npm ci
           node --test tests/local-ui-runner.test.js
           node --test tests/local-network-policy.test.js
           node --test tests/waffle-bootstrap-lifecycle.test.js
@@ -187,9 +191,10 @@ jobs:
           node-version: '20'
           cache: npm
       - name: Install dependencies and fixture browsers
+        timeout-minutes: 5
         run: |
           set -euo pipefail
-          npm ci
+          npm ci --no-audit --no-fund
           node node_modules/@playwright/test/cli.js install --with-deps chromium webkit
       - name: Run fixture configurations
         env:
@@ -233,9 +238,10 @@ jobs:
           node-version: '20'
           cache: npm
       - name: Install dependencies and placement browsers
+        timeout-minutes: 5
         run: |
           set -euo pipefail
-          npm ci
+          npm ci --no-audit --no-fund
           node node_modules/@playwright/test/cli.js install --with-deps chromium firefox webkit
       - name: Run cross-device UI placement regression
         env:

@@ -61,3 +61,10 @@ test('required ui-regression gate runs on failures and accepts only complete suc
     assert.match(jobs[name], /name: .*\$\{\{ matrix\.(group|shard) \}\}.*\$\{\{ github.run_id \}\}/);
   }
 });
+
+test('browser installation stalls fail within five minutes', () => {
+  for (const name of ['fixtures', 'placement']) {
+    assert.match(jobs[name], /- name: Install dependencies and [^\n]+\n\s+timeout-minutes: 5\n\s+run: \|/);
+    assert.match(jobs[name], /npm ci --no-audit --no-fund/);
+  }
+});
