@@ -94,7 +94,14 @@ test('Back restores the filtered list and opener focus', async ({ page, baseURL 
     const documentY = opener ? opener.getBoundingClientRect().top + window.scrollY : 520;
     window.scrollTo(0, Math.max(0, documentY - 160));
   });
-  const openerBefore = await page.locator('#directory-grid [data-open-directory-profile]').boundingBox();
+  const openerLocator = page.locator('#directory-grid [data-open-directory-profile]');
+  // CSS scroll behavior may animate this fixture scroll; wait for the target to enter the viewport before measuring it.
+  await expect.poll(async () => {
+    const box = await openerLocator.boundingBox();
+    const viewportHeight = page.viewportSize()?.height || 0;
+    return Boolean(box && box.y >= 0 && box.y + box.height <= viewportHeight);
+  }).toBe(true);
+  const openerBefore = await openerLocator.boundingBox();
   expect(openerBefore?.y).toBeGreaterThanOrEqual(0);
   expect((openerBefore?.y || 0) + (openerBefore?.height || 0)).toBeLessThanOrEqual(page.viewportSize()?.height || 0);
   // Clear search was activated with a pointer above. Establish keyboard
