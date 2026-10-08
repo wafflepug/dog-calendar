@@ -280,6 +280,11 @@ test('curated Care summaries surface sitter instructions and keep disclosures re
         failed: window.summarizeCareCategory('safety', {}, 'saved', null, 'error'),
         loading: window.summarizeCareCategory('foodWalks', {}, 'loading', null, 'loading'),
         profileError: window.summarizeCareCategory('healthHome', {}, 'error', null, 'loading'),
+        emptyFood: window.summarizeCareCategory('foodWalks', {}, 'fresh', null, 'loading'),
+        emptyBehaviour: window.summarizeCareCategory('behaviour', {}, 'saved', null, 'loading'),
+        emptyHealth: window.summarizeCareCategory('healthHome', {}, 'saved', null, 'loading'),
+        missingProfile: window.summarizeCareCategory('foodWalks', {}, 'not-found', null, 'loading'),
+        identityConflict: window.summarizeCareCategory('healthHome', {}, 'identity-conflict', null, 'loading'),
         customRisk: window.summarizeCareCategory('behaviour', { aggression: 'Reactive near food' }, 'saved', null, 'loading')
       }));
       expect(statuses.partial.text).toBe('Safety status not loaded');
@@ -289,6 +294,11 @@ test('curated Care summaries surface sitter instructions and keep disclosures re
       expect(statuses.failed.text).toBe('Safety status unavailable');
       expect(statuses.loading.text).toBe('Loading care details…');
       expect(statuses.profileError.text).toBe('Care details unavailable');
+      expect(statuses.emptyFood).toEqual({ text: 'No food or walk details saved', state: 'empty' });
+      expect(statuses.emptyBehaviour).toEqual({ text: 'No behaviour details saved', state: 'empty' });
+      expect(statuses.emptyHealth).toEqual({ text: 'No health or home details saved', state: 'empty' });
+      expect(statuses.missingProfile).toEqual({ text: 'No saved care profile', state: 'unknown' });
+      expect(statuses.identityConflict).toEqual({ text: 'Review care record identity', state: 'unknown' });
       expect(statuses.customRisk.text).toContain('Aggression: Reactive near food');
 
       await page.locator('[data-directory-detail="profile"]').first().evaluate(node => { node.dataset.profileReadState = 'error'; });
@@ -493,8 +503,8 @@ test('server identity conflict blocks legacy profile, belongings, and safety fal
     card.dataset.profileIdentityBlockedReason = 'missing';
     window.renderBrief(card);
   });
-  await expect(page.locator('[data-care-brief-feeding]')).toHaveText('Not provided');
-  await expect(page.locator('[data-care-brief-medication]')).toHaveText('Not provided');
+  await expect(page.locator('[data-care-brief-feeding]')).toHaveText('No saved feeding instructions');
+  await expect(page.locator('[data-care-brief-medication]')).toHaveText('No saved medication instructions');
   await expect(page.locator('[data-care-brief-freshness]')).toHaveText('No saved care record');
   await expect(page.locator('[data-care-brief-feeding]')).not.toContainText('identity review');
 });

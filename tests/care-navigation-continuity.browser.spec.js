@@ -113,6 +113,9 @@ test('Back restores the filtered list and opener focus', async ({ page, baseURL 
     return style.outlineStyle !== 'none' && style.outlineColor !== style.backgroundColor;
   })).toBe(true);
   await page.keyboard.press('Enter');
+  const selectedProfile = page.locator('.directory-card.is-profile-active');
+  await expect(selectedProfile.locator('[data-toggle-profile-edit]')).toHaveAttribute('aria-label', 'Edit detailed care for Continuity Dog');
+  await expect(selectedProfile.locator('[data-cancel-profile-edit]')).toHaveAttribute('aria-label', 'Discard detailed care changes for Continuity Dog');
   const tabMetrics = await page.evaluate(() => {
     const measure = element => {
       const style = element ? getComputedStyle(element) : null;

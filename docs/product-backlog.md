@@ -5,6 +5,8 @@ Reviewed 17 September 2026. Repository: `wafflepug/dog-calendar`; always start i
 
 ## Owner priority: Care UI refinements next
 
+Completed 8 October 2026: six selected-profile refinements covering medication states, labeled feeding, category-specific empty states, contextual Edit/Discard names, readable source/count badges and unclipped curated summaries. See [Care routine clarity](care-routine-clarity.md) for acceptance checks and the next bounded action-layout item.
+
 Care profile readiness is implemented in this release: saved attributes remain visible, profile reads have scoped timeout/retry, and responses cannot update a different selected dog. Next prioritize [Care UI refinements](care-ui-refinement-backlog.md): readable overview hierarchy, then lazy tabs and preserved work. Investigate reported 3–5 minute profile access with actual request timings; configured timeout limits alone do not prove the cause. Deployment metadata and general diagnostics move below these Care tasks.
 
 ## Completed — Safe confirmed-stay identity (#139)

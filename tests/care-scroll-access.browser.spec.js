@@ -12,7 +12,40 @@ const booking = {
 
 async function settlePointerTargetAfterScroll(page, locator) {
   await locator.scrollIntoViewIfNeeded();
-  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  const selector = await locator.evaluate(element =>
+    `.directory-card.is-profile-active [data-profile-subtab="${element.dataset.profileSubtab}"]`
+  );
+  await page.evaluate(targetSelector => {
+    window.__carePointerTargetReadiness ||= Object.create(null);
+    window.__carePointerTargetReadiness[targetSelector] = null;
+  }, selector);
+  try {
+    await page.waitForFunction(targetSelector => {
+      const target = document.querySelector(targetSelector);
+      if (!target?.isConnected) return false;
+      const rect = target.getBoundingClientRect();
+      const x = rect.left + rect.width / 2;
+      const y = rect.top + rect.height / 2;
+      const hit = document.elementFromPoint(x, y);
+      const hitReady = hit === target || target.contains(hit);
+      const visible = rect.width > 0 && rect.height > 0 && rect.left >= 0 && rect.top >= 0 && rect.right <= innerWidth && rect.bottom <= innerHeight;
+      const previous = window.__carePointerTargetReadiness[targetSelector];
+      const unchanged = previous &&
+        Math.abs(previous.left - rect.left) <= 0.25 &&
+        Math.abs(previous.top - rect.top) <= 0.25 &&
+        Math.abs(previous.width - rect.width) <= 0.25 &&
+        Math.abs(previous.height - rect.height) <= 0.25;
+      const stableFrames = visible && hitReady ? (unchanged ? previous.stableFrames + 1 : 1) : 0;
+      const sample = { left: rect.left, top: rect.top, width: rect.width, height: rect.height, centerX: x, centerY: y, hitTag: hit?.tagName?.toLowerCase() || null, hitReady, visible, stableFrames };
+      window.__carePointerTargetReadiness[targetSelector] = sample;
+      if (stableFrames < 3) return false;
+      (window.__carePointerTargetReadinessLog ||= []).push({ selector: targetSelector, ...sample });
+      return true;
+    }, selector, { polling: 'raf', timeout: 10_000 });
+  } catch (error) {
+    const lastSample = await page.evaluate(targetSelector => window.__carePointerTargetReadiness?.[targetSelector] || null, selector).catch(() => null);
+    throw new Error(`Care pointer target did not reach stable, hit-ready geometry: ${JSON.stringify({ selector, lastSample })}. ${error.message}`);
+  }
 }
 
 async function installReadOnlyFixture(page, options = {}) {
@@ -82,7 +115,18 @@ for (const [name, viewport, colorScheme, reducedMotion] of [
   test(`late handover pointer access ${name}`, async ({ page, baseURL }) => {
     await page.setViewportSize(viewport);
     await page.emulateMedia({ colorScheme, reducedMotion });
-    await page.clock.setFixedTime(new Date('2026-09-18T12:00:00Z'));
+    await page.addInitScript(() => {
+      const NativeDate = Date;
+      const fixedNow = NativeDate.UTC(2026, 8, 18, 12, 0, 0);
+      function FixedDate(...args) {
+        if (!new.target) return new NativeDate(fixedNow).toString();
+        return Reflect.construct(NativeDate, args.length ? args : [fixedNow], new.target);
+      }
+      FixedDate.prototype = NativeDate.prototype;
+      Object.setPrototypeOf(FixedDate, NativeDate);
+      FixedDate.now = () => fixedNow;
+      globalThis.Date = FixedDate;
+    });
     await page.addInitScript(mode => {
       localStorage.setItem('theme', mode);
       window.__careActionScrollBehaviors = [];
@@ -90,6 +134,8 @@ for (const [name, viewport, colorScheme, reducedMotion] of [
       window.__careCategoryRenderCalls = [];
       window.__careCategoryMutations = [];
       window.__careSafetyPointerTarget = null;
+      window.__carePointerTargetReadiness = Object.create(null);
+      window.__carePointerTargetReadinessLog = [];
       const scrollables = element => {
         const result = [];
         for (let node = element?.parentElement; node && node !== document.documentElement; node = node.parentElement) {
@@ -158,6 +204,19 @@ for (const [name, viewport, colorScheme, reducedMotion] of [
     const actionReads = await installReadOnlyFixture(page);
     await page.goto(`${baseURL}/directory.html?mobileHierarchy=1`, { waitUntil: 'domcontentloaded' });
     await page.waitForFunction(() => document.documentElement.dataset.waffleUiReady === 'true');
+    const clockSanity = await page.evaluate(async () => {
+      const before = performance.now();
+      await new Promise(requestAnimationFrame);
+      return {
+        now: Date.now(),
+        callableDateIsString: typeof Date() === 'string',
+        parsedDate: new Date('2026-09-18T12:00:00.000Z').getTime(),
+        dateInstance: new Date() instanceof Date,
+        performanceAdvanced: performance.now() > before,
+        playwrightClockInstalled: Boolean(window.__pwClock)
+      };
+    });
+    expect(clockSanity).toEqual({ now: Date.UTC(2026, 8, 18, 12, 0, 0), callableDateIsString: true, parsedDate: Date.UTC(2026, 8, 18, 12, 0, 0), dateInstance: true, performanceAdvanced: true, playwrightClockInstalled: false });
     await expect.poll(() => page.locator('.directory-card[data-directory-stay-key]').count()).toBe(1);
     const rosterRow = page.locator('[data-open-directory-profile]');
     await rosterRow.evaluate(button => button.click());
@@ -190,7 +249,7 @@ for (const [name, viewport, colorScheme, reducedMotion] of [
     await safety.click();
     const safetyPointerEvents = await page.evaluate(() => window.__careSafetyPointerEvents);
     expect(safetyPointerEvents.map(event => event.type)).toEqual(['pointerdown', 'pointerup', 'click']);
-    expect(safetyPointerEvents.every(event => event.target === 'safety' && event.hit === 'safety'), JSON.stringify({ safetyPointerEvents, categoryRenderCalls: await page.evaluate(() => window.__careCategoryRenderCalls), categoryMutations: await page.evaluate(() => window.__careCategoryMutations) }, null, 2)).toBe(true);
+    expect(safetyPointerEvents.every(event => event.target === 'safety' && event.hit === 'safety'), JSON.stringify({ safetyPointerEvents, pointerTargetReadiness: await page.evaluate(() => window.__carePointerTargetReadinessLog), categoryRenderCalls: await page.evaluate(() => window.__careCategoryRenderCalls), categoryMutations: await page.evaluate(() => window.__careCategoryMutations) }, null, 2)).toBe(true);
     for (const event of safetyPointerEvents) {
       expect(event.profileTransform.a).toBeCloseTo(1, 5);
       expect(event.profileTransform.b).toBeCloseTo(0, 5);

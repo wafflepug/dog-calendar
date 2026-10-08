@@ -274,11 +274,99 @@ test('Care Brief shows cached safety before the profile read and refreshes feedi
   expect(fixture.profileCalls.get(key)).toBeUndefined();
 
   await openProfile(page);
-  await expect(brief.locator('[data-care-brief-feeding]')).toHaveText('07:00 and 17:00 · 1 cup · Sensitive formula');
+  await expect(brief.locator('[data-care-brief-feeding]')).toHaveText('Times: 07:00 and 17:00 · Amount: 1 cup · Food: Sensitive formula');
   await expect(brief.locator('[data-care-brief-medication]')).toHaveText('Give after dinner');
   await expect(brief.locator('[data-care-brief-freshness]')).toHaveAttribute('data-state', 'saved');
   await expect(brief.locator('[data-care-brief-freshness]')).toHaveText('Saved care record · update time not recorded');
   expect(fixture.profileCalls.get(key)).toBe(1);
+});
+
+test('Care overview labels saved values and keeps loading, empty, failed, and missing medication states distinct', async ({ page, baseURL }) => {
+  test.setTimeout(90_000);
+  const miloKey = stayKey(bookings[0]);
+  const nalaKey = stayKey(bookings[1]);
+  let miloStage = 'populated';
+  const fixture = installReadOnlyRuntimeFixture(page, {
+    profileBehavior: (key, call) => {
+      if (key === nalaKey) {
+        return call === 1
+          ? { kind: 'error', message: 'fixture cold read failure' }
+          : { kind: 'success', record: { stayKey: key, identity: { stayKey: key }, resolution: { status: 'not_found' }, intakeAttributes: {} } };
+      }
+      if (miloStage === 'error') return { kind: 'error', message: 'fixture refresh failure' };
+      return {
+        kind: 'success',
+        hold: call === 1,
+        record: {
+          stayKey: key,
+          intakeAttributes: miloStage === 'populated'
+            ? { feedingTimes: '7 am', foodAmount: '1 cup', medicationInstructions: 'No medications recorded' }
+            : {},
+          intakeAttributesSource: 'Synthetic saved profile'
+        }
+      };
+    }
+  });
+  await openDirectory(page, baseURL, fixture);
+  const milo = await openProfile(page, 'Milo');
+  const miloBrief = milo.locator('[data-directory-care-brief]');
+  const miloStatus = milo.locator('[data-directory-profile-read-status]');
+  await expect(miloBrief.locator('[data-care-brief-feeding]')).toHaveText('Loading with full profile…');
+  await expect(miloBrief.locator('[data-care-brief-medication]')).toHaveText('Loading with full profile…');
+  fixture.release(miloKey);
+  await expect(miloStatus).toHaveAttribute('data-state', 'fresh');
+  await expect(miloBrief.locator('[data-care-brief-feeding]')).toHaveText('Times: 7 am · Amount: 1 cup');
+  await expect(miloBrief.locator('[data-care-brief-medication]')).toHaveText('No medications recorded');
+
+  miloStage = 'empty';
+  await page.evaluate(async () => {
+    const card = document.querySelector('.directory-card[data-directory-dog-name="Milo"]');
+    await loadDirectoryProfileDetail(card, card.querySelector('[data-directory-detail="profile"]'), { force: true });
+  });
+  await expect(miloBrief.locator('[data-care-brief-feeding]')).toHaveText('No feeding instructions saved');
+  await expect(miloBrief.locator('[data-care-brief-medication]')).toHaveText('No medication instructions saved');
+
+  miloStage = 'error';
+  await page.evaluate(async () => {
+    const card = document.querySelector('.directory-card[data-directory-dog-name="Milo"]');
+    await loadDirectoryProfileDetail(card, card.querySelector('[data-directory-detail="profile"]'), { force: true });
+  });
+  await expect(miloStatus).toHaveAttribute('data-state', 'error');
+  await expect(miloBrief.locator('[data-care-brief-feeding]')).toHaveText('No feeding instructions saved');
+  await expect(miloBrief.locator('[data-care-brief-medication]')).toHaveText('No medication instructions saved');
+  await expect(miloBrief.locator('[data-care-brief-freshness]')).toContainText('Refresh failed');
+
+  await page.locator('#directoryProfileBackBar .directory-profile-back-btn').click();
+  const nala = await openProfile(page, 'Nala');
+  const nalaBrief = nala.locator('[data-directory-care-brief]');
+  const nalaStatus = nala.locator('[data-directory-profile-read-status]');
+  await expect(nalaStatus).toHaveAttribute('data-state', 'error');
+  await expect(nalaBrief.locator('[data-care-brief-feeding]')).toHaveText('Feeding details unavailable');
+  await expect(nalaBrief.locator('[data-care-brief-medication]')).toHaveText('Medication details unavailable');
+  await nala.locator('[data-retry-directory-profile-read]').click();
+  await expect(nalaStatus).toHaveAttribute('data-state', 'not-found');
+  await expect(nalaBrief.locator('[data-care-brief-feeding]')).toHaveText('No saved feeding instructions');
+  await expect(nalaBrief.locator('[data-care-brief-medication]')).toHaveText('No saved medication instructions');
+
+  await page.evaluate(() => {
+    const card = document.querySelector('.directory-card[data-directory-dog-name="Milo"]');
+    const identity = getDirectoryProfileReadIdentity(card);
+    directoryProfileDetailCache[identity.cacheKey] = {
+      stayKey: identity.stayKey,
+      intakeAttributes: {
+        feedingTimes: 'Private feeding schedule',
+        medicationInstructions: 'Private medication instructions'
+      }
+    };
+    card.dataset.profileIdentityBlocked = identity.cacheKey;
+    card.dataset.profileIdentityBlockedReason = 'conflict';
+    card.querySelector('[data-directory-detail="profile"]').dataset.profileReadState = 'identity-conflict';
+    renderDirectoryCareBrief(card);
+  });
+  await expect(miloBrief.locator('[data-care-brief-feeding]')).toHaveText('Care record needs identity review');
+  await expect(miloBrief.locator('[data-care-brief-medication]')).toHaveText('Care record needs identity review');
+  await expect(miloBrief).not.toContainText('Private feeding schedule');
+  await expect(miloBrief).not.toContainText('Private medication instructions');
 });
 
 test('Records & forms shows resolved safety and document states with one primary next action', async ({ page, baseURL }) => {
