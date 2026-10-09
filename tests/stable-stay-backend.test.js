@@ -15,6 +15,8 @@ const inheritanceStart = code.indexOf('function validateReviewedCareInheritanceV
 const createEnd = code.indexOf('function updateV108BoardingDates_(data)', createStart);
 const updateStart = createEnd;
 const updateEnd = code.indexOf('function updateV108MeetGreetSchedule_(data)', updateStart);
+const updateLookupStart = code.indexOf('function findV108BoardingRowForUpdate_(rows, data) {');
+const updateLookupEnd = code.indexOf('function getV108DogHistory_(data)', updateLookupStart);
 const deleteStart = deleteSource.indexOf('function deleteConfirmedStayV11198Unlocked_(data) {');
 const deleteEnd = deleteSource.indexOf('function deleteConfirmedStayV11198_(data)', deleteStart);
 const deleteWrapperStart = deleteEnd;
@@ -26,7 +28,7 @@ const currentReadEnd = code.indexOf('function getPastGuestDirectoryPayload_(data
 const potentialReadStart = code.indexOf('function readPotentialStayRecords_() {');
 const potentialReadEnd = code.indexOf('function verifyWaffleHousePotentialStaySync()', potentialReadStart);
 assert.ok(wrapperStart >= 0 && wrapperEnd > wrapperStart);
-assert.ok(createStart >= 0 && createEnd > createStart && updateEnd > updateStart);
+assert.ok(createStart >= 0 && createEnd > createStart && updateEnd > updateStart && updateLookupStart >= 0 && updateLookupEnd > updateLookupStart);
 assert.ok(deleteStart >= 0 && deleteEnd > deleteStart && deleteWrapperEnd > deleteWrapperStart);
 assert.ok(coreStart >= 0 && coreEnd > coreStart);
 assert.ok(currentReadStart >= 0 && currentReadEnd > currentReadStart && potentialReadStart >= 0 && potentialReadEnd > potentialReadStart);
@@ -171,7 +173,7 @@ function makeHarness(options = {}) {
       throw new Error(`Unexpected fixture action ${data.action}`);
     };
   vm.createContext(sandbox);
-  const loaded = `${helperSource}\n${code.slice(wrapperStart, wrapperEnd)}\n${code.slice(createStart, createEnd)}\n${code.slice(updateStart, updateEnd)}\n` +
+  const loaded = `${helperSource}\n${code.slice(wrapperStart, wrapperEnd)}\n${code.slice(createStart, createEnd)}\n${code.slice(updateLookupStart, updateLookupEnd)}\n${code.slice(updateStart, updateEnd)}\n` +
     (options.actualCore ? `${code.slice(coreStart, coreEnd)}\n${deleteSource}\n` : '') +
   `${code.slice(inheritanceStart, createStart)}\n${code.slice(currentReadStart, currentReadEnd)}\n${code.slice(potentialReadStart, potentialReadEnd)}\n` +
     'this.createV108Boarding_ = createV108Boarding_; this.updateV108BoardingDates_ = updateV108BoardingDates_;';
@@ -454,4 +456,63 @@ function potentialRequest(action, id, stayId, values = {}) {
   assert.throws(() => h.sandbox.assertStayRowActionCompatibleV11225_(h.bookings, 2, 'delete_confirmed_stay', {}), /requested type/);
 }
 
+// Legacy confirmed rows with an empty type resolve as Boarding, matching the
+// guest directory. Exact dates and supplied Dog ID remain mandatory identity.
+{
+  const dogId = '00000000-0000-4000-8000-000000000321';
+  const otherDogId = '00000000-0000-4000-8000-000000000322';
+  const blankTypeRow = (id, end = '2026-10-11') => ['', 'Coco', 'Poodle', '2026-09-25', end, 'Owner', '0412345678', '', '', '', '', '', id, '#00001', '', ''];
+  const rows = [header.concat(['Stay ID', 'Last Stay Mutation ID']), blankTypeRow(dogId)];
+  const exactData = { action: 'update_boarding_dates', dogName: 'Coco', dogId,
+    originalStartDate: '2026-09-25', originalEndDate: '2026-10-11' };
+  const exact = makeHarness({ rows });
+  assert.equal(exact.sandbox.safeLegacyStayRowV11225_(exact.bookings.getDataRange().getValues(), exactData.action, exactData), 2,
+    'a blank confirmed type resolves when exact dates and Dog ID match');  const whitespaceType = makeHarness({ rows: [rows[0], blankTypeRow(dogId)] });
+  whitespaceType.bookings.rows[1][11] = '   ';
+  assert.equal(whitespaceType.sandbox.safeLegacyStayRowV11225_(whitespaceType.bookings.getDataRange().getValues(), exactData.action, exactData), 2,
+    'a whitespace-only confirmed type is treated like a blank type');
+
+  const ambiguous = makeHarness({ rows: [rows[0], blankTypeRow(dogId), blankTypeRow(otherDogId)] });
+  assert.throws(() => ambiguous.sandbox.safeLegacyStayRowV11225_(ambiguous.bookings.getDataRange().getValues(), exactData.action,
+    { ...exactData, dogId: '' }), /Several bookings match/, 'multiple matching blank-type rows stay ambiguous');
+  assert.equal(exact.sandbox.safeLegacyStayRowV11225_(exact.bookings.getDataRange().getValues(), exactData.action,
+    { ...exactData, dogId: otherDogId }), -1, 'a conflicting Dog ID cannot select the row');
+  assert.equal(exact.sandbox.safeLegacyStayRowV11225_(exact.bookings.getDataRange().getValues(), exactData.action,
+    { ...exactData, originalEndDate: '2026-10-12' }), -1, 'an incorrect original end date cannot select the row');
+
+  assert.equal(exact.sandbox.safeLegacyStayRowV11225_(exact.bookings.getDataRange().getValues(), exactData.action,
+    { ...exactData, phone: '0499999999' }), -1, 'a conflicting phone cannot select the row');
+
+  const updateHarness = makeHarness({ rows: [rows[0], blankTypeRow(dogId)] });
+  const updatePayload = { action: 'update_boarding_dates', clientMutationId: 'mutation-blank-type-coco', stayId: '',
+    dogName: 'Coco', originalDogName: 'Coco', dogId, breed: 'Poodle', ownerName: 'Owner', phone: '0412345678',
+    originalStartDate: '2026-09-25', originalEndDate: '2026-10-11', startDate: '2026-09-25', endDate: '2026-10-13' };
+  const updated = updateHarness.sandbox.processSheetActionWithV108Receipt_(updatePayload);
+  assert.equal(updated.result, 'success', 'the full receipt wrapper updates a unique blank-type legacy booking');
+  assert.equal(updateHarness.bookings.rows[1][4], '2026-10-13');
+  assert.equal(updateHarness.bookings.rows[1][11], '', 'normalizing blank type does not rewrite the booking-type column');
+  assert.equal(updateHarness.bookings.rows[1][12], dogId, 'the existing Dog ID remains unchanged');
+  const replay = updateHarness.sandbox.processSheetActionWithV108Receipt_({
+    action: 'update_boarding_dates', clientMutationId: updatePayload.clientMutationId, stayId: '',
+    dogName: 'Coco', originalDogName: 'Coco', dogId, breed: 'Poodle', ownerName: 'Owner', phone: '0412345678',
+    originalStartDate: '2026-09-25', originalEndDate: '2026-10-11', startDate: '2026-09-25', endDate: '2026-10-13'
+  });
+  assert.equal(replay.duplicate, true, 'the same blank-type date mutation replays its receipt');
+  assert.equal(updateHarness.bookings.getLastRow(), 2, 'receipt replay does not duplicate the stay');
+  const stableRow = blankTypeRow(dogId);
+  stableRow[14] = stayA;
+  const stable = makeHarness({ rows: [rows[0], stableRow] });
+  assert.doesNotThrow(() => stable.sandbox.assertStayRowActionCompatibleV11225_(stable.bookings, 2,
+    'update_boarding_dates', { dogName: 'Coco', dogId }), 'a stable-ID confirmed row with blank type remains compatible');
+  for (const type of ['Meet & Greet', 'Potential Stay', 'Unrecognised']) {
+    stable.bookings.rows[1][11] = type;
+    assert.throws(() => stable.sandbox.assertStayRowActionCompatibleV11225_(stable.bookings, 2,
+      'update_boarding_dates', { dogName: 'Coco', dogId }), /requested type/, `stable IDs do not make ${type} compatible`);
+
+    const typedLegacy = makeHarness({ rows: [rows[0], blankTypeRow(dogId)] });
+    typedLegacy.bookings.rows[1][11] = type;
+    assert.equal(typedLegacy.sandbox.safeLegacyStayRowV11225_(typedLegacy.bookings.getDataRange().getValues(), exactData.action, exactData), -1,
+      `${type} rows remain excluded from confirmed legacy updates`);
+  }
+}
 console.log('Stable stay backend identity and receipt tests passed.');
