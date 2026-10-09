@@ -59,3 +59,31 @@ test('leaving photo consumer resolves conflicting same-name/date stays by stable
   assert.equal(await sandbox.readPhoto('milo|2026-10-12|2026-10-13', ambiguous), '');
   assert.equal(calls.length, 0);
 });
+
+test('gallery ignores results and errors after switching to another dog', async () => {
+  const source = fs.readFileSync('waffle-v10.8.js', 'utf8');
+  const start = source.indexOf('async function v108RefreshGallery()');
+  const end = source.indexOf('\nfunction v108RenderGallery', start);
+  const host = { innerHTML: 'New dog gallery' };
+  const painted = [];
+  let finish;
+  const card = { isConnected: true, dataset: { directoryStayKey: 'dog-a' } };
+  const sandbox = {
+    v108GalleryCard: card, v108GalleryStayKey: 'dog-a',
+    v108EnsureGalleryModal: () => ({ querySelector: () => host }),
+    v108RenderGallery: record => painted.push(record), escapeDashboardHtml: s => s,
+    window: { WAFFLE_CARE_PROFILE_READS: { read: () => new Promise((resolve, reject) => { finish = { resolve, reject }; }), matches: () => true } }
+  };
+  vm.runInNewContext(source.slice(start, end), sandbox);
+  for (const fail of [false, true]) {
+    sandbox.v108GalleryCard = card; sandbox.v108GalleryStayKey = 'dog-a';
+    const pending = sandbox.v108RefreshGallery();
+    sandbox.v108GalleryCard = { isConnected: true, dataset: { directoryStayKey: 'dog-b' } };
+    sandbox.v108GalleryStayKey = 'dog-b';
+    if (fail) finish.reject(new Error('Old dog request failed'));
+    else finish.resolve({ data: { record: { dogName: 'Dog A' } } });
+    await pending;
+    assert.equal(painted.length, 0);
+    assert.equal(host.innerHTML, 'New dog gallery');
+  }
+});
