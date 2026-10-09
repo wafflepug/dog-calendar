@@ -162,3 +162,18 @@ test('same-key guest replacement during a read cannot receive the previous docum
   assert.equal(h.sandbox.directoryLegacyIntakeCache['stay-a'], undefined);
   assert.equal(h.rendered.length, 0);
 });
+
+
+test('confirmed completion waits for a pre-upload return check before reading fresh state', async () => {
+  let resolvePrior;
+  const calls = [];
+  const sandbox = { hydrateDirectoryLegacyIntakes: async options => calls.push(options), console: { error() {} } };
+  vm.runInNewContext(`${popupSource}\nthis.refresh = refreshLegacyIntakeAfterUpdate;`, sandbox);
+  const context = { identity: { dogId: 'dog-a' }, returnPromise: new Promise(resolve => { resolvePrior = resolve; }) };
+  const completed = sandbox.refresh(context, 'stay-a');
+  assert.equal(context.updated, true);
+  assert.equal(calls.length, 0);
+  resolvePrior();
+  await completed;
+  assert.deepEqual(JSON.parse(JSON.stringify(calls)), [{ force: true, stayKeys: ['stay-a'], expectedIdentity: { dogId: 'dog-a' } }]);
+});

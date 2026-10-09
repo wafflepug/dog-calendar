@@ -25,7 +25,7 @@ Scoped upload-return and Retry status reads use one 15-second attempt; broader b
 | Layout | Check 320/390px and 1440px, light/dark, all five Settings accents | Full labels, long OCR review message, equal desktop actions, 44px targets, text contrast at least 4.5:1 |
 | Physical devices | Repeat PDF return and Care navigation on iPhone and Samsung Fold4, portrait and landscape | PWA opener loss, safe areas, large text and footer clearance; emulation is not physical-device evidence |
 
-Automated tests use read-only synthetic backend fixtures. Local verification: 241 Node checks, five Python contracts, ten Records & forms browser cases across Chromium/WebKit (including all five accents and action contrast), four actual-runtime Care navigation cases across both engines, and the keyboard accessibility journey passed. Final CI and deployment verification are reported with the pull request. No customer records are uploaded during tests.
+Automated tests use read-only synthetic backend fixtures. Local verification: 242 Node checks, five Python contracts, ten Records & forms browser cases across Chromium/WebKit (including all five accents and action contrast), four actual-runtime Care navigation cases across both engines, and the keyboard accessibility journey passed. Final CI and deployment verification are reported with the pull request. No customer records are uploaded during tests.
 
 ## Next backlog item
 

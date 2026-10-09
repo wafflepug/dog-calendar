@@ -4941,8 +4941,7 @@ registerWaffleServiceWorker();
                 let expectedOrigin = '';
                 try { expectedOrigin = new URL(APPS_SCRIPT_WEBAPP_URL).origin; } catch (_) {}
                 if (!isExpectedLegacyIntakeUpdate(event, data, context, expectedOrigin)) return;
-                context.updated = true;
-                context.returnPromise = hydrateDirectoryLegacyIntakes({ force: true, stayKeys: [String(data.stayKey)], expectedIdentity: context.identity }).catch(error => console.error(error));
+                refreshLegacyIntakeAfterUpdate(context, String(data.stayKey));
             }
         });
 
@@ -15182,6 +15181,16 @@ registerWaffleServiceWorker();
         if (!data?.stayKey || (context.stayKey && String(data.stayKey) !== context.stayKey)) return false;
         if (context.documentId && String(data.documentId || '') !== context.documentId) return false;
         return true;
+    }
+
+    function refreshLegacyIntakeAfterUpdate(context, stayKey) {
+        context.updated = true;
+        // Wait for any pre-upload focus read before checking confirmed state.
+        const prior = context.returnPromise || Promise.resolve();
+        context.returnPromise = prior.catch(() => {}).then(() =>
+            hydrateDirectoryLegacyIntakes({ force: true, stayKeys: [stayKey], expectedIdentity: context.identity })
+        ).catch(error => console.error(error)).finally(() => { context.returnPromise = null; });
+        return context.returnPromise;
     }
 
     function buildLegacyIntakeUrl(
