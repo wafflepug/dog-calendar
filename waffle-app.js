@@ -7,6 +7,9 @@ let directoryConsolidatedLoadInProgress = false;
 let directoryConsolidatedLastFetch = 0;
 let directoryBookingStateSignature = '';
 let directorySelectedProfileStayKey = '';
+let directoryLegacyIntakePopupContexts = new Map();
+let directoryLegacyIntakeRequestVersions = new Map();
+let directoryLegacyIntakeReturnUntil = 0;
 /* The list origin is intentionally ephemeral: it is only needed while the
  * profile shell is open and is never written to cache or persistent storage. */
 let directoryProfileNavigationOrigin = null;
@@ -4934,11 +4937,12 @@ registerWaffleServiceWorker();
             }
 
             if (WAFFLE_PAGE === 'directory') {
-                loadGuestDirectoryConsolidated({
-                    force: true
-                }).catch(error =>
-                    console.error(error)
-                );
+                const context = directoryLegacyIntakePopupContexts.get(event.source);
+                let expectedOrigin = '';
+                try { expectedOrigin = new URL(APPS_SCRIPT_WEBAPP_URL).origin; } catch (_) {}
+                if (!isExpectedLegacyIntakeUpdate(event, data, context, expectedOrigin)) return;
+                context.updated = true;
+                context.returnPromise = hydrateDirectoryLegacyIntakes({ force: true, stayKeys: [String(data.stayKey)], expectedIdentity: context.identity }).catch(error => console.error(error));
             }
         });
 
@@ -4963,12 +4967,34 @@ registerWaffleServiceWorker();
                         return;
                     }
 
+                    if (Date.now() < directoryLegacyIntakeReturnUntil) return;
+                    const activeUploader = Array.from(directoryLegacyIntakePopupContexts.values()).at(-1);
+                    if (activeUploader) {
+                        if (activeUploader.stayKey && activeUploader.wasAway && !activeUploader.updated && !activeUploader.returnPromise) {
+                            activeUploader.wasAway = false;
+                            activeUploader.returnPromise = hydrateDirectoryLegacyIntakes({ force: true, stayKeys: [activeUploader.stayKey], expectedIdentity: activeUploader.identity })
+                                .catch(error => console.error(error))
+                                .finally(() => {
+                                    activeUploader.returnPromise = null;
+                                    if (!activeUploader.popup) {
+                                        directoryLegacyIntakePopupContexts.forEach((context, key) => { if (context === activeUploader) directoryLegacyIntakePopupContexts.delete(key); });
+                                        directoryLegacyIntakeReturnUntil = Date.now() + 1500;
+                                    }
+                                });
+                        }
+                        return;
+                    }
+
                     loadGuestDirectoryConsolidated()
                         .catch(error =>
                             console.error(error)
                         );
                 }, 250);
         }
+
+        window.addEventListener('blur', function() {
+            directoryLegacyIntakePopupContexts.forEach(context => { context.wasAway = true; });
+        });
 
         window.addEventListener(
             'focus',
@@ -4978,10 +5004,9 @@ registerWaffleServiceWorker();
         document.addEventListener(
             'visibilitychange',
             function() {
-                if (
-                    document.visibilityState ===
-                    'visible'
-                ) {
+                if (document.visibilityState === 'hidden') {
+                    directoryLegacyIntakePopupContexts.forEach(context => { context.wasAway = true; });
+                } else if (document.visibilityState === 'visible') {
                     refreshDirectoryIntakesAfterReturn();
                 }
             }
@@ -8840,7 +8865,7 @@ registerWaffleServiceWorker();
                 <strong>${escapeDashboardHtml(label)} unavailable</strong>
                 <span>Could not load this record.</span>
             </div>
-            <button type="button" class="directory-intake-action" data-care-record-retry="${escapeDashboardHtml(kind)}" data-stay-key="${escapeDashboardHtml(stayKey)}">Retry</button>
+            <button type="button" class="directory-intake-action" data-care-record-retry="${escapeDashboardHtml(kind)}" data-stay-key="${escapeDashboardHtml(stayKey)}" aria-label="Retry ${escapeDashboardHtml(label)} status for this guest">Retry</button>
         `;
     }
 
@@ -15151,6 +15176,14 @@ registerWaffleServiceWorker();
     }
 
 
+    function isExpectedLegacyIntakeUpdate(event, data, context, expectedOrigin) {
+        const trustedAppsScriptOrigin = event.origin === 'https://script.googleusercontent.com' && expectedOrigin === 'https://script.google.com';
+        if (!context || !context.popup || event.source !== context.popup || (event.origin !== expectedOrigin && !trustedAppsScriptOrigin)) return false;
+        if (!data?.stayKey || (context.stayKey && String(data.stayKey) !== context.stayKey)) return false;
+        if (context.documentId && String(data.documentId || '') !== context.documentId) return false;
+        return true;
+    }
+
     function buildLegacyIntakeUrl(
         stayKey = '',
         documentId = ''
@@ -15192,6 +15225,8 @@ registerWaffleServiceWorker();
             return;
         }
 
+        const requestedStayKey = String(stayKey || '').trim();
+        const requestedDocumentId = String(documentId || '').trim();
         let popup = window.open(
             url,
             'waffleLegacyIntake',
@@ -15205,6 +15240,16 @@ registerWaffleServiceWorker();
                     '_blank'
                 );
         }
+
+        if (!popup) {
+            renderLegacyIntakeUploaderFeedback(requestedStayKey, url);
+            return;
+        }
+        const selectedCard = Array.from(document.querySelectorAll('.directory-card[data-directory-stay-key]')).find(card => String(card.dataset.directoryStayKey || '') === requestedStayKey);
+        const popupContext = { stayKey: requestedStayKey, documentId: requestedDocumentId, popup, updated: false, returnChecked: false, wasAway: false, returnPromise: null, identity: selectedCard ? { stayId: String(selectedCard.dataset.directoryStayId || ''), dogId: String(selectedCard.dataset.directoryDogId || ''), dogNumber: String(selectedCard.dataset.directoryDogNumber || ''), editIdentity: getDirectoryProfileEditIdentity(selectedCard) } : null };
+        directoryLegacyIntakePopupContexts.set(popup, popupContext);
+        const priorFeedback = Array.from(document.querySelectorAll('[data-directory-legacy]')).find(item => String(item.dataset.directoryLegacy || '') === requestedStayKey)?.querySelector('[data-legacy-uploader-feedback]');
+        priorFeedback?.remove();
 
         /*
          * The Apps Script intake page and GitHub dashboard are on
@@ -15228,16 +15273,38 @@ registerWaffleServiceWorker();
                         closeWatch
                     );
 
-                    directoryLegacyIntakeCache = {};
-                    directoryLegacyIntakeCacheLastFetch = 0;
-
-                    hydrateDirectoryLegacyIntakes({
-                        force: true
-                    }).catch(error =>
-                        console.error(error)
-                    );
+                    const context = directoryLegacyIntakePopupContexts.get(popup);
+                    if (context !== popupContext) return;
+                    directoryLegacyIntakePopupContexts.delete(popup);
+                    directoryLegacyIntakeReturnUntil = Date.now() + 1500;
+                    if (!context?.stayKey || context.updated) return;
+                    // A focus check may have started before the upload finished.
+                    // Closing is a separate return signal: check after that read.
+                    const prior = context.returnPromise || Promise.resolve();
+                    prior.finally(() => hydrateDirectoryLegacyIntakes({ force: true, stayKeys: [context.stayKey], expectedIdentity: context.identity }).catch(error => console.error(error)));
                 }, 700);
         }
+    }
+
+    function renderLegacyIntakeUploaderFeedback(stayKey, url) {
+        const strip = Array.from(document.querySelectorAll('[data-directory-legacy]')).find(item => String(item.dataset.directoryLegacy || '') === String(stayKey || ''));
+        if (!strip) return;
+        let feedback = strip.querySelector('[data-legacy-uploader-feedback]');
+        if (!feedback) {
+            feedback = document.createElement('div');
+            feedback.dataset.legacyUploaderFeedback = '';
+            feedback.setAttribute('role', 'status');
+            feedback.setAttribute('aria-live', 'polite');
+            feedback.className = 'directory-record-error';
+            strip.appendChild(feedback);
+        }
+        feedback.innerHTML = `<span>The uploader could not open in a new window.</span> <a class="directory-intake-action" href="${escapeDashboardHtml(url)}" target="_blank" rel="noopener">Open uploader</a>`;
+        feedback.querySelector('a').addEventListener('click', () => {
+            const card = strip.closest('.directory-card');
+            // Native links can open when window.open is blocked; opener-less PWA
+            // returns use the same scoped read without trusting an upload result.
+            directoryLegacyIntakePopupContexts.set(feedback, { stayKey: String(stayKey), popup: null, wasAway: false, updated: false, returnPromise: null, identity: card ? { stayId: String(card.dataset.directoryStayId || ''), dogId: String(card.dataset.directoryDogId || ''), dogNumber: String(card.dataset.directoryDogNumber || ''), editIdentity: getDirectoryProfileEditIdentity(card) } : null });
+        });
     }
 
     function setDirectoryLegacyIntakeStatus(
@@ -15394,13 +15461,31 @@ registerWaffleServiceWorker();
             options.force === true;
 
         const requestedKeys = Array.isArray(options.stayKeys) ? new Set(options.stayKeys.map(String)) : null;
+        const expectedIdentity = options.expectedIdentity || null;
         const cards = Array.from(
             document.querySelectorAll(
                 '.directory-card[data-directory-stay-key]'
             )
-        ).filter(card => !requestedKeys || requestedKeys.has(String(card.dataset.directoryStayKey || '')));
+        ).filter(card => {
+            if (requestedKeys && !requestedKeys.has(String(card.dataset.directoryStayKey || ''))) return false;
+            if (!expectedIdentity) return true;
+            const stableIdentityMatches = (!expectedIdentity.stayId || String(card.dataset.directoryStayId || '') === expectedIdentity.stayId) && (!expectedIdentity.dogId || String(card.dataset.directoryDogId || '') === expectedIdentity.dogId) && (!expectedIdentity.dogNumber || String(card.dataset.directoryDogNumber || '') === expectedIdentity.dogNumber);
+            return stableIdentityMatches && !directoryProfileEditIdentityConflicts(expectedIdentity.editIdentity, getDirectoryProfileEditIdentity(card));
+        });
 
         if (!cards.length) return;
+        const requestCards = new Map();
+        cards.forEach(card => {
+            const key = String(card.dataset.directoryStayKey || '');
+            if (requestCards.has(key)) requestCards.set(key, null);
+            else requestCards.set(key, { stable: ['directoryStayId', 'directoryDogId', 'directoryBookingId'].map(field => String(card.dataset[field] || '')), descriptive: getDirectoryProfileEditIdentity(card) });
+        });
+        const identityStillMatches = key => {
+            const snapshot = requestCards.get(key);
+            const current = Array.from(document.querySelectorAll('.directory-card[data-directory-stay-key]')).filter(card => String(card.dataset.directoryStayKey || '') === key);
+            if (!snapshot || current.length !== 1) return false;
+            return ['directoryStayId', 'directoryDogId', 'directoryBookingId'].every((field, index) => String(current[0].dataset[field] || '') === snapshot.stable[index]) && !directoryProfileEditIdentityConflicts(snapshot.descriptive, getDirectoryProfileEditIdentity(current[0]));
+        };
 
         const keys = Array.from(
             new Set(
@@ -15412,7 +15497,7 @@ registerWaffleServiceWorker();
                             ''
                         ).trim()
                     )
-                    .filter(Boolean)
+                    .filter(key => key && identityStillMatches(key))
             )
         );
 
@@ -15439,6 +15524,13 @@ registerWaffleServiceWorker();
                     !cacheFresh
                 );
 
+        const requestVersions = new Map();
+        keysToFetch.forEach(key => {
+            const version = (directoryLegacyIntakeRequestVersions.get(key) || 0) + 1;
+            directoryLegacyIntakeRequestVersions.set(key, version);
+            requestVersions.set(key, version);
+        });
+
         keys.forEach(key => {
             if (
                 Object.prototype.hasOwnProperty.call(
@@ -15463,38 +15555,27 @@ registerWaffleServiceWorker();
                     stayKeys:
                         keysToFetch
                 }, {
-                    maxAttempts: 2,
-                    timeoutMs: 45000
+                    maxAttempts: requestedKeys ? 1 : 2,
+                    timeoutMs: requestedKeys ? 15000 : 45000
                 });
 
             keysToFetch.forEach(key => {
-                directoryLegacyIntakeCache[key] =
-                    null;
+                if (identityStillMatches(key) && directoryLegacyIntakeRequestVersions.get(key) === requestVersions.get(key)) directoryLegacyIntakeCache[key] = null;
             });
-
-            directoryLegacyIntakeCacheLastFetch =
-                Date.now();
 
             (response.records || [])
                 .forEach(group => {
-                    if (
-                        !group ||
-                        !group.stayKey
-                    ) {
-                        return;
-                    }
-
-                    directoryLegacyIntakeCache[
-                        group.stayKey
-                    ] = group;
+                    const groupKey = String(group?.stayKey || '');
+                    if (!group || !groupKey || !requestVersions.has(groupKey) || !identityStillMatches(groupKey) || directoryLegacyIntakeRequestVersions.get(groupKey) !== requestVersions.get(groupKey)) return;
+                    directoryLegacyIntakeCache[groupKey] = group;
                 });
 
             keysToFetch.forEach(key => {
-                setDirectoryLegacyIntakeStatus(
-                    key,
-                    directoryLegacyIntakeCache[key]
-                );
+                if (!identityStillMatches(key) || directoryLegacyIntakeRequestVersions.get(key) !== requestVersions.get(key)) return;
+                if (!Object.prototype.hasOwnProperty.call(directoryLegacyIntakeCache, key)) directoryLegacyIntakeCache[key] = null;
+                setDirectoryLegacyIntakeStatus(key, directoryLegacyIntakeCache[key]);
             });
+            directoryLegacyIntakeCacheLastFetch = Date.now();
 
         } catch (error) {
             console.error(
@@ -15502,9 +15583,34 @@ registerWaffleServiceWorker();
                 error
             );
             keysToFetch.forEach(key => {
+                if (!identityStillMatches(key) || directoryLegacyIntakeRequestVersions.get(key) !== requestVersions.get(key)) return;
+                const host = Array.from(document.querySelectorAll('[data-directory-legacy]')).find(item => String(item.dataset.directoryLegacy || '') === key);
                 if (!directoryLegacyIntakeCache[key]) {
-                    const host = Array.from(document.querySelectorAll('[data-directory-legacy]')).find(item => String(item.dataset.directoryLegacy || '') === key);
                     renderDirectoryRecordReadFailure(host, key, 'legacy', 'Legacy PDFs');
+                } else if (host) {
+                    host.setAttribute('aria-busy', 'false');
+                    let failure = host.querySelector('[data-legacy-refresh-failure]');
+                    if (!failure) {
+                        failure = document.createElement('div');
+                        failure.dataset.legacyRefreshFailure = '';
+                        failure.setAttribute('role', 'status');
+                        failure.setAttribute('aria-live', 'polite');
+                        failure.className = 'directory-record-error';
+                        failure.textContent = 'Could not refresh. Showing previously available document.';
+                        host.appendChild(failure);
+                    }
+                    let retry = host.querySelector('[data-care-record-retry="legacy"]');
+                    if (!retry) {
+                        retry = document.createElement('button');
+                        retry.type = 'button';
+                        retry.className = 'directory-intake-action';
+                        retry.dataset.careRecordRetry = 'legacy';
+                        retry.dataset.stayKey = key;
+                        retry.setAttribute('aria-label', 'Retry legacy PDF status for this guest');
+                        host.appendChild(retry);
+                    }
+                    retry.disabled = false;
+                    retry.textContent = 'Retry status check';
                 }
             });
         }

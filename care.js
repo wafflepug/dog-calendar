@@ -209,8 +209,8 @@
       if (event.key === 'End') next = buttons.length - 1;
       if (next < 0) return;
       event.preventDefault();
-      const key = String(buttons[next].dataset.v11160Tab || 'profile');
-      select(card, key, { load: true, focus: true });
+      buttons.forEach((item, itemIndex) => item.setAttribute('tabindex', itemIndex === next ? '0' : '-1'));
+      buttons[next].focus();
     });
 
     return nav;
@@ -238,11 +238,17 @@
     if (!nav) return;
     syncPanelSemantics(card, nav);
 
+    const focusedButton = nav.contains(document.activeElement)
+      ? document.activeElement.closest('[data-v11160-tab]')
+      : null;
+    const focusedTab = TAB_KEYS.has(focusedButton?.dataset?.v11160Tab)
+      ? focusedButton.dataset.v11160Tab
+      : key;
     nav.querySelectorAll('[data-v11160-tab]').forEach(button => {
       const active = button.dataset.v11160Tab === key;
       button.classList.toggle('is-active', active);
       button.setAttribute('aria-selected', active ? 'true' : 'false');
-      button.setAttribute('tabindex', active ? '0' : '-1');
+      button.setAttribute('tabindex', button.dataset.v11160Tab === focusedTab ? '0' : '-1');
     });
 
     managedPanels(card).forEach(item => {
@@ -252,6 +258,8 @@
       item.hidden = !active;
       item.classList.toggle('is-v11160-active', active);
       item.setAttribute('aria-hidden', active ? 'false' : 'true');
+      if (active) item.setAttribute('tabindex', '0');
+      else item.removeAttribute('tabindex');
     });
 
     card.dataset.v11160ActiveTab = key;
@@ -648,6 +656,7 @@
     if (legacy) {
       legacy.classList.add('v11160-legacy-tabs');
       legacy.setAttribute('aria-hidden', 'true');
+      legacy.inert = true;
     }
 
     buildNav(card);
@@ -667,6 +676,7 @@
     if (legacy) {
       legacy.classList.remove('v11160-legacy-tabs');
       legacy.removeAttribute('aria-hidden');
+      legacy.inert = false;
     }
     managedPanels(card).forEach(item => {
       delete item.dataset.v11160ManagedPanel;

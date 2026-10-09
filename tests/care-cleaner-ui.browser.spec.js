@@ -140,3 +140,31 @@ for (const theme of ['light', 'dark']) for (const width of [320,390,1440]) test(
       await page.locator('.directory-card.is-profile-active').locator('.directory-care-brief').scrollIntoViewIfNeeded();
       await page.screenshot({path:testInfo.outputPath(`care-compact-detail-${width}-${theme}.png`),fullPage:true});
 });
+
+
+for (const [width, theme] of [[320, 'light'], [1440, 'dark']]) test(`Care section focus preserves the selected details at ${width}-${theme}`, async ({page, baseURL}) => {
+  const calls = await installFixture(page);
+  const card = await openProfile(page, baseURL, calls, width, theme);
+  const overview = card.locator('[data-v11160-tab="profile"]');
+  const items = card.locator('[data-v11160-tab="belongings"]');
+  const panel = card.locator('[data-directory-main-panel="profile"]');
+  const before = Object.fromEntries(calls);
+  await overview.focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(items).toBeFocused();
+  await expect(items).toHaveAttribute('aria-selected', 'false');
+  await expect(overview).toHaveAttribute('aria-selected', 'true');
+  await expect(panel).toBeVisible();
+  expect(Object.fromEntries(calls)).toEqual(before);
+  const tabs = await card.locator('.v11160-desktop-tab').evaluateAll(nodes => nodes.map(node => {
+    const label = node.lastElementChild;
+    const box = node.getBoundingClientRect();
+    return { height: box.height, labelOverflow: label.scrollWidth > label.clientWidth + 1 };
+  }));
+  expect(tabs.every(tab => tab.height >= 44 && !tab.labelOverflow)).toBe(true);
+  await page.keyboard.press('Enter');
+  await expect(items).toHaveAttribute('aria-selected', 'true');
+  await expect(panel).toBeHidden();
+  await overview.click();
+  await expect(card.locator('.intake-profile-field-foodAllergies textarea:disabled')).toHaveValue(longFoodNote);
+});

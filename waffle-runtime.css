@@ -2,8 +2,8 @@
    Build: 2026.08.27.04
    Historical base styles remain compatibility sources during Phase 3A, but pages no longer
    reference them individually. Preserve this import order until modules are folded in. */
-@import url("waffle-app.css?build=2026.08.27.04&rev=2026.10.09.02");
-@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.10.09.02");
+@import url("waffle-app.css?build=2026.08.27.04&rev=2026.10.09.03");
+@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.10.09.03");
 @import url("waffle-v10.8.2.css?build=2026.08.27.04");
 @import url("waffle-v10.8.3.css?build=2026.08.27.04");
 @import url("waffle-v10.8.5.css?build=2026.08.27.04");
@@ -11,12 +11,12 @@
 @import url("waffle-v10.8.7.css?build=2026.08.27.04");
 @import url("waffle-v10.8.8.css?build=2026.08.27.04");
 @import url("waffle-v10.8.9.css?build=2026.08.27.04");
-@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.10.09.02");
+@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.10.09.03");
 @import url("waffle-v11.0.3.css?build=2026.08.27.04");
 @import url("waffle-v11.0.5.css?build=2026.08.27.04");
-@import url("waffle-v11.1.94.css?build=2026.10.09.02");
-@import url("waffle-v11.1.95.css?build=2026.10.09.02");
-@import url("waffle-v11.1.96.css?build=2026.10.09.02&rev=2026.10.09.02");
+@import url("waffle-v11.1.94.css?build=2026.10.09.03");
+@import url("waffle-v11.1.95.css?build=2026.10.09.03");
+@import url("waffle-v11.1.96.css?build=2026.10.09.03&rev=2026.10.09.03");
 
 /* ============================================================
    MOBILE FIRST-PAINT STABILITY GATE
@@ -1804,4 +1804,85 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-
 body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-profile-stay-dates[role="button"] {
   box-sizing: border-box;
   min-height: 48px;
+}
+
+/* Care document actions use a predictable row, with full-width phone targets. */
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-records-body .directory-legacy-actions,
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-records-body .directory-intake-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr));
+  gap: 8px;
+  align-items: stretch;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-records-body .directory-intake-action {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  width: 100%;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.4;
+  text-align: center;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+/* A file's saved state, processing state and metadata remain separate lines. */
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-records-body .directory-legacy-state,
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-records-body .directory-intake-state {
+  gap: 6px;
+  min-width: 0;
+  text-align: left;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-records-body .directory-legacy-ai-status {
+  display: block;
+  justify-self: start;
+  max-width: 100%;
+  margin: 0;
+  padding: 5px 8px;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.4;
+  text-align: left;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .v11160-desktop-tab > span:last-child {
+  white-space: normal;
+  overflow-wrap: normal;
+  word-break: normal;
+  line-height: 1.35;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .v11160-desktop-tab.is-active {
+  box-shadow: inset 0 -3px 0 currentColor;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active [role="tabpanel"]:focus-visible {
+  outline: 2px solid var(--wh-accent, #0f6292);
+  outline-offset: 3px;
+}
+@media (max-width: 768px) {
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .v11160-desktop-tab {
+    flex-direction: column;
+    gap: 3px;
+    padding: 7px 4px;
+    min-height: 58px;
+  }
+}
+@media (max-width: 420px) {
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-records-body .directory-legacy-actions,
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-records-body .directory-intake-actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Retire the old upload-only full-row span on wide layouts. */
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-records-body .directory-legacy-upload-action {
+  grid-column: auto;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-records-body .directory-intake-action.is-primary {
+  color: var(--wh75-accent-ink, #4338ca) !important;
+  background: var(--wh75-accent-soft, #ede9fe) !important;
+  border-color: var(--wh75-accent, #7562db) !important;
 }

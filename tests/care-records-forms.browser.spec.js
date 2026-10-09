@@ -95,7 +95,19 @@ function installFixture(page, options = {}) {
 async function openDirectory(page, baseURL, fixture, width = 390, theme = 'light') {
   await page.setViewportSize({ width, height: 900 });
   await page.emulateMedia({ colorScheme: theme });
-  await page.clock.setFixedTime(new Date('2026-09-18T12:00:00Z'));
+  // Keep native pointer timestamps and timers; only the booking date is fixed.
+  await page.addInitScript(() => {
+    const NativeDate = Date;
+    const fixedNow = NativeDate.UTC(2026, 8, 18, 12, 0, 0);
+    function FixedDate(...args) {
+      if (!new.target) return new NativeDate(fixedNow).toString();
+      return Reflect.construct(NativeDate, args.length ? args : [fixedNow], new.target);
+    }
+    FixedDate.prototype = NativeDate.prototype;
+    Object.setPrototypeOf(FixedDate, NativeDate);
+    FixedDate.now = () => fixedNow;
+    globalThis.Date = FixedDate;
+  });
   await page.addInitScript(mode => localStorage.setItem('theme', mode), theme);
   await page.route('**/*', fixture.handler);
   await page.goto(`${baseURL}/directory.html`, { waitUntil: 'domcontentloaded' });
@@ -294,7 +306,7 @@ test('legacy OCR labels are truthful and stay separate from file metadata', asyn
             statusAndMetadataSeparate: m.top >= p.bottom - 1,
             status: primary.textContent.trim(),
             metadata: meta.textContent.trim(),
-            contrast: [contrast(primary), contrast(meta)],
+            contrast: [contrast(primary), contrast(meta), ...[...document.querySelectorAll('.directory-care-records-body .directory-intake-action')].filter(el => el.getClientRects().length).map(contrast)],
             actions: [...root.querySelectorAll('.directory-intake-action')].filter(el => el.getClientRects().length).map(el => {
               const r = el.getBoundingClientRect(); return [r.width, r.height];
             })
@@ -337,4 +349,102 @@ test('collapsed Records & forms does not trigger additional document reads', asy
   await page.waitForTimeout(150);
   expect(fixture.calls.get('get_intake_statuses') || 0).toBe(initialIntakeReads);
   expect(fixture.calls.get('get_legacy_intake_statuses') || 0).toBe(initialLegacyReads);
+});
+
+
+test('selected document actions align and processing messages stay separate on phone and desktop', async ({ page, baseURL }, testInfo) => {
+  const key = stayKey(bookings[0]);
+  const fixture = installFixture(page, { legacyIntakes: [{ stayKey: key, count: 2, latest: { stayKey: key, documentId: 'legacy-milo', uploadedAt: '2026-09-18T10:00:00Z', aiStatus: 'Review Required', conflictCount: 12, pdfUrl: 'https://example.test/milo.pdf' } }] });
+  await openDirectory(page, baseURL, fixture, 320, 'light');
+  const { records } = await openRecords(page);
+  for (const theme of ['light', 'dark']) {
+    await page.evaluate(mode => document.body.classList.toggle('dark-theme', mode === 'dark'), theme);
+    for (const width of [320, 390, 1440]) {
+      await page.setViewportSize({ width, height: 900 });
+      const legacy = records.locator('[data-directory-legacy]');
+      const geometry = await legacy.evaluate(root => {
+        const actions = [...root.querySelectorAll('.directory-legacy-actions .directory-intake-action')].map(el => { const r = el.getBoundingClientRect(); return { x: r.x, y: r.y, right: r.right, bottom: r.bottom, width: r.width, height: r.height }; });
+        const state = root.querySelector('.directory-legacy-state');
+        return { actions, overflow: root.scrollWidth > root.clientWidth, stateAlignment: getComputedStyle(state).textAlign, processing: getComputedStyle(state.querySelector('.directory-legacy-ai-status')).textAlign };
+      });
+      expect(geometry.overflow).toBe(false);
+      expect(geometry.stateAlignment).toBe('left');
+      expect(geometry.processing).toBe('left');
+      expect(geometry.actions).toHaveLength(2);
+      expect(geometry.actions.every(a => a.width >= 44 && a.height >= 44)).toBe(true);
+      if (width === 1440) {
+        expect(Math.abs(geometry.actions[0].y - geometry.actions[1].y)).toBeLessThan(1);
+        expect(Math.abs(geometry.actions[0].width - geometry.actions[1].width)).toBeLessThan(1);
+      }
+      if (width <= 420) {
+        expect(new Set(geometry.actions.map(a => Math.round(a.x))).size).toBe(1);
+        expect(new Set(geometry.actions.map(a => Math.round(a.width))).size).toBe(1);
+        for (let i = 1; i < geometry.actions.length; i++) expect(geometry.actions[i].y).toBeGreaterThanOrEqual(geometry.actions[i-1].bottom);
+      }
+      await expect(legacy.locator('.directory-legacy-ai-status')).toContainText('12 items to review');
+      await records.scrollIntoViewIfNeeded();
+      await page.screenshot({ path: testInfo.outputPath(`records-actions-${width}-${theme}.png`) });
+    }
+  }
+});
+
+
+test('blocked PDF uploader preserves the selected record and exposes a reachable fallback', async ({ page, baseURL }) => {
+  const key = stayKey(bookings[0]);
+  const fixture = installFixture(page, { legacyIntakes: [{ stayKey: key, count: 1, latest: { documentId: 'saved-milo', pdfUrl: 'https://example.test/milo.pdf', aiStatus: 'Complete' } }] });
+  await openDirectory(page, baseURL, fixture, 320, 'dark');
+  const { records } = await openRecords(page);
+  await page.evaluate(() => { window.open = () => null; });
+  const upload = records.locator('[data-care-record-upload]');
+  await upload.focus();
+  await upload.press('Enter');
+  const feedback = records.locator('[data-legacy-uploader-feedback]');
+  await expect(feedback).toHaveAttribute('role', 'status');
+  await expect(feedback).toContainText('could not open');
+  const link = feedback.getByRole('link', { name: 'Open uploader' });
+  expect(new URL(await link.getAttribute('href')).searchParams.get('stayKey')).toBe(key);
+  await expect(records.locator('.directory-legacy-view')).toHaveAttribute('href', 'https://example.test/milo.pdf');
+  const box = await link.boundingBox();
+  expect(box.width).toBeGreaterThanOrEqual(44); expect(box.height).toBeGreaterThanOrEqual(44);
+  await expect(upload).toBeFocused();
+  expect(fixture.calls.get('get_legacy_intake_statuses') || 0).toBe(0);
+  const before = fixture.calls.get('get_guest_directory');
+  await link.evaluate(node => node.addEventListener('click', event => event.preventDefault(), { once: true }));
+  await link.click();
+  await page.evaluate(() => { window.dispatchEvent(new Event('blur')); window.dispatchEvent(new Event('focus')); });
+  await expect.poll(() => fixture.calls.get('get_legacy_intake_statuses') || 0).toBe(1);
+  expect(fixture.requests.get('get_legacy_intake_statuses').at(-1).stayKeys).toEqual([key]);
+  expect(fixture.calls.get('get_guest_directory')).toBe(before);
+});
+
+test('PDF uploader cancel return refreshes only its stay without claiming an upload', async ({ page, baseURL }) => {
+  const fixture = installFixture(page);
+  await openDirectory(page, baseURL, fixture);
+  const { card, records } = await openRecords(page);
+  await page.evaluate(() => { window.__pdfPopup = { closed: false }; window.open = () => window.__pdfPopup; });
+  const readsBefore = fixture.calls.get('get_guest_directory');
+  await records.locator('[data-care-record-upload]').click();
+  await page.evaluate(() => { window.__pdfPopup.closed = true; });
+  await expect.poll(() => fixture.calls.get('get_legacy_intake_statuses') || 0).toBe(1);
+  expect(fixture.requests.get('get_legacy_intake_statuses').at(-1).stayKeys).toEqual([await card.getAttribute('data-directory-stay-key')]);
+  await expect(records.locator('[data-directory-legacy]')).toContainText('No legacy PDF on file');
+  await expect(records.locator('[data-directory-legacy]')).not.toContainText(/uploaded|saved successfully/i);
+  expect(fixture.calls.get('get_guest_directory')).toBe(readsBefore);
+});
+
+test('PDF return failure retains the saved document and retries the same guest', async ({ page, baseURL }) => {
+  const key = stayKey(bookings[0]);
+  const fixture = installFixture(page, { failOnce: 'get_legacy_intake_statuses', legacyIntakes: [{ stayKey: key, count: 1, latest: { documentId: 'saved-milo', pdfUrl: 'https://example.test/milo.pdf', aiStatus: 'Complete' } }] });
+  await openDirectory(page, baseURL, fixture);
+  const { card, records } = await openRecords(page);
+  await page.evaluate(() => { window.__pdfPopup = { closed: false }; window.open = () => window.__pdfPopup; });
+  await records.locator('[data-care-record-upload]').click();
+  await page.evaluate(() => { window.__pdfPopup.closed = true; });
+  const legacy = records.locator('[data-directory-legacy]');
+  await expect(legacy.locator('[data-legacy-refresh-failure]')).toHaveText('Could not refresh. Showing previously available document.');
+  await expect(legacy.locator('.directory-legacy-view')).toHaveAttribute('href', 'https://example.test/milo.pdf');
+  await legacy.locator('[data-care-record-retry="legacy"]').click();
+  await expect(legacy.locator('[data-legacy-refresh-failure]')).toHaveCount(0);
+  await expect(legacy).toContainText('OCR complete');
+  expect(fixture.requests.get('get_legacy_intake_statuses').at(-1).stayKeys).toEqual([await card.getAttribute('data-directory-stay-key')]);
 });
