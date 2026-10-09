@@ -327,8 +327,35 @@ function v110EnsureCareOperationBar(card){
 
 function v110LeavingEvents(){const today=getLocalTodayDateString();return(Array.isArray(v110LatestCalendarEvents)?v110LatestCalendarEvents:[]).filter(e=>{const p=e?.extendedProps||{};if(p.isPotential===true||p.isMeetGreet===true)return false;return v10EventRawDates(e).end===today&&!v110IsCheckedOutEvent(e);});}
 function v110EnsureLeavingModal(){let m=document.getElementById('v110LeavingModal');if(m)return m;m=document.createElement('div');m.id='v110LeavingModal';m.className='v108-modal v110-leaving-modal';m.hidden=true;m.innerHTML=`<div class="v108-modal-card v110-leaving-card"><div class="v108-modal-head"><div><small>DEPARTURES</small><h3>👋 Leaving Today</h3><p>Review each pet and check them out when collected.</p></div><button type="button" data-v110-leaving-close aria-label="Close">×</button></div><div class="v110-leaving-list" data-v110-leaving-list></div></div>`;document.body.appendChild(m);m.addEventListener('click',async e=>{if(e.target===m||e.target.closest('[data-v110-leaving-close]')){m.hidden=true;return;}const b=e.target.closest('[data-v110-leaving-checkout]');if(!b)return;const ev=v110LeavingEvents()[Number(b.dataset.v110LeavingCheckout)];if(!ev)return;const p=ev.extendedProps||{},d=v10EventRawDates(ev),dog=String(p.dogName||ev.title||'Guest');b.disabled=true;b.textContent='⏳ Checking out…';try{await v110SaveOperationalStatus({stayId:p.stayId||'',stayKey:v110StayKeyForEvent(ev),dogName:dog,breed:p.breed||'',startDate:d.start,endDate:d.end,ownerName:p.ownerName||p.owner||'',phone:p.phone||''},'checked_out',ev);await v110RenderLeavingModal();renderV10OperationsHome(globalCalendar?.getEvents()?.slice()||v110LatestCalendarEvents);}catch(err){alert('Checkout could not be saved.\n\n'+(err?.message||String(err)));b.disabled=false;b.textContent='👋 Check Out';}});return m;}
-async function v110PhotoForStay(stayKey){try{const r=await queryAppsScript({action:'get_guest_profile',stayKey},{maxAttempts:1,timeoutMs:20000}),photo=r?.record?.dogPhoto||(Array.isArray(r?.record?.dogPhotoGallery)?r.record.dogPhotoGallery[r.record.dogPhotoGallery.length-1]:null);return String(photo?.previewUrl||photo?.url||photo?.driveUrl||'');}catch(_){return'';}}
-async function v110RenderLeavingModal(){const m=v110EnsureLeavingModal(),h=m.querySelector('[data-v110-leaving-list]'),list=v110LeavingEvents();if(!list.length){h.innerHTML='<div class="v110-leaving-empty"><span>✅</span><strong>No pets are waiting to check out.</strong><small>Completed checkouts disappear from the Leaving count.</small></div>';return;}h.innerHTML=list.map((ev,i)=>{const p=ev.extendedProps||{},d=v10EventRawDates(ev),dog=String(p.dogName||ev.title||'Guest');return`<article class="v110-leaving-pet"><div class="v110-leaving-photo" data-v110-leaving-photo="${i}"><span>🐶</span></div><div class="v110-leaving-copy"><strong>${v110Escape(dog)}</strong><span>${v110Escape(p.breed||'Breed not recorded')}</span><small>${v110Escape(formatStayDateShort(d.start))} → ${v110Escape(formatStayDateShort(d.end))}</small></div><button type="button" class="v110-checkout-button" data-v110-leaving-checkout="${i}">👋 Check Out</button></article>`;}).join('');list.forEach(async(ev,i)=>{const u=await v110PhotoForStay(v110StayKeyForEvent(ev));if(!u)return;const el=h.querySelector(`[data-v110-leaving-photo="${i}"]`);if(el)el.innerHTML=`<img src="${v110Escape(u)}" alt="" loading="lazy">`;});}
+async function v110PhotoForStay(stayKey,event){
+  try{
+    const key=String(stayKey||'').trim();
+    if(!key)return'';
+    const carePage=String(window.WAFFLE_PAGE||document.body?.dataset?.wafflePage||'').toLowerCase()==='directory';
+    let record=null;
+    if(carePage){
+      const props=event?.extendedProps||{};
+      if(!event||v110StayKeyForEvent(event)!==key||!window.WAFFLE_CARE_PROFILE_READS?.read)return'';
+      const cards=Array.from(document.querySelectorAll('.directory-card[data-directory-stay-key]'))
+        .filter(card=>String(card.dataset.directoryStayKey||card.dataset.stayKey||'').trim()===key)
+        .filter(card=>!props.stayId||String(card.dataset.directoryStayId||'').toLowerCase()===String(props.stayId).toLowerCase())
+        .filter(card=>!props.dogId||String(card.dataset.directoryDogId||'').toLowerCase()===String(props.dogId).toLowerCase())
+        .filter(card=>!props.dogName||String(card.dataset.directoryDogName||card.dataset.dogName||'').trim().toLowerCase()===String(props.dogName).trim().toLowerCase());
+      if(cards.length!==1)return'';
+      const response=await window.WAFFLE_CARE_PROFILE_READS.read(cards[0]);
+      record=response?.data?.record;
+      if(!record||!window.WAFFLE_CARE_PROFILE_READS.matches(cards[0],record))return'';
+    }else{
+      // Home/calendar tiles have no Care card to supply stable identity; retain
+      // their established legacy photo fallback while directory reads stay scoped.
+      const response=await queryAppsScript({action:'get_guest_profile',stayKey:key},{maxAttempts:1,timeoutMs:20000});
+      record=response?.record||null;
+    }
+    const photo=record?.dogPhoto||(Array.isArray(record?.dogPhotoGallery)?record.dogPhotoGallery[record.dogPhotoGallery.length-1]:null);
+    return String(photo?.previewUrl||photo?.url||photo?.driveUrl||'');
+  }catch(_){return'';}
+}
+async function v110RenderLeavingModal(){const m=v110EnsureLeavingModal(),h=m.querySelector('[data-v110-leaving-list]'),list=v110LeavingEvents();if(!list.length){h.innerHTML='<div class="v110-leaving-empty"><span>✅</span><strong>No pets are waiting to check out.</strong><small>Completed checkouts disappear from the Leaving count.</small></div>';return;}h.innerHTML=list.map((ev,i)=>{const p=ev.extendedProps||{},d=v10EventRawDates(ev),dog=String(p.dogName||ev.title||'Guest');return`<article class="v110-leaving-pet"><div class="v110-leaving-photo" data-v110-leaving-photo="${i}"><span>🐶</span></div><div class="v110-leaving-copy"><strong>${v110Escape(dog)}</strong><span>${v110Escape(p.breed||'Breed not recorded')}</span><small>${v110Escape(formatStayDateShort(d.start))} → ${v110Escape(formatStayDateShort(d.end))}</small></div><button type="button" class="v110-checkout-button" data-v110-leaving-checkout="${i}">👋 Check Out</button></article>`;}).join('');list.forEach(async(ev,i)=>{const u=await v110PhotoForStay(v110StayKeyForEvent(ev),ev);if(!u)return;const el=h.querySelector(`[data-v110-leaving-photo="${i}"]`);if(el)el.innerHTML=`<img src="${v110Escape(u)}" alt="" loading="lazy">`;});}
 async function v110OpenLeavingModal(){const m=v110EnsureLeavingModal();m.hidden=false;await v110RenderLeavingModal();}
 
 renderV10OperationsHome=function(events){v110LatestCalendarEvents=Array.isArray(events)?events:[];v110IndexCheckoutEvidence(v110LatestCalendarEvents);v110ApplyEffectiveCheckoutDates(v110LatestCalendarEvents);const filtered=v110LatestCalendarEvents.filter(e=>{const p=e?.extendedProps||{};return p.isMeetGreet===true||p.isPotential===true||!v110IsCheckedOutEvent(e);});v110BaseRenderOperationsHome(filtered);};

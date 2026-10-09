@@ -104,118 +104,57 @@
       Object.prototype.hasOwnProperty.call(record, 'requestSource');
   }
 
-  function cachedProfileRecord(card) {
+  function profileCacheIdentity(card) {
     const stayKey = profileStayKey(card);
-    if (!stayKey) return null;
+    const stayId = String(card?.dataset?.directoryStayId || '').trim().toLowerCase();
+    const dogId = String(card?.dataset?.directoryDogId || '').trim().toLowerCase();
+    return stayId || dogId ? `stable:${stayId}::${dogId}::${stayKey}` : stayKey;
+  }
 
+  function cachedProfileRecord(card) {
+    const reads = window.WAFFLE_CARE_PROFILE_READS;
+    const identity = profileCacheIdentity(card);
+    if (!identity) return null;
     let detail = null;
-    let summary = null;
-
     try {
-      if (typeof directoryProfileDetailCache !== 'undefined') {
-        detail = directoryProfileDetailCache?.[stayKey] || null;
-      }
+      if (typeof directoryProfileDetailCache !== 'undefined') detail = directoryProfileDetailCache?.[identity] || null;
     } catch (_) {}
-
-    try {
-      if (typeof directorySummaryRecordsCache !== 'undefined') {
-        summary = directorySummaryRecordsCache?.[stayKey] || null;
-      }
-    } catch (_) {}
-
-    if (hasOwnRequestSource(detail)) {
-      return {
-        ...(summary || {}),
-        ...detail,
-        stayKey
-      };
+    if (detail && typeof reads?.matches === 'function' && reads.matches(card, detail)) return detail;
+    if (card?.dataset?.v11112RequestSourceIdentity === identity && card.dataset.v11112RequestSourceKnown === 'true') {
+      return { stayKey: profileStayKey(card), requestSource: String(card.dataset.v11112RequestSource || '') };
     }
-
-    if (hasOwnRequestSource(summary)) {
-      return {
-        ...(detail || {}),
-        ...summary,
-        stayKey
-      };
-    }
-
-    const cardSource = String(card.dataset.v11112RequestSource || '').trim();
-    if (card.dataset.v11112RequestSourceKnown === 'true') {
-      return {
-        ...(summary || {}),
-        ...(detail || {}),
-        stayKey,
-        requestSource: cardSource
-      };
-    }
-
-    return detail || summary || null;
+    return null;
   }
 
   function rememberRecord(card, record) {
     if (!card || !record) return record;
-
+    const reads = window.WAFFLE_CARE_PROFILE_READS;
+    if (typeof reads?.matches !== 'function' || !reads.matches(card, record)) return record;
     const stayKey = profileStayKey(card);
-    if (!stayKey) return record;
-
+    const identity = profileCacheIdentity(card);
+    if (!stayKey || !identity) return record;
     const requestSource = String(record.requestSource || '').trim();
     card.dataset.v11112RequestSource = requestSource;
     card.dataset.v11112RequestSourceKnown = 'true';
-
+    card.dataset.v11112RequestSourceIdentity = identity;
     try {
       if (typeof directoryProfileDetailCache !== 'undefined') {
-        directoryProfileDetailCache[stayKey] = {
-          ...(directoryProfileDetailCache[stayKey] || {}),
-          ...record,
-          stayKey,
-          requestSource
-        };
+        directoryProfileDetailCache[identity] = { ...record, stayKey, requestSource };
       }
     } catch (_) {}
-
-    try {
-      if (typeof directorySummaryRecordsCache !== 'undefined') {
-        directorySummaryRecordsCache[stayKey] = {
-          ...(directorySummaryRecordsCache[stayKey] || {}),
-          stayKey,
-          requestSource
-        };
-      }
-    } catch (_) {}
-
     return record;
   }
-
   async function resolveProfileRecord(card, options = {}) {
     const stayKey = profileStayKey(card);
     if (!stayKey) return null;
-
+    const reads = window.WAFFLE_CARE_PROFILE_READS;
     const cached = cachedProfileRecord(card);
-
-    if (!options.forceRemote && hasOwnRequestSource(cached)) {
-      return cached;
-    }
-
-    if (typeof queryAppsScript !== 'function') {
-      return cached;
-    }
-
+    if (!options.forceRemote && hasOwnRequestSource(cached)) return cached;
+    if (typeof reads?.read !== 'function') return cached;
     try {
-      const response = await queryAppsScript({
-        action: 'get_guest_profile',
-        stayKey
-      }, {
-        maxAttempts: 2,
-        timeoutMs: 30000,
-        dedupe: false
-      });
-
-      const remote = response?.record || null;
-      if (!remote) return cached;
-
-      /* A summary produced by the directory endpoint can still contain the
-         Request From value if an older profile response does not. Prefer the
-         explicit remote value when present, otherwise retain the known one. */
+      const response = await reads.read(card, { force: options.forceRemote === true });
+      const remote = response?.data?.record || null;
+      if (!remote || !reads.matches(card, remote)) return cached;
       const merged = {
         ...(cached || {}),
         ...remote,
@@ -224,7 +163,6 @@
           ? String(remote.requestSource || '').trim()
           : String(cached?.requestSource || '').trim()
       };
-
       rememberRecord(card, merged);
       return merged;
     } catch (error) {
@@ -232,7 +170,6 @@
       throw error;
     }
   }
-
   function sourceTileHtml(source, selected) {
     const active = source.value.toLowerCase() === String(selected || '').toLowerCase();
     const isOther = source.value.toLowerCase() === 'other';
@@ -392,7 +329,7 @@
         /* V11.1.7 owns the save itself. Reconcile afterward so the stable
            placement and cached value remain correct after its success/error UI. */
         setTimeout(() => scheduleActiveHydrate(), 900);
-        setTimeout(() => scheduleActiveHydrate({ forceRemote: true }), 1800);
+        setTimeout(() => scheduleActiveHydrate(), 1800);
         return;
       }
 
@@ -404,16 +341,16 @@
 
     document.addEventListener('visibilitychange', () => {
       if (!document.hidden && isDirectoryPage()) {
-        scheduleActiveHydrate({ forceRemote: true });
+        scheduleActiveHydrate();
       }
     });
 
     window.addEventListener('focus', () => {
-      if (isDirectoryPage()) scheduleActiveHydrate({ forceRemote: true });
+      if (isDirectoryPage()) scheduleActiveHydrate();
     });
 
     window.addEventListener('pageshow', () => {
-      if (isDirectoryPage()) scheduleActiveHydrate({ forceRemote: true });
+      if (isDirectoryPage()) scheduleActiveHydrate();
     });
   }
 

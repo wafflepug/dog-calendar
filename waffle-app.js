@@ -9510,6 +9510,160 @@ registerWaffleServiceWorker();
             String(record.stayKey || '') === identity.stayKey;
     }
 
+    // One canonical read per validated dog/stay identity. Consumers still own
+    // their render guards; this coordinator only shares transport and cache.
+    const directoryProfileSharedReads = new Map();
+    const directoryProfileReadFailures = new Map();
+    const DIRECTORY_PROFILE_READ_FAILURE_COOLDOWN_MS = 15000;
+    const DIRECTORY_PROFILE_READ_FAILURE_LIMIT = 50;
+    let directoryProfileReadEventSequence = 0;
+    const directoryProfileReadNow = () => typeof performance !== 'undefined' && performance.now
+        ? performance.now()
+        : Date.now();
+    const directoryProfileReadEvent = (requestId, startedAt, phase, cacheStatus, outcome) => {
+        try {
+            window.dispatchEvent(new CustomEvent('waffle:care-profile-read', {
+                detail: {
+                    requestId,
+                    phase,
+                    elapsedMs: Math.max(0, Math.round(directoryProfileReadNow() - startedAt)),
+                    cacheStatus,
+                    outcome: outcome || null
+                }
+            }));
+        } catch (_) { /* Timing is diagnostic only and must not affect reads. */ }
+    };
+
+    function directoryCareProfileReadMatches(card, record) {
+        const identity = getDirectoryProfileReadIdentity(card);
+        return identity.valid && !!identity.stayKey &&
+            !(directoryProfileIdentityIsAmbiguous(card) && !identity.hasStableIds) &&
+            directoryProfileRecordMatchesIdentity(record, identity);
+    }
+    async function readDirectoryCareProfile(card, options = {}) {
+        const identity = getDirectoryProfileReadIdentity(card);
+        if (!identity.valid || !identity.stayKey ||
+            (directoryProfileIdentityIsAmbiguous(card) && !identity.hasStableIds)) {
+            throw new Error('Care profile identity is not safe to read.');
+        }
+
+        const key = identity.cacheKey;
+        const existing = directoryProfileSharedReads.get(key);
+        if (existing) {
+            if (options.force && !existing.isForcedRead) {
+                if (typeof options.onCached === 'function') existing.forceFollowupConsumers.add(options.onCached);
+                if (!existing.forceFollowup) {
+                    const forceConsumers = existing.forceFollowupConsumers;
+                    const forceOptions = {
+                        force: true,
+                        onCached: async response => {
+                            for (const consumer of Array.from(forceConsumers)) {
+                                try { await consumer(response); } catch (_) { /* Keep forced refresh delivery isolated. */ }
+                            }
+                        }
+                    };
+                    existing.forceFollowup = existing.promise.catch(() => {}).then(() => readDirectoryCareProfile(card, forceOptions));
+                }
+                directoryProfileReadEvent(existing.requestId, existing.startedAt, 'joined', 'shared');
+                return existing.forceFollowup;
+            }
+            if (typeof options.onCached === 'function') {
+                existing.consumers.add(options.onCached);
+                if (existing.lastCachedResponse) {
+                    Promise.resolve().then(() => options.onCached(existing.lastCachedResponse)).catch(() => {});
+                }
+            }
+            directoryProfileReadEvent(existing.requestId, existing.startedAt, 'joined', 'shared');
+            return existing.promise;
+        }
+
+
+        const requestId = String(++directoryProfileReadEventSequence);
+        const startedAt = directoryProfileReadNow();
+        const consumers = new Set();
+        let entry = null;
+        if (typeof options.onCached === 'function') consumers.add(options.onCached);
+        const cachedRecord = directoryProfileDetailCache[key];
+        let cacheStatus = cachedRecord && directoryProfileRecordMatchesIdentity(cachedRecord, identity) ? 'memory' : 'miss';
+        const priorFailure = directoryProfileReadFailures.get(key);
+        const now = directoryProfileReadNow();
+        if (options.force) {
+            directoryProfileReadFailures.delete(key);
+        } else if (cacheStatus !== 'memory' && priorFailure && priorFailure.expiresAt > now) {
+            throw priorFailure.error;
+        } else if (priorFailure) {
+            directoryProfileReadFailures.delete(key);
+        }
+        const notifyCached = async cachedResponse => {
+            if (!directoryProfileRecordMatchesIdentity(cachedResponse?.record, identity)) return;
+            if (cacheStatus === 'miss') cacheStatus = 'saved';
+            if (entry) entry.lastCachedResponse = cachedResponse;
+            directoryProfileReadEvent(requestId, startedAt, 'cache-applied', cacheStatus);
+            for (const consumer of Array.from(consumers)) {
+                try { await consumer(cachedResponse); } catch (_) { /* A consumer cannot block other cards' cache delivery. */ }
+            }
+        };
+
+        directoryProfileReadEvent(requestId, startedAt, 'request-start', cacheStatus);
+        entry = { requestId, startedAt, consumers, promise: null, lastCachedResponse: null, forceFollowup: null, forceFollowupConsumers: new Set(), isForcedRead: !!options.force };
+        const promise = (async () => {
+            let requestStartedAt = startedAt;
+            try {
+                if (!options.force && cacheStatus === 'memory') {
+                    await notifyCached({ record: cachedRecord });
+                    requestStartedAt = directoryProfileReadNow();
+                    const offline = typeof navigator !== 'undefined' && navigator.onLine === false;
+                    const result = {
+                        data: { result: 'success', record: cachedRecord },
+                        cacheApplied: true,
+                        unchanged: true,
+                        offlineFallback: offline,
+                        cachedOnly: true
+                    };
+                    directoryProfileReadEvent(requestId, requestStartedAt, 'request-end', cacheStatus, offline ? 'offline' : 'success');
+                    return result;
+                }
+                requestStartedAt = directoryProfileReadNow();
+                let result = await queryAppsScriptSWR({
+                    action: 'get_guest_profile',
+                    stayKey: identity.stayKey,
+                    ...(identity.stayId ? { stayId: identity.stayId } : {}),
+                    ...(identity.dogId ? { dogId: identity.dogId } : {})
+                }, {
+                    cacheKey: 'directory:profile:' + key,
+                    maxAttempts: 1,
+                    timeoutMs: 15000,
+                    maxStaleMs: 6 * 60 * 60 * 1000,
+                    onCached: cachedResponse => { void notifyCached(cachedResponse); }
+                });
+                const responseRecord = result?.data?.record;
+                if (responseRecord && !directoryProfileRecordMatchesIdentity(responseRecord, identity)) {
+                    result = { ...result, data: { ...(result.data || {}), record: null }, identityMismatch: true };
+                } else if (responseRecord && responseRecord?.resolution?.status !== 'not_found') {
+                    directoryProfileDetailCache[key] = responseRecord;
+                }
+                directoryProfileReadEvent(requestId, requestStartedAt, 'request-end', cacheStatus, result?.identityMismatch ? 'error' : result?.offlineFallback ? 'offline' : 'success');
+                directoryProfileReadFailures.delete(key);
+                return result;
+            } catch (error) {
+                const failure = error instanceof Error ? error : new Error(String(error || 'Care profile read failed.'));
+                directoryProfileReadFailures.delete(key);
+                directoryProfileReadFailures.set(key, { error: failure, expiresAt: directoryProfileReadNow() + DIRECTORY_PROFILE_READ_FAILURE_COOLDOWN_MS });
+                while (directoryProfileReadFailures.size > DIRECTORY_PROFILE_READ_FAILURE_LIMIT) {
+                    directoryProfileReadFailures.delete(directoryProfileReadFailures.keys().next().value);
+                }
+                directoryProfileReadEvent(requestId, requestStartedAt, 'request-end', cacheStatus, 'error');
+                throw failure;
+            } finally {
+                if (directoryProfileSharedReads.get(key) === entry) directoryProfileSharedReads.delete(key);
+            }
+        })();
+        entry.promise = promise;
+        directoryProfileSharedReads.set(key, entry);
+        return promise;
+    }
+
+    if (typeof window !== 'undefined') window.WAFFLE_CARE_PROFILE_READS = Object.freeze({ read: readDirectoryCareProfile, matches: directoryCareProfileReadMatches });
     function directoryProfileIdentityIsAmbiguous(card) {
         const key = String(card?.dataset?.directoryStayKey || card?.dataset?.stayKey || '').trim();
         if (!key) return false;
@@ -9727,30 +9881,41 @@ registerWaffleServiceWorker();
         let cachedRendered = false;
         try {
 
-            const swr =
-                await queryAppsScriptSWR(
+            const onCachedProfile = cachedResponse => {
+                cachedRendered = applyRecord(cachedResponse.record) === true;
+                if (cachedRendered && readIsCurrent()) setDirectoryProfileReadStatus(details, 'refreshing', 'Saved details shown · refreshing');
+            };
+            const swr = typeof window !== 'undefined' && window.WAFFLE_CARE_PROFILE_READS?.read
+                ? await window.WAFFLE_CARE_PROFILE_READS.read(card, { force: !!options.force, onCached: onCachedProfile })
+                : await queryAppsScriptSWR(
                     {
-                        action:
-                            'get_guest_profile',
+                        action: 'get_guest_profile',
                         stayKey,
                         ...(identity.stayId ? { stayId: identity.stayId } : {}),
                         ...(identity.dogId ? { dogId: identity.dogId } : {})
                     },
                     {
-                        cacheKey:
-                            'directory:profile:' +
-                            cacheKey,
+                        cacheKey: 'directory:profile:' + cacheKey,
                         maxAttempts: 1,
                         timeoutMs: 15000,
-                        maxStaleMs:
-                            6 * 60 * 60 * 1000,
-                        onCached:
-                            cachedResponse => {
-                                cachedRendered = applyRecord(cachedResponse.record) === true;
-                                if (cachedRendered && readIsCurrent()) setDirectoryProfileReadStatus(details, 'refreshing', 'Saved details shown · refreshing');
-                            }
+                        maxStaleMs: 6 * 60 * 60 * 1000,
+                        onCached: onCachedProfile
                     }
                 );
+            if (swr.cachedOnly) {
+                if (readIsCurrent()) {
+                    const offline = typeof navigator !== 'undefined' && navigator.onLine === false;
+                    setDirectoryProfileReadStatus(details, 'saved', offline ? 'Saved details shown · offline' : 'Saved details shown');
+                }
+                return;
+            }
+            if (swr.identityMismatch) {
+                if (readIsCurrent()) {
+                    delete directoryProfileDetailCache[cacheKey];
+                    showIdentityConflict();
+                }
+                return;
+            }
 
             if (
                 !swr.offlineFallback &&

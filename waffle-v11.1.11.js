@@ -365,40 +365,45 @@
     document.querySelectorAll('.directory-card[data-directory-stay-key]').forEach(card => removeFalsePhoneSignal(card));
   }
 
+  function cardProfileIdentity(card) {
+    const stayKey = String(card?.dataset?.directoryStayKey || card?.dataset?.stayKey || '').trim();
+    const stayId = String(card?.dataset?.directoryStayId || '').trim().toLowerCase();
+    const dogId = String(card?.dataset?.directoryDogId || '').trim().toLowerCase();
+    return stayId || dogId ? `stable:${stayId}::${dogId}::${stayKey}` : stayKey;
+  }
+
   async function hydrateFlaggedPhoneCards() {
-    if (pageName() !== 'directory' || typeof window.queryAppsScript !== 'function') return;
+    const reads = window.WAFFLE_CARE_PROFILE_READS;
+    if (pageName() !== 'directory' || typeof reads?.read !== 'function') return;
     const cards = Array.from(document.querySelectorAll('.directory-card[data-directory-stay-key]'))
       .filter(card => {
         const host = card.querySelector('[data-v1118-care-signals]');
         const flagged = Array.from(host?.querySelectorAll('span[title],span[aria-label]') || [])
           .some(signal => /phone missing/i.test(String(signal.title || signal.getAttribute('aria-label') || '')));
-        return flagged && !cardPhone(card) && card.dataset.v11111PhoneLookup !== 'done';
+        const identity = cardProfileIdentity(card);
+        return flagged && !cardPhone(card) && (card.dataset.v11111PhoneLookup !== 'done' || card.dataset.v11111PhoneLookupIdentity !== identity);
       })
       .slice(0, 6);
 
     for (const card of cards) {
-      const stayKey = String(card.dataset.directoryStayKey || card.dataset.stayKey || '').trim();
-      if (!stayKey) continue;
+      if (!card.isConnected) continue;
+      const identity = cardProfileIdentity(card);
       card.dataset.v11111PhoneLookup = 'done';
+      card.dataset.v11111PhoneLookupIdentity = identity;
       try {
-        const response = await window.queryAppsScript(
-          { action: 'get_guest_profile', stayKey },
-          { maxAttempts: 1, timeoutMs: 20000 }
-        );
-        const record = response?.record || null;
-        const phone = phoneFromRecord(record);
-        if (record) {
-          try {
-            if (typeof directoryProfileDetailCache !== 'undefined') directoryProfileDetailCache[stayKey] = record;
-          } catch (_) {}
+        const response = await reads.read(card);
+        const record = response?.data?.record || null;
+        if (!card.isConnected || cardProfileIdentity(card) !== identity || !record || !reads.matches(card, record)) {
+          card.dataset.v11111PhoneLookup = 'retry';
+          continue;
         }
+        const phone = phoneFromRecord(record);
         if (phone) removeFalsePhoneSignal(card, phone);
       } catch (_) {
-        card.dataset.v11111PhoneLookup = 'retry';
+        if (card.isConnected && cardProfileIdentity(card) === identity) card.dataset.v11111PhoneLookup = 'retry';
       }
     }
   }
-
   function scheduleCalendarReconcile() {
     [30, 180].forEach(delay => setTimeout(() => {
       fixSearchButton();
