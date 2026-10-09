@@ -59,25 +59,41 @@
   function confirmedEventsFromCsv(csvText) {
     const parsed = window.WaffleCsv?.parse(String(csvText || ''));
     const events = [];
-    if (parsed?.ok) {
+    if (parsed?.ok && parsed.records.length) {
+      const headerKey = value => String(value || '').replace(/^\uFEFF/, '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+      const header = parsed.records[0].cells || [];
+      const columns = new Map(header.map((name, index) => [headerKey(name), index]));
+      const indexFor = (...names) => {
+        for (const name of names) if (columns.has(headerKey(name))) return columns.get(headerKey(name));
+        return -1;
+      };
+      const valueFor = (cells, index, fallback) => String(cells[index >= 0 ? index : fallback] || '').trim();
+      const dogNameIndex = indexFor('Dog Name');
+      const startIndex = indexFor('Start Date');
+      const endIndex = indexFor('End Date');
       for (let i = 1; i < parsed.records.length; i += 1) {
         const row = parsed.records[i];
         if (!row.raw.trim()) continue;
-        const cells = row.cells.slice();
-        while (cells.length < 12) cells.push('');
-        const dogName = String(cells[1] || '').trim();
-        const breed = String(cells[2] || '').trim();
-        const startDate = dateKey(cells[3]);
-        const endDate = dateKey(cells[4]) || startDate;
-        const ownerName = String(cells[5] || '').trim();
-        const phone = String(cells[6] || '').trim();
-        const notes = String(cells[9] || '').trim();
-        const editLink = String(cells[10] || '').trim();
-        const bookingType = String(cells[11] || 'Boarding').trim();
+        const cells = row.cells || [];
+        const dogName = valueFor(cells, dogNameIndex, 1);
+        const breed = valueFor(cells, indexFor('Breed'), 2);
+        const startDate = dateKey(valueFor(cells, startIndex, 3));
+        const endDate = dateKey(valueFor(cells, endIndex, 4)) || startDate;
+        const ownerName = valueFor(cells, indexFor("Owner's Name", 'Owner Name'), 5);
+        const phone = valueFor(cells, indexFor('Contact Number', 'Phone'), 6);
+        const notes = valueFor(cells, indexFor('Notes'), 9);
+        const editLink = valueFor(cells, indexFor('Edit Link'), 10);
+        const bookingType = valueFor(cells, indexFor('Booking Type'), 11) || 'Boarding';
+        const dogId = valueFor(cells, indexFor('Dog ID', 'Dog UUID', 'Directory Dog ID'), -1);
+        const dogNumber = valueFor(cells, indexFor('Dog Number', 'Dog No', 'Dog #'), -1);
+        const stayId = valueFor(cells, indexFor('Stay ID', 'Stay UUID', 'Directory Stay ID'), -1);
+        const bookingId = valueFor(cells, indexFor('Booking ID', 'Booking UUID', 'Source Booking ID'), -1);
+        const requestSource = valueFor(cells, indexFor('Request Source'), -1);
         const lowerType = bookingType.toLowerCase();
         if (!dogName || !startDate || lowerType === 'meet & greet' || lowerType === 'potential stay') continue;
+        const sourceRow = i + 1;
         events.push({
-          id: 'care_cache_' + i + '_' + dogName + '_' + startDate,
+          id: 'care_cache_' + sourceRow + '_' + dogName + '_' + startDate,
           title: dogName,
           start: startDate,
           end: endDate,
@@ -85,8 +101,9 @@
           extendedProps: {
             isMeetGreet: false, isPotential: false, dogName, breed,
             owner: ownerName, ownerName, phone, notes: notes || 'None',
-            rawStartDate: startDate, rawEndDate: endDate, sourceRow: i + 1,
-            bookingType: bookingType || 'Boarding', editLink
+            rawStartDate: startDate, rawEndDate: endDate, sourceRow,
+            dogId, dogNumber, stayId, bookingId, requestSource,
+            bookingType, editLink
           }
         });
       }

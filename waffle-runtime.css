@@ -2,8 +2,8 @@
    Build: 2026.08.27.04
    Historical base styles remain compatibility sources during Phase 3A, but pages no longer
    reference them individually. Preserve this import order until modules are folded in. */
-@import url("waffle-app.css?build=2026.08.27.04&rev=2026.10.09.03");
-@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.10.09.03");
+@import url("waffle-app.css?build=2026.08.27.04&rev=2026.10.09.04");
+@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.10.09.04");
 @import url("waffle-v10.8.2.css?build=2026.08.27.04");
 @import url("waffle-v10.8.3.css?build=2026.08.27.04");
 @import url("waffle-v10.8.5.css?build=2026.08.27.04");
@@ -11,12 +11,12 @@
 @import url("waffle-v10.8.7.css?build=2026.08.27.04");
 @import url("waffle-v10.8.8.css?build=2026.08.27.04");
 @import url("waffle-v10.8.9.css?build=2026.08.27.04");
-@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.10.09.03");
+@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.10.09.04");
 @import url("waffle-v11.0.3.css?build=2026.08.27.04");
 @import url("waffle-v11.0.5.css?build=2026.08.27.04");
-@import url("waffle-v11.1.94.css?build=2026.10.09.03");
-@import url("waffle-v11.1.95.css?build=2026.10.09.03");
-@import url("waffle-v11.1.96.css?build=2026.10.09.03&rev=2026.10.09.03");
+@import url("waffle-v11.1.94.css?build=2026.10.09.04");
+@import url("waffle-v11.1.95.css?build=2026.10.09.04");
+@import url("waffle-v11.1.96.css?build=2026.10.09.04&rev=2026.10.09.04");
 
 /* ============================================================
    MOBILE FIRST-PAINT STABILITY GATE
@@ -1885,4 +1885,20 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-
   color: var(--wh75-accent-ink, #4338ca) !important;
   background: var(--wh75-accent-soft, #ede9fe) !important;
   border-color: var(--wh75-accent, #7562db) !important;
+}
+
+/* Later arrivals use the same unified roster footprint as loaded profiles. */
+body[data-waffle-page="directory"] .directory-card-fused.v11196-synthetic-future > .directory-roster-row {
+  min-height: 112px !important;
+}
+body[data-waffle-page="directory"] .v11196-synthetic-future .directory-roster-context {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+/* Explicitly retire the first-paint splash when the canonical shell is ready. */
+html[data-waffle-ui-ready="true"] body[data-waffle-page]::before {
+  content: none !important;
+  display: none !important;
+  visibility: hidden !important;
 }

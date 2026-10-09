@@ -337,7 +337,7 @@
     const breed = String(props.breed || 'Unknown').trim() || 'Unknown';
     const owner = String(props.ownerName || props.owner || 'N/A').trim() || 'N/A';
     const rawDogNumber = String(props.dogNumber || props.dogNo || '').trim();
-    const dogNumber = /^#?\d{1,5}$/.test(rawDogNumber) ? rawDogNumber.replace(/^#/, '') : '';
+    const dogNumber = /^#?\d{1,5}$/.test(rawDogNumber) ? '#' + rawDogNumber.replace(/^#/, '').padStart(5, '0') : '';
     const dogId = String(props.dogId || '').trim();
     const stayId = String(props.stayId || '').trim();
     const bookingId = String(props.bookingId || props.bookingID || props.sourceBookingId || '').trim();
@@ -346,6 +346,11 @@
     const phone = String(props.phone || 'N/A').trim() || 'N/A';
     const notes = String(props.notes || 'None').trim() || 'None';
     const dateLabel = `${formatStayDate(dates.start)} – ${formatStayDate(dates.end)}`;
+    const rosterContext = `${breed} ${String.fromCharCode(183)} ${dateLabel}`;
+    const rosterInitials = dogName.trim().split(/\s+/).slice(0, 2).map(part => part.charAt(0)).join('') || '\u{1F43E}';
+    const rosterStatus = 'Arriving';
+    const identifier = dogNumber ? `Dog Number ${dogNumber.replace(/^#/, "")}. ` : dogId ? `ID ${dogId}. ` : stayId ? `ID ${stayId}. ` : '';
+    const ariaLabel = `Open ${dogName} care profile. ${identifier}${owner !== 'N/A' ? `${owner}. ` : ''}${rosterContext}. ${rosterStatus}.`;
 
     return `
       <div
@@ -373,15 +378,20 @@
 
         <button
           type="button"
-          class="directory-guest-tile-open v11196-future-tile"
+          class="directory-guest-tile-open directory-roster-row"
           data-open-directory-profile
-          aria-label="Open ${escapeHtml(dogName)} future care profile. ${dogNumber ? `Dog Number ${escapeHtml(dogNumber)}. ` : dogId ? `Dog ID ${escapeHtml(dogId)}. ` : stayId ? `Stay ID ${escapeHtml(stayId)}. ` : ''}${escapeHtml(owner)}. ${escapeHtml(dateLabel)}.">
+          aria-label="${escapeHtml(ariaLabel)}">
           <span
             class="directory-guest-tile-photo"
             data-directory-tile-photo="${escapeHtml(stayKey)}"
             aria-hidden="true"></span>
-          <span class="directory-guest-tile-name">${escapeHtml(dogName)}</span>
-          <span class="v11196-future-tile-date">${escapeHtml(dateLabel)}</span>
+          <span class="directory-roster-avatar" aria-hidden="true">${escapeHtml(rosterInitials)}</span>
+          <span class="directory-roster-copy">
+            <span class="directory-guest-tile-name">${escapeHtml(dogName)}</span>
+            ${dogNumber ? `<span class="directory-dog-id">Dog ID ${escapeHtml(dogNumber)}</span>` : ''}
+            <span class="directory-roster-context">${escapeHtml(rosterContext)}</span>
+          </span>
+          <span class="directory-roster-status">${rosterStatus}</span>
         </button>
 
         <div class="directory-profile-content">
