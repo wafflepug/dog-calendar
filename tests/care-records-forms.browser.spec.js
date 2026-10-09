@@ -338,6 +338,11 @@ test('a failed safety refresh preserves cached alerts and marks uncached stays u
   const nalaSafety = nala.locator('[data-directory-care]');
   await expect(nalaSafety).toContainText('Safety record unavailable');
   await expect(nalaSafety).toHaveAttribute('aria-busy', 'false');
+  // A profile response without safety flags is not a successful safety read.
+  await page.evaluate(key => setDirectoryCareFlags(key, { stayKey: key, intakeAttributes: {} }), stayKey(bookings[1]));
+  await expect(nalaSafety).toContainText('Safety record unavailable');
+  await page.evaluate(key => setDirectoryCareFlags(key, { stayKey: key, riskFlags: {} }), stayKey(bookings[1]));
+  await expect(nalaSafety).not.toContainText('Safety record unavailable');
   expect(fixture.requests.get('get_belongings').length).toBeGreaterThan(0);
 });
 

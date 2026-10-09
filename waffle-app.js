@@ -8869,8 +8869,9 @@ registerWaffleServiceWorker();
     }
 
     function setDirectoryCareFlags(stayKey, record) {
-        if (record) directorySafetyReadFailures.delete(String(stayKey || ''));
-        const safetyReadFailed = !record && directorySafetyReadFailures.has(String(stayKey || ''));
+        const hasSafetyFlags = record?.riskFlags && typeof record.riskFlags === 'object';
+        if (hasSafetyFlags) directorySafetyReadFailures.delete(String(stayKey || ''));
+        const safetyReadFailed = !hasSafetyFlags && directorySafetyReadFailures.has(String(stayKey || ''));
         const profileCard =
             getDirectoryProfileCard(
                 stayKey
