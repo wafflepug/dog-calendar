@@ -39,7 +39,11 @@ async function openReadOnlyRuntime(page, baseURL, options = {}) {
       const resolved = resolveLocalBackendAction({ method: req.method(), url });
       if (!resolved.policy.allowed) return route.fulfill({ status: 403, body: 'Read-only fixture blocked unapproved backend action' });
       const response = { result: 'success', records: [], bookings: [], items: resolved.action === 'get_notification_centre' ? longItems : [], enabled: false };
-      if (options.failNotificationRead && resolved.action === 'get_notification_centre') Object.assign(response, { result: 'error', error: 'Synthetic notification read failed' });
+      if (resolved.action === 'get_notification_centre') {
+        options.notificationReadCount = (options.notificationReadCount || 0) + 1;
+        if (options.notificationDelay) await new Promise(resolve => setTimeout(resolve, options.notificationDelay));
+        if (options.failNotificationRead) Object.assign(response, { result: 'error', error: 'Synthetic notification read failed' });
+      }
       const body = `${callback}(${JSON.stringify(response)});`;
       return route.fulfill({ status: 200, contentType: 'application/javascript', body });
     }
@@ -49,6 +53,7 @@ async function openReadOnlyRuntime(page, baseURL, options = {}) {
     }
     return route.continue();
   });
+  return options;
 }
 
 async function buildNotificationFixture(page) {
@@ -141,19 +146,117 @@ test('mark-read still uses the existing local seen state and preserves the rende
 });
 
 
-test('empty and failed notification reads keep their existing status messaging', async ({ page, baseURL }) => {
-  await openReadOnlyRuntime(page, baseURL, { failNotificationRead: true });
+test('cached refresh failure preserves the feed and offers a working retry', async ({ page, baseURL }) => {
+  const fixture = await openReadOnlyRuntime(page, baseURL, { failNotificationRead: false });
+  await page.setViewportSize({ width: 320, height: 780 });
+  await page.goto(`${baseURL}/directory.html`, { waitUntil: 'domcontentloaded' });
+  await page.waitForFunction(() => document.documentElement.dataset.waffleUiReady === 'true' && typeof openWaffleNotificationCentre === 'function');
+  await page.evaluate(async items => { ensureWaffleNotificationModal(); await putWaffleCachedResponse('notifications:centre', { result: 'success', items }); }, longItems);
+  await page.waitForFunction(() => !waffleNotificationCentreLoadPromise);
+  fixture.failNotificationRead = true;
+  await page.evaluate(() => openWaffleNotificationCentre());
+  await page.waitForFunction(() => !waffleNotificationCentreLoadPromise);
+  await expect(page.locator('[data-notification-load-status]')).toHaveAttribute('data-state', 'cached-refresh-failure');
+  await expect(page.locator('[data-notification-load-status]')).toContainText('Showing saved notifications');
+  await expect(page.locator('[data-notification-item-id="fixture-unread"]')).toBeVisible();
+  const before = await page.locator('[data-notification-feed]').innerText();
+  await page.locator('[data-notification-mark-read]').click();
+  const seenAfterMarkRead = await page.evaluate(() => localStorage.getItem('waffleNotificationCentreSeenIds'));
+  await expect(page.locator('[data-notification-centre-count]')).toHaveText('Refresh failed');
+  await expect(page.locator('[data-notification-load-status]')).toHaveAttribute('data-state', 'cached-refresh-failure');
+
+  fixture.failNotificationRead = false;
+  await page.locator('[data-notification-refresh]').click();
+  await expect(page.locator('[data-notification-load-status]')).toHaveAttribute('data-state', 'fresh');
+  await expect(page.locator('[data-notification-centre-count]')).toHaveText('Up to date');
+  expect(await page.locator('[data-notification-feed]').innerText()).toBe(before);
+  expect(await page.evaluate(() => localStorage.getItem('waffleNotificationCentreSeenIds'))).toBe(seenAfterMarkRead);
+  const size = await page.locator('[data-notification-refresh]').evaluate(button => { const rect = button.getBoundingClientRect(); return [rect.width, rect.height]; });
+  expect(size[0]).toBeGreaterThanOrEqual(44);
+  expect(size[1]).toBeGreaterThanOrEqual(44);
+});
+
+test('uncached notification failures show retry and preserve any current feed', async ({ page, baseURL }) => {
+  const fixture = await openReadOnlyRuntime(page, baseURL, { failNotificationRead: true });
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(`${baseURL}/directory.html`, { waitUntil: 'domcontentloaded' });
-  await page.waitForFunction(() => document.documentElement.dataset.waffleUiReady === 'true' && typeof loadWaffleNotificationCentre === 'function');
-  await page.evaluate(async () => {
-    const modal = ensureWaffleNotificationModal();
-    modal.hidden = false;
-    await loadWaffleNotificationCentre({ quiet: true }).catch(() => {});
+  await page.waitForFunction(() => document.documentElement.dataset.waffleUiReady === 'true' && typeof openWaffleNotificationCentre === 'function');
+  await page.evaluate(() => openWaffleNotificationCentre());
+  await page.waitForFunction(() => !waffleNotificationCentreLoadPromise);
+  await expect(page.locator('[data-notification-load-status]')).toHaveAttribute('data-state', 'uncached-failure');
+  await expect(page.locator('[data-notification-load-status]')).toContainText('could not be loaded');
+  await expect(page.locator('[data-notification-item-id]')).toHaveCount(0);
+  await expect(page.locator('[data-notification-refresh]')).toHaveText('Retry');
+
+  fixture.failNotificationRead = false;
+  await page.locator('[data-notification-refresh]').click();
+  await expect(page.locator('[data-notification-load-status]')).toHaveAttribute('data-state', 'fresh');
+  await expect(page.locator('[data-notification-item-id="fixture-unread"]')).toBeVisible();
+
+  await page.evaluate(items => {
+    localStorage.setItem('waffleNotificationCentreSeenIds', JSON.stringify(['kept-seen']));
+    waffleNotificationCentreItems = items;
+    renderWaffleNotificationCentre();
+    return removeWaffleCachedResponse('notifications:centre');
+  }, longItems);
+  await page.evaluate(async () => await removeWaffleCachedResponse('notifications:centre'));
+  const before = await page.locator('[data-notification-feed]').innerText();
+  fixture.failNotificationRead = true;
+  await page.evaluate(async () => loadWaffleNotificationCentre({ quiet: true }).catch(() => {}));
+  await expect(page.locator('[data-notification-load-status]')).toHaveAttribute('data-state', 'uncached-failure');
+  await expect(page.locator('[data-notification-load-status]')).toContainText('current notifications are still shown');
+  expect(await page.locator('[data-notification-feed]').innerText()).toBe(before);
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('waffleNotificationCentreSeenIds')))).toEqual(['kept-seen']);
+  fixture.failNotificationRead = false;
+  await page.locator('[data-notification-refresh]').click();
+  await expect(page.locator('[data-notification-load-status]')).toHaveAttribute('data-state', 'fresh');
+});
+
+
+test('offline notification cache stays labelled saved until an online retry succeeds', async ({ page, baseURL }) => {
+  const fixture = await openReadOnlyRuntime(page, baseURL);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`${baseURL}/directory.html`, { waitUntil: 'domcontentloaded' });
+  await page.waitForFunction(() => document.documentElement.dataset.waffleUiReady === 'true' && typeof openWaffleNotificationCentre === 'function');
+  await page.waitForFunction(() => !waffleNotificationCentreLoadPromise);
+  await page.evaluate(async items => {
+    ensureWaffleNotificationModal();
+    await putWaffleCachedResponse('notifications:centre', { result: 'success', items });
+  }, longItems);
+  await page.waitForFunction(() => !waffleNotificationCentreLoadPromise);
+  const readsBeforeOffline = fixture.notificationReadCount;
+
+  await page.context().setOffline(true);
+  await page.evaluate(() => openWaffleNotificationCentre());
+  await expect(page.locator('[data-notification-load-status]')).toHaveAttribute('data-state', 'cached-refresh-failure');
+  await expect(page.locator('[data-notification-load-status]')).toHaveText('Showing saved notifications. Reconnect to refresh.');
+  await expect(page.locator('[data-notification-item-id="fixture-unread"]')).toBeVisible();
+  expect(fixture.notificationReadCount).toBe(readsBeforeOffline);
+
+  await page.locator('[data-notification-refresh]').click();
+  await expect(page.locator('[data-notification-load-status]')).toHaveText('Showing saved notifications. Reconnect to refresh.');
+  expect(fixture.notificationReadCount).toBe(readsBeforeOffline);
+
+  await page.context().setOffline(false);
+  await page.locator('[data-notification-refresh]').click();
+  await expect(page.locator('[data-notification-load-status]')).toHaveAttribute('data-state', 'fresh');
+  expect(fixture.notificationReadCount).toBe(readsBeforeOffline + 1);
+});
+
+test('notification open, tab activation, and manual refresh share one in-flight read', async ({ page, baseURL }) => {
+  const fixture = await openReadOnlyRuntime(page, baseURL, { notificationDelay: 150 });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`${baseURL}/directory.html`, { waitUntil: 'domcontentloaded' });
+  await page.waitForFunction(() => document.documentElement.dataset.waffleUiReady === 'true' && typeof openWaffleNotificationCentre === 'function');
+  await page.waitForFunction(() => !waffleNotificationCentreLoadPromise);
+  fixture.notificationReadCount = 0;
+  await page.evaluate(() => {
+    openWaffleNotificationCentre();
+    activateWaffleNotificationCentreTab('inbox');
+    retryWaffleNotificationCentre();
   });
-  await expect(page.locator('.v101-notification-empty.is-error')).toContainText('Activity could not be refreshed');
-  await page.evaluate(() => { waffleNotificationCentreItems = []; renderWaffleNotificationCentre(); });
-  await expect(page.locator('.v101-notification-empty:not(.is-error)')).toContainText('Nothing needs your attention');
+  await expect(page.locator('[data-notification-load-status]')).toHaveAttribute('data-state', 'fresh');
+  expect(fixture.notificationReadCount).toBe(1);
 });
 
 test('notification tabs expose reciprocal panel semantics and support keyboard navigation', async ({ page, baseURL }) => {

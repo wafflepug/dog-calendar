@@ -2,8 +2,8 @@
    Build: 2026.08.27.04
    Historical base styles remain compatibility sources during Phase 3A, but pages no longer
    reference them individually. Preserve this import order until modules are folded in. */
-@import url("waffle-app.css?build=2026.08.27.04&rev=2026.10.09.01");
-@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.10.09.01");
+@import url("waffle-app.css?build=2026.08.27.04&rev=2026.10.09.02");
+@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.10.09.02");
 @import url("waffle-v10.8.2.css?build=2026.08.27.04");
 @import url("waffle-v10.8.3.css?build=2026.08.27.04");
 @import url("waffle-v10.8.5.css?build=2026.08.27.04");
@@ -11,12 +11,12 @@
 @import url("waffle-v10.8.7.css?build=2026.08.27.04");
 @import url("waffle-v10.8.8.css?build=2026.08.27.04");
 @import url("waffle-v10.8.9.css?build=2026.08.27.04");
-@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.10.09.01");
+@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.10.09.02");
 @import url("waffle-v11.0.3.css?build=2026.08.27.04");
 @import url("waffle-v11.0.5.css?build=2026.08.27.04");
-@import url("waffle-v11.1.94.css?build=2026.10.09.01");
-@import url("waffle-v11.1.95.css?build=2026.10.09.01");
-@import url("waffle-v11.1.96.css?build=2026.10.09.01&rev=2026.10.09.01");
+@import url("waffle-v11.1.94.css?build=2026.10.09.02");
+@import url("waffle-v11.1.95.css?build=2026.10.09.02");
+@import url("waffle-v11.1.96.css?build=2026.10.09.02&rev=2026.10.09.02");
 
 /* ============================================================
    MOBILE FIRST-PAINT STABILITY GATE
@@ -1584,4 +1584,224 @@ body.dark-theme[data-waffle-page="directory"] .directory-care-records-body .dire
 }
 body.dark-theme[data-waffle-page="directory"] .directory-care-records-body .directory-legacy-ai-status.failed.directory-record-status {
   color: #fee2e2;
+}
+
+
+/* Compact selected Care identity, keep primary search visible, and tuck only
+   occasional record maintenance into a collapsed toolbar disclosure. */
+body[data-waffle-page="directory"] .care-record-maintenance {
+  flex: 0 0 auto;
+  min-width: 0;
+  color: var(--wh-text, #172033);
+}
+body[data-waffle-page="directory"] .care-record-maintenance > summary {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--wh-border, #cbd5e1);
+  border-radius: 9px;
+  background: var(--wh-surface, #fff);
+  color: var(--wh-text-muted, #475569);
+  font-size: 13px;
+  font-weight: 750;
+  cursor: pointer;
+}
+body[data-waffle-page="directory"] .care-record-maintenance-content {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding-top: 8px;
+}
+body[data-waffle-page="directory"] .care-record-maintenance-content > button {
+  box-sizing: border-box;
+  min-height: 44px;
+}
+body[data-waffle-page="directory"] .care-record-maintenance summary:focus-visible,
+body[data-waffle-page="directory"] .care-record-maintenance-content > button:focus-visible {
+  outline: 3px solid var(--wh-accent, #2563eb);
+  outline-offset: 2px;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-card-header {
+  column-gap: 10px;
+  row-gap: 6px;
+  margin-bottom: 6px;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-photo-shell {
+  width: 76px !important;
+  height: 76px !important;
+  flex-basis: 76px;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-card-identity {
+  align-items: flex-start;
+  text-align: left;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-name-row {
+  justify-content: flex-start !important;
+  text-align: left;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-name-row > * {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-profile-stay-dates {
+  gap: 4px 8px;
+  margin-top: 4px;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-profile-stay-dates :is(button, input, [role="button"], [data-directory-edit-field]) {
+  box-sizing: border-box;
+  min-height: 44px;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief {
+  margin-top: 6px;
+  padding: 10px;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-heading {
+  gap: 8px;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-grid {
+  margin-top: 6px;
+  gap: 6px;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-actions {
+  gap: 6px;
+  margin-top: 7px;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .p4-directory-actions {
+  margin-top: 6px;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active:not(.is-profile-editing) .directory-profile-intake-section .intake-profile-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active:not(.is-profile-editing) .directory-profile-intake-section textarea.intake-profile-control:disabled {
+  box-sizing: border-box;
+  field-sizing: content;
+  width: 100%;
+  min-height: 44px !important;
+  max-height: none;
+  padding: 8px 10px;
+  font-size: 13px !important;
+  line-height: 1.45;
+  resize: none;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+body.dark-theme[data-waffle-page="directory"] .care-record-maintenance > summary {
+  background: var(--wh-surface, #17243a);
+  border-color: var(--wh-border, #334155);
+  color: var(--wh-text, #f8fafc);
+}
+@media (max-width: 600px) {
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-card-header {
+    grid-template-columns: 68px minmax(0, 1fr) !important;
+    column-gap: 9px;
+    row-gap: 5px;
+  }
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-photo-shell {
+    width: 64px !important;
+    height: 64px !important;
+    flex-basis: 64px;
+  }
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-name-row {
+    gap: 4px 6px;
+  }
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-profile-stay-dates {
+    gap: 3px 6px;
+    margin-top: 3px;
+  }
+  body[data-waffle-page="directory"] .directory-card.is-profile-active:not(.is-profile-editing) .directory-profile-intake-section .intake-profile-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-actions,
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .p4-directory-action-list {
+    gap: 6px;
+  }
+}
+
+/* Selected stay state and check-in/out actions remain together without
+   displacing the dog's identity or the safety summary. */
+body[data-waffle-page="directory"] .directory-card.is-profile-active [data-v110-operation-bar] {
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  margin: 6px 0 !important;
+  padding: 8px 10px !important;
+  background: var(--wh-surface-soft, var(--v10-card));
+  border-color: var(--wh-border, var(--v10-border));
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .v110-operation-state {
+  min-width: 0;
+  gap: 8px;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .v110-operation-icon {
+  flex-basis: 38px;
+  width: 38px;
+  height: 38px;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .v110-operation-state small {
+  font-size: 11px;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .v110-operation-state strong {
+  font-size: 13px !important;
+  overflow-wrap: anywhere;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .v110-operation-state span {
+  font-size: 13px !important;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .v110-operation-actions {
+  min-width: 0;
+  gap: 6px;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .v110-operation-actions button {
+  box-sizing: border-box;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 8px 10px;
+  font-size: 13px !important;
+  line-height: 1.25;
+  white-space: normal;
+}
+@media (max-width: 600px) {
+  body[data-waffle-page="directory"] .directory-card.is-profile-active [data-v110-operation-bar] {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 7px;
+    margin: 5px 0 !important;
+    padding: 8px !important;
+  }
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .v110-operation-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    width: 100%;
+  }
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .v110-operation-actions button:only-child {
+    grid-column: 1 / -1;
+  }
+}
+
+/* Keep the selected identity aligned with its stay dates. */
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-card-identity {
+  min-width: 0;
+  justify-items: start;
+  max-width: none;
+  text-align: left !important;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-name-row {
+  justify-content: flex-start !important;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-primary-breed,
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-dog-name-btn {
+  text-align: left !important;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-profile-stay-dates[role="button"] {
+  box-sizing: border-box;
+  min-height: 48px;
 }

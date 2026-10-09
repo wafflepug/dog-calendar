@@ -22,9 +22,7 @@ const actualReviewTemplate = care.slice(reviewStart, reviewEnd);
 const identityLabelStart = care.indexOf('    const identityLabel = item =>');
 const identityLabelEnd = care.indexOf('\n    const updateReviewButton', identityLabelStart);
 const actualIdentityLabel = care.slice(identityLabelStart, identityLabelEnd);
-const panelStart = care.indexOf('    panel.innerHTML = `');
-const panelEnd = care.indexOf('    heading.insertAdjacentElement', panelStart);
-const actualPanelTemplate = care.slice(panelStart, panelEnd);
+const actualPanelTemplate = care.match(/panel\.innerHTML\s*=\s*(`[^`]*`);/)[0];
 const panelMarkup = new Function(`const panel = {}; ${actualPanelTemplate}; return panel.innerHTML;`)();
 
 
