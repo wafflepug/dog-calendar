@@ -104,6 +104,12 @@ function updateStableStayRowV11225_(sheet, rowNumber, changes, mutationId) {
   sheet.getRange(rowNumber, 1, 1, width).setValues([row]);
 }
 
+function isConfirmedStayBookingTypeV11225_(value) {
+  var type = String(value || '').trim().toLowerCase();
+  // Guest-directory reads expose legacy blank booking types as Boarding.
+  return !type || type === 'confirmed boarding' || type === 'boarding';
+}
+
 function safeLegacyStayRowV11225_(rows, action, data) {
   data = data || {};
   var wantedType = action === 'update_potential' || action === 'confirm_potential' || action === 'delete_potential'
@@ -121,7 +127,7 @@ function safeLegacyStayRowV11225_(rows, action, data) {
   for (var i = 1; i < rows.length; i++) {
     var row = rows[i] || [];
     var type = String(row[11] || '').trim().toLowerCase();
-    if (wantedType ? type !== wantedType && type !== 'potential' : type !== 'confirmed boarding' && type !== 'boarding') continue;
+    if (wantedType ? type !== wantedType && type !== 'potential' : !isConfirmedStayBookingTypeV11225_(type)) continue;
     if (dog && normalizeV108Identity_(row[1]) !== dog) continue;
     if (start && normalizeDateValue_(row[3]) !== start) continue;
     if (owner && normalizeV108Identity_(row[5]) !== owner) continue;
@@ -142,7 +148,7 @@ function assertStayRowActionCompatibleV11225_(sheet, row, action, data) {
   var values = sheet.getRange(row, 1, 1, Math.max(12, sheet.getLastColumn())).getValues()[0] || [];
   var type = String(values[11] || '').trim().toLowerCase();
   var wantsPotential = action === 'update_potential' || action === 'confirm_potential' || action === 'delete_potential';
-  if (wantsPotential ? (type !== 'potential stay' && type !== 'potential') : (type !== 'confirmed boarding' && type !== 'boarding')) {
+  if (wantsPotential ? (type !== 'potential stay' && type !== 'potential') : !isConfirmedStayBookingTypeV11225_(type)) {
     throw new Error('Stay ID does not identify a booking of the requested type.');
   }
   var requestedName = normalizeV108Identity_(data.originalDogName || data.dogName || '');
