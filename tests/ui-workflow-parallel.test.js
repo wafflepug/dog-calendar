@@ -14,7 +14,7 @@ const expectedConfigs = [
   'playwright.care-loading-feedback.config.js', 'playwright.care-navigation-continuity.config.js',
   'tests/mvp-records-notifications.config.js', 'playwright.mvp-observer.config.js',
   'playwright.care-overview.config.js', 'playwright.returning-dogs.config.js',
-  'playwright.runtime-review.config.js'
+  'playwright.runtime-review.config.js', 'playwright.care-cleaner-ui.config.js'
 ];
 
 test('parallel fixture matrix retains every existing configuration exactly once', () => {

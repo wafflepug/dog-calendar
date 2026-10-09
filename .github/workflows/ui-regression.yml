@@ -22,6 +22,8 @@ on:
       - 'tests/returning-dog-inheritance.spec.js'
       - 'tests/stable-stay-queue.browser.spec.js'
       - 'playwright.care-overview.config.js'
+      - 'playwright.care-cleaner-ui.config.js'
+      - 'tests/care-cleaner-ui.browser.spec.js'
       - 'tests/care-state-preservation.test.js'
       - 'tests/care-csv-integrity.test.js'
       - 'tests/care-confirmed-reconciliation.test.js'
@@ -84,6 +86,8 @@ on:
       - 'tests/returning-dog-inheritance.spec.js'
       - 'tests/stable-stay-queue.browser.spec.js'
       - 'playwright.care-overview.config.js'
+      - 'playwright.care-cleaner-ui.config.js'
+      - 'tests/care-cleaner-ui.browser.spec.js'
       - 'tests/care-state-preservation.test.js'
       - 'tests/care-csv-integrity.test.js'
       - 'tests/care-confirmed-reconciliation.test.js'
@@ -175,7 +179,7 @@ jobs:
       matrix:
         include:
           - group: overview
-            configs: playwright.care-overview.config.js
+            configs: playwright.care-overview.config.js playwright.care-cleaner-ui.config.js
           - group: refinements
             configs: playwright.care-ui-refinements.config.js playwright.care-profile.config.js playwright.care-ui-polish.config.js playwright.care-roster.config.js playwright.returning-dogs.config.js
           - group: navigation

@@ -5,6 +5,8 @@ Reviewed 17 September 2026. Repository: `wafflepug/dog-calendar`; always start i
 
 ## Owner priority: Care UI refinements next
 
+Implemented candidate 9 October 2026: four refinements in [Cleaner Care & Notification Recovery](care-cleaner-ui.md): honest notification retry states, collapsed Care maintenance tools, compact selected identity/stay actions, and compact read-only fields. Next: scoped document recovery after returning from the uploader.
+
 Completed 9 October 2026: four Records & forms and notification-access refinements: accurate OCR labels, separate intake metadata, keyboard tab navigation and dialog focus/return. See [Care Records & Notification Access](care-records-notification-access.md). Next inspect cached notification refresh recovery without adding polling.
 
 Prepared 8 October 2026: five Booking tools refinements covering readable actions, guest-specific labels, source context, dialog focus and immediate identity-safe rebooking. See [Care Booking Tools](care-booking-tools.md). Next inspect Records & forms responsive document/action states without changing OCR or adding initial reads.

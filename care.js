@@ -43,6 +43,9 @@
   const wrapped = new Set();
   let prepareTimer = 0;
   let cardAccessibilityId = 0;
+  let stayLinkTrigger = null;
+  let stayLinkPanel = null;
+  let backfillControl = null;
 
   function pageName() {
     return String(window.WAFFLE_PAGE || document.body?.dataset?.wafflePage || 'calendar');
@@ -263,22 +266,50 @@
       .replace(/'/g, '&#039;');
   }
 
+  function manageRecordControls(toolbar) {
+    if (!toolbar) return;
+    let disclosure = toolbar.querySelector(':scope > .care-record-maintenance');
+    if (!disclosure) {
+      disclosure = document.createElement('details');
+      disclosure.className = 'care-record-maintenance';
+      const summary = document.createElement('summary');
+      summary.textContent = 'Manage records';
+      disclosure.appendChild(summary);
+      toolbar.appendChild(disclosure);
+    }
+    let content = disclosure.querySelector(':scope > .care-record-maintenance-content');
+    if (!content) {
+      content = document.createElement('div');
+      content.className = 'care-record-maintenance-content';
+      disclosure.appendChild(content);
+    }
+    backfillControl = document.getElementById('p4BackfillDogIds') || backfillControl;
+    [backfillControl, document.querySelector('.care-stay-link-trigger') || stayLinkTrigger]
+      .filter(Boolean).forEach(control => { if (control.parentElement !== content) content.appendChild(control); });
+  }
+
   function installStayLinkReview() {
     const heading = document.querySelector('.directory-roster-heading');
     const toolbar = heading?.querySelector('.guest-directory-toolbar');
-    if (!heading || !toolbar || heading.querySelector('.care-stay-link-trigger')) return;
+    if (!heading || !toolbar) return;
 
-    const trigger = document.createElement('button');
-    trigger.type = 'button';
-    trigger.className = 'care-stay-link-trigger';
-    trigger.textContent = 'Link older stay';
-    toolbar.appendChild(trigger);
+    let trigger = document.querySelector('.care-stay-link-trigger') || stayLinkTrigger;
+    if (!trigger) {
+      trigger = document.createElement('button');
+      trigger.type = 'button';
+      trigger.className = 'care-stay-link-trigger';
+      trigger.textContent = 'Link older stay';
+    }
+    stayLinkTrigger = trigger;
+    manageRecordControls(toolbar);
 
-    const panel = document.createElement('section');
-    panel.className = 'care-stay-link';
-    panel.hidden = true;
-    panel.setAttribute('aria-labelledby', 'careStayLinkTitle');
-    panel.innerHTML = `
+    const existingPanel = document.querySelector('.care-stay-link') || stayLinkPanel;
+    const panel = existingPanel || document.createElement('section');
+    if (!existingPanel) {
+      panel.className = 'care-stay-link';
+      panel.hidden = true;
+      panel.setAttribute('aria-labelledby', 'careStayLinkTitle');
+      panel.innerHTML = `
       <header class="care-stay-link-header">
         <div><small>CARE RECORDS</small><h2 id="careStayLinkTitle">Link a past stay</h2>
           <p>Choose the exact stay and the numbered dog it belongs to. Only that stay will move.</p></div>
@@ -293,7 +324,10 @@
         <div class="care-stay-link-confirm" data-care-stay-confirm hidden></div>
         <p class="care-stay-link-status" data-care-stay-status role="status" aria-live="polite"></p>
       </div>`;
-    heading.insertAdjacentElement('afterend', panel);
+    }
+    stayLinkPanel = panel;
+    if (!panel.isConnected) heading.insertAdjacentElement('afterend', panel);
+    if (trigger.dataset.careStayLinkWired) return;
 
     const sourceSelect = panel.querySelector('[data-care-stay-source]');
     const targetSelect = panel.querySelector('[data-care-stay-target]');
@@ -360,7 +394,7 @@
       }
     }
 
-    trigger.addEventListener('click', () => {
+    if (!trigger.dataset.careStayLinkWired) trigger.addEventListener('click', () => {
       panel.hidden = false;
       trigger.setAttribute('aria-expanded', 'true');
       if (!stays.length && !identities.length) loadData();
@@ -432,6 +466,8 @@
         }
       });
     });
+    trigger.dataset.careStayLinkWired = 'true';
+    manageRecordControls(toolbar);
   }
 
   async function fallbackHistory(card) {
@@ -642,6 +678,8 @@
   function prepare() {
     if (pageName() !== 'directory') return;
 
+    installStayLinkReview();
+    manageRecordControls(document.querySelector('.directory-roster-heading .guest-directory-toolbar'));
     activeCards().forEach(prepareCard);
   }
 

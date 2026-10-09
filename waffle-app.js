@@ -614,6 +614,41 @@ let waffleNotificationCentreActiveTab =
 
 let waffleNotificationCentreOpener = null;
 
+let waffleNotificationCentreLoadPromise = null;
+
+let waffleNotificationCentreLoadState = 'idle';
+
+
+function setWaffleNotificationCentreLoadState(state, message = '') {
+    waffleNotificationCentreLoadState = state;
+    const status = document.querySelector('[data-notification-load-status]');
+    const refresh = document.querySelector('[data-notification-refresh]');
+    const count = document.querySelector('[data-notification-centre-count]');
+    if (status) {
+        status.dataset.state = state;
+        status.textContent = message;
+        status.hidden = !message;
+    }
+    if (refresh) {
+        const loading = state === 'loading';
+        refresh.disabled = loading;
+        refresh.setAttribute('aria-busy', loading ? 'true' : 'false');
+        refresh.textContent = loading ? 'Refreshing…' : (state.endsWith('failure') ? 'Retry' : 'Refresh');
+    }
+    if (count) {
+        const unread = getWaffleNotificationUnreadCount();
+        count.textContent = state.endsWith('failure')
+            ? 'Refresh failed'
+            : (state === 'loading' ? 'Refreshing…' : (unread ? `${unread} unread` : 'Up to date'));
+        count.dataset.mode = state.endsWith('failure') ? 'error' : (unread ? 'unread' : 'clear');
+    }
+}
+
+
+function retryWaffleNotificationCentre() {
+    return loadWaffleNotificationCentre().catch(() => {});
+}
+
 
 function getWaffleSeenNotificationIds() {
     try {
@@ -844,14 +879,16 @@ function renderWaffleNotificationCentre() {
             getWaffleNotificationUnreadCount();
 
         count.textContent =
-            unread
-                ? `${unread} unread`
-                : 'Up to date';
+            waffleNotificationCentreLoadState.endsWith('failure')
+                ? 'Refresh failed'
+                : (waffleNotificationCentreLoadState === 'loading'
+                    ? 'Refreshing…'
+                    : (unread ? `${unread} unread` : 'Up to date'));
 
         count.dataset.mode =
-            unread
-                ? 'unread'
-                : 'clear';
+            waffleNotificationCentreLoadState.endsWith('failure')
+                ? 'error'
+                : (unread ? 'unread' : 'clear');
     }
 
     const itemHtml =
@@ -982,96 +1019,65 @@ function closeWaffleNotificationCentre() {
 }
 
 
-async function loadWaffleNotificationCentre(
-    options = {}
-) {
-    const host =
-        document.querySelector(
-            '[data-notification-feed]'
-        );
+function loadWaffleNotificationCentre(options = {}) {
+    if (waffleNotificationCentreLoadPromise) return waffleNotificationCentreLoadPromise;
 
-    if (
-        host &&
-        !waffleNotificationCentreItems.length &&
-        !options.quiet
-    ) {
-        host.innerHTML =
-            v101SkeletonHtml(
-                'audit',
-                5
-            );
-    }
+    const loadPromise = (async () => {
+        const host = document.querySelector('[data-notification-feed]');
+        const hadExistingFeed = waffleNotificationCentreItems.length > 0 || !!host?.querySelector('[data-notification-item-id]');
+        const hasFeed = !!host?.querySelector('[data-notification-item-id], .v101-notification-empty');
+        if (host && !waffleNotificationCentreItems.length && !hasFeed) {
+            host.innerHTML = v101SkeletonHtml('audit', 5);
+        }
+        setWaffleNotificationCentreLoadState('loading', 'Refreshing notifications…');
 
-    const applyResponse =
-        response => {
-            waffleNotificationCentreItems =
-                Array.isArray(
-                    response.items
-                )
-                    ? response.items
-                    : [];
-
+        const applyResponse = response => {
+            waffleNotificationCentreItems = Array.isArray(response.items) ? response.items : [];
             renderWaffleNotificationCentre();
         };
 
-    try {
-        let cachedRendered =
-            false;
-
-        const swr =
-            await queryAppsScriptSWR(
+        try {
+            let cachedRendered = false;
+            const swr = await queryAppsScriptSWR(
+                { action: 'get_notification_centre' },
                 {
-                    action:
-                        'get_notification_centre'
-                },
-                {
-                    cacheKey:
-                        'notifications:centre',
-                    maxAttempts:
-                        options.quiet
-                            ? 1
-                            : 2,
-                    timeoutMs:
-                        30000,
-                    maxStaleMs:
-                        2 * 60 * 60 * 1000,
-                    onCached:
-                        cachedResponse => {
-                            cachedRendered =
-                                true;
-
-                            applyResponse(
-                                cachedResponse
-                            );
-                        }
+                    cacheKey: 'notifications:centre',
+                    maxAttempts: options.quiet ? 1 : 2,
+                    timeoutMs: 30000,
+                    maxStaleMs: 2 * 60 * 60 * 1000,
+                    onCached: cachedResponse => {
+                        cachedRendered = true;
+                        applyResponse(cachedResponse);
+                    }
                 }
             );
 
-        if (
-            !swr.unchanged ||
-            !cachedRendered
-        ) {
-            applyResponse(
-                swr.data
+            if (!swr.unchanged || !cachedRendered) applyResponse(swr.data);
+            if (swr.error) {
+                setWaffleNotificationCentreLoadState('cached-refresh-failure', 'Showing saved notifications. Refresh failed.');
+            } else if (swr.offlineFallback) {
+                setWaffleNotificationCentreLoadState('cached-refresh-failure', 'Showing saved notifications. Reconnect to refresh.');
+            } else {
+                setWaffleNotificationCentreLoadState('fresh', 'Notifications are up to date.');
+            }
+        } catch (error) {
+            setWaffleNotificationCentreLoadState(
+                'uncached-failure',
+                hadExistingFeed
+                    ? 'Refresh failed. Your current notifications are still shown. Try again.'
+                    : 'Notifications could not be loaded. Try again.'
             );
+            if (host && !waffleNotificationCentreItems.length && !host.querySelector('[data-notification-item-id], .v101-notification-empty')) {
+                host.innerHTML = '<div class="v101-notification-empty is-error"><span>⚠️</span><strong>Activity could not be loaded</strong></div>';
+            }
+            throw error;
         }
-
-    } catch (error) {
-        if (
-            host &&
-            !waffleNotificationCentreItems.length
-        ) {
-            host.innerHTML = `
-                <div class="v101-notification-empty is-error">
-                    <span>⚠️</span>
-                    <strong>Activity could not be refreshed</strong>
-                    <small>${escapeDashboardHtml(error.message || String(error))}</small>
-                </div>
-            `;
-        }
-
-        throw error;
-    }
+    })();
+    waffleNotificationCentreLoadPromise = loadPromise;
+    loadPromise.finally(() => {
+        if (waffleNotificationCentreLoadPromise === loadPromise) waffleNotificationCentreLoadPromise = null;
+    }).catch(() => {});
+    return loadPromise;
 }
 
 
@@ -2669,11 +2675,9 @@ function ensureWaffleNotificationModal() {
                 data-notification-centre-panel="inbox">
                 <div class="v101-notification-panel-actions">
                     <span>Recent operations and activity</span>
-                    <button
-                        type="button"
-                        data-notification-mark-read>
-                        Mark all read
-                    </button>
+                    <span data-notification-load-status role="status" aria-live="polite" hidden></span>
+                    <button type="button" data-notification-refresh>Refresh</button>
+                    <button type="button" data-notification-mark-read>Mark all read</button>
                 </div>
 
                 <div
@@ -2829,6 +2833,9 @@ function ensureWaffleNotificationModal() {
         activateWaffleNotificationCentreTab(tabs[nextIndex].dataset.notificationCentreTab);
         tabs[nextIndex].focus();
     });
+
+    modal.querySelector('[data-notification-refresh]')
+        ?.addEventListener('click', retryWaffleNotificationCentre);
 
     modal.querySelector('[data-notification-mark-read]')
         ?.addEventListener(
