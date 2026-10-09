@@ -62,22 +62,13 @@
   }
 
   async function loadProfileRecord(card) {
-    if (!card) return null;
-    const stayKey = String(card.dataset.directoryStayKey || card.dataset.stayKey || '').trim();
-    if (!stayKey) return null;
-
-    try {
-      if (typeof directoryProfileDetailCache !== 'undefined') {
-        const cached = directoryProfileDetailCache[stayKey];
-        if (cached && cached.requestSource !== undefined) return cached;
-      }
-    } catch (_) {}
-
-    if (typeof queryAppsScript !== 'function') return null;
-    const response = await queryAppsScript({ action: 'get_guest_profile', stayKey });
-    return response && response.record ? response.record : null;
+    const stayKey = String(card?.dataset?.directoryStayKey || card?.dataset?.stayKey || '').trim();
+    const reads = window.WAFFLE_CARE_PROFILE_READS;
+    if (!card || !stayKey || typeof reads?.read !== 'function') return null;
+    const response = await reads.read(card);
+    const record = response?.data?.record || null;
+    return record && reads.matches(card, record) ? record : null;
   }
-
   function renderProfileEnhancements(card, record) {
     if (!card || !record) return;
 

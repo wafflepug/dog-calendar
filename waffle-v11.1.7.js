@@ -255,15 +255,16 @@
      CARE TILE — REQUEST SOURCE BADGE
      ---------------------------------------------------------- */
 
-  function directoryCardForStay(stayKey) {
-    if (typeof findDirectoryCardByStayKey === 'function') {
-      return findDirectoryCardByStayKey(stayKey);
-    }
-
-    return Array.from(document.querySelectorAll('.directory-card[data-directory-stay-key]'))
-      .find(card => String(card.dataset.directoryStayKey || '') === String(stayKey || '')) || null;
+  function directoryCardForStay(stay) {
+    const identity = stay && typeof stay === 'object' ? stay : { stayKey: stay };
+    const stayKey = String(identity.stayKey || '').trim();
+    if (!stayKey) return null;
+    const cards = Array.from(document.querySelectorAll('.directory-card[data-directory-stay-key]'))
+      .filter(card => String(card.dataset.directoryStayKey || card.dataset.stayKey || '').trim() === stayKey)
+      .filter(card => !identity.stayId || String(card.dataset.directoryStayId || '').toLowerCase() === String(identity.stayId).toLowerCase())
+      .filter(card => !identity.dogId || String(card.dataset.directoryDogId || '').toLowerCase() === String(identity.dogId).toLowerCase());
+    return cards.length === 1 ? cards[0] : null;
   }
-
   function careSourceBadgeHtml(requestSource) {
     const source = sourceDefinition(requestSource);
     if (!source) return '';
@@ -279,28 +280,28 @@
       </span>`;
   }
 
-  function renderCareSourceBadge(stayKey, requestSource) {
-    const card = directoryCardForStay(stayKey);
+  function renderCareSourceBadge(stay, requestSource, cardHint) {
+    const row = stay && typeof stay === 'object' ? stay : null;
+    const stayKey = String(row?.stayKey || stay || '').trim();
+    const card = cardHint?.dataset && profileStayKey(cardHint) === stayKey
+      ? cardHint
+      : directoryCardForStay(row || stayKey);
     if (!card) return;
     const tile = card.querySelector('.directory-guest-tile-open');
     const host = card.querySelector('[data-directory-profile-roster-badges]') || tile;
     if (!tile || !host) return;
-
     host.querySelector('[data-v1117-care-source-badge]')?.remove();
     tile.querySelector('[data-v1117-care-source-badge]')?.remove();
     card.classList.remove('has-request-source');
-
     const html = careSourceBadgeHtml(requestSource);
     if (!html) return;
-
     host.insertAdjacentHTML('beforeend', html);
     card.classList.add('has-request-source');
   }
-
   function renderCareSourceBadgesFromResponse(response) {
     (response?.bookings || []).forEach(booking => {
       if (!booking?.stayKey) return;
-      renderCareSourceBadge(booking.stayKey, booking.requestSource || '');
+      renderCareSourceBadge(booking, booking.requestSource || '');
     });
   }
 
@@ -320,7 +321,7 @@
   function renderCachedCareBadges() {
     if (typeof directorySummaryRecordsCache === 'undefined') return;
     Object.entries(directorySummaryRecordsCache || {}).forEach(([stayKey, summary]) => {
-      renderCareSourceBadge(stayKey, summary?.requestSource || '');
+      renderCareSourceBadge({ ...(summary || {}), stayKey }, summary?.requestSource || '');
     });
   }
 
@@ -330,6 +331,13 @@
 
   function profileStayKey(card) {
     return String(card?.dataset?.directoryStayKey || card?.dataset?.stayKey || '').trim();
+  }
+
+  function profileCacheIdentity(card) {
+    const stayKey = profileStayKey(card);
+    const stayId = String(card?.dataset?.directoryStayId || '').trim().toLowerCase();
+    const dogId = String(card?.dataset?.directoryDogId || '').trim().toLowerCase();
+    return stayId || dogId ? `stable:${stayId}::${dogId}::${stayKey}` : stayKey;
   }
 
   function ensureProfileSourceHost(card) {
@@ -350,23 +358,12 @@
 
   async function profileRecord(card) {
     const stayKey = profileStayKey(card);
-    if (!stayKey) return null;
-
-    try {
-      if (typeof directoryProfileDetailCache !== 'undefined') {
-        const cached = directoryProfileDetailCache[stayKey];
-        if (cached && cached.requestSource !== undefined) return cached;
-      }
-    } catch (_) {}
-
-    if (typeof queryAppsScript !== 'function') return null;
-    const response = await queryAppsScript({ action: 'get_guest_profile', stayKey }, {
-      maxAttempts: 2,
-      timeoutMs: 30000
-    });
-    return response?.record || null;
+    const reads = window.WAFFLE_CARE_PROFILE_READS;
+    if (!stayKey || typeof reads?.read !== 'function') return null;
+    const response = await reads.read(card);
+    const record = response?.data?.record || null;
+    return record && reads.matches(card, record) ? record : null;
   }
-
   function profileSourceTileHtml(source, selected) {
     const active = source.value.toLowerCase() === String(selected || '').toLowerCase();
     const isOther = source.value.toLowerCase() === 'other';
@@ -460,19 +457,16 @@
       const updated = { ...record, requestSource: String(response.requestSource || requestSource) };
 
       try {
-        if (typeof directoryProfileDetailCache !== 'undefined') {
-          directoryProfileDetailCache[stayKey] = updated;
-        }
-        if (typeof directorySummaryRecordsCache !== 'undefined') {
-          directorySummaryRecordsCache[stayKey] = {
-            ...(directorySummaryRecordsCache[stayKey] || {}),
-            stayKey,
-            requestSource: updated.requestSource
-          };
+        const identity = profileCacheIdentity(card);
+        const reads = window.WAFFLE_CARE_PROFILE_READS;
+        if (typeof directoryProfileDetailCache !== 'undefined' && reads?.matches?.(card, updated)) {
+          directoryProfileDetailCache[identity] = updated;
+          card.dataset.v11112RequestSource = updated.requestSource;
+          card.dataset.v11112RequestSourceKnown = 'true';
+          card.dataset.v11112RequestSourceIdentity = identity;
         }
       } catch (_) {}
-
-      renderCareSourceBadge(stayKey, updated.requestSource);
+      renderCareSourceBadge(stayKey, updated.requestSource, card);
       hostInvalidateDirectoryCache();
       renderProfileSourceEditor(card, updated, 'Saved');
     } catch (error) {

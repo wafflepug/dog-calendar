@@ -2,7 +2,7 @@ const { defineConfig } = require('@playwright/test');
 
 module.exports = defineConfig({
   testDir: './tests',
-  testMatch: 'care-profile-read-timing.browser.spec.js',
+  testMatch: ['care-profile-read-timing.browser.spec.js', 'care-profile-performance.browser.spec.js'],
   timeout: 60000,
   workers: 1,
   reporter: [['list'], ['json', { outputFile: 'evidence/care-profile-read-timing-report.json' }]],

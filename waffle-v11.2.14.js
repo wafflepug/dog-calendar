@@ -93,36 +93,22 @@
 
   async function refreshStay(stayKey) {
     const key = String(stayKey || '').trim();
-    if (!key || typeof window.queryAppsScript !== 'function') return;
-
+    if (!key || !window.WAFFLE_CARE_PROFILE_READS?.read) return;
+    const cards = cardsForStay(key);
+    // The sync result names only a legacy key; never fan one response out to
+    // cards that may carry conflicting stable identities.
+    if (cards.length !== 1) return;
+    const card = cards[0];
     try {
-      const response = await window.queryAppsScript(
-        { action: 'get_guest_profile', stayKey: key, syncRefresh: VERSION, _: Date.now() },
-        { maxAttempts: 1, timeoutMs: 20000 }
-      );
-      const record = response?.record || response?.data?.record || null;
-      if (!record) return;
-
-      cardsForStay(key).forEach(card => {
-        try {
-          if (typeof window.renderDirectoryCareProfile === 'function') {
-            window.renderDirectoryCareProfile(card, record);
-          } else {
-            applyPhotoFallback(card, record);
-          }
-          if (typeof window.v110EnhanceCareCard === 'function') {
-            window.v110EnhanceCareCard(card);
-          }
-        } catch (error) {
-          console.warn('V11.2.16 could not refresh a synced stay card:', error);
-          applyPhotoFallback(card, record);
-        }
-      });
+      // This sync changes photos only. Keep an open Care profile draft intact.
+      const response = await window.WAFFLE_CARE_PROFILE_READS.read(card, { force: true });
+      const record = response?.data?.record;
+      if (!card.isConnected || !record || !window.WAFFLE_CARE_PROFILE_READS.matches(card, record)) return;
+      applyPhotoFallback(card, record);
     } catch (error) {
       console.warn('V11.2.16 could not reload synced stay', key, error);
     }
   }
-
   async function refreshStayKeys(stayKeys) {
     const unique = Array.from(new Set((Array.isArray(stayKeys) ? stayKeys : [])
       .map(value => String(value || '').trim())
