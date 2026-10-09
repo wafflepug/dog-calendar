@@ -119,6 +119,7 @@ async function openRecords(page) {
   const card = page.locator('.directory-card[data-directory-dog-name="Milo"]');
   await card.locator('[data-open-directory-profile]').click();
   await expect(card).toHaveClass(/is-profile-active/);
+  await expect(card.locator('[data-directory-detail="profile"]')).toHaveAttribute('data-profile-read-state', 'fresh');
   const records = card.locator('.directory-care-records-disclosure');
   await records.locator('summary').click();
   return { card, records };
@@ -426,9 +427,11 @@ test('PDF uploader cancel return refreshes only its stay without claiming an upl
   const fixture = installFixture(page);
   await openDirectory(page, baseURL, fixture);
   const { card, records } = await openRecords(page);
-  await page.evaluate(() => { window.__pdfPopup = { closed: false }; window.open = () => window.__pdfPopup; });
+  await page.evaluate(() => { window.__pdfPopup = { closed: false }; window.__pdfPopupOpens = 0; window.open = () => { window.__pdfPopupOpens++; return window.__pdfPopup; }; });
   const readsBefore = fixture.calls.get('get_guest_directory');
-  await records.locator('[data-care-record-upload]').click();
+  await records.locator('[data-care-record-upload]').focus();
+  await page.keyboard.press('Enter');
+  await expect.poll(() => page.evaluate(() => window.__pdfPopupOpens)).toBe(1);
   await page.evaluate(() => { window.__pdfPopup.closed = true; });
   await expect.poll(() => fixture.calls.get('get_legacy_intake_statuses') || 0).toBe(1);
   expect(fixture.requests.get('get_legacy_intake_statuses').at(-1).stayKeys).toEqual([await card.getAttribute('data-directory-stay-key')]);
@@ -442,8 +445,10 @@ test('PDF return failure retains the saved document and retries the same guest',
   const fixture = installFixture(page, { failOnce: 'get_legacy_intake_statuses', legacyIntakes: [{ stayKey: key, count: 1, latest: { documentId: 'saved-milo', pdfUrl: 'https://example.test/milo.pdf', aiStatus: 'Complete' } }] });
   await openDirectory(page, baseURL, fixture);
   const { card, records } = await openRecords(page);
-  await page.evaluate(() => { window.__pdfPopup = { closed: false }; window.open = () => window.__pdfPopup; });
-  await records.locator('[data-care-record-upload]').click();
+  await page.evaluate(() => { window.__pdfPopup = { closed: false }; window.__pdfPopupOpens = 0; window.open = () => { window.__pdfPopupOpens++; return window.__pdfPopup; }; });
+  await records.locator('[data-care-record-upload]').focus();
+  await page.keyboard.press('Enter');
+  await expect.poll(() => page.evaluate(() => window.__pdfPopupOpens)).toBe(1);
   await page.evaluate(() => { window.__pdfPopup.closed = true; });
   const legacy = records.locator('[data-directory-legacy]');
   await expect(legacy.locator('[data-legacy-refresh-failure]')).toHaveText('Could not refresh. Showing previously available document.');
