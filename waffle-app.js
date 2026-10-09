@@ -15973,7 +15973,7 @@ registerWaffleServiceWorker();
                                     `${formatStayDateShort(startParsed)} – ${formatStayDateShort(endParsed)}`;
                                 const rosterContext = isCurrentlyAtHome
                                     ? `${breedTxt} · ${isTodayTheEndDate ? 'leaves today' : `leaves ${formatStayDateShort(endParsed)}`}`
-                                    : `${breedTxt} · arrives ${formatStayDateShort(startParsed)}`;
+                                    : `${breedTxt} · ${stayDateLabel}`;
                                 const rosterStatus = hasBeenPickedUp
                                     ? 'Checked out'
                                     : (isCurrentlyAtHome ? 'Staying' : 'Arriving');
@@ -16006,7 +16006,7 @@ registerWaffleServiceWorker();
                                             type="button"
                                             class="directory-guest-tile-open"
                                             data-open-directory-profile
-                                            aria-label="${escapeDashboardHtml(directoryProfileAccessibleLabel({ dogName: dogName.trim(), dogNumber, dogId, stayId, owner: ownerName, context: rosterContext, stayDates: stayDateLabel, statusLabel: rosterStatus }))}">
+                                            aria-label="${escapeDashboardHtml(directoryProfileAccessibleLabel({ dogName: dogName.trim(), dogNumber, dogId, stayId, owner: ownerName, context: isCurrentlyAtHome ? rosterContext : breedTxt, stayDates: stayDateLabel, statusLabel: rosterStatus }))}">
                                             <span
                                                 class="directory-guest-tile-photo"
                                                 data-directory-tile-photo="${escapeDashboardHtml(directoryStayKey)}"

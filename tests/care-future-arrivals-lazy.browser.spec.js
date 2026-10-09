@@ -239,3 +239,75 @@ test('later arrivals keep stable identity conflicts separate and collapse matchi
   await expect(page.locator('[data-v11196-synthetic-future="true"][data-directory-dog-name="Unowned Pup"]')).toHaveCount(1);
   expect(await page.evaluate(() => document.querySelector('[data-v11196-synthetic-future="true"][data-directory-dog-name="Unowned Pup"]') === window.unownedCardBeforeRefresh)).toBe(true);
 });
+
+
+test('full Arriving page consolidates loaded and later cards with dates and stable identities', async ({ page, baseURL }, testInfo) => {
+  const { resolveLocalBackendAction } = require('../scripts/local-network-policy');
+  const fullCalendar = fs.readFileSync('tests/fixtures/fullcalendar.global.min.js', 'utf8');
+  const bennyId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+  const scoobyId = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+  const bookings = [
+    { dogName: 'Benny', breed: 'Moodle', startDate: '2026-10-14', endDate: '2026-10-20', dogId: bennyId, dogNumber: '#00052', stayId: '11111111-1111-4111-8111-111111111111' },
+    { dogName: 'Scooby', breed: 'Pugalier', startDate: '2026-10-16', endDate: '2026-10-18', dogId: scoobyId, dogNumber: '#00041', stayId: '22222222-2222-4222-8222-222222222222' },
+    { dogName: 'Luna', breed: 'Pug', startDate: '2026-10-18', endDate: '2026-10-21', dogId: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc', dogNumber: '#00053', stayId: '33333333-3333-4333-8333-333333333333' },
+    { dogName: 'Scooby', breed: 'Pugalier', startDate: '2026-10-20', endDate: '2026-10-25', dogId: scoobyId, dogNumber: '#00041', stayId: '44444444-4444-4444-8444-444444444444' }
+  ].map(b => ({ ...b, timestamp: '2026-10-01', ownerName: 'Fixture Owner', phone: '0400000000', bookingType: 'Boarding' }));
+  const csv = 'Timestamp,Dog Name,Breed,Start Date,End Date,Owner\'s Name,Contact Number,Likes,Dislikes,Notes,Edit Link,Booking Type,Request Source,Dog ID,Dog Number,Stay ID\n' + bookings.map(b => [b.timestamp,b.dogName,b.breed,b.startDate,b.endDate,b.ownerName,b.phone,'','','','',b.bookingType,'Other',b.dogId,b.dogNumber,b.stayId].join(',')).join('\n');
+  const reads = [];
+  await page.addInitScript(() => {
+    const NativeDate = Date, now = NativeDate.UTC(2026,9,9,1);
+    function FixedDate(...args) { if (!new.target) return new NativeDate(now).toString(); return Reflect.construct(NativeDate,args.length ? args : [now],new.target); }
+    FixedDate.prototype = NativeDate.prototype; Object.setPrototypeOf(FixedDate,NativeDate); FixedDate.now = () => now; globalThis.Date = FixedDate;
+  });
+  await page.addInitScript(({ theme, csv }) => { localStorage.setItem('theme',theme); localStorage.setItem('boardingDataCache',csv); }, { theme: testInfo.project.use.colorScheme, csv });
+  await page.route('**/*', async route => {
+    const request = route.request(), url = request.url();
+    if (!['GET','HEAD'].includes(request.method())) throw new Error('Fixture blocked mutation');
+    if (new URL(url).hostname === '127.0.0.1') return route.continue();
+    if (url.includes('docs.google.com') && url.includes('output=csv')) return route.fulfill({status:200,contentType:'text/csv',body:csv});
+    if (url.includes('cdn.jsdelivr.net') && url.includes('fullcalendar')) return route.fulfill({status:200,contentType:'application/javascript',body:fullCalendar});
+    if (url.includes('script.google')) {
+      const params = new URL(url).searchParams, callback = params.get('callback');
+      const payload = JSON.parse(params.get('payload') || '{}');
+      const action = resolveLocalBackendAction({method:request.method(),url});
+      if (!action.policy.allowed) return route.fulfill({status:403,body:'Read-only fixture blocked action'});
+      reads.push(payload);
+      let data = {result:'success',records:[]};
+      if (action.action === 'get_guest_directory') data = {result:'success',bookings:bookings.slice(0,2),summaries:[]};
+      if (action.action === 'get_guest_profile') data = {result:'success',record:{stayKey:payload.stayKey,identity:{stayKey:payload.stayKey,dogId:payload.dogId,stayId:payload.stayId},resolution:{status:'resolved',method:'stay-id-unique-legacy-key'},requestSource:'Other',intakeAttributes:{}}};
+      return route.fulfill({status:200,contentType:'application/javascript',body:`${callback}(${JSON.stringify(data)});`});
+    }
+    return route.fulfill({status:200,contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>'});
+  });
+  await page.goto(`${baseURL}/directory.html`,{waitUntil:'domcontentloaded'});
+  await page.waitForFunction(() => document.documentElement.dataset.waffleUiReady === 'true');
+  await page.locator('[data-v1082-stay-tab="future"]').click();
+  const benny = page.locator('#directory-grid > .directory-card[data-directory-dog-name="Benny"]');
+  await expect(benny).toHaveCount(1);
+  await expect(benny.locator(':scope > [data-open-directory-profile]')).toContainText(/14 Oct.*20 Oct/);
+  await expect(page.getByRole('button',{name:/View 2 later arrivals/})).toBeVisible();
+  expect(reads.filter(p => p.action === 'get_guest_profile')).toHaveLength(0);
+  await page.getByRole('button',{name:/View 2 later arrivals/}).click();
+  await expect(page.locator('#directory-grid > .directory-card[data-directory-dog-name="Benny"]')).toHaveCount(1);
+  await expect(page.locator('#directory-grid > .directory-card[data-directory-dog-name="Scooby"]')).toHaveCount(2);
+  await expect(page.locator('#directory-grid > .directory-card[data-directory-dog-name="Luna"]')).toHaveCount(1);
+  await expect(page.locator('#directory-grid .v11196-month-count')).toHaveText('4 stays');
+  const tiles = page.locator('#directory-grid > .directory-card > [data-open-directory-profile]');
+  await expect(tiles).toHaveCount(4);
+  for (const tile of await tiles.all()) {
+    await expect(tile.locator('.directory-roster-copy')).toHaveCount(1);
+    await expect(tile.locator('.directory-roster-avatar')).toHaveCount(1);
+    await expect(tile.locator('.v11196-future-tile-date')).toHaveCount(0);
+    expect(await tile.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
+  }
+  expect(reads.filter(p => p.action === 'get_guest_profile')).toHaveLength(0);
+  await expect.poll(() => page.evaluate(() => { const s = getComputedStyle(document.body, '::before'); return s.content === '"Waffle House"' && s.visibility !== 'hidden' && Number(s.opacity) > 0; }), {timeout:10000}).toBe(false);
+  await page.screenshot({path:testInfo.outputPath('arrivals-consolidated.png'),fullPage:true});
+  await benny.locator(':scope > [data-open-directory-profile]').click();
+  await expect(benny).toHaveClass(/is-profile-active/);
+  await expect.poll(() => reads.filter(p => p.action === 'get_guest_profile').length).toBeGreaterThan(0);
+  const profileReads = reads.filter(p => p.action === 'get_guest_profile');
+  // Canonical profile access must retain identity; legacy source-badge reads may use the same stay key.
+  expect(profileReads).toEqual(expect.arrayContaining([expect.objectContaining({dogId:bennyId,stayKey:'benny|2026-10-14|2026-10-20'})]));
+  expect(profileReads.every(p => p.stayKey === 'benny|2026-10-14|2026-10-20' && (!p.dogId || p.dogId === bennyId) && (!p.stayId || p.stayId === bookings[0].stayId)), JSON.stringify(profileReads)).toBe(true);
+});

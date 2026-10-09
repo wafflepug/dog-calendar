@@ -321,3 +321,16 @@ test('future-stay bridge keeps optimistic local confirmed stays with empty or ma
     assert.deepEqual(JSON.parse(JSON.stringify(futureConfirmedReader(storage)(csv))), optimistic);
   }
 });
+
+
+test('future arrival bridge preserves persisted IDs even with reordered identity columns', () => {
+  const dogId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+  const stayId = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+  const csv = "Timestamp,Dog Name,Breed,Start Date,End Date,Owner's Name,Contact Number,Likes,Dislikes,Notes,Edit Link,Booking Type,Stay ID,Dog Number,Dog ID\n2026-10-01,Benny,Moodle,2026-10-14,2026-10-20,Owner,0400000000,,,,,Boarding," + stayId + ',#00052,' + dogId;
+  const storage = storageWith(csv);
+  const events = futureConfirmedReader(storage)(csv);
+  assert.equal(events.length, 1);
+  assert.equal(events[0].extendedProps.dogId, dogId);
+  assert.equal(events[0].extendedProps.stayId, stayId);
+  assert.equal(events[0].extendedProps.dogNumber, '#00052');
+});
