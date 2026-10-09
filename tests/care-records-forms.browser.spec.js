@@ -324,7 +324,7 @@ test('legacy OCR labels are truthful and stay separate from file metadata', asyn
   expect(fixture.calls.get('get_legacy_intake_statuses') || 0).toBe(legacyStatusReads);
 });
 test('a failed safety refresh preserves cached alerts and marks uncached stays unavailable', async ({ page, baseURL }) => {
-  const fixture = installFixture(page, { failOnce: 'get_belongings', summaryRecords: [{ stayKey: stayKey(bookings[0]), riskFlags: { foodAllergy: true } }] });
+  const fixture = installFixture(page, { failOnce: 'get_belongings', failAttempts: 100, summaryRecords: [{ stayKey: stayKey(bookings[0]), riskFlags: { foodAllergy: true } }] });
   await openDirectory(page, baseURL, fixture, 390, 'light');
   await page.evaluate(() => loadCareRiskDashboard(localStorage.getItem('boardingDataCache') || ''));
   const { records } = await openRecords(page);
