@@ -2,7 +2,7 @@ const { defineConfig } = require('@playwright/test');
 
 module.exports = defineConfig({
   testDir: './tests',
-  testMatch: 'care-roster.spec.js',
+  testMatch: ['care-roster.spec.js', 'care-roster-*.browser.spec.js'],
   timeout: 30000,
   reporter: 'list',
   use: {
