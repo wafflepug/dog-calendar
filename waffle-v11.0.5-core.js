@@ -278,7 +278,12 @@ function v1105LegacyDateSourceMatches(source, optimistic) {
     const optimisticProps = optimistic?.extendedProps || {};
     if (String(sourceProps.stayId || '').trim() || !optimisticProps.dateUpdatePending) return false;
     const sourceDates = [sourceProps.rawStartDate || source.start, sourceProps.rawEndDate || sourceProps.rawStartDate || source.start].map(value => String(value || '').slice(0, 10));
-    if (sourceDates[0] !== String(optimisticProps.pendingOriginalStartDate || '').slice(0, 10) || sourceDates[1] !== String(optimisticProps.pendingOriginalEndDate || '').slice(0, 10)) return false;
+    const originalDates = [optimisticProps.pendingOriginalStartDate, optimisticProps.pendingOriginalEndDate].map(value => String(value || '').slice(0, 10));
+    const optimisticDates = [optimisticProps.rawStartDate || optimistic.start, optimisticProps.rawEndDate || optimisticProps.rawStartDate || optimistic.start].map(value => String(value || '').slice(0, 10));
+    const matchesDates = dates => dates[0] && dates[1] && sourceDates[0] === dates[0] && sourceDates[1] === dates[1];
+    // A pending edit's legacy CSV row can show either its old or published
+    // range. Strong identity checks below are required to match either range.
+    if (!matchesDates(originalDates) && !matchesDates(optimisticDates)) return false;
     const norm = value => String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
     if (norm(sourceProps.dogName || source.title) !== norm(optimisticProps.dogName || optimistic.title)) return false;
     const sourceDogId = String(sourceProps.dogId || '').trim().toLowerCase();
@@ -300,14 +305,24 @@ function v1105LegacyDateSourceMatches(source, optimistic) {
 function v1105DedupeConfirmedStays(events) {
     const groups = new Map();
     events.forEach(event => {
-        const key = v1105ConfirmedStayIdentity(event);
+        if (event?.extendedProps?.isPotential === true || event?.extendedProps?.isMeetGreet === true) return;
+        const stayId = String(event?.extendedProps?.stayId || '').trim().toLowerCase();
+        const identity = v1105ConfirmedStayIdentity(event);
+        // Stable IDs survive harmless changes in descriptive formatting.
+        // Compatibility below still protects dates, Dog IDs, owners, and phones.
+        const key = stayId ? `stay:${stayId}` : identity;
         if (!key) return;
         if (!groups.has(key)) groups.set(key, []);
         groups.get(key).push(event);
     });
     const seen = new Map();
     return events.filter(event => {
-        const key = v1105ConfirmedStayIdentity(event);
+        if (event?.extendedProps?.isPotential === true || event?.extendedProps?.isMeetGreet === true) return true;
+        const stayId = String(event?.extendedProps?.stayId || '').trim().toLowerCase();
+        const identity = v1105ConfirmedStayIdentity(event);
+        // Stable IDs survive harmless changes in descriptive formatting.
+        // Compatibility below still protects dates, Dog IDs, owners, and phones.
+        const key = stayId ? `stay:${stayId}` : identity;
         if (!key) return true;
         const group = groups.get(key) || [];
         const dogIds = new Set(group.map(candidate => String(candidate?.extendedProps?.dogId || '').trim().toLowerCase()).filter(Boolean));
