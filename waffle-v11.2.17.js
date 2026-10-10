@@ -45,6 +45,7 @@
     }
     return {
       stayId: String(card?.dataset?.directoryStayId || ''),
+      dogId: String(card?.dataset?.directoryDogId || ''),
       stayKey: String(card?.dataset?.directoryStayKey || card?.dataset?.stayKey || ''),
       dogName: String(card?.dataset?.directoryDogName || card?.dataset?.dogName || ''),
       startDate: String(card?.dataset?.directoryStartDate || card?.dataset?.startDate || ''),
@@ -99,6 +100,9 @@
     style.textContent = `
       .v11217-early-checkout-button{min-height:38px;padding:8px 12px;border:1px solid #f59e0b;border-radius:9px;background:#fffbeb;color:#92400e;font:inherit;font-size:10px;font-weight:900;cursor:pointer}
       .v11217-early-checkout-button:hover{background:#fef3c7}.v11217-early-checkout-button:focus-visible{outline:3px solid rgba(245,158,11,.32);outline-offset:2px}
+      .v11217-roster-actions{display:flex;gap:8px;max-width:360px;margin-left:auto;padding:0 12px 12px}.v11217-roster-actions button{flex:1;min-width:0;min-height:44px;padding:9px 12px;border:1px solid var(--v10-border,#cbd5e1);border-radius:10px;background:var(--v10-card-soft,#f8fafc);color:var(--v10-text,#172033);font:inherit;font-size:12px;font-weight:850;cursor:pointer}.v11217-roster-actions [data-v11217-roster-checkin]{border-color:#86efac;background:#f0fdf4;color:#166534}.v11217-roster-actions [data-v11217-roster-checkout]{border-color:#fda4af;background:#fff1f2;color:#9f1239}.v11217-roster-actions button:focus-visible{outline:3px solid rgba(37,99,235,.28);outline-offset:2px}.v11217-roster-actions button:disabled{opacity:.62;cursor:wait}
+      @media(max-width:600px){.v11217-roster-actions{max-width:none;margin-left:0}}
+      body.dark-theme .v11217-roster-actions [data-v11217-roster-checkin]{border-color:#4ade80;background:#14532d;color:#dcfce7}body.dark-theme .v11217-roster-actions [data-v11217-roster-checkout]{border-color:#fb7185;background:#4c0519;color:#ffe4e6}
       body.dark-theme .v11217-early-checkout-button{border-color:#d97706;background:#451a03;color:#fde68a}
       .v11217-profile-summary{margin:0 0 12px;padding:12px;border:1px solid #f59e0b;border-radius:12px;background:color-mix(in srgb,#f59e0b 8%,var(--v10-card,#fff));color:var(--v10-text,#172033)}
       .v11217-profile-summary-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}.v11217-profile-summary-head small{display:block;color:#b45309;font-size:8px;font-weight:950;letter-spacing:.07em}.v11217-profile-summary-head h4{margin:3px 0 0;font-size:14px}.v11217-profile-badge{flex:0 0 auto;padding:5px 8px;border-radius:999px;background:#fef3c7;color:#92400e;font-size:8px;font-weight:950}
@@ -220,7 +224,48 @@
   function decorateCard(card) {
     if (!card) return;
     decorateEarlyAction(card);
+    decorateRosterActions(card);
     renderEarlyProfile(card);
+  }
+
+  function decorateRosterActions(card) {
+    const tile = card?.querySelector?.('.directory-guest-tile-open');
+    const p = payloadForCard(card);
+    const today = todayKey();
+    const isStaying = !!tile && !card.classList.contains('is-profile-active') && card.dataset?.v1082PastStay !== 'true' &&
+      !!p.startDate && !!p.endDate && p.startDate <= today && p.endDate >= today;
+    let actions = card?.querySelector?.('[data-v11217-roster-actions]');
+    if (!isStaying) {
+      actions?.remove();
+      return;
+    }
+
+    const state = typeof window.v110OperationDisplayState === 'function'
+      ? window.v110OperationDisplayState(card) : null;
+    const operation = operationForCard(card);
+    const colliding = state?.code === 'collision';
+    const checkedOut = operation?.status === 'checked_out' || state?.code === 'checked_out';
+    const checkedIn = operation?.status === 'checked_in' || state?.code === 'checked_in';
+    const early = !checkedOut && !colliding && earlyCheckoutEligible(card);
+    const canCheckIn = !checkedOut && !checkedIn && !colliding && state?.code === 'date_active';
+    const canCheckout = !checkedOut && !colliding && !early &&
+      (checkedIn || state?.code === 'date_active') && p.endDate <= today;
+    const signature = JSON.stringify([p.stayId, p.stayKey, p.dogId, canCheckIn, canCheckout, early, state?.code]);
+    if (!canCheckIn && !canCheckout && !early) {
+      actions?.remove();
+      return;
+    }
+    if (!actions) {
+      actions = document.createElement('div');
+      actions.className = 'v11217-roster-actions';
+      actions.dataset.v11217RosterActions = '';
+      tile.insertAdjacentElement('afterend', actions);
+    }
+    if (actions.dataset.renderSignature === signature) return;
+    actions.dataset.renderSignature = signature;
+    actions.innerHTML = `${canCheckIn ? `<button type="button" class="v110-checkin-button" data-v11217-roster-checkin aria-label="Check in ${esc(p.dogName || 'guest')}">🛬 Check In</button>` : ''}${canCheckout ? `<button type="button" class="v110-checkout-button" data-v11217-roster-checkout aria-label="Check out ${esc(p.dogName || 'guest')}">👋 Check Out</button>` : ''}${early ? '<button type="button" class="v11217-early-checkout-button" data-v11217-early-checkout>⏱️ Early Checkout</button>' : ''}`;
+    const earlyButton = actions.querySelector('[data-v11217-early-checkout]');
+    if (earlyButton) earlyButton.setAttribute('aria-label', `Record early checkout for ${p.dogName || 'guest'}`);
   }
 
   if (typeof baseEnsureCareOperationBar === 'function') {
@@ -237,6 +282,31 @@
       decorateCard(card);
       return result;
     };
+  }
+
+  const activeStatusSaves = new Set();
+  const canonicalSave = window.v110SaveOperationalStatus;
+  if (typeof canonicalSave === 'function' && !canonicalSave.__v11217RosterLock) {
+    const guardedSave = async function(payload, status, target) {
+      const key = String(payload?.stayId || '').trim().toLowerCase() ||
+        `${String(payload?.stayKey || '').trim()}|${String(payload?.dogId || '').trim().toLowerCase()}|${String(payload?.dogName || '').trim().toLowerCase()}`;
+      if (activeStatusSaves.has(key)) throw new Error('A status update is already being saved for this stay.');
+      activeStatusSaves.add(key);
+      const disabledStates = [];
+      allCards().filter(card => {
+        const candidate = payloadForCard(card);
+        return key === (candidate.stayId ? candidate.stayId.trim().toLowerCase() :
+          `${candidate.stayKey.trim()}|${candidate.dogId.trim().toLowerCase()}|${candidate.dogName.trim().toLowerCase()}`);
+      }).forEach(card => card.querySelectorAll('[data-v110-checkin],[data-v110-checkout],[data-v11217-early-checkout],[data-v11217-roster-checkin],[data-v11217-roster-checkout]').forEach(button => { disabledStates.push([button, button.disabled]); button.disabled = true; }));
+      try { return await canonicalSave(payload, status, target); }
+      finally {
+        activeStatusSaves.delete(key);
+        disabledStates.forEach(([button, wasDisabled]) => { if (button.isConnected) button.disabled = wasDisabled; });
+        allCards().forEach(card => decorateCard(card));
+      }
+    };
+    guardedSave.__v11217RosterLock = true;
+    window.v110SaveOperationalStatus = guardedSave;
   }
 
   function allCards() {
@@ -361,6 +431,7 @@
       }
       const response = await window.v110SaveOperationalStatus(payload, 'checked_out', card);
       if (response?.queued) throw new Error('Early checkout cannot be queued offline. Nothing was saved.');
+      if (typeof window.v1086MoveCheckedOutStayToPast === 'function') window.v1086MoveCheckedOutStayToPast(card, p);
 
       if (response?.record?.stayId && !p.stayId && String(response.record.stayKey || '') === p.stayKey) {
         p.stayId = String(response.record.stayId);
@@ -403,6 +474,50 @@
       button.textContent = originalText;
     }
   }
+
+  document.addEventListener('click', async event => {
+    const checkinButton = event.target?.closest?.('[data-v11217-roster-checkin]');
+    const checkoutButton = event.target?.closest?.('[data-v11217-roster-checkout]');
+    const button = checkinButton || checkoutButton;
+    if (!button) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const card = button.closest('.directory-card');
+    if (!card || button.disabled) return;
+    const payload = payloadForCard(card);
+    const status = checkinButton ? 'checked_in' : 'checked_out';
+    const original = button.textContent;
+    if (checkoutButton && !window.confirm(`Check out ${payload.dogName}?`)) return;
+    button.disabled = true;
+    button.textContent = status === 'checked_in' ? '⏳ Checking in…' : '⏳ Checking out…';
+    try {
+      const current = payloadForCard(card);
+      const currentState = typeof window.v110OperationDisplayState === 'function' ? window.v110OperationDisplayState(card) : null;
+      const statusStillAvailable = status === 'checked_in'
+        ? currentState?.code === 'date_active'
+        : ['date_active', 'checked_in'].includes(currentState?.code);
+      if (!card.isConnected || card.dataset?.v1082PastStay === 'true' ||
+          current.stayId !== payload.stayId || current.stayKey !== payload.stayKey || current.dogId !== payload.dogId ||
+          current.startDate > todayKey() || current.endDate < todayKey() || !statusStillAvailable || currentState?.code === 'collision') {
+        throw new Error('This roster card changed. Reload the current stay before trying again.');
+      }
+      if (typeof window.v110SaveOperationalStatus !== 'function') throw new Error('Stay operations service is unavailable.');
+      await window.v110SaveOperationalStatus(payload, status, card);
+      if (status === 'checked_out' && typeof window.v1086MoveCheckedOutStayToPast === 'function') {
+        window.v1086MoveCheckedOutStayToPast(card, payload);
+      }
+      if (typeof window.v110EnsureCareOperationBar === 'function') window.v110EnsureCareOperationBar(card);
+      scheduleEnhance();
+      if (typeof window.showWaffleForegroundPush === 'function') window.showWaffleForegroundPush({
+        title: status === 'checked_in' ? `🏡 ${payload.dogName} checked in` : `👋 ${payload.dogName} checked out`,
+        body: status === 'checked_in' ? 'Operational stay tracking is now active.' : 'The stay has moved to Past.'
+      });
+    } catch (error) {
+      window.alert(`${status === 'checked_in' ? 'Check In' : 'Check Out'} could not be saved.\n\n${error?.message || String(error)}`);
+      button.disabled = false;
+      button.textContent = original;
+    }
+  });
 
   document.addEventListener('click', event => {
     const earlyButton = event.target?.closest?.('[data-v11217-early-checkout]');
