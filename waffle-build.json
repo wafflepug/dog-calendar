@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.10.10.01",
-  "releaseName": "Care Profile Performance",
+  "assetRevision": "2026.10.10.02",
+  "releaseName": "Home Stay Date Reconciliation",
   "careIteration": {
     "returningDogSuggestions": true,
     "reviewedCareInheritance": true,

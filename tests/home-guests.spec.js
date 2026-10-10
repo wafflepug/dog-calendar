@@ -360,3 +360,41 @@ test('Potential stays sit directly below arrivals while legacy agenda stays hidd
   expect(layout.legacyPotential).toBe('none');
   await expect(page.getByRole('button', { name: /New Potential/ })).toBeVisible();
 });
+
+
+test('Home shows one guest for a saved date edit throughout spreadsheet refresh', async ({ page }) => {
+  await setup(page, { today: '2026-10-10', events: [] });
+  const core = read('waffle-v11.0.5-core.js');
+  const start = core.indexOf('function v1105ConfirmedStayIdentity');
+  const end = core.indexOf('v1104LoadSharedPotentialStays =', start);
+  await page.evaluate(() => {
+    window.v1104SharedPotentialLoaded = true;
+    window.v1104SharedPotentialEvents = [];
+    window.getPendingPotentialRemovals = () => [];
+    window.dailyCapacityCounts = {};
+    window.countDogsInName = () => 1;
+    window.addLocalEventCapacity = () => {};
+    window.v1105IsPotentialStayTombstoned = () => false;
+    window.v1105IsStableStayTombstoned = () => false;
+  });
+  await page.addScriptTag({ content: core.slice(start, end) });
+  const dogId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+  const stayId = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+  const props = { dogId, breed: 'Poodle', ownerName: 'Fixture Owner', owner: 'Fixture Owner', phone: '0400 123 456', bookingType: 'Boarding' };
+  const overlay = event('Coco', '2026-09-25', '2026-10-13', { ...props, phone: '0400123456', stayId, dateUpdatePending: true, pendingOriginalStartDate: '2026-09-25', pendingOriginalEndDate: '2026-10-11' });
+  for (const sheet of [
+    event('Coco', '2026-09-25', '2026-10-11', props),
+    event('Coco', '2026-09-25', '2026-10-13', props),
+    event('Coco', '2026-09-25', '2026-10-13', { ...props, stayId })
+  ]) {
+    await page.evaluate(({ sheet, overlay }) => {
+      fixtureEvents = v1104ComposeCalendarEvents([sheet], [], [], [overlay]);
+      WAFFLE_HOME_GUESTS.refresh();
+    }, { sheet, overlay });
+    const guests = page.locator('#whHomeGuests .wh-home-guest');
+    await expect(guests).toHaveCount(1);
+    await expect(guests.locator('.wh-home-guest-name')).toHaveText('Coco');
+    await expect(guests.locator('.wh-home-guest-label')).toHaveText('Leaves 13 Oct');
+    await expect(guests).toHaveAttribute('href', new RegExp('stayId=' + stayId));
+  }
+});

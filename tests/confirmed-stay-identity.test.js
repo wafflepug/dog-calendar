@@ -136,6 +136,40 @@ test('conflicting aliases and different partial source identities are preserved 
     assert.equal(sandbox.v1104ComposeCalendarEvents([ownerOnly], [], [], [phoneOnly]).length, 2);
 });
 
+test('stable stay IDs reconcile same-date copies when CSV phone formatting changes', () => {
+    const stayId = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
+    const dogId = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+    const csv = stay({ stayId, dogId, phone: '(02) 9123-4567' });
+    const overlay = stay({ stayId, dogId, phone: '02 9123 4567' });
+    assert.equal(sandbox.dedupe([csv, overlay]).length, 1);
+});
+
+test('stable stay ID bucket still preserves conflicts and different stay IDs', () => {
+    const stayId = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
+    const first = stay({ stayId, dogId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' });
+    const conflictingDog = stay({ stayId, dogId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb' });
+    const differentDate = stay({ stayId, rawStartDate: '2026-09-21', rawEndDate: '2026-09-23' });
+    const differentStay = stay({ stayId: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee' });
+    assert.equal(sandbox.dedupe([first, conflictingDog]).length, 2);
+    assert.equal(sandbox.dedupe([first, differentDate]).length, 2);
+    assert.equal(sandbox.dedupe([first, differentStay]).length, 2);
+});
+
+test('a legacy CSV row already showing the pending edited dates is replaced by its strong-ID overlay', () => {
+    const dogId = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+    const legacy = stay({ dogId, rawStartDate: '2026-09-25', rawEndDate: '2026-10-13' });
+    const overlay = stay({
+        dogId,
+        stayId: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+        rawStartDate: '2026-09-25',
+        rawEndDate: '2026-10-13',
+        pendingOriginalStartDate: '2026-09-25',
+        pendingOriginalEndDate: '2026-10-11',
+        dateUpdatePending: true
+    });
+    const result = sandbox.v1104ComposeCalendarEvents([legacy], [], [], [overlay]);
+    assert.deepEqual(result, [overlay]);
+});
 test('delimiters in identity fields cannot produce a false collision', () => {
     assert.notEqual(sandbox.identity(stay({ breed: 'a|b', ownerName: 'c' })), sandbox.identity(stay({ breed: 'a', ownerName: 'b|c' })));
 });
@@ -166,5 +200,25 @@ test('an ID-less copy cannot bridge two distinct persisted Dog IDs in any source
         assert.equal(deduped.includes(noId), true);
         assert.equal(deduped.includes(first), true);
         assert.equal(deduped.includes(second), true);
+    }
+});
+
+
+test('stable ID buckets never absorb potential or meet events into boarding', () => {
+    const props = { stayId: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd', dogId: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc' };
+    const confirmed = stay(props);
+    const potential = stay({ ...props, isPotential: true });
+    const meet = stay({ ...props, isMeetGreet: true });
+    assert.equal(sandbox.dedupe([confirmed, potential, meet]).length, 3);
+});
+
+test('edited-date legacy bridge preserves ambiguity and conflicting identity', () => {
+    const props = { dogId: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc', rawStartDate: '2026-09-25', rawEndDate: '2026-10-13' };
+    const overlay = stay({ ...props, stayId: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd', dateUpdatePending: true, pendingOriginalStartDate: '2026-09-25', pendingOriginalEndDate: '2026-10-11' });
+    const ambiguous = sandbox.v1104ComposeCalendarEvents([stay(props), stay(props)], [], [], [overlay]);
+    assert.equal(ambiguous.length, 2, 'existing legacy duplicate reconciliation remains separate from the unresolved overlay');
+    assert.equal(ambiguous.includes(overlay), true);
+    for (const conflict of [{ ownerName: 'Other owner' }, { phone: '0499999999' }, { dogId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' }]) {
+        assert.equal(sandbox.v1104ComposeCalendarEvents([stay({ ...props, ...conflict })], [], [], [overlay]).length, 2);
     }
 });
