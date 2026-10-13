@@ -36,4 +36,6 @@ Automated totals, current-head CI and live deployment attribution are recorded i
 1. Scope cache invalidation to the affected dog/stay after writes, with coverage for date edits, checkout, intake and photo changes.
 2. Measure booking-sheet reads on cold profile requests, then narrow range transfer only where evidence shows a benefit and identity checks remain intact.
 
-Local verification: 301 Node tests pass; 21 focused browser tests pass (9 full-runtime Care, 7 Photos/fallback, 5 cold/warm timing and recovery). The current source was reviewed by the lead model after Luna implementation. Test fixtures block customer-data mutations. Detailed Care also retains responsive, enlarged-text, theme, keyboard and fixed-footer checks.
+Local verification: 301 Node tests pass; 23 focused browser tests pass (9 full-runtime Care, 7 Photos/fallback, 5 cold/warm timing and recovery, 2 intake metadata/readability). The current source was reviewed by the lead model after Luna implementation. Test fixtures block customer-data mutations. Detailed Care also retains responsive, enlarged-text, theme, keyboard and fixed-footer checks.
+
+A broader CI case caught a dirty-draft metadata regression. The fix updates saved field count/source metadata independently of the editor DOM; the existing empty-to-populated-to-empty intake case and enlarged intake readability check pass with the draft and disclosures retained.

@@ -10005,6 +10005,7 @@ registerWaffleServiceWorker();
                 if (!readIsCurrent()) return true;
 
                 if (hasDirtyProfileDraft()) {
+                    updateDirectoryIntakeMetadata(card, record);
                     details.dataset.detailLoaded = 'true';
                     return true;
                 }
@@ -11611,6 +11612,21 @@ registerWaffleServiceWorker();
         return { text: emptySummaries[tabKey] || 'No care details saved', state: 'empty' };
     }
 
+    function updateDirectoryIntakeMetadata(card, record) {
+        const attributes = record?.intakeAttributes && typeof record.intakeAttributes === 'object' ? record.intakeAttributes : {};
+        const populatedCount = Object.values(attributes).filter(value => String(value ?? '').trim()).length;
+        const source = String(record?.intakeAttributesSource || '').trim();
+        const sourceLabel = source || (populatedCount ? 'Stored profile' : 'No intake saved yet');
+        const summaryChip = card.querySelector('[data-intake-profile-summary]');
+        if (summaryChip) {
+            summaryChip.hidden = populatedCount === 0;
+            summaryChip.textContent = populatedCount ? `${populatedCount} fields · ${sourceLabel}` : '';
+        }
+        const sourceLine = card.querySelector('.directory-profile-source-line');
+        if (sourceLine) sourceLine.textContent = `📋 ${sourceLabel}`;
+        return { attributes, sourceLabel };
+    }
+
     function renderDirectoryIntakeAttributes(card, record) {
         const host =
             card.querySelector(
@@ -11629,43 +11645,7 @@ registerWaffleServiceWorker();
                 'true';
         }
 
-        const attributes =
-            record &&
-            record.intakeAttributes &&
-            typeof record.intakeAttributes === 'object'
-                ? record.intakeAttributes
-                : {};
-
-        const populatedCount =
-            Object.values(attributes)
-                .filter(value =>
-                    String(value ?? '').trim()
-                ).length;
-
-        const source =
-            String(
-                record?.intakeAttributesSource ||
-                ''
-            ).trim();
-
-        const sourceLabel =
-            source
-                ? escapeDashboardHtml(source)
-                : (
-                    populatedCount
-                        ? 'Stored profile'
-                        : 'No intake saved yet'
-                );
-
-        const summaryChip =
-            card.querySelector(
-                '[data-intake-profile-summary]'
-            );
-
-        if (summaryChip) {
-            summaryChip.hidden = populatedCount === 0;
-            summaryChip.textContent = populatedCount ? `${populatedCount} fields · ${sourceLabel}` : '';
-        }
+        const { attributes, sourceLabel } = updateDirectoryIntakeMetadata(card, record);
 
         const selectedSubTab = String(card.dataset.profileSubTab || '');
         const expandedSubTabs = new Set(String(card.dataset.profileSubTabs || selectedSubTab).split(',').map(value => value.trim()).filter(Boolean));
@@ -11714,7 +11694,7 @@ registerWaffleServiceWorker();
 
         host.innerHTML = `
             <div class="intake-profile-source directory-profile-source-line">
-                📋 ${sourceLabel}
+            📋 ${escapeDashboardHtml(sourceLabel)}
             </div>
             <div class="care-category-list" aria-label="Detailed care categories">${cardsHtml}</div>
         `;
