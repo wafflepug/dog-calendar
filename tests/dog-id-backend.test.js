@@ -69,6 +69,12 @@ function makeHarness(initialRows, priorProfiles = []) {
     Session: { getScriptTimeZone: () => 'Australia/Sydney' },
     getTargetSheet_: () => sheet,
     getBelongingsSheet_: () => belongings,
+    getBelongingsSheetReadOnly_: () => belongings,
+    readCareRecordIdentityState_() {
+      const byKey = {};
+      priorProfiles.forEach(record => { (byKey[record.stayKey] || (byKey[record.stayKey] = [])).push({ rowNumber: 2, stayKey: record.stayKey, stayId: record.stayId || '', dogId: record.dogId || '', valid: true }); });
+      return { ok: true, legacy: true, byKey };
+    },
     normalizeV108Identity_: value => String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim(),
     phoneTailV108_: value => String(value || '').replace(/\D/g, '').slice(-4),
     normalizeDateValue_: value => String(value || '').slice(0, 10),
@@ -376,6 +382,7 @@ console.log('Dog stay link UI and route contract tests passed.');
   const sandbox = {
     getTargetSheet_: () => ({ getDataRange: () => ({ getValues: () => rows }) }),
     getBelongingsSheet_: () => ({}),
+    getBelongingsSheetReadOnly_: () => ({}),
     readBelongingsRecords_: () => profiles,
     readStayOperations_: () => [],
     phoneTailV108_: value => String(value || '').replace(/\D/g, '').slice(-4),

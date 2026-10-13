@@ -5,6 +5,7 @@ const test = require('node:test');
 const vm = require('node:vm');
 
 const code = fs.readFileSync(path.join(__dirname, '..', 'apps-script', 'Code.js'), 'utf8');
+const identityCode = fs.readFileSync(path.join(__dirname, '..', 'apps-script', 'CareRecordIdentity.js'), 'utf8');
 
 function extractFunction(name) {
   const start = code.indexOf(`function ${name}(`);
@@ -17,8 +18,13 @@ function extractFunction(name) {
 }
 
 function load(functionNames, stubs = {}) {
-  const sandbox = { ...stubs };
-  vm.runInNewContext(`${functionNames.map(extractFunction).join('\n')}\nthis.contractFns = { ${functionNames.join(', ')} };`, sandbox);
+  const sandbox = {
+    getBelongingsHeaders_: () => Array.from({ length: 34 }, (_, index) => ['Updated At', 'Stay Key', 'Dog Name'][index] || `Column ${index + 1}`),
+    getBelongingsSheetReadOnly_: () => (stubs.getBelongingsSheet_ ? stubs.getBelongingsSheet_() : null),
+    getTargetSheet_: () => ({ getDataRange: () => ({ getValues: () => [] }) }),
+    ...stubs
+  };
+  vm.runInNewContext(`${identityCode}\n${functionNames.map(extractFunction).join('\n')}\nthis.contractFns = { ${functionNames.join(', ')} };`, sandbox);
   return sandbox;
 }
 
@@ -29,7 +35,7 @@ function sheetWithRow(row) {
     getLastColumn: () => row.length,
     getRange(startRow, startColumn, rowCount, columnCount) {
       return {
-        getValues: () => startRow === 1 ? [row.headers] : [row.values],
+        getValues: () => startRow === 1 ? [row.headers, row.values] : [row.values],
         setValue(value) { writes.push({ startRow, startColumn, value }); }
       };
     }
@@ -37,7 +43,7 @@ function sheetWithRow(row) {
   return { sheet, writes };
 }
 
-test('intake import save refreshes the existing shared-row timestamp', () => {
+test('intake import refuses an existing row without a proven booking identity', () => {
   const writes = [];
   const sheet = { getRange(row, column) { return { setValue(value) { writes.push({ row, column, value }); } }; } };
   const sandbox = load(['saveIntakeAttributesForStay_'], {
@@ -49,17 +55,11 @@ test('intake import save refreshes the existing shared-row timestamp', () => {
     Date
   });
 
-  const before = Date.now();
-  sandbox.contractFns.saveIntakeAttributesForStay_('Milo', '2026-10-01', '2026-10-03', 'milo|2026-10-01|2026-10-03', { medicationInstructions: 'With dinner' }, 'Legacy Intake · Confirmed');
-  const after = Date.now();
-
-  const timestampWrite = writes.find(write => write.row === 4 && write.column === 1);
-  assert.ok(timestampWrite?.value instanceof Date);
-  assert.ok(timestampWrite.value.getTime() >= before && timestampWrite.value.getTime() <= after);
-  assert.ok(writes.some(write => write.column === 31));
+  assert.throws(() => sandbox.contractFns.saveIntakeAttributesForStay_('Milo', '2026-10-01', '2026-10-03', 'milo|2026-10-01|2026-10-03', { medicationInstructions: 'With dinner' }, 'Legacy Intake · Confirmed'), /Care write blocked/);
+  assert.deepEqual(writes, []);
 });
 
-test('core booking sync refreshes the shared-row timestamp', () => {
+test('core booking sync refuses an existing row without a proven booking identity', () => {
   const writes = [];
   const sheet = { getRange(row, column) { return { setValue(value) { writes.push({ row, column, value }); } }; } };
   const sandbox = load(['syncCoreBookingFieldsToIntakeAttributes_'], {
@@ -68,10 +68,8 @@ test('core booking sync refreshes the shared-row timestamp', () => {
     Date
   });
 
-  assert.equal(sandbox.contractFns.syncCoreBookingFieldsToIntakeAttributes_('milo|2026-10-01|2026-10-03', {}), true);
-  assert.equal(writes.length, 1);
-  assert.equal(writes[0].column, 1);
-  assert.ok(writes[0].value instanceof Date);
+  assert.throws(() => sandbox.contractFns.syncCoreBookingFieldsToIntakeAttributes_('milo|2026-10-01|2026-10-03', {}), /Care write blocked/);
+  assert.deepEqual(writes, []);
 });
 
 test('core booking sync leaves a missing care row untouched', () => {
@@ -152,17 +150,18 @@ test('guest detail returns the stored shared-row timestamp unchanged', () => {
   assert.deepEqual(writes, []);
 });
 
-test('reviewed inheritance writes a fresh destination timestamp without touching the source', () => {
+test('reviewed inheritance refuses a destination without a unique booking key', () => {
   const sourceKey = 'milo|2026-09-01|2026-09-03';
   const destinationKey = 'milo|2026-10-01|2026-10-03';
   const sourceUpdatedAt = '2026-09-02T12:00:00.000Z';
   const dogId = 'bb942e2d-2c4c-4be5-a943-f7a9e0ae402c';
   const sourceReads = [];
   const destinationRow = [];
+  const destinationHeaders = Array.from({ length: 34 }, (_, index) => ['Updated At', 'Stay Key', 'Dog Name'][index] || `Column ${index + 1}`);
   const destinationSheet = {
     getLastRow: () => destinationRow.length ? 2 : 1,
     appendRow(row) { destinationRow.push(row); },
-    getRange() { return { getValue: () => '' }; }
+    getRange() { return { getValues: () => [destinationHeaders], getValue: () => '' }; }
   };
   const bookingRows = Array.from({ length: 9 }, () => []);
   bookingRows[8] = [dogId];
@@ -203,18 +202,12 @@ test('reviewed inheritance writes a fresh destination timestamp without touching
     Date
   });
 
-  const result = sandbox.contractFns.applyReviewedCareInheritanceV11225_(
+  assert.throws(() => sandbox.contractFns.applyReviewedCareInheritanceV11225_(
     {}, dogId, 'Milo', destinationKey, '2026-10-01', '2026-10-03', 'destination-stay-id'
-  );
-
-  assert.equal(result.copied, true);
+  ), /Care write blocked/);
   assert.equal(sourceReads.length, 1);
   assert.equal(sourceReads[0][0], destinationKey);
-  assert.equal(destinationRow.length, 1);
-  assert.equal(destinationRow[0][1], destinationKey);
-  assert.ok(destinationRow[0][0] instanceof Date);
-  assert.notEqual(destinationRow[0][0].toISOString(), sourceUpdatedAt);
-  assert.equal(destinationRow[0][11], 'Reviewed from previous stay');
+  assert.equal(destinationRow.length, 0);
 });
 
 test('profile reads preserve timestamp strings and return empty for absent timestamps', () => {
@@ -231,7 +224,7 @@ test('profile reads preserve timestamp strings and return empty for absent times
     parseV108DogPhotoGalleryJson_: () => [],
     parseStayPhotosJson_: () => []
   });
-  const sheet = { getLastRow: () => 2, getLastColumn: () => 34, getRange: row => ({ getValues: () => [row === 1 ? headers : values] }) };
+  const sheet = { getLastRow: () => 2, getLastColumn: () => 34, getRange: row => ({ getValues: () => row === 1 ? [headers, values] : [values] }) };
 
   assert.equal(sandbox.contractFns.readGuestProfileRowsReadOnly_(sheet, values[1])[0].updatedAt, storedString);
   values[0] = '';

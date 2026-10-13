@@ -55,6 +55,12 @@ function build(rows, careRecords, operationRecords) {
     makeGuestStayKey_: key,
     getTargetSheet_: () => sheet,
     getBelongingsSheet_: () => belongings,
+    getBelongingsSheetReadOnly_: () => belongings,
+    readCareRecordIdentityState_() {
+      const byKey = {};
+      careRecords.forEach(record => { (byKey[record.stayKey] || (byKey[record.stayKey] = [])).push({ rowNumber: 2, stayKey: record.stayKey, stayId: record.stayId || '', dogId: record.dogId || '', valid: true }); });
+      return { ok: true, legacy: true, byKey };
+    },
     readBelongingsRecords_(_sheet, stayKeys) { return !Array.isArray(stayKeys) || !stayKeys.length ? careRecords.slice() : careRecords.filter(record=>stayKeys.includes(record.stayKey)); },
     readStayOperations_(filters) {
       const ids = filters && filters.stayIds || [], keys = filters && filters.stayKeys || [];

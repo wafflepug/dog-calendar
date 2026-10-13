@@ -96,6 +96,7 @@ function makeHarness(options = {}) {
   const props = new Map(options.properties || []);
   let failIntake = Boolean(options.failIntake);
   let failMigration = Boolean(options.failMigration);
+  const belongingsMigrationCalls = [];
   const sandbox = {
     console,
     Date,
@@ -155,9 +156,10 @@ function makeHarness(options = {}) {
     auditBookingFieldLabels_() { return {}; },
     logAuditEvent_(event) { if (options.onAudit) options.onAudit(event); },
     touchWaffleDataVersion_() {},
-    migrateBelongingsIdentityForGuest_() { if (failMigration) { failMigration = false; throw new Error('simulated media-key migration failure'); } return true; },
+    migrateBelongingsIdentityForGuest_(...args) { belongingsMigrationCalls.push(args); if (failMigration) { failMigration = false; throw new Error('simulated media-key migration failure'); } return true; },
     migrateIntakeIdentitiesForGuest_() { return { digital: 0, legacy: 0 }; },
     getBelongingsSheet_() { return makeSheet('Belongings', [['header']], ss); },
+    getBelongingsSheetReadOnly_() { return makeSheet('Belongings', [['header']], ss); },
     readBelongingsRecords_() { return []; },
     readBelongingsSummaryRecords_() { return []; },
     getIntakeStatusRecords_() { return []; },
@@ -178,7 +180,7 @@ function makeHarness(options = {}) {
   `${code.slice(inheritanceStart, createStart)}\n${code.slice(currentReadStart, currentReadEnd)}\n${code.slice(potentialReadStart, potentialReadEnd)}\n` +
     'this.createV108Boarding_ = createV108Boarding_; this.updateV108BoardingDates_ = updateV108BoardingDates_;';
   vm.runInContext(loaded, sandbox);
-  return { sandbox, bookings, ss, props, get lockHeld() { return lockHeld; }, get lockAttempts() { return lockAttempts; } };
+  return { sandbox, bookings, ss, props, belongingsMigrationCalls, get lockHeld() { return lockHeld; }, get lockAttempts() { return lockAttempts; } };
 }
 
 function request(id, stayId, values = {}) {
@@ -242,6 +244,7 @@ function potentialRequest(action, id, stayId, values = {}) {
   assert.equal(h.bookings.rows[1][14], stayB);
   assert.equal(h.bookings.rows[1][15], payload.clientMutationId);
   assert.equal(recovered.stayId, stayB);
+  assert.equal(h.belongingsMigrationCalls.at(-1)[4], stayB, 'receipt recovery passes its verified stable Stay ID to legacy Care carry-forward');
   assert.equal(h.bookings.getLastRow(), 2);
   const exactReplay = h.sandbox.processSheetActionWithV108Receipt_(payload);
   assert.equal(exactReplay.booking.endDate, '2026-10-05');

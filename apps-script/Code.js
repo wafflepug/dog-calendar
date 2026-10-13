@@ -1542,7 +1542,8 @@ function countStoredIntakeFields_(value) {
 
 function readBelongingsSummaryRecords_(
   sheet,
-  stayKeys
+  stayKeys,
+  bookingRows
 ) {
   if (
     !sheet ||
@@ -1570,18 +1571,14 @@ function readBelongingsSummaryRecords_(
     Object.keys(requested)
       .length > 0;
 
-  var values =
-    sheet
-      .getRange(
-        2,
-        1,
-        sheet.getLastRow() - 1,
-        getBelongingsHeaders_()
-          .length
-      )
-      .getValues();
+  var identityState = readCareRecordIdentityState_(sheet);
+  if (!identityState.ok) return [];
+
+  var values = identityState.values.slice(1);
 
   var summaries = [];
+  var candidateKeys = values.map(function(row) { return String(row[1] || "").trim(); }).filter(function(key) { return key && (!hasFilter || requested[key]); });
+  var bookingIdentities = resolveCareBookingIdentities_(candidateKeys, bookingRows);
 
   values.forEach(function(row) {
     var stayKey =
@@ -1598,6 +1595,12 @@ function readBelongingsSummaryRecords_(
     ) {
       return;
     }
+
+    var identityRows = identityState.byKey[stayKey] || [];
+    var bookingIdentity = bookingIdentities[stayKey];
+    if (identityRows.length !== 1 || !identityRows[0].valid || !bookingIdentity || !bookingIdentity.ok ||
+        (identityRows[0].stayId && identityRows[0].stayId !== bookingIdentity.identity.stayId) ||
+        (identityRows[0].dogId && identityRows[0].dogId !== bookingIdentity.identity.dogId)) return;
 
     var riskFlags = {};
 
@@ -1646,6 +1649,8 @@ function readBelongingsSummaryRecords_(
       );
 
     summaries.push({
+      identity: { stayKey: stayKey, stayId: bookingIdentity.identity.stayId, dogId: bookingIdentity.identity.dogId },
+      identityResolution: { status: "resolved", method: identityState.legacy ? "legacy-key-unique" : "persisted-care-identity" },
       updatedAt:
         row[0] instanceof Date
           ? row[0].toISOString()
@@ -1697,21 +1702,44 @@ function readGuestProfileRowsReadOnly_(sheet, stayKey) {
   if (!sheet || sheet.getLastRow() < 2) return [];
 
   var expected = getBelongingsHeaders_();
+  if (sheet.getMaxColumns && sheet.getMaxColumns() < expected.length) return null;
   var lastColumn = sheet.getLastColumn ? sheet.getLastColumn() : expected.length;
-  var width = Math.min(expected.length, Math.max(2, Number(lastColumn)));
-  var headers = sheet.getRange(1, 1, 1, width).getValues()[0] || [];
-  for (var headerIndex = 0; headerIndex < width; headerIndex++) {
+  if (!isFinite(Number(lastColumn))) lastColumn = expected.length;
+  if (Number(lastColumn) > expected.length + 2) return null;
+  if (Number(lastColumn) !== expected.length && Number(lastColumn) !== expected.length + 2) return null;
+  var width = Math.max(expected.length, Math.min(expected.length + 2, Math.max(2, Number(lastColumn))));
+  // Take one bounded snapshot so the active detail path does not fetch the
+  // Care header and body in separate spreadsheet reads.
+  var snapshot = sheet.getRange(1, 1, sheet.getLastRow(), width).getValues();
+  var headers = snapshot[0] || [];
+  for (var headerIndex = 0; headerIndex < expected.length; headerIndex++) {
     if (String(headers[headerIndex] || "").trim() !== expected[headerIndex]) return null;
   }
+  var stayIdColumn = -1, dogIdColumn = -1;
+  for (var identityHeaderIndex = 0; identityHeaderIndex < headers.length; identityHeaderIndex++) {
+    var identityHeader = String(headers[identityHeaderIndex] || '').trim().toLowerCase();
+    if (identityHeader === 'stay id') { if (stayIdColumn >= 0) return null; stayIdColumn = identityHeaderIndex; }
+    if (identityHeader === 'dog id') { if (dogIdColumn >= 0) return null; dogIdColumn = identityHeaderIndex; }
+  }
+  if ((stayIdColumn < 0) !== (dogIdColumn < 0) || (stayIdColumn >= 0 && (stayIdColumn !== expected.length || dogIdColumn !== expected.length + 1))) return null;
+  if (Number(lastColumn) === expected.length + 2 && (stayIdColumn !== expected.length || dogIdColumn !== expected.length + 1)) return null;
 
-  var rowCount = sheet.getLastRow() - 1;
-  var values = sheet.getRange(2, 1, rowCount, width).getValues();
-  var records = [];
+  var values = snapshot.slice(1);
+  var records = [], stayIdCounts = {}, idPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  values.forEach(function(row) {
+    var id = stayIdColumn < 0 ? '' : String(row[stayIdColumn] || '').trim().toLowerCase();
+    if (id) stayIdCounts[id] = (stayIdCounts[id] || 0) + 1;
+  });
   values.forEach(function(row) {
     var rowStayKey = String(row[1] || "").trim();
     if (rowStayKey !== stayKey) return;
+    var persistedStayId = stayIdColumn < 0 ? '' : String(row[stayIdColumn] || '').trim().toLowerCase();
+    var persistedDogId = dogIdColumn < 0 ? '' : String(row[dogIdColumn] || '').trim().toLowerCase();
     records.push({
       stayKey: rowStayKey,
+      stayId: persistedStayId,
+      dogId: persistedDogId,
+      invalidIdentity: (persistedStayId && (!validStayIdV11225_(persistedStayId) || stayIdCounts[persistedStayId] !== 1)) || (persistedDogId && !idPattern.test(persistedDogId)),
       dogName: String(row[2] || ""),
       updatedAt: row[0] instanceof Date ? row[0].toISOString() : String(row[0] || ""),
       dogPhoto: parseDogPhotoJson_(row[29]),
@@ -1859,6 +1887,9 @@ function getGuestProfileDetail_(request) {
   }
 
   var record = records[0];
+  if (record.invalidIdentity || (record.stayId && record.stayId !== identity.stayId) || (record.dogId && record.dogId !== identity.dogId)) {
+    return emptyProfile(identity, { status: "unresolved", method: "identity-conflict", reason: "care-booking-id-conflict" });
+  }
   return {
     stayKey: record.stayKey,
     identity: identity,
@@ -1887,13 +1918,12 @@ function getGuestBelongingsDetail_(
     );
   }
 
-  var records =
-    readBelongingsRecords_(
-      getBelongingsSheet_(),
-      [
-        stayKey
-      ]
-    );
+  var careSheet = getBelongingsSheetReadOnly_();
+  var careIdentityState = readCareRecordIdentityState_(careSheet);
+  var bookingRows = getTargetSheet_().getDataRange().getValues();
+  var resolution = describeCareRecordIdentityReads_(careSheet, [stayKey], bookingRows, careIdentityState)[0] || { stayKey: stayKey, status: "unresolved", reason: "missing-identity-result" };
+  if (resolution.status === "unresolved") throw new Error("Care identity is unresolved for this stay. No belongings or safety details were returned.");
+  var records = readBelongingsRecords_(careSheet, [stayKey], bookingRows, careIdentityState);
 
   var record =
     records.length
@@ -1916,6 +1946,7 @@ function getGuestBelongingsDetail_(
     return {
       stayKey:
         stayKey,
+      identityResolution: resolution,
       items:
         emptyItems,
       photos:
@@ -1939,6 +1970,8 @@ function getGuestBelongingsDetail_(
   return {
     stayKey:
       record.stayKey,
+    identity: { stayKey: record.stayKey, stayId: record.stayId || "", dogId: record.dogId || "" },
+    identityResolution: { stayKey: record.stayKey, status: "resolved", identity: { stayKey: record.stayKey, stayId: record.stayId || "", dogId: record.dogId || "" }, method: record.stayId || record.dogId ? "persisted-care-identity" : "legacy-key-unique" },
     dogName:
       record.dogName,
     startDate:
@@ -2142,8 +2175,9 @@ function getGuestDirectoryPayload_() {
    */
   var summaries =
     readBelongingsSummaryRecords_(
-      getBelongingsSheet_(),
-      stayKeys
+      getBelongingsSheetReadOnly_(),
+      stayKeys,
+      rows
     );
 
   var digitalIntakes =
@@ -2154,7 +2188,8 @@ function getGuestDirectoryPayload_() {
 
   var legacyIntakes =
     getLegacyIntakeStatusRecords_(
-      stayKeys
+      stayKeys,
+      rows
     );
 
   return {
@@ -2519,8 +2554,9 @@ function getPastGuestDirectoryPayload_(data) {
 
   var summaries =
     readBelongingsSummaryRecords_(
-      getBelongingsSheet_(),
-      stayKeys
+      getBelongingsSheetReadOnly_(),
+      stayKeys,
+      rows
     );
 
   var digitalIntakes =
@@ -3256,7 +3292,9 @@ function processReadOnlySheetAction_(data) {
       deployment: typeof getWaffleDeploymentIdentity_ === "function" ? getWaffleDeploymentIdentity_() : null,
       versions: Object.assign({}, getWaffleDataVersions_(), {
         stableStayIdentityVersion: STABLE_STAY_IDENTITY_VERSION_V11225_,
-        stayOperationIdentityVersion: STAY_OPERATION_IDENTITY_VERSION_V11226_
+        stayOperationIdentityVersion: STAY_OPERATION_IDENTITY_VERSION_V11226_,
+        careRecordIdentityVersion: typeof CARE_RECORD_IDENTITY_VERSION_ === "number" ? CARE_RECORD_IDENTITY_VERSION_ : 0,
+        careRecordIdentityWritesEnabled: typeof careRecordIdentityWritesEnabled_ === "function" ? careRecordIdentityWritesEnabled_() : false
       })
     };
   }
@@ -3492,12 +3530,20 @@ function processReadOnlySheetAction_(data) {
       data,
       45,
       function() {
+        var readSheet = getBelongingsSheetReadOnly_();
+        var bookingRows = getTargetSheet_().getDataRange().getValues();
+        var identityState = readCareRecordIdentityState_(readSheet);
+        var resolutions = describeCareRecordIdentityReads_(readSheet, data.stayKeys || [], bookingRows, identityState);
+        if (resolutions.some(function(entry) { return entry.status === "unresolved"; })) throw new Error("One or more Care identities are unresolved. No belongings or safety details were returned.");
         return {
           records:
             readBelongingsRecords_(
-              getBelongingsSheet_(),
-              data.stayKeys || []
-            )
+              readSheet,
+              data.stayKeys || [],
+              bookingRows,
+              identityState
+            ),
+          identityResolution: resolutions
         };
       }
     );
@@ -4025,7 +4071,7 @@ function getV108DogHistory_(data) {
   var stayIndex = indexV108BookingStayKeys_(rows);
   var historyKeyCounts = {};
   stays.forEach(function(stay) { historyKeyCounts[stay.stayKey] = (historyKeyCounts[stay.stayKey] || 0) + 1; });
-  var careRecords = stays.length ? readBelongingsRecords_(getBelongingsSheet_(), stays.map(function(stay) { return stay.stayKey; })) : [];
+  var careRecords = stays.length ? readBelongingsRecords_(getBelongingsSheetReadOnly_(), stays.map(function(stay) { return stay.stayKey; }), rows) : [];
   stays.forEach(function(stay) {
     var owners = stayIndex[stay.stayKey] || {};
     if (Object.keys(owners).length === 1 && (identity.dogId ? owners[identity.dogId] : owners["legacy-row-" + identity.rows[0]])) staySet[stay.stayKey] = true;
@@ -4039,7 +4085,7 @@ function getV108DogHistory_(data) {
       source: String(care.intakeAttributesSource || "").trim()
     }];
   });
-  var records = readBelongingsRecords_(getBelongingsSheet_(), []).filter(function(r){ return staySet[String(r.stayKey || "")] === true; });
+  var records = readBelongingsRecords_(getBelongingsSheetReadOnly_(), [], rows).filter(function(r){ return staySet[String(r.stayKey || "")] === true; });
   records.sort(function(a,b){ return String(b.endDate || b.startDate || "").localeCompare(String(a.endDate || a.startDate || "")); });
   var latest = records.length ? records[0] : null;
   var today = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd");
@@ -4138,12 +4184,12 @@ function copyV108PreviousProfile_(dogName, dogId, newStayKey, startDate, endDate
     var end = normalizeDateValue_(row[4] || row[3]);
     if (start) stayKeys[makeGuestStayKey_(String(row[1] || ""), start, end)] = true;
   });
-  var sheet = getBelongingsSheet_();
+  var sheet = getBelongingsSheetReadOnly_();
   var records = readBelongingsRecords_(sheet, []).filter(function(r){ return stayKeys[String(r.stayKey || "")] === true && r.stayKey !== newStayKey; });
   records.sort(function(a,b){ return String(b.endDate || b.startDate || "").localeCompare(String(a.endDate || a.startDate || "")); });
   if (!records.length) return {copied:false};
   var previous = records[0];
-  var row = upsertBelongingsRecord_(sheet,{stayKey:newStayKey,dogName:dogName,startDate:startDate,endDate:endDate,riskFlags:previous.riskFlags||{},intakeAttributes:previous.intakeAttributes||{},intakeAttributesSource:"Copied from previous stay"});
+  var row = upsertBelongingsRecord_(getBelongingsSheet_(),{stayKey:newStayKey,dogName:dogName,startDate:startDate,endDate:endDate,riskFlags:previous.riskFlags||{},intakeAttributes:previous.intakeAttributes||{},intakeAttributesSource:"Copied from previous stay"});
   if (previous.dogPhoto) sheet.getRange(row,30).setValue(JSON.stringify(previous.dogPhoto));
   var gallery = normalizeV108DogPhotoGallery_(previous.dogPhotoGallery || [], previous.dogPhoto || null);
   if (gallery.length) sheet.getRange(row,33).setValue(JSON.stringify(gallery));
@@ -4195,7 +4241,12 @@ function validateReviewedCareInheritanceV11225_(review, dogId) {
   if (!dogId || !sourceDog.dogId || String(sourceDog.dogId).trim() !== String(dogId).trim()) {
     throw new Error("Reviewed care details do not belong to the selected dog record.");
   }
-  var sourceCare = readBelongingsRecords_(getBelongingsSheet_(), [sourceKey]).filter(function(record) { return record.stayKey === sourceKey; });
+  var sourceCareSheet = getBelongingsSheetReadOnly_();
+  var sourceCareState = readCareRecordIdentityState_(sourceCareSheet);
+  var rawSourceCareRows = sourceCareState.ok ? (sourceCareState.byKey[sourceKey] || []) : [];
+  if (!sourceCareState.ok || rawSourceCareRows.length !== 1 || !rawSourceCareRows[0].valid) throw new Error("Reviewed source Care identity is unresolved. Refresh the stay history before saving.");
+  var sourceCare = readBelongingsRecords_(sourceCareSheet, [sourceKey]).filter(function(record) { return record.stayKey === sourceKey; });
+  if (sourceCare.length !== 1) throw new Error("Reviewed source Care identity is unresolved. Refresh the stay history before saving.");
   function hasMeaningfulValues(values, riskFlagsOnly) {
     return Object.keys(values || {}).some(function(key) {
       var value = values[key];
@@ -4266,7 +4317,7 @@ function applyReviewedCareInheritanceV11225_(review, dogId, dogName, newStayKey,
       makeGuestStayKey_(target.dogName, target.startDate, target.endDate) !== newStayKey) {
     throw new Error("Destination stay does not belong to the selected dog; reviewed care was not applied.");
   }
-  var destinationRows = readBelongingsRecords_(getBelongingsSheet_(), [newStayKey]);
+  var destinationRows = readBelongingsRecords_(getBelongingsSheetReadOnly_(), [newStayKey]);
   var destinationMatches = destinationRows.filter(function(record) { return record.stayKey === newStayKey; });
   if (destinationMatches.length > 1) throw new Error("Destination care key is ambiguous; reviewed care was not applied.");
   var destinationRecord = destinationMatches[0] || {};
@@ -4303,9 +4354,9 @@ function createV108Boarding_(data) {
     if (confirmedBookingRowsForStayKeyV11225_(sheet, destinationStayKey).length) {
       throw new Error("A confirmed booking already uses this stay key. Edit that stay instead; no booking was created.");
     }
-    var existingDestinationCare = readBelongingsRecords_(getBelongingsSheet_(), [destinationStayKey])
-      .filter(function(record) { return record.stayKey === destinationStayKey; });
-    if (existingDestinationCare.length) throw new Error("Destination care key already has unassigned details. Review that stay instead; no booking was created.");
+    var destinationCareState = readCareRecordIdentityState_(getBelongingsSheetReadOnly_());
+    if (!destinationCareState.ok) throw new Error("Destination Care identity schema is unresolved. No booking was created.");
+    if ((destinationCareState.byKey[destinationStayKey] || []).length) throw new Error("Destination care key already has unassigned details. Review that stay instead; no booking was created.");
   }
   if(copyRequested && selectedDogId) validateV108DogProfileCopy_(dogName, dogId, rows);
   var dogColumns=ensureV108DogIdColumn_(sheet);
@@ -4347,7 +4398,7 @@ function updateV108BoardingDates_(data) {
   updateStableStayRowV11225_(sheet,row,{4:start,5:end},String(data.clientMutationId||""));
   var newStayKey = makeGuestStayKey_(before.dogName, start, end);
   if (oldStayKey !== newStayKey) {
-    migrateBelongingsIdentityForGuest_(sheet.getParent(), oldStayKey, newStayKey, before.dogName);
+        migrateBelongingsIdentityForGuest_(sheet.getParent(), oldStayKey, newStayKey, before.dogName, stayId);
     migrateIntakeIdentitiesForGuest_(oldStayKey, newStayKey, before.dogName);
   }
   var after=auditBookingSnapshotFromSheetRow_(sheet,row);
@@ -4372,6 +4423,7 @@ function setV108PrimaryDogPhoto_(data) {
   var stayKey=String(data.stayKey||"").trim(), photoId=String(data.photoId||"").trim();
   var sheet=getBelongingsSheet_(), row=findBelongingsRow_(sheet,stayKey);
   if (row === -1) throw new Error("Dog photo record was not found.");
+  row = assertCareRecordWriteIdentity_(sheet, data).row;
   var current=parseDogPhotoJson_(sheet.getRange(row,30).getValue());
   var gallery=normalizeV108DogPhotoGallery_(parseV108DogPhotoGalleryJson_(sheet.getRange(row,33).getValue()),current);
   var selected=gallery.filter(function(p){return String(p.id||"")===photoId;})[0];
@@ -4384,6 +4436,7 @@ function deleteV108DogPhoto_(data) {
   var stayKey=String(data.stayKey||"").trim(), photoId=String(data.photoId||"").trim();
   var sheet=getBelongingsSheet_(), row=findBelongingsRow_(sheet,stayKey);
   if (row === -1) throw new Error("Dog photo record was not found.");
+  row = assertCareRecordWriteIdentity_(sheet, data).row;
   var current=parseDogPhotoJson_(sheet.getRange(row,30).getValue());
   var gallery=normalizeV108DogPhotoGallery_(parseV108DogPhotoGalleryJson_(sheet.getRange(row,33).getValue()),current);
   var removed=gallery.filter(function(p){return String(p.id||"")===photoId;})[0];
@@ -4399,6 +4452,7 @@ function reorderV108DogPhotos_(data) {
   var stayKey=String(data.stayKey||"").trim(), ids=Array.isArray(data.photoIds)?data.photoIds.map(String):[];
   var sheet=getBelongingsSheet_(), row=findBelongingsRow_(sheet,stayKey);
   if (row === -1) throw new Error("Dog photo record was not found.");
+  row = assertCareRecordWriteIdentity_(sheet, data).row;
   var current=parseDogPhotoJson_(sheet.getRange(row,30).getValue());
   var gallery=normalizeV108DogPhotoGallery_(parseV108DogPhotoGalleryJson_(sheet.getRange(row,33).getValue()),current), byId={};
   gallery.forEach(function(p){byId[String(p.id||"")]=p;});
@@ -4718,7 +4772,7 @@ function deriveDogMasterProfile_(dogName,breed,dogId){
   var latest=stays.length?stays[0]:{dogName:dogName,breed:breed,ownerName:"",phone:"",notes:"",stayKey:""};
   var stayIndex=indexV108BookingStayKeys_(rows), safeStayKeys={};
   identity.rows.forEach(function(i){var r=rows[i],sd=normalizeDateValue_(r[3]),ed=normalizeDateValue_(r[4]||r[3]);if(!sd)return;var sk=makeGuestStayKey_(String(r[1]||""),sd,ed),owners=stayIndex[sk]||{};var owner=dogId||("legacy-row-"+i);if(Object.keys(owners).length===1&&owners[owner])safeStayKeys[sk]=true;});
-  var br=readBelongingsRecords_(getBelongingsSheet_(),[]).filter(function(x){return safeStayKeys[String(x.stayKey||"")]===true;}).sort(function(a,b){return String(b.endDate||b.startDate||"").localeCompare(String(a.endDate||a.startDate||""));});
+  var br=readBelongingsRecords_(getBelongingsSheetReadOnly_(),[]).filter(function(x){return safeStayKeys[String(x.stayKey||"")]===true;}).sort(function(a,b){return String(b.endDate||b.startDate||"").localeCompare(String(a.endDate||a.startDate||""));});
   var rec=br.length?br[0]:null;
   var dogNumber=identity.dogId?v108DogIdentityAt_(rows,latestV108DogRowForId_(rows,identity.dogId)).dogNumber:"";
   return {persisted:false,masterKey:key,dogId:dogId,dogNumber:dogNumber,dogName:latest.dogName||dogName,breed:latest.breed||breed,ownerName:latest.ownerName||"",phone:latest.phone||"",notes:latest.notes||"",profile:rec&&rec.intakeAttributes?rec.intakeAttributes:{},riskFlags:rec&&rec.riskFlags?rec.riskFlags:{},primaryPhoto:rec?rec.dogPhoto||null:null,photoGallery:rec?rec.dogPhotoGallery||[]:[],lastStayKey:rec?rec.stayKey:(latest.stayKey||""),stayCount:stays.length};
@@ -4740,7 +4794,7 @@ function saveDogMasterProfile_(data){
   var key=dogMasterKeyForIdentity_(dogName,breed,dogId), derived=deriveDogMasterProfile_(dogName,breed,dogId);
   stayKey=stayKey||String(derived.lastStayKey||"").trim();
   if(stayKey){var stayIdentity=resolveV108DogIdentityForStay_(stayKey);if(stayIdentity.dogId!==dogId)throw dogIdError_("DOG_ID_STAY_CONFLICT","The selected stay belongs to a different dog record.");}
-  var rec=stayKey?(readBelongingsRecords_(getBelongingsSheet_(),[stayKey])[0]||null):null;
+  var rec=stayKey?(readBelongingsRecords_(getBelongingsSheetReadOnly_(),[stayKey])[0]||null):null;
   var profile=rec&&rec.intakeAttributes?rec.intakeAttributes:(derived.profile||{}), flags=rec&&rec.riskFlags?rec.riskFlags:(derived.riskFlags||{}), primary=rec?(rec.dogPhoto||derived.primaryPhoto||null):(derived.primaryPhoto||null), gallery=rec?(rec.dogPhotoGallery||derived.photoGallery||[]):(derived.photoGallery||[]), now=new Date();
   var dataRow=[now,key,dogName,breed,String(data.ownerName||derived.ownerName||"").trim(),String(data.phone||derived.phone||"").trim(),String(data.notes||derived.notes||"").trim(),JSON.stringify(profile),JSON.stringify(flags),primary?JSON.stringify(primary):"",JSON.stringify(gallery),stayKey,Number(derived.stayCount||0)];
   var sh=getDogMasterSheet_(), row=findDogMasterRow_(sh,key); if(row===-1){sh.appendRow(dataRow);row=sh.getLastRow();}else sh.getRange(row,1,1,dataRow.length).setValues([dataRow]);
@@ -4753,6 +4807,7 @@ function parseStayPhotosJson_(v){return parsePhotosJson_(v);}
 function deleteStayPhoto_(data){
   var stayKey=String(data.stayKey||"").trim(), photoId=String(data.photoId||"").trim(); if(!stayKey||!photoId)throw new Error("Stay Key and Photo ID are required.");
   var sh=getBelongingsSheet_(), row=findBelongingsRow_(sh,stayKey); if(row===-1)throw new Error("The stay media record was not found.");
+  row=assertCareRecordWriteIdentity_(sh,data).row;
   var photos=parseStayPhotosJson_(sh.getRange(row,34).getValue()), removed=photos.filter(function(p){return String(p.id||"")===photoId;})[0]; photos=photos.filter(function(p){return String(p.id||"")!==photoId;});
   sh.getRange(row,34).setValue(JSON.stringify(photos));sh.getRange(row,1).setValue(new Date()); if(removed){try{DriveApp.getFileById(photoId).setTrashed(true);}catch(_){}}
   touchWaffleDataVersion_("directory"); logAuditEvent_({category:"Photos",action:"Stay Photo Deleted",dogName:String(sh.getRange(row,3).getDisplayValue()||""),bookingType:"Boarding",reference:stayKey,summary:"A stay photo was deleted.",changedFields:["Stay Photos"],before:removed||null,after:{remaining:photos.length},source:"Web App"});
@@ -5371,6 +5426,7 @@ function processSheetAction_(data) {
       if (fieldKey === "dogName" && !newValue) {
         throw new Error("Dog Name cannot be blank.");
       }
+      var mutationStayId = ensureStableStayIdV11225_(sheet, guestRow);
 
       var oldStayKey = makeGuestStayKey_(
         guestBefore.dogName,
@@ -5406,7 +5462,8 @@ function processSheetAction_(data) {
           sheet.getParent(),
           oldStayKey,
           newStayKey,
-          guestAfter.dogName
+          guestAfter.dogName,
+          mutationStayId
         );
 
         intakeMigrations =
@@ -5590,6 +5647,7 @@ function processSheetAction_(data) {
       if (deletePhotoRow === -1) {
         throw new Error("Belongings record could not be found.");
       }
+      deletePhotoRow = assertCareRecordWriteIdentity_(deletePhotoSheet, data).row;
 
       var deletePhotoId = String(data.photoId || "").trim();
       if (!deletePhotoId) {
@@ -7950,6 +8008,9 @@ function applyLegacyIntakeProfileUpdates_(
     ownerName: { column: 6, label: "Owner" },
     phone: { column: 7, label: "Contact Number" }
   };
+  // Capture the exact booking row's stable identity before OCR/extracted
+  // profile fields can change its legacy stay key.
+  var mutationStayId = ensureStableStayIdV11225_(mainSheet, bookingRow);
 
   var appliedDirectory = {};
   var changedLabels = [];
@@ -8009,7 +8070,8 @@ function applyLegacyIntakeProfileUpdates_(
       mainSheet.getParent(),
       oldStayKey,
       newStayKey,
-      after.dogName
+      after.dogName,
+      mutationStayId
     );
 
     migrateIntakeIdentitiesForGuest_(
@@ -11668,7 +11730,7 @@ function getIntakeStatusRecords_(stayKeys, profileSummaries) {
       )
         ? profileSummaries
         : readBelongingsSummaryRecords_(
-            getBelongingsSheet_(),
+            getBelongingsSheetReadOnly_(),
             requestedKeys
           );
 
@@ -11784,7 +11846,7 @@ function verifyWaffleHouseDigitalIntakeDirectoryStatus() {
 
   var profiles =
     readBelongingsRecords_(
-      getBelongingsSheet_(),
+      getBelongingsSheetReadOnly_(),
       stayKeys
     );
 
@@ -12012,6 +12074,7 @@ function ensureIntakeBelongingsFlags_(
       riskFlags: riskFlags
     });
   } else {
+    row = assertCareRecordWriteIdentity_(sheet, { stayKey: stayKey }).row;
     sheet.getRange(row, 1).setValue(new Date());
     sheet.getRange(row, 3).setValue(dogName);
     sheet.getRange(row, 4).setValue(startDate);
@@ -12461,6 +12524,10 @@ function processIntakeSubmission_(data) {
     answers.mobile || bookingBefore.phone
   ).trim();
 
+  // Intake can rename a dog and thereby change its Care key. Retain proof of
+  // this exact booking before applying owner-submitted fields.
+  var mutationStayId = ensureStableStayIdV11225_(mainSheet, bookingRow);
+
   mainSheet.getRange(bookingRow, 2).setValue(newDogName);
   mainSheet.getRange(bookingRow, 3).setValue(newBreed);
   mainSheet.getRange(bookingRow, 6).setValue(newOwner);
@@ -12490,7 +12557,8 @@ function processIntakeSubmission_(data) {
       mainSheet.getParent(),
       oldStayKey,
       newStayKey,
-      bookingAfter.dogName
+      bookingAfter.dogName,
+      mutationStayId
     );
   }
 
@@ -13257,6 +13325,7 @@ function saveIntakeAttributesForStay_(
         }
       );
   } else {
+    row = assertCareRecordWriteIdentity_(sheet, { stayKey: stayKey }).row;
     sheet
       .getRange(
         row,
@@ -13348,6 +13417,7 @@ function syncCoreBookingFieldsToIntakeAttributes_(
     );
 
   if (row === -1) return false;
+  row = assertCareRecordWriteIdentity_(sheet, { stayKey: stayKey }).row;
 
   /*
    * Owner/mobile/dog/breed remain stored in the booking sheet and are
@@ -13678,11 +13748,23 @@ function getBelongingsSheet_() {
   }
 
   if (needsHeaders) {
+    if (sheet.getLastRow() > 0) {
+      throw new Error("Pet_Belongings headers do not match the supported legacy schema; no headers or records were changed.");
+    }
     sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
     sheet.setFrozenRows(1);
   }
 
   return sheet;
+}
+
+function getBelongingsSheetReadOnly_() {
+  var mainSheet = getTargetSheet_();
+  var spreadsheet = mainSheet && mainSheet.getParent ? mainSheet.getParent() : null;
+  if (!spreadsheet) return null;
+  var properties = PropertiesService.getScriptProperties();
+  var sheetName = String(properties.getProperty("BELONGINGS_SHEET_NAME") || "Pet_Belongings").trim();
+  return spreadsheet.getSheetByName(sheetName);
 }
 
 
@@ -13830,6 +13912,7 @@ function readBelongingsRiskFlagsFromRow_(sheet, row) {
 
 function upsertBelongingsRecord_(sheet, data) {
   var stayKey = String(data.stayKey || "").trim();
+  var provenCareIdentity = resolveCareRecordIdentityForWrite_(sheet, data);
   var row = findBelongingsRow_(sheet, stayKey);
   var existingItems =
     normalizeBelongingsItems_(
@@ -14004,6 +14087,19 @@ function upsertBelongingsRecord_(sheet, data) {
   );
   rowData.push(JSON.stringify(existingStayPhotos));
 
+  // The optional identity columns are enrolled only as part of this explicit,
+  // uniquely proven Care write. Reads leave the historical 34-column sheet alone.
+  var enrollCareIdentity = careRecordIdentityWritesEnabled_();
+  var hasCareIdentityColumns = ensureCareRecordIdentityHeadersForWrite_(sheet, enrollCareIdentity);
+  if (hasCareIdentityColumns) {
+    rowData.push(enrollCareIdentity
+      ? provenCareIdentity.identity.stayId
+      : (provenCareIdentity.row ? provenCareIdentity.row.stayId : ""));
+    rowData.push(enrollCareIdentity
+      ? provenCareIdentity.identity.dogId
+      : (provenCareIdentity.row ? provenCareIdentity.row.dogId : ""));
+  }
+
   if (row === -1) {
     sheet.appendRow(
       rowData
@@ -14032,9 +14128,9 @@ function upsertBelongingsRecord_(sheet, data) {
 }
 
 
-function readBelongingsRecords_(sheet, stayKeys) {
+function readBelongingsRecords_(sheet, stayKeys, bookingRows, suppliedIdentityState) {
   if (
-    sheet.getLastRow() <
+    !sheet || sheet.getLastRow() <
     2
   ) {
     return [];
@@ -14057,21 +14153,18 @@ function readBelongingsRecords_(sheet, stayKeys) {
     );
   }
 
-  var columnCount =
-    getBelongingsHeaders_()
-      .length;
+  var identityState = suppliedIdentityState || readCareRecordIdentityState_(sheet);
+  if (!identityState.ok) return [];
 
-  var values =
-    sheet
-      .getRange(
-        2,
-        1,
-        sheet.getLastRow() - 1,
-        columnCount
-      )
-      .getValues();
+  var values = identityState.values.slice(1);
 
   var records = [];
+  var candidateKeys = [];
+  values.forEach(function(row) {
+    var key = String(row[1] || "").trim();
+    if (key && (!Object.keys(requestedKeys).length || requestedKeys[key])) candidateKeys.push(key);
+  });
+  var bookingIdentities = resolveCareBookingIdentities_(candidateKeys, bookingRows);
 
   values.forEach(
     function(row) {
@@ -14081,6 +14174,14 @@ function readBelongingsRecords_(sheet, stayKeys) {
         ).trim();
 
       if (!stayKey) return;
+
+      var bookingIdentity = bookingIdentities[stayKey];
+      // Repeated legacy keys cannot be safely mapped to a particular booking.
+      // Persisted row IDs are also required to agree with the unique booking proof.
+      if (!bookingIdentity || !bookingIdentity.ok || (identityState.byKey[stayKey] || []).length !== 1) return;
+      var identityEntry = identityState.byKey[stayKey][0];
+      if (!identityEntry.valid || (identityEntry.stayId && identityEntry.stayId !== bookingIdentity.identity.stayId) ||
+          (identityEntry.dogId && identityEntry.dogId !== bookingIdentity.identity.dogId)) return;
 
       if (
         Object.keys(
@@ -14145,6 +14246,8 @@ function readBelongingsRecords_(sheet, stayKeys) {
               ),
         stayKey:
           stayKey,
+        stayId: bookingIdentity.identity.stayId,
+        dogId: bookingIdentity.identity.dogId,
         dogName:
           String(
             row[2] || ""
@@ -14941,13 +15044,13 @@ function uploadBelongingsPhotoFromHtml(data) {
         "The belongings record was not found. Save the pet belongings details first, then try the photo again."
       );
     }
-
     var identity = sheet.getRange(row, 2, 1, 4).getValues()[0];
     if (String(identity[1] || "").trim().toLowerCase() !== dogName.toLowerCase() ||
         (data.startDate && belongingsPhotoDateKey_(identity[2]) !== belongingsPhotoDateKey_(data.startDate)) ||
         (data.endDate && belongingsPhotoDateKey_(identity[3]) !== belongingsPhotoDateKey_(data.endDate))) {
       throw new Error("The selected stay identity changed. Refresh the stay and try again.");
     }
+    row = assertCareRecordWriteIdentity_(sheet, data).row;
 
     var photoType = String(data.photoType || "belongings").trim();
     var isDogProfile = photoType === "dogProfile";
@@ -15305,7 +15408,8 @@ function migrateBelongingsIdentityForGuest_(
   spreadsheet,
   oldStayKey,
   newStayKey,
-  newDogName
+  newDogName,
+  provenStayId
 ) {
   if (!spreadsheet || !oldStayKey || !newStayKey) return false;
 
@@ -15320,6 +15424,19 @@ function migrateBelongingsIdentityForGuest_(
 
   var row = findBelongingsRow_(belongingsSheet, oldStayKey);
   if (row === -1) return false;
+
+  var identityState = readCareRecordIdentityState_(belongingsSheet);
+  var oldMatches = identityState.ok ? (identityState.byKey[oldStayKey] || []) : [];
+  var bookingRows = getTargetSheet_().getDataRange().getValues();
+  var bookingProof = resolveCareBookingIdentity_(newStayKey, String(provenStayId || ""), "", bookingRows);
+  var oldBookings = resolveCareBookingIdentities_([oldStayKey], bookingRows)[oldStayKey];
+  // The validated mutation supplies the stable ID captured from the exact
+  // booking row before its key changed. This preserves 34-column legacy Care
+  // rows while requiring the destination booking to match that same ID.
+  if (!provenStayId || !bookingProof.ok || !oldBookings || oldBookings.reason !== "no-booking-proves-stay-key" || oldMatches.length !== 1 || !oldMatches[0].valid ||
+      (oldMatches[0].stayId && oldMatches[0].stayId !== bookingProof.identity.stayId) ||
+      (oldMatches[0].dogId && oldMatches[0].dogId !== bookingProof.identity.dogId) ||
+      (identityState.byKey[newStayKey] || []).length) return false;
 
   belongingsSheet.getRange(row, 1).setValue(new Date());
   belongingsSheet.getRange(row, 2).setValue(newStayKey);
