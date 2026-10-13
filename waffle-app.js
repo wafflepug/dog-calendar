@@ -16238,11 +16238,10 @@ registerWaffleServiceWorker();
                                         <section
                                             class="directory-care-brief"
                                             data-directory-care-brief
-                                            aria-label="Care overview">
+                                            aria-label="Care essentials">
                                             <div class="directory-care-brief-heading">
                                                 <div>
-                                                    <span class="directory-profile-section-kicker">Selected guest</span>
-                                                    <h3>Care overview</h3>
+                                                    <h3>Care essentials</h3>
                                                 </div>
                                                 <span
                                                     class="directory-care-brief-freshness"
@@ -16316,7 +16315,7 @@ registerWaffleServiceWorker();
                                                 </span>
                                                 <button type="button" class="directory-care-brief-action" data-care-brief-action="emergency-contact">Emergency contact</button>
                                                 <details class="directory-care-more-actions">
-                                                    <summary aria-label="More care actions">More actions</summary>
+                                                    <summary aria-label="Manage stay and care tools">Manage stay &amp; care tools</summary>
                                                 <button type="button" class="directory-care-brief-action" data-care-brief-action="belongings">
                                                     Items &amp; photos
                                                 </button>

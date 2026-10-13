@@ -55,6 +55,10 @@ async function installReadOnlyFixture(page) {
       try { payload = JSON.parse(params.get('payload') || '{}'); } catch (_) {}
       if (!resolved.policy.allowed) {
         blocked.push({ method: request.method(), action: resolved.action, reason: resolved.policy.reason });
+        if (request.method() === 'GET' && resolved.action === 'sync_dog_master_photos_to_upcoming_stays' && callback) {
+          const denial = { result: 'error', error: 'Read-only fixture denied this action.' };
+          return route.fulfill({ status: 200, contentType: 'application/javascript', body: `${callback}(${JSON.stringify(denial)});` });
+        }
         return route.fulfill({ status: 403, body: 'Read-only fixture blocked action' });
       }
       actions.push({ action: resolved.action, payload });
@@ -79,6 +83,7 @@ async function installReadOnlyFixture(page) {
 }
 
 async function openFixtureProfile(page, fixture, viewport = { width: 390, height: 844 }, theme = 'light') {
+  const syncAttemptsBeforeLoad = fixture.blocked.filter(item => item.action === 'sync_dog_master_photos_to_upcoming_stays').length;
   await page.setViewportSize(viewport);
   await page.clock.setFixedTime(new Date('2026-10-13T12:00:00.000Z'));
   await page.emulateMedia({ colorScheme: theme });
@@ -91,6 +96,7 @@ async function openFixtureProfile(page, fixture, viewport = { width: 390, height
   await expect(card).toHaveClass(/is-profile-active/);
   await expect(card.locator('.directory-profile-intake-section')).toBeVisible();
   await expect.poll(() => fixture.actions.some(item => item.action === 'get_guest_profile')).toBe(true);
+  await expect.poll(() => fixture.blocked.filter(item => item.action === 'sync_dog_master_photos_to_upcoming_stays').length).toBe(syncAttemptsBeforeLoad + 1);
   // Startup background reads (and the known blocked photo sync) may finish
   // after the profile render. Take the ledger baseline only after it settles.
   let previous = '';
@@ -102,6 +108,7 @@ async function openFixtureProfile(page, fixture, viewport = { width: 390, height
     previous = current;
   }
   expect(stableSamples, 'fixture action ledger did not settle').toBeGreaterThanOrEqual(4);
+  expect(fixture.blocked.filter(item => item.action === 'sync_dog_master_photos_to_upcoming_stays')).toHaveLength(syncAttemptsBeforeLoad + 1);
   return card;
 }
 

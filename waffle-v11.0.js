@@ -14,6 +14,36 @@ let v110LatestCalendarEvents=[];
 let v110MediaCache={};
 let v110MasterCache={};
 let v110CheckoutCollisionMap={};
+const v110ActiveMasterSaves=new Set();
+
+function v110ErrorCanRetry(error){
+  const message=String(error?.message||error||'');
+  if(typeof navigator!=='undefined'&&navigator.onLine===false)return false;
+  if(/conflict|collision|duplicate|ambiguous|several .*match|multiple .*match|operation rows match|invalid stay|changed|reload|does not match|did not confirm|review .*booking|already being saved|cannot be queued|offline/i.test(message))return false;
+  return error instanceof TypeError||/network|timed? ?out|fetch failed|connection (?:was )?(?:lost|interrupted|failed)|temporarily unavailable|http 5\d\d|server error/i.test(message);
+}
+function v110ShowActionFeedback(container,message,retry){
+  if(!container)return;
+  let region=container.querySelector(':scope > .v110-action-feedback');
+  if(!region){region=document.createElement('div');region.className='v110-action-feedback';container.appendChild(region);}
+  const keepRetryFocus=region.contains(document.activeElement)&&document.activeElement.matches('button');
+  region.classList.remove('is-success');
+  region.setAttribute('role','alert');region.setAttribute('aria-live','assertive');region.replaceChildren();
+  const text=document.createElement('span');text.textContent=String(message||'The action could not be completed.');region.appendChild(text);
+  if(typeof retry==='function'){const button=document.createElement('button');button.type='button';button.textContent='Retry';let running=false;button.addEventListener('click',()=>{if(running)return;const restoreFocus=document.activeElement===button;running=true;button.setAttribute('aria-disabled','true');region.setAttribute('aria-busy','true');Promise.resolve().then(retry).catch(()=>{}).finally(()=>{running=false;region.removeAttribute('aria-busy');if(button.isConnected)button.removeAttribute('aria-disabled');const nextRetry=region.querySelector('button');if(restoreFocus&&nextRetry)nextRetry.focus();});},{once:true});region.appendChild(button);if(keepRetryFocus)button.focus();}
+}
+function v110ClearActionFeedback(container,message){
+  if(!container)return;let region=container.querySelector(':scope > .v110-action-feedback');
+  if(!region){if(!message)return;region=document.createElement('div');region.className='v110-action-feedback';container.appendChild(region);}
+  region.classList.add('is-success');
+  region.setAttribute('role','status');region.setAttribute('aria-live','polite');region.replaceChildren();
+  if(message){const text=document.createElement('span');text.textContent=message;region.appendChild(text);}
+}
+function v110ActionErrorMessage(label,error){
+  const message=String(error?.message||error||'Unknown error');
+  const structural=/conflict|collision|duplicate|ambiguous|several .*match|multiple .*match|operation rows match|invalid stay|changed|reload|does not match|did not confirm|review .*booking/i.test(message);
+  return `${label} could not be saved. ${message}${structural?' Review the booking identity and refresh Care before taking action.':''}`;
+}
 
 function v110Escape(v){return escapeDashboardHtml(v==null?'':String(v));}
 function v110NormaliseStayDate(value){
@@ -235,7 +265,17 @@ async function v110SaveOperationalStatus(payload,status,target){
   if(r?.result!=='success'||!record||!v110ValidStayId(returned)||(requested&&requested!==returned)||String(record.stayKey||'')!==String(payload.stayKey||'')||String(record.status||'')!==status)throw new Error('The server did not confirm the selected stay operation. Reload before continuing.');
   if(record.startDate&&v110NormaliseStayDate(record.startDate)!==v110NormaliseStayDate(payload.startDate)||record.endDate&&v110NormaliseStayDate(record.endDate)!==v110NormaliseStayDate(payload.endDate))throw new Error('The server response does not match the selected booking dates. Reload before continuing.');
   if(String(record.dogName||'').trim().toLowerCase()!==String(payload.dogName||'').trim().toLowerCase())throw new Error('The server response does not match the selected dog. Reload before continuing.');
-  payload.stayId=returned;if(target?.dataset&&!requested)target.dataset.directoryStayId=returned;if(target?.extendedProps&&!requested)target.extendedProps.stayId=returned;
+  payload.stayId=returned;
+  let targetMatches=false;
+  if(target?.dataset){
+    const currentTarget=v110OperationalPayloadFromCard(target);
+    targetMatches=currentTarget.stayKey===payload.stayKey&&currentTarget.dogId===payload.dogId&&currentTarget.dogName===payload.dogName&&currentTarget.startDate===payload.startDate&&currentTarget.endDate===payload.endDate;
+  }else if(target?.extendedProps){
+    const props=target.extendedProps,dates=v10EventRawDates(target);
+    targetMatches=(!requested||String(props.stayId||'').toLowerCase()===requested)&&String(props.dogId||'')===String(payload.dogId||'')&&v110StayKeyForEvent(target)===payload.stayKey&&String(props.dogName||target.title||'').trim().toLowerCase()===String(payload.dogName||'').trim().toLowerCase()&&v110NormaliseStayDate(dates.start)===v110NormaliseStayDate(payload.startDate)&&v110NormaliseStayDate(dates.end)===v110NormaliseStayDate(payload.endDate);
+  }
+  if(target?.dataset&&!requested&&targetMatches)target.dataset.directoryStayId=returned;
+  if(target?.extendedProps&&!requested&&targetMatches)target.extendedProps.stayId=returned;
   if(status==='checked_out')v110AuthoritativeCheckouts[returned]=record;else delete v110AuthoritativeCheckouts[returned];
   if(record.stayKey){const rest=v110OperationRecords.filter(old=>{const id=String(old.stayId||old.identityStayId||old.sourceStayId||'').toLowerCase();return id?id!==returned:old.identityConflict===true||old.stayKey!==record.stayKey;});v110IndexOperations([...rest,record]);}
   try{await invalidateWaffleClientCaches(['directory','audit']);}catch(_){ }
@@ -261,7 +301,7 @@ function v110OperationDisplayState(card){
   if(op?.status==='checked_in')return{code:'checked_in',label:'Checked In',icon:'🏡',meta:op.checkedInAt?`Arrived ${v110FormatTime(op.checkedInAt)}`:'Currently at home'};
   if(p.startDate>today)return{code:'expected',label:'Expected',icon:'🛬',meta:`Arriving ${formatStayDateShort(p.startDate)}`};
   if(p.endDate<today)return{code:'completed',label:'Completed',icon:'🕘',meta:'Historical stay'};
-  return{code:'date_active',label:'At Home',icon:'🏡',meta:'Date-based · use Check In to start operational tracking'};
+  return{code:'date_active',label:'No check-in recorded',icon:'🏡',meta:''};
 }
 
 function v110EnsureCareOperationBar(card){
@@ -322,11 +362,11 @@ function v110EnsureCareOperationBar(card){
   bar.dataset.v110RenderSignature=signature;
   bar.dataset.state=state.code;
 
-  bar.innerHTML=`<div class="v110-operation-state"><span class="v110-operation-icon">${state.icon}</span><div><small>STAY STATUS</small><strong>${v110Escape(state.label)}</strong><span>${v110Escape(state.meta)}</span></div></div><div class="v110-operation-actions">${canCheckIn?'<button type="button" class="v110-checkin-button" data-v110-checkin>🛬 Check In</button>':''}${canCheckout?'<button type="button" class="v110-checkout-button" data-v110-checkout>👋 Check Out</button>':''}</div>`;
+  bar.innerHTML=`<div class="v110-operation-state"><span class="v110-operation-icon" aria-hidden="true">${state.icon}</span><div><strong>${v110Escape(state.label)}</strong>${state.meta?`<span>${v110Escape(state.meta)}</span>`:''}</div></div><div class="v110-operation-actions">${canCheckIn?'<button type="button" class="v110-checkin-button" data-v110-checkin>🛬 Check In</button>':''}${canCheckout?'<button type="button" class="v110-checkout-button" data-v110-checkout>👋 Check Out</button>':''}</div>`;
 }
 
 function v110LeavingEvents(){const today=getLocalTodayDateString();return(Array.isArray(v110LatestCalendarEvents)?v110LatestCalendarEvents:[]).filter(e=>{const p=e?.extendedProps||{};if(p.isPotential===true||p.isMeetGreet===true)return false;return v10EventRawDates(e).end===today&&!v110IsCheckedOutEvent(e);});}
-function v110EnsureLeavingModal(){let m=document.getElementById('v110LeavingModal');if(m)return m;m=document.createElement('div');m.id='v110LeavingModal';m.className='v108-modal v110-leaving-modal';m.hidden=true;m.innerHTML=`<div class="v108-modal-card v110-leaving-card"><div class="v108-modal-head"><div><small>DEPARTURES</small><h3>👋 Leaving Today</h3><p>Review each pet and check them out when collected.</p></div><button type="button" data-v110-leaving-close aria-label="Close">×</button></div><div class="v110-leaving-list" data-v110-leaving-list></div></div>`;document.body.appendChild(m);m.addEventListener('click',async e=>{if(e.target===m||e.target.closest('[data-v110-leaving-close]')){m.hidden=true;return;}const b=e.target.closest('[data-v110-leaving-checkout]');if(!b)return;const ev=v110LeavingEvents()[Number(b.dataset.v110LeavingCheckout)];if(!ev)return;const p=ev.extendedProps||{},d=v10EventRawDates(ev),dog=String(p.dogName||ev.title||'Guest');b.disabled=true;b.textContent='⏳ Checking out…';try{await v110SaveOperationalStatus({stayId:p.stayId||'',stayKey:v110StayKeyForEvent(ev),dogName:dog,breed:p.breed||'',startDate:d.start,endDate:d.end,ownerName:p.ownerName||p.owner||'',phone:p.phone||''},'checked_out',ev);await v110RenderLeavingModal();renderV10OperationsHome(globalCalendar?.getEvents()?.slice()||v110LatestCalendarEvents);}catch(err){alert('Checkout could not be saved.\n\n'+(err?.message||String(err)));b.disabled=false;b.textContent='👋 Check Out';}});return m;}
+function v110EnsureLeavingModal(){let m=document.getElementById('v110LeavingModal');if(m)return m;m=document.createElement('div');m.id='v110LeavingModal';m.className='v108-modal v110-leaving-modal';m.hidden=true;m.innerHTML=`<div class="v108-modal-card v110-leaving-card"><div class="v108-modal-head"><div><small>DEPARTURES</small><h3>👋 Leaving Today</h3><p>Review each pet and check them out when collected.</p></div><button type="button" data-v110-leaving-close aria-label="Close">×</button></div><div class="v110-leaving-list" data-v110-leaving-list></div></div>`;document.body.appendChild(m);m.addEventListener('click',async e=>{if(e.target===m||e.target.closest('[data-v110-leaving-close]')){m.hidden=true;return;}const b=e.target.closest('[data-v110-leaving-checkout]');if(!b)return;const ev=v110LeavingEvents()[Number(b.dataset.v110LeavingCheckout)];if(!ev)return;const p=ev.extendedProps||{},d=v10EventRawDates(ev),dog=String(p.dogName||ev.title||'Guest'),payload={stayId:p.stayId||'',stayKey:v110StayKeyForEvent(ev),dogName:dog,breed:p.breed||'',startDate:d.start,endDate:d.end,ownerName:p.ownerName||p.owner||'',phone:p.phone||''},row=b.parentElement;const attempt=async()=>{const current=v110LeavingEvents().find(item=>String(item.extendedProps?.stayId||'').toLowerCase()===String(payload.stayId||'').toLowerCase()&&v110StayKeyForEvent(item)===payload.stayKey);if(!current){v110ShowActionFeedback(row,'This booking is no longer in the current Leaving list. Refresh before taking another action.');return;}b.disabled=true;b.textContent='⏳ Checking out…';try{await v110SaveOperationalStatus(payload,'checked_out',ev);await v110RenderLeavingModal();renderV10OperationsHome(globalCalendar?.getEvents()?.slice()||v110LatestCalendarEvents);}catch(err){v110ShowActionFeedback(row,v110ActionErrorMessage('Check Out',err),v110ErrorCanRetry(err)?attempt:null);}finally{if(b.isConnected){b.disabled=false;b.textContent='👋 Check Out';}}};await attempt();});return m;}
 async function v110PhotoForStay(stayKey,event){
   try{
     const key=String(stayKey||'').trim();
@@ -366,7 +406,35 @@ function v110MasterRiskBadges(flags){const cfg=[['escapeRisk','🚪','Escape ris
 function v110MasterPhotoHtml(r){const p=r?.primaryPhoto||(Array.isArray(r?.photoGallery)&&r.photoGallery.length?r.photoGallery[r.photoGallery.length-1]:null),u=String(p?.previewUrl||p?.url||p?.driveUrl||'');return u?`<img src="${v110Escape(u)}" alt="${v110Escape(r?.dogName||'Dog')} master profile photo">`:'<span>🐶</span>';}
 function v110RenderMasterProfile(card,r,opt={}){const h=card.querySelector('[data-v110-master-host]');if(!h)return;const fields=Object.values(r?.profile||{}).filter(v=>String(v??'').trim()).length,dogNumber=String(r?.dogNumber||card.dataset.directoryDogNumber||'').trim(),notes=String(r?.notes||''),noteHtml=notes?`<details class="v110-master-note"><summary>Known notes</summary><p>${v110Escape(notes)}</p></details>`:'';h.innerHTML=`<div class="v110-master-record"><div class="v110-master-heading"><div><small>DOG RECORD</small><h4>${v110Escape(r?.dogName||card.dataset.directoryDogName||'Dog')}</h4><span>${v110Escape(r?.breed||'Breed not recorded')}</span></div><strong class="v110-master-id">Dog ID ${v110Escape(dogNumber||'Not assigned')}</strong></div><div class="v110-master-meta"><span class="${r?.persisted?'is-saved':'is-derived'}">${r?.persisted?'✓ Saved master profile':'↻ Derived from stay history'}</span><span>${Number(r?.stayCount||0)} recorded stay${Number(r?.stayCount||0)===1?'':'s'}</span><span>${fields} profile fields · ${Array.isArray(r?.photoGallery)?r.photoGallery.length:0} photos</span></div><section class="v110-master-care" aria-label="Safety alerts">${v110MasterRiskBadges(r?.riskFlags)}</section><div class="v110-master-fields"><div><small>OWNER</small><strong>${v110Escape(r?.ownerName||'Not recorded')}</strong></div><div><small>CONTACT</small><strong>${r?.phone?`<a href="tel:${v110Escape(r.phone)}">${v110Escape(r.phone)}</a>`:'Not recorded'}</strong></div></div>${noteHtml}<div class="v110-master-actions"><button type="button" class="v110-master-save" data-v110-save-master>⭐ Sync This Stay to Master Profile</button><span>Save this stay’s details to the persistent dog record.</span></div><p class="v110-master-freshness" role="status">${opt.offline?'Showing saved profile data offline.':opt.refreshFailed?'Showing saved profile data; refresh failed.':opt.cached?'Showing saved profile data; it has not been refreshed.':'Profile refreshed just now.'}</p></div>`;}
 async function v110LoadMasterProfile(card,opt={}){const dog=String(card?.dataset?.directoryDogName||card?.dataset?.dogName||''),dogId=String(card?.dataset?.directoryDogId||''),breed=String(card?.querySelector('.directory-primary-breed')?.textContent||card?.dataset?.v1088Breed||'').trim(),key=dogId?`id:${dogId}`:`${dog.toLowerCase()}|${breed.toLowerCase()}`;if(v110MasterCache[key]&&!opt.force){v110RenderMasterProfile(card,v110MasterCache[key],{cached:true});return;}const h=card.querySelector('[data-v110-master-host]');if(h)h.innerHTML='<div class="v110-panel-loading" role="status"><span class="v110-panel-spinner"></span><strong>Loading dog record…</strong></div>';try{const payload={action:'get_dog_master_profile',dogName:dog,...(dogId?{dogId}:{}),breed};const r=await queryAppsScriptSWR(payload,{cacheKey:'directory:master:'+key,maxStaleMs:6*60*60*1000,maxAttempts:2,timeoutMs:30000,onCached:c=>{if(c?.record){v110MasterCache[key]=c.record;v110RenderMasterProfile(card,c.record,{cached:true});}}});if(r?.data?.record){v110MasterCache[key]=r.data.record;v110RenderMasterProfile(card,r.data.record,{offline:!!r.offlineFallback,cached:!!r.offlineFallback&&!!r.unchanged,refreshFailed:!!r.error});}}catch(e){if(h)h.innerHTML=`<div class="v110-panel-error" role="alert"><strong>Dog record could not be loaded.</strong><span>${v110Escape(e?.message||String(e))}</span><button type="button" data-v110-master-retry>Retry loading dog record</button></div>`;}}
-async function v110SaveMasterFromCard(card,b){const p=v110OperationalPayloadFromCard(card);p.action='save_dog_master_profile';p.notes=String(card.querySelector('[data-directory-edit-field="notes"]')?.dataset?.directoryCurrentValue||card.dataset.v1088Notes||'');b.disabled=true;b.textContent='⏳ Saving Master Profile…';try{const r=await sendPayloadToAppsScript(p);if(r?.record){const k=p.dogId?`id:${p.dogId}`:`${p.dogName.toLowerCase()}|${p.breed.toLowerCase()}`;v110MasterCache[k]=r.record;v110RenderMasterProfile(card,r.record);}}catch(e){alert('Master Profile could not be saved.\n\n'+(e?.message||String(e)));}finally{b.disabled=false;b.textContent='⭐ Sync This Stay to Master Profile';}}
+async function v110SaveMasterFromCard(card,b){
+  const p=v110OperationalPayloadFromCard(card);p.action='save_dog_master_profile';p.notes=String(card.querySelector('[data-directory-edit-field="notes"]')?.dataset?.directoryCurrentValue||card.dataset.v1088Notes||'');
+  const key=String(p.stayId||p.dogId||`${p.dogName}|${p.breed}`).toLowerCase(),host=b.closest('.v110-master-actions')||b.parentElement;
+  if(v110ActiveMasterSaves.has(key))return;
+  const original='⭐ Sync This Stay to Master Profile';let activePayload=p,activeButton=b;
+  const save=async retry=>{
+    if(!card?.isConnected)return;
+    const current=v110OperationalPayloadFromCard(card);
+    if(current.stayId!==activePayload.stayId||current.dogId!==activePayload.dogId||current.dogName!==activePayload.dogName){
+      v110ShowActionFeedback(host,'The selected stay changed. Refresh Care and review the current booking before saving.');return;
+    }
+    if(v110ActiveMasterSaves.has(key))return;
+    activeButton=card.querySelector('[data-v110-save-master]')||activeButton;if(!activeButton?.isConnected)return;
+    v110ActiveMasterSaves.add(key);activeButton.disabled=true;activeButton.textContent='⏳ Saving Master Profile…';
+    try{
+      const r=await sendPayloadToAppsScript(activePayload);
+      if(!r?.record)throw new Error('The server did not confirm the Master Profile save. Reload before continuing.');
+      const k=activePayload.dogId?`id:${activePayload.dogId}`:`${activePayload.dogName.toLowerCase()}|${activePayload.breed.toLowerCase()}`;v110MasterCache[k]=r.record;
+      const current=v110OperationalPayloadFromCard(card);
+      if(current.stayId!==activePayload.stayId||current.dogId!==activePayload.dogId||current.dogName!==activePayload.dogName)return;
+      v110RenderMasterProfile(card,r.record);
+      const currentHost=card.querySelector('[data-v110-save-master]')?.closest('.v110-master-actions')||host;
+      v110ClearActionFeedback(currentHost,'Master Profile saved.');
+    }catch(e){
+      const canRetry=v110ErrorCanRetry(e);v110ShowActionFeedback(host,v110ActionErrorMessage('Master Profile',e),canRetry?()=>save(true):null);
+    }finally{v110ActiveMasterSaves.delete(key);activeButton=card.querySelector('[data-v110-save-master]')||activeButton;if(activeButton?.isConnected){activeButton.disabled=false;activeButton.textContent=original;}}
+  };
+  await save(false);
+}
 
 /* Media */
 function v110PhotoUrl(p){
@@ -414,6 +482,42 @@ function v110BindPhotoPreviewStates(host){
 function v110RenderMedia(card,r){const h=card.querySelector('[data-v110-media-host]');if(!h)return;const gallery=Array.isArray(r?.dogPhotoGallery)?[...r.dogPhotoGallery]:[];if(r?.dogPhoto&&!gallery.some(p=>String(p?.id||'')===String(r.dogPhoto?.id||'')))gallery.push(r.dogPhoto);const groups=[['profile','🐶 Profile Photos','Persistent identity photos',gallery,'No profile photos yet. These remain with the dog across stays.','Profile photo',false],['stay','📸 Stay Photos','Photos from this boarding stay',Array.isArray(r?.stayPhotos)?r.stayPhotos:[],'No stay photos yet. Add photos from this visit here.','Stay photo',true],['belongings','🧳 Belongings Photos','Arrival belongings and item records',Array.isArray(r?.photos)?r.photos:[],'No belongings photos saved for this stay.','Belongings photo',false]].map(group=>[...group.slice(0,3),group[3].filter(photo=>v110PhotoUrl(photo)),...group.slice(4)]);h.innerHTML=`<div class="v110-media-heading"><div><small>PHOTOS</small><h4>Photos for this dog and stay</h4><p>Profile photos follow the dog. Stay and belongings photos belong to this visit.</p></div><button type="button" class="v110-add-stay-photo" data-v110-add-stay-photo>＋ Add Stay Photos</button></div>${groups.map(([key,title,desc,photos,empty,label,deletable])=>`<section class="v110-media-section"><button type="button" class="v110-media-section-title" data-v110-media-toggle="${key}" aria-expanded="${photos.length?'true':'false'}"><span><strong>${title}</strong><span class="v110-media-count">${photos.length}</span><small>${desc}</small></span><span class="v110-media-chevron" aria-hidden="true">⌄</span></button><div class="v110-media-group-content"${photos.length?'':' hidden'}>${v110PhotoGrid(photos,{empty,label,deletable})}</div></section>`).join('')}`;v110BindPhotoPreviewStates(h);}
 async function v110LoadMedia(card,opt={}){const stayKey=String(card?.dataset?.directoryStayKey||'');if(!stayKey)return;const h=card.querySelector('[data-v110-media-host]');if(!h)return;if(v110MediaCache[stayKey]&&!opt.force){v110RenderMedia(card,v110MediaCache[stayKey]);return;}const requestId=String((Number(h.dataset.v110RequestId)||0)+1);h.dataset.v110RequestId=requestId;h.dataset.v110StayKey=stayKey;h.innerHTML='<div class="v110-panel-loading" role="status"><span class="v110-panel-spinner"></span><strong>Loading photos…</strong></div>';try{const r=await queryAppsScript({action:'get_guest_belongings',stayKey},{maxAttempts:2,timeoutMs:30000});if(h.dataset.v110RequestId!==requestId||String(card.dataset.directoryStayKey||'')!==stayKey)return;v110MediaCache[stayKey]=r?.record||{};v110RenderMedia(card,v110MediaCache[stayKey]);}catch(e){if(h.dataset.v110RequestId!==requestId||String(card.dataset.directoryStayKey||'')!==stayKey)return;h.innerHTML=`<div class="v110-panel-error" role="alert"><strong>Photos could not be loaded.</strong><span>${v110Escape(e?.message||String(e))}</span><button type="button" data-v110-media-retry>Retry loading photos</button></div>`;}}
 function v110EnsurePhotoViewer(){let v=document.getElementById('v110PhotoViewer');if(v)return v;v=document.createElement('div');v.id='v110PhotoViewer';v.className='v110-photo-viewer';v.hidden=true;v.setAttribute('role','dialog');v.setAttribute('aria-modal','true');v.innerHTML='<div class="v110-photo-viewer-panel"><button type="button" class="v110-photo-viewer-close" aria-label="Close photo">×</button><img alt=""><p class="v110-photo-viewer-caption" id="v110PhotoViewerCaption"></p><p class="v110-photo-viewer-loading" role="status">Loading photo…</p><p class="v110-photo-viewer-error" role="status" hidden>Photo unavailable. <button type="button" data-v110-photo-viewer-retry>Retry</button></p></div>';document.body.appendChild(v);v._v110Open=false;v._v110Generation=0;v._v110Attempt=0;v.addEventListener('click',e=>{if(e.target===v)v110ClosePhotoViewer(v);});v.querySelector('.v110-photo-viewer-close').addEventListener('click',()=>v110ClosePhotoViewer(v));v.querySelector('[data-v110-photo-viewer-retry]').addEventListener('click',()=>{if(!v._v110Open)return;v110SetPhotoViewerImage(v,v._v110Url,true);});v.addEventListener('keydown',e=>{if(!v._v110Open)return;if(e.key==='Escape'){e.preventDefault();v110ClosePhotoViewer(v);return;}if(e.key==='Tab'){const items=[...v.querySelectorAll('button:not([disabled])')].filter(item=>item.getClientRects().length&&getComputedStyle(item).visibility!=='hidden');if(!items.length){e.preventDefault();return;}const first=items[0],last=items[items.length-1];if(e.shiftKey&&(document.activeElement===first||!v.contains(document.activeElement))){e.preventDefault();last.focus();}else if(!e.shiftKey&&(document.activeElement===last||!v.contains(document.activeElement))){e.preventDefault();first.focus();}}});return v;}
+
+const v110ActiveOperationalActions=new Set();
+async function v110RunOperationalAction(card,button,payload,status){
+  const lock=String(payload.stayId||`${payload.stayKey}|${payload.dogId}|${payload.dogName}`).trim().toLowerCase();
+  const label=status==='checked_in'?'Check In':'Check Out';
+  const original=status==='checked_in'?'🛬 Check In':'👋 Check Out';
+  const originalStayId=payload.stayId;
+  const sameTarget=()=>{
+    if(!card?.isConnected)return false;
+    const current=v110OperationalPayloadFromCard(card);
+    const expectedStayId=String(originalStayId||'').trim()||String(payload.stayId||'').trim();
+    return current.stayId===expectedStayId&&current.stayKey===payload.stayKey&&current.dogId===payload.dogId&&current.dogName===payload.dogName&&current.startDate===payload.startDate&&current.endDate===payload.endDate;
+  };
+  let activeButton=button;
+  const attempt=async()=>{
+    if(!sameTarget())return;
+    if(v110ActiveOperationalActions.has(lock))return;
+    activeButton=card.querySelector(status==='checked_in'?'[data-v110-checkin]':'[data-v110-checkout]')||activeButton;
+    if(!activeButton?.isConnected){v110ShowActionFeedback(card,`${label} is no longer available for this stay. Refresh Care and review its current status.`);return;}
+    v110ActiveOperationalActions.add(lock);activeButton.disabled=true;activeButton.textContent=status==='checked_in'?'⏳ Checking in…':'⏳ Checking out…';
+    try{
+      await v110SaveOperationalStatus(payload,status,card);
+      if(!sameTarget())return;
+      if(status==='checked_out'&&typeof v1086MoveCheckedOutStayToPast==='function')v1086MoveCheckedOutStayToPast(card,payload);
+      else v110EnsureCareOperationBar(card);
+      const current=card.querySelector('[data-v110-operation-bar]')||card;
+      v110ClearActionFeedback(current,`${payload.dogName} ${status==='checked_in'?'checked in':'checked out'} successfully.`);
+      showWaffleForegroundPush({title:status==='checked_in'?`🏡 ${payload.dogName} checked in`:`👋 ${payload.dogName} checked out`,body:status==='checked_in'?'Operational stay tracking is now active.':'The stay has moved to Past.'});
+    }catch(error){
+      if(!sameTarget())return;
+      const current=card.querySelector('[data-v110-operation-bar]')||card;
+      v110ShowActionFeedback(current,v110ActionErrorMessage(label,error),v110ErrorCanRetry(error)?attempt:null);
+    }finally{v110ActiveOperationalActions.delete(lock);activeButton=card.querySelector(status==='checked_in'?'[data-v110-checkin]':'[data-v110-checkout]')||activeButton;if(activeButton.isConnected){activeButton.disabled=false;activeButton.textContent=original;}}
+  };
+  await attempt();
+}
 function v110SetPhotoViewerImage(v,url,retry=false){
   clearTimeout(v._v110ImageTimer);
   const generation=++v._v110Generation,old=v.querySelector('img'),img=document.createElement('img');
@@ -500,8 +604,8 @@ document.addEventListener('click',async e=>{
 
   const dep=e.target.closest('[data-v10-jump="departures"]');if(dep&&WAFFLE_PAGE==='calendar'){e.preventDefault();e.stopPropagation();await v110OpenLeavingModal();return;}
   const tab=e.target.closest('[data-v110-tab]');if(tab){e.preventDefault();e.stopPropagation();v110OpenCustomPanel(tab.closest('.directory-card'),tab.dataset.v110Tab);return;}
-  const ci=e.target.closest('[data-v110-checkin]');if(ci){const card=ci.closest('.directory-card'),p=v110OperationalPayloadFromCard(card);ci.disabled=true;ci.textContent='⏳ Checking in…';try{await v110SaveOperationalStatus(p,'checked_in',card);v110EnsureCareOperationBar(card);showWaffleForegroundPush({title:`🏡 ${p.dogName} checked in`,body:'Operational stay tracking is now active.'});}catch(err){alert('Check In could not be saved.\n\n'+(err?.message||String(err)));}finally{ci.disabled=false;}return;}
-  const co=e.target.closest('[data-v110-checkout]');if(co){const card=co.closest('.directory-card'),p=v110OperationalPayloadFromCard(card);if(!confirm(`Check out ${p.dogName}?`))return;co.disabled=true;co.textContent='⏳ Checking out…';try{await v110SaveOperationalStatus(p,'checked_out',card);if(typeof v1086MoveCheckedOutStayToPast==='function')v1086MoveCheckedOutStayToPast(card,p);else v110EnsureCareOperationBar(card);showWaffleForegroundPush({title:`👋 ${p.dogName} checked out`,body:'The stay has moved to Past.'});}catch(err){alert('Check Out could not be saved.\n\n'+(err?.message||String(err)));}finally{co.disabled=false;}return;}
+  const ci=e.target.closest('[data-v110-checkin]');if(ci){const card=ci.closest('.directory-card'),p=v110OperationalPayloadFromCard(card);await v110RunOperationalAction(card,ci,p,'checked_in');return;}
+  const co=e.target.closest('[data-v110-checkout]');if(co){const card=co.closest('.directory-card'),p=v110OperationalPayloadFromCard(card);if(!confirm(`Check out ${p.dogName}?`))return;await v110RunOperationalAction(card,co,p,'checked_out');return;}
   const sm=e.target.closest('[data-v110-save-master]');if(sm){await v110SaveMasterFromCard(sm.closest('.directory-card'),sm);return;}
   const retryMaster=e.target.closest('[data-v110-master-retry]');if(retryMaster){v110LoadMasterProfile(retryMaster.closest('.directory-card'),{force:true});return;}
   const mediaToggle=e.target.closest('[data-v110-media-toggle]');if(mediaToggle){const expanded=mediaToggle.getAttribute('aria-expanded')==='true',content=mediaToggle.closest('.v110-media-section')?.querySelector('.v110-media-group-content');mediaToggle.setAttribute('aria-expanded',expanded?'false':'true');if(content)content.hidden=expanded;return;}

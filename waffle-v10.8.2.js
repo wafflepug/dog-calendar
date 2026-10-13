@@ -72,6 +72,10 @@ function v1082PastCardHtml(booking) {
 
     const dateLabel =
         `${formatStayDateShort(startDate)} – ${formatStayDateShort(endDate)}`;
+    const isCheckedOut = String(booking.operationalStatus || booking.status || '').trim().toLowerCase() === 'checked_out';
+    const checkoutDate = String(booking.checkoutDate || booking.actualCheckoutDate || '').trim();
+    const displayNumber = /^#?\d+$/.test(dogNumber) && Number(dogNumber.replace(/^#/, '')) > 0 ? `#${dogNumber.replace(/^#/, '').padStart(5, '0')}` : '';
+    const dogIdentityLabel = displayNumber ? `Dog ID ${displayNumber}` : '';
 
     return `
         <div
@@ -93,7 +97,7 @@ function v1082PastCardHtml(booking) {
                 type="button"
                 class="directory-guest-tile-open directory-roster-row v1082-past-tile"
                 data-open-directory-profile
-                aria-label="Open ${v1082Escape(dogName)} past care profile. ${v1082Escape(breed)}. Stayed ${v1082Escape(dateLabel)}.">
+                aria-label="Open ${v1082Escape(dogName)} past care profile. ${v1082Escape(breed)}${dogIdentityLabel ? `. ${v1082Escape(dogIdentityLabel)}` : ''}. Stayed ${v1082Escape(dateLabel)}${checkoutDate ? `. ${v1082Escape(booking.checkoutDateLabel || (isCheckedOut ? 'Checked out' : 'Scheduled checkout'))} ${v1082Escape(formatStayDateShort(checkoutDate))}` : ''}.">
                 <span
                     class="directory-guest-tile-photo"
                     data-directory-tile-photo="${v1082Escape(stayKey)}"
@@ -101,9 +105,9 @@ function v1082PastCardHtml(booking) {
                 <span class="directory-roster-avatar" aria-hidden="true">${v1082Escape(dogName.split(/\s+/).slice(0, 2).map(part => part.charAt(0)).join('') || '🐾')}</span>
                 <span class="directory-roster-copy">
                     <span class="directory-guest-tile-name">${v1082Escape(dogName)}</span>
-                    <span class="directory-roster-context">${v1082Escape(breed)} · stayed ${v1082Escape(dateLabel)}</span>
+                    <span class="directory-roster-context">${v1082Escape(breed)}${dogIdentityLabel ? ` · ${v1082Escape(dogIdentityLabel)}` : ''} · stayed ${v1082Escape(dateLabel)}</span>
                 </span>
-                <span class="directory-roster-status is-past">Past stay</span>
+                <span class="directory-roster-status is-past">${isCheckedOut ? 'Checked out' : 'Completed'}</span>
             </button>
 
             <div class="directory-profile-content">
@@ -132,7 +136,7 @@ function v1082PastCardHtml(booking) {
                                 ${v1082Escape(dogName)}
                             </span>
                             <span class="directory-status-tag v1082-past-status">
-                                Past Stay
+                                ${isCheckedOut ? 'Checked out' : 'Completed'}
                             </span>
                         </div>
 
@@ -140,9 +144,12 @@ function v1082PastCardHtml(booking) {
                             ${v1082Escape(breed)}
                         </span>
 
+                        ${dogIdentityLabel ? `<div class="directory-stay-dates v1082-past-dog-id">${v1082Escape(dogIdentityLabel)}</div>` : ''}
+
                         <div class="directory-stay-dates">
                             📅 ${v1082Escape(dateLabel)}
                         </div>
+                        ${checkoutDate ? `<div class="directory-stay-dates v1082-past-checkout-date">${v1082Escape(booking.checkoutDateLabel || (isCheckedOut ? 'Checked out' : 'Scheduled checkout'))} ${v1082Escape(formatStayDateShort(checkoutDate))}</div>` : ''}
                     </div>
                 </div>
 

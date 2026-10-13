@@ -199,6 +199,40 @@ test('past Care search reads only API-provided Dog ID and Dog Number metadata', 
   await expect(page.locator('#directory-search-status')).toContainText('1 match in Past');
 });
 
+test('past profiles group repeat stays only by proven Dog ID', () => {
+  const sameName = { dogName: 'Coco', breed: 'Poodle', stayKey: 'coco|2026-06-01|2026-06-05' };
+  const repeatedDog = groupPastBookings([
+    { ...sameName, dogId: '11111111-1111-4111-8111-111111111111', stayId: 'stay-june', row: 2, startDate: '2026-06-01', endDate: '2026-06-05' },
+    { ...sameName, dogId: '11111111-1111-4111-8111-111111111111', stayId: 'stay-july', row: 3, startDate: '2026-07-01', endDate: '2026-07-05' }
+  ]);
+  expect(repeatedDog).toHaveLength(1);
+  expect(repeatedDog[0].v1088StayCount).toBe(2);
+  expect(repeatedDog[0].v1088AllStays).toHaveLength(2);
+  expect(repeatedDog[0].v1088AllStays.map(stay => stay.stayId).sort()).toEqual(['stay-july', 'stay-june']);
+
+  const sameNameDifferentDogs = groupPastBookings([
+    { ...sameName, dogId: '11111111-1111-4111-8111-111111111111', stayId: 'coco-a', row: 4 },
+    { ...sameName, dogId: '22222222-2222-4222-8222-222222222222', stayId: 'coco-b', row: 5 }
+  ]);
+  expect(sameNameDifferentDogs).toHaveLength(2);
+  expect(sameNameDifferentDogs.every(booking => booking.v1088StayCount === 1)).toBe(true);
+
+  const unknownIdentity = groupPastBookings([
+    { ...sameName, stayId: 'legacy-coco-a', row: 6 },
+    { ...sameName, stayId: 'legacy-coco-b', row: 7 },
+    { ...sameName, row: 8 },
+    { ...sameName, row: 9 }
+  ]);
+  expect(unknownIdentity).toHaveLength(4);
+  expect(unknownIdentity.every(booking => booking.v1088StayCount === 1)).toBe(true);
+
+  const conflictedIdentity = groupPastBookings([
+    { ...sameName, dogId: '11111111-1111-4111-8111-111111111111', identityConflict: true, stayId: 'conflict-a', row: 10 },
+    { ...sameName, dogId: '11111111-1111-4111-8111-111111111111', identityConflict: true, stayId: 'conflict-b', row: 11 }
+  ]);
+  expect(conflictedIdentity).toHaveLength(2);
+});
+
 test('Care stay-link controls and profile actions remain usable on desktop and mobile', async ({ page }) => {
   await page.setContent(`<!doctype html><html><head><style>${rosterStyles}\n${careRuntimeStyles}</style></head>
     <body data-waffle-page="directory"><main id="directoryTabPanel" class="app-tab-panel active">

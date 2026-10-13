@@ -271,13 +271,16 @@
   function enhanceDeleteAction(card) {
     if (!isDeletableConfirmedCard(card)) return;
     const content = card.querySelector('.directory-profile-content');
-    const header = content?.querySelector('.directory-card-header');
-    if (!content || !header || content.querySelector(':scope > .v11198-confirmed-actions')) return;
+    const tools = content?.querySelector('.directory-care-more-actions');
+    if (!content || !tools || tools.querySelector('[data-v11198-delete-confirmed]')) return;
 
-    const actions = document.createElement('div');
-    actions.className = 'v11198-confirmed-actions';
-    actions.innerHTML = '<button type="button" class="v11198-delete-stay" data-v11198-delete-confirmed>🗑 Delete Confirmed Stay</button>';
-    header.insertAdjacentElement('afterend', actions);
+    const action = document.createElement('button');
+    action.type = 'button';
+    action.className = 'v11198-delete-stay';
+    action.dataset.v11198DeleteConfirmed = '';
+    action.setAttribute('aria-label', 'Delete this confirmed stay');
+    action.textContent = 'Delete Confirmed Stay';
+    tools.append(action);
   }
 
   function enhanceAllCards() {

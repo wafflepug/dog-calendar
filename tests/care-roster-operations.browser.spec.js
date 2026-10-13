@@ -76,17 +76,26 @@ for (const width of [360, 1280]) {
     expect(await page.evaluate(() => window.readActions)).toEqual(['get_data_versions','get_data_versions']);
   });
 }
-test('offline and failed writes retain the active stay and restore both actions', async ({page}) => {
+test('offline and failed writes show inline feedback, offer no unsafe retry, and retain the active stay', async ({page}) => {
   await setup(page);
   const card = page.locator(`[data-directory-stay-id="${ids[0]}"]`);
   await page.context().setOffline(true);
   await card.locator('[data-v11217-roster-checkin]').click();
-  await expect.poll(() => page.evaluate(() => window.alerts.join(' '))).toMatch(/live connection/);
+  const offline = card.locator(':scope > .v110-action-feedback');
+  await expect(offline).toHaveAttribute('role', 'alert');
+  await expect(offline).toContainText(/live connection/);
+  await expect(offline.getByRole('button', {name:'Retry'})).toHaveCount(0);
   expect(await page.evaluate(() => window.sent.length)).toBe(0);
+  await expect(card.locator('[data-v11217-roster-checkin]')).toBeEnabled();
+  await expect(card.locator('[data-v11217-roster-checkout]')).toBeEnabled();
+  await expect(page.locator('#past-directory-grid .directory-card')).toHaveCount(0);
   await page.context().setOffline(false);
   await page.evaluate(() => window.fail = true);
   await card.locator('[data-v11217-roster-checkout]').click();
-  await expect.poll(() => page.evaluate(() => window.alerts.join(' '))).toMatch(/Synthetic write failure/);
+  const failed = card.locator(':scope > .v110-action-feedback');
+  await expect(failed).toHaveAttribute('role', 'alert');
+  await expect(failed).toContainText(/Synthetic write failure/);
+  await expect(failed.getByRole('button', {name:'Retry'})).toHaveCount(0);
   await expect(card.locator('[data-v11217-roster-checkin]')).toBeEnabled();
   await expect(card.locator('[data-v11217-roster-checkout]')).toBeEnabled();
   await expect(page.locator('#past-directory-grid .directory-card')).toHaveCount(0);

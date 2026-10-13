@@ -22,6 +22,7 @@ jobs:
           set -euo pipefail
 
           node --check apps-script/Code.js
+          node --test tests/care-past-cache-contract.test.js tests/care-past-classification.test.js
           node --check apps-script/WaffleAIProvider.js
           node --check apps-script/WaffleAICalendarFast.js
           node --check apps-script/WaffleAIHealth.js

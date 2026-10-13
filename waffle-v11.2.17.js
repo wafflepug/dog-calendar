@@ -20,6 +20,7 @@
   let activeCard = null;
   let previousFocus = null;
   let enhanceQueued = false;
+  const activeStatusSaves = new Set();
 
   function esc(value) {
     return String(value == null ? '' : value)
@@ -110,7 +111,7 @@
       .v11217-modal{position:fixed;inset:0;z-index:4200;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(15,23,42,.66);backdrop-filter:blur(4px)}.v11217-modal[hidden]{display:none!important}.v11217-modal-card{width:min(100%,520px);max-height:min(88vh,720px);overflow:auto;border:1px solid var(--v10-border,#dbe3ed);border-radius:18px;background:var(--v10-card,#fff);color:var(--v10-text,#172033);box-shadow:0 28px 70px rgba(15,23,42,.35)}
       .v11217-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:17px 18px 12px;border-bottom:1px solid var(--v10-border,#e2e8f0)}.v11217-modal-head small{display:block;color:#b45309;font-size:8px;font-weight:950;letter-spacing:.08em}.v11217-modal-head h3{margin:3px 0 4px;font-size:20px}.v11217-modal-head p{margin:0;color:var(--v10-muted,#64748b);font-size:10px;line-height:1.45}.v11217-modal-close{flex:0 0 36px;width:36px;height:36px;border:0;border-radius:50%;background:var(--v10-card-soft,#f1f5f9);color:inherit;font-size:22px;cursor:pointer}
       .v11217-modal-body{display:grid;gap:11px;padding:16px 18px}.v11217-modal-dog{padding:11px 12px;border:1px solid #fde68a;border-radius:11px;background:#fffbeb}.v11217-modal-dog strong{display:block;font-size:14px}.v11217-modal-dog span{display:block;margin-top:2px;color:#92400e;font-size:9px;font-weight:800}.v11217-modal-facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.v11217-modal-fact{padding:10px;border:1px solid var(--v10-border,#e2e8f0);border-radius:10px;background:var(--v10-card-soft,#f8fafc)}.v11217-modal-fact small{display:block;color:var(--v10-muted,#64748b);font-size:8px;font-weight:900}.v11217-modal-fact strong{display:block;margin-top:4px;font-size:10px;line-height:1.35}.v11217-modal-preserve{padding:10px;border-radius:10px;background:#eff6ff;color:#1e40af;font-size:9px;line-height:1.45;font-weight:750}.v11217-field label{display:block;margin-bottom:5px;font-size:9px;font-weight:900}.v11217-field textarea{width:100%;min-height:82px;box-sizing:border-box;resize:vertical;border:1px solid var(--v10-border,#cbd5e1);border-radius:10px;padding:10px;background:var(--v10-card,#fff);color:inherit;font:inherit;font-size:10px;line-height:1.45}.v11217-field textarea:focus{outline:3px solid rgba(245,158,11,.2);border-color:#f59e0b}
-      .v11217-modal-actions{display:flex;justify-content:flex-end;gap:8px;padding:12px 18px 18px}.v11217-modal-actions button{min-height:41px;padding:9px 13px;border-radius:10px;font:inherit;font-size:10px;font-weight:900;cursor:pointer}.v11217-cancel{border:1px solid var(--v10-border,#cbd5e1);background:var(--v10-card-soft,#f8fafc);color:inherit}.v11217-confirm{border:1px solid #d97706;background:#d97706;color:#fff}.v11217-confirm:disabled{opacity:.65;cursor:wait}
+      .v11217-action-feedback{display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:10px;border:1px solid #fda4af;border-radius:10px;background:#fff1f2;color:#881337;font-size:10px;line-height:1.45}.v11217-action-feedback[hidden]{display:none}.v11217-action-feedback button{min-width:88px;min-height:44px;padding:8px 12px;border:1px solid currentColor;border-radius:8px;background:transparent;color:inherit;font:inherit;font-size:13px;font-weight:850;cursor:pointer}.v11217-action-feedback button:focus-visible{outline:3px solid rgba(37,99,235,.3);outline-offset:2px}body.dark-theme .v11217-action-feedback{background:#4c0519;color:#ffe4e6;border-color:#fb7185}.v11217-modal-actions{display:flex;justify-content:flex-end;gap:8px;padding:12px 18px 18px}.v11217-modal-actions button{min-height:41px;padding:9px 13px;border-radius:10px;font:inherit;font-size:10px;font-weight:900;cursor:pointer}.v11217-cancel{border:1px solid var(--v10-border,#cbd5e1);background:var(--v10-card-soft,#f8fafc);color:inherit}.v11217-confirm{border:1px solid #d97706;background:#d97706;color:#fff}.v11217-confirm:disabled{opacity:.65;cursor:wait}
       body.dark-theme .v11217-profile-badge,body.dark-theme .v11217-modal-dog{background:#451a03;color:#fde68a;border-color:#92400e}body.dark-theme .v11217-modal-dog span{color:#fde68a}body.dark-theme .v11217-modal-preserve{background:#172554;color:#bfdbfe}
       @media(max-width:768px){.v11217-profile-grid,.v11217-modal-facts{grid-template-columns:1fr}.v11217-early-checkout-button{width:100%}.v11217-modal{align-items:flex-end;padding:10px}.v11217-modal-card{width:100%;max-height:91vh;border-radius:18px 18px 12px 12px}.v11217-modal-actions{display:grid;grid-template-columns:1fr 1fr}.v11217-modal-actions button{width:100%}}
     `;
@@ -266,6 +267,10 @@
     actions.innerHTML = `${canCheckIn ? `<button type="button" class="v110-checkin-button" data-v11217-roster-checkin aria-label="Check in ${esc(p.dogName || 'guest')}">🛬 Check In</button>` : ''}${canCheckout ? `<button type="button" class="v110-checkout-button" data-v11217-roster-checkout aria-label="Check out ${esc(p.dogName || 'guest')}">👋 Check Out</button>` : ''}${early ? '<button type="button" class="v11217-early-checkout-button" data-v11217-early-checkout>⏱️ Early Checkout</button>' : ''}`;
     const earlyButton = actions.querySelector('[data-v11217-early-checkout]');
     if (earlyButton) earlyButton.setAttribute('aria-label', `Record early checkout for ${p.dogName || 'guest'}`);
+    const saveKey = String(p.stayId || '').trim().toLowerCase() ||
+      `${String(p.stayKey || '').trim()}|${String(p.dogId || '').trim().toLowerCase()}|${String(p.dogName || '').trim().toLowerCase()}`;
+    const saving = activeStatusSaves.has(saveKey);
+    actions.querySelectorAll('[data-v11217-roster-checkin],[data-v11217-roster-checkout],[data-v11217-early-checkout]').forEach(control => { control.disabled = saving; });
   }
 
   if (typeof baseEnsureCareOperationBar === 'function') {
@@ -284,7 +289,6 @@
     };
   }
 
-  const activeStatusSaves = new Set();
   const canonicalSave = window.v110SaveOperationalStatus;
   if (typeof canonicalSave === 'function' && !canonicalSave.__v11217RosterLock) {
     const guardedSave = async function(payload, status, target) {
@@ -361,6 +365,7 @@
           </div>
           <div class="v11217-modal-preserve">The original booking dates will be preserved. This only updates the guest's operational status and early-checkout profile.</div>
           <div class="v11217-field"><label for="v11217EarlyCheckoutNote">Optional checkout note</label><textarea id="v11217EarlyCheckoutNote" data-v11217-note maxlength="1000" placeholder="Add collection details or other context…"></textarea></div>
+          <div class="v11217-action-feedback" data-v11217-feedback role="status" aria-live="polite" hidden><span data-v11217-feedback-message></span><button type="button" data-v11217-retry hidden>Retry Early Checkout</button></div>
         </div>
         <div class="v11217-modal-actions">
           <button type="button" class="v11217-cancel" data-v11217-close>Cancel</button>
@@ -382,6 +387,35 @@
     try { focus?.focus?.(); } catch (_) {}
   }
 
+  function setEarlyFeedback(message, retry) {
+    const modal = document.getElementById('v11217EarlyCheckoutModal');
+    const region = modal?.querySelector('[data-v11217-feedback]');
+    if (!region) return;
+    const text = region.querySelector('[data-v11217-feedback-message]');
+    const button = region.querySelector('[data-v11217-retry]');
+    text.textContent = String(message || 'Early checkout could not be saved.');
+    region.hidden = false;
+    region.setAttribute('role', 'alert');
+    region.setAttribute('aria-live', 'assertive');
+    button.hidden = typeof retry !== 'function';
+    button.onclick = typeof retry === 'function' ? retry : null;
+  }
+
+  function actionCanRetry(error) {
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) return false;
+    const message = String(error?.message || error || '');
+    if (/conflict|collision|duplicate|ambiguous|several .*match|multiple .*match|operation rows match|invalid stay|changed|reload|does not match|did not confirm|review .*booking|cannot be queued|already being saved|offline/i.test(message)) return false;
+    return error instanceof TypeError || /network|timed? ?out|fetch failed|connection (?:was )?(?:lost|interrupted|failed)|temporarily unavailable|http 5\d\d|server error/i.test(message);
+  }
+
+  function identityMatchesCard(card, payload, originalStayId) {
+    if (!card?.isConnected) return false;
+    const current = payloadForCard(card);
+    return current.stayId === (String(originalStayId || '').trim() || String(payload.stayId || '').trim()) &&
+      current.stayKey === payload.stayKey && current.dogId === payload.dogId && current.dogName === payload.dogName &&
+      current.startDate === payload.startDate && current.endDate === payload.endDate;
+  }
+
   function openModal(card, trigger) {
     const p = payloadForCard(card);
     if (!earlyCheckoutEligible(card)) return;
@@ -394,6 +428,7 @@
     modal.querySelector('[data-v11217-original-date]').textContent = formatDate(p.endDate);
     modal.querySelector('[data-v11217-requested-by]').textContent = p.ownerName || 'Owner';
     modal.querySelector('[data-v11217-note]').value = '';
+    modal.querySelector('[data-v11217-feedback]').hidden = true;
     modal.hidden = false;
     window.setTimeout(() => modal.querySelector('[data-v11217-note]')?.focus(), 0);
   }
@@ -406,6 +441,7 @@
     }
     const modal = ensureModal();
     const p = payloadForCard(card);
+    const originalStayId = p.stayId;
     const note = String(modal.querySelector('[data-v11217-note]')?.value || '').trim();
     const actualDate = todayKey();
     const payload = {
@@ -423,7 +459,9 @@
     };
 
     const originalText = button.textContent;
+    const retryButton = modal.querySelector('[data-v11217-retry]');
     button.disabled = true;
+    if (retryButton) retryButton.disabled = true;
     button.textContent = '⏳ Recording early checkout…';
     try {
       if (typeof window.v110SaveOperationalStatus !== 'function') {
@@ -431,6 +469,10 @@
       }
       const response = await window.v110SaveOperationalStatus(payload, 'checked_out', card);
       if (response?.queued) throw new Error('Early checkout cannot be queued offline. Nothing was saved.');
+      if (!identityMatchesCard(card, payload, originalStayId)) {
+        setEarlyFeedback('The selected booking changed while saving. Review its current identity and refresh Care before taking another action.');
+        return;
+      }
       if (typeof window.v1086MoveCheckedOutStayToPast === 'function') window.v1086MoveCheckedOutStayToPast(card, p);
 
       if (response?.record?.stayId && !p.stayId && String(response.record.stayKey || '') === p.stayKey) {
@@ -465,13 +507,19 @@
           }
         }));
       } catch (_) {}
+      if (typeof window.v110ClearActionFeedback === 'function') window.v110ClearActionFeedback(card, `${p.dogName} checked out early successfully.`);
       closeModal();
       scheduleEnhance();
     } catch (error) {
-      window.alert(`Early checkout could not be saved.\n\n${error?.message || String(error)}`);
+      const message = String(error?.message || error || 'Unknown error');
+      const structural = /conflict|collision|duplicate|ambiguous|several .*match|multiple .*match|operation rows match|invalid stay|changed|reload|does not match|did not confirm|review .*booking/i.test(message);
+      const guidance = structural ? ' Review the booking identity and refresh Care before taking another action.' : '';
+      const retry = actionCanRetry(error) && identityMatchesCard(card, payload, originalStayId);
+      setEarlyFeedback(`Early checkout could not be saved. ${message}${guidance}`, retry ? () => confirmEarlyCheckout(button) : null);
     } finally {
       button.disabled = false;
       button.textContent = originalText;
+      if (retryButton) retryButton.disabled = false;
     }
   }
 
@@ -485,12 +533,23 @@
     const card = button.closest('.directory-card');
     if (!card || button.disabled) return;
     const payload = payloadForCard(card);
+    const originalStayId = payload.stayId;
     const status = checkinButton ? 'checked_in' : 'checked_out';
     const original = button.textContent;
     if (checkoutButton && !window.confirm(`Check out ${payload.dogName}?`)) return;
-    button.disabled = true;
-    button.textContent = status === 'checked_in' ? '⏳ Checking in…' : '⏳ Checking out…';
-    try {
+    const actions = button.closest('[data-v11217-roster-actions]') || button.parentElement;
+    const actionName = status === 'checked_in' ? 'Check In' : 'Check Out';
+    let activeButton = button;
+    const attempt = async () => {
+      if (!identityMatchesCard(card, payload, originalStayId)) return;
+      activeButton = card.querySelector(status === 'checked_in' ? '[data-v11217-roster-checkin]' : '[data-v11217-roster-checkout]') || activeButton;
+      if (!activeButton?.isConnected) {
+        if (typeof window.v110ShowActionFeedback === 'function') window.v110ShowActionFeedback(card, `${actionName} is no longer available for this stay. Refresh Care and review its current status.`);
+        return;
+      }
+      activeButton.disabled = true;
+      activeButton.textContent = status === 'checked_in' ? '⏳ Checking in…' : '⏳ Checking out…';
+      try {
       const current = payloadForCard(card);
       const currentState = typeof window.v110OperationDisplayState === 'function' ? window.v110OperationDisplayState(card) : null;
       const statusStillAvailable = status === 'checked_in'
@@ -502,7 +561,9 @@
         throw new Error('This roster card changed. Reload the current stay before trying again.');
       }
       if (typeof window.v110SaveOperationalStatus !== 'function') throw new Error('Stay operations service is unavailable.');
-      await window.v110SaveOperationalStatus(payload, status, card);
+      const response = await window.v110SaveOperationalStatus(payload, status, card);
+      if (response?.queued) throw new Error('Stay operations cannot be queued offline. Nothing was saved.');
+      if (!identityMatchesCard(card, payload, originalStayId)) return;
       if (status === 'checked_out' && typeof window.v1086MoveCheckedOutStayToPast === 'function') {
         window.v1086MoveCheckedOutStayToPast(card, payload);
       }
@@ -512,11 +573,21 @@
         title: status === 'checked_in' ? `🏡 ${payload.dogName} checked in` : `👋 ${payload.dogName} checked out`,
         body: status === 'checked_in' ? 'Operational stay tracking is now active.' : 'The stay has moved to Past.'
       });
+      const feedbackHost = card;
+      if (typeof window.v110ClearActionFeedback === 'function') window.v110ClearActionFeedback(feedbackHost, `${payload.dogName} ${status === 'checked_in' ? 'checked in' : 'checked out'} successfully.`);
     } catch (error) {
-      window.alert(`${status === 'checked_in' ? 'Check In' : 'Check Out'} could not be saved.\n\n${error?.message || String(error)}`);
-      button.disabled = false;
-      button.textContent = original;
+      if (!identityMatchesCard(card, payload, originalStayId)) return;
+      const message = String(error?.message || error || 'Unknown error');
+      const structural = /conflict|collision|duplicate|ambiguous|several .*match|multiple .*match|operation rows match|invalid stay|changed|reload|does not match|did not confirm|review .*booking/i.test(message);
+      const guidance = structural ? ' Review the booking identity and refresh Care before taking another action.' : '';
+      const retry = actionCanRetry(error);
+      if (typeof window.v110ShowActionFeedback === 'function') window.v110ShowActionFeedback(card, `${actionName} could not be saved. ${message}${guidance}`, retry ? attempt : null);
+    } finally {
+      activeButton = card.querySelector(status === 'checked_in' ? '[data-v11217-roster-checkin]' : '[data-v11217-roster-checkout]') || activeButton;
+      if (activeButton?.isConnected) { activeButton.disabled = false; activeButton.textContent = original; }
     }
+    };
+    await attempt();
   });
 
   document.addEventListener('click', event => {

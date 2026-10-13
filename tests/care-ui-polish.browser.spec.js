@@ -12,6 +12,10 @@ const shellCss = [...settingsSource.matchAll(/body(?:\.dark-theme|:not\(\.dark-t
 const css = importedCss + '\n' + runtimeCss.replace(/@import[^;]+;/g, '') + '\n' + paletteCss + '\n' + shellCss + '\n* { transition: none !important; animation: none !important; }';
 const paletteNames = [...new Set([...paletteCss.matchAll(/data-waffle-colour-style="([^"]+)"/g)].map(match => match[1]))];
 const app = fs.readFileSync(path.join(root, 'waffle-app.js'), 'utf8');
+const pastSource = fs.readFileSync(path.join(root, 'waffle-v10.8.2.js'), 'utf8');
+const pastCardStart = pastSource.indexOf('function v1082PastCardHtml(booking)');
+const pastCardEnd = pastSource.indexOf('\nfunction v1082ApplyPastReadOnly', pastCardStart);
+const pastCardRenderer = pastSource.slice(pastCardStart, pastCardEnd);
 const care = fs.readFileSync(path.join(root, 'care.js'), 'utf8');
 const start = app.indexOf('function intakeAttributeControlHtml');
 const end = app.indexOf('function directoryCareCategorySummary', start);
@@ -36,6 +40,35 @@ function contrastRatio(fg, bg) {
   const values = [lum(fg), lum(bg)].sort((a, b) => b - a);
   return (values[0] + .05) / (values[1] + .05);
 }
+
+test('Past cards preserve distinct same-name dog identities and show checked-out details on phone and desktop', async ({ page }) => {
+  const renderPastCard = new Function('escapeDashboardHtml', 'formatStayDateShort', `function v1082Escape(value) { return escapeDashboardHtml(value); } ${pastCardRenderer}; return v1082PastCardHtml;`)(
+    value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c])),
+    value => { const [, month, day] = String(value || '').match(/^\d{4}-(\d{2})-(\d{2})/) || []; return month && day ? `${Number(day)} ${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][Number(month)-1]}` : String(value || ''); }
+  );
+  const cards = [
+    { stayKey:'coco|2026-07-01|2026-07-05', stayId:'stay-coco-a', dogId:'11111111-1111-4111-8111-111111111111', dogNumber:'#00017', dogName:'Coco with an exceptionally long registered name', breed:'Very long breed and descriptor', startDate:'2026-07-01', endDate:'2026-07-05', operationalStatus:'checked_out', checkoutDate:'2026-07-03' },
+    { stayKey:'coco|2026-07-01|2026-07-05', stayId:'stay-coco-b', dogId:'22222222-2222-4222-8222-222222222222', dogNumber:'#00018', dogName:'Coco with an exceptionally long registered name', breed:'Very long breed and descriptor', startDate:'2026-07-01', endDate:'2026-07-05', operationalStatus:'checked_out', checkoutDate:'2026-07-04' },
+    { stayKey:'coco|2026-06-01|2026-06-05', stayId:'stay-coco-a-return', dogId:'11111111-1111-4111-8111-111111111111', dogNumber:'#00017', dogName:'Coco with an exceptionally long registered name', breed:'Very long breed and descriptor', startDate:'2026-06-01', endDate:'2026-06-05', operationalStatus:'', checkoutDate:'' }
+  ];
+  const markup = cards.map(renderPastCard).join('');
+  for (const width of [320, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.setContent(`<style>${css}</style><body data-waffle-page="directory"><main id="past-directory-grid">${markup}</main></body>`);
+    const pastCards = page.locator('.v1082-past-card');
+    await expect(pastCards).toHaveCount(3);
+    await expect(pastCards.nth(0)).toHaveAttribute('data-directory-dog-id', cards[0].dogId);
+    await expect(pastCards.nth(1)).toHaveAttribute('data-directory-dog-id', cards[1].dogId);
+    await expect(pastCards.nth(2)).toHaveAttribute('data-directory-dog-id', cards[0].dogId);
+    await expect(pastCards.nth(2)).toHaveAttribute('data-directory-stay-id', 'stay-coco-a-return');
+    await expect(pastCards.nth(0).locator('.v1082-past-status')).toHaveText('Checked out');
+    await expect(pastCards.nth(0).locator('.directory-roster-context')).toContainText('Dog ID #00017');
+    await expect(pastCards.nth(1).locator('.v1082-past-checkout-date')).toContainText('Checked out 4 Jul');
+    await expect(pastCards.nth(0).locator('.v1082-past-dog-id')).toHaveText('Dog ID #00017');
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
+    expect(overflow, `Past cards should fit at ${width}px`).toBeFalsy();
+  }
+});
 
 test('Care profile editing and returning-stay review remain readable and usable at phone and desktop widths', async ({ page }) => {
   expect(paletteCss.match(/--wh75-accent-soft:/g)).toHaveLength(10);
