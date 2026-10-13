@@ -11815,6 +11815,11 @@ registerWaffleServiceWorker();
                 '[data-directory-detail="belongings"]'
             );
 
+        const checklistWasOpen = !!host.querySelector('[data-belongings-checklist-details]')?.open;
+        const photoToolsWereOpen = !!host.querySelector('[data-belongings-photo-tools-details]')?.open;
+        const draftBeforeRender = belongingsItemDrafts.get(directoryProfileEditKey(card));
+        const draftIsDirty = !!draftBeforeRender && !belongingsItemsEqual(draftBeforeRender.values, draftBeforeRender.initial);
+
         if (details) {
             details.dataset.detailLoaded =
                 'true';
@@ -11868,6 +11873,18 @@ registerWaffleServiceWorker();
                 })
                 .join('');
 
+        const savedItems = record.items || {};
+        const presentItems = BELONGINGS_ITEMS.filter(item => savedItems[item.key]?.present);
+        const presentCount = presentItems.length;
+        const recordedItems = BELONGINGS_ITEMS.filter(item => savedItems[item.key]?.present || String(savedItems[item.key]?.description || '').trim());
+        const belongingsSummaryHtml = recordedItems.length
+            ? `<ul class="belongings-summary-list">${recordedItems.map(item => {
+                const description = String(savedItems[item.key]?.description || '').trim();
+                const state = savedItems[item.key]?.present ? 'Present' : 'Not marked present';
+                return `<li><strong>${escapeDashboardHtml(item.label)}</strong><span class="belongings-summary-state">${state}</span>${description ? `<span>${escapeDashboardHtml(description)}</span>` : ''}</li>`;
+            }).join('')}</ul>`
+            : '<p class="belongings-summary-empty">No belongings have been recorded yet.</p>';
+
         const photos =
             Array.isArray(record.photos)
                 ? record.photos
@@ -11906,81 +11923,65 @@ registerWaffleServiceWorker();
 
         host.innerHTML = `
             <div class="directory-belongings-section">
-                <div class="belongings-item-section-heading">
-                    <div>
-                        <strong>🧳 Belongings Checklist</strong>
-                        <span>
-                            Tick what arrived and add a short note only where needed.
-                        </span>
+                <section class="belongings-saved-summary" data-belongings-summary aria-label="Saved belongings summary">
+                    <h4>Saved items</h4>
+                    <p data-belongings-summary-count>${presentCount} marked present · ${BELONGINGS_ITEMS.length} checklist items</p>
+                    ${belongingsSummaryHtml}
+                </section>
+
+                <details class="belongings-edit-disclosure" data-belongings-checklist-details>
+                    <summary data-belongings-checklist-summary>Edit checklist · ${presentCount} marked present</summary>
+                    <div class="belongings-item-section-heading">
+                        <div>
+                            <strong>Belongings Checklist</strong>
+                            <span>Tick what arrived and add a short note only where needed.</span>
+                        </div>
                     </div>
-                </div>
-
-                <div class="belongings-item-list">
-                    ${itemsHtml}
-                </div>
-
-                <div class="belongings-photo-upload-card">
-                    <div class="belongings-photo-upload-copy">
-                        <strong>📷 Belongings Photos</strong>
-                        <span>
-                            Add several photos from your library in one selection, or use the camera.
-                        </span>
+                    <div class="belongings-item-list">${itemsHtml}</div>
+                    <div class="directory-profile-save-bar directory-belongings-save-bar">
+                        <button type="button" class="belongings-save-btn" data-save-belongings>Save Belongings</button>
+                        <button type="button" class="belongings-save-btn" data-discard-belongings-draft>Discard draft</button>
                     </div>
+                </details>
 
-                    <input
-                        type="text"
-                        class="belongings-description belongings-photo-note"
-                        data-belongings-photo-label
-                        placeholder="Optional note for this group of photos">
-
-                    <div class="belongings-actions belongings-actions-compact">
-                        <button
-                            type="button"
-                            class="belongings-camera-btn"
-                            data-take-belongings-photo>
-                            📷 Take Photo
-                        </button>
-
-                        <button
-                            type="button"
-                            class="belongings-upload-btn"
-                            data-upload-belongings-photo>
-                            🖼️ Add Photos
-                        </button>
+                <details class="belongings-photo-tools-disclosure" data-belongings-photo-tools-details>
+                    <summary>Add belongings photos</summary>
+                    <div class="belongings-photo-upload-card">
+                        <div class="belongings-photo-upload-copy">
+                            <strong>Belongings Photos</strong>
+                            <span>Add several photos from your library in one selection, or use the camera.</span>
+                        </div>
 
                         <input
-                            type="file"
-                            accept="image/*"
-                            data-belongings-photo-input
-                            multiple
-                            hidden>
-                    </div>
+                            type="text"
+                            class="belongings-description belongings-photo-note"
+                            data-belongings-photo-label
+                            placeholder="Optional note for this group of photos">
 
-                    <div
-                        class="belongings-photo-status"
-                        data-belongings-photo-status
-                        role="status"
-                        aria-live="polite"
-                        aria-atomic="true"></div>
-                <button type="button" data-confirm-hosted-photo hidden>Check whether photo was saved</button>
+                        <div class="belongings-actions belongings-actions-compact">
+                            <button type="button" class="belongings-camera-btn" data-take-belongings-photo>Take Photo</button>
+                            <button type="button" class="belongings-upload-btn" data-upload-belongings-photo>Add Photos</button>
+
+                            <input type="file" accept="image/*" data-belongings-photo-input multiple hidden>
+                        </div>
+
+                    </div>
+                </details>
+
+                <div class="belongings-photo-feedback" aria-label="Photo upload status">
+                    <div class="belongings-photo-status" data-belongings-photo-status role="status" aria-live="polite" aria-atomic="true"></div>
+                    <button type="button" data-confirm-hosted-photo hidden>Check whether photo was saved</button>
                 </div>
 
                 <div class="belongings-photo-gallery">
                     ${photosHtml}
                 </div>
 
-                <div class="directory-profile-save-bar directory-belongings-save-bar">
-                    <button
-                        type="button"
-                        class="belongings-save-btn"
-                        data-save-belongings>
-                        💾 Save Belongings
-                    </button>
-                    <button type="button" class="belongings-save-btn" data-discard-belongings-draft>Discard draft</button>
-                </div>
                 <div class="directory-profile-edit-status is-clean" data-belongings-edit-status role="status" aria-live="polite" aria-atomic="true">No unsaved belongings changes.</div>
             </div>
         `;
+        host.querySelector('[data-belongings-checklist-details]').open = checklistWasOpen || draftIsDirty;
+        host.querySelector('[data-belongings-photo-tools-details]').open = photoToolsWereOpen;
         restoreBelongingsItemDraft(card, record.items || {});
         if (uncertainBelongingsPhotoUploads.has(stayKey)) {
             setBelongingsUploadCheckVisible(card, true);
@@ -12180,6 +12181,44 @@ registerWaffleServiceWorker();
 
     function belongingsItemsEqual(left, right) {
         return JSON.stringify(left || {}) === JSON.stringify(right || {});
+    }
+
+    function updateBelongingsSavedSummary(card, savedItems) {
+        const summary = card?.querySelector('[data-belongings-summary]');
+        if (!summary) return;
+        const presentItems = BELONGINGS_ITEMS.filter(item => savedItems?.[item.key]?.present);
+        const recordedItems = BELONGINGS_ITEMS.filter(item => savedItems?.[item.key]?.present || String(savedItems?.[item.key]?.description || '').trim());
+        const count = summary.querySelector('[data-belongings-summary-count]');
+        if (count) count.textContent = `${presentItems.length} marked present · ${BELONGINGS_ITEMS.length} checklist items`;
+        const editSummary = card.querySelector('[data-belongings-checklist-summary]');
+        if (editSummary) editSummary.textContent = `Edit checklist · ${presentItems.length} marked present`;
+        const content = recordedItems.length
+            ? recordedItems.map(item => {
+                const row = document.createElement('li');
+                const name = document.createElement('strong');
+                const state = document.createElement('span');
+                name.textContent = item.label;
+                state.className = 'belongings-summary-state';
+                state.textContent = savedItems[item.key]?.present ? 'Present' : 'Not marked present';
+                row.append(name, state);
+                const description = String(savedItems[item.key]?.description || '').trim();
+                if (description) { const note = document.createElement('span'); note.textContent = description; row.append(note); }
+                return row;
+            })
+            : null;
+        let list = summary.querySelector('.belongings-summary-list');
+        if (content) {
+            if (!list) { list = document.createElement('ul'); list.className = 'belongings-summary-list'; summary.querySelector('.belongings-summary-empty')?.replaceWith(list); }
+            list.replaceChildren(...content);
+        } else {
+            list?.remove();
+            if (!summary.querySelector('.belongings-summary-empty')) {
+                const empty = document.createElement('p');
+                empty.className = 'belongings-summary-empty';
+                empty.textContent = 'No belongings have been recorded yet.';
+                summary.append(empty);
+            }
+        }
     }
 
     function restoreBelongingsItemDraft(card, savedItems) {
@@ -12440,6 +12479,8 @@ registerWaffleServiceWorker();
                     ]?.dogPhoto ||
                     null
             };
+
+            if (payload.items) updateBelongingsSavedSummary(card, payload.items);
 
             if (payload.intakeAttributes) {
                 const profileIdentity = getDirectoryProfileReadIdentity(card);

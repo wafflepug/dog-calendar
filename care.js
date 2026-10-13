@@ -494,10 +494,21 @@
         { maxAttempts: 2, timeoutMs: 30000 }
       );
       const history = response?.history || {};
-      const stays = (Array.isArray(history.previousStays) ? history.previousStays : []).slice().sort((a, b) => String(b.actualCheckoutDate || b.endDate || b.startDate || '').localeCompare(String(a.actualCheckoutDate || a.endDate || a.startDate || '')));
+      const historyIdentity = String(history.dogId || history.dogNumber || dogId || '').trim();
+      const savedYearOpen = {};
+      if (historyIdentity && host.dataset.historyIdentity === historyIdentity) host.querySelectorAll('.v108-history-year-group').forEach(group => { savedYearOpen[group.dataset.historyYear || 'undated'] = group.open; });
+      const stays = (Array.isArray(history.previousStays) ? history.previousStays : []).slice().sort((a, b) => String(b.startDate || '').localeCompare(String(a.startDate || '')));
       host.dataset.historyState = 'loaded';
       const dateLabel = value => typeof window.v10FormatDateLabel === 'function' ? window.v10FormatDateLabel(value) : String(value || '');
-      host.innerHTML = `<section class="v11160-simple-section v108-history-fallback"><div class="v11160-section-head"><div><small>STAY HISTORY</small><h4>🕘 ${html(dogName)}</h4></div><strong>${Number(history.stayCount ?? stays.length)} stay${Number(history.stayCount ?? stays.length) === 1 ? '' : 's'}</strong></div>${history.dogNumber ? `<p>Dog ID ${html(history.dogNumber)}</p>` : ''}${stays.length ? `<div class="v11160-list">${stays.map(stay => { const changes = Array.isArray(stay.careChanges) ? stay.careChanges.filter(change => change && (change.updatedAt || change.date)) : []; const actual = String(stay.actualCheckoutDate || stay.checkedOutAt || '').slice(0, 10); return `<article class="v108-stay-history"><strong>Scheduled start ${html(dateLabel(String(stay.startDate || '').slice(0, 10)))}</strong>${actual ? `<span class="v108-stay-checkout">Checked out ${html(dateLabel(actual))}</span>${stay.endDate && actual !== String(stay.endDate).slice(0, 10) ? `<span class="v108-stay-checkout is-planned">Originally scheduled ${html(dateLabel(stay.endDate))}</span>` : ''}` : stay.endDate ? `<span class="v108-stay-checkout is-planned">Scheduled checkout ${html(dateLabel(stay.endDate))}</span>` : ''}<span>${[stay.bookingType || 'Boarding', stay.breed, stay.ownerName].filter(Boolean).map(html).join(' · ')}</span>${stay.phone ? `<a href="tel:${html(stay.phone)}">${html(stay.phone)}</a>` : ''}${changes.length ? `<div class="v108-stay-care-changes"><strong>Care record updates</strong>${changes.map(change => `<p><time>${html(dateLabel(String(change.updatedAt || change.date).slice(0, 10)))}</time>${change.source ? ` · ${html(change.source)}` : ''}</p>`).join('')}</div>` : ''}${stay.notes ? `<details><summary>Stay notes</summary><p>${html(stay.notes)}</p></details>` : ''}</article>`; }).join('')}</div>` : '<div class="v11160-empty">No stays are recorded for this dog.</div>'}</section>`;
+      const yearFor = stay => { const match = /^(\d{4})-(\d{2})-(\d{2})(?:$|T)/.exec(String(stay.startDate || '')); if (!match) return ''; const date = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]))); return date.getUTCFullYear() === Number(match[1]) && date.getUTCMonth() === Number(match[2]) - 1 && date.getUTCDate() === Number(match[3]) ? match[1] : ''; };
+      const dated = new Map(); const undated = [];
+      stays.forEach(stay => { const year = yearFor(stay); if (!year) { undated.push(stay); return; } if (!dated.has(year)) dated.set(year, []); dated.get(year).push(stay); });
+      const renderStay = stay => { const changes = Array.isArray(stay.careChanges) ? stay.careChanges.filter(change => change && (change.updatedAt || change.date)) : []; const start = dateLabel(String(stay.startDate || '').slice(0, 10)); const actual = String(stay.actualCheckoutDate || stay.checkedOutAt || '').slice(0, 10); return `<article class="v108-stay-history"><strong>${start ? `Scheduled start ${html(start)}` : 'Stay date unavailable'}</strong>${actual ? `<span class="v108-stay-checkout">Checked out ${html(dateLabel(actual))}</span>${stay.endDate && actual !== String(stay.endDate).slice(0, 10) ? `<span class="v108-stay-checkout is-planned">Originally scheduled ${html(dateLabel(stay.endDate))}</span>` : ''}` : stay.endDate ? `<span class="v108-stay-checkout is-planned">Scheduled checkout ${html(dateLabel(stay.endDate))}</span>` : ''}<span>${[stay.bookingType || 'Boarding', stay.breed, stay.ownerName].filter(Boolean).map(html).join(' · ')}</span>${stay.phone ? `<a href="tel:${html(stay.phone)}">${html(stay.phone)}</a>` : ''}${changes.length ? `<div class="v108-stay-care-changes"><strong>Care record updates</strong>${changes.map(change => `<p><time>${html(dateLabel(String(change.updatedAt || change.date).slice(0, 10)))}</time>${change.source ? ` · ${html(change.source)}` : ''}</p>`).join('')}</div>` : ''}${stay.notes ? `<details><summary>Stay notes</summary><p>${html(stay.notes)}</p></details>` : ''}</article>`; };
+      const yearGroups = [...dated.entries()].sort(([a], [b]) => b.localeCompare(a)).map(([year, rows], index) => `<details class="v108-history-year-group" data-history-year="${year}"${Object.prototype.hasOwnProperty.call(savedYearOpen, year) ? (savedYearOpen[year] ? ' open' : '') : (index === 0 ? ' open' : '')}><summary><strong>${year}</strong><span>${rows.length} stay${rows.length === 1 ? '' : 's'}</span></summary><div class="v108-history-year-content">${rows.map(renderStay).join('')}</div></details>`).join('');
+      const undatedGroup = undated.length ? `<details class="v108-history-year-group is-undated" data-history-year="undated"${Object.prototype.hasOwnProperty.call(savedYearOpen, 'undated') ? (savedYearOpen.undated ? ' open' : '') : ' open'}><summary><strong>Undated stays</strong><span>${undated.length} stay${undated.length === 1 ? '' : 's'}</span></summary><div class="v108-history-year-content">${undated.map(renderStay).join('')}</div></details>` : '';
+      const staysMarkup = stays.length ? `<div class="v108-history-year-groups">${yearGroups}${undatedGroup}</div>` : '<div class="v11160-empty">No stays are recorded for this dog.</div>';
+      host.innerHTML = `<section class="v11160-simple-section v108-history-fallback"><div class="v11160-section-head"><div><small>STAY HISTORY</small><h4>🕘 ${html(dogName)}</h4></div><strong>${Number(history.stayCount ?? stays.length)} stay${Number(history.stayCount ?? stays.length) === 1 ? '' : 's'}</strong></div>${history.dogNumber ? `<p>Dog ID ${html(history.dogNumber)}</p>` : ''}${staysMarkup}</section>`;
+      if (historyIdentity) host.dataset.historyIdentity = historyIdentity; else delete host.dataset.historyIdentity;
     } catch (error) {
       host.dataset.historyState = 'error';
       host.innerHTML = `<div class="v11160-error v108-history-error" role="alert"><strong>Stay history could not be loaded</strong><br>${html(error?.message || String(error))}<br><button type="button" data-v108-history-retry>Try again</button></div>`;
@@ -519,8 +530,22 @@
     const stayKey = String(card?.dataset?.directoryStayKey || card?.dataset?.stayKey || '').trim();
     if (!host || !stayKey || (!window.WAFFLE_CARE_BELONGINGS_READS?.read && typeof window.queryAppsScript !== 'function')) return;
 
-    const requestId = String((Number(host.dataset.v110FallbackRequestId) || 0) + 1);
     const identityKey = `${String(card.dataset.directoryStayId || '').toLowerCase()}::${String(card.dataset.directoryDogId || '').toLowerCase()}::${stayKey}`;
+    const activeToggle = document.activeElement?.closest?.('[data-v110-media-toggle]');
+    if (activeToggle && host.contains(activeToggle) && host.dataset.v110FallbackExpandedIdentity === identityKey) {
+      host.dataset.v110FallbackPendingFocusKey = activeToggle.dataset.v110MediaToggle;
+      host.dataset.v110FallbackPendingFocusIdentity = identityKey;
+    } else if (host.dataset.v110FallbackPendingFocusIdentity !== identityKey) {
+      delete host.dataset.v110FallbackPendingFocusKey;
+      delete host.dataset.v110FallbackPendingFocusIdentity;
+    }
+    if (host.dataset.v110FallbackExpandedIdentity === identityKey) {
+      host.dataset.v110FallbackExpanded = JSON.stringify(Object.fromEntries([...host.querySelectorAll('[data-v110-media-toggle]')].map(button => [button.dataset.v110MediaToggle, button.getAttribute('aria-expanded') === 'true'])));
+    } else {
+      delete host.dataset.v110FallbackExpanded;
+      host.dataset.v110FallbackExpandedIdentity = identityKey;
+    }
+    const requestId = String((Number(host.dataset.v110FallbackRequestId) || 0) + 1);
     host.dataset.v110FallbackRequestId = requestId;
     host.dataset.v110FallbackIdentity = identityKey;
     host.innerHTML = '<div class="v11160-loading" role="status">Loading photos…</div>';
@@ -529,15 +554,29 @@
     const renderRecord = record => {
       if (!isCurrent()) return;
       record = record || {};
+      const focusedToggle = document.activeElement?.closest?.('[data-v110-media-toggle]');
+      const focusKey = focusedToggle && host.contains(focusedToggle) ? focusedToggle.dataset.v110MediaToggle :
+        (host.dataset.v110FallbackPendingFocusIdentity === identityKey ? host.dataset.v110FallbackPendingFocusKey : '');
       const profile = Array.isArray(record.dogPhotoGallery) ? [...record.dogPhotoGallery] : [];
       if (record.dogPhoto && !profile.some(photo => String(photo?.id || '') === String(record.dogPhoto?.id || ''))) profile.push(record.dogPhoto);
       const stay = Array.isArray(record.stayPhotos) ? record.stayPhotos : [];
       const belongings = Array.isArray(record.photos) ? record.photos : [];
+      const hostId = host.dataset.v110FallbackMediaHostId || (host.dataset.v110FallbackMediaHostId = `v110-fallback-media-${fallbackMedia.controlsSequence = (Number(fallbackMedia.controlsSequence) || 0) + 1}`);
+      let savedState = {};
+      try { savedState = JSON.parse(host.dataset.v110FallbackExpanded || '{}'); } catch { savedState = {}; }
       const photos = (key, title, desc, rows, label) => {
         const visible = rows.filter(photo => String(photo?.previewUrl || photo?.url || photo?.driveUrl || '').trim());
-        return `<section class="v110-media-section"><button type="button" class="v110-media-section-title" data-v110-media-toggle="${key}" aria-expanded="${visible.length?'true':'false'}"><span><strong>${title}</strong><span class="v110-media-count">${visible.length}</span><small>${desc}</small></span><span class="v110-media-chevron" aria-hidden="true">⌄</span></button><div class="v110-media-group-content"${visible.length?'':' hidden'}>${visible.length ? `<div class="v110-media-grid">${visible.map((photo, index) => { const url = String(photo?.previewUrl || photo?.url || photo?.driveUrl || ''), name = String(photo?.label || `${label} ${index+1}`); return `<article class="v110-media-photo"><a class="v110-media-view" href="${html(url)}" target="_blank" rel="noopener" aria-label="View ${html(name)}"><img src="${html(url)}" alt="${html(name)}" loading="lazy"></a><div class="v110-media-photo-meta"><span>${html(name)}</span></div></article>`; }).join('')}</div>` : `<div class="v110-media-empty">No ${label.toLowerCase()} photos saved yet.</div>`}</div></section>`;
+        const expanded = Object.prototype.hasOwnProperty.call(savedState, key) ? savedState[key] : visible.length > 0;
+        const contentId = `${hostId}-${key}-content`;
+        return `<section class="v110-media-section"><button type="button" class="v110-media-section-title" data-v110-media-toggle="${key}" aria-controls="${contentId}" aria-expanded="${expanded?'true':'false'}"><span><strong>${title}</strong><span class="v110-media-count">${visible.length}</span><small>${desc}</small></span><span class="v110-media-chevron" aria-hidden="true">⌄</span></button><div class="v110-media-group-content" id="${contentId}"${expanded?'':' hidden'}>${visible.length ? `<div class="v110-media-grid">${visible.map((photo, index) => { const url = String(photo?.previewUrl || photo?.url || photo?.driveUrl || ''), name = String(photo?.label || `${label} ${index+1}`); return `<article class="v110-media-photo"><a class="v110-media-view" href="${html(url)}" target="_blank" rel="noopener" aria-label="View ${html(name)}"><img src="${html(url)}" alt="${html(name)}" loading="lazy"></a><div class="v110-media-photo-meta"><span>${html(name)}</span></div></article>`; }).join('')}</div>` : `<div class="v110-media-empty">No ${label.toLowerCase()} photos saved yet.</div>`}</div></section>`;
       };
-      host.innerHTML = `<div class="v110-media-heading"><div><small>PHOTOS</small><h4>Photos for this dog and stay</h4><p>Profile photos follow the dog. Stay and belongings photos belong to this visit.</p></div></div>` + photos('profile','🐶 Profile Photos','Persistent identity photos',profile,'Profile') + photos('stay','📸 Stay Photos','Photos from this boarding stay',stay,'Stay') + photos('belongings','🧳 Belongings Photos','Arrival belongings and item records',belongings,'Belongings');
+      host.innerHTML = `<div class="v110-media-heading"><div><h4>Photos</h4><p>Profile photos follow the dog; stay and belongings photos belong to this visit.</p></div></div>` + photos('profile','🐶 Profile Photos','Persistent identity photos',profile,'Profile') + photos('stay','📸 Stay Photos','Photos from this boarding stay',stay,'Stay') + photos('belongings','🧳 Belongings Photos','Arrival belongings and item records',belongings,'Belongings');
+      host.dataset.v110FallbackExpandedIdentity = identityKey;
+      host.dataset.v110FallbackExpanded = JSON.stringify(Object.fromEntries([...host.querySelectorAll('[data-v110-media-toggle]')].map(button => [button.dataset.v110MediaToggle, button.getAttribute('aria-expanded') === 'true'])));
+      delete host.dataset.v110FallbackPendingFocusKey;
+      delete host.dataset.v110FallbackPendingFocusIdentity;
+      const replacement = focusKey && host.querySelector(`[data-v110-media-toggle="${focusKey}"]`);
+      if (replacement && replacement.getClientRects().length && !host.closest('[hidden]') && (document.activeElement === document.body || document.activeElement === document.documentElement || host.contains(document.activeElement))) replacement.focus({ preventScroll: true });
     };
     try {
       const api = window.WAFFLE_CARE_BELONGINGS_READS;
@@ -587,6 +626,11 @@
     const content = button.closest('.v110-media-section')?.querySelector('.v110-media-group-content');
     button.setAttribute('aria-expanded', expanded ? 'false' : 'true');
     if (content) content.hidden = expanded;
+    const host = button.closest('[data-v110-media-host]');
+    if (host?.dataset.v110FallbackRequestId) {
+      host.dataset.v110FallbackExpandedIdentity = host.dataset.v110FallbackIdentity || '';
+      host.dataset.v110FallbackExpanded = JSON.stringify(Object.fromEntries([...host.querySelectorAll('[data-v110-media-toggle]')].map(item => [item.dataset.v110MediaToggle, item.getAttribute('aria-expanded') === 'true'])));
+    }
   }
 
   document.addEventListener('click', async event => {

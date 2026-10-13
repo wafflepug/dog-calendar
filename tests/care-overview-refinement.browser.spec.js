@@ -30,8 +30,9 @@ test('Belongings recovery controls wrap, remain touch-sized, and expose keyboard
     for (const width of [320, 390, 1440]) {
       await page.setViewportSize({ width, height: 900 });
       await page.setContent(`<style>${css}</style><body class="${theme}"><main class="directory-card" data-stay-key="stay-a" style="padding:12px"><section data-directory-detail="belongings"><div data-directory-belongings></div></section></main></body>`);
-      await page.addScriptTag({ content: `${belongingsItems}\nconst careRiskRecordsCache={},directorySummaryRecordsCache={}; const uncertainBelongingsPhotoUploads=new Map(),hostedPendingPhotoConfirmations=new Map([['stay-a',{}]]); function renderDirectoryCareProfile(){} function restoreBelongingsItemDraft(){} function syncHostedPhotoSessionControls(){} function setBelongingsUploadCheckVisible(){} function escapeDashboardHtml(v){return String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');}\n${belongingsRenderer}` });
+      await page.addScriptTag({ content: `${belongingsItems}\nconst careRiskRecordsCache={},directorySummaryRecordsCache={},belongingsItemDrafts=new Map(); function directoryProfileEditKey(card){return card.dataset.stayKey;} const uncertainBelongingsPhotoUploads=new Map(),hostedPendingPhotoConfirmations=new Map([['stay-a',{}]]); function renderDirectoryCareProfile(){} function restoreBelongingsItemDraft(){} function syncHostedPhotoSessionControls(){} function setBelongingsUploadCheckVisible(){} function escapeDashboardHtml(v){return String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');}\n${belongingsRenderer}` });
       await page.evaluate(() => renderDirectoryBelongings(document.querySelector('.directory-card'), {items:{},photos:[]}));
+      await page.locator('[data-belongings-checklist-details] > summary').click();
       const buttons = page.locator('[data-save-belongings], [data-discard-belongings-draft], [data-confirm-hosted-photo]');
       await expect(buttons).toHaveCount(3);
       for (const button of await buttons.all()) {
@@ -40,6 +41,7 @@ test('Belongings recovery controls wrap, remain touch-sized, and expose keyboard
         expect(box.x).toBeGreaterThanOrEqual(0);
         expect(box.x + box.width).toBeLessThanOrEqual(width);
       }
+      await page.keyboard.press('Tab');
       await page.locator('[data-confirm-hosted-photo]').focus();
       await expect(page.locator('[data-confirm-hosted-photo]')).toHaveCSS('outline-style', 'solid');
       const backgrounds = await page.locator('[data-save-belongings], [data-discard-belongings-draft]').evaluateAll(nodes => nodes.map(node => getComputedStyle(node).backgroundColor));
@@ -542,7 +544,7 @@ test('readiness actions expand the correct category and focus its existing field
 
 test('Care overview leads with essentials and history distinguishes actual from scheduled checkout', async ({ page }) => {
   const start = historySource.indexOf('function v108RenderHistory(');
-  const end = historySource.indexOf('\n', start);
+  const end = historySource.indexOf('\nfunction v108EnsureGalleryModal(', start);
   const renderer = historySource.slice(start, end);
   for (const theme of ['', 'dark-theme']) {
     await page.setContent(`<style>${css}\n${historyCss}</style><body class="${theme}"><main class="directory-card is-profile-active"><div class="directory-profile-content"><section class="directory-care-brief"><div class="directory-care-brief-heading"><h3>Care overview</h3><span class="directory-care-brief-freshness">Care details available · Verified profile source with a deliberately long label</span></div><div class="directory-care-brief-grid"><section class="directory-care-brief-item directory-care-brief-safety"><h4>Safety</h4><span class="care-brief-alert">⚠ Food allergy</span></section><section class="directory-care-brief-item"><h4>Feeding</h4><p class="directory-care-brief-value">Long feeding directions wrap cleanly and remain readable.</p></section><section class="directory-care-brief-item"><h4>Medication</h4><p class="directory-care-brief-value">With dinner.</p></section><section class="directory-care-brief-item directory-care-brief-note"><h4>Handover note</h4><p class="directory-care-brief-value">Call before pickup.</p></section></div><details class="directory-care-readiness"><summary>Other setup checks</summary></details></section><section class="v108-history-panel"><div data-history></div></section></div></main></body>`);
