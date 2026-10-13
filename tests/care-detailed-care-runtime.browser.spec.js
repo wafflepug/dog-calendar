@@ -27,7 +27,7 @@ function assertNoUnexpectedBackendRequests(fixture) {
   expect(backendBlocks.every(item => item.method === 'GET')).toBe(true);
 }
 
-async function installReadOnlyFixture(page, { allowManualPhotoSync = false, photoSyncResponses = ['success'] } = {}) {
+async function installReadOnlyFixture(page, { allowManualPhotoSync = false, photoSyncResponses = ['success'], directoryGate = null, profileAttributes = longProfile } = {}) {
   const actions = [];
   const blocked = [];
   const photoSyncRequests = [];
@@ -84,12 +84,17 @@ async function installReadOnlyFixture(page, { allowManualPhotoSync = false, phot
         return route.fulfill({ status: 403, body: 'Read-only fixture blocked action' });
       }
       actions.push({ action: resolved.action, payload });
+      if (resolved.action === 'get_guest_directory' && directoryGate) await directoryGate;
       let response = { result: 'success', records: [] };
       if (resolved.action === 'maintenance_status') response = { result: 'success', enabled: false };
       if (resolved.action === 'get_guest_directory') response = { result: 'success', bookings: [booking], summaries: [{ stayKey }] };
       if (resolved.action === 'get_guest_profile') response = { result: 'success', record: {
         stayKey, identity: { stayKey, dogId, stayId }, resolution: { status: 'resolved' },
-        intakeAttributes: longProfile, intakeAttributesSource: 'Synthetic saved profile', riskFlags: {}
+        intakeAttributes: profileAttributes, intakeAttributesSource: 'Synthetic saved profile', riskFlags: {}
+      } };
+      if (resolved.action === 'get_guest_belongings') response = { result: 'success', record: {
+        stayKey, stayId, dogId, items: {}, photos: [], riskFlags: {},
+        identityResolution: { status: 'resolved', identity: { stayKey, stayId, dogId } }
       } };
       if (resolved.action === 'get_data_versions') response = { result: 'success', versions: { belongings: 'fixture' } };
       const contentType = callback ? 'application/javascript' : 'application/json';
@@ -265,6 +270,91 @@ test('Detailed Care enlarged text wraps at phone, tablet, and desktop widths in 
   expect(await settingsPanel.evaluate(el => getComputedStyle(el).opacity)).toBe('0');
   expect(await settingsPanel.evaluate(el => getComputedStyle(el).pointerEvents)).toBe('none');
   await page.screenshot({ path: testInfo.outputPath('detailed-care-enlarged-text.png'), fullPage: true, animations: 'disabled' });
+});
+
+test('Belongings and Photos reuse one verified stay read in the full Care runtime', async ({ page }) => {
+  const fixture = await installReadOnlyFixture(page);
+  const card = await openFixtureProfile(page, fixture);
+  await card.locator('[data-v11160-tab="belongings"]').click();
+  await expect(card.locator('[data-directory-detail="belongings"]')).toHaveAttribute('data-detail-loaded', 'true');
+  await card.locator('[data-v11160-tab="media"]').click();
+  await expect(card.locator('[data-v110-media-host]')).toContainText('Photos for this dog and stay');
+  expect(fixture.actions.filter(item => item.action === 'get_guest_belongings')).toHaveLength(1);
+  await card.locator('[data-v11160-tab="belongings"]').click();
+  await card.locator('[data-v11160-tab="media"]').click();
+  expect(fixture.actions.filter(item => item.action === 'get_guest_belongings')).toHaveLength(1);
+  assertNoUnexpectedBackendRequests(fixture);
+});
+
+test('focus revalidation applies newer Care data and preserves an unsaved feeding draft', async ({ page }) => {
+  const profileAttributes = { ...longProfile };
+  const fixture = await installReadOnlyFixture(page, { profileAttributes });
+  const card = await openFixtureProfile(page, fixture);
+  const count = () => fixture.actions.filter(item => item.action === 'get_guest_profile').length;
+  const advanceFreshness = () => page.evaluate(() => {
+    if (!window.__careFreshnessClock) {
+      const original = performance.now.bind(performance);
+      window.__careFreshnessClock = { offset: 0 };
+      Object.defineProperty(performance, 'now', { configurable: true, value: () => original() + window.__careFreshnessClock.offset });
+    }
+    window.__careFreshnessClock.offset += 46000;
+    window.dispatchEvent(new Event('focus'));
+  });
+  const before = count();
+  profileAttributes.feedingTimes = 'Updated on another device: dinner at 19:15';
+  await advanceFreshness();
+  await expect.poll(count).toBe(before + 1);
+  await expect(card.locator('[data-directory-detail="profile"]')).toHaveAttribute('data-profile-read-state', 'fresh');
+  await card.locator('[data-toggle-profile-edit]').click();
+  await card.locator('[data-profile-subtab="foodWalks"]').click();
+  const feeding = card.locator('[data-intake-attribute="feedingTimes"]');
+  await expect(feeding).toHaveValue(profileAttributes.feedingTimes);
+  await feeding.fill('Unsaved local draft: breakfast at 07:15');
+  const beforeDraftRefresh = count();
+  profileAttributes.feedingTimes = 'Second remote change: dinner at 20:00';
+  await advanceFreshness();
+  await expect.poll(count).toBe(beforeDraftRefresh + 1);
+  await expect(card.locator('[data-directory-detail="profile"]')).toHaveAttribute('data-profile-read-state', 'fresh');
+  await expect(feeding).toHaveValue('Unsaved local draft: breakfast at 07:15');
+  assertNoUnexpectedBackendRequests(fixture);
+});
+
+test('Care startup defers quiet notifications and AI health until the directory settles', async ({ page }) => {
+  let releaseDirectory;
+  const directoryGate = new Promise(resolve => { releaseDirectory = resolve; });
+  const fixture = await installReadOnlyFixture(page, { directoryGate });
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('http://127.0.0.1:4176/directory.html?startupPriority=1', { waitUntil: 'domcontentloaded' });
+  try {
+    await page.waitForFunction(() => !!window.WAFFLE_CARE_STARTUP && typeof window.v11148WaffleAiHealth === 'function');
+    await expect.poll(() => fixture.actions.some(item => item.action === 'get_guest_directory')).toBe(true);
+    await page.evaluate(() => { window.dispatchEvent(new Event('focus')); window.dispatchEvent(new Event('pageshow')); });
+    // The former quiet notification timer fired at 1400 ms regardless of roster readiness.
+    await page.waitForTimeout(1800);
+    expect(fixture.actions.filter(item => ['get_notification_centre', 'waffle_ai_health'].includes(item.action))).toEqual([]);
+    releaseDirectory();
+    await expect.poll(() => fixture.actions.some(item => item.action === 'get_notification_centre')).toBe(true);
+    await expect.poll(() => fixture.actions.some(item => item.action === 'waffle_ai_health')).toBe(true);
+    expect(fixture.actions.filter(item => item.action === 'waffle_ai_health')).toHaveLength(1);
+    expect(fixture.photoSyncRequests).toHaveLength(0);
+    assertNoUnexpectedBackendRequests(fixture);
+  } finally { releaseDirectory(); }
+});
+
+test('explicit notification opening bypasses the pending Care startup queue', async ({ page }) => {
+  let releaseDirectory;
+  const directoryGate = new Promise(resolve => { releaseDirectory = resolve; });
+  const fixture = await installReadOnlyFixture(page, { directoryGate });
+  await page.goto('http://127.0.0.1:4176/directory.html?startupExplicit=1', { waitUntil: 'domcontentloaded' });
+  try {
+    await page.waitForFunction(() => !!window.WAFFLE_CARE_STARTUP && typeof window.openWaffleNotificationCentre === 'function');
+    await expect.poll(() => fixture.actions.some(item => item.action === 'get_guest_directory')).toBe(true);
+    await page.evaluate(() => window.openWaffleNotificationCentre());
+    await expect.poll(() => fixture.actions.some(item => item.action === 'get_notification_centre')).toBe(true);
+    await expect(page.locator('#waffleNotificationModal')).toBeVisible();
+    expect(fixture.actions.some(item => item.action === 'waffle_ai_health')).toBe(false);
+    assertNoUnexpectedBackendRequests(fixture);
+  } finally { releaseDirectory(); }
 });
 
 test('Settings photo resync runs only after a deliberate user action', async ({ page }) => {

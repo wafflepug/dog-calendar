@@ -240,6 +240,13 @@ for (const [name, viewport, colorScheme, reducedMotion] of [
     await sectionNav.locator('[data-v11160-tab="profile"]').click();
     const healthHome = profile.locator('[data-profile-subtab="healthHome"]');
     await settlePointerTargetAfterScroll(page, healthHome);
+    if (await healthHome.getAttribute('aria-expanded') === 'true') {
+      await healthHome.click();
+      await expect(healthHome).toHaveAttribute('aria-expanded', 'false');
+      await settlePointerTargetAfterScroll(page, healthHome);
+    }
+    const healthHomeBeforeClick = await healthHome.getAttribute('aria-expanded');
+    expect(healthHomeBeforeClick).toBe('false');
     await healthHome.click();
     await expect(healthHome).toHaveAttribute('aria-expanded', 'true');
     const safety = profile.locator('[data-profile-subtab="safety"]');
