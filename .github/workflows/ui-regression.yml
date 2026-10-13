@@ -49,6 +49,9 @@ on:
       - 'tests/care-detailed-care-runtime.browser.spec.js'
       - 'playwright.care-detailed-care-runtime.config.js'
       - 'playwright.care-photos.config.js'
+      - 'playwright.care-ui-five.config.js'
+      - 'tests/care-items-compact.browser.spec.js'
+      - 'tests/care-gallery-history-polish.browser.spec.js'
       - 'tests/care-photos.browser.spec.js'
       - 'tests/care-fallback-media.browser.spec.js'
       - 'tests/care-startup-priority.test.js'
@@ -123,6 +126,9 @@ on:
       - 'tests/care-detailed-care-runtime.browser.spec.js'
       - 'playwright.care-detailed-care-runtime.config.js'
       - 'playwright.care-photos.config.js'
+      - 'playwright.care-ui-five.config.js'
+      - 'tests/care-items-compact.browser.spec.js'
+      - 'tests/care-gallery-history-polish.browser.spec.js'
       - 'tests/care-photos.browser.spec.js'
       - 'tests/care-fallback-media.browser.spec.js'
       - 'tests/care-startup-priority.test.js'
@@ -202,7 +208,7 @@ jobs:
           - group: overview
             configs: playwright.care-overview.config.js
           - group: profiles
-            configs: playwright.care-cleaner-ui.config.js playwright.care-detailed-care-runtime.config.js playwright.care-mobile-hierarchy.config.js playwright.care-photos.config.js
+            configs: playwright.care-cleaner-ui.config.js playwright.care-detailed-care-runtime.config.js playwright.care-mobile-hierarchy.config.js playwright.care-photos.config.js playwright.care-ui-five.config.js
           - group: refinements
             configs: playwright.care-ui-refinements.config.js playwright.care-profile.config.js playwright.care-ui-polish.config.js playwright.care-roster.config.js playwright.returning-dogs.config.js
           - group: navigation

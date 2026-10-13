@@ -2,8 +2,8 @@
    Build: 2026.08.27.04
    Historical base styles remain compatibility sources during Phase 3A, but pages no longer
    reference them individually. Preserve this import order until modules are folded in. */
-@import url("waffle-app.css?build=2026.08.27.04&rev=2026.10.14.01");
-@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.10.14.01");
+@import url("waffle-app.css?build=2026.08.27.04&rev=2026.10.14.02");
+@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.10.14.02");
 @import url("waffle-v10.8.2.css?build=2026.08.27.04");
 @import url("waffle-v10.8.3.css?build=2026.08.27.04");
 @import url("waffle-v10.8.5.css?build=2026.08.27.04");
@@ -11,12 +11,12 @@
 @import url("waffle-v10.8.7.css?build=2026.08.27.04");
 @import url("waffle-v10.8.8.css?build=2026.08.27.04");
 @import url("waffle-v10.8.9.css?build=2026.08.27.04");
-@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.10.14.01");
+@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.10.14.02");
 @import url("waffle-v11.0.3.css?build=2026.08.27.04");
 @import url("waffle-v11.0.5.css?build=2026.08.27.04");
-@import url("waffle-v11.1.94.css?build=2026.10.14.01");
-@import url("waffle-v11.1.95.css?build=2026.10.14.01");
-@import url("waffle-v11.1.96.css?build=2026.10.14.01&rev=2026.10.14.01");
+@import url("waffle-v11.1.94.css?build=2026.10.14.02");
+@import url("waffle-v11.1.95.css?build=2026.10.14.02");
+@import url("waffle-v11.1.96.css?build=2026.10.14.02&rev=2026.10.14.02");
 
 /* ============================================================
    MOBILE FIRST-PAINT STABILITY GATE
@@ -2063,3 +2063,51 @@ html[data-waffle-ui-ready="true"] body[data-waffle-page]::before {
   display: none !important;
   visibility: hidden !important;
 }
+
+/* Compact Care Items and visit history: native disclosures retain drafts. */
+body[data-waffle-page="directory"] .belongings-saved-summary { padding: 14px; border: 1px solid var(--v10-border,#cbd5e1); border-radius: 12px; background: var(--v10-card,#fff); color: var(--v10-text,#172033); }
+body[data-waffle-page="directory"] .belongings-saved-summary h4 { margin: 0 0 6px; font-size: 16px; }
+body[data-waffle-page="directory"] .belongings-saved-summary p { margin: 0 0 10px; font-size: 13px; line-height: 1.5; }
+body[data-waffle-page="directory"] .belongings-summary-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+body[data-waffle-page="directory"] .belongings-summary-list > li { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 3px 10px; font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
+body[data-waffle-page="directory"] .belongings-summary-list > li > span:last-child:not(.belongings-summary-state) { grid-column: 1 / -1; white-space: pre-wrap; }
+body[data-waffle-page="directory"] .belongings-summary-state { font-size: 12px; font-weight: 700; max-width: 12em; }
+body[data-waffle-page="directory"] .belongings-edit-disclosure,
+body[data-waffle-page="directory"] .belongings-photo-tools-disclosure { margin-top: 12px; border: 1px solid var(--v10-border,#cbd5e1); border-radius: 12px; background: var(--v10-card,#fff); color: var(--v10-text,#172033); }
+body[data-waffle-page="directory"] .belongings-edit-disclosure > summary,
+body[data-waffle-page="directory"] .belongings-photo-tools-disclosure > summary { min-height: 48px; box-sizing: border-box; padding: 14px; font-size: 14px; font-weight: 750; line-height: 1.5; overflow-wrap: anywhere; cursor: pointer; }
+body[data-waffle-page="directory"] .belongings-edit-disclosure > .belongings-item-list { margin: 0; padding: 0 12px 12px; }
+body[data-waffle-page="directory"] .belongings-edit-disclosure .belongings-item-row { min-width: 0; }
+body[data-waffle-page="directory"] .belongings-edit-disclosure .belongings-item-label { min-height: 44px; font-size: 14px; }
+body[data-waffle-page="directory"] .belongings-edit-disclosure input.belongings-description,
+body[data-waffle-page="directory"] .belongings-photo-tools-disclosure input.belongings-description { font-size: 16px; min-height: 44px; }
+body[data-waffle-page="directory"] .belongings-photo-tools-disclosure .belongings-photo-upload-card { margin: 0; border: 0; }
+body[data-waffle-page="directory"] .v108-history-year-groups { display: grid; gap: 12px; }
+body[data-waffle-page="directory"] .v108-history-year-group { min-width: 0; border: 1px solid var(--v10-border,#cbd5e1); border-radius: 12px; background: var(--v10-card,#fff); color: var(--v10-text,#172033); }
+body[data-waffle-page="directory"] .v108-history-year-group > summary { min-height: 48px; box-sizing: border-box; padding: 14px; font-size: 15px; line-height: 1.5; cursor: pointer; overflow-wrap: anywhere; }
+body[data-waffle-page="directory"] .v108-history-year-group > summary > span { margin-inline-start: 12px; font-size: 13px; }
+body[data-waffle-page="directory"] .v108-history-year-content { padding: 0 12px 12px; display: grid; gap: 10px; min-width: 0; }
+body[data-waffle-page="directory"] .v108-history-year-content .v108-stay-history { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+body[data-waffle-page="directory"] .v108-history-year-group p { white-space: pre-wrap; overflow-wrap: anywhere; }
+body[data-waffle-page="directory"] .belongings-edit-disclosure > summary:focus-visible,
+body[data-waffle-page="directory"] .belongings-photo-tools-disclosure > summary:focus-visible,
+body[data-waffle-page="directory"] .v108-history-year-group > summary:focus-visible { outline: 3px solid var(--v10-primary,#075985); outline-offset: 2px; border-radius: 10px; }
+body[data-waffle-page="directory"] .v110-media-heading h4 { margin: 0; font-size: 18px; }
+body[data-waffle-page="directory"] .v110-media-heading p { margin: 6px 0 0; font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; }
+body.dark-theme[data-waffle-page="directory"] .belongings-saved-summary,
+body.dark-theme[data-waffle-page="directory"] .belongings-edit-disclosure,
+body.dark-theme[data-waffle-page="directory"] .belongings-photo-tools-disclosure,
+body.dark-theme[data-waffle-page="directory"] .v108-history-year-group { background: #111827; color: #f8fafc; border-color: #64748b; }
+@media(max-width:600px) {
+  body[data-waffle-page="directory"] .belongings-summary-list > li { grid-template-columns: minmax(0,1fr); gap: 2px; }
+  body[data-waffle-page="directory"] .belongings-summary-list > li > span:last-child { grid-column: auto; }
+}
+/* Late compatibility styles must not shrink the compact Photos headings. */
+body[data-waffle-page="directory"] .directory-card.is-profile-active [data-v110-media-host] .v110-media-heading h4 { font-size: 18px !important; }
+body[data-waffle-page="directory"] .directory-card.is-profile-active [data-v110-media-host] .v110-media-heading p { font-size: 13px !important; line-height: 1.5 !important; }
+body[data-waffle-page="directory"] .directory-card.is-profile-active [data-v110-media-host] .v110-media-section { padding: 0 !important; }
+body[data-waffle-page="directory"] .directory-card.is-profile-active [data-v110-media-host] .v110-media-section-title { display: flex !important; flex-direction: row !important; align-items: center !important; min-height: 64px !important; padding: 12px !important; text-align: left !important; }
+body[data-waffle-page="directory"] .directory-card.is-profile-active [data-v110-media-host] .v110-media-section-title > span:first-child { display: grid !important; grid-template-columns: minmax(0,1fr) auto !important; gap: 4px 8px !important; flex: 1; min-width: 0; }
+body[data-waffle-page="directory"] .directory-card.is-profile-active [data-v110-media-host] .v110-media-section-title strong { font-size: 14px !important; line-height: 1.4 !important; overflow-wrap: anywhere; }
+body[data-waffle-page="directory"] .directory-card.is-profile-active [data-v110-media-host] .v110-media-section-title small { font-size: 12px !important; line-height: 1.4 !important; grid-column: 1 / -1; overflow-wrap: anywhere; }
+body[data-waffle-page="directory"] .directory-card.is-profile-active [data-v110-media-host] .v110-media-chevron { margin-inline-start: 12px; }
