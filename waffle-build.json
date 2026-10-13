@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.10.10.02",
-  "releaseName": "Home Stay Date Reconciliation",
+  "assetRevision": "2026.10.11.01",
+  "releaseName": "Care Roster Stay Actions",
   "careIteration": {
     "returningDogSuggestions": true,
     "reviewedCareInheritance": true,
