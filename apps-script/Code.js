@@ -2376,6 +2376,7 @@ function getPastGuestDirectoryPayload_(data) {
       diagnostics.historicalBoarding++;
     }
 
+    var dogIdentity = v108DogIdentityAt_(rows, i);
     bookings.push({
       row:
         i + 1,
@@ -2395,6 +2396,10 @@ function getPastGuestDirectoryPayload_(data) {
         ),
       stayId:
         stableStayIdAtV11225_(rows, i),
+      dogId:
+        dogIdentity.dogId,
+      dogNumber:
+        dogIdentity.dogNumber,
       dogName:
         dogName,
       breed:
@@ -2476,6 +2481,15 @@ function getPastGuestDirectoryPayload_(data) {
   var candidateOperationsByStayId = {};
   var candidateOperationsByStayKey = {};
   var operationStayKeyCounts = {};
+  var operationStayIdCounts = {};
+  var bookingStayKeyCounts = {};
+  var bookingStayIdCounts = {};
+
+  bookings.forEach(function(booking) {
+    bookingStayKeyCounts[booking.stayKey] = (bookingStayKeyCounts[booking.stayKey] || 0) + 1;
+    var bookingStayId = String(booking.stayId || "").toLowerCase();
+    if (bookingStayId) bookingStayIdCounts[bookingStayId] = (bookingStayIdCounts[bookingStayId] || 0) + 1;
+  });
 
   (candidateOperations || []).forEach(
     function(operation) {
@@ -2486,10 +2500,16 @@ function getPastGuestDirectoryPayload_(data) {
           ""
         );
 
-      if (stayKey && !operation.identityConflict) {
+      var operationStayId = String(operation && operation.stayId || "").toLowerCase();
+      if (operationStayId) {
+        operationStayIdCounts[operationStayId] = (operationStayIdCounts[operationStayId] || 0) + 1;
+        if (!operation.identityConflict && operationStayIdCounts[operationStayId] === 1) candidateOperationsByStayId[operationStayId] = operation;
+        else delete candidateOperationsByStayId[operationStayId];
+      }
+
+      if (stayKey) {
         operationStayKeyCounts[stayKey] = (operationStayKeyCounts[stayKey] || 0) + 1;
-        if (operation.stayId) candidateOperationsByStayId[String(operation.stayId).toLowerCase()] = operation;
-        candidateOperationsByStayKey[stayKey] = operation;
+        if (!operation.identityConflict) candidateOperationsByStayKey[stayKey] = operation;
       }
     }
   );
@@ -2499,9 +2519,16 @@ function getPastGuestDirectoryPayload_(data) {
   bookings =
     bookings.filter(
       function(booking) {
-        var operation = booking.stayId
-          ? candidateOperationsByStayId[String(booking.stayId).toLowerCase()]
-          : operationStayKeyCounts[booking.stayKey] === 1 ? candidateOperationsByStayKey[booking.stayKey] : null;
+        var bookingStayId = String(booking.stayId || "").toLowerCase();
+        var bookingStayIdIsUnique = !bookingStayId || bookingStayIdCounts[bookingStayId] === 1;
+        var operation = bookingStayIdIsUnique && bookingStayId && candidateOperationsByStayId[bookingStayId];
+        if (!operation && bookingStayIdIsUnique && operationStayKeyCounts[booking.stayKey] === 1 && bookingStayKeyCounts[booking.stayKey] === 1) {
+          var legacyOperation = candidateOperationsByStayKey[booking.stayKey];
+          var operationStayId = String(legacyOperation && legacyOperation.stayId || "").toLowerCase();
+          if (legacyOperation && !legacyOperation.identityConflict && (!operationStayId || (operationStayId === bookingStayId && operationStayIdCounts[operationStayId] === 1))) {
+            operation = legacyOperation;
+          }
+        }
 
         var isCheckedOut =
           String(
@@ -2518,6 +2545,23 @@ function getPastGuestDirectoryPayload_(data) {
             booking.endDate ||
             ""
           ) < todayStr;
+
+        booking.operationalStatus = isCheckedOut ? "checked_out" : "";
+        booking.checkedOutAt = isCheckedOut ? String(operation.checkedOutAt || "") : "";
+        var actualCheckoutDate = isCheckedOut
+          ? normalizeDateValue_(operation.actualCheckoutDate || "")
+          : "";
+        if (isCheckedOut && !actualCheckoutDate && operation.checkedOutAt) {
+          var checkedOutInstant = operation.checkedOutAt instanceof Date
+            ? operation.checkedOutAt
+            : new Date(operation.checkedOutAt);
+          if (!isNaN(checkedOutInstant.getTime())) {
+            actualCheckoutDate = Utilities.formatDate(checkedOutInstant, timezone, "yyyy-MM-dd");
+          }
+        }
+        booking.actualCheckoutDate = actualCheckoutDate;
+        booking.checkoutDate = booking.actualCheckoutDate || (isCheckedOut || isDateCompleted ? booking.endDate : "");
+        booking.checkoutDateLabel = booking.actualCheckoutDate ? "Checked out" : "Scheduled checkout";
 
         if (
           isCheckedOut &&

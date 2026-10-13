@@ -52,6 +52,10 @@ on:
       - 'tests/care-return-focus-identity.test.js'
       - 'tests/care-navigation-continuity.browser.spec.js'
       - 'tests/care-roster.spec.js'
+      - 'tests/care-roster-*.browser.spec.js'
+      - 'tests/master-profile-inline-feedback.browser.spec.js'
+      - 'tests/care-past-classification.test.js'
+      - 'tests/stay-operation-frontend.test.js'
       - 'playwright.care-roster.config.js'
       - 'tests/care-future-arrivals-lazy.browser.spec.js'
       - 'tests/mvp-records-notifications.browser.spec.js'
@@ -118,6 +122,10 @@ on:
       - 'tests/care-return-focus-identity.test.js'
       - 'tests/care-navigation-continuity.browser.spec.js'
       - 'tests/care-roster.spec.js'
+      - 'tests/care-roster-*.browser.spec.js'
+      - 'tests/master-profile-inline-feedback.browser.spec.js'
+      - 'tests/care-past-classification.test.js'
+      - 'tests/stay-operation-frontend.test.js'
       - 'playwright.care-roster.config.js'
       - 'tests/care-future-arrivals-lazy.browser.spec.js'
       - 'tests/mvp-records-notifications.browser.spec.js'
@@ -165,7 +173,7 @@ jobs:
           node --test tests/local-network-policy.test.js
           node --test tests/waffle-bootstrap-lifecycle.test.js
           node --test tests/care-profile-readiness.test.js tests/care-overview-freshness.test.js tests/care-record-update-contract.test.js
-          node --test tests/care-state-preservation.test.js
+          node --test tests/care-state-preservation.test.js tests/care-past-classification.test.js tests/stay-operation-frontend.test.js
           node --test tests/care-csv-integrity.test.js
           node --test tests/care-confirmed-reconciliation.test.js tests/confirmed-stay-identity.test.js tests/potential-confirm-dog-id.test.js tests/checkout-collision-safety.test.js
           node --test tests/system-status-sync.test.js
@@ -183,7 +191,7 @@ jobs:
       matrix:
         include:
           - group: overview
-            configs: playwright.care-overview.config.js playwright.care-cleaner-ui.config.js playwright.care-detailed-care-runtime.config.js
+            configs: playwright.care-overview.config.js playwright.care-cleaner-ui.config.js playwright.care-detailed-care-runtime.config.js playwright.care-mobile-hierarchy.config.js
           - group: refinements
             configs: playwright.care-ui-refinements.config.js playwright.care-profile.config.js playwright.care-ui-polish.config.js playwright.care-roster.config.js playwright.returning-dogs.config.js
           - group: navigation

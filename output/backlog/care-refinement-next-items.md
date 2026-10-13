@@ -1,4 +1,4 @@
-# Next Care backlog after 2026.10.13.01
+# Next Care backlog after 2026.10.13.02
 
 ## 1. Validate identity enrollment on an isolated Google test sheet
 
@@ -12,7 +12,7 @@ Acceptance: no read changes sheet headers/data; default-off legacy sheet remains
 
 Story: opening the guest list/profile performs reads and remains responsive.
 
-Implementation prompt: trace the existing sync_dog_master_photos_to_upcoming_stays startup call and current explicit booking/photo inheritance paths. Inspect waffle-v11.2.8.js, waffle-app.js, the runtime bootstrap and Apps Script photo helpers; locate the actual caller before editing. Move redundant bulk synchronization to an explicit, clearly named maintenance action if needed. Retain explicit same-Dog-ID inheritance on booking creation and reviewed returning stays. Use the existing read-only full-runtime fixture action ledger; do not permit mutations just to make fixtures pass. Deliver a small source diff, synthetic regression fixtures and before/after request counts. Preserve profile draft state and concurrent identity-scoped reads.
+Implementation prompt: trace the existing sync_dog_master_photos_to_upcoming_stays startup call and current explicit booking/photo inheritance paths. Inspect waffle-v11.2.14.js, waffle-app.js, the runtime bootstrap and Apps Script photo helpers; locate the actual caller before editing. Move redundant bulk synchronization to an explicit, clearly named maintenance action if needed. Retain explicit same-Dog-ID inheritance on booking creation and reviewed returning stays. Use the existing read-only full-runtime fixture action ledger; do not permit mutations just to make fixtures pass. Deliver a small source diff, synthetic regression fixtures and before/after request counts. Preserve profile draft state and concurrent identity-scoped reads.
 
 Acceptance: opening Care or toggling a category does not start a photo-sync mutation; explicit new-booking photo inheritance still works only for the selected Dog ID; no new broad read or paid service; errors are visible and retry is intentional.
 

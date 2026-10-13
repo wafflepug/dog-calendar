@@ -20,50 +20,19 @@ let v1088SelectedCalendarDate =
    ============================================================ */
 
 function v1088NormaliseDogKey(
-    booking
+    booking,
+    fallbackIdentity
 ) {
     const dogId = String(booking?.dogId || '').trim();
-    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(dogId)) {
+    if (booking?.identityConflict !== true && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(dogId)) {
         return `id|${dogId.toLowerCase()}`;
     }
 
-    const dog =
-        String(
-            booking?.dogName ||
-            ''
-        )
-            .toLowerCase()
-            .replace(
-                /[^a-z0-9]+/g,
-                ' '
-            )
-            .replace(
-                /\s+/g,
-                ' '
-            )
-            .trim();
+    const stayId = String(booking?.stayId || '').trim().toLowerCase();
+    if (stayId) return `stay|${stayId}`;
 
-    const breed =
-        String(
-            booking?.breed ||
-            ''
-        )
-            .toLowerCase()
-            .replace(
-                /[^a-z0-9]+/g,
-                ' '
-            )
-            .replace(
-                /\s+/g,
-                ' '
-            )
-            .trim();
-
-    return (
-        dog +
-        '|' +
-        breed
-    );
+    const row = String(booking?.row || '').trim();
+    return row ? `row|${row}` : `unresolved|${fallbackIdentity}`;
 }
 
 
@@ -81,17 +50,14 @@ function v1088GroupPastBookings(
             : []
     )
         .forEach(
-            booking => {
+            (booking, index) => {
                 const key =
                     v1088NormaliseDogKey(
-                        booking
+                        booking,
+                        index
                     );
 
-                if (
-                    !key ||
-                    key ===
-                        '|'
-                ) {
+                if (!key) {
                     return;
                 }
 
@@ -163,6 +129,10 @@ function v1088GroupPastBookings(
                 latest.v1088AllStays =
                     stays.map(
                         stay => ({
+                            stayId:
+                                stay.stayId,
+                            dogId:
+                                stay.dogId,
                             stayKey:
                                 stay.stayKey,
                             startDate:

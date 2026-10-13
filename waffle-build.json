@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.10.13.01",
-  "releaseName": "Care Readability and Record Identity",
+  "assetRevision": "2026.10.13.02",
+  "releaseName": "Care Profile Clarity and Feedback",
   "careIteration": {
     "returningDogSuggestions": true,
     "reviewedCareInheritance": true,

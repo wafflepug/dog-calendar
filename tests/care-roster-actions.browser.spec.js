@@ -20,6 +20,9 @@ async function setup(page) {
     window.profileReadCount = 0;
     window.alertMessages = [];
     window.failNextSave = false;
+    window.failMessage = 'Synthetic network failure';
+    window.saveGate = null;
+    window.releaseSave = null;
     window.v110OperationForStay = payload => window.operations.get(payload.stayId) || null;
     window.v110OperationDisplayState = card => {
       if (card.dataset.identityCollision === 'true') return { code: 'collision' };
@@ -28,9 +31,17 @@ async function setup(page) {
     };
     window.v110EnsureCareOperationBar = () => {};
     window.v110EnhanceCareCard = () => {};
+    window.v110ShowActionFeedback = (host, message, retry) => {
+      let region = host.querySelector(':scope > .v110-action-feedback');
+      if (!region) { region = document.createElement('div'); region.className = 'v110-action-feedback'; host.appendChild(region); }
+      region.setAttribute('role', 'alert'); region.setAttribute('aria-live', 'assertive'); region.replaceChildren(document.createTextNode(message));
+      if (retry) { const button = document.createElement('button'); button.textContent = 'Retry'; button.addEventListener('click', retry, { once: true }); region.appendChild(button); }
+    };
+    window.v110ClearActionFeedback = (host, message) => window.v110ShowActionFeedback(host, message, null);
     window.v110SaveOperationalStatus = async (payload, status) => {
       window.savedPayloads.push({ ...payload, status });
-      if (window.failNextSave) { window.failNextSave = false; throw new Error('Synthetic network failure'); }
+      if (window.saveGate) await window.saveGate;
+      if (window.failNextSave) { window.failNextSave = false; throw new Error(window.failMessage); }
       const record = { ...payload, status, stayId: payload.stayId, stayKey: payload.stayKey };
       window.operations.set(payload.stayId, record);
       return { result: 'success', record };
@@ -51,7 +62,7 @@ function card(key, startDate, endDate, dogId) {
   </article>`;
 }
 
-test('roster actions are separate from profile open, isolate same-name dogs, recover failures, and move checkout to Past', async ({ page }) => {
+test('roster actions are separate from profile open, isolate same-name dogs, retry transport failures inline, and move checkout to Past', async ({ page }) => {
   await setup(page);
   const staying = page.locator('[data-directory-stay-id="stay-a"]');
   const checkin = staying.locator('[data-v11217-roster-checkin]');
@@ -63,9 +74,11 @@ test('roster actions are separate from profile open, isolate same-name dogs, rec
   await checkin.click();
   await expect(checkin).toHaveText(/Check In/);
   await expect(checkin).toBeEnabled();
-  await expect.poll(() => page.evaluate(() => window.alertMessages.length)).toBe(1);
-  await checkin.click();
+  const feedback = staying.locator(':scope > .v110-action-feedback');
+  await expect(feedback).toContainText('Check In could not be saved');
+  await feedback.getByRole('button', { name: 'Retry' }).click();
   await expect(staying.locator('[data-v11217-roster-checkin]')).toHaveCount(0);
+  await expect(staying.locator(':scope > .v110-action-feedback')).toContainText('Twin Pup checked in successfully');
   expect(await page.evaluate(() => window.savedPayloads.map(item => [item.stayId, item.dogId, item.status]))).toEqual([
     ['stay-a', '11111111-1111-4111-8111-111111111111', 'checked_in'],
     ['stay-a', '11111111-1111-4111-8111-111111111111', 'checked_in']
@@ -75,6 +88,46 @@ test('roster actions are separate from profile open, isolate same-name dogs, rec
   await expect(staying.locator('[data-v11217-roster-actions]')).toHaveCount(0);
   expect(await page.evaluate(() => window.profileOpenCount)).toBe(0);
   expect(await page.evaluate(() => window.profileReadCount)).toBe(0);
+  await expect.poll(() => page.evaluate(() => window.alertMessages.length)).toBe(0);
+});
+
+test('identity ambiguity and offline failures offer review guidance without a retry', async ({ page }) => {
+  await setup(page);
+  const card = page.locator('[data-directory-stay-id="stay-a"]');
+  await page.evaluate(() => { window.failNextSave = true; window.failMessage = 'Several operation rows match this booking. Review duplicate bookings and reload.'; });
+  await card.locator('[data-v11217-roster-checkin]').click();
+  const conflict = card.locator('.v110-action-feedback');
+  await expect(conflict).toHaveAttribute('role', 'alert');
+  await expect(conflict).toContainText('Review the booking identity and refresh Care');
+  await expect(conflict.getByRole('button', { name: 'Retry' })).toHaveCount(0);
+
+  await page.evaluate(() => { window.failNextSave = true; window.failMessage = 'Check-in requires a live connection. Nothing was queued.'; });
+  await card.locator('[data-v11217-roster-checkin]').click();
+  const offline = card.locator('.v110-action-feedback');
+  await expect(offline).toHaveAttribute('role', 'alert');
+  await expect(offline).toContainText('live connection');
+  await expect(offline.getByRole('button', { name: 'Retry' })).toHaveCount(0);
+});
+
+test('a late save response cannot apply to a card reused for a different same-name stay', async ({ page }) => {
+  await setup(page);
+  const card = page.locator('.directory-card').nth(0);
+  await page.evaluate(() => {
+    window.saveGate = new Promise(resolve => { window.releaseSave = resolve; });
+  });
+  await card.locator('[data-v11217-roster-checkin]').click();
+  await expect.poll(() => page.evaluate(() => window.savedPayloads.length)).toBe(1);
+  await card.evaluate(node => {
+    node.dataset.directoryStayId = 'stay-reused';
+    node.dataset.directoryStayKey = 'another-stay|2026-10-11|2026-10-11';
+    node.dataset.directoryDogId = '99999999-9999-4999-8999-999999999999';
+  });
+  await page.evaluate(() => window.releaseSave());
+  await expect(card).toHaveAttribute('data-directory-stay-id', 'stay-reused');
+  await expect(card.locator('[data-v11217-roster-checkin]')).toBeEnabled();
+  await expect(card).not.toHaveAttribute('data-moved-to-past', 'true');
+  await expect(card.locator('.v110-action-feedback')).toHaveCount(0);
+  expect(await page.evaluate(() => window.operations.has('stay-reused'))).toBe(false);
 });
 
 test('early checkout uses its review modal and controls fit on a narrow mobile viewport', async ({ page }) => {
@@ -98,9 +151,19 @@ test('early checkout uses its review modal and controls fit on a narrow mobile v
   await expect(dialog).toBeVisible();
   await expect(dialog.locator('[data-v11217-dog]')).toHaveText('Twin Pup');
   await dialog.locator('[data-v11217-note]').fill('Owner collected early');
+  await page.evaluate(() => { window.failNextSave = true; });
   await dialog.locator('[data-v11217-confirm]').click();
+  await expect(dialog.locator('[data-v11217-feedback]')).toContainText('Early checkout could not be saved');
+  const earlyRetry = dialog.getByRole('button', { name: 'Retry Early Checkout' });
+  await expect(earlyRetry).toBeVisible();
+  const retrySize = await earlyRetry.evaluate(button => ({ height: button.getBoundingClientRect().height, fontSize: parseFloat(getComputedStyle(button).fontSize) }));
+  expect(retrySize.height).toBeGreaterThanOrEqual(44);
+  expect(retrySize.fontSize).toBe(13);
+  await expect(dialog.locator('[data-v11217-note]')).toHaveValue('Owner collected early');
+  await dialog.getByRole('button', { name: 'Retry Early Checkout' }).click();
   await expect(dialog).toBeHidden();
   await expect(early).toHaveAttribute('data-moved-to-past', 'true');
+  await expect(early.locator(':scope > .v110-action-feedback')).toContainText('checked out early successfully');
   expect(await page.evaluate(() => window.savedPayloads.at(-1))).toMatchObject({
     stayId: 'stay-b', dogId: '22222222-2222-4222-8222-222222222222', status: 'checked_out'
   });
