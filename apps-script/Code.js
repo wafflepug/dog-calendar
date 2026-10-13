@@ -2805,6 +2805,10 @@ function waffleReadVariant_(action, data) {
         : ""
   };
 
+  if (actionName === "get_past_guest_directory") {
+    variantPayload.pastDirectorySchemaVersion = 2;
+  }
+
   if (["get_stay_operations", "get_guest_directory", "get_past_guest_directory"].indexOf(actionName) !== -1) {
     variantPayload.stayOperationIdentityVersion = typeof STAY_OPERATION_IDENTITY_VERSION_V11226_ === "undefined" ? 0 : STAY_OPERATION_IDENTITY_VERSION_V11226_;
   }
