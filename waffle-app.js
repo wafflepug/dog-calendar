@@ -368,6 +368,11 @@ async function queryAppsScriptSWR(
             options.maxStaleMs ||
             WAFFLE_CACHE_MAX_STALE_MS
         );
+    const mayPersistResponse = responsePayload => {
+        if (typeof options.shouldCacheResponse !== 'function') return true;
+        try { return options.shouldCacheResponse(responsePayload) !== false; }
+        catch (_) { return false; }
+    };
 
     const cached =
         cacheKey
@@ -473,10 +478,12 @@ async function queryAppsScriptSWR(
             response?.unchanged &&
             cached?.payload
         ) {
-            await putWaffleCachedResponse(
-                cacheKey,
-                cached.payload
-            );
+            if (mayPersistResponse(cached.payload)) {
+                await putWaffleCachedResponse(
+                    cacheKey,
+                    cached.payload
+                );
+            }
 
             return {
                 data:
@@ -492,8 +499,8 @@ async function queryAppsScriptSWR(
         if (
             cacheKey &&
             response &&
-            response.result ===
-                'success'
+            response.result === 'success' &&
+            mayPersistResponse(response)
         ) {
             await putWaffleCachedResponse(
                 cacheKey,
@@ -1119,7 +1126,7 @@ function openWaffleNotificationCentre(tabName = 'inbox', opener = null) {
 
 
 function refreshWaffleNotificationCentreBadge() {
-    loadWaffleNotificationCentre({ quiet: true }).catch(() => {});
+    return loadWaffleNotificationCentre({ quiet: true }).catch(() => {});
 }
 
 
@@ -1285,10 +1292,11 @@ function initialiseV101AuditFilterChips() {
 function initialiseV101Polish() {
     initialiseV101AuditFilterChips();
 
-    setTimeout(
-        refreshWaffleNotificationCentreBadge,
-        1400
-    );
+    if (String(window.WAFFLE_PAGE || document.body?.dataset?.wafflePage || '') === 'directory' && window.WAFFLE_CARE_STARTUP?.schedule) {
+        window.WAFFLE_CARE_STARTUP.schedule('notification-badge', refreshWaffleNotificationCentreBadge);
+    } else {
+        setTimeout(refreshWaffleNotificationCentreBadge, 1400);
+    }
 }
 
 
@@ -9514,6 +9522,9 @@ registerWaffleServiceWorker();
     // their render guards; this coordinator only shares transport and cache.
     const directoryProfileSharedReads = new Map();
     const directoryProfileReadFailures = new Map();
+    const directoryProfileFreshAt = new Map();
+    const directoryProfileMutationVersions = new Map();
+    const DIRECTORY_PROFILE_FRESH_MS = 45000;
     const DIRECTORY_PROFILE_READ_FAILURE_COOLDOWN_MS = 15000;
     const DIRECTORY_PROFILE_READ_FAILURE_LIMIT = 50;
     let directoryProfileReadEventSequence = 0;
@@ -9550,7 +9561,8 @@ registerWaffleServiceWorker();
         const key = identity.cacheKey;
         const existing = directoryProfileSharedReads.get(key);
         if (existing) {
-            if (options.force && !existing.isForcedRead) {
+            const invalidatedWhilePending = (directoryProfileMutationVersions.get(key) || 0) !== existing.mutationVersion;
+            if (options.force && (!existing.isForcedRead || invalidatedWhilePending)) {
                 if (typeof options.onCached === 'function') existing.forceFollowupConsumers.add(options.onCached);
                 if (!existing.forceFollowup) {
                     const forceConsumers = existing.forceFollowupConsumers;
@@ -9589,23 +9601,42 @@ registerWaffleServiceWorker();
         const now = directoryProfileReadNow();
         if (options.force) {
             directoryProfileReadFailures.delete(key);
-        } else if (cacheStatus !== 'memory' && priorFailure && priorFailure.expiresAt > now) {
+        } else if (priorFailure && priorFailure.expiresAt > now && cacheStatus !== 'memory') {
             throw priorFailure.error;
-        } else if (priorFailure) {
+        } else if (priorFailure && priorFailure.expiresAt <= now) {
             directoryProfileReadFailures.delete(key);
         }
-        const notifyCached = async cachedResponse => {
+        if (cacheStatus === 'memory' && !options.force) {
+            const offline = typeof navigator !== 'undefined' && navigator.onLine === false;
+            if (offline || (priorFailure && priorFailure.expiresAt > now) || (directoryProfileFreshAt.has(key) && now - directoryProfileFreshAt.get(key) < DIRECTORY_PROFILE_FRESH_MS)) {
+                await Promise.resolve(options.onCached?.({ record: cachedRecord }));
+                if (offline) directoryProfileReadEvent(requestId, startedAt, 'request-end', 'memory', 'offline');
+                return { data: { result: 'success', record: cachedRecord }, cacheApplied: true, unchanged: true, offlineFallback: offline, cachedOnly: true, refreshFailed: !!priorFailure };
+            }
+            await Promise.resolve(options.onCached?.({ record: cachedRecord }));
+            const refresh = readDirectoryCareProfile(card, { force: true, onCached: options.onCached });
+            void refresh.then(result => {
+                if (result?.identityMismatch || result?.offlineFallback || result?.error) {
+                    const error = result.error instanceof Error ? result.error : new Error(result.error ? String(result.error.message || result.error) : result?.identityMismatch ? 'Care profile identity could not be verified.' : 'Care profile refresh failed.');
+                    directoryProfileReadFailures.set(key, { error, expiresAt: directoryProfileReadNow() + DIRECTORY_PROFILE_READ_FAILURE_COOLDOWN_MS });
+                    try { options.onRefreshError?.(error); } catch (_) {}
+                }
+            }).catch(error => { try { options.onRefreshError?.(error); } catch (_) {} });
+            return { data: { result: 'success', record: cachedRecord }, cacheApplied: true, unchanged: true, cachedOnly: true, refreshing: true };
+        }
+        const notifyCached = async (cachedResponse, meta = {}) => {
             if (!directoryProfileRecordMatchesIdentity(cachedResponse?.record, identity)) return;
+            if (entry && (directoryProfileMutationVersions.get(key) || 0) !== entry.mutationVersion) return;
             if (cacheStatus === 'miss') cacheStatus = 'saved';
             if (entry) entry.lastCachedResponse = cachedResponse;
             directoryProfileReadEvent(requestId, startedAt, 'cache-applied', cacheStatus);
             for (const consumer of Array.from(consumers)) {
-                try { await consumer(cachedResponse); } catch (_) { /* A consumer cannot block other cards' cache delivery. */ }
+                try { await consumer(cachedResponse, meta); } catch (_) { /* A consumer cannot block other cards' cache delivery. */ }
             }
         };
 
         directoryProfileReadEvent(requestId, startedAt, 'request-start', cacheStatus);
-        entry = { requestId, startedAt, consumers, promise: null, lastCachedResponse: null, forceFollowup: null, forceFollowupConsumers: new Set(), isForcedRead: !!options.force };
+        entry = { requestId, startedAt, consumers, promise: null, lastCachedResponse: null, forceFollowup: null, forceFollowupConsumers: new Set(), isForcedRead: !!options.force, mutationVersion: directoryProfileMutationVersions.get(key) || 0 };
         const promise = (async () => {
             let requestStartedAt = startedAt;
             try {
@@ -9634,16 +9665,26 @@ registerWaffleServiceWorker();
                     maxAttempts: 1,
                     timeoutMs: 15000,
                     maxStaleMs: 6 * 60 * 60 * 1000,
-                    onCached: cachedResponse => { void notifyCached(cachedResponse); }
+                    shouldCacheResponse: payload =>
+                        (directoryProfileMutationVersions.get(key) || 0) === entry.mutationVersion &&
+                        directoryProfileRecordMatchesIdentity(payload?.record, identity),
+                    onCached: cachedResponse => { void notifyCached(cachedResponse, { fresh: false }); }
                 });
                 const responseRecord = result?.data?.record;
-                if (responseRecord && !directoryProfileRecordMatchesIdentity(responseRecord, identity)) {
+                const superseded = (directoryProfileMutationVersions.get(key) || 0) !== entry.mutationVersion;
+                if (superseded) {
+                    result = { ...result, data: { ...(result.data || {}), record: null }, superseded: true };
+                } else if (responseRecord && !directoryProfileRecordMatchesIdentity(responseRecord, identity)) {
                     result = { ...result, data: { ...(result.data || {}), record: null }, identityMismatch: true };
                 } else if (responseRecord && responseRecord?.resolution?.status !== 'not_found') {
                     directoryProfileDetailCache[key] = responseRecord;
                 }
+                if (responseRecord && !result?.identityMismatch && !result?.offlineFallback && !result?.superseded) {
+                    directoryProfileFreshAt.set(key, directoryProfileReadNow());
+                    await notifyCached({ record: responseRecord }, { fresh: true });
+                }
                 directoryProfileReadEvent(requestId, requestStartedAt, 'request-end', cacheStatus, result?.identityMismatch ? 'error' : result?.offlineFallback ? 'offline' : 'success');
-                directoryProfileReadFailures.delete(key);
+                if (!result?.superseded) directoryProfileReadFailures.delete(key);
                 return result;
             } catch (error) {
                 const failure = error instanceof Error ? error : new Error(String(error || 'Care profile read failed.'));
@@ -9664,6 +9705,109 @@ registerWaffleServiceWorker();
     }
 
     if (typeof window !== 'undefined') window.WAFFLE_CARE_PROFILE_READS = Object.freeze({ read: readDirectoryCareProfile, matches: directoryCareProfileReadMatches });
+    if (typeof window !== 'undefined') window.WAFFLE_CARE_PROFILE_INVALIDATE = card => {
+        const identity = getDirectoryProfileReadIdentity(card); if (!identity.valid || !identity.stayKey) return;
+        directoryProfileMutationVersions.set(identity.cacheKey, (directoryProfileMutationVersions.get(identity.cacheKey) || 0) + 1);
+        directoryProfileFreshAt.delete(identity.cacheKey); delete directoryProfileDetailCache[identity.cacheKey];
+    };
+    const directoryBelongingsReads = new Map(), directoryBelongingsFreshAt = new Map(), directoryBelongingsVersions = new Map(), directoryBelongingsFailures = new Map();
+    const directoryBelongingsFreshConsumers = new Map();
+    function directoryBelongingsRecordMatchesIdentity(record, identity) {
+        if (!record || String(record.stayKey || '') !== identity.stayKey) return false;
+        const proof = record.identity || record.identityResolution?.identity;
+        const status = record.identityResolution?.status;
+        if (identity.hasStableIds) return ['resolved', 'not_found'].includes(status) && !!proof &&
+            String(proof.stayKey || '') === identity.stayKey &&
+            (!identity.stayId || String(proof.stayId || '').toLowerCase() === identity.stayId.toLowerCase()) &&
+            (!identity.dogId || String(proof.dogId || '').toLowerCase() === identity.dogId.toLowerCase());
+        return !!proof && String(proof.stayKey || '') === identity.stayKey && (status === 'resolved' || status === 'not_found');
+    }
+    async function readDirectoryBelongings(card, options = {}) {
+        const identity = getDirectoryProfileReadIdentity(card);
+        if (!identity.valid || !identity.stayKey || (directoryProfileIdentityIsAmbiguous(card) && !identity.hasStableIds)) throw new Error('Belongings identity is not safe to read.');
+        const key = identity.cacheKey, cacheCandidate = directoryBelongingsDetailCache[key], cached = directoryBelongingsRecordMatchesIdentity(cacheCandidate, identity) ? cacheCandidate : null, offline = typeof navigator !== 'undefined' && navigator.onLine === false;
+        const existing = directoryBelongingsReads.get(key), versionNow = directoryBelongingsVersions.get(key) || 0;
+        if (existing) {
+            if (typeof options.onFresh === 'function') {
+                let joinedConsumers = directoryBelongingsFreshConsumers.get(key);
+                if (!joinedConsumers) directoryBelongingsFreshConsumers.set(key, joinedConsumers = new Set());
+                joinedConsumers.add(options.onFresh);
+            }
+            if (options.force && existing.version !== versionNow) {
+                if (typeof options.onFresh === 'function') {
+                    existing.followupConsumers ||= new Set(); existing.followupConsumers.add(options.onFresh);
+                }
+                if (!existing.followup) existing.followup = existing.promise.catch(() => null).then(() => readDirectoryBelongings(card, { force: true, onFresh: response => {
+                    for (const consumer of Array.from(existing.followupConsumers || [])) { try { consumer(response); } catch (_) {} }
+                } }));
+                return existing.followup;
+            }
+            return existing.promise;
+        }
+        const fresh = directoryBelongingsFreshAt.has(key) && directoryProfileReadNow() - directoryBelongingsFreshAt.get(key) < DIRECTORY_PROFILE_FRESH_MS;
+        const recentFailure = directoryBelongingsFailures.get(key);
+        if (cached && !options.force && (offline || fresh || (recentFailure && recentFailure.expiresAt > directoryProfileReadNow()))) return { data: { record: cached }, cacheApplied: true, unchanged: true, cachedOnly: true, offlineFallback: offline, refreshFailed: !!recentFailure };
+        if (cached && !options.force && !offline) {
+            void readDirectoryBelongings(card, { force: true, onFresh: options.onFresh }).catch(() => null);
+            return { data: { record: cached }, cacheApplied: true, unchanged: true, cachedOnly: true, refreshing: true };
+        }
+        const version = versionNow, consumers = directoryBelongingsFreshConsumers.get(key) || new Set();
+        if (typeof options.onFresh === 'function') consumers.add(options.onFresh);
+        directoryBelongingsFreshConsumers.set(key, consumers);
+        const entry = { version, promise: null, followup: null };
+        const fanout = async (record, result, isNetwork) => {
+            if (!directoryBelongingsRecordMatchesIdentity(record, identity) || (directoryBelongingsVersions.get(key) || 0) !== version) return;
+            directoryBelongingsDetailCache[key] = record;
+            directoryBelongingsDetailCache[identity.stayKey] = record;
+            if (isNetwork && !result?.offlineFallback) directoryBelongingsFreshAt.set(key, directoryProfileReadNow());
+            for (const consumer of Array.from(consumers)) { try { await consumer({ record, result }); } catch (_) { /* Isolate cards. */ } }
+        };
+        const request = (async () => {
+        try {
+            const result = await queryAppsScriptSWR({ action: 'get_guest_belongings', stayKey: identity.stayKey }, { cacheKey: 'directory:belongings:' + key, maxAttempts: 2, timeoutMs: 30000, maxStaleMs: 6 * 60 * 60 * 1000, shouldCacheResponse: payload => (directoryBelongingsVersions.get(key) || 0) === version && directoryBelongingsRecordMatchesIdentity(payload?.record, identity), onCached: payload => fanout(payload?.record, { cacheApplied: true }, false) });
+            const record = result?.data?.record;
+            if (!directoryBelongingsRecordMatchesIdentity(record, identity)) throw new Error('Belongings response identity could not be verified.');
+            if ((directoryBelongingsVersions.get(key) || 0) === version) {
+                if (result?.offlineFallback) { consumers.clear(); directoryBelongingsFreshConsumers.delete(key); return result; }
+                await fanout(record, result, true);
+                directoryBelongingsFailures.delete(key);
+                consumers.clear(); directoryBelongingsFreshConsumers.delete(key);
+                return result;
+            }
+            consumers.clear(); directoryBelongingsFreshConsumers.delete(key);
+            return { ...result, data: { ...(result.data || {}), record: null }, superseded: true };
+        } catch (error) {
+            directoryBelongingsFailures.set(key, { expiresAt: directoryProfileReadNow() + DIRECTORY_PROFILE_READ_FAILURE_COOLDOWN_MS });
+            throw error;
+        } finally {
+            if (directoryBelongingsFreshConsumers.get(key) === consumers) directoryBelongingsFreshConsumers.delete(key);
+            consumers.clear();
+            if (directoryBelongingsReads.get(key) === entry) directoryBelongingsReads.delete(key);
+        }
+        })();
+        entry.promise = request;
+        directoryBelongingsReads.set(key, entry);
+        return request;
+    }
+    if (typeof window !== 'undefined') {
+        window.WAFFLE_CARE_BELONGINGS_READS = Object.freeze({ read: readDirectoryBelongings, invalidate: card => {
+            const identity = getDirectoryProfileReadIdentity(card); if (!identity.valid || !identity.stayKey) return;
+            directoryBelongingsVersions.set(identity.cacheKey, (directoryBelongingsVersions.get(identity.cacheKey) || 0) + 1);
+            directoryBelongingsFreshAt.delete(identity.cacheKey); directoryBelongingsFailures.delete(identity.cacheKey); delete directoryBelongingsDetailCache[identity.cacheKey]; delete directoryBelongingsDetailCache[identity.stayKey];
+        } });
+    }
+    function revalidateSelectedDirectoryProfile() {
+        if (typeof document === 'undefined' || document.visibilityState === 'hidden' || (typeof navigator !== 'undefined' && navigator.onLine === false)) return;
+        const stayKey = String(directorySelectedProfileStayKey || '').trim(); if (!stayKey) return;
+        const card = document.querySelector('.directory-card.is-profile-active') || (typeof getDirectoryProfileCard === 'function' ? getDirectoryProfileCard(stayKey) : null);
+        const details = card?.querySelector?.('[data-directory-detail="profile"]');
+        if (!card || !details || details.dataset.detailLoading === 'true') return;
+        void loadDirectoryProfileDetail(card, details, { revalidate: true }).catch(() => {});
+    }
+    if (typeof window !== 'undefined') {
+        if (typeof window.addEventListener === 'function') window.addEventListener('focus', revalidateSelectedDirectoryProfile);
+        if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') document.addEventListener('visibilitychange', revalidateSelectedDirectoryProfile);
+    }
     function directoryProfileIdentityIsAmbiguous(card) {
         const key = String(card?.dataset?.directoryStayKey || card?.dataset?.stayKey || '').trim();
         if (!key) return false;
@@ -9742,15 +9886,17 @@ registerWaffleServiceWorker();
             : null;
         const profileFields = details.querySelector('[data-directory-intake-attributes]');
         if (profileFields) profileFields.hidden = false;
+        const hasDirtyProfileDraft = () => {
+            const state = typeof directoryProfileEditDrafts !== 'undefined' && typeof directoryProfileEditKey === 'function'
+                ? directoryProfileEditDrafts.get(directoryProfileEditKey(card)) : null;
+            return !!(state && typeof directoryProfileEditIsDirty === 'function' && directoryProfileEditIsDirty(card, state));
+        };
 
         if (
-            !options.force &&
+            !options.force && !options.revalidate &&
             profileCache
         ) {
-            renderDirectoryIntakeAttributes(
-                card,
-                profileCache
-            );
+            if (!hasDirtyProfileDraft()) renderDirectoryIntakeAttributes(card, profileCache);
 
             details.dataset.detailLoaded =
                 'true';
@@ -9795,10 +9941,7 @@ registerWaffleServiceWorker();
         const readIsCurrent = () => profileIsCurrent() && details.dataset.profileReadToken === readToken;
 
         if (cachedRecord) {
-            renderDirectoryIntakeAttributes(
-                card,
-                cachedRecord
-            );
+            if (!hasDirtyProfileDraft()) renderDirectoryIntakeAttributes(card, cachedRecord);
             setDirectoryProfileReadStatus(
                 details,
                 'refreshing',
@@ -9861,6 +10004,11 @@ registerWaffleServiceWorker();
 
                 if (!readIsCurrent()) return true;
 
+                if (hasDirtyProfileDraft()) {
+                    details.dataset.detailLoaded = 'true';
+                    return true;
+                }
+
                 renderDirectoryIntakeAttributes(
                     card,
                     record
@@ -9881,12 +10029,17 @@ registerWaffleServiceWorker();
         let cachedRendered = false;
         try {
 
-            const onCachedProfile = cachedResponse => {
+            const onCachedProfile = (cachedResponse, meta = {}) => {
                 cachedRendered = applyRecord(cachedResponse.record) === true;
-                if (cachedRendered && readIsCurrent()) setDirectoryProfileReadStatus(details, 'refreshing', 'Saved details shown · refreshing');
+                if (cachedRendered && readIsCurrent()) {
+                    const freshNetworkRecord = meta.fresh === true;
+                    setDirectoryProfileReadStatus(details, freshNetworkRecord ? 'fresh' : 'refreshing', freshNetworkRecord ? 'Care details updated' : 'Saved details shown · refreshing');
+                }
             };
             const swr = typeof window !== 'undefined' && window.WAFFLE_CARE_PROFILE_READS?.read
-                ? await window.WAFFLE_CARE_PROFILE_READS.read(card, { force: !!options.force, onCached: onCachedProfile })
+                ? await window.WAFFLE_CARE_PROFILE_READS.read(card, { force: !!options.force, onCached: onCachedProfile, onRefreshError: error => {
+                    if (readIsCurrent() && cachedRendered) setDirectoryProfileReadStatus(details, 'error', 'Saved details shown · refresh failed', () => loadDirectoryProfileDetail(card, details, { force: true }));
+                } })
                 : await queryAppsScriptSWR(
                     {
                         action: 'get_guest_profile',
@@ -9902,10 +10055,13 @@ registerWaffleServiceWorker();
                         onCached: onCachedProfile
                     }
                 );
+            if (swr.superseded) return;
             if (swr.cachedOnly) {
                 if (readIsCurrent()) {
                     const offline = typeof navigator !== 'undefined' && navigator.onLine === false;
-                    setDirectoryProfileReadStatus(details, 'saved', offline ? 'Saved details shown · offline' : 'Saved details shown');
+                    const failed = !!swr.refreshFailed;
+                    const refreshing = !!swr.refreshing;
+                    setDirectoryProfileReadStatus(details, failed ? 'error' : refreshing ? 'refreshing' : 'saved', offline ? 'Saved details shown · offline' : failed ? 'Saved details shown · refresh failed' : refreshing ? 'Saved details shown · refreshing' : 'Saved details shown', failed ? () => loadDirectoryProfileDetail(card, details, { force: true }) : null);
                 }
                 return;
             }
@@ -9989,25 +10145,6 @@ registerWaffleServiceWorker();
         if (!stayKey) return;
 
         if (
-            !options.force &&
-            directoryBelongingsDetailCache[
-                stayKey
-            ]
-        ) {
-            renderDirectoryBelongings(
-                card,
-                directoryBelongingsDetailCache[
-                    stayKey
-                ]
-            );
-
-            details.dataset.detailLoaded =
-                'true';
-
-            return;
-        }
-
-        if (
             details.dataset.detailLoading ===
             'true'
         ) {
@@ -10037,9 +10174,8 @@ registerWaffleServiceWorker();
                     }
                 };
 
-                directoryBelongingsDetailCache[
-                    stayKey
-                ] = record;
+                directoryBelongingsDetailCache[getDirectoryProfileReadIdentity(card).cacheKey] = record;
+                directoryBelongingsDetailCache[stayKey] = record;
 
                 belongingsRecordsCache[
                     stayKey
@@ -10089,56 +10225,14 @@ registerWaffleServiceWorker();
             };
 
         try {
-            let cachedRendered = false;
+            const identityKey = getDirectoryProfileReadIdentity(card).cacheKey;
+            const swr = await window.WAFFLE_CARE_BELONGINGS_READS.read(card, { force: !!options.force, onFresh: response => {
+                if (getDirectoryProfileReadIdentity(card).cacheKey === identityKey && card.isConnected) applyRecord(response.record);
+            } });
 
-            const swr =
-                await queryAppsScriptSWR(
-                    {
-                        action:
-                            'get_guest_belongings',
-                        stayKey
-                    },
-                    {
-                        cacheKey:
-                            'directory:belongings:' +
-                            stayKey,
-                        maxAttempts: 2,
-                        timeoutMs: 30000,
-                        maxStaleMs:
-                            6 * 60 * 60 * 1000,
-                        onCached:
-                            cachedResponse => {
-                                cachedRendered =
-                                    true;
-
-                                applyRecord(
-                                    cachedResponse.record ||
-                                    {
-                                        stayKey,
-                                        items: {},
-                                        photos: [],
-                                        riskFlags: {},
-                                        dogPhoto: null
-                                    }
-                                );
-                            }
-                    }
-                );
-
-            if (
-                !swr.unchanged ||
-                !cachedRendered
-            ) {
-                applyRecord(
-                    swr.data.record ||
-                    {
-                        stayKey,
-                        items: {},
-                        photos: [],
-                        riskFlags: {},
-                        dogPhoto: null
-                    }
-                );
+            if (swr?.superseded) return;
+            if (getDirectoryProfileReadIdentity(card).stayKey === stayKey) {
+                if (swr.data?.record) applyRecord(swr.data.record);
             }
 
         } catch (error) {
@@ -10510,6 +10604,7 @@ registerWaffleServiceWorker();
         refreshDirectoryCareSummary();
         filterGuestDirectoryCards();
         restoreSelectedDirectoryProfile({ state: preservedUiState });
+        window.WAFFLE_CARE_STARTUP?.ready();
     }
 
 
@@ -10653,6 +10748,7 @@ registerWaffleServiceWorker();
         } finally {
             directoryConsolidatedLoadInProgress =
                 false;
+            window.WAFFLE_CARE_STARTUP?.settled();
 
             if (button) {
                 button.disabled = false;
@@ -12293,6 +12389,8 @@ registerWaffleServiceWorker();
             }
             await sendPayloadToAppsScript({ action: 'save_belongings', ...payload });
             serverSaved = true;
+            window.WAFFLE_CARE_BELONGINGS_READS?.invalidate(card);
+            if (profileEdit) window.WAFFLE_CARE_PROFILE_INVALIDATE?.(card);
 
             belongingsRecordsCache[payload.stayKey] = {
                 ...(belongingsRecordsCache[payload.stayKey] || {}),
@@ -13328,6 +13426,8 @@ registerWaffleServiceWorker();
     }
 
     async function refreshBelongingsPhotoRecord(stayKey, record) {
+        const card = Array.from(document.querySelectorAll('.directory-card[data-directory-stay-key]')).find(item => String(item.dataset.directoryStayKey || item.dataset.stayKey || '') === String(stayKey));
+        if (card) window.WAFFLE_CARE_BELONGINGS_READS?.invalidate(card);
         belongingsRecordsCache[stayKey] = record;
         directoryPhotoRecordsCache[stayKey] = record;
         careRiskRecordsCache[stayKey] = record;
@@ -13547,6 +13647,7 @@ registerWaffleServiceWorker();
                 stayKey: card.dataset.stayKey,
                 photoId
             });
+            window.WAFFLE_CARE_BELONGINGS_READS?.invalidate(card);
 
             const response = await queryAppsScript({
                 action: 'get_belongings',

@@ -19,6 +19,8 @@ async function setup(page, queryBody) {
     window.v110MediaCache = Object.create(null);
     window.v110Escape = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
     window.queryAppsScript = ${queryBody};
+    window.WAFFLE_CARE_BELONGINGS_READS = { read: async (card, options) => ({ data: await window.queryAppsScript({ action: 'get_guest_belongings', stayKey: card.dataset.directoryStayKey }, options) }), invalidate() {} };
+
     ${photoFunctions}
   ` });
   await page.addScriptTag({ content: carouselRuntime });
@@ -117,7 +119,7 @@ test('late media responses cannot replace the selected stay and errors remain re
 
   await page.evaluate(() => {
     window.queryAppsScript = async () => { throw new Error('temporary outage'); };
-    delete v110MediaCache['stay-b'];
+
     void v110LoadMedia(document.querySelector('.directory-card'), {force:true});
   });
   await expect(page.getByRole('alert')).toContainText('temporary outage');

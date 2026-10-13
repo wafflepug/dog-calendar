@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.10.13.03",
-  "releaseName": "Read-only Care Startup",
+  "assetRevision": "2026.10.14.01",
+  "releaseName": "Care Loading and Cache Freshness",
   "careIteration": {
     "returningDogSuggestions": true,
     "reviewedCareInheritance": true,

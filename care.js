@@ -517,18 +517,18 @@
     const target = panel(card, 'media');
     const host = target?.querySelector('[data-v110-media-host]') || target;
     const stayKey = String(card?.dataset?.directoryStayKey || card?.dataset?.stayKey || '').trim();
-    if (!host || !stayKey || typeof window.queryAppsScript !== 'function') return;
+    if (!host || !stayKey || (!window.WAFFLE_CARE_BELONGINGS_READS?.read && typeof window.queryAppsScript !== 'function')) return;
 
     const requestId = String((Number(host.dataset.v110FallbackRequestId) || 0) + 1);
+    const identityKey = `${String(card.dataset.directoryStayId || '').toLowerCase()}::${String(card.dataset.directoryDogId || '').toLowerCase()}::${stayKey}`;
     host.dataset.v110FallbackRequestId = requestId;
+    host.dataset.v110FallbackIdentity = identityKey;
     host.innerHTML = '<div class="v11160-loading" role="status">Loading photos…</div>';
-    try {
-      const response = await window.queryAppsScript(
-        { action: 'get_guest_belongings', stayKey },
-        { maxAttempts: 2, timeoutMs: 30000 }
-      );
-      if (host.dataset.v110FallbackRequestId !== requestId || String(card?.dataset?.directoryStayKey || card?.dataset?.stayKey || '').trim() !== stayKey) return;
-      const record = response?.record || {};
+    const isCurrent = () => host.dataset.v110FallbackRequestId === requestId && host.dataset.v110FallbackIdentity === identityKey &&
+      `${String(card?.dataset?.directoryStayId || '').toLowerCase()}::${String(card?.dataset?.directoryDogId || '').toLowerCase()}::${String(card?.dataset?.directoryStayKey || card?.dataset?.stayKey || '').trim()}` === identityKey;
+    const renderRecord = record => {
+      if (!isCurrent()) return;
+      record = record || {};
       const profile = Array.isArray(record.dogPhotoGallery) ? [...record.dogPhotoGallery] : [];
       if (record.dogPhoto && !profile.some(photo => String(photo?.id || '') === String(record.dogPhoto?.id || ''))) profile.push(record.dogPhoto);
       const stay = Array.isArray(record.stayPhotos) ? record.stayPhotos : [];
@@ -538,8 +538,19 @@
         return `<section class="v110-media-section"><button type="button" class="v110-media-section-title" data-v110-media-toggle="${key}" aria-expanded="${visible.length?'true':'false'}"><span><strong>${title}</strong><span class="v110-media-count">${visible.length}</span><small>${desc}</small></span><span class="v110-media-chevron" aria-hidden="true">⌄</span></button><div class="v110-media-group-content"${visible.length?'':' hidden'}>${visible.length ? `<div class="v110-media-grid">${visible.map((photo, index) => { const url = String(photo?.previewUrl || photo?.url || photo?.driveUrl || ''), name = String(photo?.label || `${label} ${index+1}`); return `<article class="v110-media-photo"><a class="v110-media-view" href="${html(url)}" target="_blank" rel="noopener" aria-label="View ${html(name)}"><img src="${html(url)}" alt="${html(name)}" loading="lazy"></a><div class="v110-media-photo-meta"><span>${html(name)}</span></div></article>`; }).join('')}</div>` : `<div class="v110-media-empty">No ${label.toLowerCase()} photos saved yet.</div>`}</div></section>`;
       };
       host.innerHTML = `<div class="v110-media-heading"><div><small>PHOTOS</small><h4>Photos for this dog and stay</h4><p>Profile photos follow the dog. Stay and belongings photos belong to this visit.</p></div></div>` + photos('profile','🐶 Profile Photos','Persistent identity photos',profile,'Profile') + photos('stay','📸 Stay Photos','Photos from this boarding stay',stay,'Stay') + photos('belongings','🧳 Belongings Photos','Arrival belongings and item records',belongings,'Belongings');
+    };
+    try {
+      const api = window.WAFFLE_CARE_BELONGINGS_READS;
+      if (api?.read) {
+        const result = await api.read(card, { onFresh: response => renderRecord(response?.record) });
+        if (result?.superseded) return;
+        if (isCurrent()) renderRecord(result?.data?.record);
+      } else {
+        const response = await window.queryAppsScript({ action: 'get_guest_belongings', stayKey }, { maxAttempts: 2, timeoutMs: 30000 });
+        renderRecord(response?.record);
+      }
     } catch (error) {
-      if (host.dataset.v110FallbackRequestId !== requestId || String(card?.dataset?.directoryStayKey || card?.dataset?.stayKey || '').trim() !== stayKey) return;
+      if (!isCurrent()) return;
       host.innerHTML = `<div class="v110-panel-error" role="alert"><strong>Photos could not be loaded.</strong><span>${html(error?.message || String(error))}</span><button type="button" data-v110-media-fallback-retry>Retry loading photos</button></div>`;
     }
   }

@@ -2704,6 +2704,7 @@ if (String(window.WAFFLE_PAGE || document.body?.dataset?.wafflePage || 'calendar
 
   let healthCache = null;
   let healthFetchedAt = 0;
+  let healthRequest = null;
   let structuredFallback = null;
   let copyFrame = 0;
 
@@ -2878,23 +2879,29 @@ if (String(window.WAFFLE_PAGE || document.body?.dataset?.wafflePage || 'calendar
 
   async function getHealth(force = false) {
     if (!force && healthCache && Date.now() - healthFetchedAt < HEALTH_MAX_AGE) return healthCache;
-    try {
-      const response = await jsonp({ action: 'waffle_ai_health' }, 15000);
-      if (response?.result !== 'success' || response?.action !== 'waffle_ai_health') {
-        throw new Error(String(response?.error || 'The live backend does not expose the Waffle AI health route.'));
+    if (navigator.onLine === false) return healthCache;
+    if (healthRequest) return healthRequest;
+    healthRequest = (async () => {
+      try {
+        const response = await jsonp({ action: 'waffle_ai_health' }, 15000);
+        if (response?.result !== 'success' || response?.action !== 'waffle_ai_health') {
+          throw new Error(String(response?.error || 'The live backend does not expose the Waffle AI health route.'));
+        }
+        healthCache = { ...response, routeReady: response.routeReady !== false };
+      } catch (error) {
+        healthCache = {
+          result: 'error',
+          routeReady: false,
+          configured: false,
+          error: String(error?.message || error || 'Waffle AI health check failed.')
+        };
       }
-      healthCache = { ...response, routeReady: response.routeReady !== false };
-    } catch (error) {
-      healthCache = {
-        result: 'error',
-        routeReady: false,
-        configured: false,
-        error: String(error?.message || error || 'Waffle AI health check failed.')
-      };
-    }
-    healthFetchedAt = Date.now();
-    updateCopy();
-    return healthCache;
+      healthFetchedAt = Date.now();
+      updateCopy();
+      return healthCache;
+    })();
+    try { return await healthRequest; }
+    finally { healthRequest = null; }
   }
 
   function footerText() {
@@ -3114,8 +3121,15 @@ if (String(window.WAFFLE_PAGE || document.body?.dataset?.wafflePage || 'calendar
 
     wireModal();
     [60,180,420,900,1800,3600,5400,7600].forEach(delay => setTimeout(wireModal, delay));
-    window.addEventListener('pageshow', () => { wireModal(); getHealth(false); });
-    window.addEventListener('focus', () => { wireModal(); getHealth(false); });
+    const refreshHealth = () => {
+      wireModal();
+      if (navigator.onLine === false) return;
+      const startup = window.WAFFLE_CARE_STARTUP;
+      if (pageName() === 'directory' && startup?.schedule) startup.schedule('ai-health', () => getHealth(false));
+      else getHealth(false);
+    };
+    window.addEventListener('pageshow', refreshHealth);
+    window.addEventListener('focus', refreshHealth);
 
     window.v11148WaffleAiAsk = ask;
     window.v11148WaffleAiHealth = getHealth;
