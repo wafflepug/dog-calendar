@@ -489,7 +489,7 @@ function recoverStayMutationV11225_(receiptSheet, receipt, bookingSheet) {
     throw new Error('This pending booking write no longer matches its recorded result. It was not replayed.');
   }
   if (action === 'update_boarding_dates' && pendingPlan.oldStayKey && pendingPlan.newStayKey && pendingPlan.oldStayKey !== pendingPlan.newStayKey) {
-    migrateBelongingsIdentityForGuest_(bookingSheet.getParent(), pendingPlan.oldStayKey, pendingPlan.newStayKey, pendingPlan.dogName);
+    migrateBelongingsIdentityForGuest_(bookingSheet.getParent(), pendingPlan.oldStayKey, pendingPlan.newStayKey, pendingPlan.dogName, receipt.stayId);
     migrateIntakeIdentitiesForGuest_(pendingPlan.oldStayKey, pendingPlan.newStayKey, pendingPlan.dogName);
   }
   var recoveredDog = null;

@@ -120,6 +120,7 @@ const backendSandbox = {
   },
   readBelongingsSummaryRecords_: () => [],
   getBelongingsSheet_: () => ({}),
+  getBelongingsSheetReadOnly_: () => ({}),
   getIntakeStatusRecords_: () => [],
   getLegacyIntakeStatusRecords_: () => []
 };

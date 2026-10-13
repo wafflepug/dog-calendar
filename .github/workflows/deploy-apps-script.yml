@@ -49,7 +49,8 @@ jobs:
           node --test tests/deployment-attribution.test.js
           node --check apps-script/StableStayIdentity.js
           node --test tests/stable-stay-backend.test.js
-          node --test tests/care-profile-identity-backend.test.js
+          node --check apps-script/CareRecordIdentity.js
+          node --test tests/care-profile-identity-backend.test.js tests/care-profile-backend-read-count.test.js tests/care-record-identity-persistence.test.js tests/care-record-update-contract.test.js tests/photo-upload-receipt.test.js
           node --check apps-script/V11217EarlyCheckout.js
           node --check apps-script/V11198ConfirmedStayDelete.js
           node --test tests/stay-operation-backend.test.js
@@ -100,12 +101,13 @@ jobs:
               sys.exit(1)
           versions = payload.get('versions') or {}
           deployment = payload.get('deployment') or {}
-          if payload.get('result') != 'success' or versions.get('stableStayIdentityVersion') != 1 or versions.get('stayOperationIdentityVersion') != 1:
+          if payload.get('result') != 'success' or versions.get('stableStayIdentityVersion') != 1 or versions.get('stayOperationIdentityVersion') != 1 or versions.get('careRecordIdentityVersion') != 1 or versions.get('careRecordIdentityWritesEnabled') is not False:
               sys.exit(1)
           if deployment.get('commitSha') != os.environ.get('GITHUB_SHA') or str(deployment.get('workflowRunId')) != os.environ.get('GITHUB_RUN_ID'):
               sys.exit(1)
-          print('Live stable stay and operation identity capabilities verified with a read-only request.')
+          print('Live stable stay, operation, and Care record identity capabilities verified with a read-only request.')
           print('Live backend deployment SHA and workflow run identity verified.')
+          print('Care identity enrollment remains disabled pending copied-sheet validation.')
           PY
             then
               exit 0

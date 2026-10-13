@@ -4529,7 +4529,7 @@ registerWaffleServiceWorker();
             fields: [
                 { key: 'foodBrandType', label: 'Food Brand / Type' },
                 { key: 'feedingTimes', label: 'Feeding Times' },
-                { key: 'foodAmount', label: 'Food Amount' },
+                { key: 'foodAmount', label: 'Food Amount', type: 'textarea', wide: true },
                 { key: 'allowedTreats', label: 'Allowed Treats', type: 'yesno' },
                 { key: 'foodAllergies', label: 'Food Allergies', type: 'textarea', wide: true }
             ]

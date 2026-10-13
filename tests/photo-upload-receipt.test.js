@@ -4,6 +4,7 @@ const test = require('node:test');
 const vm = require('node:vm');
 
 const source = fs.readFileSync('apps-script/Code.js', 'utf8');
+const identitySource = fs.readFileSync('apps-script/CareRecordIdentity.js', 'utf8');
 test('generated hosted uploader script parses after HTML string assembly', () => {
   let html;
   const output = { addMetaTag() { return this; }, setXFrameOptionsMode() { return this; } };
@@ -48,21 +49,35 @@ function harness() {
 
 function uploadHarness(failFirstSheetWrite = false) {
   const receipts = {};
+  const stayKey = 'milo|2026-09-01|2026-09-05';
+  const careHeaders = Array.from({ length: 34 }, (_, index) => `Column ${index + 1}`);
+  careHeaders[0] = 'Updated At'; careHeaders[1] = 'Stay Key'; careHeaders[2] = 'Dog Name';
+  const careRow = Array(34).fill(''); careRow[1] = stayKey; careRow[2] = 'Milo'; careRow[3] = '2026-09-01'; careRow[4] = '2026-09-05'; careRow[23] = '[]';
+  const careRows = [careHeaders, careRow];
   const rows = { 24: '[]' };
   let created = 0;
   let writes = 0;
   const sheet = {
-    getRange(row, col) {
+    getLastRow: () => careRows.length,
+    getLastColumn: () => careRows[0].length,
+    getMaxColumns: () => 40,
+    insertColumnsAfter() {},
+    getRange(row, col, count = 1, width = 1) {
       return {
-        getValues: () => [['stay-a', 'Milo', new Date('2026-09-01T00:00:00Z'), new Date('2026-09-05T00:00:00Z')]],
-        getValue: () => rows[col] || '',
+        getValues: () => careRows.slice(row - 1, row - 1 + count).map(values => values.slice(col - 1, col - 1 + width)),
+        getValue: () => careRows[row - 1][col - 1] || '',
         setValue: value => {
           if (failFirstSheetWrite && col === 24 && writes === 0) { writes++; throw new Error('simulated sheet write failure'); }
-          rows[col] = value; writes++;
-        }
+          careRows[row - 1][col - 1] = value; rows[col] = value; writes++;
+        },
+        setValues: values => { values[0].forEach((value, index) => { careRows[row - 1][col - 1 + index] = value; }); }
       };
     }
   };
+  const dogId = '10000000-0000-4000-8000-000000000001';
+  const stayId = '00000000-0000-4000-8000-000000000001';
+  const bookingHeaders = ['Timestamp','Dog Name','Breed','Start Date','End Date','Owner','Phone','x','x','Notes','x','Type','Dog ID','Stay ID'];
+  const bookingRows = [bookingHeaders, ['', 'Milo', '', '2026-09-01', '2026-09-05', '', '', '', '', '', '', 'Boarding', dogId, stayId]];
   const context = {
     Date, JSON, Object, String, Error, PropertiesService: { getScriptProperties: () => ({
       getProperty: key => receipts[key] || null,
@@ -72,7 +87,11 @@ function uploadHarness(failFirstSheetWrite = false) {
     }) },
     LockService: { getScriptLock: () => ({ waitLock() {}, releaseLock() {} }) },
     getBelongingsSheet_: () => sheet,
-    findBelongingsRow_: () => 2,
+    findBelongingsRow_: (_sheet, key) => key === stayKey ? 2 : -1,
+    getBelongingsHeaders_: () => careHeaders.slice(0, 34),
+    makeGuestStayKey_: (name, start, end) => `${String(name).trim().toLowerCase()}|${start}|${end}`,
+    validStayIdV11225_: value => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || '')),
+    getTargetSheet_: () => ({ getDataRange: () => ({ getValues: () => bookingRows }) }),
     assertWaffleActionAllowedDuringMaintenance_() {},
     belongingsPhotoDateKey_: value => value instanceof Date ? value.toISOString().slice(0, 10) : String(value),
     saveBelongingsPhoto_: data => {
@@ -91,10 +110,11 @@ function uploadHarness(failFirstSheetWrite = false) {
   };
   vm.createContext(context);
   vm.runInContext([
+    identitySource,
     extract('getPhotoUploadReceiptKey_'), extract('getPhotoUploadReceiptRecord_'), extract('setPhotoUploadReceipt_'),
     extract('uploadBelongingsPhotoFromHtml')
   ].join('\n'), context);
-  return { context, rows, get created() { return created; }, get writes() { return writes; } };
+  return { context, rows, stayKey, get created() { return created; }, get writes() { return writes; } };
 }
 
 test('receipt lookup is read-only for unknown uploads and returns saved metadata by matching identity', () => {
@@ -120,7 +140,7 @@ test('expired receipt is read-only and an old timestamped client ID stays expire
 
 test('repeated and concurrent requests with one ID create one Drive photo and one sheet attachment', async () => {
   const h = uploadHarness();
-  const payload = { clientUploadId: `${Date.now().toString(36)}_1234567890abcdef`, stayKey: 'stay-a', dogName: 'Milo', startDate: '2026-09-01', endDate: '2026-09-05', photoType: 'belongings', photoData: 'private-image-data' };
+  const payload = { clientUploadId: `${Date.now().toString(36)}_1234567890abcdef`, stayKey: h.stayKey, dogName: 'Milo', startDate: '2026-09-01', endDate: '2026-09-05', photoType: 'belongings', photoData: 'private-image-data' };
   const [first, concurrent] = await Promise.all([
     Promise.resolve().then(() => h.context.uploadBelongingsPhotoFromHtml(payload)),
     Promise.resolve().then(() => h.context.uploadBelongingsPhotoFromHtml(payload))
@@ -134,7 +154,7 @@ test('repeated and concurrent requests with one ID create one Drive photo and on
 
 test('retry reuses the deterministic Drive file after a sheet write failure', () => {
   const h = uploadHarness(true);
-  const payload = { clientUploadId: `${Date.now().toString(36)}_fedcba0987654321`, stayKey: 'stay-a', dogName: 'Milo', startDate: '2026-09-01', endDate: '2026-09-05', photoType: 'belongings', photoData: 'private-image-data' };
+  const payload = { clientUploadId: `${Date.now().toString(36)}_fedcba0987654321`, stayKey: h.stayKey, dogName: 'Milo', startDate: '2026-09-01', endDate: '2026-09-05', photoType: 'belongings', photoData: 'private-image-data' };
   assert.throws(() => h.context.uploadBelongingsPhotoFromHtml(payload), /simulated sheet write failure/);
   assert.equal(h.created, 1);
   assert.equal(JSON.parse(h.rows[24]).length, 0);

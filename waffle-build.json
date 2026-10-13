@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.10.11.01",
-  "releaseName": "Care Roster Stay Actions",
+  "assetRevision": "2026.10.13.01",
+  "releaseName": "Care Readability and Record Identity",
   "careIteration": {
     "returningDogSuggestions": true,
     "reviewedCareInheritance": true,

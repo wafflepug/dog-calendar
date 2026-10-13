@@ -42,13 +42,14 @@ function harness({ bookings = [], care = [{ stayKey: key, dogName: 'Milo', intak
     row[1] = record.stayKey;
     row[2] = record.dogName || 'Milo';
     row[30] = JSON.stringify(record.intakeAttributes || {});
+    if (careHeaders.length >= 36) { row[34] = record.stayId || ''; row[35] = record.dogId || ''; }
     return row;
   });
   const careSheet = care.length ? {
     getLastRow: () => careRows.length + 1,
     getLastColumn: () => careHeaders.length,
     getRange: (r, c, n, w) => ({
-      getValues: () => (r === 1 ? [careHeaders] : careRows.slice(r - 2, r - 2 + n)).map(row => row.slice(c - 1, c - 1 + w)),
+      getValues: () => (r === 1 ? [careHeaders, ...careRows] : careRows.slice(r - 2, r - 2 + n)).map(row => row.slice(c - 1, c - 1 + w)),
       setValue: () => writes.push('setValue'),
       setValues: () => writes.push('setValues')
     })
@@ -171,6 +172,19 @@ test('missing, duplicate, or altered Care rows never return shared details', () 
   const alteredHeader = harness({ bookings: [booking(ids.a)], careHeaderEdit: headers => { headers[30] = 'Unexpected Profile Field'; } }).read({ stayKey: key, stayId: ids.a });
   assert.equal(alteredHeader.resolution.reason, 'invalid-care-sheet-schema');
   assert.deepEqual(JSON.parse(JSON.stringify(alteredHeader.intakeAttributes)), {});
+});
+
+test('persisted Care Stay ID and Dog ID must match the uniquely proven booking', () => {
+  const good = harness({ bookings: [booking(ids.a)], care: [{ stayKey: key, stayId: ids.a, dogId: ids.dogA }] });
+  const headers = good.read({ stayKey: key, stayId: ids.a, dogId: ids.dogA });
+  assert.equal(headers.resolution.status, 'resolved');
+  const mismatch = harness({
+    bookings: [booking(ids.a)],
+    care: [{ stayKey: key, stayId: ids.b, dogId: ids.dogA }],
+    careHeaderEdit: columns => columns.push('Stay ID', 'Dog ID')
+  }).read({ stayKey: key, stayId: ids.a, dogId: ids.dogA });
+  assert.equal(mismatch.resolution.reason, 'care-booking-id-conflict');
+  assert.deepEqual(JSON.parse(JSON.stringify(mismatch.intakeAttributes)), {});
 });
 
 test('booking sheet transport failures remain exceptions', () => {
