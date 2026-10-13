@@ -14,6 +14,8 @@ test('System Status separates deployed frontend identity, backend protocol and b
   let releaseMismatch = false;
   let raceHealthRequests = false;
   let healthCalls = 0;
+  let releaseFirstHealth;
+  let delayedHealthCallback;
   const backendActions = [];
   await page.route('**/waffle-deployment.json*', route => failManifest ? route.abort() : route.fulfill({ contentType: 'application/json', body: JSON.stringify(manifest) }));
   await page.route('**/waffle-build.json*', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ build: '2026.08.28.01', assetRevision: releaseMismatch ? '2026.10.06.99' : '2026.10.06.02', releaseName: 'Release Attribution' }) }));
@@ -25,7 +27,8 @@ test('System Status separates deployed frontend identity, backend protocol and b
     const callback = url.searchParams.get('callback');
     if (action === 'get_data_versions' && failBackendVersion) return route.abort();
     if (action === 'health' && raceHealthRequests && ++healthCalls === 1) {
-      await new Promise(resolve => setTimeout(resolve, 250));
+      delayedHealthCallback = callback;
+      await new Promise(resolve => { releaseFirstHealth = resolve; });
       return route.fulfill({ contentType: 'application/javascript', body: `${callback}({"result":"error"});` });
     }
     const data = action === 'get_data_versions'
@@ -54,14 +57,25 @@ test('System Status separates deployed frontend identity, backend protocol and b
   await expect(frontend.locator('[data-detail]')).toContainText('revisions disagree');
   releaseMismatch = false;
 
+  // Complete the preceding refresh before starting the deliberate race.
+  await expect(page.locator('#aiCard [data-value]')).toHaveText('Healthy');
   raceHealthRequests = true;
   healthCalls = 0;
-  await page.getByRole('button', { name: 'Refresh checks' }).click();
-  await page.getByRole('button', { name: 'Refresh checks' }).click();
-  await expect(backend.locator('[data-value]')).toHaveText('Healthy');
-  await page.waitForTimeout(350);
-  await expect(backend.locator('[data-value]')).toHaveText('Healthy');
-  raceHealthRequests = false;
+  try {
+    await page.getByRole('button', { name: 'Refresh checks' }).click();
+    await expect.poll(() => healthCalls).toBe(1);
+    await page.getByRole('button', { name: 'Refresh checks' }).click();
+    await expect.poll(() => healthCalls).toBe(2);
+    await expect(backend.locator('[data-value]')).toHaveText('Healthy');
+    releaseFirstHealth();
+    // Wait for the held JSONP callback to be consumed, then prove its older
+    // failure did not replace the newer successful refresh.
+    await page.waitForFunction(callback => typeof window[callback] !== 'function', delayedHealthCallback);
+    await expect(backend.locator('[data-value]')).toHaveText('Healthy');
+  } finally {
+    releaseFirstHealth?.();
+    raceHealthRequests = false;
+  }
 
   includeBackendIdentity = false;
   await page.getByRole('button', { name: 'Refresh checks' }).click();

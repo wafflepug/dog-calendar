@@ -191,7 +191,9 @@ jobs:
       matrix:
         include:
           - group: overview
-            configs: playwright.care-overview.config.js playwright.care-cleaner-ui.config.js playwright.care-detailed-care-runtime.config.js playwright.care-mobile-hierarchy.config.js
+            configs: playwright.care-overview.config.js
+          - group: profiles
+            configs: playwright.care-cleaner-ui.config.js playwright.care-detailed-care-runtime.config.js playwright.care-mobile-hierarchy.config.js
           - group: refinements
             configs: playwright.care-ui-refinements.config.js playwright.care-profile.config.js playwright.care-ui-polish.config.js playwright.care-roster.config.js playwright.returning-dogs.config.js
           - group: navigation
