@@ -33,7 +33,7 @@ Improve spatial keyboard navigation of the five Care tabs on the mobile grid. Ar
 ## Local verification
 
 - Luna implemented the bounded Items and Photos/history stories; the lead model reviewed integration and corrected identity/visibility focus guards and the active style cascade.
-- 301 Node tests pass. 60 focused browser cases pass: 8 new full-runtime/fallback cases across Chromium and WebKit, 7 existing Photos/fallback cases, and 45 existing overview/viewer cases across desktop, phone and WebKit projects.
+- 301 Node tests pass. 61 focused browser cases pass: 8 new full-runtime/fallback cases across Chromium and WebKit, 7 existing Photos/fallback cases, 45 existing overview/viewer cases across desktop, phone and WebKit projects, and one existing full-runtime shared-read journey.
 - The full-runtime layout measure caught legacy Photos fonts at 10px/8px. The scoped cascade fix now measures 18px for the header, 14px for group titles and 12px for descriptions, with a 72.8px group toggle on the synthetic phone fixture.
 - Matching gallery refreshes retain open groups and keyboard focus without taking focus from another control. Same-key/different-ID fixtures reset disclosure state. History remains lazy; grouping and native disclosure toggles introduce no additional reads.
 - The Items fixture permits only an intercepted, in-memory save for its exact synthetic stay. Save payload and descriptions remain intact; no production mutation is permitted. Saved photos can be scrolled clear of the fixed footer.
@@ -41,3 +41,5 @@ Improve spatial keyboard navigation of the five Care tabs on the mobile grid. Ar
 - Optional screenshot exports are separate from the functional CI path; ordinary failures retain screenshots/traces. The native disclosure and layout assertions run regardless of screenshot export.
 
 Physical phone hardware and real-device latency are unverified. This batch changes only frontend UI; it introduces no Apps Script source changes, data migration, paid service or access requirement. Current-head CI, merge SHA and live deployment attribution are added to the verified report after release.
+
+CI caught one stale expectation for the previous Photos heading. The regression now asserts the exact new heading and scope hint; its shared-read and no-mutation assertions remain intact. The corrected full-runtime case passed locally.

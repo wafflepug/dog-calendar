@@ -278,7 +278,8 @@ test('Belongings and Photos reuse one verified stay read in the full Care runtim
   await card.locator('[data-v11160-tab="belongings"]').click();
   await expect(card.locator('[data-directory-detail="belongings"]')).toHaveAttribute('data-detail-loaded', 'true');
   await card.locator('[data-v11160-tab="media"]').click();
-  await expect(card.locator('[data-v110-media-host]')).toContainText('Photos for this dog and stay');
+  await expect(card.locator('[data-v110-media-host] .v110-media-heading h4')).toHaveText('Photos');
+  await expect(card.locator('[data-v110-media-host] .v110-media-heading p')).toHaveText('Profile photos follow the dog; stay and belongings photos belong to this visit.');
   expect(fixture.actions.filter(item => item.action === 'get_guest_belongings')).toHaveLength(1);
   await card.locator('[data-v11160-tab="belongings"]').click();
   await card.locator('[data-v11160-tab="media"]').click();
