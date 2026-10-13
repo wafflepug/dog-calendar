@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.10.13.02",
-  "releaseName": "Care Profile Clarity and Feedback",
+  "assetRevision": "2026.10.13.03",
+  "releaseName": "Read-only Care Startup",
   "careIteration": {
     "returningDogSuggestions": true,
     "reviewedCareInheritance": true,

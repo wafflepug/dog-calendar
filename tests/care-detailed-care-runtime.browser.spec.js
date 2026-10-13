@@ -21,16 +21,16 @@ const longProfile = {
   friendlyDogs: 'Calm dogs after a slow introduction; keep meal bowls separate and supervise shared play'
 };
 
-function assertOnlyKnownStartupMutationWasBlocked(fixture) {
+function assertNoUnexpectedBackendRequests(fixture) {
   const backendBlocks = fixture.blocked.filter(item => item.action || item.url?.includes('script.google'));
-  const unexpected = backendBlocks.filter(item => item.action !== 'sync_dog_master_photos_to_upcoming_stays' || item.reason !== 'unapproved action');
-  expect(unexpected, JSON.stringify(unexpected)).toEqual([]);
+  expect(backendBlocks, JSON.stringify(backendBlocks)).toEqual([]);
   expect(backendBlocks.every(item => item.method === 'GET')).toBe(true);
 }
 
-async function installReadOnlyFixture(page) {
+async function installReadOnlyFixture(page, { allowManualPhotoSync = false, photoSyncResponses = ['success'] } = {}) {
   const actions = [];
   const blocked = [];
+  const photoSyncRequests = [];
   const stayKey = 'detailed care fixture|2026-10-12|2026-10-16';
   await page.route('**/*', async route => {
     const request = route.request(), url = request.url();
@@ -53,12 +53,34 @@ async function installReadOnlyFixture(page) {
       const callback = params.get('callback');
       let payload = {};
       try { payload = JSON.parse(params.get('payload') || '{}'); } catch (_) {}
+      if (resolved.action === 'sync_dog_master_photos_to_upcoming_stays' && callback) {
+        photoSyncRequests.push({ action: resolved.action, payload });
+        if (allowManualPhotoSync && payload.source === 'settings-manual-resync') {
+          const mode = photoSyncResponses.shift() || 'success';
+          if (mode === 'transport') return route.abort('failed');
+          if (mode === 'identity-error') {
+            const response = { result: 'error', error: 'Dog identity is ambiguous.' };
+            return route.fulfill({ status: 200, contentType: 'application/javascript', body: `${callback}(${JSON.stringify(response)});` });
+          }
+          if (mode === 'missing-result') {
+            return route.fulfill({ status: 200, contentType: 'application/javascript', body: `${callback}({});` });
+          }
+          if (mode === 'queued') {
+            const response = { result: 'queued', queued: true, updatedCount: 0, skippedExistingCount: 0, missingMasterPhotoCount: 0, eligibleStayCount: 3 };
+            return route.fulfill({ status: 200, contentType: 'application/javascript', body: `${callback}(${JSON.stringify(response)});` });
+          }
+          if (mode === 'invalid-count') {
+            const response = { result: 'success', updatedCount: 1, skippedExistingCount: 0, missingMasterPhotoCount: 0 };
+            return route.fulfill({ status: 200, contentType: 'application/javascript', body: `${callback}(${JSON.stringify(response)});` });
+          }
+          const response = { result: 'success', updatedCount: 1, skippedExistingCount: 2, missingMasterPhotoCount: 0, eligibleStayCount: 3, updatedStayKeys: [stayKey] };
+          return route.fulfill({ status: 200, contentType: 'application/javascript', body: `${callback}(${JSON.stringify(response)});` });
+        }
+        blocked.push({ method: request.method(), action: resolved.action, reason: 'unapproved action' });
+        return route.fulfill({ status: 403, body: 'Read-only fixture blocked action' });
+      }
       if (!resolved.policy.allowed) {
         blocked.push({ method: request.method(), action: resolved.action, reason: resolved.policy.reason });
-        if (request.method() === 'GET' && resolved.action === 'sync_dog_master_photos_to_upcoming_stays' && callback) {
-          const denial = { result: 'error', error: 'Read-only fixture denied this action.' };
-          return route.fulfill({ status: 200, contentType: 'application/javascript', body: `${callback}(${JSON.stringify(denial)});` });
-        }
         return route.fulfill({ status: 403, body: 'Read-only fixture blocked action' });
       }
       actions.push({ action: resolved.action, payload });
@@ -79,11 +101,11 @@ async function installReadOnlyFixture(page) {
     }
     return route.continue();
   });
-  return { actions, blocked, stayKey };
+  return { actions, blocked, photoSyncRequests, stayKey };
 }
 
 async function openFixtureProfile(page, fixture, viewport = { width: 390, height: 844 }, theme = 'light') {
-  const syncAttemptsBeforeLoad = fixture.blocked.filter(item => item.action === 'sync_dog_master_photos_to_upcoming_stays').length;
+  const syncAttemptsBeforeLoad = fixture.photoSyncRequests.length;
   await page.setViewportSize(viewport);
   await page.clock.setFixedTime(new Date('2026-10-13T12:00:00.000Z'));
   await page.emulateMedia({ colorScheme: theme });
@@ -96,9 +118,8 @@ async function openFixtureProfile(page, fixture, viewport = { width: 390, height
   await expect(card).toHaveClass(/is-profile-active/);
   await expect(card.locator('.directory-profile-intake-section')).toBeVisible();
   await expect.poll(() => fixture.actions.some(item => item.action === 'get_guest_profile')).toBe(true);
-  await expect.poll(() => fixture.blocked.filter(item => item.action === 'sync_dog_master_photos_to_upcoming_stays').length).toBe(syncAttemptsBeforeLoad + 1);
-  // Startup background reads (and the known blocked photo sync) may finish
-  // after the profile render. Take the ledger baseline only after it settles.
+  // Startup background reads may finish after the profile render. Take the
+  // ledger baseline only after they settle, and require zero startup writes.
   let previous = '';
   let stableSamples = 0;
   for (let sample = 0; sample < 40 && stableSamples < 4; sample += 1) {
@@ -108,7 +129,7 @@ async function openFixtureProfile(page, fixture, viewport = { width: 390, height
     previous = current;
   }
   expect(stableSamples, 'fixture action ledger did not settle').toBeGreaterThanOrEqual(4);
-  expect(fixture.blocked.filter(item => item.action === 'sync_dog_master_photos_to_upcoming_stays')).toHaveLength(syncAttemptsBeforeLoad + 1);
+  expect(fixture.photoSyncRequests).toHaveLength(syncAttemptsBeforeLoad);
   return card;
 }
 
@@ -162,7 +183,7 @@ test('Detailed Care toggles stay local and preserve drafts across Profile and Be
     await expect(feeding).toHaveValue('Synthetic draft: breakfast at 06:45 with a full bowl of water.');
   }
   console.log('DETAILED_CARE_LEDGER', JSON.stringify({ actions: fixture.actions.map(item => item.action), blocked: fixture.blocked }));
-  assertOnlyKnownStartupMutationWasBlocked(fixture);
+  assertNoUnexpectedBackendRequests(fixture);
   expect(fixture.blocked.filter(item => !['GET', 'HEAD'].includes(item.method))).toEqual([]);
 });
 
@@ -236,7 +257,7 @@ test('Detailed Care enlarged text wraps at phone, tablet, and desktop widths in 
     await fontScale.evaluate(style => style.remove());
     await card.locator('[data-cancel-profile-edit]').click();
   }
-  assertOnlyKnownStartupMutationWasBlocked(fixture);
+  assertNoUnexpectedBackendRequests(fixture);
   expect(fixture.blocked.filter(item => !['GET', 'HEAD'].includes(item.method))).toEqual([]);
   await page.waitForTimeout(1200);
   const settingsPanel = page.locator('#wh75SettingsPanel');
@@ -244,4 +265,79 @@ test('Detailed Care enlarged text wraps at phone, tablet, and desktop widths in 
   expect(await settingsPanel.evaluate(el => getComputedStyle(el).opacity)).toBe('0');
   expect(await settingsPanel.evaluate(el => getComputedStyle(el).pointerEvents)).toBe('none');
   await page.screenshot({ path: testInfo.outputPath('detailed-care-enlarged-text.png'), fullPage: true, animations: 'disabled' });
+});
+
+test('Settings photo resync runs only after a deliberate user action', async ({ page }) => {
+  const fixture = await installReadOnlyFixture(page, { allowManualPhotoSync: true });
+  const card = await openFixtureProfile(page, fixture);
+  expect(fixture.photoSyncRequests).toHaveLength(0);
+  await page.locator('[data-wh75-settings]').first().evaluate(button => button.click());
+  const button = page.locator('[data-v11216-master-photo-resync]');
+  await expect(button).toBeVisible();
+  page.once('dialog', dialog => dialog.accept());
+  await button.click();
+  await expect.poll(() => fixture.photoSyncRequests.length, 'explicit Settings click should issue one synthetic sync request').toBe(1);
+  await expect(page.locator('[data-v11216-master-photo-resync-status]')).toContainText('1 updated');
+  expect(fixture.photoSyncRequests).toHaveLength(1);
+  expect(fixture.photoSyncRequests[0].payload.source).toBe('settings-manual-resync');
+  expect(fixture.blocked).toEqual([]);
+  await expect(card.locator('.directory-profile-intake-section')).toBeVisible();
+});
+
+test('Settings resync stays offline-safe and identity errors never offer blind retry', async ({ page }) => {
+  const fixture = await installReadOnlyFixture(page, { allowManualPhotoSync: true, photoSyncResponses: ['identity-error', 'missing-result', 'queued', 'invalid-count'] });
+  await openFixtureProfile(page, fixture);
+  await page.locator('[data-wh75-settings]').first().evaluate(button => button.click());
+  const button = page.locator('[data-v11216-master-photo-resync]');
+  await expect(button).toBeVisible();
+  await page.evaluate(() => Object.defineProperty(navigator, 'onLine', { configurable: true, value: false }));
+  page.on('dialog', dialog => dialog.accept());
+  await button.click();
+  await expect(page.locator('[data-v11216-master-photo-resync-status]')).toContainText('while offline');
+  expect(fixture.photoSyncRequests).toHaveLength(0);
+  await page.evaluate(() => Object.defineProperty(navigator, 'onLine', { configurable: true, value: true }));
+  await button.click();
+  const status = page.locator('[data-v11216-master-photo-resync-status]');
+  await expect(status).toContainText('Dog identity is ambiguous');
+  await expect(status).toHaveAttribute('role', 'alert');
+  await expect(page.locator('[data-v11216-master-photo-resync-retry]')).toHaveCount(0);
+  await button.click();
+  await expect(status).toContainText('unknown error');
+  await expect(page.locator('[data-v11216-master-photo-resync-retry]')).toHaveCount(0);
+  await button.click();
+  await expect(status).toContainText('unknown error');
+  await expect(page.locator('[data-v11216-master-photo-resync-retry]')).toHaveCount(0);
+  await button.click();
+  await expect(status).toContainText('Resync stopped');
+  await expect(page.locator('[data-v11216-master-photo-resync-retry]')).toHaveCount(0);
+  expect(fixture.photoSyncRequests).toHaveLength(4);
+});
+
+test('Settings offers a focused deliberate Retry for transport failures and locks duplicate attempts', async ({ page }) => {
+  const fixture = await installReadOnlyFixture(page);
+  await openFixtureProfile(page, fixture);
+  await page.locator('[data-wh75-settings]').first().evaluate(button => button.click());
+  const button = page.locator('[data-v11216-master-photo-resync]');
+  await expect(button).toBeVisible();
+  await page.evaluate(() => {
+    window.__manualPhotoSyncCalls = 0;
+    window.sendPayloadToAppsScript = async payload => {
+      if (payload?.action !== 'sync_dog_master_photos_to_upcoming_stays' || payload?.source !== 'settings-manual-resync') throw new Error('Unexpected synthetic request');
+      window.__manualPhotoSyncCalls += 1;
+      if (window.__manualPhotoSyncCalls === 1) {
+        const error = new TypeError('Network request failed');
+        error.code = 'NETWORK_ERROR';
+        throw error;
+      }
+      return { result: 'success', updatedCount: 1, skippedExistingCount: 2, missingMasterPhotoCount: 0, eligibleStayCount: 3, updatedStayKeys: [] };
+    };
+  });
+  page.on('dialog', dialog => dialog.accept());
+  await button.click();
+  const retry = page.locator('[data-v11216-master-photo-resync-retry]');
+  await expect(retry).toBeFocused();
+  await retry.evaluate(el => { el.click(); el.click(); });
+  await expect(page.locator('[data-v11216-master-photo-resync-status]')).toContainText('1 updated');
+  expect(await page.evaluate(() => window.__manualPhotoSyncCalls)).toBe(2);
+  expect(fixture.photoSyncRequests).toHaveLength(0);
 });
