@@ -51,6 +51,10 @@ on:
       - 'playwright.care-photos.config.js'
       - 'playwright.care-ui-five.config.js'
       - 'playwright.care-ui-clarity.config.js'
+      - 'playwright.care-compact-controls.config.js'
+      - 'tests/care-source-compact.browser.spec.js'
+      - 'tests/care-past-records-compact.browser.spec.js'
+      - 'tests/care-record-dialog-readability.browser.spec.js'
       - 'tests/care-contact-caption.browser.spec.js'
       - 'tests/care-clarity-navigation.browser.spec.js'
       - 'tests/care-items-compact.browser.spec.js'
@@ -131,6 +135,10 @@ on:
       - 'playwright.care-photos.config.js'
       - 'playwright.care-ui-five.config.js'
       - 'playwright.care-ui-clarity.config.js'
+      - 'playwright.care-compact-controls.config.js'
+      - 'tests/care-source-compact.browser.spec.js'
+      - 'tests/care-past-records-compact.browser.spec.js'
+      - 'tests/care-record-dialog-readability.browser.spec.js'
       - 'tests/care-contact-caption.browser.spec.js'
       - 'tests/care-clarity-navigation.browser.spec.js'
       - 'tests/care-items-compact.browser.spec.js'
@@ -211,6 +219,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          - group: compact-controls
+            configs: playwright.care-compact-controls.config.js
           - group: overview
             configs: playwright.care-overview.config.js
           - group: profiles

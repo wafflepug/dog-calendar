@@ -384,9 +384,12 @@
 
   function renderProfileSourceEditor(card, record, statusText = '') {
     if (!card) return;
+    if (card.dataset?.v1082PastStay === 'true') return;
     const stayKey = profileStayKey(card);
     const host = ensureProfileSourceHost(card);
     if (!host || !stayKey) return;
+    /* V11.1.12 owns the compact disclosure once it has rendered this host. */
+    if (host.dataset.v11112SourceIdentity) return;
 
     const selected = String(record?.requestSource || '').trim();
     const signature = `${stayKey}|${selected}`;
@@ -415,7 +418,7 @@
   }
 
   function scheduleProfileSourceEditor(card) {
-    if (!card) return;
+    if (!card || card.dataset?.v1082PastStay === 'true') return;
     [140, 460, 1120, 1900].forEach(delay => {
       setTimeout(async () => {
         if (!card.isConnected || !card.classList.contains('is-profile-active')) return;
@@ -432,17 +435,26 @@
   async function saveProfileRequestSource(button) {
     const picker = button.closest('[data-v1117-profile-source-picker]');
     const card = button.closest('.directory-card');
+    /* Past stays are immutable snapshots. This guard also covers synthetic
+       clicks and legacy picker markup that may outlive the current renderer. */
+    if (card?.dataset?.v1082PastStay === 'true') return;
     const stayKey = String(picker?.dataset?.v1117StayKey || profileStayKey(card)).trim();
     const requestSource = String(button.dataset.v1117ProfileSourceValue || '').trim();
     if (!picker || !card || !stayKey || !requestSource || typeof sendPayloadToAppsScript !== 'function') return;
+    const identity = profileCacheIdentity(card);
+    if (card.dataset.v11112SourceSavingIdentity === identity) return;
+    const compactHost = card.querySelector('[data-v11112-care-source-host]');
+    card.dataset.v11112SourceSavingIdentity = identity;
+    if (compactHost) compactHost.dataset.v11112SourceSavingIdentity = identity;
 
-    const status = picker.querySelector('[data-v1117-profile-source-status]');
+    const status = picker.querySelector('[data-v11112-source-status], [data-v1117-profile-source-status]');
     const buttons = Array.from(picker.querySelectorAll('[data-v1117-profile-source-value]'));
     buttons.forEach(item => { item.disabled = true; });
     if (status) status.textContent = 'Saving…';
 
     try {
       const record = await profileRecord(card) || {};
+      if (profileCacheIdentity(card) !== identity || profileStayKey(card) !== stayKey) return;
       const response = await sendPayloadToAppsScript({
         action: 'update_request_source',
         stayKey,
@@ -450,29 +462,60 @@
         requestSource
       });
 
+      if (response?.queued === true || response?.result === 'queued') {
+        if (profileCacheIdentity(card) === identity && status) status.textContent = 'Waiting to sync · saved source unchanged';
+        buttons.forEach(item => { item.disabled = false; });
+        return;
+      }
+
       if (!response || response.result !== 'success') {
         throw new Error(response?.error || 'Request From could not be updated.');
       }
 
       const updated = { ...record, requestSource: String(response.requestSource || requestSource) };
+      const cardStillMatches = profileCacheIdentity(card) === identity && profileStayKey(card) === stayKey;
 
       try {
-        const identity = profileCacheIdentity(card);
         const reads = window.WAFFLE_CARE_PROFILE_READS;
-        if (typeof directoryProfileDetailCache !== 'undefined' && reads?.matches?.(card, updated)) {
+        if (cardStillMatches && typeof directoryProfileDetailCache !== 'undefined' && reads?.matches?.(card, updated)) {
           directoryProfileDetailCache[identity] = updated;
           card.dataset.v11112RequestSource = updated.requestSource;
           card.dataset.v11112RequestSourceKnown = 'true';
           card.dataset.v11112RequestSourceIdentity = identity;
         }
       } catch (_) {}
-      renderCareSourceBadge(stayKey, updated.requestSource, card);
+      if (cardStillMatches) renderCareSourceBadge(stayKey, updated.requestSource, card);
       hostInvalidateDirectoryCache();
-      renderProfileSourceEditor(card, updated, 'Saved');
+      if (!cardStillMatches) return;
+      const compactHost = card.querySelector('[data-v11112-care-source-host]');
+      if (compactHost?.dataset?.v11112SourceIdentity) {
+        const current = compactHost.querySelector('[data-v11112-care-source-current] strong');
+        if (current) current.textContent = updated.requestSource;
+        compactHost.querySelectorAll('[data-v1117-profile-source-value]').forEach(item => {
+          const selected = String(item.dataset.v1117ProfileSourceValue || '').toLowerCase() === updated.requestSource.toLowerCase();
+          item.setAttribute('aria-pressed', selected ? 'true' : 'false');
+          item.classList.toggle('is-selected', selected);
+          item.disabled = false;
+        });
+        const compactStatus = compactHost.querySelector('[data-v11112-source-status]');
+        if (compactStatus) compactStatus.textContent = 'Saved';
+        else {
+          const statusNode = document.createElement('strong');
+          statusNode.dataset.v11112SourceStatus = '';
+          statusNode.setAttribute('role', 'status');
+          statusNode.textContent = 'Saved';
+          compactHost.querySelector('[data-v1117-profile-source-picker]')?.prepend(statusNode);
+        }
+      } else {
+        renderProfileSourceEditor(card, updated, 'Saved');
+      }
     } catch (error) {
       console.error('Request From save failed:', error);
-      if (status) status.textContent = error?.message || String(error);
+      if (profileCacheIdentity(card) === identity && status) status.textContent = error?.message || String(error);
       buttons.forEach(item => { item.disabled = false; });
+    } finally {
+      if (card.dataset.v11112SourceSavingIdentity === identity) delete card.dataset.v11112SourceSavingIdentity;
+      if (compactHost?.dataset?.v11112SourceSavingIdentity === identity) delete compactHost.dataset.v11112SourceSavingIdentity;
     }
   }
 

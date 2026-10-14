@@ -5,6 +5,8 @@ Reviewed 17 September 2026. Repository: `wafflepug/dog-calendar`; always start i
 
 ## Owner priority: Care UI refinements next
 
+Candidate 14 October 2026: five compact controls and record refinements, [Care compact controls](care-compact-controls.md), release 2026.10.14.04. Next: simplify Dog record maintenance actions after a UI audit.
+
 Candidate 14 October 2026: five profile clarity and navigation improvements in [Care profile clarity](care-profile-clarity.md), release 2026.10.14.03. Await current-head regression and deployment verification. Next: enlarged-text Care summaries and footer-safe dialog audit.
 
 Candidate 14 October 2026: five compact Items, Photos and yearly Stay history improvements in [Compact Care panels](care-compact-panels.md), release 2026.10.14.02. Final checks and deployment evidence are required before treating this candidate as deployed. Next UI task: spatial keyboard focus on the mobile Care tab grid without activating tabs or adding reads.

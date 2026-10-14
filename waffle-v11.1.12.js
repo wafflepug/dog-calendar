@@ -75,6 +75,14 @@
     host.classList.add('v11112-care-source-host');
     host.setAttribute('data-v11112-care-source-host', 'true');
 
+    const careBrief = card.querySelector('[data-directory-care-brief]');
+    if (careBrief?.parentElement) {
+      if (host.parentElement !== careBrief.parentElement || careBrief.nextElementSibling !== host) {
+        careBrief.insertAdjacentElement('afterend', host);
+      }
+      return host;
+    }
+
     const notes = notesRow(card);
     if (notes?.parentElement) {
       if (host.parentElement !== notes.parentElement || notes.nextElementSibling !== host) {
@@ -197,32 +205,61 @@
     if (!host || !stayKey) return;
 
     const selected = String(record?.requestSource || '').trim();
+    const sourceLabel = selected || (hasOwnRequestSource(record) ? 'Not recorded' : 'Source not available');
+    const identity = profileCacheIdentity(card);
+    const previousIdentity = host.dataset.v11112SourceIdentity || '';
+    const sameIdentity = previousIdentity === identity;
+    if (sameIdentity && card.dataset.v11112SourceSavingIdentity === identity) return;
+    if (card.dataset.v11112SourceSavingIdentity && card.dataset.v11112SourceSavingIdentity !== identity) {
+      delete card.dataset.v11112SourceSavingIdentity;
+    }
+    if (host.dataset.v11112SourceSavingIdentity && host.dataset.v11112SourceSavingIdentity !== identity) {
+      delete host.dataset.v11112SourceSavingIdentity;
+    }
+    const previousDisclosure = host.querySelector('[data-v11112-source-details]');
+    const disclosureOpen = sameIdentity && previousDisclosure?.open === true;
+    const focusedSummary = sameIdentity && previousDisclosure?.querySelector('summary') === document.activeElement;
+    const focusedSourceValue = sameIdentity && document.activeElement?.matches?.('[data-v1117-profile-source-value]')
+      ? String(document.activeElement.dataset.v1117ProfileSourceValue || '')
+      : '';
+    const previousStatus = sameIdentity
+      ? String(host.querySelector('[data-v11112-source-status]')?.textContent || '').trim()
+      : '';
+    const visibleStatus = statusText || previousStatus;
+    host.dataset.v1117SourceRender = `${stayKey}|${selected}`;
+    host.dataset.v11112SourceIdentity = identity;
+    if (card.dataset.v1082PastStay === 'true') {
+      host.innerHTML = `
+        <section class="v1117-profile-source-picker v11112-care-source-picker v11112-care-source-readonly" data-v1117-profile-source-picker data-v1117-stay-key="${escapeHtml(stayKey)}">
+          <div class="v11112-care-source-current" data-v11112-care-source-current><span>Request source</span><strong>${escapeHtml(sourceLabel)}</strong></div>
+          <strong data-v11112-source-status role="status">${escapeHtml(visibleStatus)}</strong>
+        </section>`;
+      return;
+    }
     rememberRecord(card, {
       ...(record || {}),
       stayKey,
       requestSource: selected
     });
-
-    host.dataset.v1117SourceRender = `${stayKey}|${selected}`;
     host.innerHTML = `
       <section class="v1117-profile-source-picker v11112-care-source-picker"
         data-v1117-profile-source-picker
         data-v1117-stay-key="${escapeHtml(stayKey)}">
-        <div class="v1117-profile-source-heading v11112-care-source-heading">
-          <div>
-            <span>REQUEST FROM</span>
-            <small>Tap another option at any time if the original source was entered incorrectly.</small>
+        <div class="v11112-care-source-current" data-v11112-care-source-current><span>Request source</span><strong>${escapeHtml(sourceLabel)}</strong></div>
+        <strong data-v11112-source-status role="status">${escapeHtml(visibleStatus)}</strong>
+        <details data-v11112-source-details${disclosureOpen ? ' open' : ''}>
+          <summary tabindex="0">Change booking source</summary>
+          <div class="v1117-profile-source-grid v11112-care-source-grid" role="group" aria-label="Request From">
+            ${sourceDefinitions().map(source => sourceTileHtml(source, selected)).join('')}
           </div>
-          <strong data-v1117-profile-source-status>
-            ${escapeHtml(statusText || (selected ? `Selected: ${selected}` : 'Not recorded · Tap to choose'))}
-          </strong>
-        </div>
-        <div class="v1117-profile-source-grid v11112-care-source-grid"
-          role="group"
-          aria-label="Request From">
-          ${sourceDefinitions().map(source => sourceTileHtml(source, selected)).join('')}
-        </div>
+        </details>
       </section>`;
+    if (focusedSummary) host.querySelector('[data-v11112-source-details] summary')?.focus({ preventScroll: true });
+    if (focusedSourceValue) {
+      Array.from(host.querySelectorAll('[data-v1117-profile-source-value]'))
+        .find(button => button.dataset.v1117ProfileSourceValue === focusedSourceValue)
+        ?.focus({ preventScroll: true });
+    }
   }
 
   async function hydrateCard(card, options = {}) {
@@ -244,14 +281,16 @@
     }
 
     try {
-      const record = await resolveProfileRecord(card, options);
+      const record = card.dataset.v1082PastStay === 'true'
+        ? cachedProfileRecord(card)
+        : await resolveProfileRecord(card, options);
       if (!card.isConnected || !card.classList.contains('is-profile-active')) return;
-      renderStableSourceEditor(card, record || { requestSource: '' });
+      renderStableSourceEditor(card, record || {});
     } catch (error) {
       console.warn('Care Request From could not be restored:', error);
       if (!card.isConnected) return;
       const fallback = cachedProfileRecord(card);
-      renderStableSourceEditor(card, fallback || { requestSource: '' }, 'Could not refresh · tap to retry');
+      renderStableSourceEditor(card, fallback || {}, 'Could not refresh the saved source.');
     }
   }
 

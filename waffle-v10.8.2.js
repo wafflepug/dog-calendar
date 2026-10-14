@@ -7,6 +7,7 @@ let v1082ActiveStayView = 'current';
 let v1082PastLoaded = false;
 let v1082PastLoadPromise = null;
 let v1082PastResponse = null;
+const v1082PastRecordsDisclosure = new Map();
 
 function v1082Escape(value) {
     return escapeDashboardHtml(
@@ -76,6 +77,9 @@ function v1082PastCardHtml(booking) {
     const checkoutDate = String(booking.checkoutDate || booking.actualCheckoutDate || '').trim();
     const displayNumber = /^#?\d+$/.test(dogNumber) && Number(dogNumber.replace(/^#/, '')) > 0 ? `#${dogNumber.replace(/^#/, '').padStart(5, '0')}` : '';
     const dogIdentityLabel = displayNumber ? `Dog ID ${displayNumber}` : '';
+    const telPhone = phone.replace(/[^+\d;,.]/g, '');
+    const hasCallablePhone = /\d{6}/.test(telPhone);
+    const recordsIdentity = [stayId, dogId, stayKey].map(value => String(value || '').trim().toLowerCase()).join('::');
 
     return `
         <div
@@ -186,69 +190,44 @@ function v1082PastCardHtml(booking) {
                         class="directory-care-strip"
                         data-directory-care="${v1082Escape(stayKey)}">
                         <span class="directory-care-unset">
-                            🛡️ No saved care alerts
+                            🛡️ Care alerts not loaded
                         </span>
-                    </div>
-
-                    <div
-                        class="directory-intake-strip v1082-past-intake"
-                        data-directory-intake="${v1082Escape(stayKey)}">
-                        <div class="directory-intake-state">
-                            <span class="directory-intake-dot is-not-sent"></span>
-                            <span>No Digital Intake on record</span>
-                        </div>
-                    </div>
-
-                    <div
-                        class="directory-legacy-strip v1082-past-legacy"
-                        data-directory-legacy="${v1082Escape(stayKey)}">
-                        <div class="directory-legacy-state">
-                            <span>📚 No Legacy Intake on record</span>
-                        </div>
                     </div>
 
                     <div class="directory-attributes-grid directory-core-attributes v1082-past-core-details">
                         <div class="directory-attribute">
                             <span class="directory-field-label">Owner</span>
-                            <span class="directory-field-value">${v1082Escape(ownerName || 'N/A')}</span>
+                            <span class="directory-field-value" data-v1082-past-owner>${v1082Escape(ownerName || 'Not recorded')}</span>
                         </div>
 
                         <div class="directory-attribute">
                             <span class="directory-field-label">Contact</span>
-                            <span class="directory-field-value">${v1082Escape(phone || 'N/A')}</span>
+                            ${phone ? hasCallablePhone ? `<a class="directory-field-value v1082-past-call-owner" href="tel:${v1082Escape(telPhone)}" aria-label="Call owner ${v1082Escape(ownerName || '')}${ownerName ? ', ' : ''}${v1082Escape(phone)}" data-v1082-past-phone>${v1082Escape(phone)}</a>` : `<span class="directory-field-value" data-v1082-past-phone>${v1082Escape(phone)}</span>` : '<span class="directory-field-value" data-v1082-past-phone>Not recorded</span>'}
                         </div>
 
                         <div class="directory-attribute directory-attribute-wide">
                             <span class="directory-field-label">Notes</span>
-                            <span class="directory-field-value">${v1082Escape(notes || 'None')}</span>
+                            ${notes.length > 160 ? `<details class="v1082-past-note-details"><summary>Handover note</summary><span class="directory-field-value v1082-past-notes">${v1082Escape(notes)}</span></details>` : `<span class="directory-field-value v1082-past-notes">${v1082Escape(notes || 'None')}</span>`}
                         </div>
                     </div>
 
-                    <section
-                        class="directory-profile-section directory-profile-intake-section"
-                        data-directory-detail="profile"
-                        data-detail-loaded="false">
-                        <div class="directory-profile-section-heading">
-                            <div>
-                                <span class="directory-profile-section-kicker">Past stay profile</span>
-                                <h4>📋 Profile &amp; Care</h4>
+                    <details class="v1082-past-records" data-v1082-past-records data-records-identity="${v1082Escape(recordsIdentity)}">
+                        <summary>Records &amp; forms <span class="v1082-past-records-status" data-v1082-records-status>Record status not loaded</span></summary>
+                        <div class="v1082-past-records-content">
+                            <div class="directory-intake-strip v1082-past-intake" data-directory-intake="${v1082Escape(stayKey)}">
+                                <div class="directory-intake-state"><span class="directory-intake-dot is-not-sent"></span><span>Digital intake status not loaded</span></div>
                             </div>
-                            <div class="directory-profile-section-tools">
-                                <span
-                                    class="intake-profile-source"
-                                    data-intake-profile-summary>
-                                    Loading profile…
-                                </span>
+                            <div class="directory-legacy-strip v1082-past-legacy" data-directory-legacy="${v1082Escape(stayKey)}">
+                                <div class="directory-legacy-state"><span>📚 Legacy record status not loaded</span></div>
                             </div>
                         </div>
-                        <div
-                            class="directory-fused-details-body"
-                            data-directory-intake-attributes>
-                            <div class="intake-profile-empty">
-                                Open this profile to load saved intake attributes.
-                            </div>
-                        </div>
+                    </details>
+
+                    <section class="directory-profile-section directory-profile-intake-section" data-directory-detail="profile" data-detail-loaded="false">
+                        <div class="directory-profile-section-heading"><div><span class="directory-profile-section-kicker">Past stay profile</span><h4>📋 Profile &amp; Care</h4></div><div class="directory-profile-section-tools"><span class="intake-profile-source" data-intake-profile-summary>Loading profile…</span></div></div>
+                        <div class="directory-fused-details-body" data-directory-intake-attributes><div class="intake-profile-empty">Open this profile to load saved intake attributes.</div></div>
                     </section>
+
                 </section>
 
                 <section
@@ -288,6 +267,29 @@ function v1082ApplyPastReadOnly(card) {
     card.classList.add(
         'is-v1082-readonly'
     );
+
+    const records = card.querySelector('[data-v1082-past-records]');
+    if (records) {
+        const identity = [card.dataset.directoryStayId, card.dataset.directoryDogId, card.dataset.directoryStayKey || card.dataset.stayKey].map(value => String(value || '').trim().toLowerCase()).join('::');
+        records.dataset.recordsIdentity = identity;
+        if (v1082PastRecordsDisclosure.has(identity)) records.open = v1082PastRecordsDisclosure.get(identity);
+        const status = records.querySelector('[data-v1082-records-status]');
+        const intakeText = String(records.querySelector('[data-directory-intake]')?.textContent || '').replace(/\s+/g, ' ').trim();
+        const legacyText = String(records.querySelector('[data-directory-legacy]')?.textContent || '').replace(/\s+/g, ' ').trim();
+        const intakeDot = records.querySelector('[data-directory-intake] .directory-intake-dot');
+        const legacyStrip = records.querySelector('[data-directory-legacy]');
+        const intake = /error|failed|retry|unavailable/i.test(intakeText) ? 'Digital intake unavailable' : /no digital intake|not sent/i.test(intakeText) ? 'No digital intake' : /awaiting|pending|processing|queued/i.test(intakeText) ? 'Digital intake pending' : intakeDot?.classList.contains('is-complete') || /intake complete|intake submitted|intake saved/i.test(intakeText) ? 'Digital intake saved' : 'Digital intake status unknown';
+        const legacy = /error|failed|retry|unavailable/i.test(legacyText) ? 'Legacy record unavailable' : /no legacy (?:intake|pdf|record)|not uploaded/i.test(legacyText) ? 'No legacy record' : /awaiting|pending|processing|queued/i.test(legacyText) ? 'Legacy status pending' : legacyStrip?.classList.contains('has-document') ? 'Legacy record saved' : 'Legacy status unknown';
+        const nextStatus = `${intake} · ${legacy}`;
+        if (status && status.textContent !== nextStatus) status.textContent = nextStatus;
+        if (!records.dataset.v1082StateBound) {
+            records.dataset.v1082StateBound = 'true';
+            records.addEventListener('toggle', () => {
+                const key = records.dataset.recordsIdentity || '';
+                if (key) v1082PastRecordsDisclosure.set(key, records.open);
+            });
+        }
+    }
 
     card
         .querySelectorAll(
@@ -387,6 +389,11 @@ function v1082ApplyPastResponse(response) {
         );
 
     if (!grid) return;
+
+    grid.querySelectorAll('[data-v1082-past-records]').forEach(details => {
+        const key = details.dataset.recordsIdentity || '';
+        if (key) v1082PastRecordsDisclosure.set(key, details.open);
+    });
 
     const bookings =
         Array.isArray(
