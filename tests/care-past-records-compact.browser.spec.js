@@ -18,9 +18,9 @@ async function fixture(page) {
     const req = route.request(), url = req.url();
     if (!['GET', 'HEAD'].includes(req.method())) return route.fulfill({ status: 405, body: 'Read-only fixture' });
     if (url.includes('docs.google.com/spreadsheets') && url.includes('output=csv')) {
-      const row = [booking.timestamp, booking.dogName, booking.breed, '02/10/2026', '06/10/2026', booking.ownerName, booking.phone, '', '', booking.notes, '', 'Boarding', 'Other', booking.dogId, booking.stayId, booking.dogNumber];
-      const csv = value => `"${String(value || '').replace(/"/g, '""')}"`;
-      return route.fulfill({ status: 200, contentType: 'text/csv', body: `Timestamp,Dog Name,Breed,Start Date,End Date,Owner,Phone,Likes,Dislikes,Notes,Edit Link,Booking Type,Source,Dog ID,Stay ID,Dog Number\n${row.map(csv).join(',')}` });
+      // The current-booking CSV is empty; this historical stay exists only in the Past response.
+      // Mirroring it here races the startup current-to-past migration with the opened fixture card.
+      return route.fulfill({ status: 200, contentType: 'text/csv', body: 'Timestamp,Dog Name,Breed,Start Date,End Date,Owner,Phone,Likes,Dislikes,Notes,Edit Link,Booking Type,Source,Dog ID,Stay ID,Dog Number\n' });
     }
     if (url.includes('cdn.jsdelivr.net') && url.includes('fullcalendar')) return route.fulfill({ status: 200, contentType: 'application/javascript', body: fullCalendar });
     if (url.includes('script.google')) {
@@ -88,7 +88,11 @@ test.describe('compact past contact and records', () => {
     await page.emulateMedia({ colorScheme: 'dark' });
     await expect(records.locator('summary')).toBeVisible();
     await page.emulateMedia({ colorScheme: 'light' });
-    await records.locator('summary').click();
+    // Verify native keyboard closing after the theme reflow; pointer opening is checked above.
+    await records.locator('summary').focus();
+    await expect(records.locator('summary')).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(card).toBeVisible();
     await expect(records).not.toHaveAttribute('open', '');
   });
 

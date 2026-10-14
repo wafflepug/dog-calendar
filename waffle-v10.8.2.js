@@ -207,12 +207,12 @@ function v1082PastCardHtml(booking) {
 
                         <div class="directory-attribute directory-attribute-wide">
                             <span class="directory-field-label">Notes</span>
-                            ${notes.length > 160 ? `<details class="v1082-past-note-details"><summary>Handover note</summary><span class="directory-field-value v1082-past-notes">${v1082Escape(notes)}</span></details>` : `<span class="directory-field-value v1082-past-notes">${v1082Escape(notes || 'None')}</span>`}
+                            ${notes.length > 160 ? `<details class="v1082-past-note-details"><summary tabindex="0">Handover note</summary><span class="directory-field-value v1082-past-notes">${v1082Escape(notes)}</span></details>` : `<span class="directory-field-value v1082-past-notes">${v1082Escape(notes || 'None')}</span>`}
                         </div>
                     </div>
 
                     <details class="v1082-past-records" data-v1082-past-records data-records-identity="${v1082Escape(recordsIdentity)}">
-                        <summary>Records &amp; forms <span class="v1082-past-records-status" data-v1082-records-status>Record status not loaded</span></summary>
+                        <summary tabindex="0">Records &amp; forms <span class="v1082-past-records-status" data-v1082-records-status>Record status not loaded</span></summary>
                         <div class="v1082-past-records-content">
                             <div class="directory-intake-strip v1082-past-intake" data-directory-intake="${v1082Escape(stayKey)}">
                                 <div class="directory-intake-state"><span class="directory-intake-dot is-not-sent"></span><span>Digital intake status not loaded</span></div>
