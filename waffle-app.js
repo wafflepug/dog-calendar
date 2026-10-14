@@ -1906,6 +1906,7 @@ function ensureV10QuickAdd() {
             </div>
             <div class="v10-quick-actions">
                 <button type="button" data-v10-quick-action="boarding"><span>🏡</span><strong>Boarding</strong><small>Confirmed booking form</small></button>
+                <button type="button" data-v10-quick-action="visit-plan"><span>🗓️</span><strong>Multiple visits</strong><small>Several dogs or dates</small></button>
                 <button type="button" data-v10-quick-action="potential"><span>❓</span><strong>Potential</strong><small>Pending stay request</small></button>
                 <button type="button" data-v10-quick-action="meet"><span>🤝</span><strong>Meet & Greet</strong><small>Schedule a visit</small></button>
                 <button type="button" data-v10-quick-action="reminder"><span>📌</span><strong>Reminder</strong><small>Shared team note</small></button>

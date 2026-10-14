@@ -148,6 +148,8 @@ for (const [width, theme] of [[320, 'light'], [1440, 'dark']]) test(`Care sectio
   const overview = card.locator('[data-v11160-tab="profile"]');
   const items = card.locator('[data-v11160-tab="belongings"]');
   const panel = card.locator('[data-directory-main-panel="profile"]');
+  // The initial operations read is background startup work, not tab-focus work.
+  await expect.poll(() => calls.get('get_stay_operations') || 0).toBeGreaterThan(0);
   const before = Object.fromEntries(calls);
   await overview.focus();
   await page.keyboard.press('ArrowRight');

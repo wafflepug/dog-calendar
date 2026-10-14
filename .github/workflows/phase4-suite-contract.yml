@@ -4,6 +4,8 @@ on:
   pull_request:
     paths:
       - 'phase4*.js'
+      - 'booking-plan.js'
+      - 'tests/booking-plan.test.js'
       - 'waffle-build.json'
       - 'apps-script/**'
       - '.github/workflows/phase4-suite-contract.yml'
@@ -25,7 +27,7 @@ jobs:
       - name: Validate Phase 4 JavaScript syntax
         run: |
           set -euo pipefail
-          for file in phase4.js phase4-core.js phase4-booking.js phase4-operations.js phase4-ai-actions.js; do
+          for file in phase4.js phase4-core.js booking-plan.js phase4-booking.js phase4-operations.js phase4-ai-actions.js; do
             test -f "$file"
             node --check "$file"
           done
@@ -53,7 +55,7 @@ jobs:
               assert phase4.get(key) is value, f'{key} contract mismatch'
           assert phase4.get('loader') == 'phase4.js'
           assert set(phase4.get('modules') or []) == {
-            'phase4-core.js','phase4-booking.js','phase4-operations.js','phase4-ai-actions.js'
+            'phase4-core.js','booking-plan.js','phase4-booking.js','phase4-operations.js','phase4-ai-actions.js'
           }
           PY
           grep -q 'phase4.js' waffle-bootstrap.js
@@ -65,6 +67,7 @@ jobs:
           grep -q 'duplicate' phase4-booking.js
           grep -q 'capacity' phase4-booking.js
           grep -q 'TextDetector' phase4-booking.js
+          node --test tests/booking-plan.test.js
           grep -Eq 'Pawshake|Mad Paws|marketplace|source' phase4-booking.js
 
       - name: Validate 4B Owner Self-Service

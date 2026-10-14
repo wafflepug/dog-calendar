@@ -302,6 +302,8 @@
 
   function relocateLauncher(node) {
     if (!(node instanceof HTMLElement) || node.closest?.('#wh75SettingsPanel,#whSitterDesktopSidebar')) return;
+    // Controls inside the workspace (including Close Sitter Tools) are not launchers.
+    if (node.closest?.('#p4Modal')) return;
     if (!/\bsitter\s+tools\b/i.test(signature(node))) return;
     if (!originalToolsLauncher || !originalToolsLauncher.isConnected) originalToolsLauncher = node;
     if (!originalToolsHref && node instanceof HTMLAnchorElement && node.href) originalToolsHref = node.href;

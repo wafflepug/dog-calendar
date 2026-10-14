@@ -92,7 +92,8 @@ test.describe('compact past contact and records', () => {
     await expect(card.locator('[data-directory-legacy]')).toBeAttached();
     const detailReads = () => reads.filter(action => ['get_guest_profile', 'get_guest_belongings', 'get_dog_history', 'get_dog_master_profile'].includes(action));
     const before = detailReads().length;
-    await records.locator('summary').click();
+    // Click the stable disclosure marker area, away from asynchronously refreshed status text.
+    await records.locator('summary').click({ position: { x: 12, y: 12 } });
     await expect(records).toHaveAttribute('open', '');
     expect(detailReads()).toHaveLength(before);
     await page.emulateMedia({ colorScheme: 'dark' });
