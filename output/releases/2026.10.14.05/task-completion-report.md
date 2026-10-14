@@ -14,7 +14,7 @@ Candidate release 2026.10.14.05. Development delegated to Luna; lead model revie
 
 ## Testing Matrix
 
-316 Node tests and 58 distinct focused browser cases passed locally: 20 new isolated planner cases, 2 shipped-runtime Add-menu cases, and 36 existing booking/focus cases. Chromium/WebKit coverage includes 320/390/1440px, light/dark, enlarged text, exact IDs, new-ID reuse, valid/bounded weekly dates, overlapping/duplicate/capacity preflight, partial retry, queued states, concurrent-click guards, stale reviewed-input invalidation, paused-plan ordinary booking, actual loader assets and preserved modal draft/focus. Inline active-runtime and Phase 4 manifest checks passed. No live customer writes occurred.
+316 Node tests and 60 distinct focused browser cases passed locally: 20 new isolated planner cases, 2 shipped-runtime Add-menu cases, 36 existing booking/focus cases, and 2 first-open/cache-upgrade cases. Chromium/WebKit coverage includes 320/390/1440px, light/dark, enlarged text, exact IDs, new-ID reuse, valid/bounded weekly dates, overlapping/duplicate/capacity preflight, partial retry, queued states, concurrent-click guards, stale reviewed-input invalidation, paused-plan ordinary booking, actual loader assets and preserved modal draft/focus. Inline active-runtime and Phase 4 manifest checks passed. No live customer writes occurred.
 
 For step-by-step happy-path, failure and edge acceptance checks, see docs/multi-visit-booking-plans.md. Physical phone acceptance remains for the owner.
 
