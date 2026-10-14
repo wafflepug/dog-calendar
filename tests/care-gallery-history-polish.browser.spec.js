@@ -7,7 +7,7 @@ const fullCalendar = fs.readFileSync(path.join(__dirname, 'fixtures', 'fullcalen
 const careRuntime = fs.readFileSync(path.join(__dirname, '..', 'care.js'), 'utf8');
 const fallbackMedia = careRuntime.match(/async function fallbackMedia\(card\) \{[\s\S]*?\n  \}/)?.[0];
 const fallbackToggle = careRuntime.match(/function toggleMediaGroup\(button\) \{[\s\S]*?\n  \}/)?.[0];
-const evidenceDir = path.join(__dirname, '..', 'output', 'releases', '2026.10.14.02', 'evidence');
+const evidenceDir = path.join(__dirname, '..', 'output', 'releases', '2026.10.14.03', 'evidence');
 fs.mkdirSync(evidenceDir, { recursive: true });
 
 const dogId = '11111111-1111-4111-8111-111111111111';
@@ -60,7 +60,7 @@ async function installReadOnlyFixture(page) {
         stayKey: payload.stayKey || stayKey,
         identityResolution: { status: 'resolved', identity: { stayKey: payload.stayKey || stayKey, stayId, dogId } },
         dogPhotoGallery: [{ id: 'profile-1', label: 'Profile portrait', previewUrl: 'https://photos.test/profile.jpg' }],
-        stayPhotos: [{ id: 'stay-1', label: 'Playtime', previewUrl: 'https://photos.test/stay.jpg' }], photos: []
+        stayPhotos: [{ id: 'stay-1', label: 'Extended care handover photo caption that wraps cleanly at narrow widths without clipping', previewUrl: 'https://photos.test/stay.jpg' }], photos: []
       } };
       if (action === 'get_dog_history') response = { result: 'success', history };
       if (callback) return route.fulfill({ status: 200, contentType: 'application/javascript', body: `${callback}(${JSON.stringify(response)});` });
@@ -124,9 +124,23 @@ test('selected Care keeps gallery group state and organizes history by visit sta
   await expect(groupButtons.nth(2)).toHaveAttribute('aria-expanded', 'true');
   expect(actionReads.filter(item => item.action === 'get_guest_belongings')).toHaveLength(beforeDisclosureReads);
 
-  if (browserName === 'chromium' && process.env.WAFFLE_CAPTURE_UI_EVIDENCE === '1') await media.screenshot({ path: path.join(evidenceDir, 'care-gallery-phone-390.png'), fullPage: false });
-  await page.setViewportSize({ width: 1440, height: 900 });
-  if (browserName === 'chromium' && process.env.WAFFLE_CAPTURE_UI_EVIDENCE === '1') await media.screenshot({ path: path.join(evidenceDir, 'care-gallery-desktop-1440.png'), fullPage: false });
+  const stayCaption = media.locator('.v110-media-section').nth(1).locator('.v110-media-photo-meta > span');
+  await expect(stayCaption).toContainText('Extended care handover');
+  for (const width of [320, 390, 1440]) {
+    await page.setViewportSize({ width, height: width === 1440 ? 900 : 844 });
+    for (const colorScheme of ['light', 'dark']) {
+      await page.emulateMedia({ colorScheme });
+      await page.locator('body').evaluate((body, dark) => body.classList.toggle('dark-theme', dark), colorScheme === 'dark');
+      await expect.poll(() => stayCaption.evaluate(node => parseFloat(getComputedStyle(node).fontSize))).toBeGreaterThanOrEqual(14);
+      await expect(stayCaption).toHaveCSS('white-space', 'normal');
+      const layout = await stayCaption.evaluate(node => ({ width: node.clientWidth, scrollWidth: node.scrollWidth, height: node.getBoundingClientRect().height, font: parseFloat(getComputedStyle(node).fontSize), color: getComputedStyle(node).color }));
+      expect(layout.scrollWidth).toBeLessThanOrEqual(layout.width + 1);
+      expect(layout.height).toBeGreaterThan(layout.font);
+      expect(layout.color).toBe(colorScheme === 'dark' ? 'rgb(248, 250, 252)' : 'rgb(23, 37, 84)');
+    }
+    if (browserName === 'chromium' && process.env.WAFFLE_CAPTURE_UI_EVIDENCE === '1') await media.screenshot({ path: path.join(evidenceDir, `care-gallery-caption-${width}.png`), fullPage: false });
+  }
+  await page.locator('body').evaluate(body => body.classList.remove('dark-theme'));
 
   const beforeRefresh = actionReads.filter(item => item.action === 'get_guest_belongings').length;
   await groupButtons.nth(0).focus();
@@ -173,7 +187,8 @@ test('selected Care keeps gallery group state and organizes history by visit sta
   await expect(yearGroups.nth(3).locator(':scope > summary')).toContainText('Undated stays');
   await expect(yearGroups.nth(3)).toHaveAttribute('open', '');
   await expect(historyHost).toContainText('Alexandria Peterson-Smith');
-  await expect(historyHost.locator('a[href="tel:0400123456"]')).toHaveCount(5);
+  await expect(historyHost.locator('.v108-owner-list a[href="tel:0400123456"]')).toHaveCount(1);
+  await expect(historyHost.locator('.v108-stay-history a[href="tel:0400123456"]')).toHaveCount(0);
   await expect(yearGroups.nth(1).locator('.v108-stay-history')).toContainText('Checked out');
   await expect(yearGroups.nth(1).locator('.v108-stay-history')).toContainText('Originally scheduled');
   await expect(yearGroups.nth(1).locator('.v108-stay-history')).toContainText(longNote.trim());

@@ -1,7 +1,7 @@
 const { test, expect } = require('@playwright/test');
 
 async function seedStatusStorage(page) {
-  await page.route('http://127.0.0.1:44972/__status-seed.html', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html><title>Fixture seed</title>' }));
+  await page.route('http://127.0.0.1:4186/__status-seed.html', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html><title>Fixture seed</title>' }));
   await page.goto('/__status-seed.html');
   await page.evaluate(async () => {
     const open = (name, storeName, keyPath) => new Promise((resolve, reject) => {
