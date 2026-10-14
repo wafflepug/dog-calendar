@@ -279,7 +279,12 @@ function v1082ApplyPastReadOnly(card) {
         const intakeDot = records.querySelector('[data-directory-intake] .directory-intake-dot');
         const legacyStrip = records.querySelector('[data-directory-legacy]');
         const intake = /error|failed|retry|unavailable/i.test(intakeText) ? 'Digital intake unavailable' : /no digital intake|not sent/i.test(intakeText) ? 'No digital intake' : /awaiting|pending|processing|queued/i.test(intakeText) ? 'Digital intake pending' : intakeDot?.classList.contains('is-complete') || /intake complete|intake submitted|intake saved/i.test(intakeText) ? 'Digital intake saved' : 'Digital intake status unknown';
-        const legacy = /error|failed|retry|unavailable/i.test(legacyText) ? 'Legacy record unavailable' : /no legacy (?:intake|pdf|record)|not uploaded/i.test(legacyText) ? 'No legacy record' : /awaiting|pending|processing|queued/i.test(legacyText) ? 'Legacy status pending' : legacyStrip?.classList.contains('has-document') ? 'Legacy record saved' : 'Legacy status unknown';
+        const legacySaved = legacyStrip?.classList.contains('has-document');
+        const legacyUnavailable = /error|failed|retry|unavailable/i.test(legacyText);
+        const legacyPending = /awaiting|pending|processing|queued/i.test(legacyText);
+        const legacy = legacySaved
+            ? legacyUnavailable ? 'Legacy PDF saved · details unavailable' : legacyPending ? 'Legacy PDF saved · processing pending' : 'Legacy record saved'
+            : legacyUnavailable ? 'Legacy record unavailable' : /no legacy (?:intake|pdf|record)|not uploaded/i.test(legacyText) ? 'No legacy record' : legacyPending ? 'Legacy status pending' : 'Legacy status unknown';
         const nextStatus = `${intake} · ${legacy}`;
         if (status && status.textContent !== nextStatus) status.textContent = nextStatus;
         if (!records.dataset.v1082StateBound) {

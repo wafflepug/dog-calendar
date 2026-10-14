@@ -127,6 +127,19 @@ test.describe('compact past contact and records', () => {
     });
     await expect(page.locator('[data-v1082-records-status]')).toContainText('Legacy status unknown');
     await expect(page.locator('[data-v1082-records-status]')).toContainText('Digital intake status unknown');
+    await page.evaluate(() => {
+      const card = document.querySelector('.v1082-past-card');
+      const strip = card.querySelector('[data-directory-legacy]');
+      strip.classList.add('has-document'); strip.textContent = 'PDF available. OCR failed; retry processing.';
+      v1082ApplyPastReadOnly(card);
+    });
+    await expect(page.locator('[data-v1082-records-status]')).toContainText('Legacy PDF saved · details unavailable');
+    await page.evaluate(() => {
+      const card = document.querySelector('.v1082-past-card');
+      card.querySelector('[data-directory-legacy]').textContent = 'PDF available. Processing pending.';
+      v1082ApplyPastReadOnly(card);
+    });
+    await expect(page.locator('[data-v1082-records-status]')).toContainText('Legacy PDF saved · processing pending');
     const mutations = await page.evaluate(async () => {
       const card = document.querySelector('.v1082-past-card');
       let count = 0;
