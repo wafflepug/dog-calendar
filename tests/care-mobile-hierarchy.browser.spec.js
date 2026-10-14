@@ -332,7 +332,7 @@ for (const [name, viewport, colorScheme] of [['320-light', { width: 320, height:
     await expect(mediaHost.getByRole('button', { name: '＋ Add Stay Photos' })).toHaveCount(1);
     await mediaHost.locator('[data-v110-media-toggle="belongings"]').click();
     await expect(mediaHost.locator('[data-v110-media-toggle="belongings"]')).toHaveAttribute('aria-expanded', 'true');
-    await expect(mediaHost.getByText('No belongings photos saved for this stay.')).toBeVisible();
+    await expect(mediaHost.getByText('No belongings photos saved for this visit.')).toBeVisible();
     expect(await mediaHost.locator('.v110-add-stay-photo').evaluate(button => button.getBoundingClientRect().height)).toBeGreaterThanOrEqual(44);
     await expect(mediaHost.locator('.v110-media-view img').first()).toHaveAttribute('alt', 'Profile portrait');
     await sectionNav.locator('[data-v11160-tab="profile"]').click();
@@ -389,7 +389,7 @@ for (const [name, viewport, colorScheme] of [['320-light', { width: 320, height:
     await expect(historyHost.locator('.v108-stay-history details')).not.toHaveAttribute('open', '');
     expect(actionReads.filter(action => action === 'get_dog_history')).toHaveLength(name === '390-light' ? 2 : 1);
     expect(actionReads.payloads.filter(entry => entry.action === 'get_dog_history')[0]?.payload.dogId).toBe(exactDogId);
-    await expect(historyHost.locator('.v108-stay-history a')).toHaveAttribute('href', 'tel:0400123456');
+    await expect(historyHost.locator('.v108-owner-list a')).toHaveAttribute('href', 'tel:0400123456');
     await sectionNav.locator('[data-v11160-tab="profile"]').click();
     await expect(page.locator('.directory-card.is-profile-active [data-profile-subtab="healthHome"]')).toHaveAttribute('aria-expanded', 'true');
     await expect(page.locator('.directory-card.is-profile-active [data-intake-attribute="medicationInstructions"]')).toHaveValue(longCareInstruction);

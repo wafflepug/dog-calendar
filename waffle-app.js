@@ -11883,7 +11883,7 @@ registerWaffleServiceWorker();
                 const state = savedItems[item.key]?.present ? 'Present' : 'Not marked present';
                 return `<li><strong>${escapeDashboardHtml(item.label)}</strong><span class="belongings-summary-state">${state}</span>${description ? `<span>${escapeDashboardHtml(description)}</span>` : ''}</li>`;
             }).join('')}</ul>`
-            : '<p class="belongings-summary-empty">No belongings have been recorded yet.</p>';
+            : `<p class="belongings-summary-empty">${card.dataset.v1082PastStay === 'true' ? 'No items were saved for this visit.' : 'No items saved. Use Edit checklist to record belongings.'}</p>`;
 
         const photos =
             Array.isArray(record.photos)
@@ -11917,7 +11917,7 @@ registerWaffleServiceWorker();
                     .join('')
                 : `
                     <div class="belongings-photo-status belongings-photo-empty">
-                        No belongings photos saved yet.
+                        ${card.dataset.v1082PastStay === 'true' ? 'No belongings photos were saved for this visit.' : 'No belongings photos saved. Open Add belongings photos to add one.'}
                     </div>
                 `;
 
@@ -12215,7 +12215,7 @@ registerWaffleServiceWorker();
             if (!summary.querySelector('.belongings-summary-empty')) {
                 const empty = document.createElement('p');
                 empty.className = 'belongings-summary-empty';
-                empty.textContent = 'No belongings have been recorded yet.';
+                empty.textContent = 'No items saved. Use Edit checklist to record belongings.';
                 summary.append(empty);
             }
         }
