@@ -16,7 +16,7 @@ const expectedConfigs = [
   'playwright.care-overview.config.js', 'playwright.returning-dogs.config.js',
   'playwright.runtime-review.config.js', 'playwright.care-cleaner-ui.config.js',
   'playwright.care-detailed-care-runtime.config.js', 'playwright.care-mobile-hierarchy.config.js',
-  'playwright.care-photos.config.js', 'playwright.care-ui-five.config.js', 'playwright.care-ui-clarity.config.js'
+  'playwright.care-photos.config.js', 'playwright.care-ui-five.config.js', 'playwright.care-ui-clarity.config.js', 'playwright.care-compact-controls.config.js'
 ];
 
 test('parallel fixture matrix retains every existing configuration exactly once', () => {
@@ -30,7 +30,7 @@ test('parallel fixture matrix retains every existing configuration exactly once'
 });
 
 test('contract job preserves existing Node checks', () => {
-  const expected = ['local-ui-runner', 'local-network-policy', 'waffle-bootstrap-lifecycle', 'care-startup-priority',
+  const expected = ['local-ui-runner', 'local-network-policy', 'waffle-bootstrap-lifecycle', 'care-startup-priority', 'care-past-background-load',
     'care-profile-readiness', 'care-overview-freshness', 'care-record-update-contract',
     'care-state-preservation', 'care-past-classification', 'stay-operation-frontend', 'care-csv-integrity', 'care-confirmed-reconciliation',
     'confirmed-stay-identity', 'potential-confirm-dog-id', 'checkout-collision-safety',
