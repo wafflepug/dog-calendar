@@ -868,6 +868,13 @@ function v1086BackgroundLoadPastStays() {
     v1086BackgroundPastRequested =
         true;
 
+    // A user may have opened Past before this delayed count task runs.
+    // Reuse that result instead of rebuilding an already selected profile.
+    if (v1082PastLoaded) {
+        v1086UpdateCareStayCounts();
+        return;
+    }
+
     v1082LoadPastStays()
         .then(
             v1086UpdateCareStayCounts

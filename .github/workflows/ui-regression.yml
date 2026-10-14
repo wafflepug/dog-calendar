@@ -62,6 +62,7 @@ on:
       - 'tests/care-photos.browser.spec.js'
       - 'tests/care-fallback-media.browser.spec.js'
       - 'tests/care-startup-priority.test.js'
+      - 'tests/care-past-background-load.test.js'
       - 'tests/care-navigation-continuity.test.js'
       - 'tests/care-return-focus-identity.test.js'
       - 'tests/care-navigation-continuity.browser.spec.js'
@@ -146,6 +147,7 @@ on:
       - 'tests/care-photos.browser.spec.js'
       - 'tests/care-fallback-media.browser.spec.js'
       - 'tests/care-startup-priority.test.js'
+      - 'tests/care-past-background-load.test.js'
       - 'tests/care-navigation-continuity.test.js'
       - 'tests/care-return-focus-identity.test.js'
       - 'tests/care-navigation-continuity.browser.spec.js'
@@ -200,7 +202,7 @@ jobs:
           node --test tests/local-ui-runner.test.js
           node --test tests/local-network-policy.test.js
           node --test tests/waffle-bootstrap-lifecycle.test.js
-          node --test tests/care-startup-priority.test.js
+          node --test tests/care-startup-priority.test.js tests/care-past-background-load.test.js
           node --test tests/care-profile-readiness.test.js tests/care-overview-freshness.test.js tests/care-record-update-contract.test.js
           node --test tests/care-state-preservation.test.js tests/care-past-classification.test.js tests/stay-operation-frontend.test.js
           node --test tests/care-csv-integrity.test.js

@@ -58,6 +58,13 @@ test.describe('compact past contact and records', () => {
     await tile.click();
     const card = page.locator('#directoryTabPanel .directory-card[data-v1082-past-stay="true"].is-profile-active');
     await expect(card.locator('[data-directory-detail="profile"]')).toHaveAttribute('data-detail-loaded', 'true');
+    const pastReads = reads.filter(action => action === 'get_past_guest_directory').length;
+    await card.evaluate(el => {
+      window.compactPastOpenedCard = el;
+      // Exercise the delayed count task after the user's manual load has completed.
+      v1086BackgroundPastRequested = false;
+      v1086BackgroundLoadPastStays();
+    });
     await expect(card.locator('[data-v1082-past-owner]')).toHaveText('Alex Owner');
     const call = card.locator('[data-v1082-past-phone]');
     await expect(call).toHaveAttribute('href', 'tel:+61400111222');
@@ -97,6 +104,8 @@ test.describe('compact past contact and records', () => {
     await page.keyboard.press('Enter');
     await expect(card).toBeVisible();
     await expect(records).not.toHaveAttribute('open', '');
+    expect(reads.filter(action => action === 'get_past_guest_directory')).toHaveLength(pastReads);
+    expect(await card.evaluate(el => el === window.compactPastOpenedCard)).toBe(true);
   });
 
   test('does not invent an owner or phone when fields are absent', async ({ page, baseURL }) => {

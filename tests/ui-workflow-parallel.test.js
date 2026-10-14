@@ -30,7 +30,7 @@ test('parallel fixture matrix retains every existing configuration exactly once'
 });
 
 test('contract job preserves existing Node checks', () => {
-  const expected = ['local-ui-runner', 'local-network-policy', 'waffle-bootstrap-lifecycle', 'care-startup-priority',
+  const expected = ['local-ui-runner', 'local-network-policy', 'waffle-bootstrap-lifecycle', 'care-startup-priority', 'care-past-background-load',
     'care-profile-readiness', 'care-overview-freshness', 'care-record-update-contract',
     'care-state-preservation', 'care-past-classification', 'stay-operation-frontend', 'care-csv-integrity', 'care-confirmed-reconciliation',
     'confirmed-stay-identity', 'potential-confirm-dog-id', 'checkout-collision-safety',
