@@ -10,7 +10,7 @@ Each dog/date row creates its own confirmed stay with a unique Stay ID. A return
 
 ## Safety and practical bounds
 
-The first version permits up to 5 dogs, 12 date sets and 30 individual dog visits per plan. Weekly generation requires an end date; each range is bounded to 90 days. Dates must be valid and planned ranges cannot overlap. Existing exact-name/date collisions and exact-Dog-ID overlaps are rejected before confirmation. Combined daily capacity is advisory and counts all dogs, including long existing stays. Same-day visits use the existing daily boarding capacity rules; separate drop-off hours, daytime capacity and distinct backend service categories are future work.
+The first version permits up to 5 dog profiles, 12 date sets and 30 confirmed stay records per plan. Weekly generation requires an end date; each range is bounded to 90 days. Dates must be valid and planned ranges cannot overlap. Existing exact-name/date collisions and exact-Dog-ID overlaps are rejected before confirmation. Combined daily capacity is advisory and counts all dogs, including legacy combined profiles and long existing stays. Existing combined profiles are preserved as supplied; they are not automatically split into new Dog IDs. Same-day visits use the existing daily boarding capacity rules; separate drop-off hours, daytime capacity and distinct backend service categories are future work.
 
 The legacy Care stay key still includes name and dates, so two different dogs with the same name cannot safely be confirmed for identical dates in one plan. No automatic renaming or identity merging is used. A backend identity migration is needed to remove this limitation.
 

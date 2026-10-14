@@ -168,7 +168,7 @@ function reviewPlan(){
     return;
   }
   const warnings=result.warnings||[];
-  preview.innerHTML=`<div class="p4-return"><strong>${p.dogs.length} dog${p.dogs.length===1?'':'s'} · ${p.visits.length} date set${p.visits.length===1?'':'s'} · ${p.dogs.length*p.visits.length} planned visits</strong><span>Shared owner: ${C().esc(p.ownerName||'Not provided')} · Phone: ${C().esc(p.phone||'Not provided')} · Source: ${C().esc(p.source)}</span><span>Peak capacity: ${C().esc(String(result.peak??'not available'))}</span>${warnings.map(warning=>`<span>⚠ ${C().esc(typeof warning==='string'?warning:warning.message||JSON.stringify(warning))}</span>`).join('')}</div>`;
+  preview.innerHTML=`<div class="p4-return"><strong>${p.dogs.length} dog profile${p.dogs.length===1?'':'s'} · ${p.visits.length} date set${p.visits.length===1?'':'s'} · ${p.dogs.length*p.visits.length} planned visits</strong><span>Shared owner: ${C().esc(p.ownerName||'Not provided')} · Phone: ${C().esc(p.phone||'Not provided')} · Source: ${C().esc(p.source)}</span><span>Peak capacity: ${C().esc(String(result.peak??'not available'))}</span>${warnings.map(warning=>`<span>⚠ ${C().esc(typeof warning==='string'?warning:warning.message||JSON.stringify(warning))}</span>`).join('')}</div>`;
   $('p4PlanAckLabel').hidden=!warnings.length;
   $('p4PlanCapacityAck').checked=false;
   const planned=planEngine().createPlan(input,uuid);

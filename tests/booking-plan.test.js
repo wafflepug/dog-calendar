@@ -102,6 +102,25 @@ test('capacity counts a long confirmed stay on requested dates and ignores unrel
   assert.deepEqual(result.warnings, []);
 });
 
+test('planned legacy combined profiles retain the existing daily dog-count convention', () => {
+  const plan = input({
+    dogs: [{ key: 'a', dogId: idA, dogName: 'One & Two', breed: 'Pugs' }, { key: 'b', dogName: 'Pip', breed: 'Terrier' }],
+    visits: [{ startDate: '2026-12-02', endDate: '2026-12-02' }]
+  });
+  const result = validatePlan(plan, [], { preferred: 2, absolute: 3 });
+  assert.equal(result.peak, 3);
+  assert.ok(result.warnings.some(warning => warning.includes('above the preferred')));
+});
+
+test('invalid long ranges and oversized plans never enter capacity expansion', () => {
+  const long = validatePlan(input({ visits: [{ startDate: '2026-01-01', endDate: '2041-01-01' }] }));
+  assert.ok(long.issues.some(issue => issue.includes('90-day limit')));
+  assert.equal(long.peak, 0);
+  const oversized = validatePlan(input({ visits: Array.from({ length: 13 }, () => ({ startDate: '2026-01-01', endDate: '2026-01-01' })) }));
+  assert.ok(oversized.issues.some(issue => issue.includes('12 visits')));
+  assert.equal(oversized.peak, 0);
+});
+
 test('createPlan builds stable create_boarding payloads and reviewed inheritance only for earlier completed care', () => {
   const reviewed = { sourceDogId: idA, sourceStayId: 'stay-1', sourceStayKey: 'stay-key-1', sourceEndDate: '2026-11-30', sourceCompletedDate: '2026-11-30', confirmed: true, profile: { medicalConditions: 'None' }, riskFlags: { medicated: false } };
   const plan = createPlan(input({ dogs: [{ key: 'a', dogId: idA, dogName: 'Milo', breed: 'Kelpie', notes: 'Quiet at night', inheritCareReview: reviewed }] }), uuid);

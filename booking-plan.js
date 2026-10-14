@@ -76,6 +76,9 @@
     if (visits.length > MAX_VISITS) issues.push('A plan cannot contain more than 12 visits.');
     if (dogs.length * visits.length > MAX_ROWS) issues.push('A plan cannot contain more than 30 dog visits.');
     if (!['stay', 'same-day'].includes(plan.visitMode)) issues.push('Visit mode must be stay or same-day.');
+    if (dogs.length > MAX_DOGS || visits.length > MAX_VISITS || dogs.length * visits.length > MAX_ROWS) {
+      return { issues, warnings, peak: 0 };
+    }
 
     const keys = new Set();
     const dogIds = new Set();
@@ -106,8 +109,14 @@
         issues.push('Every visit must use real YYYY-MM-DD dates.');
         continue;
       }
-      if (end < start) issues.push(`Visit end must be on or after its start (${start}).`);
-      if (dayNumber(end) - dayNumber(start) > MAX_DAYS) issues.push(`Visit ${start}–${end} exceeds the 90-day limit.`);
+      if (end < start) {
+        issues.push(`Visit end must be on or after its start (${start}).`);
+        continue;
+      }
+      if (dayNumber(end) - dayNumber(start) > MAX_DAYS) {
+        issues.push(`Visit ${start}–${end} exceeds the 90-day limit.`);
+        continue;
+      }
       if (plan.visitMode === 'same-day' && end !== start) issues.push(`Same-day visits must end on their start date (${start}).`);
       validVisits.push({ start, end });
     }
@@ -155,9 +164,10 @@
     }
 
     const daily = new Map();
+    const requestedDogs = dogs.reduce((total, dog) => total + countDogs(dog?.dogName), 0);
     for (const visit of validVisits) {
       const from = dayNumber(visit.start), to = dayNumber(visit.end);
-      for (let day = from; day <= to; day++) daily.set(day, (daily.get(day) || 0) + dogs.length);
+      for (let day = from; day <= to; day++) daily.set(day, (daily.get(day) || 0) + requestedDogs);
     }
     function countDogs(name) {
       const count = String(name || '').split(/&|\s+and\s+/i).map(value => value.trim()).filter(Boolean).length;
