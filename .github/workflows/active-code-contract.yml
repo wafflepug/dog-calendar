@@ -21,7 +21,7 @@ jobs:
           set -euo pipefail
           for file in \
             waffle-bootstrap.js waffle-csv.js system-status-sync.js waffle-v11.0.5.js calendar.js care.js organiser.js logs.js \
-            waffle-ui.js waffle-ai.js phase4.js phase4-core.js phase4-booking.js \
+            waffle-ui.js waffle-ai.js phase4.js phase4-core.js booking-plan.js phase4-booking.js \
             phase4-operations.js phase4-ai-actions.js service-worker.js; do
             test -f "$file"
             node --check "$file"
@@ -68,7 +68,7 @@ jobs:
 
           phase4 = manifest.get('phase4') or {}
           assert phase4.get('loader') == 'phase4.js'
-          phase4_modules = ['phase4-core.js','phase4-booking.js','phase4-operations.js','phase4-ai-actions.js']
+          phase4_modules = ['phase4-core.js','booking-plan.js','phase4-booking.js','phase4-operations.js','phase4-ai-actions.js']
           assert phase4.get('modules') == phase4_modules
           for name in phase4_modules:
               assert Path(name).exists(), f'Phase 4 module missing: {name}'
@@ -162,7 +162,7 @@ jobs:
           shell_assets = [
               'waffle-bootstrap.js','waffle-runtime.css','waffle-build.json',
               'calendar.js','care.js','organiser.js','organiser.css','logs.js','waffle-ui.js','waffle-ai.js',
-              'phase4.js','phase4-core.js','phase4-booking.js','phase4-operations.js','phase4-ai-actions.js',
+              'phase4.js','phase4-core.js','booking-plan.js','phase4-booking.js','phase4-operations.js','phase4-ai-actions.js',
               'waffle-maintenance-v2.webp',
           ]
           for name in shell_assets:

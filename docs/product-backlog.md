@@ -91,3 +91,6 @@ Validation includes unit fixtures, browser checks across desktop/mobile/WebKit a
 - Built Deliverables: final behavior, changed files, commit/PR, material limitations.
 - Testing Matrix: numbered happy-path, edge-case, failure-mode steps; separate executed checks from instructions awaiting real-device verification.
 - Next Backlog Item: next bounded prompt and why it follows.
+
+
+Candidate 14 October 2026: [Multi-Visit Booking Plans](multi-visit-booking-plans.md), release 2026.10.14.05, supports shared-contact multi-dog and multiple-date booking, bounded weekly same-day visits, stable per-visit identity and partial retry. Existing production backend remains unchanged. A distinct day-care service type and same-name/date identity migration remain later backend work. Compact Dog record maintenance remains the next Care UI item.

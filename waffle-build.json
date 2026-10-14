@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.10.14.04",
-  "releaseName": "Compact Care Controls and Records",
+  "assetRevision": "2026.10.14.05",
+  "releaseName": "Multi-Visit Booking Plans",
   "careIteration": {
     "returningDogSuggestions": true,
     "reviewedCareInheritance": true,
@@ -29,7 +29,7 @@
   },
   "phase4": {
     "loader": "phase4.js",
-    "modules": ["phase4-core.js", "phase4-booking.js", "phase4-operations.js", "phase4-ai-actions.js"],
+    "modules": ["phase4-core.js", "booking-plan.js", "phase4-booking.js", "phase4-operations.js", "phase4-ai-actions.js"],
     "fastBooking": true,
     "ownerSelfService": true,
     "capacityDecisionAssistant": true,
