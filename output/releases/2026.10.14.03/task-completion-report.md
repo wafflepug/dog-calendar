@@ -15,7 +15,7 @@ Release candidate: 2026.10.14.03. Luna implemented bounded UI changes; lead mode
 - Node contract tests: 301 passed.
 - Existing compact Items/gallery tests: 8 passed across Chromium and WebKit; caption geometry checked at 320/390/1440px in actual light and dark app themes.
 - Existing hierarchy tests: 16 unique cases passed at phone/desktop widths, including retry, booking actions and saved contact availability. Five stale-copy assertions were updated and rerun without removing functional coverage.
-- New bounded tests: 14 passed across Chromium/WebKit. A final two-case Past/Items fixture recheck is pending at report creation after adding explicit identity proof and read-only Items assertions. Covered read counters, multiple owners/changed phones, no aggregate contacts, keyboard focus/activation/drafts/resize, expanded Past identity, read-only empty Items and return focus.
+- New bounded tests: 14 passed across Chromium/WebKit. The final two Past/Items cases passed after explicit identity proof/read-only assertions. CI identified a background-startup count race; the full-runtime focus assertion now counts lazy destination-panel reads, with the isolated fixture retaining all-read assertions. Overview server moved below the OS ephemeral port range after a CI bind collision. Final current-head checks remain required. Covered read counters, multiple owners/changed phones, no aggregate contacts, keyboard focus/activation/drafts/resize, expanded Past identity, read-only empty Items and return focus.
 - Current-head CI and deployment verification required before marking this release live. All production checks are read-only; no Apps Script or data migration is included.
 
 ## Next Backlog Item

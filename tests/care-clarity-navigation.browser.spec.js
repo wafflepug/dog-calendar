@@ -181,7 +181,11 @@ test.describe('Care mobile spatial tab navigation', () => {
       const nav = card.locator('.v11160-desktop-tabs');
       const overview = nav.locator('[data-v11160-tab="profile"]');
       const history = nav.locator('[data-v11160-tab="history"]');
-      const readsBefore = actionReads.length;
+      // Startup diagnostics can settle during focus changes. Count the lazy
+      // destination panel reads; the isolated navigation fixture above also
+      // verifies every read and draft while exercising activation.
+      const panelReads = () => actionReads.filter(item => ['get_dog_history', 'get_guest_belongings', 'get_dog_master_profile'].includes(item.action));
+      const readsBefore = panelReads().length;
       await overview.focus();
       await page.keyboard.press('ArrowDown');
       if (width <= 768) {
@@ -192,7 +196,8 @@ test.describe('Care mobile spatial tab navigation', () => {
       } else {
         await expect(overview).toBeFocused();
       }
-      expect(actionReads).toHaveLength(readsBefore);
+      expect(panelReads()).toHaveLength(readsBefore);
+      await expect(overview).toHaveAttribute('aria-selected', 'true');
 
       if (browserName === 'chromium' && process.env.WAFFLE_CAPTURE_UI_EVIDENCE === '1' && width === 390) {
         await card.screenshot({ path: path.join(evidenceDir, 'care-past-identity-phone-390.png') });
