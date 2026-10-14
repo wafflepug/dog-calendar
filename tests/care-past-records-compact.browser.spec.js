@@ -49,7 +49,10 @@ test.describe('compact past contact and records', () => {
     await page.setViewportSize({ width, height: 900 });
     await page.goto(`${baseURL}/directory.html?careCompactPastFixture=1`, { waitUntil: 'domcontentloaded' });
     await page.waitForFunction(() => document.documentElement.dataset.waffleUiReady === 'true');
+    // Asset readiness precedes the initial roster response, which can restore selection.
+    await page.waitForFunction(() => directoryConsolidatedLastFetch > 0 && !directoryConsolidatedLoadInProgress);
     await page.locator('[data-v1082-stay-tab="past"]').click();
+    await page.waitForFunction(() => v1082PastLoaded && !v1082PastLoadPromise);
     const tile = page.locator('#past-directory-grid [data-v1082-past-stay="true"] [data-open-directory-profile]');
     await expect(tile).toBeVisible();
     await tile.click();
