@@ -22,6 +22,16 @@ async function setup(page, queryBody) {
     window.WAFFLE_CARE_BELONGINGS_READS = { read: async (card, options) => ({ data: await window.queryAppsScript({ action: 'get_guest_belongings', stayKey: card.dataset.directoryStayKey }, options) }), invalidate() {} };
 
     ${photoFunctions}
+    document.addEventListener('click', event => {
+      const button = event.target.closest('[data-v110-media-toggle]');
+      if (!button) return;
+      const host = button.closest('[data-v110-media-host]');
+      const expanded = button.getAttribute('aria-expanded') === 'true';
+      button.setAttribute('aria-expanded', expanded ? 'false' : 'true');
+      const content = button.closest('.v110-media-section')?.querySelector('.v110-media-group-content');
+      if (content) content.hidden = expanded;
+      v110RememberMediaDisclosures(host);
+    });
   ` });
   await page.addScriptTag({ content: carouselRuntime });
 }
@@ -32,10 +42,17 @@ test('Care Photos render counts, disclosures, accessible actions, and empty grou
   const host = page.locator('[data-v110-media-host]');
   await expect(host.locator('.v110-media-section')).toHaveCount(3);
   await expect(host.locator('.v110-media-count')).toHaveText(['1', '1', '0']);
-  await expect(host.locator('[data-v110-media-toggle="profile"]')).toHaveAttribute('aria-expanded', 'true');
+  for (let index = 0; index < 3; index += 1) await expect(host.locator('[data-v110-media-toggle]').nth(index)).toHaveAttribute('aria-expanded', 'false');
   await expect(host.locator('[data-v110-media-toggle="belongings"]')).toHaveAttribute('aria-expanded', 'false');
   await expect(host.getByRole('button', { name: '＋ Add Stay Photos' })).toHaveCount(1);
   await expect(host.locator('img[alt="Profile portrait"]')).toHaveCount(1);
+  await expect(host.locator('.v110-media-group-content').first()).toBeHidden();
+  await host.locator('[data-v110-media-toggle="profile"]').click();
+  await expect(host.locator('[data-v110-media-toggle="profile"]')).toHaveAttribute('aria-expanded', 'true');
+  await page.evaluate(() => v110RenderMedia(document.querySelector('.directory-card'), { dogPhotoGallery:[{id:'p1',label:'Profile portrait',url:'https://photos.test/profile.jpg'}], stayPhotos:[{id:'s1',label:'Playtime',url:'https://photos.test/stay.jpg'}] }));
+  await expect(host.locator('[data-v110-media-toggle="profile"]')).toHaveAttribute('aria-expanded', 'true');
+  await expect(host.locator('[data-v110-media-toggle="stay"]')).toHaveAttribute('aria-expanded', 'false');
+  await host.locator('[data-v110-media-toggle="stay"]').click();
   await expect(host.getByRole('button', { name: 'View Profile portrait' })).toHaveCount(1);
   await expect(host.getByRole('button', { name: 'Delete Playtime' })).toHaveCount(1);
 });
@@ -47,6 +64,7 @@ test('Care gallery uses bounded Drive previews, wraps captions, loads originals 
   const retryRequests = [];
   await page.route('https://images.test/**', route => { retryRequests.push(route.request().url()); return route.abort(); });
   await page.evaluate(() => v110LoadMedia(document.querySelector('.directory-card')));
+  await page.locator('[data-v110-media-toggle="stay"]').click();
   const images = page.locator('.v110-media-view img');
   await expect(images).toHaveCount(2);
   await expect(images.nth(0)).toHaveAttribute('src', /thumbnail\?id=photo_123&sz=w480/);

@@ -8,6 +8,7 @@ const booking = fs.readFileSync('phase4-booking.js', 'utf8');
 const care = fs.readFileSync('care.js', 'utf8');
 const roster = fs.readFileSync('waffle-app.js', 'utf8');
 const master = fs.readFileSync('waffle-v11.0.js', 'utf8');
+const emptyMasterHost = () => ({ innerHTML:'', dataset:{}, querySelector:() => null, contains:() => false });
 
 test('confirmed booking defaults to new identity and labels exact existing choices', () => {
   assert.match(booking, /<option value="">New dog \(create a new identity\)<\/option>/);
@@ -89,10 +90,11 @@ test('Dog record renders the exact Dog ID and makes saved, derived, contact and 
   const render = master.match(/function v110RenderMasterProfile\(card,r,opt=\{\}\)\{[^\n]+/)[0];
   const sandbox = {
     escapeDashboardHtml: value => String(value).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;'),
+    document:{ activeElement:null },
     card: null
   };
   vm.runInNewContext(`function v110Escape(v){return escapeDashboardHtml(v==null?'':String(v));}\n${risk}\n${render}`, sandbox);
-  const host = { innerHTML: '' };
+  const host = emptyMasterHost();
   sandbox.card = { dataset:{ directoryDogName:'Milo', directoryDogNumber:'#00007' }, querySelector(){ return host; } };
   sandbox.v110RenderMasterProfile(sandbox.card, { dogName:'Milo', breed:'Pug', ownerName:'Sam Owner', phone:'0400 123 456', dogNumber:'#00007', persisted:true, riskFlags:{ foodAllergy:true }, notes:'No chicken' });
   assert.match(host.innerHTML, /Dog ID #00007/);
@@ -122,12 +124,13 @@ test('Dog record reads remain tab-triggered and failed loads expose a forced ret
 test('failed Dog record read displays an error and Retry recovers on a forced second read', async () => {
   const render = master.match(/function v110RenderMasterProfile\(card,r,opt=\{\}\)\{[^\n]+/)[0];
   const risk = master.match(/function v110MasterRiskBadges\(flags\)\{[^\n]+/)[0];
-  const load = master.match(/async function v110LoadMasterProfile\(card,opt=\{\}\)\{[^\n]+/)[0];
+  const load = master.match(/async function v110LoadMasterProfile\(card,opt=\{\}\)\{[\s\S]*?\n\}/)[0];
   let calls = 0;
-  const host = { innerHTML: '' };
+  const host = emptyMasterHost();
   const breedNode = { textContent:'Pug' };
   const sandbox = {
     escapeDashboardHtml: value => String(value).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;'),
+    document:{ activeElement:null },
     v110MasterCache: {},
     queryAppsScriptSWR: async () => {
       calls += 1;
@@ -150,11 +153,12 @@ test('failed Dog record read displays an error and Retry recovers on a forced se
 test('offline cached dog record is labelled saved, while a validated unchanged response is fresh', async () => {
   const render = master.match(/function v110RenderMasterProfile\(card,r,opt=\{\}\)\{[^\n]+/)[0];
   const risk = master.match(/function v110MasterRiskBadges\(flags\)\{[^\n]+/)[0];
-  const load = master.match(/async function v110LoadMasterProfile\(card,opt=\{\}\)\{[^\n]+/)[0];
+  const load = master.match(/async function v110LoadMasterProfile\(card,opt=\{\}\)\{[\s\S]*?\n\}/)[0];
   let calls = 0;
-  const host = { innerHTML: '' };
+  const host = emptyMasterHost();
   const sandbox = {
     escapeDashboardHtml: value => String(value),
+    document:{ activeElement:null },
     v110MasterCache: {},
     queryAppsScriptSWR: async () => {
       calls += 1;

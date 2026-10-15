@@ -50,9 +50,11 @@ async function setup(page) {
   await page.locator('#p4PlanDisclosure').evaluate(el => { el.open = true; el.dispatchEvent(new Event('toggle')); });
   await page.locator('#p4PlanOwner').fill('Alex');
   await page.locator('#p4PlanPhone').fill('0400000000');
+  await page.locator('#p4PlanNext').click();
 }
 
 async function addDog(page, name, identity) {
+  if ((await page.locator('#p4PlanStepLabel').textContent()).includes('Owner')) await page.locator('#p4PlanNext').click();
   await page.locator('#p4Dog').fill(name);
   if (identity) {
     await page.locator('#p4LoadDogIdentities').click();
@@ -68,23 +70,41 @@ async function addDog(page, name, identity) {
 }
 
 async function addVisit(page, start, end) {
+  if ((await page.locator('#p4PlanStepLabel').textContent()).includes('Dogs')) await page.locator('#p4PlanNext').click();
   await page.locator('#p4PlanMode').selectOption('stay');
   await page.locator('#p4PlanStart').fill(start);
   await page.locator('#p4PlanEnd').fill(end);
   await page.locator('#p4PlanAddVisit').click();
 }
 
+async function openReview(page) {
+  for (let step = 0; step < 4 && !(await page.locator('#p4PlanStepLabel').textContent()).includes('Review'); step++) {
+    const before = await page.locator('#p4PlanStepLabel').textContent();
+    await page.locator('#p4PlanNext').click();
+    await expect(page.locator('#p4PlanStepLabel')).not.toHaveText(before);
+  }
+  await expect(page.locator('#p4PlanStepLabel')).toContainText('Review');
+  if (!(await page.locator('#p4PlanSave').isEnabled())) await page.locator('#p4PlanReview').click();
+}
+
 async function reviewAndSave(page) {
-  await page.locator('#p4PlanReview').click();
+  await openReview(page);
   await expect(page.locator('#p4PlanSave')).toBeEnabled();
   await page.locator('#p4PlanSave').click();
   await expect(page.locator('#p4PlanStatus')).toContainText('confirmed saved');
 }
 
+async function capturePlanEvidence(page, name, width, dark) {
+  const evidenceDir = path.join(root, 'output', 'releases', '2026.10.16.01', 'evidence');
+  fs.mkdirSync(evidenceDir, { recursive: true });
+  await page.setViewportSize({ width, height: 844 });
+  await page.emulateMedia({ colorScheme: dark ? 'dark' : 'light' });
+  await page.evaluate(isDark => document.body.classList.toggle('dark-theme', isDark), dark);
+  await page.screenshot({ path: path.join(evidenceDir, name), fullPage: true });
+}
+
 test('two dogs and two date ranges save four distinct confirmed stay intents', async ({ page }) => {
   await setup(page);
-  await page.locator('#p4PlanOwner').fill('Alex');
-  await page.locator('#p4PlanPhone').fill('0400000000');
   await addDog(page, 'Luna', dogA);
   await addDog(page, 'Milo', dogB);
   await addVisit(page, '2026-11-10', '2026-11-12');
@@ -95,16 +115,49 @@ test('two dogs and two date ranges save four distinct confirmed stay intents', a
   expect(new Set(writes.map(row => row.stayId)).size).toBe(4);
   expect(new Set(writes.map(row => row.dogId))).toEqual(new Set([dogA, dogB]));
   expect(writes.every(row => row.action === 'create_boarding' && row.ownerName === 'Alex' && row.phone === '0400000000')).toBe(true);
+  await expect(page.locator('#p4PlanRows [data-p4-result-dog]')).toHaveCount(2);
+  await expect(page.locator('#p4PlanRows [data-p4-result-status="saved"]')).toHaveCount(4);
+});
+
+test('guided steps announce progress and require each section before advancing', async ({ page }, testInfo) => {
+  await setup(page);
+  await expect(page.locator('#p4Paste')).toBeHidden();
+  await expect(page.locator('#p4SaveConfirmed')).toBeHidden();
+  const nav = page.getByRole('group', { name: 'Visit plan progress' });
+  await expect(nav.getByRole('button')).toHaveCount(4);
+  await nav.locator('[data-p4-plan-step="0"]').click();
+  await expect(nav.locator('[aria-current="step"]')).toContainText('Owner');
+  if (testInfo.project.name === 'chromium') await capturePlanEvidence(page, 'owner-320-light.png', 320, false);
+  await page.locator('#p4PlanNext').click();
+  await expect(page.locator('#p4PlanStepLabel')).toHaveText('Step 2 of 4 · Dogs');
+  await expect(page.locator('#p4PlanNext')).toBeVisible();
+  await page.locator('#p4PlanNext').click();
+  await expect(page.locator('#p4PlanStepLabel')).toContainText('Dogs');
+  await expect(page.locator('#p4PlanStatus')).toContainText('Add at least one dog');
+  if (testInfo.project.name === 'chromium') await capturePlanEvidence(page, 'dogs-390-dark.png', 390, true);
+  await addDog(page, 'Luna', dogA);
+  await page.locator('#p4PlanNext').click();
+  await expect(page.locator('#p4PlanStepLabel')).toContainText('Dates');
+  await addVisit(page, '2026-11-10', '2026-11-11');
+  await page.locator('#p4PlanNext').click();
+  await expect(page.locator('#p4PlanStepLabel')).toContainText('Review');
+  await expect(nav.locator('[aria-current="step"]')).toContainText('Review');
+  await expect(page.locator('#p4PlanSave')).toBeEnabled();
+  if (testInfo.project.name === 'chromium') {
+    await capturePlanEvidence(page, 'review-1440-light.png', 1440, false);
+    await capturePlanEvidence(page, 'review-390-dark.png', 390, true);
+  }
 });
 
 test('weekly same-day visits expand into three independent occurrences', async ({ page }) => {
   await setup(page);
   await addDog(page, 'Luna', dogA);
+  await page.locator('#p4PlanNext').click();
   await page.locator('#p4PlanMode').selectOption('same-day');
   await page.locator('#p4PlanStart').fill('2026-11-02');
   await page.locator('#p4PlanUntil').fill('2026-11-16');
   await page.locator('#p4PlanWeekly').click();
-  await expect(page.locator('#p4PlanRows .p4-plan-item')).toHaveCount(3);
+  await expect(page.locator('#p4PlanVisits .p4-plan-item')).toHaveCount(3);
   await reviewAndSave(page);
   const writes = await page.evaluate(() => window.fixtureWrites);
   expect(writes.map(row => [row.startDate, row.endDate])).toEqual([
@@ -144,10 +197,12 @@ test('resume retries only the failed visit with its original stable intent', asy
   await addVisit(page, '2026-11-10', '2026-11-11');
   await addVisit(page, '2026-11-20', '2026-11-21');
   await expect(page.locator('#p4PlanVisits .p4-plan-item')).toHaveCount(2);
-  await page.locator('#p4PlanReview').click();
+  await openReview(page);
   await page.locator('#p4PlanSave').click();
   await expect(page.locator('#p4PlanRows')).toContainText('saved');
   await expect(page.locator('#p4PlanRows')).toContainText('temporary outage');
+  await page.locator('#p4PlanDisclosure summary').click();
+  await expect(page.locator('#p4PlanDisclosure')).not.toHaveAttribute('open', '');
   await expect(page.locator('#p4Dog')).toBeEnabled();
   await page.locator('#p4DogIdentity').selectOption('');
   await page.locator('#p4Dog').fill('Scout');
@@ -163,6 +218,9 @@ test('resume retries only the failed visit with its original stable intent', asy
   expect(singleWrite.action).toBe('create_boarding');
   expect(singleWrite.dogName).toBe('Scout');
   expect(singleWrite.startDate).toBe('2026-12-01');
+  await page.locator('#p4PlanDisclosure summary').click();
+  await expect(page.locator('#p4PlanDisclosure')).toHaveAttribute('open', '');
+  await openReview(page);
   await page.locator('#p4PlanSave').click();
   await expect(page.locator('#p4PlanStatus')).toContainText('confirmed saved');
   const after = await page.evaluate(() => window.fixtureWrites);
@@ -180,7 +238,7 @@ test('queued result freezes plan controls and is not reported as saved', async (
   await page.evaluate(() => { window.WAFFLE_PHASE4_CORE.write = async () => ({ result: 'success', queued: true }); });
   await addDog(page, 'Luna', dogA);
   await addVisit(page, '2026-11-10', '2026-11-11');
-  await page.locator('#p4PlanReview').click();
+  await openReview(page);
   await page.locator('#p4PlanSave').click();
   await expect(page.locator('#p4PlanRows')).toContainText('queued');
   await expect(page.locator('#p4PlanOwner')).toBeDisabled();
@@ -199,13 +257,34 @@ test('same-name identity collision is blocked before any plan write', async ({ p
   expect(await page.evaluate(() => window.fixtureWrites)).toHaveLength(0);
 });
 
+test('same-name dogs remain unselected until the exact identity card is chosen', async ({ page }) => {
+  await setup(page);
+  await page.evaluate(({ dogC }) => {
+    window.identityRows.push({ dogId: dogC, dogNumber: '00004', dogName: 'Luna', breed: 'Pug', ownerName: 'Blair' });
+  }, { dogC });
+  await page.locator('#p4Dog').fill('Luna');
+  await page.locator('#p4LoadDogIdentities').click();
+  await expect(page.locator('#p4IdentitySearch')).toHaveAttribute('aria-label', /Search existing dogs/);
+  await page.locator('#p4IdentitySearch').fill('Luna');
+  const matchingCards = page.locator('#p4IdentityCards [data-p4-identity]');
+  await expect(matchingCards).toHaveCount(2);
+  await expect(page.locator('#p4DogIdentity')).toHaveValue('');
+  await expect(matchingCards.nth(0)).toContainText('00001');
+  await expect(matchingCards.nth(1)).toContainText('00004');
+  await matchingCards.nth(1).click();
+  await expect(page.locator('#p4DogIdentity')).toHaveValue(dogC);
+  await expect(page.locator(`#p4IdentityCards [data-p4-identity="${dogC}"]`)).toHaveAttribute('aria-pressed', 'true');
+  await expect.poll(() => page.evaluate(() => window.fixtureReads.some(x => x.action === 'get_dog_history' && x.dogId === 'dddddddd-dddd-4ddd-8ddd-dddddddddddd'))).toBeTruthy();
+  expect(await page.evaluate(() => window.fixtureWrites)).toHaveLength(0);
+});
+
 test('aggregate preferred-capacity warning requires acknowledgement before saving', async ({ page }) => {
   await setup(page);
   await page.evaluate(() => { window.WAFFLE_PHASE4_CORE.settings = () => ({ preferred: 1, absolute: 3 }); });
   await addDog(page, 'Luna', dogA);
   await addDog(page, 'Milo', dogB);
   await addVisit(page, '2026-11-10', '2026-11-11');
-  await page.locator('#p4PlanReview').click();
+  await openReview(page);
   await expect(page.locator('#p4PlanPreview')).toContainText('above the preferred setting');
   await expect(page.locator('#p4PlanAckLabel')).toBeVisible();
   await expect(page.locator('#p4PlanSave')).toBeDisabled();
@@ -220,18 +299,22 @@ test('review invalidates after edits, and the layout fits narrow, wide, dark, an
   await setup(page);
   await addDog(page, 'Luna', dogA);
   await addVisit(page, '2026-11-10', '2026-11-11');
-  await page.locator('#p4PlanReview').click();
+  await openReview(page);
   await expect(page.locator('#p4PlanSave')).toBeEnabled();
+  await page.locator('[data-p4-plan-step="0"]').click();
   await page.locator('#p4PlanPhone').fill('0411111111');
   await expect(page.locator('#p4PlanSave')).toBeDisabled();
   await expect(page.locator('#p4PlanPreview')).toBeEmpty();
-  await page.locator('#p4PlanReview').click();
+  await openReview(page);
   await expect(page.locator('#p4PlanPreview')).toContainText('0411111111');
   await expect(page.locator('#p4PlanSave')).toBeEnabled();
   for (const width of [320, 390, 1440]) {
     await page.setViewportSize({ width, height: 844 });
     await page.emulateMedia({ colorScheme: width === 390 ? 'dark' : 'light' });
-    await page.evaluate(() => { document.documentElement.style.fontSize = '125%'; });
+    await page.evaluate(dark => {
+      document.body.classList.toggle('dark-theme', dark);
+      document.documentElement.style.fontSize = '200%';
+    }, width === 390);
     const overflow = await page.evaluate(() => ({
       body: document.body.scrollWidth > document.documentElement.clientWidth,
       panel: document.querySelector('.p4-plan').scrollWidth > document.querySelector('.p4-plan').clientWidth
@@ -244,17 +327,16 @@ test('review invalidates after edits, and the layout fits narrow, wide, dark, an
 
 test('editing reviewed plan content requires a fresh review before the new values can be saved', async ({ page }) => {
   await setup(page);
-  await page.locator('#p4PlanOwner').fill('Alex');
-  await page.locator('#p4PlanPhone').fill('0400000000');
   await addDog(page, 'Luna', dogA);
   await addVisit(page, '2026-11-10', '2026-11-11');
-  await page.locator('#p4PlanReview').click();
+  await openReview(page);
   await expect(page.locator('#p4PlanSave')).toBeEnabled();
+  await page.locator('[data-p4-plan-step="0"]').click();
   await page.locator('#p4PlanOwner').fill('Blair');
   await expect(page.locator('#p4PlanSave')).toBeDisabled();
   await expect(page.locator('#p4PlanPreview')).toBeEmpty();
   expect(await page.evaluate(() => window.fixtureWrites)).toHaveLength(0);
-  await page.locator('#p4PlanReview').click();
+  await openReview(page);
   await expect(page.locator('#p4PlanPreview')).toContainText('Blair');
   await expect(page.locator('#p4PlanSave')).toBeEnabled();
   await page.locator('#p4PlanSave').click();
@@ -267,7 +349,7 @@ test('rapid double confirmation sends one concurrent write per planned stay', as
   await page.evaluate(() => { window.writeGate = new Promise(resolve => { window.releaseWrites = resolve; }); });
   await addDog(page, 'Luna', dogA);
   await addVisit(page, '2026-11-10', '2026-11-11');
-  await page.locator('#p4PlanReview').click();
+  await openReview(page);
   await page.locator('#p4PlanSave').click();
   await expect.poll(() => page.evaluate(() => window.fixtureWrites.length)).toBe(1);
   await page.evaluate(() => {

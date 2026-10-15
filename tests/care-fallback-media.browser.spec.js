@@ -22,6 +22,10 @@ test('legacy Photos fallback uses the shared identity-safe reader when available
   await setup(page, `{ read: async (card, options) => { window.sharedReadCount = (window.sharedReadCount || 0) + 1; window.sharedIdentity = [card.dataset.directoryStayId, card.dataset.directoryDogId]; return { data: { record: { stayPhotos: [{id:'photo-1', label:'Playtime', url:'https://photos.test/stay.jpg'}] } } }; } }`);
   await page.evaluate(() => { void runFallbackMedia(document.querySelector('.directory-card')); });
   await expect(page.locator('[data-v110-media-host]')).toContainText('Playtime');
+  const toggle = page.locator('[data-v110-media-toggle="stay"]');
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  await expect(page.locator('[data-v110-media-toggle="stay"] + .v110-media-group-content')).toBeHidden();
+  await expect(page.locator('[data-v110-media-toggle="stay"] .v110-media-count')).toHaveText('1');
   expect(await page.evaluate(() => window.sharedReadCount)).toBe(1);
   expect(await page.evaluate(() => window.sharedIdentity)).toEqual(['stay-a', 'dog-a']);
 });

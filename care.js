@@ -586,7 +586,7 @@
       try { savedState = JSON.parse(host.dataset.v110FallbackExpanded || '{}'); } catch { savedState = {}; }
       const photos = (key, title, desc, rows, label) => {
         const visible = rows.filter(photo => String(photo?.previewUrl || photo?.url || photo?.driveUrl || '').trim());
-        const expanded = Object.prototype.hasOwnProperty.call(savedState, key) ? savedState[key] : visible.length > 0;
+        const expanded = Object.prototype.hasOwnProperty.call(savedState, key) ? savedState[key] : false;
         const contentId = `${hostId}-${key}-content`;
         return `<section class="v110-media-section"><button type="button" class="v110-media-section-title" data-v110-media-toggle="${key}" aria-controls="${contentId}" aria-expanded="${expanded?'true':'false'}"><span><strong>${title}</strong><span class="v110-media-count">${visible.length}</span><small>${desc}</small></span><span class="v110-media-chevron" aria-hidden="true">⌄</span></button><div class="v110-media-group-content" id="${contentId}"${expanded?'':' hidden'}>${visible.length ? `<div class="v110-media-grid">${visible.map((photo, index) => { const url = String(photo?.previewUrl || photo?.url || photo?.driveUrl || ''), name = String(photo?.label || `${label} ${index+1}`); return `<article class="v110-media-photo"><a class="v110-media-view" href="${html(url)}" target="_blank" rel="noopener" aria-label="View ${html(name)}"><img src="${html(url)}" alt="${html(name)}" loading="lazy"></a><div class="v110-media-photo-meta"><span>${html(name)}</span></div></article>`; }).join('')}</div>` : `<div class="v110-media-empty">No ${label.toLowerCase()} photos saved yet.</div>`}</div></section>`;
       };

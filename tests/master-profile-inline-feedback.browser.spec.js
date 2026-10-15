@@ -2,7 +2,7 @@ const { test, expect } = require('@playwright/test');
 const fs = require('node:fs');
 const path = require('node:path');
 
-const runtime = fs.readFileSync(path.join(__dirname, '..', 'waffle-v11.0.js'), 'utf8');
+const runtime = fs.readFileSync(path.join(__dirname, '..', 'waffle-v11.0.js'), 'utf8').replace(/\r\n/g, '\n');
 const styles = fs.readFileSync(path.join(__dirname, '..', 'waffle-v11.0.css'), 'utf8');
 const helpersStart = runtime.indexOf('const v110ActiveMasterSaves=new Set();');
 const helpersEnd = runtime.indexOf('function v110Escape(', helpersStart);
@@ -35,7 +35,8 @@ test('Master Profile transport failures show a retry and preserve the selected s
   expect(retrySize.height).toBeGreaterThanOrEqual(44);
   expect(retrySize.fontSize).toBe(13);
   expect(await page.evaluate(() => window.savedPayloads.length)).toBe(1);
-  await feedback.getByRole('button', { name: 'Retry' }).click();
+  await feedback.getByRole('button', { name: 'Retry' }).focus();
+  await page.keyboard.press('Enter');
   const secondRetry = feedback.getByRole('button', { name: 'Retry' });
   await expect(secondRetry).toBeFocused();
   await secondRetry.click();

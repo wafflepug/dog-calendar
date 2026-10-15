@@ -94,3 +94,8 @@ Validation includes unit fixtures, browser checks across desktop/mobile/WebKit a
 
 
 Candidate 14 October 2026: [Multi-Visit Booking Plans](multi-visit-booking-plans.md), release 2026.10.14.05, supports shared-contact multi-dog and multiple-date booking, bounded weekly same-day visits, stable per-visit identity and partial retry. Existing production backend remains unchanged. A distinct day-care service type and same-name/date identity migration remain later backend work. Compact Dog record maintenance remains the next Care UI item.
+
+
+## Care and booking UI refinement — 2026.10.16.01
+
+Candidate scope: compact Dog record maintenance and photo galleries; guided multi-visit steps; explicit searchable dog identity cards; grouped per-dog review and save progress. See [implementation and test matrix](care-booking-ui-refinement.md). Next: trustworthy cached record age without additional reads.
