@@ -116,12 +116,15 @@ test('selected Care keeps gallery group state and organizes history by visit sta
   expect(controls.map(item => item.tag)).toEqual(['BUTTON', 'BUTTON', 'BUTTON']);
   expect(controls.every(item => item.controls && item.hidden === (item.expanded !== 'true'))).toBeTruthy();
   expect(controls.map(item => item.count)).toEqual(['1', '1', '0']);
+  expect(controls.map(item => item.expanded)).toEqual(['false', 'false', 'false']);
   const beforeDisclosureReads = actionReads.filter(item => item.action === 'get_guest_belongings').length;
   await groupButtons.nth(0).focus();
   await page.keyboard.press('Enter');
-  await expect(groupButtons.nth(0)).toHaveAttribute('aria-expanded', 'false');
+  await expect(groupButtons.nth(0)).toHaveAttribute('aria-expanded', 'true');
   await groupButtons.nth(2).click();
   await expect(groupButtons.nth(2)).toHaveAttribute('aria-expanded', 'true');
+  await groupButtons.nth(1).click();
+  await expect(groupButtons.nth(1)).toHaveAttribute('aria-expanded', 'true');
   expect(actionReads.filter(item => item.action === 'get_guest_belongings')).toHaveLength(beforeDisclosureReads);
 
   const stayCaption = media.locator('.v110-media-section').nth(1).locator('.v110-media-photo-meta > span');
@@ -146,7 +149,7 @@ test('selected Care keeps gallery group state and organizes history by visit sta
   await groupButtons.nth(0).focus();
   await page.evaluate(() => window.v110LoadMedia(document.querySelector('.directory-card.is-profile-active'), { force: true }));
   await expect.poll(() => actionReads.filter(item => item.action === 'get_guest_belongings').length).toBeGreaterThan(beforeRefresh);
-  await expect(groupButtons.nth(0)).toHaveAttribute('aria-expanded', 'false');
+  await expect(groupButtons.nth(0)).toHaveAttribute('aria-expanded', 'true');
   await expect(groupButtons.nth(0)).toBeFocused();
   await expect(groupButtons.nth(2)).toHaveAttribute('aria-expanded', 'true');
   await expect(media.locator('.v110-media-count')).toHaveText(['1', '1', '0']);
@@ -162,7 +165,7 @@ test('selected Care keeps gallery group state and organizes history by visit sta
     host.dataset.v110StayKey = `${nextStayId}::${nextDogId}::${card.dataset.directoryStayKey}`;
     window.v110RenderMedia(card, { dogPhotoGallery: [{ id: 'profile-1', label: 'Profile portrait', previewUrl: 'https://photos.test/profile.jpg' }], stayPhotos: [{ id: 'stay-1', label: 'Playtime', previewUrl: 'https://photos.test/stay.jpg' }], photos: [] });
   }, ['22222222-2222-4222-8222-222222222222', stayId]);
-  await expect(groupButtons.nth(0)).toHaveAttribute('aria-expanded', 'true');
+  await expect(groupButtons.nth(0)).toHaveAttribute('aria-expanded', 'false');
   await expect(groupButtons.nth(2)).toHaveAttribute('aria-expanded', 'false');
   await page.evaluate(([originalDogId, originalStayId]) => {
     const card = document.querySelector('.directory-card.is-profile-active');
@@ -240,17 +243,17 @@ test('fallback Photos renderer preserves disclosure state only for the same full
   await expect(groups).toHaveCount(3);
   await groups.nth(0).click();
   await groups.nth(2).click();
-  await expect(groups.nth(0)).toHaveAttribute('aria-expanded', 'false');
+  await expect(groups.nth(0)).toHaveAttribute('aria-expanded', 'true');
   await expect(groups.nth(2)).toHaveAttribute('aria-expanded', 'true');
   const controls = await groups.evaluateAll(buttons => buttons.map(button => ({ controls: button.getAttribute('aria-controls'), hidden: document.getElementById(button.getAttribute('aria-controls'))?.hidden })));
   expect(controls.every(item => item.controls && item.hidden !== undefined)).toBeTruthy();
   await groups.nth(0).focus();
   await page.evaluate(() => fallbackMedia(document.querySelector('.directory-card')));
-  await expect(groups.nth(0)).toHaveAttribute('aria-expanded', 'false');
+  await expect(groups.nth(0)).toHaveAttribute('aria-expanded', 'true');
   await expect(groups.nth(0)).toBeFocused();
   await expect(groups.nth(2)).toHaveAttribute('aria-expanded', 'true');
   await page.locator('.directory-card').evaluate(card => { card.dataset.directoryDogId = 'dog-b'; });
   await page.evaluate(() => fallbackMedia(document.querySelector('.directory-card')));
-  await expect(groups.nth(0)).toHaveAttribute('aria-expanded', 'true');
+  await expect(groups.nth(0)).toHaveAttribute('aria-expanded', 'false');
   await expect(groups.nth(2)).toHaveAttribute('aria-expanded', 'false');
 });

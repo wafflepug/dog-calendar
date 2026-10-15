@@ -327,7 +327,15 @@ for (const [name, viewport, colorScheme] of [['320-light', { width: 320, height:
     const mediaHost = page.locator('.directory-card.is-profile-active [data-v110-media-host]');
     await expect(mediaHost.locator('.v110-media-section')).toHaveCount(3);
     await expect(mediaHost.locator('.v110-media-count')).toHaveText(['1', '1', '0']);
-    await expect(mediaHost.locator('[data-v110-media-toggle="profile"]')).toHaveAttribute('aria-expanded', 'true');
+    const profilePhotos = mediaHost.locator('[data-v110-media-toggle="profile"]');
+    await expect(profilePhotos).toHaveAttribute('aria-expanded', 'false');
+    await profilePhotos.focus();
+    await page.keyboard.press('Enter');
+    await expect(profilePhotos).toHaveAttribute('aria-expanded', 'true');
+    await profilePhotos.click();
+    await expect(profilePhotos).toHaveAttribute('aria-expanded', 'false');
+    await profilePhotos.click();
+    await expect(profilePhotos).toHaveAttribute('aria-expanded', 'true');
     await expect(mediaHost.locator('[data-v110-media-toggle="belongings"]')).toHaveAttribute('aria-expanded', 'false');
     await expect(mediaHost.getByRole('button', { name: '＋ Add Stay Photos' })).toHaveCount(1);
     await mediaHost.locator('[data-v110-media-toggle="belongings"]').click();

@@ -47,6 +47,12 @@ async function installContinuityFixture(page) {
         ? { result: 'success', bookings: [booking], summaries: [{ stayKey }] }
         : policy.action === 'get_past_guest_directory'
         ? { result: 'success', bookings: pastBookings, summaries: [] }
+        : policy.action === 'get_guest_profile'
+        ? { result: 'success', record: {
+            stayKey: payload.stayKey || stayKey,
+            identity: { stayKey: payload.stayKey || stayKey, stayId: payload.stayId || stayId, dogId: payload.dogId || dogId },
+            resolution: { status: 'resolved', method: 'fixture' }, intakeAttributes: {}
+          } }
         : { result: 'success', record: { stayKey: payload.stayKey || stayKey, intakeAttributes: {} } };
       if (callback) return route.fulfill({ status: 200, contentType: 'application/javascript', body: `${callback}(${JSON.stringify(response)});` });
       return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(response) });

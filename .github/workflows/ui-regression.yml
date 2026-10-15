@@ -52,6 +52,8 @@ on:
       - 'playwright.care-ui-five.config.js'
       - 'playwright.care-ui-clarity.config.js'
       - 'playwright.care-compact-controls.config.js'
+      - 'playwright.care-master-compact.config.js'
+      - 'tests/care-master-compact.browser.spec.js'
       - 'playwright.booking-plan.config.js'
       - 'tests/booking-plan.test.js'
       - 'tests/booking-plan.browser.spec.js'
@@ -141,6 +143,8 @@ on:
       - 'playwright.care-ui-five.config.js'
       - 'playwright.care-ui-clarity.config.js'
       - 'playwright.care-compact-controls.config.js'
+      - 'playwright.care-master-compact.config.js'
+      - 'tests/care-master-compact.browser.spec.js'
       - 'playwright.booking-plan.config.js'
       - 'tests/booking-plan.test.js'
       - 'tests/booking-plan.browser.spec.js'
@@ -229,6 +233,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          - group: master-compact
+            configs: playwright.care-master-compact.config.js
           - group: booking-plans
             configs: playwright.booking-plan.config.js
           - group: compact-controls

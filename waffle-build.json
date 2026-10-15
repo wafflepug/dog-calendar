@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.10.14.05",
-  "releaseName": "Multi-Visit Booking Plans",
+  "assetRevision": "2026.10.16.01",
+  "releaseName": "Care and Booking UI Refinement",
   "careIteration": {
     "returningDogSuggestions": true,
     "reviewedCareInheritance": true,

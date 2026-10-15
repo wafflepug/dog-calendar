@@ -143,7 +143,8 @@ test('full runtime source controls stay compact and readable beside current care
     for(const dark of [false,true]){
       await page.locator('body').evaluate((node,mode)=>node.classList.toggle('dark-theme',mode),dark);
       await expect.poll(()=>host.locator('.v11112-care-source-current strong').evaluate(node=>parseFloat(getComputedStyle(node).fontSize))).toBeGreaterThanOrEqual(14);
-      const box=await disclosure.locator('summary').boundingBox();expect(box.height).toBeGreaterThanOrEqual(44);
+      const summary=disclosure.locator('summary');await expect(summary).toBeVisible();
+      await expect.poll(async()=>{const box=await summary.boundingBox();return box?.height||0;}).toBeGreaterThanOrEqual(44);
       expect(await host.evaluate(node=>node.scrollWidth<=node.clientWidth+1)).toBeTruthy();
     }
   }

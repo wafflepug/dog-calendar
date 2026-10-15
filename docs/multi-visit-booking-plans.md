@@ -1,10 +1,10 @@
 # Multi-visit booking plans
 
-Candidate release 2026.10.14.05: Multi-Visit Booking Plans. Existing Waffle House backend and data remain unchanged.
+Introduced in 2026.10.14.05; guided UI refined in 2026.10.16.01. Existing Waffle House backend and data remain unchanged.
 
 ## User flow
 
-Open Add > Multiple visits, or Sitter Tools > Booking > Plan multiple visits. Find a returning dog using the exact Dog ID, or explicitly choose New dog. Review saved care where available, then Add dog. Repeat for other dogs in the household. Enter shared owner contact once. Add one or more independent date ranges. For repeated single-day care, choose Same-day visits and add individual dates or a weekly pattern with an end date. Review every individual dog/date row, check combined capacity warnings, then confirm.
+Open Add > Multiple visits, or Sitter Tools > Booking > Plan multiple visits. Follow Owner → Dogs → Dates → Review. Enter shared owner contact once, then search for returning dogs by name, Dog ID, breed or owner and explicitly select the exact Dog ID card. New dogs use the explicit New dog choice. Review saved care where available, add the dog and repeat for other dogs in the household. Add independent date ranges; for repeated single-day care, choose Same-day visits and add individual dates or a weekly pattern with an end date. Review dates grouped under each dog, check combined capacity warnings, then confirm. Back retains entered data. Results show each individual visit outcome and one Resume action for unfinished saves.
 
 Each dog/date row creates its own confirmed stay with a unique Stay ID. A returning dog's permanent Dog ID is retained; a new dog's first acknowledged ID is reused for subsequent visits. The generated visits are ordinary independent bookings, editable or cancellable through existing stay controls. A later calendar change does not modify the whole original weekly pattern.
 
@@ -31,4 +31,4 @@ Automated tests use synthetic records and mocked writes; production checks are r
 
 ## Next iteration
 
-A server-side household/group booking API with strict Dog-ID/Stay-ID linking would permit same-name dogs on identical dates and support a persistent group summary. A separate day-care service type with hours and daytime capacity would follow that identity-safe foundation. Compact Dog record maintenance remains in the Care UI backlog.
+A server-side household/group booking API with strict Dog-ID/Stay-ID linking would permit same-name dogs on identical dates and support a persistent group summary. A separate day-care service type with hours and daytime capacity would follow that identity-safe foundation. The next Care presentation item is trustworthy cached record age without additional reads.
