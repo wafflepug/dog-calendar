@@ -272,7 +272,12 @@ function v1082ApplyPastReadOnly(card) {
     if (records) {
         const identity = [card.dataset.directoryStayId, card.dataset.directoryDogId, card.dataset.directoryStayKey || card.dataset.stayKey].map(value => String(value || '').trim().toLowerCase()).join('::');
         records.dataset.recordsIdentity = identity;
-        if (v1082PastRecordsDisclosure.has(identity)) records.open = v1082PastRecordsDisclosure.get(identity);
+        if (records.dataset.v1082DisclosureIdentity !== identity) {
+            records.dataset.v1082DisclosureIdentity = identity;
+            records.open = v1082PastRecordsDisclosure.has(identity)
+                ? v1082PastRecordsDisclosure.get(identity)
+                : false;
+        }
         const status = records.querySelector('[data-v1082-records-status]');
         const intakeText = String(records.querySelector('[data-directory-intake]')?.textContent || '').replace(/\s+/g, ' ').trim();
         const legacyText = String(records.querySelector('[data-directory-legacy]')?.textContent || '').replace(/\s+/g, ' ').trim();

@@ -428,8 +428,9 @@
       chip.dataset.v1118StatusChip = '';
       host.appendChild(chip);
     }
-    chip.className = 'v1118-status-chip v1118-care-status ' + statusClass(status);
-    chip.textContent = status;
+    const chipClass = 'v1118-status-chip v1118-care-status ' + statusClass(status);
+    if (chip.className !== chipClass) chip.className = chipClass;
+    if (chip.textContent !== status) chip.textContent = status;
     const profileStatus = card.classList.contains('is-profile-active') && card.dataset.v1082PastStay !== 'true'
       ? card.querySelector('.directory-card-header .directory-status-tag')
       : null;
@@ -444,7 +445,8 @@
       };
       const label = labels[status] || status;
       const tagClass = status === 'AT HOME' ? 'tag-at-home' : status === 'CHECKED OUT' || status === 'PAST STAY' ? 'tag-checked-out' : 'tag-upcoming';
-      profileStatus.className = 'directory-status-tag ' + tagClass;
+      const profileClass = 'directory-status-tag ' + tagClass;
+      if (profileStatus.className !== profileClass) profileStatus.className = profileClass;
       if (profileStatus.textContent !== label) profileStatus.textContent = label;
     }
     const signals = careSignals(card);
@@ -455,14 +457,20 @@
       signalsHost.className = 'v1118-care-signals';
       host.appendChild(signalsHost);
     }
-    signalsHost.innerHTML = signals.map(signal => `
+    const signalsMarkup = signals.map(signal => `
       <span class="v1118-care-signal" title="${esc(signal.label)}">
         <span class="v1118-care-signal-icon" aria-hidden="true">${esc(signal.icon)}</span>
         <span>${esc(signal.label)}</span>
       </span>`).join('');
-    signalsHost.hidden = signals.length === 0;
-    card.classList.toggle('has-v1118-care-signals', signals.length > 0);
-    card.dataset.v1118PriorityScore = String(signals.reduce((sum, signal) => sum + signal.weight, 0));
+    if (signalsHost.innerHTML !== signalsMarkup) signalsHost.innerHTML = signalsMarkup;
+    const isHidden = signals.length === 0;
+    if (signalsHost.hidden !== isHidden) signalsHost.hidden = isHidden;
+    const hasSignals = signals.length > 0;
+    if (card.classList.contains('has-v1118-care-signals') !== hasSignals) {
+      card.classList.toggle('has-v1118-care-signals', hasSignals);
+    }
+    const priorityScore = String(signals.reduce((sum, signal) => sum + signal.weight, 0));
+    if (card.dataset.v1118PriorityScore !== priorityScore) card.dataset.v1118PriorityScore = priorityScore;
   }
 
   function decorateAllCareCards() {
@@ -693,7 +701,6 @@
     openQuickAddFromUrl();
     if (pageName() === 'directory') {
       removeCareSort();
-      decorateAllCareCards();
       loadCareReminders().catch(() => {});
     }
     if (pageName() === 'calendar') {

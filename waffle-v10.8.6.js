@@ -897,47 +897,39 @@ function v1086ObserveCareDirectory() {
         return;
     }
 
-    const currentGrid =
-        document.getElementById(
-            'directory-grid'
-        );
-
-    if (currentGrid) {
-        new MutationObserver(
-            () => {
-                v1086UpdateCareStayCounts();
-            }
-        ).observe(
-            currentGrid,
-            {
-                childList:
-                    true,
-                subtree:
-                    true
-            }
-        );
+    if (
+        window.v1086CareDirectoryObserver ||
+        !document.body
+    ) {
+        return;
     }
 
-    const pastGrid =
-        document.getElementById(
-            'past-directory-grid'
-        );
-
-    if (pastGrid) {
-        new MutationObserver(
-            () => {
-                v1086UpdateCareStayCounts();
-            }
-        ).observe(
-            pastGrid,
-            {
-                childList:
-                    true,
-                subtree:
-                    true
-            }
-        );
-    }
+    // Observe the page once so late-created/replaced grids are covered too.
+    // Count updates only read the grids, so their own text changes cannot
+    // feed back into this child-list observer.
+    const observer = new MutationObserver(
+        (mutations) => {
+            const hasGridChange = mutations.some((mutation) => {
+                const target = mutation.target;
+                return target.matches?.('#directory-grid, #past-directory-grid') ||
+                    Array.from(mutation.addedNodes || []).some((node) =>
+                        node.nodeType === 1 && (
+                            node.matches?.('#directory-grid, #past-directory-grid, .directory-guest-tile-open') ||
+                            node.querySelector?.('#directory-grid, #past-directory-grid, .directory-guest-tile-open')
+                        )
+                    ) ||
+                    Array.from(mutation.removedNodes || []).some((node) =>
+                        node.nodeType === 1 && (
+                            node.matches?.('#directory-grid, #past-directory-grid, .directory-guest-tile-open') ||
+                            node.querySelector?.('#directory-grid, #past-directory-grid, .directory-guest-tile-open')
+                        )
+                    );
+            });
+            if (hasGridChange) v1086UpdateCareStayCounts();
+        }
+    );
+    observer.observe(document.body, { childList: true, subtree: true });
+    window.v1086CareDirectoryObserver = observer;
 }
 
 

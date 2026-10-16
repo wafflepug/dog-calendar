@@ -167,4 +167,45 @@ test.describe('compact past contact and records', () => {
     });
     expect(mutations).toBe(0);
   });
+
+  test('reapplying the same past record identity cannot reopen a native close before toggle sync', async ({ page }) => {
+    const source = fs.readFileSync(path.join(__dirname, '..', 'waffle-v10.8.2.js'), 'utf8');
+    const start = source.indexOf('function v1082ApplyPastReadOnly(card)');
+    const end = source.indexOf('function v1082ApplyPastResponse(', start);
+    expect(start).toBeGreaterThanOrEqual(0);
+    expect(end).toBeGreaterThan(start);
+    await page.setContent('<article class="directory-card" data-v1082-past-stay="true" data-directory-stay-key="stay"><details data-v1082-past-records><summary>Records &amp; forms</summary><div data-v1082-records-status></div><div data-directory-intake></div><div data-directory-legacy></div></details></article>');
+    await page.addScriptTag({ content: `const v1082PastRecordsDisclosure = new Map();\n${source.slice(start, end)}\nwindow.__pastDisclosureMap = () => v1082PastRecordsDisclosure;` });
+    await page.evaluate(() => {
+      const card = document.querySelector('.directory-card');
+      const details = card.querySelector('[data-v1082-past-records]');
+      v1082ApplyPastReadOnly(card);
+      window.__pastDisclosureMap().set(details.dataset.recordsIdentity, true);
+      details.open = true;
+    });
+    await page.waitForFunction(() => window.__pastDisclosureMap().get('::::stay') === true);
+
+    const remainedClosed = await page.evaluate(() => {
+      const card = document.querySelector('.directory-card');
+      const details = card.querySelector('[data-v1082-past-records]');
+      details.open = false;
+      v1082ApplyPastReadOnly(card);
+      return !details.open;
+    });
+    expect(remainedClosed).toBe(true);
+    await page.waitForFunction(() => window.__pastDisclosureMap().get('::::stay') === false);
+
+    const identityStates = await page.evaluate(() => {
+      const card = document.querySelector('.directory-card');
+      const details = card.querySelector('[data-v1082-past-records]');
+      card.dataset.directoryStayKey = 'new';
+      v1082ApplyPastReadOnly(card);
+      const unseenIdentityClosed = !details.open;
+      card.dataset.directoryStayKey = 'saved';
+      window.__pastDisclosureMap().set('::::saved', true);
+      v1082ApplyPastReadOnly(card);
+      return { unseenIdentityClosed, savedIdentityRestored: details.open };
+    });
+    expect(identityStates).toEqual({ unseenIdentityClosed: true, savedIdentityRestored: true });
+  });
 });

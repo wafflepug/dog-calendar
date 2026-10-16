@@ -9134,7 +9134,8 @@ registerWaffleServiceWorker();
             'Edit Link',
             'Booking Type',
             'Dog ID',
-            'Dog Number'
+            'Dog Number',
+            'Stay ID'
         ];
 
         const rows = [
@@ -9159,7 +9160,8 @@ registerWaffleServiceWorker();
                 booking.editLink || '',
                 booking.bookingType || 'Boarding',
                 booking.dogId || '',
-                booking.dogNumber || ''
+                booking.dogNumber || '',
+                booking.stayId || ''
             ]);
         });
 
@@ -9178,13 +9180,20 @@ registerWaffleServiceWorker();
     function getDirectoryBookingSignature(
         bookings
     ) {
-        return (
+        const localDay = new Date();
+        const localDateKey = [
+            localDay.getFullYear(),
+            String(localDay.getMonth() + 1).padStart(2, '0'),
+            String(localDay.getDate()).padStart(2, '0')
+        ].join('-');
+        return JSON.stringify([localDateKey, (
             Array.isArray(bookings)
                 ? bookings
                 : []
-        )
-            .map(booking => [
+        ).map(booking => [
+                booking.timestamp || '',
                 booking.stayKey || '',
+                booking.stayId || '',
                 booking.dogName || '',
                 booking.breed || '',
                 booking.startDate || '',
@@ -9192,11 +9201,11 @@ registerWaffleServiceWorker();
                 booking.ownerName || '',
                 booking.phone || '',
                 booking.notes || '',
+                booking.editLink || '',
+                booking.bookingType || 'Boarding',
                 booking.dogId || '',
                 booking.dogNumber || ''
-            ].join('|'))
-            .sort()
-            .join('||');
+            ])]);
     }
 
     function findDirectoryCardByStayKey(
@@ -10435,7 +10444,6 @@ registerWaffleServiceWorker();
             );
 
         const shouldRebuildCards =
-            !options.quiet ||
             !existingCards ||
             !directoryBookingStateSignature ||
             directoryBookingStateSignature !==
@@ -10505,7 +10513,7 @@ registerWaffleServiceWorker();
                     bookings
                 );
 
-            parseCSVToEvents(csv);
+            parseCSVToEvents(csv, { preserveDirectoryProfileState: false });
 
             directoryBookingStateSignature =
                 nextSignature;
@@ -16075,7 +16083,82 @@ registerWaffleServiceWorker();
     }
 
 
-    function parseCSVToEvents(csvText) {
+    const directoryCardGeneratedMarkup = new WeakMap();
+
+    function directoryCardReuseKey(card) {
+        const stayKey = String(card?.dataset?.directoryStayKey || '').trim();
+        const stayId = String(card?.dataset?.directoryStayId || '').trim().toLowerCase();
+        const dogId = String(card?.dataset?.directoryDogId || '').trim().toLowerCase();
+        return stayKey && stayId && dogId
+            ? JSON.stringify([stayId, dogId, stayKey])
+            : '';
+    }
+
+    function directoryCardCanReuse(oldEntry, newEntry, oldCard, generatedMarkup) {
+        return !!oldCard && oldEntry?.count === 1 && newEntry?.count === 1 &&
+            directoryCardGeneratedMarkup.get(oldCard) === generatedMarkup;
+    }
+
+    function reconcileDirectoryGridCards(grid, generatedHtml) {
+        if (!grid || typeof document.createElement !== 'function') {
+            if (grid) grid.innerHTML = generatedHtml;
+            return;
+        }
+
+        const template = document.createElement('template');
+        template.innerHTML = generatedHtml;
+        const incoming = Array.from(template.content.querySelectorAll('.directory-card[data-directory-stay-key]'));
+        if (!incoming.length) {
+            grid.innerHTML = generatedHtml;
+            return;
+        }
+
+        const existing = Array.from(grid.querySelectorAll('.directory-card[data-directory-stay-key]'));
+        const oldByKey = new Map();
+        const newByKey = new Map();
+        const count = (map, key, card) => {
+            if (!key) return;
+            const entry = map.get(key) || { count: 0, card: null };
+            entry.count++;
+            entry.card = card;
+            map.set(key, entry);
+        };
+        existing.forEach(card => count(oldByKey, directoryCardReuseKey(card), card));
+        incoming.forEach(card => count(newByKey, directoryCardReuseKey(card), card));
+
+        const targetCards = incoming.map(card => {
+            const key = directoryCardReuseKey(card);
+            const oldEntry = oldByKey.get(key);
+            const newEntry = newByKey.get(key);
+            if (key && directoryCardCanReuse(oldEntry, newEntry, oldEntry?.card, card.outerHTML)) {
+                return oldEntry.card;
+            }
+            return card;
+        });
+
+        targetCards.forEach(card => {
+            if (!directoryCardGeneratedMarkup.has(card)) directoryCardGeneratedMarkup.set(card, card.outerHTML);
+        });
+
+        const targetSet = new Set(targetCards);
+        existing.forEach(card => { if (!targetSet.has(card)) card.remove(); });
+        Array.from(grid.children).forEach(child => {
+            if (!targetSet.has(child)) child.remove();
+        });
+
+        targetCards.forEach((card, index) => {
+            const currentCards = Array.from(grid.children);
+            if (currentCards[index] !== card) grid.insertBefore(card, currentCards[index] || null);
+        });
+    }
+
+    function parseCSVToEvents(csvText, options = {}) {
+        const preservedProfileState = options.preserveDirectoryProfileState !== false && WAFFLE_PAGE === 'directory' && !directoryConsolidatedLoadInProgress
+            ? captureDirectoryProfileUiState()
+            : null;
+        const previouslyActiveCard = preservedProfileState
+            ? document.querySelector('.directory-card.is-profile-active')
+            : null;
         if (!csvText) return [];
         const parsedCsv = window.WaffleCsv?.parse(csvText);
         if (!parsedCsv?.ok || !parsedCsv.records.length) return [];
@@ -16624,11 +16707,17 @@ registerWaffleServiceWorker();
         document.getElementById('at-home-list').innerHTML = atHomeDogs.length > 0 ? atHomeDogs.join('') : '<li class="no-dogs">No remaining guests at home right now</li>';
         document.getElementById('leaving-list').innerHTML = leavingDogs.length > 0 ? leavingDogs.join('') : '<li class="no-dogs">No checkouts scheduled this week</li>';
         document.getElementById('upcoming-list').innerHTML = upcomingDogs.length > 0 ? upcomingDogs.join('') : '<li class="no-dogs">No new arrivals scheduled this week</li>';
-        document.getElementById('directory-grid').innerHTML = directoryCardsHTML.length > 0 ? directoryCardsHTML.join('') : '<div class="no-dogs" style="grid-column: 1/-1; text-align: center; padding: 20px;">No active guests to display.</div>';
+        const directoryGrid = document.getElementById('directory-grid');
+        const generatedDirectoryHtml = directoryCardsHTML.length > 0 ? directoryCardsHTML.join('') : '<div class="no-dogs" style="grid-column: 1/-1; text-align: center; padding: 20px;">No active guests to display.</div>';
+        reconcileDirectoryGridCards(directoryGrid, generatedDirectoryHtml);
 
         document
             .querySelectorAll('.directory-card[data-directory-stay-key]')
             .forEach(card => renderDirectoryCareBrief(card));
+
+        if (preservedProfileState && (!previouslyActiveCard || !previouslyActiveCard.isConnected)) {
+            restoreSelectedDirectoryProfile({ state: preservedProfileState });
+        }
 
         if (
             WAFFLE_PAGE === 'directory' &&

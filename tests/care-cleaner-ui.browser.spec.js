@@ -8,6 +8,21 @@ const longFoodNote = 'Sensitive stomach; avoid chicken treats. '.repeat(12);
 const booking = { timestamp:'2026-09-18', dogName:'Milo', breed:'Border Collie', startDate:'2026-09-17', endDate:'2026-09-22', ownerName:'Alex Owner', phone:'0400000001', notes:'Saved care note', bookingType:'Boarding', dogId:'11111111-1111-4111-8111-111111111111', dogNumber:'00007' };
 const stayKey = 'milo|2026-09-17|2026-09-22';
 const csv = () => 'Timestamp,Dog Name,Breed,Start Date,End Date,Owner,Phone,Likes,Dislikes,Notes,Edit Link,Booking Type,Source,Dog ID,Dog Number\n' + [booking.timestamp,booking.dogName,booking.breed,'17/09/2026','22/09/2026',booking.ownerName,booking.phone,'','','Saved care note','','Boarding','Direct',booking.dogId,booking.dogNumber].join(',');
+async function fixBookingDate(page) {
+  // Keep native pointer timestamps and timers; only the booking date is fixed.
+  await page.addInitScript(() => {
+    const NativeDate = Date;
+    const fixedNow = NativeDate.UTC(2026, 8, 18, 12, 0, 0);
+    function FixedDate(...args) {
+      if (!new.target) return new NativeDate(fixedNow).toString();
+      return Reflect.construct(NativeDate, args.length ? args : [fixedNow], new.target);
+    }
+    FixedDate.prototype = NativeDate.prototype;
+    Object.setPrototypeOf(FixedDate, NativeDate);
+    FixedDate.now = () => fixedNow;
+    globalThis.Date = FixedDate;
+  });
+}
 async function installFixture(page) {
   const calls = new Map();
   await page.route('**/*', async route => {
@@ -38,7 +53,7 @@ async function installFixture(page) {
 async function openProfile(page, baseURL, calls, width=390, theme='light') {
   await page.setViewportSize({width,height:900});
   await page.emulateMedia({colorScheme:theme});
-  await page.clock.setFixedTime(new Date('2026-09-18T12:00:00Z'));
+  await fixBookingDate(page);
   await page.addInitScript(mode=>localStorage.setItem('theme',mode),theme);
   await page.goto(`${baseURL}/directory.html`,{waitUntil:'domcontentloaded'});
   await page.waitForFunction(()=>document.documentElement.dataset.waffleUiReady==='true');
@@ -57,7 +72,7 @@ async function openProfile(page, baseURL, calls, width=390, theme='light') {
 test('actual Care runtime tucks record tools into a no-read disclosure and recovers its controls after toolbar replacement', async ({page,baseURL}) => {
   const calls=await installFixture(page);
   await page.setViewportSize({width:390,height:900});
-  await page.clock.setFixedTime(new Date('2026-09-18T12:00:00Z'));
+  await fixBookingDate(page);
   await page.goto(`${baseURL}/directory.html`,{waitUntil:'domcontentloaded'});
   await page.waitForFunction(()=>document.documentElement.dataset.waffleUiReady==='true');
   const details=page.locator('.care-record-maintenance');
