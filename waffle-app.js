@@ -1332,42 +1332,58 @@ function v10FormatDateLabel(dateString) {
 
 
 function v10EventRawDates(event) {
-    const props =
-        event?.extendedProps ||
-        {};
-
-    const start =
-        String(
-            props.rawStartDate ||
-            event?.startStr ||
-            ''
-        ).slice(0, 10);
-
-    let end =
-        String(
-            props.rawEndDate ||
-            ''
-        ).slice(0, 10);
-
+    const props = event?.extendedProps || {};
+    const startValue = props.rawStartDate || event?.startStr || event?.start || '';
+    const start = startValue instanceof Date && !Number.isNaN(startValue.getTime())
+        ? startValue.getFullYear() + '-' + String(startValue.getMonth() + 1).padStart(2, '0') + '-' + String(startValue.getDate()).padStart(2, '0')
+        : String(startValue).slice(0, 10);
+    let end = props.isMeetGreet === true ? start : String(props.rawEndDate || '').slice(0, 10);
     if (!end && event?.end) {
-        const endDate =
-            new Date(event.end);
-
-        endDate.setDate(
-            endDate.getDate() - 1
-        );
-
-        end =
-            endDate.getFullYear() +
-            '-' +
-            String(endDate.getMonth() + 1).padStart(2, '0') +
-            '-' +
-            String(endDate.getDate()).padStart(2, '0');
+        const endDate = new Date(event.end);
+        endDate.setDate(endDate.getDate() - 1);
+        end = endDate.getFullYear() + '-' + String(endDate.getMonth() + 1).padStart(2, '0') + '-' + String(endDate.getDate()).padStart(2, '0');
     }
-
     if (!end) end = start;
-
     return { start, end };
+}
+
+
+function todayQueueIdentity(event) {
+    const props = event?.extendedProps || {};
+    const dates = v10EventRawDates(event);
+    const stayKey = typeof v110StayKeyForEvent === 'function' ? v110StayKeyForEvent(event) : String(props.stayKey || '');
+    if (props.isMeetGreet === true) {
+        return JSON.stringify(['meet', stayKey, props.dogId || '', props.dogName || event?.title || '', dates.start || '', String(props.time || ''), props.breed || '']);
+    }
+    if (String(props.stayId || '').trim() && typeof v110EventUniqueKey === 'function') return v110EventUniqueKey(event, stayKey);
+    return JSON.stringify([event?.id || '', stayKey, props.dogId || '', props.dogName || event?.title || '', dates.start || '', dates.end || '', props.ownerName || props.owner || '', props.phone || '']);
+}
+
+function todayQueueItem(event, type, icon, title, meta, sort) {
+    const props = event?.extendedProps || {};
+    const stayKey = typeof v110StayKeyForEvent === 'function' ? v110StayKeyForEvent(event) : String(props.stayKey || '');
+    const identity = todayQueueIdentity(event);
+    const stayId = String(props.stayId || '').trim();
+    const dogId = String(props.dogId || '').trim();
+    const href = 'directory.html?stayKey=' + encodeURIComponent(stayKey)
+        + (typeof v110ValidStayId === 'function' && v110ValidStayId(stayId) ? '&stayId=' + encodeURIComponent(stayId) : '')
+        + (dogId ? '&dogId=' + encodeURIComponent(dogId) : '');
+    return { identity, href, type, icon, title, meta, sort, isMeet: type === 'meet' };
+}
+
+function wireTodayQueueActions() {
+    if (window.todayQueueActionsWired) return;
+    window.todayQueueActionsWired = true;
+    document.addEventListener('click', event => {
+        const button = event.target.closest('[data-today-open-meet]');
+        if (!button) return;
+        event.preventDefault();
+        const identity = button.dataset.todayOpenMeet || '';
+        const current = globalCalendar?.getEvents?.().find(item => todayQueueIdentity(item) === identity);
+        const handler = globalCalendar?.getOption?.('eventClick');
+        if (!current || typeof handler !== 'function') { window.location.href = 'index.html?view=calendar'; return; }
+        handler({ event: current, jsEvent: event, el: button, view: globalCalendar.view });
+    });
 }
 
 
@@ -1380,6 +1396,13 @@ function renderV10OperationsHome(events) {
         Array.isArray(events)
             ? events
             : [];
+
+    const uniqueEvents = new Map();
+    events.forEach(event => {
+        const identity = todayQueueIdentity(event);
+        if (!uniqueEvents.has(identity)) uniqueEvents.set(identity, event);
+    });
+    events = Array.from(uniqueEvents.values());
 
     const today =
         getLocalTodayDateString();
@@ -1456,23 +1479,7 @@ function renderV10OperationsHome(events) {
             if (dates.start === today) {
                 meets++;
 
-                agenda.push({
-                    type: 'meet',
-                    icon: '🤝',
-                    title: dogName,
-                    meta:
-                        String(
-                            props.time ||
-                            ''
-                        ) ||
-                        'Meet & Greet',
-                    sort:
-                        300 +
-                        meetGreetTimeToMinutes(
-                            props.time ||
-                            ''
-                        )
-                });
+                agenda.push(todayQueueItem(event, 'meet', '🤝', dogName, String(props.time || '') || 'Meet & Greet', 300 + meetGreetTimeToMinutes(props.time || '')));
             }
 
             if (
@@ -1512,24 +1519,12 @@ function renderV10OperationsHome(events) {
 
         if (dates.start === today) {
             arrivals++;
-            agenda.push({
-                type: 'arrival',
-                icon: '🛬',
-                title: dogName,
-                meta: 'Arriving today',
-                sort: 100
-            });
+            agenda.push(todayQueueItem(event, 'arrival', '🛬', dogName, 'Arriving today', 100));
         }
 
         if (dates.end === today) {
             departures++;
-            agenda.push({
-                type: 'departure',
-                icon: '👋',
-                title: dogName,
-                meta: 'Leaving today',
-                sort: 200
-            });
+            agenda.push(todayQueueItem(event, 'departure', '👋', dogName, 'Leaving today', 200));
         }
 
         if (
@@ -1591,32 +1586,23 @@ function renderV10OperationsHome(events) {
         );
 
     if (agendaHost) {
-        agenda.sort((a, b) =>
-            a.sort - b.sort
-        );
-
-        agendaHost.innerHTML =
-            agenda.length
-                ? agenda
-                    .map(item => `
-                        <div class="v10-agenda-item type-${escapeDashboardHtml(item.type)}">
-                            <span class="v10-agenda-icon">${item.icon}</span>
-                            <div>
-                                <strong>${escapeDashboardHtml(item.title)}</strong>
-                                <span>${escapeDashboardHtml(item.meta)}</span>
-                            </div>
-                        </div>
-                    `)
-                    .join('')
-                : `
-                    <div class="v10-empty v10-all-clear">
-                        <span>✓</span>
-                        <div>
-                            <strong>No arrivals, departures or Meet & Greets today</strong>
-                            <small>Use the calendar below for the full schedule.</small>
-                        </div>
-                    </div>
-                  `;
+        wireTodayQueueActions();
+        const uniqueAgenda = new Map();
+        agenda.forEach(item => {
+            if (!item) return;
+            const existing = uniqueAgenda.get(item.identity);
+            if (!existing) uniqueAgenda.set(item.identity, item);
+            else if (!existing.meta.split(' · ').includes(item.meta)) existing.meta += ' · ' + item.meta;
+        });
+        const queue = Array.from(uniqueAgenda.values()).sort((a, b) => a.sort - b.sort || a.title.localeCompare(b.title) || a.identity.localeCompare(b.identity));
+        agendaHost.innerHTML = queue.length
+            ? queue.map(item => item.isMeet ? '<button type="button" class="v10-agenda-item type-meet" data-today-open-meet="' + escapeDashboardHtml(item.identity) + '" aria-label="Open ' + escapeDashboardHtml(item.title) + ' Meet & Greet in calendar"><span class="v10-agenda-icon" aria-hidden="true">' + item.icon + '</span><span class="v10-agenda-copy"><strong>' + escapeDashboardHtml(item.title) + '</strong><span>' + escapeDashboardHtml(item.meta) + '</span></span><span class="v10-agenda-action">Open event <span aria-hidden="true">↗</span></span></button>' : '<a class="v10-agenda-item type-' + escapeDashboardHtml(item.type) + '" href="' + escapeDashboardHtml(item.href) + '" aria-label="Open ' + escapeDashboardHtml(item.title) + ' care profile, ' + escapeDashboardHtml(item.meta) + '"><span class="v10-agenda-icon" aria-hidden="true">' + item.icon + '</span><span class="v10-agenda-copy"><strong>' + escapeDashboardHtml(item.title) + '</strong><span>' + escapeDashboardHtml(item.meta) + '</span></span><span class="v10-agenda-action">Open profile <span aria-hidden="true">↗</span></span></a>').join('')
+            : '<div class="v10-empty v10-all-clear" role="status"><span aria-hidden="true">✓</span><div><strong>No arrivals, departures or Meet & Greets today</strong><small>The Today queue has no scheduled actions.</small></div></div>';
+        const careNote = document.createElement('a');
+        careNote.className = 'v10-agenda-care-link';
+        careNote.href = 'directory.html';
+        careNote.textContent = 'Medication and intake checks are in Care profiles';
+        agendaHost.appendChild(careNote);
     }
 
     const nextHost =
@@ -3877,77 +3863,46 @@ function initialiseWafflePushUi() {
 
 
 function maybeOpenDirectoryPushDeepLink() {
-    if (
-        WAFFLE_PAGE !==
-        'directory'
-    ) {
-        return;
-    }
-
-    const stayKey =
-        String(
-            new URLSearchParams(
-                window.location.search
-            ).get(
-                'stayKey'
-            ) ||
-            ''
-        ).trim();
-
+    if (WAFFLE_PAGE !== 'directory') return;
+    const params = new URLSearchParams(window.location.search);
+    const stayKey = String(params.get('stayKey') || '').trim();
+    const stayId = String(params.get('stayId') || '').trim();
+    const dogId = String(params.get('dogId') || '').trim();
     if (!stayKey) return;
 
-    const attemptOpen =
-        () => {
-            const card =
-                getDirectoryProfileCard(
-                    stayKey
-                );
+    const clearLinkMessage = () => document.querySelector('[data-directory-push-link-status]')?.remove();
+    const showLinkMessage = () => {
+        const roster = document.getElementById('directory-roster-summary');
+        if (!roster || roster.querySelector('[data-directory-push-link-status]')) return;
+        const message = document.createElement('span');
+        message.dataset.directoryPushLinkStatus = 'true';
+        message.setAttribute('role', 'status');
+        message.textContent = 'The linked stay could not be opened. Find the guest by Dog ID or refresh the list.';
+        roster.appendChild(message);
+    };
+    const attemptOpen = () => {
+        const card = getDirectoryProfileCard(stayKey, stayId, dogId, true);
+        if (!card) return false;
+        clearLinkMessage();
+        openDirectoryGuestProfile(card, { instant: true }).catch(error => console.error(error));
+        return true;
+    };
 
-            if (!card) {
-                return false;
-            }
-
-            openDirectoryGuestProfile(
-                card,
-                {
-                    instant: true
-                }
-            ).catch(error =>
-                console.error(error)
-            );
-
-            return true;
-        };
-
-    if (attemptOpen()) {
-        return;
-    }
-
+    if (attemptOpen()) return;
     let attempts = 0;
-
-    const timer =
-        setInterval(
-            () => {
-                attempts++;
-
-                if (
-                    attemptOpen() ||
-                    attempts >= 20
-                ) {
-                    clearInterval(
-                        timer
-                    );
-                }
-            },
-            500
-        );
+    const timer = setInterval(() => {
+        attempts++;
+        if (attemptOpen()) {
+            clearInterval(timer);
+            return;
+        }
+        if (attempts >= 20) {
+            clearInterval(timer);
+            showLinkMessage();
+        }
+    }, 500);
 }
 
-
-
-/* ============================================================
-   V8.4 PWA / OFFLINE APP SHELL
-   ============================================================ */
 
 let waffleDeferredInstallPrompt = null;
 let waffleActiveNetworkRequests = 0;
@@ -8695,7 +8650,15 @@ registerWaffleServiceWorker();
             });
             const unresolved = Object.values(readinessItems).filter(item => !item.ready && item.status !== 'Loading').length;
             const summary = brief.querySelector('[data-care-readiness-summary]');
-            if (summary) summary.textContent = unresolved ? `${unresolved} to review` : 'Ready for care';
+            if (summary) {
+                const identityNeedsReview = identityAmbiguous || identityBlocked;
+                summary.textContent = identityNeedsReview ? 'Needs identity review'
+                    : !readinessItems.intake.ready ? 'Needs intake'
+                    : unresolved ? 'Needs handover' : 'Setup complete';
+                summary.dataset.state = identityNeedsReview || unresolved ? 'attention' : 'ready';
+                summary.closest('summary')?.setAttribute('aria-description',
+                    'Intake and handover setup checks only. Review safety, feeding and medication separately.');
+            }
         }
 
         const safetyHost = brief.querySelector('[data-care-brief-safety]');
@@ -10763,21 +10726,13 @@ registerWaffleServiceWorker();
 
 
 
-    function getDirectoryProfileCard(stayKey) {
-        return Array.from(
-            document.querySelectorAll(
-                '.directory-card[data-directory-stay-key]'
-            )
-        ).find(card =>
-            String(
-                card.dataset
-                    .directoryStayKey ||
-                ''
-            ) ===
-            String(
-                stayKey || ''
-            )
-        ) || null;
+    function getDirectoryProfileCard(stayKey, stayId = '', dogId = '', requireUnique = false) {
+        let candidates = Array.from(document.querySelectorAll('.directory-card[data-directory-stay-key]'))
+            .filter(card => String(card.dataset.directoryStayKey || '') === String(stayKey || ''));
+        if (stayId) candidates = candidates.filter(card => String(card.dataset.directoryStayId || '').toLowerCase() === String(stayId).toLowerCase());
+        if (dogId) candidates = candidates.filter(card => String(card.dataset.directoryDogId || '').toLowerCase() === String(dogId).toLowerCase());
+        if (!stayId && !dogId && !requireUnique) return candidates[0] || null;
+        return candidates.length === 1 ? candidates[0] : null;
     }
 
 
@@ -16376,6 +16331,25 @@ registerWaffleServiceWorker();
                                                 </span>
                                             </div>
 
+                                            <details class="directory-care-readiness">
+                                                <summary>
+                                                    <span>Booking setup</span>
+                                                    <strong data-care-readiness-summary>Loading</strong>
+                                                </summary>
+                                                <div class="directory-care-readiness-list" data-care-readiness-list>
+                                                    <div class="directory-care-readiness-row" data-care-readiness-item="intake" data-state="attention">
+                                                        <span class="directory-care-readiness-copy"><strong>Owner intake</strong><small data-care-readiness-detail>Owner intake form</small></span>
+                                                        <span class="directory-care-readiness-status" data-care-readiness-status>Not sent</span>
+                                                        <button type="button" data-care-readiness-action="intake" aria-label="Review intake form">Review</button>
+                                                    </div>
+                                                    <div class="directory-care-readiness-row" data-care-readiness-item="handover" data-state="attention">
+                                                        <span class="directory-care-readiness-copy"><strong>Handover</strong><small data-care-readiness-detail>Handover note</small></span>
+                                                        <span class="directory-care-readiness-status" data-care-readiness-status>Add note</span>
+                                                        <button type="button" data-care-readiness-action="handover" aria-label="Review handover note">Review</button>
+                                                    </div>
+                                                </div>
+                                            </details>
+
                                             <div class="directory-care-brief-grid">
                                                 <section class="directory-care-brief-item directory-care-brief-safety">
                                                     <div class="directory-care-brief-note-heading"><h4>Safety</h4><button type="button" class="directory-care-brief-note-edit" data-care-readiness-action="safety" aria-label="Review safety details">Review</button></div>
@@ -16400,6 +16374,9 @@ registerWaffleServiceWorker();
                                                     <p class="directory-care-brief-value directory-care-brief-contact">
                                                         <strong data-care-brief-owner-name>${escapeDashboardHtml(ownerName ? ownerName.trim() : 'Not provided')}</strong>
                                                     </p>
+                                                <span class="directory-care-owner-action" data-care-brief-call-owner>
+                                                    <span class="directory-care-brief-action is-unavailable" aria-disabled="true">Call owner unavailable</span>
+                                                </span>
                                                 </section>
                                                 <section class="directory-care-brief-item directory-care-brief-note">
                                                     <div class="directory-care-brief-note-heading">
@@ -16410,32 +16387,13 @@ registerWaffleServiceWorker();
                                                 </section>
                                             </div>
 
-                                            <details class="directory-care-readiness">
-                                                <summary>
-                                                    <span>Other setup checks</span>
-                                                    <strong data-care-readiness-summary>Loading</strong>
-                                                </summary>
-                                                <div class="directory-care-readiness-list" data-care-readiness-list>
-                                                    <div class="directory-care-readiness-row" data-care-readiness-item="intake" data-state="attention">
-                                                        <span class="directory-care-readiness-copy"><strong>Owner intake</strong><small data-care-readiness-detail>Owner intake form</small></span>
-                                                        <span class="directory-care-readiness-status" data-care-readiness-status>Not sent</span>
-                                                        <button type="button" data-care-readiness-action="intake" aria-label="Review intake form">Review</button>
-                                                    </div>
-                                                    <div class="directory-care-readiness-row" data-care-readiness-item="handover" data-state="attention">
-                                                        <span class="directory-care-readiness-copy"><strong>Handover</strong><small data-care-readiness-detail>Handover note</small></span>
-                                                        <span class="directory-care-readiness-status" data-care-readiness-status>Add note</span>
-                                                        <button type="button" data-care-readiness-action="handover" aria-label="Review handover note">Review</button>
-                                                    </div>
-                                                </div>
-                                            </details>
+
 
                                             <div class="directory-care-brief-actions" aria-label="Care profile actions">
                                                 <button type="button" class="directory-care-brief-action is-primary" data-care-brief-action="full-profile">
                                                     Care details
                                                 </button>
-                                                <span data-care-brief-call-owner>
-                                                    <span class="directory-care-brief-action is-unavailable" aria-disabled="true">Call owner unavailable</span>
-                                                </span>
+
                                                 <button type="button" class="directory-care-brief-action" data-care-brief-action="emergency-contact">Emergency contact</button>
                                                 <details class="directory-care-more-actions">
                                                     <summary aria-label="Manage stay and care tools">Manage stay &amp; care tools</summary>

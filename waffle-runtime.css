@@ -2,8 +2,8 @@
    Build: 2026.08.27.04
    Historical base styles remain compatibility sources during Phase 3A, but pages no longer
    reference them individually. Preserve this import order until modules are folded in. */
-@import url("waffle-app.css?build=2026.08.27.04&rev=2026.10.16.01");
-@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.10.16.01");
+@import url("waffle-app.css?build=2026.08.27.04&rev=2026.10.16.02");
+@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.10.16.02");
 @import url("waffle-v10.8.2.css?build=2026.08.27.04");
 @import url("waffle-v10.8.3.css?build=2026.08.27.04");
 @import url("waffle-v10.8.5.css?build=2026.08.27.04");
@@ -11,12 +11,12 @@
 @import url("waffle-v10.8.7.css?build=2026.08.27.04");
 @import url("waffle-v10.8.8.css?build=2026.08.27.04");
 @import url("waffle-v10.8.9.css?build=2026.08.27.04");
-@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.10.16.01");
+@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.10.16.02");
 @import url("waffle-v11.0.3.css?build=2026.08.27.04");
 @import url("waffle-v11.0.5.css?build=2026.08.27.04");
-@import url("waffle-v11.1.94.css?build=2026.10.16.01");
-@import url("waffle-v11.1.95.css?build=2026.10.16.01");
-@import url("waffle-v11.1.96.css?build=2026.10.16.01&rev=2026.10.16.01");
+@import url("waffle-v11.1.94.css?build=2026.10.16.02");
+@import url("waffle-v11.1.95.css?build=2026.10.16.02");
+@import url("waffle-v11.1.96.css?build=2026.10.16.02&rev=2026.10.16.02");
 
 /* ============================================================
    MOBILE FIRST-PAINT STABILITY GATE
@@ -248,7 +248,6 @@ body[data-waffle-page="calendar"] .v10-stat-grid,
 body[data-waffle-page="calendar"] #p4Home {
   display: none !important;
 }
-body[data-waffle-page="calendar"] .v10-agenda-card,
 body[data-waffle-page="calendar"] .v10-potential-card { display: none !important; }
 .wh-home-button-link { border: 0; background: transparent; cursor: pointer; }
 .wh-home-potential-row { align-items: flex-start; }
@@ -2164,3 +2163,18 @@ body[data-waffle-page="directory"] .v11112-care-source-host{min-width:0;width:10
 body[data-waffle-page="directory"] .v11112-care-source-picker{box-sizing:border-box!important}
 body[data-waffle-page="directory"] .v1082-past-core-details .directory-field-label{font-size:.8125rem!important;line-height:1.5!important}
 body[data-waffle-page="directory"] .v1082-past-core-details .directory-field-value{font-size:.875rem!important;line-height:1.5!important;overflow-wrap:anywhere}
+
+/* The scheduled action queue is visible before the guest portrait sections. */
+body[data-waffle-page="calendar"] .v10-ops-grid { margin-bottom: 16px; }
+body[data-waffle-page="calendar"] .v10-agenda-card #today-actions-title {
+  margin: 0 !important;
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif !important;
+  font-size: 18px !important;
+  font-weight: 850 !important;
+  line-height: 1.25 !important;
+  letter-spacing: -.35px !important;
+  color: var(--wh75-text, #172033) !important;
+}
+@media (min-width: 821px) {
+  body[data-waffle-page="calendar"] .v10-agenda-card #today-actions-title { font-size: 24px !important; }
+}

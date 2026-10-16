@@ -356,9 +356,12 @@ for (const [name, viewport, colorScheme] of [['320-light', { width: 320, height:
     await careBrief.locator('.directory-care-more-actions > summary').focus();
     await expect(careBrief.locator('.directory-care-more-actions > summary')).toHaveCSS('outline-style', 'solid');
     const readiness = careBrief.locator('.directory-care-readiness');
+    expect(await readiness.evaluate(element => Boolean(element.compareDocumentPosition(element.parentElement.querySelector('.directory-care-brief-grid')) & Node.DOCUMENT_POSITION_FOLLOWING))).toBeTruthy();
+    await expect(careBrief.locator('.directory-care-brief-item:has([data-care-brief-owner-name]) [data-care-brief-call-owner]')).toHaveCount(1);
+    await expect(careBrief.locator('[data-care-brief-call-owner]')).toHaveCount(1);
     await expect(readiness).toBeVisible();
     await expect(readiness).not.toHaveAttribute('open', '');
-    await expect(careBrief.locator('[data-care-readiness-summary]')).toContainText(/review|Ready for care/);
+    await expect(careBrief.locator('[data-care-readiness-summary]')).toContainText(/Needs|Setup complete/);
     await expect(careBrief.locator('[data-care-brief-safety]')).toBeVisible();
     await expect(careBrief.locator('[data-care-brief-feeding]')).toBeVisible();
     await expect(careBrief.getByRole('heading', { name: 'Owner', exact: true })).toBeVisible();

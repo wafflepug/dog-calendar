@@ -13,7 +13,7 @@
     <link rel="apple-touch-icon" sizes="180x180" href="pwa-apple-touch-icon.png?v=2026.08.28.01">
     <title>Waffle House — Calendar & Dashboard</title>
     <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="waffle-runtime.css?v=2026.08.28.01&amp;rev=2026.10.16.01">
+    <link rel="stylesheet" href="waffle-runtime.css?v=2026.08.28.01&amp;rev=2026.10.16.02">
     </head>
 <body data-waffle-page="calendar">
 
@@ -57,6 +57,25 @@
                 <p id="v10TodayDateLabel">Loading today…</p>
             </div>
             <span class="v10-today-status" id="v10TodayStatus">Loading schedule…</span>
+        </div>
+
+        <div class="v10-ops-grid">
+            <article class="v10-ops-card v10-agenda-card" aria-labelledby="today-actions-title">
+                <div class="v10-card-heading">
+                    <div>
+                        <h2 id="today-actions-title">Today's actions</h2>
+                    </div>
+                </div>
+                <div id="v10TodayAgenda" class="v10-agenda-list">
+                    <div class="v101-skeleton-stack" aria-label="Loading today's schedule">
+                        <div class="v101-skeleton-line wide"></div>
+                        <div class="v101-skeleton-line medium"></div>
+                        <div class="v101-skeleton-line wide"></div>
+                    </div>
+                </div>
+            </article>
+
+
         </div>
 
         <section class="wh-home-guests" aria-labelledby="whHomeGuestsTitle">
@@ -110,26 +129,6 @@
                 <strong id="v10MeetCount">0</strong>
                 <span>Meet &amp; Greets</span>
             </button>
-        </div>
-
-        <div class="v10-ops-grid">
-            <article class="v10-ops-card v10-agenda-card">
-                <div class="v10-card-heading">
-                    <div>
-                        <span class="v10-card-kicker">Today</span>
-                        <h2>What needs attention</h2>
-                    </div>
-                </div>
-                <div id="v10TodayAgenda" class="v10-agenda-list">
-                    <div class="v101-skeleton-stack" aria-label="Loading today's schedule">
-                        <div class="v101-skeleton-line wide"></div>
-                        <div class="v101-skeleton-line medium"></div>
-                        <div class="v101-skeleton-line wide"></div>
-                    </div>
-                </div>
-            </article>
-
-
         </div>
 
         <article class="v10-ops-card v10-capacity-card">
@@ -569,6 +568,6 @@
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
-<script src="waffle-bootstrap.js?v=2026.08.28.01&amp;rev=2026.10.16.01"></script>
+<script src="waffle-bootstrap.js?v=2026.08.28.01&amp;rev=2026.10.16.02"></script>
     </html>
 

@@ -11,7 +11,7 @@ const expectedConfigs = [
   'playwright.care-profile.config.js', 'playwright.care-ui-polish.config.js',
   'playwright.care-roster.config.js', 'playwright.care-ui-refinements.config.js',
   'playwright.care-navigation-accessibility.config.js', 'playwright.care-scroll-access.config.js',
-  'playwright.care-loading-feedback.config.js', 'playwright.care-navigation-continuity.config.js',
+  'playwright.care-loading-feedback.config.js', 'playwright.care-navigation-continuity.config.js', 'playwright.owner-workflows.config.js',
   'tests/mvp-records-notifications.config.js', 'playwright.mvp-observer.config.js',
   'playwright.care-overview.config.js', 'playwright.returning-dogs.config.js',
   'playwright.runtime-review.config.js', 'playwright.care-cleaner-ui.config.js',
@@ -30,7 +30,7 @@ test('parallel fixture matrix retains every existing configuration exactly once'
 });
 
 test('contract job preserves existing Node checks', () => {
-  const expected = ['local-ui-runner', 'local-network-policy', 'waffle-bootstrap-lifecycle', 'care-startup-priority', 'care-past-background-load', 'booking-plan',
+  const expected = ['local-ui-runner', 'local-network-policy', 'waffle-bootstrap-lifecycle', 'care-startup-priority', 'care-past-background-load', 'booking-plan', 'dog-record-cache-age',
     'care-profile-readiness', 'care-overview-freshness', 'care-record-update-contract',
     'care-state-preservation', 'care-past-classification', 'stay-operation-frontend', 'care-csv-integrity', 'care-confirmed-reconciliation',
     'confirmed-stay-identity', 'potential-confirm-dog-id', 'checkout-collision-safety',
@@ -38,6 +38,17 @@ test('contract job preserves existing Node checks', () => {
     'care-return-focus-identity', 'ui-workflow-parallel'].map(name => `tests/${name}.test.js`);
   const actual = [...jobs.contracts.matchAll(/tests\/[\w-]+\.test\.js/g)].map(([file]) => file);
   assert.deepEqual(actual.sort(), expected.sort());
+});
+
+test('profile suites can fail and rerun independently without losing coverage', () => {
+  const groups = [...jobs.fixtures.matchAll(/- group: (profiles-[^\r\n]+)\r?\n\s+configs: ([^\r\n]+)/g)];
+  assert.equal(groups.length, 6);
+  assert.equal(new Set(groups.map(([, name]) => name)).size, 6);
+  assert.deepEqual(groups.map(([, , config]) => config.trim()).sort(), [
+    'playwright.care-cleaner-ui.config.js', 'playwright.care-detailed-care-runtime.config.js',
+    'playwright.care-mobile-hierarchy.config.js', 'playwright.care-photos.config.js',
+    'playwright.care-ui-five.config.js', 'playwright.care-ui-clarity.config.js'
+  ].sort());
 });
 
 test('placement runs all three shards with the existing runner and real exit code', () => {
