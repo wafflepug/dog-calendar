@@ -1760,15 +1760,16 @@
   function ensureOrganiserAssets() {
     if (pageName() !== 'reminders') return;
 
-    if (!document.querySelector('link[data-wh89-organiser-css]')) {
+    if (!document.querySelector('link[data-wh89-organiser-css], link[data-waffle-organiser-canonical-style]')) {
       const existingCss = Array.from(document.styleSheets || []).some(sheet =>
         String(sheet.href || '').includes('/organiser.css')
       );
       if (!existingCss) {
         const link = document.createElement('link');
         link.rel = 'stylesheet';
-        link.href = 'organiser.css?build=2026.08.27.04';
+        link.href = 'organiser.css?build=2026.08.28.01';
         link.dataset.wh89OrganiserCss = 'true';
+        link.dataset.waffleOrganiserCanonicalStyle = '2026.08.28.01';
         document.head.appendChild(link);
       }
     }
@@ -1784,7 +1785,7 @@
 
     organiserScriptRequested = true;
     const script = document.createElement('script');
-    script.src = 'organiser.js?build=2026.08.27.04';
+    script.src = 'organiser.js?build=2026.08.28.01';
     script.async = false;
     script.dataset.wh89Organiser = 'true';
     script.addEventListener('load', () => {

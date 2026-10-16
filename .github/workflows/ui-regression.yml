@@ -57,6 +57,12 @@ on:
       - 'tests/today-queue.browser.spec.js'
       - 'tests/today-queue-runtime.browser.spec.js'
       - 'tests/dog-record-cache-age.test.js'
+      - 'playwright.care-summary-card-clarity.config.js'
+      - 'tests/care-document-return.test.js'
+      - 'tests/care-summary-updates.test.js'
+      - 'tests/care-summary-updates.browser.spec.js'
+      - 'tests/canonical-organiser-loader.browser.spec.js'
+      - 'tests/care-guest-card-clarity.browser.spec.js'
       - 'playwright.care-render-performance.config.js'
       - 'tests/care-render-performance.browser.spec.js'
       - 'tests/care-directory-refresh-rendering.test.js'
@@ -155,6 +161,12 @@ on:
       - 'playwright.care-ui-clarity.config.js'
       - 'playwright.care-compact-controls.config.js'
       - 'playwright.care-master-compact.config.js'
+      - 'playwright.care-summary-card-clarity.config.js'
+      - 'tests/care-document-return.test.js'
+      - 'tests/care-summary-updates.test.js'
+      - 'tests/care-summary-updates.browser.spec.js'
+      - 'tests/canonical-organiser-loader.browser.spec.js'
+      - 'tests/care-guest-card-clarity.browser.spec.js'
       - 'playwright.care-render-performance.config.js'
       - 'tests/care-render-performance.browser.spec.js'
       - 'tests/care-directory-refresh-rendering.test.js'
@@ -241,6 +253,7 @@ jobs:
           node --test tests/system-status-release.test.js
           node --test tests/care-navigation-continuity.test.js
           node --test tests/care-return-focus-identity.test.js
+          node --test tests/care-summary-updates.test.js tests/care-document-return.test.js
           node --test tests/ui-workflow-parallel.test.js
 
   fixtures:
@@ -251,6 +264,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          - group: care-summary-card-clarity
+            configs: playwright.care-summary-card-clarity.config.js
           - group: care-render-performance
             configs: playwright.care-render-performance.config.js
           - group: owner-workflows

@@ -264,7 +264,22 @@
     }
     if (actions.dataset.renderSignature === signature) return;
     actions.dataset.renderSignature = signature;
-    actions.innerHTML = `${canCheckIn ? `<button type="button" class="v110-checkin-button" data-v11217-roster-checkin aria-label="Check in ${esc(p.dogName || 'guest')}">🛬 Check In</button>` : ''}${canCheckout ? `<button type="button" class="v110-checkout-button" data-v11217-roster-checkout aria-label="Check out ${esc(p.dogName || 'guest')}">👋 Check Out</button>` : ''}${early ? '<button type="button" class="v11217-early-checkout-button" data-v11217-early-checkout>⏱️ Early Checkout</button>' : ''}`;
+    const checkInMarkup = canCheckIn ? `<button type="button" class="v110-checkin-button" data-v11217-roster-checkin aria-label="Check in ${esc(p.dogName || 'guest')}">🛬 Check In</button>` : '';
+    const checkOutMarkup = canCheckout ? `<button type="button" class="v110-checkout-button" data-v11217-roster-checkout aria-label="Check out ${esc(p.dogName || 'guest')}">👋 Check Out</button>` : '';
+    const earlyButtonMarkup = early ? '<button type="button" class="v11217-early-checkout-button" data-v11217-early-checkout>⏱️ Early Checkout</button>' : '';
+    const hasPrimaryStayAction = canCheckIn || canCheckout;
+    const secondaryActions = `${canCheckIn && canCheckout ? checkOutMarkup : ''}${early && hasPrimaryStayAction ? earlyButtonMarkup : ''}`;
+    const moreActions = secondaryActions
+      ? `<details class="v11217-roster-more-actions"><summary>More actions</summary>${secondaryActions}</details>`
+      : '';
+    const primaryAction = `${checkInMarkup}${canCheckIn ? '' : checkOutMarkup}${early && !hasPrimaryStayAction ? earlyButtonMarkup : ''}`;
+    actions.innerHTML = `${primaryAction}${moreActions}`;
+    if (!actions.dataset.summaryPropagationGuard) {
+      actions.dataset.summaryPropagationGuard = 'true';
+      actions.addEventListener('click', event => {
+        if (event.target?.closest?.('.v11217-roster-more-actions > summary')) event.stopPropagation();
+      });
+    }
     const earlyButton = actions.querySelector('[data-v11217-early-checkout]');
     if (earlyButton) earlyButton.setAttribute('aria-label', `Record early checkout for ${p.dogName || 'guest'}`);
     const saveKey = String(p.stayId || '').trim().toLowerCase() ||

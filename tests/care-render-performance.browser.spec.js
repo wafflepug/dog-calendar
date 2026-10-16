@@ -147,7 +147,7 @@ for (const width of [390, 1440]) {
   reads.setBookings([booking,{...other,breed:'Updated Breed'}]);
   await page.evaluate(bookings=>window.__applyCareResponse({result:'success',bookings,summaries:[]}),[booking,{...other,breed:'Updated Breed'}]);
   expect(await page.evaluate(()=>({selectedSame:document.querySelector('.directory-card.is-profile-active')===window.__selected,otherReplaced:!window.__other.isConnected,focused:document.activeElement?.hasAttribute('data-refresh-draft-probe'),draft:document.querySelector('[data-refresh-draft-probe]')?.value}))).toEqual({selectedSame:true,otherReplaced:true,focused:true,draft:'Keep this draft'});
-  await expect(page.locator('#directory-grid .directory-card').filter({hasText:'Other Guest'}).locator('.directory-roster-context')).toContainText('Updated Breed');
+  await expect(page.locator('#directory-grid .directory-card').filter({hasText:'Other Guest'})).toHaveAttribute('data-v1088-breed', 'Updated Breed');
   expect(reads()).toBe(before);
  });
 }

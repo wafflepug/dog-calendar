@@ -8590,6 +8590,50 @@ registerWaffleServiceWorker();
         return merged;
     }
 
+    const directorySummaryHtmlState = new WeakMap();
+
+    function setDirectorySummaryText(host, value) {
+        const next = String(value ?? '');
+        if (host && host.textContent !== next) host.textContent = next;
+    }
+
+    function setDirectorySummaryData(host, key, value) {
+        const next = String(value ?? '');
+        if (host && host.dataset && host.dataset[key] !== next) host.dataset[key] = next;
+    }
+
+    function setDirectorySummaryAttribute(host, name, value) {
+        const next = String(value ?? '');
+        if (host && host.getAttribute(name) !== next) host.setAttribute(name, next);
+    }
+
+    function setDirectorySummaryClass(host, name, enabled) {
+        if (!host) return;
+        const present = host.classList.contains(name);
+        if (present !== !!enabled) host.classList.toggle(name, !!enabled);
+    }
+
+    function setDirectorySummaryHtml(host, html, generatedKey, preserveFailure = false) {
+        if (!host) return;
+        const next = String(html ?? '');
+        const previous = directorySummaryHtmlState.get(host);
+        const failure = preserveFailure ? host.querySelector('[data-legacy-refresh-failure]') : null;
+        if (previous?.key === generatedKey && previous.generated === next) {
+            // A refresh failure is transient UI owned by the refresh flow. Keep it
+            // attached while the server-owned legacy summary remains unchanged.
+            if (failure) return;
+            if (host.innerHTML === previous.actual) return;
+        }
+        if (failure && (previous?.key !== generatedKey || previous?.generated !== next)) {
+            failure.remove();
+            host.innerHTML = next;
+            host.append(failure);
+        } else if (host.innerHTML !== next) {
+            host.innerHTML = next;
+        }
+        directorySummaryHtmlState.set(host, { generated: next, actual: host.innerHTML, key: generatedKey });
+    }
+
     function renderDirectoryCareBrief(card) {
         if (!card) return;
 
@@ -8646,19 +8690,20 @@ registerWaffleServiceWorker();
                 const status = row.querySelector('[data-care-readiness-status]');
                 const detail = row.querySelector('[data-care-readiness-detail]');
                 const needsAttention = !item.ready && item.status !== 'Loading';
-                row.dataset.state = needsAttention ? 'attention' : (item.ready ? 'ready' : 'pending');
-                if (status) status.textContent = item.status;
-                if (detail) detail.textContent = item.detail;
+                setDirectorySummaryData(row, 'state', needsAttention ? 'attention' : (item.ready ? 'ready' : 'pending'));
+                setDirectorySummaryText(status, item.status);
+                setDirectorySummaryText(detail, item.detail);
             });
             const unresolved = Object.values(readinessItems).filter(item => !item.ready && item.status !== 'Loading').length;
             const summary = brief.querySelector('[data-care-readiness-summary]');
             if (summary) {
                 const identityNeedsReview = identityAmbiguous || identityBlocked;
-                summary.textContent = identityNeedsReview ? 'Needs identity review'
+                setDirectorySummaryText(summary, identityNeedsReview ? 'Needs identity review'
                     : !readinessItems.intake.ready ? 'Needs intake'
-                    : unresolved ? 'Needs handover' : 'Setup complete';
-                summary.dataset.state = identityNeedsReview || unresolved ? 'attention' : 'ready';
-                summary.closest('summary')?.setAttribute('aria-description',
+                    : unresolved ? 'Needs handover' : 'Setup complete');
+                setDirectorySummaryData(summary, 'state', identityNeedsReview || unresolved ? 'attention' : 'ready');
+                setDirectorySummaryAttribute(summary.closest('summary'),
+                    'aria-description',
                     'Intake and handover setup checks only. Review safety, feeding and medication separately.');
             }
         }
@@ -8674,26 +8719,26 @@ registerWaffleServiceWorker();
             const ownerValue = ownerField
                 ? ownerField.dataset.directoryCurrentValue
                 : (card.dataset.v1088OwnerName || ownerNameHost.textContent);
-            ownerNameHost.textContent = String(ownerValue || '').trim() || 'Not provided';
+            setDirectorySummaryText(ownerNameHost, String(ownerValue || '').trim() || 'Not provided');
         }
 
         if (safetyHost) {
             if (!safetyRecord) {
-                safetyHost.dataset.state = 'pending';
-                safetyHost.innerHTML = '<span class="care-brief-state is-pending">Safety profile not yet available</span>';
+                setDirectorySummaryData(safetyHost, 'state', 'pending');
+                setDirectorySummaryHtml(safetyHost, '<span class="care-brief-state is-pending">Safety profile not yet available</span>', 'careBriefGeneratedHtml');
             } else if (!activeFlags.length) {
-                safetyHost.dataset.state = 'clear';
-                safetyHost.innerHTML = '<span class="care-brief-state is-clear">✓ No active safety flags recorded</span>';
+                setDirectorySummaryData(safetyHost, 'state', 'clear');
+                setDirectorySummaryHtml(safetyHost, '<span class="care-brief-state is-clear">✓ No active safety flags recorded</span>', 'careBriefGeneratedHtml');
             } else {
-                safetyHost.dataset.state = 'attention';
-                safetyHost.innerHTML = activeFlags.map(flag => `
+                setDirectorySummaryData(safetyHost, 'state', 'attention');
+                setDirectorySummaryHtml(safetyHost, activeFlags.map(flag => `
                     <span class="care-brief-alert ${escapeDashboardHtml(flag.className)}">
                         <span aria-hidden="true">${escapeDashboardHtml(flag.icon)}</span>
                         <span>${escapeDashboardHtml(flag.label)}</span>
                     </span>
-                `).join('');
+                `).join(''), 'careBriefGeneratedHtml');
             }
-            safetyHost.closest('.directory-care-brief-safety')?.setAttribute('data-state', safetyHost.dataset.state);
+            setDirectorySummaryAttribute(safetyHost.closest('.directory-care-brief-safety'), 'data-state', safetyHost.dataset.state);
         }
 
         const profileReadState = card.querySelector('[data-directory-detail="profile"]')?.dataset.profileReadState || (attributes ? 'saved' : 'loading');
@@ -8710,7 +8755,7 @@ registerWaffleServiceWorker();
                 .map(([label, value]) => `${label}: ${value}`)
             : [];
         if (feedingHost) {
-            feedingHost.textContent = profileIdentityNeedsReview
+            setDirectorySummaryText(feedingHost, profileIdentityNeedsReview
                 ? 'Care record needs identity review'
                 : missingProfile
                     ? 'No saved feeding instructions'
@@ -8718,7 +8763,7 @@ registerWaffleServiceWorker();
                     ? (feedingParts.length ? feedingParts.join(' · ') : 'No feeding instructions saved')
                     : profileReadState === 'error'
                         ? 'Feeding details unavailable'
-                        : 'Loading with full profile…';
+                        : 'Loading with full profile…');
             feedingHost.classList.toggle('is-pending', !attributes && !missingProfile && !profileIdentityNeedsReview && profileReadState !== 'error');
         }
 
@@ -8728,7 +8773,7 @@ registerWaffleServiceWorker();
             ''
         ).trim();
         if (medicationHost) {
-            medicationHost.textContent = profileIdentityNeedsReview
+            setDirectorySummaryText(medicationHost, profileIdentityNeedsReview
                 ? 'Care record needs identity review'
                 : missingProfile
                     ? 'No saved medication instructions'
@@ -8738,7 +8783,7 @@ registerWaffleServiceWorker();
                         ? 'No medication instructions saved'
                         : profileReadState === 'error'
                             ? 'Medication details unavailable'
-                            : 'Loading with full profile…';
+                            : 'Loading with full profile…');
             medicationHost.classList.toggle('is-pending', !attributes && !medicationText && !missingProfile && !profileIdentityNeedsReview && profileReadState !== 'error');
         }
 
@@ -8750,18 +8795,18 @@ registerWaffleServiceWorker();
                 profileReadState,
                 missingRecord ? 'missing' : unresolvedIdentity ? 'unresolved' : 'resolved'
             );
-            freshnessHost.textContent = freshness.text;
-            freshnessHost.dataset.state = freshness.state;
-            freshnessHost.setAttribute('aria-description', 'Update time refers to the shared saved record, including intake imports, photos and booking changes; it does not confirm care instructions were reviewed.');
+            setDirectorySummaryText(freshnessHost, freshness.text);
+            setDirectorySummaryData(freshnessHost, 'state', freshness.state);
+            setDirectorySummaryAttribute(freshnessHost, 'aria-description', 'Update time refers to the shared saved record, including intake imports, photos and booking changes; it does not confirm care instructions were reviewed.');
         }
 
         if (profileIdentityNeedsReview) {
             markDirectoryProfileIdentityConflict(card);
-            if (feedingHost) feedingHost.textContent = 'Care record needs identity review';
-            if (medicationHost) medicationHost.textContent = 'Care record needs identity review';
+            setDirectorySummaryText(feedingHost, 'Care record needs identity review');
+            setDirectorySummaryText(medicationHost, 'Care record needs identity review');
             if (freshnessHost) {
-                freshnessHost.textContent = 'Shared name and dates · review the care record identity';
-                freshnessHost.dataset.state = 'identity-conflict';
+                setDirectorySummaryText(freshnessHost, 'Shared name and dates · review the care record identity');
+                setDirectorySummaryData(freshnessHost, 'state', 'identity-conflict');
             }
         }
 
@@ -8770,9 +8815,9 @@ registerWaffleServiceWorker();
             const phone = normalizeDirectoryPhoneForTel(
                 phoneField ? phoneField.dataset.directoryCurrentValue : card.dataset.v1088Phone
             );
-            callActionHost.innerHTML = phone
+            setDirectorySummaryHtml(callActionHost, phone
                 ? `<a class="directory-care-brief-action" href="tel:${escapeDashboardHtml(phone)}" aria-label="Call owner">Call owner</a>`
-                : '<span class="directory-care-brief-action is-unavailable" aria-disabled="true" title="No valid owner phone number">Call owner unavailable</span>';
+                : '<span class="directory-care-brief-action is-unavailable" aria-disabled="true" title="No valid owner phone number">Call owner unavailable</span>', 'careBriefGeneratedHtml');
         }
     }
 
@@ -8861,38 +8906,42 @@ registerWaffleServiceWorker();
 
         const container = findDirectoryCareElement(stayKey);
         if (!container) return;
-        container.setAttribute('aria-busy', 'false');
+        setDirectorySummaryAttribute(container, 'aria-busy', 'false');
 
         if (safetyReadFailed) {
-            container.classList.remove('has-alerts', 'care-clear', 'care-unset');
-            container.innerHTML = '<div class="directory-record-error" role="status"><strong>Safety record unavailable</strong><span>Could not load this record.</span></div>';
+            setDirectorySummaryClass(container, 'has-alerts', false);
+            setDirectorySummaryClass(container, 'care-clear', false);
+            setDirectorySummaryClass(container, 'care-unset', false);
+            setDirectorySummaryHtml(container, '<div class="directory-record-error" role="status"><strong>Safety record unavailable</strong><span>Could not load this record.</span></div>', 'directoryCareFlagsGeneratedHtml');
             updateDirectoryRosterStatus(stayKey, 'Safety unavailable', 'is-unset');
             const safetyHost = profileCard?.querySelector('[data-care-brief-safety]');
             if (safetyHost) {
-                safetyHost.dataset.state = 'pending';
-                safetyHost.innerHTML = '<span class="care-brief-state is-pending">Safety status unavailable</span>';
+                setDirectorySummaryData(safetyHost, 'state', 'pending');
+                setDirectorySummaryHtml(safetyHost, '<span class="care-brief-state is-pending">Safety status unavailable</span>', 'careBriefGeneratedHtml');
             }
             const safetySummary = profileCard?.querySelector('[data-care-category-summary="safety"]');
             if (safetySummary) {
                 const summary = directoryCareCategorySummary('safety', {}, 'saved', null, 'error');
-                safetySummary.textContent = summary.text;
-                safetySummary.dataset.state = summary.state;
+                setDirectorySummaryText(safetySummary, summary.text);
+                setDirectorySummaryData(safetySummary, 'state', summary.state);
             }
             refreshDirectoryCareSummary();
             return;
         }
 
         if (!record) {
-            container.classList.remove('has-alerts', 'care-clear');
-            container.classList.add('care-unset');
-            container.innerHTML =
-                '<strong class="directory-record-kicker">Safety record</strong><span class="directory-care-unset">🛡️ Care profile not set</span>';
+            setDirectorySummaryClass(container, 'has-alerts', false);
+            setDirectorySummaryClass(container, 'care-clear', false);
+            setDirectorySummaryClass(container, 'care-unset', true);
+            setDirectorySummaryHtml(container,
+                '<strong class="directory-record-kicker">Safety record</strong><span class="directory-care-unset">🛡️ Care profile not set</span>',
+                'directoryCareFlagsGeneratedHtml');
             updateDirectoryRosterStatus(stayKey, 'Care not set', 'is-unset');
             const safetySummary = profileCard?.querySelector('[data-care-category-summary="safety"]');
             if (safetySummary) {
                 const summary = directoryCareCategorySummary('safety', {}, 'saved', null, 'not-set');
-                safetySummary.textContent = summary.text;
-                safetySummary.dataset.state = summary.state;
+                setDirectorySummaryText(safetySummary, summary.text);
+                setDirectorySummaryData(safetySummary, 'state', summary.state);
             }
             refreshDirectoryCareSummary();
             return;
@@ -8901,19 +8950,22 @@ registerWaffleServiceWorker();
         const activeFlags = getActiveCareFlags(record);
 
         if (!activeFlags.length) {
-            container.classList.remove('has-alerts', 'care-unset');
-            container.classList.add('care-clear');
-            container.innerHTML =
-                '<strong class="directory-record-kicker">Safety record</strong><span class="directory-care-clear">✓ No active care alerts</span>';
+            setDirectorySummaryClass(container, 'has-alerts', false);
+            setDirectorySummaryClass(container, 'care-unset', false);
+            setDirectorySummaryClass(container, 'care-clear', true);
+            setDirectorySummaryHtml(container,
+                '<strong class="directory-record-kicker">Safety record</strong><span class="directory-care-clear">✓ No active care alerts</span>',
+                'directoryCareFlagsGeneratedHtml');
             updateDirectoryRosterStatus(stayKey, 'Ready', 'is-ready');
             refreshDirectoryCareSummary();
             return;
         }
 
-        container.classList.remove('care-clear', 'care-unset');
-        container.classList.add('has-alerts');
+        setDirectorySummaryClass(container, 'care-clear', false);
+        setDirectorySummaryClass(container, 'care-unset', false);
+        setDirectorySummaryClass(container, 'has-alerts', true);
 
-        container.innerHTML = `<strong class="directory-record-kicker">Safety record</strong>${activeFlags.map(flag => `
+        setDirectorySummaryHtml(container, `<strong class="directory-record-kicker">Safety record</strong>${activeFlags.map(flag => `
             <span
                 class="care-alert-badge directory-care-badge ${escapeDashboardHtml(flag.className)}"
                 data-directory-care-alert
@@ -8923,7 +8975,7 @@ registerWaffleServiceWorker();
                 </span>
                 <span>${escapeDashboardHtml(flag.label)}</span>
             </span>
-        `).join('')}`;
+        `).join('')}`, 'directoryCareFlagsGeneratedHtml');
 
         updateDirectoryRosterStatus(
             stayKey,
@@ -8953,9 +9005,8 @@ registerWaffleServiceWorker();
         const card = getDirectoryProfileCard(stayKey);
         const status = card?.querySelector('.directory-roster-status');
         if (!status) return;
-        status.textContent = label;
-        status.classList.remove('is-ready', 'is-unset', 'is-alert');
-        if (stateClass) status.classList.add(stateClass);
+        setDirectorySummaryText(status, label);
+        ['is-ready', 'is-unset', 'is-alert'].forEach(name => setDirectorySummaryClass(status, name, name === stateClass));
         const openButton = card.querySelector('[data-open-directory-profile]');
         const stayDates = [card.dataset.directoryStartDate, card.dataset.directoryEndDate]
             .filter(Boolean)
@@ -8964,7 +9015,7 @@ registerWaffleServiceWorker();
                 catch (_) { return value; }
             })
             .join(' – ');
-        if (openButton) openButton.setAttribute('aria-label', directoryProfileAccessibleLabel({
+        setDirectorySummaryAttribute(openButton, 'aria-label', directoryProfileAccessibleLabel({
             dogName: card.dataset.directoryDogName || card.dataset.dogName,
             dogNumber: card.dataset.directoryDogNumber,
             dogId: card.dataset.directoryDogId,
@@ -8993,17 +9044,17 @@ registerWaffleServiceWorker();
 
         if (!totalAlerts) {
             const unavailable = document.querySelectorAll('.directory-care-strip .directory-record-error').length > 0;
-            summary.textContent = unavailable ? 'Safety status unavailable' : 'No active care alerts';
-            summary.classList.remove('has-alerts');
+            setDirectorySummaryText(summary, unavailable ? 'Safety status unavailable' : 'No active care alerts');
+            setDirectorySummaryClass(summary, 'has-alerts', false);
             return;
         }
 
-        summary.textContent =
+        setDirectorySummaryText(summary,
             `${totalAlerts} ${totalAlerts === 1 ? 'alert' : 'alerts'} · ` +
             `${flaggedCards.length} ${flaggedCards.length === 1 ? 'dog' : 'dogs'}` +
-            (document.querySelector('.directory-care-strip .directory-record-error') ? ' · safety status unavailable' : '');
+            (document.querySelector('.directory-care-strip .directory-record-error') ? ' · safety status unavailable' : ''));
 
-        summary.classList.add('has-alerts');
+        setDirectorySummaryClass(summary, 'has-alerts', true);
     }
 
     function renderCareRiskDashboard(stays) {
@@ -9267,9 +9318,10 @@ registerWaffleServiceWorker();
                 '[data-intake-profile-summary]'
             );
 
-        if (profileChip && fieldCount) {
-            profileChip.hidden = false;
-            profileChip.textContent = `${fieldCount} fields · ${source || 'Stored profile'}`;
+        if (profileChip) {
+            const hidden = fieldCount === 0;
+            if (profileChip.hidden !== hidden) profileChip.hidden = hidden;
+            setDirectorySummaryText(profileChip, fieldCount ? `${fieldCount} fields · ${source || 'Stored profile'}` : '');
         }
 
         const profileDetails =
@@ -9289,8 +9341,7 @@ registerWaffleServiceWorker();
                 'true' &&
             profileHost
         ) {
-            profileHost.innerHTML =
-                fieldCount
+            setDirectorySummaryHtml(profileHost, fieldCount
                     ? `
                         <div class="directory-lazy-placeholder">
                             <div>
@@ -9307,7 +9358,7 @@ registerWaffleServiceWorker();
                                 <span>Digital or Legacy Intake details will appear here when available.</span>
                             </div>
                         </div>
-                      `;
+                      `, 'lazyProfileGeneratedHtml');
         }
 
         const belongingsDetails =
@@ -9353,7 +9404,7 @@ registerWaffleServiceWorker();
                 );
             }
 
-            belongingsHost.innerHTML = `
+            setDirectorySummaryHtml(belongingsHost, `
                 <div class="directory-lazy-placeholder">
                     <div>
                         <strong>🧳 ${bits.length ? bits.join(' · ') : 'Belongings & care'}</strong>
@@ -9361,7 +9412,7 @@ registerWaffleServiceWorker();
                     </div>
                     <span class="directory-lazy-hint">Open this section to load details and photos.</span>
                 </div>
-            `;
+            `, 'lazyBelongingsGeneratedHtml');
         }
     }
 
@@ -11738,7 +11789,7 @@ registerWaffleServiceWorker();
                 `)
                 .join('');
 
-        host.innerHTML = `
+        setDirectorySummaryHtml(host, `
             <div class="care-profile-compact">
                 <div class="care-risk-section-heading">
                     <div>
@@ -11751,7 +11802,7 @@ registerWaffleServiceWorker();
                     ${riskFlagsHtml}
                 </div>
             </div>
-        `;
+        `, 'directoryProfileSafetyGeneratedHtml');
 
         const safetySummary = host.closest('[data-care-category]')?.querySelector('[data-care-category-summary="safety"]');
         const stayKey = String(card.dataset.stayKey || card.dataset.directoryStayKey || '').trim();
@@ -11759,8 +11810,8 @@ registerWaffleServiceWorker();
         const safetyState = directorySafetyReadFailures.has(stayKey) ? 'error' : savedSafetyRecord?.riskFlags && typeof savedSafetyRecord.riskFlags === 'object' ? 'saved' : 'loading';
         if (safetySummary) {
             const summary = directoryCareCategorySummary('safety', {}, 'saved', savedSafetyRecord, safetyState);
-            safetySummary.textContent = summary.text;
-            safetySummary.dataset.state = summary.state;
+            setDirectorySummaryText(safetySummary, summary.text);
+            setDirectorySummaryData(safetySummary, 'state', summary.state);
         }
 
         restoreDirectoryProfileEditDraft(card, { checkConflict: true });
@@ -15124,11 +15175,11 @@ registerWaffleServiceWorker();
         );
 
         if (!strip) return;
-        strip.setAttribute('aria-busy', 'false');
+        setDirectorySummaryAttribute(strip, 'aria-busy', 'false');
         const dogName = strip.closest('.directory-card')?.dataset.directoryDogName || 'this dog';
 
         if (!record) {
-            strip.innerHTML = `
+            setDirectorySummaryHtml(strip, `
                 <div class="directory-intake-state">
                     <strong class="directory-record-kicker">Digital intake</strong>
                     <span class="directory-intake-dot is-not-sent"></span>
@@ -15141,7 +15192,7 @@ registerWaffleServiceWorker();
                     aria-label="Create ${escapeDashboardHtml(dogName)} intake link">
                     📝 Create Link
                 </button>
-            `;
+            `, 'digitalIntakeGeneratedHtml');
 
             applyDirectoryIntakeMethodVisibility(
                 stayKey
@@ -15156,7 +15207,7 @@ registerWaffleServiceWorker();
             : '';
 
         if (status === 'Complete') {
-            strip.innerHTML = `
+            setDirectorySummaryHtml(strip, `
                 <div class="directory-intake-state">
                     <strong class="directory-record-kicker">Digital intake</strong>
                     <span class="directory-intake-dot is-complete"></span>
@@ -15190,7 +15241,7 @@ registerWaffleServiceWorker();
                         </span>
                     `}
                 </div>
-            `;
+            `, 'digitalIntakeGeneratedHtml');
 
             applyDirectoryIntakeMethodVisibility(
                 stayKey
@@ -15199,7 +15250,7 @@ registerWaffleServiceWorker();
             return;
         }
 
-        strip.innerHTML = `
+        setDirectorySummaryHtml(strip, `
             <div class="directory-intake-state">
                 <strong class="directory-record-kicker">Digital intake</strong>
                 <span class="directory-intake-dot is-awaiting"></span>
@@ -15212,7 +15263,7 @@ registerWaffleServiceWorker();
                 aria-label="Copy ${escapeDashboardHtml(dogName)} intake link">
                 🔗 Copy Link
             </button>
-        `;
+        `, 'digitalIntakeGeneratedHtml');
 
         applyDirectoryIntakeMethodVisibility(
             stayKey
@@ -15586,7 +15637,7 @@ registerWaffleServiceWorker();
         );
 
         if (!strip) return;
-        strip.setAttribute('aria-busy', 'false');
+        setDirectorySummaryAttribute(strip, 'aria-busy', 'false');
         const dogName = strip.closest('.directory-card')?.dataset.directoryDogName || 'this dog';
 
         if (
@@ -15597,7 +15648,7 @@ registerWaffleServiceWorker();
                 'has-document'
             );
 
-            strip.innerHTML = `
+            setDirectorySummaryHtml(strip, `
                 <div class="directory-legacy-state">
                     <strong class="directory-record-kicker">Legacy PDFs</strong>
                     <span>📚 No legacy PDF on file</span>
@@ -15609,7 +15660,7 @@ registerWaffleServiceWorker();
                     aria-label="Upload a legacy intake PDF for ${escapeDashboardHtml(dogName)} for OCR">
                     Upload PDF for OCR
                 </button>
-            `;
+            `, 'legacyIntakeGeneratedHtml', true);
 
             applyDirectoryIntakeMethodVisibility(
                 stayKey
@@ -15676,7 +15727,7 @@ registerWaffleServiceWorker();
             'has-document'
         );
 
-        strip.innerHTML = `
+        setDirectorySummaryHtml(strip, `
             <div class="directory-legacy-state">
                 <strong class="directory-record-kicker">Legacy PDFs</strong>
                 <span class="directory-record-status">📚 Legacy PDF on file</span>
@@ -15710,7 +15761,7 @@ registerWaffleServiceWorker();
                     ✨ Review / Reassign
                 </button>
             </div>
-        `;
+        `, 'legacyIntakeGeneratedHtml', true);
 
         applyDirectoryIntakeMethodVisibility(
             stayKey
@@ -15822,6 +15873,10 @@ registerWaffleServiceWorker();
                     timeoutMs: requestedKeys ? 15000 : 45000
                 });
 
+            if (!response || response.result !== 'success' || !Array.isArray(response.records)) {
+                throw new Error('Legacy intake status response was not successful.');
+            }
+
             keysToFetch.forEach(key => {
                 if (identityStillMatches(key) && directoryLegacyIntakeRequestVersions.get(key) === requestVersions.get(key)) directoryLegacyIntakeCache[key] = null;
             });
@@ -15836,6 +15891,19 @@ registerWaffleServiceWorker();
             keysToFetch.forEach(key => {
                 if (!identityStillMatches(key) || directoryLegacyIntakeRequestVersions.get(key) !== requestVersions.get(key)) return;
                 if (!Object.prototype.hasOwnProperty.call(directoryLegacyIntakeCache, key)) directoryLegacyIntakeCache[key] = null;
+                const host = Array.from(document.querySelectorAll('[data-directory-legacy]')).find(item => String(item.dataset.directoryLegacy || '') === key);
+                if (host) {
+                    const failure = host.querySelector('[data-legacy-refresh-failure]');
+                    const retry = host.querySelector('[data-care-record-retry="legacy"]');
+                    const readError = host.querySelector('.directory-record-error[role="status"]');
+                    if (failure) failure.remove();
+                    if (retry) retry.remove();
+                    if (readError) readError.remove();
+                    const rendered = directorySummaryHtmlState.get(host);
+                    if (rendered?.key === 'legacyIntakeGeneratedHtml' && (failure || retry || readError)) {
+                        directorySummaryHtmlState.set(host, { ...rendered, actual: host.innerHTML });
+                    }
+                }
                 setDirectoryLegacyIntakeStatus(key, directoryLegacyIntakeCache[key]);
             });
             directoryLegacyIntakeCacheLastFetch = Date.now();
@@ -16299,9 +16367,7 @@ registerWaffleServiceWorker();
                                 const directoryStayKey = potentialKey;
                                 const stayDateLabel =
                                     `${formatStayDateShort(startParsed)} – ${formatStayDateShort(endParsed)}`;
-                                const rosterContext = isCurrentlyAtHome
-                                    ? `${breedTxt} · ${isTodayTheEndDate ? 'leaves today' : `leaves ${formatStayDateShort(endParsed)}`}`
-                                    : `${breedTxt} · ${stayDateLabel}`;
+                                const rosterContext = `Check-in ${formatStayDateShort(startParsed)} · Check-out ${formatStayDateShort(endParsed)}`;
                                 const rosterStatus = hasBeenPickedUp
                                     ? 'Checked out'
                                     : (isCurrentlyAtHome ? 'Staying' : 'Arriving');
@@ -16345,7 +16411,7 @@ registerWaffleServiceWorker();
                                                 ${dogNumber ? `<span class="directory-dog-id">Dog ID ${escapeDashboardHtml(dogNumber)}</span>` : ''}
                                                 <span class="directory-roster-context">${escapeDashboardHtml(rosterContext)}</span>
                                             </span>
-                                            <span class="directory-roster-status">${rosterStatus}</span>
+                                            <span class="directory-roster-status${hasBeenPickedUp ? ' is-past' : ''}">${rosterStatus}</span>
                                         </button>
 
                                         <div class="directory-profile-content">
