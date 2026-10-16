@@ -67,7 +67,11 @@ test('roster actions are separate from profile open, isolate same-name dogs, ret
   const staying = page.locator('[data-directory-stay-id="stay-a"]');
   const checkin = staying.locator('[data-v11217-roster-checkin]');
   await expect(checkin).toHaveAccessibleName('Check in Twin Pup');
-  await expect(staying.locator('[data-v11217-roster-checkout]')).toHaveAccessibleName('Check out Twin Pup');
+  const moreActions = staying.locator('.v11217-roster-more-actions');
+  await expect(moreActions.locator('summary')).toHaveText('More actions');
+  await moreActions.locator('summary').click();
+  await expect(moreActions.locator('[data-v11217-roster-checkout]')).toHaveAccessibleName('Check out Twin Pup');
+  await expect(staying.locator('[data-v11217-roster-actions] > button')).toHaveCount(1);
   expect(await checkin.evaluate(button => button.closest('.directory-guest-tile-open'))).toBeNull();
 
   await page.evaluate(() => { window.failNextSave = true; });
@@ -109,6 +113,19 @@ test('identity ambiguity and offline failures offer review guidance without a re
   await expect(offline.getByRole('button', { name: 'Retry' })).toHaveCount(0);
 });
 
+test('a checked-in guest keeps Early Checkout as the sole direct action when no primary check-in or checkout is due', async ({ page }) => {
+  await setup(page);
+  const early = page.locator('[data-directory-stay-id="stay-b"]');
+  await page.evaluate(() => {
+    window.operations.set('stay-b', { stayId: 'stay-b', stayKey: 'same-name|2026-10-11|2026-10-14|b', dogId: '22222222-2222-4222-8222-222222222222', status: 'checked_in' });
+    window.v110EnsureCareOperationBar(document.querySelector('[data-directory-stay-id="stay-b"]'));
+  });
+  await expect(early.locator('[data-v11217-roster-checkin]')).toHaveCount(0);
+  await expect(early.locator('[data-v11217-roster-checkout]')).toHaveCount(0);
+  await expect(early.locator('[data-v11217-early-checkout]')).toBeVisible();
+  await expect(early.locator('.v11217-roster-more-actions')).toHaveCount(0);
+});
+
 test('a late save response cannot apply to a card reused for a different same-name stay', async ({ page }) => {
   await setup(page);
   const card = page.locator('.directory-card').nth(0);
@@ -134,6 +151,8 @@ test('early checkout uses its review modal and controls fit on a narrow mobile v
   await setup(page);
   await page.setViewportSize({ width: 360, height: 780 });
   const early = page.locator('[data-directory-stay-id="stay-b"]');
+  const moreActions = early.locator('.v11217-roster-more-actions');
+  await moreActions.locator('summary').click();
   const button = early.locator('[data-v11217-early-checkout]');
   await expect(button).toHaveAccessibleName('Record early checkout for Twin Pup');
   const bounds = await page.evaluate(() => ({

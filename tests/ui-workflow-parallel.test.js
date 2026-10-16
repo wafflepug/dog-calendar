@@ -8,7 +8,7 @@ const workflow = readFileSync(path.join(__dirname, '../.github/workflows/ui-regr
 const jobs = Object.fromEntries([...workflow.matchAll(/^  ([\w-]+):\n([\s\S]*?)(?=^  [\w-]+:|$(?![\s\S]))/gm)]
   .filter(([text]) => /runs-on:/.test(text)).map(([, name, body]) => [name, body]));
 const expectedConfigs = [
-  'playwright.care-render-performance.config.js',
+  'playwright.care-summary-card-clarity.config.js', 'playwright.care-render-performance.config.js',
   'playwright.care-profile.config.js', 'playwright.care-ui-polish.config.js',
   'playwright.care-roster.config.js', 'playwright.care-ui-refinements.config.js',
   'playwright.care-navigation-accessibility.config.js', 'playwright.care-scroll-access.config.js',
@@ -31,7 +31,7 @@ test('parallel fixture matrix retains every existing configuration exactly once'
 });
 
 test('contract job preserves existing Node checks', () => {
-  const expected = ['care-directory-refresh-rendering', 'care-decorator-observer', 'care-media-render-cache', 'local-ui-runner', 'local-network-policy', 'waffle-bootstrap-lifecycle', 'care-startup-priority', 'care-past-background-load', 'booking-plan', 'dog-record-cache-age',
+  const expected = ['care-document-return', 'care-summary-updates', 'care-directory-refresh-rendering', 'care-decorator-observer', 'care-media-render-cache', 'local-ui-runner', 'local-network-policy', 'waffle-bootstrap-lifecycle', 'care-startup-priority', 'care-past-background-load', 'booking-plan', 'dog-record-cache-age',
     'care-profile-readiness', 'care-overview-freshness', 'care-record-update-contract',
     'care-state-preservation', 'care-past-classification', 'stay-operation-frontend', 'care-csv-integrity', 'care-confirmed-reconciliation',
     'confirmed-stay-identity', 'potential-confirm-dog-id', 'checkout-collision-safety',

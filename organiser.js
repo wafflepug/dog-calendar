@@ -13,8 +13,8 @@
   if (document.querySelector('link[data-waffle-organiser-canonical-style]')) return;
   const link = document.createElement('link');
   link.rel = 'stylesheet';
-  link.href = 'organiser.css?build=2026.08.27.04';
-  link.dataset.waffleOrganiserCanonicalStyle = '2026.08.27.04';
+  link.href = 'organiser.css?build=2026.08.28.01';
+  link.dataset.waffleOrganiserCanonicalStyle = '2026.08.28.01';
   document.head.appendChild(link);
 })();
 

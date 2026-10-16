@@ -26,6 +26,7 @@ function makeHarness({ cache = {}, queryAppsScript, cards = ['stay-a', 'stay-b']
   }));
   const sandbox = {
     directoryLegacyIntakeCache: cache,
+    directorySummaryHtmlState: new WeakMap(),
     directoryLegacyIntakeCacheLastFetch: 1,
     directoryLegacyIntakeRequestVersions: new Map(),
     getDirectoryProfileEditIdentity() { return {}; },
@@ -114,13 +115,22 @@ test('legacy status read sends a scoped request and ignores an older response', 
   } });
   const first = h.sandbox.hydrate({ force: true, stayKeys: ['stay-a'] });
   const second = h.sandbox.hydrate({ force: true, stayKeys: ['stay-a'] });
-  deferred[1]({ records: [{ stayKey: 'stay-a', latest: { documentId: 'new' }, count: 1 }, { stayKey: 'stay-b', latest: { documentId: 'stray' }, count: 1 }] });
+  deferred[1]({ result: 'success', records: [{ stayKey: 'stay-a', latest: { documentId: 'new' }, count: 1 }, { stayKey: 'stay-b', latest: { documentId: 'stray' }, count: 1 }] });
   await second;
-  deferred[0]({ records: [{ stayKey: 'stay-a', latest: { documentId: 'old' }, count: 1 }] });
+  deferred[0]({ result: 'success', records: [{ stayKey: 'stay-a', latest: { documentId: 'old' }, count: 1 }] });
   await first;
   assert.equal(h.sandbox.directoryLegacyIntakeCache['stay-a'].latest.documentId, 'new');
   assert.equal(h.sandbox.directoryLegacyIntakeCache['stay-b'], undefined, 'response records outside the requested stay scope are ignored');
   assert.deepEqual(h.rendered.filter(item => item.key === 'stay-a').map(item => item.group?.latest?.documentId), ['new']);
+});
+
+test('an unsuccessful legacy response cannot replace the saved document or clear refresh failure', async () => {
+  const cached = { stayKey: 'stay-a', latest: { documentId: 'existing' }, count: 1 };
+  const h = makeHarness({ cache: { 'stay-a': cached }, queryAppsScript: async () => ({ result: 'error', records: [] }) });
+  await h.sandbox.hydrate({ force: true, stayKeys: ['stay-a'] });
+  assert.equal(h.sandbox.directoryLegacyIntakeCache['stay-a'], cached);
+  assert.equal(h.appended.length, 2);
+  assert.equal(h.rendered.some(item => item.group === null), false);
 });
 
 test('failed scoped refresh retains the current PDF and adds a retry for that stay', async () => {
@@ -157,7 +167,7 @@ test('same-key guest replacement during a read cannot receive the previous docum
   h.sandbox.directoryProfileEditIdentityConflicts = (a, b) => a.ownerName !== b.ownerName;
   const pending = h.sandbox.hydrate({ force: true, stayKeys: ['stay-a'] });
   owner = 'replacement';
-  resolveRead({ records: [{ stayKey: 'stay-a', latest: { documentId: 'wrong-guest' } }] });
+  resolveRead({ result: 'success', records: [{ stayKey: 'stay-a', latest: { documentId: 'wrong-guest' } }] });
   await pending;
   assert.equal(h.sandbox.directoryLegacyIntakeCache['stay-a'], undefined);
   assert.equal(h.rendered.length, 0);

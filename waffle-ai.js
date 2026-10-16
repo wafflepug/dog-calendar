@@ -1777,40 +1777,34 @@ if (['calendar', 'directory'].includes(String(window.WAFFLE_PAGE || document.bod
 
   function renderCanonicalCareSummary() {
     if (!isDirectory()) return;
-
     const summary = document.getElementById('directory-care-summary');
     const grid = currentGrid();
     if (!summary || !grid) return;
-
     const cards = currentCards();
     const loading = directoryIsVisiblyLoading() || document.body?.dataset?.v11144DirectoryState === 'loading';
-    const flagged = Array.from(
-      grid.querySelectorAll('.directory-care-strip.has-alerts')
-    );
-    const totalAlerts = flagged.reduce((total, container) => {
-      return total + container.querySelectorAll('[data-directory-care-alert]').length;
-    }, 0);
+    const flagged = Array.from(grid.querySelectorAll('.directory-care-strip.has-alerts'));
+    const totalAlerts = flagged.reduce((total, container) => total + container.querySelectorAll('[data-directory-care-alert]').length, 0);
+    const unavailable = !!grid.querySelector('.directory-care-strip .directory-record-error');
 
-    summary.classList.remove('v11144-care-loading');
-
+    // This canonical override runs on an animation frame. Recompute the state,
+    // but preserve the summary node and its text when the output is identical.
+    function show(text, hasAlerts, pending) {
+      if (summary.textContent !== text) summary.textContent = text;
+      for (const [name, enabled] of [
+        ['has-alerts', hasAlerts], ['v11144-care-loading', pending], ['v11144-care-ready', !pending]
+      ]) {
+        if (summary.classList.contains(name) !== enabled) summary.classList.toggle(name, enabled);
+      }
+    }
     if (totalAlerts > 0) {
-      summary.textContent =
-        `${totalAlerts} ${totalAlerts === 1 ? 'alert' : 'alerts'} · ` +
-        `${flagged.length} ${flagged.length === 1 ? 'dog' : 'dogs'}`;
-      summary.classList.add('has-alerts', 'v11144-care-ready');
-      return;
+      show(`${totalAlerts} ${totalAlerts === 1 ? 'alert' : 'alerts'} · ` +
+        `${flagged.length} ${flagged.length === 1 ? 'dog' : 'dogs'}` +
+        (unavailable ? ' · safety status unavailable' : ''), true, false);
+    } else if (loading && cards.length === 0) {
+      show('Loading care alerts…', false, true);
+    } else {
+      show(unavailable ? 'Safety status unavailable' : 'No active care alerts', false, false);
     }
-
-    if (loading && cards.length === 0) {
-      summary.textContent = 'Loading care alerts…';
-      summary.classList.remove('has-alerts', 'v11144-care-ready');
-      summary.classList.add('v11144-care-loading');
-      return;
-    }
-
-    summary.textContent = 'No active care alerts';
-    summary.classList.remove('has-alerts', 'v11144-care-loading');
-    summary.classList.add('v11144-care-ready');
   }
 
   function queueCareSummary() {

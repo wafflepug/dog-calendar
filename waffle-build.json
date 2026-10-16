@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.10.16.03",
-  "releaseName": "Care Rendering Performance",
+  "assetRevision": "2026.10.17.01",
+  "releaseName": "Care Summary & Guest Clarity",
   "careIteration": {
     "returningDogSuggestions": true,
     "reviewedCareInheritance": true,
