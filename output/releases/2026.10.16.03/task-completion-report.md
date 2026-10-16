@@ -12,7 +12,7 @@ Candidate release: 2026.10.16.03. Implementation delegated to gpt-6-luna; review
 
 ## Testing Matrix
 
-Local validation: 339 Node tests and 46 distinct focused browser cases (18 performance and 28 existing photo/cache/readiness cases). Final release evidence must confirm all current-head checks and deployed artifact identity. Initial synthetic neighbor-update fixture returned its old booking list during revalidation; the fixture was corrected to return the same authoritative synthetic state being exercised. No production writes were made.
+Local validation: 339 Node tests and 46 distinct focused browser cases (18 performance and 28 existing photo/cache/readiness cases). Final release evidence must confirm all current-head checks and deployed artifact identity. Initial synthetic neighbor-update fixture returned its old booking list during revalidation; the fixture was corrected to return the same authoritative synthetic state being exercised. The local WebKit full-page test completed its assertions at the 60-second total-test boundary and timed out during teardown; its total budget now matches the existing 90-second Care runtime suites. Assertion timeouts and coverage are unchanged. No production writes were made.
 
 Happy path: unchanged refresh retains card/detail/focus/draft; another guest's changed booking replaces only its card; Photos reopen retains existing nodes and disclosures.
 
