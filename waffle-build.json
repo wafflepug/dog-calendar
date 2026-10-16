@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.10.16.02",
-  "releaseName": "Daily Owner Workflow Clarity",
+  "assetRevision": "2026.10.16.03",
+  "releaseName": "Care Rendering Performance",
   "careIteration": {
     "returningDogSuggestions": true,
     "reviewedCareInheritance": true,

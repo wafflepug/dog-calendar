@@ -57,6 +57,13 @@ on:
       - 'tests/today-queue.browser.spec.js'
       - 'tests/today-queue-runtime.browser.spec.js'
       - 'tests/dog-record-cache-age.test.js'
+      - 'playwright.care-render-performance.config.js'
+      - 'tests/care-render-performance.browser.spec.js'
+      - 'tests/care-directory-refresh-rendering.test.js'
+      - 'tests/care-decorator-observer.test.js'
+      - 'tests/care-decorator-observer.browser.spec.js'
+      - 'tests/care-media-render-cache.test.js'
+      - 'tests/care-media-render-cache.browser.spec.js'
       - 'tests/care-master-compact.browser.spec.js'
       - 'playwright.booking-plan.config.js'
       - 'tests/booking-plan.test.js'
@@ -148,6 +155,13 @@ on:
       - 'playwright.care-ui-clarity.config.js'
       - 'playwright.care-compact-controls.config.js'
       - 'playwright.care-master-compact.config.js'
+      - 'playwright.care-render-performance.config.js'
+      - 'tests/care-render-performance.browser.spec.js'
+      - 'tests/care-directory-refresh-rendering.test.js'
+      - 'tests/care-decorator-observer.test.js'
+      - 'tests/care-decorator-observer.browser.spec.js'
+      - 'tests/care-media-render-cache.test.js'
+      - 'tests/care-media-render-cache.browser.spec.js'
       - 'tests/care-master-compact.browser.spec.js'
       - 'playwright.booking-plan.config.js'
       - 'tests/booking-plan.test.js'
@@ -218,7 +232,7 @@ jobs:
           node --test tests/local-ui-runner.test.js
           node --test tests/local-network-policy.test.js
           node --test tests/waffle-bootstrap-lifecycle.test.js
-          node --test tests/care-startup-priority.test.js tests/care-past-background-load.test.js tests/booking-plan.test.js tests/dog-record-cache-age.test.js
+          node --test tests/care-startup-priority.test.js tests/care-past-background-load.test.js tests/booking-plan.test.js tests/dog-record-cache-age.test.js tests/care-directory-refresh-rendering.test.js tests/care-decorator-observer.test.js tests/care-media-render-cache.test.js
           node --test tests/care-profile-readiness.test.js tests/care-overview-freshness.test.js tests/care-record-update-contract.test.js
           node --test tests/care-state-preservation.test.js tests/care-past-classification.test.js tests/stay-operation-frontend.test.js
           node --test tests/care-csv-integrity.test.js
@@ -237,6 +251,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          - group: care-render-performance
+            configs: playwright.care-render-performance.config.js
           - group: owner-workflows
             configs: playwright.owner-workflows.config.js
           - group: master-compact
