@@ -93,7 +93,8 @@ test('Dog record renders the exact Dog ID and makes saved, derived, contact and 
     document:{ activeElement:null },
     card: null
   };
-  vm.runInNewContext(`function v110Escape(v){return escapeDashboardHtml(v==null?'':String(v));}\n${risk}\n${render}`, sandbox);
+  const freshness = master.match(/function v110MasterSavedAge\(savedAt,now=Date\.now\(\)\)\{[^\n]+\nfunction v110MasterFreshness\(opt=\{\}\)\{[^\n]+/)[0];
+  vm.runInNewContext(`function v110Escape(v){return escapeDashboardHtml(v==null?'':String(v));}\n${freshness}\n${risk}\n${render}`, sandbox);
   const host = emptyMasterHost();
   sandbox.card = { dataset:{ directoryDogName:'Milo', directoryDogNumber:'#00007' }, querySelector(){ return host; } };
   sandbox.v110RenderMasterProfile(sandbox.card, { dogName:'Milo', breed:'Pug', ownerName:'Sam Owner', phone:'0400 123 456', dogNumber:'#00007', persisted:true, riskFlags:{ foodAllergy:true }, notes:'No chicken' });
@@ -124,6 +125,7 @@ test('Dog record reads remain tab-triggered and failed loads expose a forced ret
 test('failed Dog record read displays an error and Retry recovers on a forced second read', async () => {
   const render = master.match(/function v110RenderMasterProfile\(card,r,opt=\{\}\)\{[^\n]+/)[0];
   const risk = master.match(/function v110MasterRiskBadges\(flags\)\{[^\n]+/)[0];
+  const freshness = master.match(/function v110MasterSavedAge\(savedAt,now=Date\.now\(\)\)\{[^\n]+\nfunction v110MasterFreshness\(opt=\{\}\)\{[^\n]+/)[0];
   const load = master.match(/async function v110LoadMasterProfile\(card,opt=\{\}\)\{[\s\S]*?\n\}/)[0];
   let calls = 0;
   const host = emptyMasterHost();
@@ -132,13 +134,14 @@ test('failed Dog record read displays an error and Retry recovers on a forced se
     escapeDashboardHtml: value => String(value).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;'),
     document:{ activeElement:null },
     v110MasterCache: {},
+    v110MasterCacheSavedAt: {},
     queryAppsScriptSWR: async () => {
       calls += 1;
       if (calls === 1) throw new Error('temporary network failure');
       return { data:{ record:{ dogName:'Milo', dogNumber:'#00007', persisted:false, riskFlags:{} } } };
     }
   };
-  vm.runInNewContext(`function v110Escape(v){return escapeDashboardHtml(v==null?'':String(v));}\n${risk}\n${render}\n${load}`, sandbox);
+  vm.runInNewContext(`function v110Escape(v){return escapeDashboardHtml(v==null?'':String(v));}\n${freshness}\n${risk}\n${render}\n${load}`, sandbox);
   const card = { dataset:{ directoryDogName:'Milo', directoryDogId:'dog-7', directoryDogNumber:'#00007' }, querySelector(selector){ return selector === '[data-v110-master-host]' ? host : selector === '.directory-primary-breed' ? breedNode : null; } };
   await sandbox.v110LoadMasterProfile(card);
   assert.match(host.innerHTML, /role="alert"/);
@@ -153,6 +156,7 @@ test('failed Dog record read displays an error and Retry recovers on a forced se
 test('offline cached dog record is labelled saved, while a validated unchanged response is fresh', async () => {
   const render = master.match(/function v110RenderMasterProfile\(card,r,opt=\{\}\)\{[^\n]+/)[0];
   const risk = master.match(/function v110MasterRiskBadges\(flags\)\{[^\n]+/)[0];
+  const freshness = master.match(/function v110MasterSavedAge\(savedAt,now=Date\.now\(\)\)\{[^\n]+\nfunction v110MasterFreshness\(opt=\{\}\)\{[^\n]+/)[0];
   const load = master.match(/async function v110LoadMasterProfile\(card,opt=\{\}\)\{[\s\S]*?\n\}/)[0];
   let calls = 0;
   const host = emptyMasterHost();
@@ -160,18 +164,19 @@ test('offline cached dog record is labelled saved, while a validated unchanged r
     escapeDashboardHtml: value => String(value),
     document:{ activeElement:null },
     v110MasterCache: {},
+    v110MasterCacheSavedAt: {},
     queryAppsScriptSWR: async () => {
       calls += 1;
       const data = { record:{ dogName:'Milo', dogNumber:'#00007', persisted:true, riskFlags:{} } };
       return calls === 1
-        ? { ...data, data, cacheApplied:true, unchanged:true, offlineFallback:true }
+        ? { ...data, data, cacheApplied:true, offlineFallback:true }
         : { ...data, data, cacheApplied:true, unchanged:true, offlineFallback:false };
     }
   };
-  vm.runInNewContext(`function v110Escape(v){return escapeDashboardHtml(v==null?'':String(v));}\n${risk}\n${render}\n${load}`, sandbox);
+  vm.runInNewContext(`function v110Escape(v){return escapeDashboardHtml(v==null?'':String(v));}\n${freshness}\n${risk}\n${render}\n${load}`, sandbox);
   const card = { dataset:{ directoryDogName:'Milo', directoryDogId:'dog-7' }, querySelector(selector){ return selector === '[data-v110-master-host]' ? host : null; } };
   await sandbox.v110LoadMasterProfile(card);
   assert.match(host.innerHTML, /Showing saved profile data offline/);
   await sandbox.v110LoadMasterProfile(card, { force:true });
-  assert.match(host.innerHTML, /Profile refreshed just now/);
+  assert.match(host.innerHTML, /Dog record checked just now/);
 });

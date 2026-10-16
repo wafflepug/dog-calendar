@@ -169,6 +169,42 @@ test('Care roster stays compact and fits a narrow mobile viewport', async ({ pag
   expect(status.bottom).toBeLessThanOrEqual(signals.top);
 });
 
+test('late care-card decoration preserves the checked-out status of an opened past profile', async ({ page }) => {
+  await page.setContent(`<!doctype html><body data-waffle-page="directory">
+    <article class="directory-card" data-directory-stay-key="milo|2026-10-02|2026-10-06" data-directory-dog-name="Milo" data-directory-start-date="2026-10-02" data-directory-end-date="2026-10-06" data-v1082-past-stay="true">
+      <button class="directory-guest-tile-open"><span class="directory-guest-tile-name">Milo</span></button>
+      <header class="directory-card-header"><div class="directory-card-identity"><span class="directory-status-tag v1082-past-status">Checked out</span><span class="v1082-past-checkout-date">Checked out 4 Oct</span></div></header>
+    </article>
+    <article class="directory-card" data-directory-stay-key="maple|2026-10-13|2026-10-14" data-directory-dog-name="Maple" data-directory-start-date="2026-10-13" data-directory-end-date="2026-10-14">
+      <button class="directory-guest-tile-open">Maple</button><header class="directory-card-header"><span class="directory-status-tag">Staying</span></header>
+    </article>
+    <article class="directory-card" data-directory-stay-key="pip|2026-10-20|2026-10-22" data-directory-dog-name="Pip" data-directory-start-date="2026-10-20" data-directory-end-date="2026-10-22">
+      <button class="directory-guest-tile-open">Pip</button><header class="directory-card-header"><span class="directory-status-tag">Old label</span></header>
+    </article>
+  </body>`);
+  await page.evaluate(() => {
+    window.WAFFLE_PAGE = 'directory';
+    window.getLocalTodayDateString = () => '2026-10-14';
+    window.queryAppsScript = async () => ({ records:[] });
+  });
+  await page.addScriptTag({ content: carePolishJs });
+  await page.evaluate(() => {
+    document.querySelector('[data-v1082-past-stay]').classList.add('is-profile-active');
+    document.querySelector('[data-directory-dog-name="Maple"]').classList.add('is-profile-active');
+    document.querySelector('[data-directory-dog-name="Pip"]').classList.add('is-profile-active');
+    window.WAFFLE_V1118.decorateAllCareCards();
+  });
+
+  const past = page.locator('[data-v1082-past-stay]');
+  const pastHeaderStatus = past.locator('.directory-card-header .directory-status-tag');
+  await expect(pastHeaderStatus).toHaveText('Checked out');
+  await expect(pastHeaderStatus).toHaveClass(/v1082-past-status/);
+  await expect(past.locator('.v1082-past-checkout-date')).toHaveText('Checked out 4 Oct');
+  await expect(past.locator('.directory-guest-tile-open .v1118-care-status')).toHaveText('PAST STAY');
+  await expect(page.locator('[data-directory-dog-name="Maple"] .directory-status-tag')).toHaveText('Leaving Today');
+  await expect(page.locator('[data-directory-dog-name="Pip"] .directory-status-tag')).toHaveText('Upcoming');
+});
+
 test('past Care search reads only API-provided Dog ID and Dog Number metadata', async ({ page }) => {
   const bookings = groupPastBookings([
     { stayKey: 'twin|2026-08-01|2026-08-03', dogName: 'Twin Pup', breed: 'Cavoodle', startDate: '2026-08-01', endDate: '2026-08-03', dogId: '11111111-1111-4111-8111-111111111111', dogNumber: '17', ownerName: 'Owner A' },

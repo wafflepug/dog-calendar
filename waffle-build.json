@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.10.16.01",
-  "releaseName": "Care and Booking UI Refinement",
+  "assetRevision": "2026.10.16.02",
+  "releaseName": "Daily Owner Workflow Clarity",
   "careIteration": {
     "returningDogSuggestions": true,
     "reviewedCareInheritance": true,

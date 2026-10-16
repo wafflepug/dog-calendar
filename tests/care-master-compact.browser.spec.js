@@ -5,6 +5,8 @@ const path = require('node:path');
 const compactCss = fs.readFileSync(path.join(__dirname, '..', 'waffle-v11.0.css'), 'utf8');
 const source = fs.readFileSync(path.join(__dirname, '..', 'waffle-v11.0.js'), 'utf8');
 const render = source.match(/function v110RenderMasterProfile\([\s\S]*?\n(?=async function v110LoadMasterProfile)/)?.[0];
+const savedAge = source.match(/function v110MasterSavedAge\([\s\S]*?\n(?=function v110MasterPhotoHtml)/)?.[0];
+const freshness = source.match(/function v110MasterFreshness\([\s\S]*?\n(?=function v110MasterPhotoHtml)/)?.[0];
 const risks = source.match(/function v110MasterRiskBadges\([\s\S]*?\n(?=function v110MasterPhotoHtml)/)?.[0];
 const escape = source.match(/function v110Escape\([\s\S]*?\n(?=function )/)?.[0];
 const feedback = source.match(/function v110ShowActionFeedback\([\s\S]*?\n(?=function v110ClearActionFeedback)/)?.[0];
@@ -14,6 +16,8 @@ const loadMaster = source.match(/async function v110LoadMasterProfile\([\s\S]*?\
 
 test('dog record maintenance starts closed and feedback stays visible outside it across same-identity rerenders', async ({ page }) => {
   expect(render).toBeTruthy();
+  expect(savedAge).toBeTruthy();
+  expect(freshness).toBeTruthy();
   expect(risks).toBeTruthy();
   expect(escape).toBeTruthy();
   expect(feedback).toBeTruthy();
@@ -23,7 +27,7 @@ test('dog record maintenance starts closed and feedback stays visible outside it
   await page.setContent('<article class="directory-card" data-directory-stay-id="stay-a" data-directory-dog-id="dog-a" data-directory-dog-name="Milo"><div data-v110-master-host></div></article>');
   await page.addScriptTag({ content: `
     const escapeDashboardHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
-    ${escape}\n${risks}\n${feedback}\n${clearFeedback}\n${render}
+    ${escape}\n${savedAge}\n${freshness}\n${risks}\n${feedback}\n${clearFeedback}\n${render}
     const v110ActiveMasterSaves = new Set();
     let v110MasterCache = {};
     window.saveRequests = [];
@@ -31,6 +35,7 @@ test('dog record maintenance starts closed and feedback stays visible outside it
     const sendPayloadToAppsScript = payload => new Promise((resolve, reject) => window.saveRequests.push({payload, resolve, reject}));
     const v110ErrorCanRetry = error => /temporary/.test(error?.message || '');
     const v110ActionErrorMessage = (label, error) => label + ' could not be saved. ' + error.message;
+    let v110MasterCacheSavedAt = {};
     ${save}
   ` });
   await page.evaluate(() => {
@@ -80,7 +85,7 @@ test('dog record maintenance starts closed and feedback stays visible outside it
 test('master save exposes pending, retry, and ACK feedback while closed and ignores a late ACK after a guest switch', async ({ page }) => {
   const payload = { stayId:'stay-a', stayKey:'milo|2026-10-11|2026-10-14', dogId:'dog-a', dogName:'Milo', breed:'Poodle', startDate:'2026-10-11', endDate:'2026-10-14' };
   await page.setContent(`<article class="directory-card" data-directory-stay-id="stay-a" data-directory-dog-id="dog-a" data-directory-stay-key="${payload.stayKey}" data-directory-dog-name="Milo" data-payload='${JSON.stringify(payload)}'><div data-v110-master-host></div></article>`);
-  await page.addScriptTag({ content: `const escapeDashboardHtml=value=>String(value??'').replace(/[<>"']/g,char=>({'<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));\n${escape}\n${risks}\n${feedback}\n${clearFeedback}\n${render}\nconst v110ActiveMasterSaves=new Set();let v110MasterCache={};window.saveRequests=[];window.masterReadRequests=[];const v110OperationalPayloadFromCard=card=>JSON.parse(card.dataset.payload);const sendPayloadToAppsScript=payload=>new Promise((resolve,reject)=>window.saveRequests.push({payload,resolve,reject}));const queryAppsScriptSWR=()=>new Promise(resolve=>window.masterReadRequests.push(resolve));const v110ErrorCanRetry=error=>/temporary/.test(error?.message||'');const v110ActionErrorMessage=(label,error)=>label+' could not be saved. '+error.message;${save}\n${loadMaster}` });
+  await page.addScriptTag({ content: `const escapeDashboardHtml=value=>String(value??'').replace(/[<>"']/g,char=>({'<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));\n${escape}\n${savedAge}\n${freshness}\n${risks}\n${feedback}\n${clearFeedback}\n${render}\nconst v110ActiveMasterSaves=new Set();let v110MasterCache={};let v110MasterCacheSavedAt={};window.saveRequests=[];window.masterReadRequests=[];const v110OperationalPayloadFromCard=card=>JSON.parse(card.dataset.payload);const sendPayloadToAppsScript=payload=>new Promise((resolve,reject)=>window.saveRequests.push({payload,resolve,reject}));const queryAppsScriptSWR=()=>new Promise(resolve=>window.masterReadRequests.push(resolve));const v110ErrorCanRetry=error=>/temporary/.test(error?.message||'');const v110ActionErrorMessage=(label,error)=>label+' could not be saved. '+error.message;${save}\n${loadMaster}` });
   await page.evaluate(record => v110RenderMasterProfile(document.querySelector('.directory-card'), record), {dogName:'Milo',persisted:true,riskFlags:{}});
   const host = page.locator('[data-v110-master-host]');
   const disclosure = host.locator('[data-v110-update-dog-record]');
@@ -102,9 +107,11 @@ test('master save exposes pending, retry, and ACK feedback while closed and igno
   await expect(host.getByRole('button', { name:'Retry' })).toBeVisible();
   const retrying = page.getByRole('button', { name:'Retry' }).click();
   await expect.poll(() => page.evaluate(() => window.saveRequests.length)).toBe(2);
+  await page.evaluate(() => { v110MasterCacheSavedAt['id:dog-a']=Date.now()-86400000; });
   await page.evaluate(() => window.saveRequests[1].resolve({record:{dogName:'Milo',persisted:true,riskFlags:{}}}));
   await retrying;
   await expect(host.locator('.v110-action-feedback.is-success')).toContainText('Master Profile saved');
+  expect(await page.evaluate(() => v110MasterCacheSavedAt['id:dog-a'])).toBeUndefined();
   await saving;
 
   await page.evaluate(() => {
@@ -129,7 +136,7 @@ test('master save exposes pending, retry, and ACK feedback while closed and igno
   await page.evaluate(() => { void v110LoadMasterProfile(document.querySelector('.directory-card'), {force:true}); });
   await expect.poll(() => page.evaluate(() => window.masterReadRequests.length)).toBe(2);
   await page.evaluate(() => window.masterReadRequests[1]({error: new Error('network unavailable')}));
-  await expect(host.locator('.v110-master-freshness')).toHaveText('Showing saved profile data; refresh failed.');
+  await expect(host.locator('.v110-master-freshness')).toContainText('Showing saved profile data; refresh failed.');
   await expect(host.getByRole('button', {name:'Retry loading dog record'})).toBeVisible();
   await expect(host).toContainText('Pip');
   await page.evaluate(() => { void v110SaveMasterFromCard(document.querySelector('.directory-card'), document.querySelector('[data-v110-save-master]')); });
@@ -137,4 +144,61 @@ test('master save exposes pending, retry, and ACK feedback while closed and igno
   await page.evaluate(() => window.saveRequests[3].resolve({queued:true,result:'success',record:{dogName:'Pip',persisted:true}}));
   await expect(host.locator('.v110-action-feedback')).toContainText('did not confirm');
   await expect(host.locator('.v110-action-feedback.is-success')).toHaveCount(0);
+});
+
+test('cached Dog Record age states remain readable across widths and themes, and stale callbacks cannot cross guests', async ({ page }) => {
+  await page.setContent('<article class="directory-card" data-directory-stay-id="stay-a" data-directory-dog-id="dog-a" data-directory-dog-name="Milo"><div data-v110-master-host></div></article>');
+  await page.addScriptTag({ content: `const escapeDashboardHtml=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));\n${escape}\n${savedAge}\n${freshness}\n${risks}\n${render}\nlet v110MasterCache={};let v110MasterCacheSavedAt={};window.readOptions=[];window.readResolvers=[];const queryAppsScriptSWR=(_payload,options)=>{window.readOptions.push(options);return new Promise(resolve=>window.readResolvers.push(resolve));}\n${loadMaster}\nwindow.paint=(options)=>v110RenderMasterProfile(document.querySelector('.directory-card'),{dogName:'Milo',persisted:true,riskFlags:{}},options);` });
+  const status = page.locator('.v110-master-freshness');
+  const knownAt = Date.now() - 7 * 60_000;
+  for (const width of [320, 390, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    for (const theme of ['light', 'dark']) {
+      await page.evaluate(theme => { document.body.className = theme === 'dark' ? 'dark-theme' : ''; }, theme);
+      await page.evaluate(savedAt => window.paint({ cached:true, savedAt }), knownAt);
+      await expect(status).toContainText(/saved on this device \d+ minutes? ago/i);
+      await page.evaluate(() => window.paint({ cached:true }));
+      await expect(status).toContainText('Copy save time unavailable');
+      await page.evaluate(savedAt => window.paint({ offline:true, cached:true, savedAt }), knownAt);
+      await expect(status).toContainText('Showing saved profile data offline.');
+      await expect(status).toContainText(/saved on this device \d+ minutes? ago/i);
+      await page.evaluate(savedAt => window.paint({ refreshFailed:true, cached:true, savedAt }), knownAt);
+      await expect(status).toContainText('Showing saved profile data; refresh failed.');
+      await expect(status).toContainText(/saved on this device \d+ minutes? ago/i);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+    }
+  }
+
+  await page.evaluate(() => {
+    const card = document.querySelector('.directory-card');
+    void v110LoadMasterProfile(card, { force:true });
+  });
+  await expect.poll(() => page.evaluate(() => window.readOptions.length)).toBe(1);
+  await page.evaluate(() => window.readOptions[0].onCached({record:{dogName:'Milo',persisted:true,riskFlags:{}}}, {savedAt:Date.now()-60000}));
+  await expect(status).toContainText(/Saved on this device 1 minute ago/i);
+  await page.evaluate(() => {
+    const card = document.querySelector('.directory-card');
+    card.dataset.directoryStayId='stay-b'; card.dataset.directoryDogId='dog-b'; card.dataset.directoryDogName='Coco';
+    v110RenderMasterProfile(card,{dogName:'Coco',persisted:true,riskFlags:{}},{});
+    window.readOptions[0].onCached({record:{dogName:'Milo',persisted:true,riskFlags:{}}},{savedAt:Date.now()-86400000});
+    window.readResolvers[0]({data:{record:{dogName:'Milo',persisted:true,riskFlags:{}}},offlineFallback:true});
+  });
+  await expect(page.locator('.v110-master-heading h4')).toHaveText('Coco');
+  await expect(status).toHaveText('Dog record checked just now.');
+});
+
+test('network replacement clears the previous cache time and cold cache refresh failure keeps cached data visible', async ({ page }) => {
+  await page.setContent('<article class="directory-card" data-directory-stay-id="stay-a" data-directory-dog-id="dog-a" data-directory-dog-name="Milo"><div data-v110-master-host></div></article>');
+  await page.addScriptTag({ content: `const escapeDashboardHtml=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));\n${escape}\n${savedAge}\n${freshness}\n${risks}\n${render}\nlet v110MasterCache={};let v110MasterCacheSavedAt={};window.mode='network';const queryAppsScriptSWR=async (_payload,options)=>{if(window.mode==='cold-fail'){await options.onCached({record:{dogName:'Milo',persisted:true,riskFlags:{}}},{savedAt:Date.now()-3600000});throw new Error('synthetic refresh failure');}return {data:{record:{dogName:'Milo Updated',persisted:true,riskFlags:{}}},offlineFallback:false};}\n${loadMaster}` });
+  const card = page.locator('.directory-card');
+  const status = page.locator('.v110-master-freshness');
+  await page.evaluate(() => { v110MasterCache['id:dog-a']={dogName:'Old Milo',persisted:true,riskFlags:{}};v110MasterCacheSavedAt['id:dog-a']=Date.now()-86400000;void v110LoadMasterProfile(document.querySelector('.directory-card'),{force:true}); });
+  await expect(page.locator('.v110-master-heading h4')).toHaveText('Milo Updated');
+  await expect(status).toHaveText('Dog record checked just now.');
+  await expect.poll(() => page.evaluate(() => v110MasterCacheSavedAt['id:dog-a'])).toBeUndefined();
+  await page.evaluate(() => { window.mode='cold-fail'; v110MasterCache={}; v110MasterCacheSavedAt={}; void v110LoadMasterProfile(document.querySelector('.directory-card'),{force:true}); });
+  await expect(page.locator('.v110-master-heading h4')).toHaveText('Milo');
+  await expect(status).toContainText('Showing saved profile data; refresh failed.');
+  await expect(status).toContainText('Saved on this device 1 hour ago');
+  await expect(page.getByRole('button', { name:'Retry loading dog record' })).toBeVisible();
 });

@@ -73,6 +73,14 @@ test('Book Again opens a clean new stay immediately and confirms only the exact 
   await expect(page.locator('#p4DogIdentity')).toHaveValue(dogA);
   await expect(page.locator('#p4BookingContext')).toContainText('Dog ID #00001');
   await expect(page.locator('#p4SaveConfirmed')).toBeEnabled();
+  await expect(page.locator('#p4Start')).toBeFocused();
+  const planShortcut = page.locator('#p4BookingContext [data-p4-open-plan]');
+  await expect(planShortcut).toHaveAccessibleName('Plan multiple visits');
+  await planShortcut.click();
+  await expect(page.locator('#p4PlanDisclosure')).toHaveAttribute('open', '');
+  await expect(page.locator('#p4PlanStageHeading')).toBeFocused();
+  await expect(page.locator('#p4PlanOwner')).toHaveValue('Alex');
+  await page.locator('#p4PlanDisclosure summary').click();
   await seedBooking(page);
   await page.locator('#p4SaveConfirmed').click();
   await expect.poll(() => page.evaluate(() => window.fixtureWrites.length)).toBe(1);
@@ -166,6 +174,36 @@ test('directory Booking tools labels are guest-specific and direct Book Again ga
   await expect(page.locator('#p4SaveConfirmed')).toBeDisabled();
   await page.locator('#p4DogIdentity').selectOption('');
   await expect(page.locator('#p4SaveConfirmed')).toBeEnabled();
+});
+
+test('directory Book Again preserves a deliberate field focus through delayed exact-ID confirmation', async ({ page }) => {
+  await setup(page);
+  await page.evaluate(() => {
+    window.fixturePage = 'directory';
+    document.getElementById('p4Modal').hidden = true;
+    window.WAFFLE_PHASE4_CORE.open = () => { document.getElementById('p4Modal').hidden = false; };
+    window.identityRead = payload => payload.action === 'list_dog_identities'
+      ? new Promise(resolve => { window.pendingDirectoryIdentity = resolve; })
+      : Promise.resolve({ history: { previousStays: [] } });
+    const card = document.createElement('article');
+    card.className = 'directory-card';
+    Object.assign(card.dataset, { directoryStayKey: 'luna|2026-01-01|2026-01-03', directoryDogName: 'Luna', directoryDogId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', directoryDogNumber: '00001', directoryStartDate: '2026-01-01', directoryEndDate: '2026-01-03' });
+    card.innerHTML = '<header class="directory-card-header"></header><span class="directory-primary-breed" data-directory-current-value="Pug"></span><span data-directory-edit-field="ownerName" data-directory-current-value="Alex"></span>';
+    document.body.appendChild(card);
+    window.WAFFLE_PHASE4_BOOKING.enhanceDirectory();
+  });
+  await page.locator('.p4-directory-actions summary').click();
+  await page.locator('[data-p4-dir="again"]').click();
+  await expect(page.locator('#p4DogIdentity')).toBeFocused();
+  await page.locator('#p4Owner').focus();
+  await page.evaluate(rows => window.pendingDirectoryIdentity({ identities: rows }), [
+    { dogId: dogA, dogNumber: '00001', dogName: 'Luna', breed: 'Pug', ownerName: 'Alex' },
+    { dogId: dogB, dogNumber: '00002', dogName: 'Luna', breed: 'Pug', ownerName: 'Blair' }
+  ]);
+  await expect(page.locator('#p4DogIdentity')).toHaveValue(dogA);
+  await expect(page.locator('#p4Owner')).toBeFocused();
+  await expect(page.locator('#p4SaveConfirmed')).toBeEnabled();
+  expect(await page.evaluate(() => window.fixtureWrites.length)).toBe(0);
 });
 
 test('stale generic identity failure cannot reset a newer Book Again action', async ({ page }) => {

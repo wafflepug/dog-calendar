@@ -424,7 +424,7 @@ test('readiness checklist updates from cached profile state, prioritizes gaps, a
   await page.evaluate(() => {
     window.renderBrief(document.querySelector('.directory-card'));
   });
-  await expect(page.locator('[data-care-readiness-summary]')).toHaveText('2 to review');
+  await expect(page.locator('[data-care-readiness-summary]')).toHaveText('Needs intake');
   await expect(page.locator('[data-care-brief-safety]')).toContainText('Safety profile not yet available');
   await expect(page.locator('.directory-care-brief-safety')).toBeVisible();
   await page.evaluate(() => {
@@ -433,7 +433,7 @@ test('readiness checklist updates from cached profile state, prioritizes gaps, a
     window.renderBrief(card);
   });
   await expect(page.locator('[data-care-readiness-item="intake"]')).toHaveAttribute('data-state', 'ready');
-  await expect(page.locator('[data-care-readiness-summary]')).toHaveText('1 to review');
+  await expect(page.locator('[data-care-readiness-summary]')).toHaveText('Needs handover');
   await page.evaluate(() => {
     const card = document.querySelector('.directory-card');
     directoryProfileDetailCache[card.dataset.stayKey] = { intakeAttributes: { feedingTimes: '7 am', medicationInstructions: 'With dinner' } };
@@ -442,7 +442,25 @@ test('readiness checklist updates from cached profile state, prioritizes gaps, a
     card.querySelector('[data-directory-edit-field="notes"]').dataset.directoryCurrentValue = 'Call before pickup';
     window.renderBrief(card);
   });
-  await expect(page.locator('[data-care-readiness-summary]')).toHaveText('Ready for care');
+  await expect(page.locator('[data-care-readiness-summary]')).toHaveText('Setup complete');
+  await expect(page.locator('[data-care-readiness-summary]')).toHaveAttribute('data-state', 'ready');
+  await expect(page.locator('.directory-care-readiness > summary')).toHaveAttribute('aria-description', /setup checks only/);
+  // A completed form and handover cannot override an unresolved dog identity.
+  await page.evaluate(() => {
+    const card = document.querySelector('.directory-card');
+    card.dataset.profileIdentityBlocked = card.dataset.stayKey;
+    card.dataset.profileIdentityBlockedReason = 'conflict';
+    window.renderBrief(card);
+  });
+  await expect(page.locator('[data-care-readiness-summary]')).toHaveText('Needs identity review');
+  await expect(page.locator('[data-care-readiness-summary]')).toHaveAttribute('data-state', 'attention');
+  await page.evaluate(() => {
+    const card = document.querySelector('.directory-card');
+    delete card.dataset.profileIdentityBlocked;
+    delete card.dataset.profileIdentityBlockedReason;
+    window.renderBrief(card);
+  });
+  await expect(page.locator('[data-care-readiness-summary]')).toHaveText('Setup complete');
   await expect(page.locator('[data-care-brief-safety]')).toHaveAttribute('data-state', 'clear');
   await expect(page.locator('.directory-care-brief-safety')).toHaveAttribute('data-state', 'clear');
   await page.evaluate(() => {
@@ -566,7 +584,9 @@ test('Care overview leads with essentials and history distinguishes actual from 
     await expect(cards.nth(1)).toContainText('Originally scheduled 2026-06-05');
     await expect(cards.nth(1)).toContainText('Care record updates2026-06-02 · care profile');
     await expect(cards.nth(0)).toContainText('Safety monitor appetite.');
-    expect(appSource.indexOf('class="directory-care-brief-grid"')).toBeLessThan(appSource.indexOf('<details class="directory-care-readiness">'));
+    // The existing compact setup disclosure now leads the essentials; it does
+    // not introduce a second overview or duplicate any care instructions.
+    expect(appSource.indexOf('<details class="directory-care-readiness">')).toBeLessThan(appSource.indexOf('class="directory-care-brief-grid"'));
     expect(appSource).toContain("'<span class=\"directory-status-tag tag-checked-out\">Checked Out</span>'");
     expect(appSource).not.toContain("class=\"directory-status-tag\" style=\"background:#e2e8f0");
     for (const width of [390, 412, 1440]) {
