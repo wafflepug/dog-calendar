@@ -430,7 +430,7 @@
     }
     chip.className = 'v1118-status-chip v1118-care-status ' + statusClass(status);
     chip.textContent = status;
-    const profileStatus = card.classList.contains('is-profile-active')
+    const profileStatus = card.classList.contains('is-profile-active') && card.dataset.v1082PastStay !== 'true'
       ? card.querySelector('.directory-card-header .directory-status-tag')
       : null;
     if (profileStatus) {

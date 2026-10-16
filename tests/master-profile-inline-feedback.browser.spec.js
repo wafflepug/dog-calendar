@@ -16,6 +16,7 @@ test('Master Profile transport failures show a retry and preserve the selected s
     window.savedPayloads = [];
     window.failCount = 2;
     window.v110MasterCache = {};
+    window.v110MasterCacheSavedAt = {};
     window.v110OperationalPayloadFromCard = card => JSON.parse(card.dataset.payload);
     window.sendPayloadToAppsScript = async payload => {
       window.savedPayloads.push({ ...payload });

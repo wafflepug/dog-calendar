@@ -12,6 +12,8 @@ This iteration refines existing screens instead of adding another dashboard or C
 
 No backend deployment, paid service or additional startup read is introduced.
 
+Late roster decoration also preserves the historical checkout label and marker in an opened Past profile. Current/upcoming status updates remain active.
+
 The six existing profile regression configurations now run as separate CI matrix jobs. Their cases, browsers and final required gate remain unchanged. This permits isolated failure diagnosis and reruns; the overall speed improvement must be measured from CI rather than assumed.
 
 ## Testing matrix
