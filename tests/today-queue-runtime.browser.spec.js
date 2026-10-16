@@ -41,14 +41,23 @@ test('the shipped Today page opens its exact Meet & Greet and exposes identity-s
     expect(headingFonts[0]).toBe(headingFonts[1]);
     await expect(queue.getByRole('link', {name:/Open Milo care profile/})).toHaveAttribute('href', /stayId=11111111-1111-4111-8111-111111111111.*dogId=aaaaaaaa/);
     await page.evaluate(dark => document.body.classList.toggle('dark-theme', dark), width === 1440);
-    const actionContrast = await queue.locator('.v10-agenda-action').first().evaluate(element => {
-      const rgb = value => value.match(/[\d.]+/g).slice(0,3).map(Number).map(value => value/255);
+    await expect.poll(() => queue.locator('.v10-agenda-action').first().evaluate(element => {
+      // A scheduled render can replace a row between locator resolution and
+      // evaluation. Unknown/detached colours remain below the threshold.
+      const rgb = value => {
+        const channels = value.match(/[\d.]+/g);
+        return channels?.length >= 3 ? channels.slice(0,3).map(Number).map(value => value/255) : null;
+      };
       const lum = values => values.map(v => v <= .04045 ? v/12.92 : ((v+.055)/1.055)**2.4).reduce((sum,v,i) => sum+v*[.2126,.7152,.0722][i],0);
-      const foreground = lum(rgb(getComputedStyle(element).color));
-      const background = lum(rgb(getComputedStyle(element.closest('.v10-agenda-item')).backgroundColor));
+      const row = element.closest('.v10-agenda-item');
+      if (!element.isConnected || !row) return 0;
+      const foregroundRgb = rgb(getComputedStyle(element).color);
+      const backgroundRgb = rgb(getComputedStyle(row).backgroundColor);
+      if (!foregroundRgb || !backgroundRgb) return 0;
+      const foreground = lum(foregroundRgb);
+      const background = lum(backgroundRgb);
       return (Math.max(foreground,background)+.05)/(Math.min(foreground,background)+.05);
-    });
-    expect(actionContrast).toBeGreaterThanOrEqual(4.5);
+    }), {message:'Action text retains 4.5:1 contrast after the theme transition settles'}).toBeGreaterThanOrEqual(4.5);
     await queue.scrollIntoViewIfNeeded();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBeTruthy();
     await info.attach(`today-${width}`, {body:await page.screenshot({path:info.outputPath(`today-${width}.png`)}),contentType:'image/png'});
