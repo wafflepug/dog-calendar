@@ -16,7 +16,7 @@ Medication dose times and missing intake are not inferred from schedule events. 
 
 ## Testing Matrix
 
-Local verification: 322 Node tests and 116 distinct focused browser cases. Existing mobile hierarchy/overview checks cover 54 cases (52 passed in the first run; the two old source-order assertions were deliberately updated for the new setup position and passed in a targeted rerun). The booking/cache/Today run passed 58 cases; the final Today run passed 14, replacing the ten earlier Today cases and adding four distinct cases. Later contrast verification repeats the two real-page cases without inflating the distinct count.
+Local verification: 322 Node tests and 118 distinct focused browser cases. Existing mobile hierarchy/overview checks cover 54 cases (52 passed in the first run; the two old source-order assertions were deliberately updated for the new setup position and passed in a targeted rerun). The booking/cache/Today run passed 58 cases; the final Today run passed 16, replacing the ten earlier Today cases and adding six distinct cases. Later contrast verification repeats the two real-page cases without inflating the distinct count. CI exposed an assertion sampling theme-transition colours; it now waits for the same 4.5:1 threshold and treats detached rows as unknown until they can be measured.
 
 - Happy path: Today identity-specific links and exact Meet & Greet editor; essentials/contact placement; intake then handover setup; confirmed repeat booking and multi-visit planner.
 - Edge cases: same-name distinct Dog IDs, separate visits, raw/calendar event formats, unknown/future timestamps, 320/390/1440 widths, dark/light styles, text wrapping, 44px targets and keyboard focus.

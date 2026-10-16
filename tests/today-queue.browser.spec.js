@@ -14,7 +14,7 @@ const queueSource = app.slice(
 );
 
 async function loadQueue(page) {
-  await page.setContent(`<body data-waffle-page="calendar">
+  await page.setContent(`<base href="https://today.test/"><body data-waffle-page="calendar">
     <span id="v10TodayDateLabel"></span><span id="v10TodayStatus"></span>
     <span id="v10AtHomeCount"></span><span id="v10ArrivalCount"></span>
     <span id="v10DepartureCount"></span><span id="v10MeetCount"></span>
@@ -84,6 +84,23 @@ test('Today Meet & Greet action dispatches the exact calendar event to its exist
     exactEvent: window.meetActions[0] === window.meetFixture
   }));
   expect(action).toEqual({ name: 'Milo', exactEvent: true });
+});
+
+test('ambiguous Meet & Greet matches open the calendar without selecting an event to edit', async ({ page }) => {
+  await page.route('https://today.test/index.html?view=calendar', route => route.fulfill({body:'<h1>Calendar destination</h1>'}));
+  await loadQueue(page);
+  await page.evaluate(() => {
+    const meet = { title:'Milo', extendedProps:{dogName:'Milo',isMeetGreet:true,stayKey:'milo|2026-10-16|2026-10-16',start:'2026-10-16',end:'2026-10-16'} };
+    window.name = '';
+    window.globalCalendar = {
+      getEvents: () => [meet, {...meet, extendedProps:{...meet.extendedProps}}],
+      getOption: () => () => { window.name = 'unsafe event selection'; }
+    };
+    renderV10OperationsHome([meet]);
+  });
+  await page.locator('[data-today-open-meet]').click();
+  await expect(page).toHaveURL('https://today.test/index.html?view=calendar');
+  expect(await page.evaluate(() => window.name)).toBe('');
 });
 
 test('raw CSV and FullCalendar Meet & Greet shapes share the exact queue identity', async ({ page }) => {

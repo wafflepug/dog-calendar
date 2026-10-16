@@ -1379,7 +1379,9 @@ function wireTodayQueueActions() {
         if (!button) return;
         event.preventDefault();
         const identity = button.dataset.todayOpenMeet || '';
-        const current = globalCalendar?.getEvents?.().find(item => todayQueueIdentity(item) === identity);
+        const matches = (globalCalendar?.getEvents?.() || []).filter(item =>
+            item.extendedProps?.isMeetGreet === true && todayQueueIdentity(item) === identity);
+        const current = matches.length === 1 ? matches[0] : null;
         const handler = globalCalendar?.getOption?.('eventClick');
         if (!current || typeof handler !== 'function') { window.location.href = 'index.html?view=calendar'; return; }
         handler({ event: current, jsEvent: event, el: button, view: globalCalendar.view });
