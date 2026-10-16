@@ -15900,7 +15900,11 @@ registerWaffleServiceWorker();
                     if (retry) retry.remove();
                     if (readError) readError.remove();
                     const rendered = directorySummaryHtmlState.get(host);
-                    if (rendered?.key === 'legacyIntakeGeneratedHtml' && (failure || retry || readError)) {
+                    if (readError && readError !== failure) {
+                        // A cold-read error replaced the entire status. Its removal
+                        // leaves no saved markup to reuse, so render the status again.
+                        directorySummaryHtmlState.delete(host);
+                    } else if (rendered?.key === 'legacyIntakeGeneratedHtml' && (failure || retry)) {
                         directorySummaryHtmlState.set(host, { ...rendered, actual: host.innerHTML });
                     }
                 }
