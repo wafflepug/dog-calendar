@@ -25,7 +25,19 @@ const pastBookings = [
 async function installContinuityFixture(page) {
   let profileReadCount = 0;
   let fixtureBookings = [booking];
-  await page.clock.setFixedTime(new Date('2026-09-18T12:00:00Z'));
+  // Freeze only the business date. Keep native input timestamps, timers and paint scheduling.
+  await page.addInitScript(() => {
+    const NativeDate = Date;
+    const fixedNow = NativeDate.UTC(2026, 8, 18, 12, 0, 0);
+    function FixedDate(...args) {
+      if (!new.target) return new NativeDate(fixedNow).toString();
+      return Reflect.construct(NativeDate, args.length ? args : [fixedNow], new.target);
+    }
+    FixedDate.prototype = NativeDate.prototype;
+    Object.setPrototypeOf(FixedDate, NativeDate);
+    FixedDate.now = () => fixedNow;
+    globalThis.Date = FixedDate;
+  });
   await page.route('**/*', async route => {
     const request = route.request();
     if (!['GET', 'HEAD'].includes(request.method())) return route.fulfill({ status: 405, body: 'fixture' });

@@ -8,7 +8,19 @@ test('the shipped Today page opens its exact Meet & Greet and exposes identity-s
   const writes = [];
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
-  await page.clock.install({time: new Date('2026-10-16T02:00:00Z')});
+  await page.addInitScript(() => {
+    const NativeDate = Date;
+    // Freeze only business time; keep native timers and input timestamps.
+    const fixedNow = NativeDate.UTC(2026, 9, 16, 2, 0, 0);
+    function FixedDate(...args) {
+      if (!new.target) return new NativeDate(fixedNow).toString();
+      return Reflect.construct(NativeDate, args.length ? args : [fixedNow], new.target);
+    }
+    FixedDate.prototype = NativeDate.prototype;
+    Object.setPrototypeOf(FixedDate, NativeDate);
+    FixedDate.now = () => fixedNow;
+    globalThis.Date = FixedDate;
+  });
   const rows = [
     ['Milo','Poodle','16/10/2026','20/10/2026','Boarding','aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','11111111-1111-4111-8111-111111111111','#00001',''],
     ['Coco','Poodle','12/10/2026','16/10/2026','Boarding','bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb','22222222-2222-4222-8222-222222222222','#00002',''],
