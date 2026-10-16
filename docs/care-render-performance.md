@@ -6,7 +6,7 @@ The directory booking signature includes the rendered CSV fields and stable Stay
 
 Photos remain loaded on intent. Reopening the Photos tab reuses the current gallery while the shared reader checks freshness. Equal cached/fresh responses do not replace gallery nodes. Changed records render once; failed refreshes preserve the current gallery and show the existing error/retry action. A new dog or stay cannot receive the previous identity's response.
 
-Care status and flag decoration compares values before writing. Current/Past counts use one guarded observer, including late grids, and ignore unrelated profile content changes. Scheduled late compatibility passes remain so late modules and reminder results can still decorate cards.
+Care status and flag decoration compares values before writing. Current/Past counts use one guarded observer, including late grids, and ignore unrelated profile content changes. Past Records & forms restores saved disclosure state only when binding a new full identity. Repeated decoration cannot undo a user close before the native toggle event; unseen identities start closed. Scheduled late compatibility passes remain so late modules and reminder results can still decorate cards.
 
 These changes remove avoidable client DOM work. They do not reduce Google Sheets or Apps Script server latency or promise a specific wall-clock improvement. Existing history loading is already deferred and was retained.
 
