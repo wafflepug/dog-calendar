@@ -44,7 +44,7 @@ The existing owner form and its required safety questions remain in place. Owner
 
 | What you see | What to do |
 |---|---|
-| Saved on this device / awaiting sync | Keep the page available and check sync status. Once the stay appears in Care, use Owner Care Link there. Do not create the same stay again. |
+| Saved on this device / awaiting sync | Keep the page available and check sync status. Once the stay appears in Care, use Owner Care Link there. Do not create the same stay again. To enter a different pet, use Add another dog. |
 | Save failed | Your entries remain. Check the connection, then use the retry button. |
 | Stay saved but no care link returned | Find the saved stay in Care and choose Owner Care Link. The booking does not need to be recreated. |
 | Copy was blocked | The text is selected. Press and hold to copy on your phone, or use Ctrl+C on a computer; then paste it into the owner’s chat. |

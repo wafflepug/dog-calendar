@@ -76,6 +76,10 @@ test('queued saves remain locked across close and reopen without offering anothe
   await expect(page.locator('[data-v108-board="dogName"]')).toBeDisabled();
   await page.evaluate(() => window.boardingHarness.save());
   expect(await page.evaluate(() => window.savedPayloads)).toHaveLength(1);
+  await page.getByRole('button', { name: '＋ Add another dog' }).click();
+  await expect(page.locator('[data-v108-board="dogName"]')).toHaveValue('');
+  await expect(page.locator('[data-v108-save-board]')).toBeEnabled();
+  expect(await page.evaluate(() => window.savedPayloads)).toHaveLength(1);
 });
 
 test('failed booking keeps the entered values and allows retry', async ({ page }) => {
