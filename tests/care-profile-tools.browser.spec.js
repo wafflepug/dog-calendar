@@ -198,7 +198,7 @@ for (const [name, width, colorScheme] of [['320-light', 320, 'light'], ['320-dar
     await expect(page.locator('#p4OwnerDog')).toHaveValue(booking.dogName);
     await expect(page.locator('#p4OwnerStart')).toHaveValue(booking.startDate);
     await expect(page.locator('#p4OwnerEnd')).toHaveValue(booking.endDate);
-    await expect.poll(() => reads.filter(action => action === 'get_dog_history').length).toBe(historyReadsBeforeShare + 1);
+    await expect.poll(() => reads.filter(action => action === 'get_dog_history').length).toBe(historyReadsBeforeShare);
     await page.locator('#p4Modal [data-p4-close]').click();
     await expect(ownerLink).toBeFocused();
     await expect(amount).toHaveValue('2 cups draft');

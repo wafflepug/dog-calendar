@@ -57,6 +57,7 @@ test('Book Again opens a clean new stay immediately and confirms only the exact 
   await page.evaluate(dogA => window.WAFFLE_PHASE4_BOOKING.fillOwner({ dogName: 'Luna', dogId: dogA, dogNumber: '00001', breed: 'Pug', ownerName: 'Alex', phone: '0400000000', startDate: '2025-01-01', endDate: '2025-01-02' }), dogA);
   await expect(page.locator('#p4OwnerBookingContext')).toContainText('Dog ID #00001');
   await expect(page.locator('#p4OwnerBookingContext')).toContainText('2025-01-01–2025-01-02');
+  await page.locator('#p4OwnerOtherOptions summary').click();
   await page.locator('#p4BookAgain').click();
   await expect(page.locator('#p4Dog')).toHaveValue('Luna');
   await expect(page.locator('#p4Breed')).toHaveValue('Pug');
