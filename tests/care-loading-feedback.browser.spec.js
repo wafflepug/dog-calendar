@@ -409,6 +409,7 @@ test('Records & forms shows resolved safety and document states with one primary
   await openProfile(page, 'Milo');
   const card = page.locator('.directory-card[data-directory-dog-name="Milo"]');
   const records = card.locator('.directory-care-records-disclosure');
+  await revealSecondaryTools(page);
   await records.locator('summary').click();
 
   const safety = records.locator('[data-directory-care]');
@@ -448,6 +449,7 @@ test('missing records resolve to truthful empty states and preserve create/uploa
   await openProfile(page, 'Milo');
   const card = page.locator('.directory-card[data-directory-dog-name="Milo"]');
   const records = card.locator('.directory-care-records-disclosure');
+  await revealSecondaryTools(page);
   await records.locator('summary').click();
   await expect(records.locator('[data-directory-intake]')).toContainText('No digital intake on file');
   await expect(records.locator('[data-directory-intake] [data-create-intake-link]')).toHaveAttribute('aria-label', 'Create Milo intake link');
@@ -548,3 +550,10 @@ test('successful empty intake stays concise while the profile read is lazy and t
   await expect(details.locator('[data-cancel-profile-edit]')).toBeVisible();
   expect(fixture.profileCalls.get(key)).toBeGreaterThan(1);
 });
+
+async function revealSecondaryTools(page) {
+  const tools = page.locator('.directory-card.is-profile-active .directory-care-more-actions');
+  if (await tools.count() && await tools.getAttribute('open') === null) {
+    await tools.locator(':scope > summary').click();
+  }
+}
