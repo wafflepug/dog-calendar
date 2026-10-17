@@ -11,7 +11,9 @@ const booking = {
 };
 
 async function settlePointerTargetAfterScroll(page, locator) {
-  await locator.scrollIntoViewIfNeeded();
+  // Compact read views can leave a fully in-viewport target behind the fixed footer.
+  // Perform an ordinary native scroll to the centre before real pointer hit-testing.
+  await locator.evaluate(element => element.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' }));
   const selector = await locator.evaluate(element =>
     `.directory-card.is-profile-active [data-profile-subtab="${element.dataset.profileSubtab}"]`
   );

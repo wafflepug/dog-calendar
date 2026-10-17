@@ -42,6 +42,7 @@ test('Detailed Care groups missing fields, keeps critical unknowns clear, and pr
     await expect(page.locator('[data-intake-read-attribute="feedingTimes"] .intake-profile-read-value')).toHaveText(feeding);
     await expect(page.locator('[data-intake-read-attribute="medicationInstructions"] .intake-profile-read-value')).toHaveText(medication);
     await expect(page.locator('[data-intake-read-attribute="medicalConditions"]')).toContainText('Seasonal allergies');
+    for (const group of await page.locator('.care-category-panel > .intake-profile-group').all()) await expect(group).toBeHidden();
     await expect(page.locator('[data-profile-subpanel="foodWalks"] .intake-profile-missing')).toHaveCount(1);
     await expect(page.locator('[data-profile-subpanel="healthHome"] .intake-profile-missing')).toHaveCount(1);
     await expect(page.locator('[data-profile-subpanel="healthHome"] .intake-profile-missing')).not.toContainText('Medication Instructions');
@@ -70,6 +71,7 @@ test('Detailed Care groups missing fields, keeps critical unknowns clear, and pr
     await expect(page.locator('[data-intake-read-category="healthHome"] .intake-profile-missing')).toHaveCount(0);
     await expect(page.locator('[data-intake-read-category="healthHome"] .intake-profile-medication-status')).toHaveText('Medication instructions are not verified.');
     await expect(page.locator('[data-intake-read-attribute="medicalConditions"]')).toContainText('Seasonal allergies');
+    for (const group of await page.locator('.care-category-panel > .intake-profile-group').all()) await expect(group).toBeHidden();
     await page.evaluate(record => {
       const card = document.querySelector('.directory-card');
       card.querySelector('[data-directory-detail="profile"]').dataset.profileReadState = 'saved';
@@ -85,6 +87,7 @@ test('Detailed Care groups missing fields, keeps critical unknowns clear, and pr
     });
     const feedingControl = page.locator('[data-intake-attribute="feedingTimes"]');
     await expect(feedingControl).toBeVisible();
+    await expect(page.locator('[data-profile-subpanel="foodWalks"] > .intake-profile-group').first()).toBeVisible();
     await expect(page.locator('[data-intake-read-category="foodWalks"]')).toBeHidden();
     await feedingControl.fill('Unsaved draft: keep this value');
     await page.evaluate(() => window.captureDraft(document.querySelector('[data-intake-attribute="feedingTimes"]')));

@@ -11995,7 +11995,7 @@ registerWaffleServiceWorker();
                     .filter(field => tab.fields.includes(field.key))
                     .map(field => intakeAttributeControlHtml(field, attributes[field.key], card.dataset.directorySourceRow || card.dataset.directoryStayKey))
                     .join('');
-                return `<section class="intake-profile-group"><div class="intake-profile-editor-fields"><div class="intake-profile-group-title">${escapeDashboardHtml(group.title)}</div><div class="intake-profile-grid">${fieldsHtml}</div></div></section>`;
+                return `<section class="intake-profile-group intake-profile-editor-fields"><div class="intake-profile-group-title">${escapeDashboardHtml(group.title)}</div><div class="intake-profile-grid">${fieldsHtml}</div></section>`;
             }).join('');
             const summary = directoryCareCategorySummary(tab.key, attributes, profileReadState, safetyRecord, safetyState);
             const content = tab.key === 'safety'

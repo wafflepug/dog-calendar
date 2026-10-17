@@ -65,7 +65,8 @@ async function openProfile(page, baseURL, calls, width=390, theme='light') {
   await expect(profileTab).toBeVisible({timeout:15000});
   await profileTab.click();
   await card.locator('[data-profile-subtab="foodWalks"]').click();
-  await expect(card.locator('.intake-profile-field-foodAllergies textarea:disabled')).toBeVisible({timeout:15000});
+  await expect(card.locator('[data-intake-read-attribute="foodAllergies"] .intake-profile-read-value')).toBeVisible({timeout:15000});
+  await expect(card.locator('.intake-profile-field-foodAllergies textarea:disabled')).toBeHidden();
   return card;
 }
 
@@ -113,29 +114,28 @@ for (const theme of ['light', 'dark']) for (const width of [320,390,1440]) test(
       const card=await openProfile(page,baseURL,calls,width,theme);
       await page.evaluate(() => window.scrollTo(0, 0));
       await page.screenshot({path:testInfo.outputPath(`care-header-${width}-${theme}.png`)});
-      const food=card.locator('.intake-profile-field-foodAllergies textarea:disabled');
-      const short=card.locator('.intake-profile-field-feedingTimes textarea:disabled');
-      await expect(food).toHaveValue(longFoodNote);
-      await expect(short).toHaveValue('6:30 am before morning walk');
+      const food=card.locator('[data-intake-read-attribute="foodAllergies"] .intake-profile-read-value');
+      const short=card.locator('[data-intake-read-attribute="feedingTimes"] .intake-profile-read-value');
+      await expect(food).toHaveText(longFoodNote.trim());
+      await expect(short).toHaveText('6:30 am before morning walk');
       const metrics=await page.evaluate(()=>{
         const rect=e=>{const r=e.getBoundingClientRect();return{x:r.x,width:r.width,height:r.height,right:r.right,bottom:r.bottom,font:parseFloat(getComputedStyle(e).fontSize),scrollHeight:e.scrollHeight,clientHeight:e.clientHeight}};
         const card=document.querySelector('.directory-card.is-profile-active');
-        return{overflow:document.documentElement.scrollWidth>innerWidth,photo:rect(card.querySelector('.directory-photo-shell')),name:rect(card.querySelector('.directory-dog-name-btn')),breed:rect(card.querySelector('.directory-primary-breed')),dates:[...card.querySelectorAll('.directory-profile-stay-dates[role="button"],.directory-profile-stay-dates button,.directory-profile-stay-dates input')].map(rect),saved:[...card.querySelectorAll('.directory-profile-intake-section textarea:disabled')].filter(node=>node.getClientRects().length).map(rect),actions:rect(card.querySelector('.directory-care-brief-actions'))};
+        return{overflow:document.documentElement.scrollWidth>innerWidth,photo:rect(card.querySelector('.directory-photo-shell')),name:rect(card.querySelector('.directory-dog-name-btn')),breed:rect(card.querySelector('.directory-primary-breed')),dates:[...card.querySelectorAll('.directory-profile-stay-dates[role="button"],.directory-profile-stay-dates button,.directory-profile-stay-dates input')].map(rect),saved:[...card.querySelectorAll('.directory-profile-intake-section .intake-profile-read-value')].filter(node=>node.getClientRects().length).map(rect),actions:rect(card.querySelector('.directory-care-brief-actions'))};
       });
       expect(metrics.overflow).toBe(false);
       expect(metrics.photo.width).toBeGreaterThanOrEqual(64);
       expect(metrics.name.font).toBeGreaterThanOrEqual(13);
       expect(Math.abs(metrics.name.x - metrics.breed.x)).toBeLessThanOrEqual(1);
+      expect(metrics.saved.length).toBeGreaterThanOrEqual(2);
       expect(metrics.saved.every(field=>field.font>=13&&field.width>0)).toBe(true);
-      const fieldVisibility=await page.evaluate(()=>Object.fromEntries(['feedingTimes','foodAllergies'].map(key=>{const node=document.querySelector(`.intake-profile-field-${key} textarea:disabled`);return[key,node?{scrollHeight:node.scrollHeight,clientHeight:node.clientHeight,height:node.getBoundingClientRect().height}:null]})));
+      const fieldVisibility=await page.evaluate(()=>Object.fromEntries(['feedingTimes','foodAllergies'].map(key=>{const node=document.querySelector(`[data-intake-read-attribute="${key}"] .intake-profile-read-value`);return[key,node?{scrollHeight:node.scrollHeight,clientHeight:node.clientHeight,height:node.getBoundingClientRect().height}:null]})));
       expect(fieldVisibility.feedingTimes.height).toBeLessThan(120);
-      if (await page.evaluate(() => CSS.supports('field-sizing', 'content'))) {
-        expect(fieldVisibility.foodAllergies.scrollHeight).toBeLessThanOrEqual(fieldVisibility.foodAllergies.clientHeight);
-      } else {
-        await expect(food).toHaveCSS('overflow-y', 'auto');
-        expect(await food.evaluate(node => { node.scrollTop = node.scrollHeight; return node.scrollTop + node.clientHeight >= node.scrollHeight - 1; })).toBe(true);
-      }
+      expect(fieldVisibility.foodAllergies.height).toBeGreaterThan(0);
+      expect(fieldVisibility.foodAllergies.scrollHeight).toBeLessThanOrEqual(fieldVisibility.foodAllergies.clientHeight + 1);
       for(const date of metrics.dates) expect(date.height).toBeGreaterThanOrEqual(44);
+      const moreStayActions=card.locator('.v11217-profile-more-actions');
+      if (await moreStayActions.count()) await moreStayActions.locator('summary').click();
       const operationButtons=card.locator('.v110-operation-actions button');
       for (const button of await operationButtons.all()) {
         const box=await button.boundingBox();
@@ -143,6 +143,7 @@ for (const theme of ['light', 'dark']) for (const width of [320,390,1440]) test(
         expect(parseFloat(await button.evaluate(node=>getComputedStyle(node).fontSize))).toBeGreaterThanOrEqual(13);
         expect(box.x + box.width).toBeLessThanOrEqual(width + 1);
       }
+      if (await moreStayActions.count()) await moreStayActions.locator('summary').click();
       const shot=await page.screenshot({path:testInfo.outputPath(`care-compact-${width}-${theme}.png`),fullPage:true});
       await testInfo.attach(`care-compact-${width}-${theme}`,{body:shot,contentType:'image/png'});
       await card.locator('[data-toggle-profile-edit]').click();
@@ -150,6 +151,16 @@ for (const theme of ['light', 'dark']) for (const width of [320,390,1440]) test(
       await expect(card.locator('.intake-profile-field-foodAllergies textarea:not(:disabled)')).toHaveValue(longFoodNote);
       await expect(card.locator('.directory-profile-save-bar')).toBeVisible();
       await expect(card.locator('.intake-profile-field-foodAllergies textarea')).toHaveValue(longFoodNote);
+      const editorFood=card.locator('.intake-profile-field-foodAllergies textarea');
+      await expect(editorFood).toBeVisible();
+      const editorVisibility=await editorFood.evaluate(node=>({scrollHeight:node.scrollHeight,clientHeight:node.clientHeight}));
+      if (await editorFood.evaluate(node => getComputedStyle(node).getPropertyValue('field-sizing') === 'content')) {
+        expect(editorVisibility.scrollHeight).toBeLessThanOrEqual(editorVisibility.clientHeight);
+      } else {
+        await expect(editorFood).toHaveCSS('overflow-y', 'auto');
+        expect(await editorFood.evaluate(node => { node.scrollTop = node.scrollHeight; return node.scrollTop + node.clientHeight >= node.scrollHeight - 1; })).toBe(true);
+      }
+
       await card.locator('[data-cancel-profile-edit]').click();
       await expect(card).not.toHaveClass(/is-profile-editing/);
       await page.locator('.directory-card.is-profile-active').locator('.directory-care-brief').scrollIntoViewIfNeeded();
@@ -183,5 +194,6 @@ for (const [width, theme] of [[320, 'light'], [1440, 'dark']]) test(`Care sectio
   await expect(items).toHaveAttribute('aria-selected', 'true');
   await expect(panel).toBeHidden();
   await overview.click();
+  await expect(card.locator('[data-intake-read-attribute="foodAllergies"] .intake-profile-read-value')).toHaveText(longFoodNote.trim());
   await expect(card.locator('.intake-profile-field-foodAllergies textarea:disabled')).toHaveValue(longFoodNote);
 });

@@ -80,6 +80,9 @@ test('actual Care profile stays compact, keeps exceptions visible and preserves 
     if (await toggle.getAttribute('aria-expanded') !== 'true') await toggle.click();
     await expect(card.locator('[data-intake-read-attribute="foodAmount"]')).toContainText('1 cup');
     await expect(card.locator('[data-intake-attribute="foodAmount"]')).toBeHidden();
+    for (const group of await card.locator('.care-category-panel > .intake-profile-group').all()) await expect(group).toBeHidden();
+    await card.locator('[data-profile-subpanel="foodWalks"]').scrollIntoViewIfNeeded();
+    await page.screenshot({ path: testInfo.outputPath(`care-details-${width}-${theme}.png`) });
     await card.locator('.directory-care-more-actions > summary').click();
     await card.locator('[data-care-brief-action="edit"]').click();
     await expect(card).toHaveClass(/is-profile-editing/);
