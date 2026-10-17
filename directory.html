@@ -12,7 +12,7 @@
     <link rel="icon" type="image/png" sizes="192x192" href="pwa-icon-192.png?v=2026.08.28.01">
     <link rel="apple-touch-icon" sizes="180x180" href="pwa-apple-touch-icon.png?v=2026.08.28.01">
     <title>Waffle House — Guest Directory & Care</title>
-<link rel="stylesheet" href="waffle-runtime.css?v=2026.08.28.01&amp;rev=2026.10.17.01">
+<link rel="stylesheet" href="waffle-runtime.css?v=2026.08.28.01&amp;rev=2026.10.17.02">
     </head>
 <body data-waffle-page="directory">
 
@@ -227,6 +227,12 @@
                     <strong id="v1082PastStayCount">…</strong>
                 </button>
             </nav>
+
+            <div id="directory-empty-state" class="directory-empty-state" role="status" aria-live="polite" hidden>
+                <strong data-directory-empty-title></strong>
+                <p data-directory-empty-copy></p>
+                <button type="button" data-directory-empty-action></button>
+            </div>
 
             <div
                 id="directoryProfileBackBar"
@@ -567,6 +573,6 @@
     body.dark-theme .modal-content-panel input { background: #334155; border-color: #475569; color: white; }
 </style>
 
-<script src="waffle-bootstrap.js?v=2026.08.28.01&amp;rev=2026.10.17.01"></script>
+<script src="waffle-bootstrap.js?v=2026.08.28.01&amp;rev=2026.10.17.02"></script>
     </html>
 

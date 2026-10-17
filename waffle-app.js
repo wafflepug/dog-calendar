@@ -8560,27 +8560,33 @@ registerWaffleServiceWorker();
         return `${phone.trim().startsWith('+') ? '+' : ''}${digits}`;
     }
 
-    function getDirectoryCareBriefFreshness(record, readState, identityState) {
+    function getDirectoryCareBriefFreshness(record, readState, identityState, presentation = {}) {
         if (identityState === 'missing' || readState === 'not-found') return { text: 'No saved care record', state: 'missing' };
         if (identityState === 'unresolved' || readState === 'identity-conflict') return { text: 'Care record identity needs review', state: 'unresolved' };
         const updatedDate = record?.updatedAt ? new Date(record.updatedAt) : null;
-        const validUpdatedDate = updatedDate && Number.isFinite(updatedDate.getTime()) ? updatedDate : null;
+        const validUpdatedDate = updatedDate && Number.isFinite(updatedDate.getTime()) && updatedDate.getTime() <= Date.now() ? updatedDate : null;
         const formattedUpdatedAt = validUpdatedDate
             ? new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(validUpdatedDate)
             : '';
-        if (readState === 'error') {
+        if (presentation.offline && record && presentation.refreshFailed) return validUpdatedDate
+                ? { text: `Offline · refresh unavailable · saved record · updated ${formattedUpdatedAt}`, state: 'offline' }
+            : { text: 'Offline · refresh unavailable · saved record · update time unknown', state: 'offline' };
+        if (readState === 'error' || presentation.refreshFailed) {
             return validUpdatedDate
-                ? { text: `Refresh failed · saved record updated ${formattedUpdatedAt}`, state: 'error' }
-                : { text: record ? 'Refresh failed · saved record update time not recorded' : 'Care record could not be loaded', state: 'error' };
+                ? { text: `Refresh failed · saved record · updated ${formattedUpdatedAt}`, state: 'error' }
+                : { text: record ? 'Refresh failed · saved record · update time unknown' : 'Care record could not be loaded', state: 'error' };
         }
         if (readState === 'loading' || readState === 'refreshing' || !record) {
             return readState === 'refreshing' && record
-                ? { text: `Refreshing saved care record${validUpdatedDate ? ` · updated ${formattedUpdatedAt}` : ' · update time not recorded'}`, state: 'refreshing' }
+                ? { text: `Refreshing · saved record${validUpdatedDate ? ` · updated ${formattedUpdatedAt}` : ' · update time unknown'}`, state: 'refreshing' }
                 : { text: 'Loading care record…', state: 'loading' };
         }
+        if (presentation.offline) return validUpdatedDate
+            ? { text: `Offline · saved record · updated ${formattedUpdatedAt}`, state: 'offline' }
+            : { text: 'Offline · saved record · update time unknown', state: 'offline' };
         return validUpdatedDate
-            ? { text: `Record updated ${formattedUpdatedAt}`, state: 'fresh' }
-            : { text: 'Saved care record · update time not recorded', state: 'saved' };
+            ? { text: `Saved record · updated ${formattedUpdatedAt}`, state: 'fresh' }
+            : { text: 'Saved record · update time unknown', state: 'saved' };
     }
 
     function mergeDirectoryCareRecordWithServerTimestamp(record, serverUpdatedAt) {
@@ -8793,11 +8799,24 @@ registerWaffleServiceWorker();
             const freshness = getDirectoryCareBriefFreshness(
                 validatedProfileRecord,
                 profileReadState,
-                missingRecord ? 'missing' : unresolvedIdentity ? 'unresolved' : 'resolved'
+                missingRecord ? 'missing' : unresolvedIdentity ? 'unresolved' : 'resolved',
+                (() => {
+                    const readStatus = card.querySelector('[data-directory-detail="profile"] [data-directory-profile-read-status]');
+                    return { offline: readStatus?.dataset.freshnessOffline === 'true', refreshFailed: readStatus?.dataset.freshnessRefreshFailed === 'true' };
+                })()
             );
             setDirectorySummaryText(freshnessHost, freshness.text);
             setDirectorySummaryData(freshnessHost, 'state', freshness.state);
+            setDirectorySummaryAttribute(freshnessHost, 'role', 'status');
+            setDirectorySummaryAttribute(freshnessHost, 'aria-live', 'polite');
+            setDirectorySummaryAttribute(freshnessHost, 'aria-atomic', 'true');
             setDirectorySummaryAttribute(freshnessHost, 'aria-description', 'Update time refers to the shared saved record, including intake imports, photos and booking changes; it does not confirm care instructions were reviewed.');
+            const profileReadStatus = card.querySelector('[data-directory-detail="profile"] [data-directory-profile-read-status]');
+            const redundantReadStatus = !!profileReadStatus
+                && (['fresh', 'saved'].includes(profileReadState) || (freshness.state === 'offline' && profileReadState === 'saved'))
+                && !profileReadStatus.querySelector('[data-retry-directory-profile-read]');
+            setDirectorySummaryClass(profileReadStatus, 'is-visually-redundant', redundantReadStatus);
+            if (profileReadStatus) setDirectorySummaryAttribute(profileReadStatus, 'aria-live', redundantReadStatus ? 'off' : 'polite');
         }
 
         if (profileIdentityNeedsReview) {
@@ -9472,7 +9491,7 @@ registerWaffleServiceWorker();
         `;
     }
 
-    function setDirectoryProfileReadStatus(details, state, message, onRetry) {
+    function setDirectoryProfileReadStatus(details, state, message, onRetry, presentation = {}) {
         if (!details) return;
         let status = details.querySelector('[data-directory-profile-read-status]');
         if (!status) {
@@ -9487,7 +9506,10 @@ registerWaffleServiceWorker();
             else details.prepend(status);
         }
         status.dataset.state = state;
+        status.dataset.freshnessOffline = presentation.offline ? 'true' : 'false';
+        status.dataset.freshnessRefreshFailed = presentation.refreshFailed ? 'true' : 'false';
         details.dataset.profileReadState = state;
+        status.dataset.message = String(message || '');
         const summaryChip = details.querySelector('[data-intake-profile-summary]');
         if (summaryChip && details.dataset.detailLoaded !== 'true') {
             if ((state === 'loading' || state === 'refreshing') && !summaryChip.textContent.trim()) {
@@ -10065,7 +10087,7 @@ registerWaffleServiceWorker();
             };
             const swr = typeof window !== 'undefined' && window.WAFFLE_CARE_PROFILE_READS?.read
                 ? await window.WAFFLE_CARE_PROFILE_READS.read(card, { force: !!options.force, onCached: onCachedProfile, onRefreshError: error => {
-                    if (readIsCurrent() && cachedRendered) setDirectoryProfileReadStatus(details, 'error', 'Saved details shown · refresh failed', () => loadDirectoryProfileDetail(card, details, { force: true }));
+                    if (readIsCurrent() && cachedRendered) setDirectoryProfileReadStatus(details, 'error', 'Saved details shown · refresh failed', () => loadDirectoryProfileDetail(card, details, { force: true }), { refreshFailed: true });
                 } })
                 : await queryAppsScriptSWR(
                     {
@@ -10088,7 +10110,7 @@ registerWaffleServiceWorker();
                     const offline = typeof navigator !== 'undefined' && navigator.onLine === false;
                     const failed = !!swr.refreshFailed;
                     const refreshing = !!swr.refreshing;
-                    setDirectoryProfileReadStatus(details, failed ? 'error' : refreshing ? 'refreshing' : 'saved', offline ? 'Saved details shown · offline' : failed ? 'Saved details shown · refresh failed' : refreshing ? 'Saved details shown · refreshing' : 'Saved details shown', failed ? () => loadDirectoryProfileDetail(card, details, { force: true }) : null);
+                    setDirectoryProfileReadStatus(details, failed ? 'error' : refreshing ? 'refreshing' : 'saved', offline ? 'Saved details shown · offline' : failed ? 'Saved details shown · refresh failed' : refreshing ? 'Saved details shown · refreshing' : 'Saved details shown', failed ? () => loadDirectoryProfileDetail(card, details, { force: true }) : null, { offline, refreshFailed: failed });
                 }
                 return;
             }
@@ -10107,9 +10129,9 @@ registerWaffleServiceWorker();
                 const applied = applyRecord(swr.data.record);
                 if (applied && readIsCurrent()) setDirectoryProfileReadStatus(details, 'fresh', 'Care details updated');
             } else if (readIsCurrent() && swr.offlineFallback && typeof navigator !== 'undefined' && navigator.onLine === false) {
-                setDirectoryProfileReadStatus(details, 'error', 'Saved details shown · offline refresh unavailable', () => loadDirectoryProfileDetail(card, details, { force: true }));
+                setDirectoryProfileReadStatus(details, 'error', 'Saved details shown · offline refresh unavailable', () => loadDirectoryProfileDetail(card, details, { force: true }), { offline: true, refreshFailed: true });
             } else if (readIsCurrent() && swr.offlineFallback) {
-                setDirectoryProfileReadStatus(details, 'error', 'Unable to refresh saved details', () => loadDirectoryProfileDetail(card, details, { force: true }));
+                setDirectoryProfileReadStatus(details, 'error', 'Unable to refresh saved details', () => loadDirectoryProfileDetail(card, details, { force: true }), { refreshFailed: true });
             } else if (readIsCurrent()) {
                 setDirectoryProfileReadStatus(details, 'fresh', 'Saved details current');
             }
@@ -10130,7 +10152,8 @@ registerWaffleServiceWorker();
                         card,
                         details,
                         { force: true }
-                    )
+                    ),
+                    { refreshFailed: true }
                 );
             } else {
                 setDirectoryDetailError(
@@ -10627,6 +10650,8 @@ registerWaffleServiceWorker();
             }
         );
 
+        const dashboard = document.querySelector('.directory-dashboard-fused');
+        if (dashboard) dashboard.dataset.directoryRosterLoadState = options.fromCache ? 'cached' : 'success';
         refreshDirectoryCareSummary();
         filterGuestDirectoryCards();
         restoreSelectedDirectoryProfile({ state: preservedUiState });
@@ -10659,6 +10684,8 @@ registerWaffleServiceWorker();
 
         directoryConsolidatedLoadInProgress =
             true;
+        const rosterDashboard = document.querySelector('.directory-dashboard-fused');
+        if (rosterDashboard) rosterDashboard.dataset.directoryRosterLoadState = 'loading';
 
         const button =
             options.button ||
@@ -10712,8 +10739,8 @@ registerWaffleServiceWorker();
                             6 * 60 * 60 * 1000,
                         onCached:
                             cachedResponse => {
-                                cachedRendered =
-                                    true;
+                                if (getDirectoryRosterResponseState({ data: cachedResponse }) === 'failure') return;
+                                cachedRendered = true;
 
                                 applyGuestDirectoryResponse(
                                     cachedResponse,
@@ -10728,6 +10755,8 @@ registerWaffleServiceWorker();
                     }
                 );
 
+            const rosterState = getDirectoryRosterResponseState(swr);
+            if (rosterState === 'failure') throw new Error('Guest list response was unavailable or incomplete.');
             if (
                 !swr.unchanged ||
                 !cachedRendered
@@ -10747,7 +10776,12 @@ registerWaffleServiceWorker();
                 );
             }
 
+            if (rosterDashboard) rosterDashboard.dataset.directoryRosterLoadState = rosterState;
+            updateDirectoryEmptyState();
+
         } catch (error) {
+            if (rosterDashboard) rosterDashboard.dataset.directoryRosterLoadState = 'failure';
+            updateDirectoryEmptyState();
             console.error(
                 'Guest Directory load failed:',
                 error
@@ -11065,17 +11099,50 @@ registerWaffleServiceWorker();
     }
 
 
+    const directoryCareSectionChoices = new Map();
+
+    function directoryCareSectionIdentity(card) {
+        const stayId = String(card?.dataset.directoryStayId || '').trim().toLowerCase();
+        const dogId = String(card?.dataset.directoryDogId || '').trim().toLowerCase();
+        const stayKey = String(card?.dataset.directoryStayKey || card?.dataset.stayKey || '').trim();
+        const complete = stayId && dogId && stayKey;
+        const key = JSON.stringify([stayId, dogId, stayKey]);
+        const unique = complete && Array.from(document.querySelectorAll('.directory-card'))
+            .filter(candidate =>
+                String(candidate.dataset.directoryStayId || '').trim().toLowerCase() === stayId &&
+                String(candidate.dataset.directoryDogId || '').trim().toLowerCase() === dogId &&
+                String(candidate.dataset.directoryStayKey || candidate.dataset.stayKey || '').trim() === stayKey
+            ).length === 1;
+        return { key, shareable: !!unique };
+    }
+
     function switchDirectoryProfileSubTab(card, tabName, toggleCurrent = false) {
         if (!card) return;
         const valid = DIRECTORY_PROFILE_SECONDARY_TABS.some(tab => tab.key === tabName);
         tabName = valid ? tabName : '';
         const allowed = new Set(DIRECTORY_PROFILE_SECONDARY_TABS.map(tab => tab.key));
-        const expanded = new Set(String(card.dataset.profileSubTabs || card.dataset.profileSubTab || '').split(',').map(value => value.trim()).filter(value => allowed.has(value)));
+        const identity = directoryCareSectionIdentity(card);
+        if (card.dataset.profileCareSectionsIdentity !== identity.key) {
+            card.dataset.profileSubTabs = '';
+            card.dataset.profileSubTab = '';
+            const saved = identity.shareable ? directoryCareSectionChoices.get(identity.key) : null;
+            card.dataset.profileSubTabs = saved?.join(',') || '';
+            card.dataset.profileCareSectionsInitialized = saved ? 'true' : 'false';
+            card.dataset.profileCareSectionsIdentity = identity.key;
+        }
+        const initialized = card.dataset.profileCareSectionsInitialized === 'true';
+        const expanded = new Set(String(initialized ? card.dataset.profileSubTabs : (card.dataset.profileSubTabs || card.dataset.profileSubTab || '')).split(',').map(value => value.trim()).filter(value => allowed.has(value)));
         if (toggleCurrent && tabName) {
             if (expanded.has(tabName)) expanded.delete(tabName);
             else expanded.add(tabName);
-        } else if (tabName && !card.dataset.profileSubTabs) expanded.add(tabName);
+        } else if (tabName && !initialized) expanded.add(tabName);
+        card.dataset.profileCareSectionsInitialized = 'true';
         card.dataset.profileSubTabs = Array.from(expanded).join(',');
+        if (identity.shareable) {
+            directoryCareSectionChoices.delete(identity.key);
+            directoryCareSectionChoices.set(identity.key, Array.from(expanded));
+            while (directoryCareSectionChoices.size > 50) directoryCareSectionChoices.delete(directoryCareSectionChoices.keys().next().value);
+        }
         if (tabName && expanded.has(tabName)) card.dataset.profileSubTab = tabName;
         else if (!expanded.has(card.dataset.profileSubTab)) {
             const remaining = Array.from(expanded);
@@ -11380,6 +11447,103 @@ registerWaffleServiceWorker();
         return status;
     }
 
+    function getDirectoryRosterResponseState(swr) {
+        if (swr?.data?.result !== 'success' || !Array.isArray(swr.data.bookings)) return 'failure';
+        if (swr.error || swr.refreshFailed) return 'cached-failure';
+        if (swr.offlineFallback) return 'cached-offline';
+        return 'success';
+    }
+
+    function directoryRosterCount(id) {
+        const text = String(document.getElementById(id)?.textContent || '').trim();
+        return /^\d+$/.test(text) ? Number(text) : null;
+    }
+
+    function directoryPastLoadState() {
+        const grid = document.getElementById('past-directory-grid');
+        if (!grid) return 'unknown';
+        if (grid.querySelector('.v1082-past-empty.is-error, [data-v1082-past-error]')) return 'failure';
+        if (grid.querySelector('.v101-skeleton-list, .v101-skeleton-directory, [aria-label="Loading past stays"]')) return 'loading';
+        return directoryRosterCount('v1082PastStayCount') === null ? 'unknown' : 'success';
+    }
+
+    function updateDirectoryEmptyState() {
+        const empty = document.getElementById('directory-empty-state');
+        if (!empty) return;
+        if (empty.dataset.actionHandlerBound !== 'true') {
+            empty.dataset.actionHandlerBound = 'true';
+            empty.addEventListener('click', event => {
+                const action = event.target.closest('[data-directory-empty-action]');
+                if (!action) return;
+                const destination = action.dataset.directoryEmptyAction;
+                if (destination === 'search') {
+                    document.getElementById('guestDirectorySearch')?.focus();
+                    return;
+                }
+                if (destination === 'refresh') {
+                    document.getElementById('manualRefreshBtn')?.click();
+                    return;
+                }
+                if (destination === 'add') {
+                    document.getElementById('v10QuickAddButton')?.click();
+                    return;
+                }
+                document.querySelector(`[data-v1082-stay-tab="${destination}"]`)?.click();
+            });
+        }
+        const input = document.getElementById('guestDirectorySearch');
+        const dashboard = document.querySelector('.directory-dashboard-fused');
+        const profileMode = dashboard?.classList.contains('is-profile-mode');
+        const search = String(input?.value || '').trim();
+        const activeView = String(document.querySelector('[data-v1082-stay-tab].is-active')?.dataset.v1082StayTab || 'current');
+        const panel = document.querySelector(`[data-v1082-stay-panel="${activeView}"]`);
+        const cards = Array.from(panel?.querySelectorAll('.directory-card') || []).filter(card => card.style.display !== 'none');
+        const title = empty.querySelector('[data-directory-empty-title]');
+        const copy = empty.querySelector('[data-directory-empty-copy]');
+        const action = empty.querySelector('[data-directory-empty-action]');
+        const currentState = String(dashboard?.dataset.directoryRosterLoadState || 'unknown');
+        const viewState = activeView === 'past' ? directoryPastLoadState() : currentState;
+        const isCachedFailure = activeView !== 'past' && ['cached-failure', 'cached-offline'].includes(viewState);
+        const savedCopy = viewState === 'cached-offline'
+            ? 'You are offline. This saved list may be out of date; reconnect and refresh to check for changes.'
+            : 'The last refresh failed. This saved list may be out of date; reconnect and refresh to check for changes.';
+
+        empty.hidden = true;
+        if (dashboard) dashboard.dataset.contextualEmptyVisible = 'false';
+        if (!title || !copy || !action || profileMode || search || cards.length || !['success', 'cached-failure', 'cached-offline'].includes(viewState)) return;
+
+        const labels = { current: 'Staying', future: 'Arriving', past: 'Past' };
+        const others = activeView === 'current' ? ['future', 'past'] : activeView === 'future' ? ['current', 'past'] : ['current', 'future'];
+        const destination = others.find(view => directoryRosterCount(view === 'current' ? 'v1082CurrentStayCount' : view === 'future' ? 'v1082FutureStayCount' : 'v1082PastStayCount') > 0);
+        if (destination) {
+            title.textContent = isCachedFailure
+                ? `No ${labels[activeView].toLowerCase()} guests in the saved roster`
+                : `No ${labels[activeView].toLowerCase()} guests right now`;
+            copy.textContent = isCachedFailure
+                ? savedCopy
+                : activeView === 'current' && destination === 'future'
+                    ? 'Guests with upcoming stays are listed under Arriving.'
+                    : activeView === 'current'
+                        ? 'There are no current stays. Review completed visits under Past.'
+                        : activeView === 'future'
+                            ? 'There are no upcoming stays in the loaded arrival range.'
+                            : `No completed stays are available. Review ${labels[destination].toLowerCase()} guests instead.`;
+            action.textContent = `View ${labels[destination]}`;
+            action.dataset.directoryEmptyAction = destination;
+        } else {
+            title.textContent = isCachedFailure
+                ? `No ${labels[activeView].toLowerCase()} guests in the saved roster`
+                : `No ${labels[activeView].toLowerCase()} guests to show`;
+            copy.textContent = isCachedFailure
+                ? savedCopy
+                : 'There are no stays in this category yet. Add a booking to start a guest record.';
+            action.textContent = isCachedFailure ? 'Refresh guest list' : 'Add a booking';
+            action.dataset.directoryEmptyAction = isCachedFailure ? 'refresh' : 'add';
+        }
+        empty.hidden = false;
+        if (dashboard) dashboard.dataset.contextualEmptyVisible = 'true';
+    }
+
     function filterGuestDirectoryCards() {
         const input = document.getElementById('guestDirectorySearch');
         const search = String(input?.value || '').toLowerCase().trim();
@@ -11470,14 +11634,17 @@ registerWaffleServiceWorker();
             }
             status.classList.toggle('is-empty', Boolean(search) && visibleMatches === 0);
         }
+        updateDirectoryEmptyState();
     }
 
     function updateDirectoryRosterSummary() {
         const summary = document.getElementById('directory-roster-summary');
         if (!summary) return;
-        const staying = document.getElementById('v1082CurrentStayCount')?.textContent || '0';
-        const arriving = document.getElementById('v1082FutureStayCount')?.textContent || '0';
+        const staying = directoryRosterCount('v1082CurrentStayCount');
+        const arriving = directoryRosterCount('v1082FutureStayCount');
+        if (staying === null || arriving === null) return;
         summary.textContent = `${staying} staying · ${arriving} arriving soon`;
+        updateDirectoryEmptyState();
     }
 
     function intakeAttributeControlHtml(field, value, controlPrefix) {
@@ -11664,8 +11831,18 @@ registerWaffleServiceWorker();
 
         const { attributes, sourceLabel } = updateDirectoryIntakeMetadata(card, record);
 
+        const identity = directoryCareSectionIdentity(card);
+        if (card.dataset.profileCareSectionsIdentity !== identity.key) {
+            card.dataset.profileSubTabs = '';
+            card.dataset.profileSubTab = '';
+            const saved = identity.shareable ? directoryCareSectionChoices.get(identity.key) : null;
+            card.dataset.profileSubTabs = saved?.join(',') || '';
+            card.dataset.profileCareSectionsInitialized = saved ? 'true' : 'false';
+            card.dataset.profileCareSectionsIdentity = identity.key;
+        }
         const selectedSubTab = String(card.dataset.profileSubTab || '');
-        const expandedSubTabs = new Set(String(card.dataset.profileSubTabs || selectedSubTab).split(',').map(value => value.trim()).filter(Boolean));
+        const initialized = card.dataset.profileCareSectionsInitialized === 'true';
+        const expandedSubTabs = new Set(String(initialized ? card.dataset.profileSubTabs : (card.dataset.profileSubTabs || selectedSubTab)).split(',').map(value => value.trim()).filter(Boolean));
         const profileDetails = card.querySelector('[data-directory-detail="profile"]');
         const profileReadState = profileDetails?.dataset.profileReadState || (record ? 'saved' : 'loading');
         const stayKey = String(card.dataset.stayKey || card.dataset.directoryStayKey || '').trim();
@@ -11735,7 +11912,7 @@ registerWaffleServiceWorker();
             });
         }
 
-        switchDirectoryProfileSubTab(card, selectedSubTab);
+        if (selectedSubTab || initialized) switchDirectoryProfileSubTab(card, selectedSubTab);
 
         renderDirectoryCareProfile(
             card,
