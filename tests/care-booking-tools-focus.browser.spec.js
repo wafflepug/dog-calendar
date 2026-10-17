@@ -19,7 +19,7 @@ for (const [size, viewport] of [['320', { width: 320, height: 844 }], ['390', { 
       await page.addScriptTag({ path: path.join(__dirname, '..', 'phase4-core.js') });
       await page.evaluate(() => {
         const booking = document.querySelector('[data-p4-panel="booking"]');
-        booking.innerHTML = '<button id="hiddenFirst" hidden>Hidden first</button><input id="disabledFirst" disabled><label>Dog name <input id="dogName" value="Milo"></label><label>Start date <input id="startDate" value="2026-10-10"></label>';
+        booking.innerHTML = '<button id="hiddenFirst" hidden>Hidden first</button><input id="disabledFirst" disabled><details><summary>Optional details</summary><input id="closedDetailInput"></details><label>Dog name <input id="dogName" value="Milo"></label><label>Start date <input id="startDate" value="2026-10-10"></label>';
         document.querySelector('[data-p4-panel="owner"]').innerHTML = '<button id="ownerAction" type="button">Create owner link</button>';
       });
       const opener = page.locator('#ownerLink');

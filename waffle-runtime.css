@@ -2,8 +2,8 @@
    Build: 2026.08.27.04
    Historical base styles remain compatibility sources during Phase 3A, but pages no longer
    reference them individually. Preserve this import order until modules are folded in. */
-@import url("waffle-app.css?build=2026.08.27.04&rev=2026.10.17.05");
-@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.10.17.05");
+@import url("waffle-app.css?build=2026.08.27.04&rev=2026.10.18.01");
+@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.10.18.01");
 @import url("waffle-v10.8.2.css?build=2026.08.27.04");
 @import url("waffle-v10.8.3.css?build=2026.08.27.04");
 @import url("waffle-v10.8.5.css?build=2026.08.27.04");
@@ -11,12 +11,12 @@
 @import url("waffle-v10.8.7.css?build=2026.08.27.04");
 @import url("waffle-v10.8.8.css?build=2026.08.27.04");
 @import url("waffle-v10.8.9.css?build=2026.08.27.04");
-@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.10.17.05");
+@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.10.18.01");
 @import url("waffle-v11.0.3.css?build=2026.08.27.04");
 @import url("waffle-v11.0.5.css?build=2026.08.27.04");
-@import url("waffle-v11.1.94.css?build=2026.10.17.05");
-@import url("waffle-v11.1.95.css?build=2026.10.17.05");
-@import url("waffle-v11.1.96.css?build=2026.10.17.05&rev=2026.10.17.05");
+@import url("waffle-v11.1.94.css?build=2026.10.18.01");
+@import url("waffle-v11.1.95.css?build=2026.10.18.01");
+@import url("waffle-v11.1.96.css?build=2026.10.18.01&rev=2026.10.18.01");
 
 /* ============================================================
    MOBILE FIRST-PAINT STABILITY GATE
@@ -2668,3 +2668,35 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-
   overflow-wrap: anywhere;
 }
 body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-actions > button[data-p4-dir="owner"] small { display: none; }
+
+/* Owner handoff: one readable message and explicit sharing actions. */
+.owner-handoff{display:grid;gap:.75rem;min-width:0;width:100%;box-sizing:border-box;text-align:left;color:var(--wh-text,#17243b)}
+.owner-handoff h4,.owner-handoff p{margin:0;line-height:1.5;overflow-wrap:anywhere}
+.owner-handoff-message{display:grid;gap:.4rem;min-width:0;font-size:1rem;font-weight:600}
+.owner-handoff-message textarea{display:block;box-sizing:border-box;width:100%;min-width:0;min-height:190px;max-width:100%;padding:.8rem;border:1px solid var(--wh-border,#bac7dc);border-radius:12px;background:var(--wh-surface,#fff);color:inherit;font:400 16px/1.5 system-ui,sans-serif;white-space:pre-wrap;overflow-wrap:anywhere;resize:vertical}
+.owner-handoff-actions{display:flex;flex-wrap:wrap;gap:.5rem;min-width:0}
+.owner-handoff-actions button{min-height:44px;min-width:44px;padding:.65rem 1rem;white-space:normal;overflow-wrap:anywhere;cursor:pointer}
+.owner-handoff-status{font-size:.875rem;font-weight:400}
+.owner-handoff :focus-visible{outline:3px solid var(--wh-accent,#7c3aed);outline-offset:3px}
+#p4Modal .p4-owner-options{margin:.8rem 0;padding:.7rem;border:1px solid var(--wh-border,#bac7dc);border-radius:12px}
+#p4Modal .p4-owner-options>summary{min-height:44px;display:list-item;align-content:center;cursor:pointer;font-weight:600}
+#p4Modal .p4-owner-options[open]>.p4-grid{margin-top:.75rem}
+#v108BoardingModal .v108-intake-result{display:block;min-width:0}
+#v108BoardingModal [hidden],#p4Modal .owner-handoff [hidden]{display:none!important}
+body.dark-theme .owner-handoff{color:#e2e8f0}
+body.dark-theme .owner-handoff-message textarea{background:#172236;color:#e2e8f0;border-color:#526178}
+@media(max-width:360px){.owner-handoff-actions button{flex:1 1 100%}}
+
+.owner-handoff h4{font:750 18px/1.4 system-ui,sans-serif}
+#p4Modal .owner-handoff p{font-size:14px;line-height:1.5;color:inherit}
+.owner-handoff-actions button{border:1px solid var(--wh-border,#bac7dc);border-radius:10px;background:var(--wh-surface,#fff);color:inherit;font:700 15px/1.35 system-ui,sans-serif}
+.owner-handoff-actions button.primary{background:var(--wh75-accent,#7c3aed);border-color:var(--wh75-accent,#7c3aed);color:#fff}
+body.dark-theme .owner-handoff-actions button:not(.primary){background:#22304a;color:#f8fafc;border-color:#526178}
+
+#p4Modal [data-p4-panel="owner"]{font:400 14px/1.5 system-ui,sans-serif}
+#p4Modal [data-p4-panel="owner"] h3{font-size:18px;line-height:1.4}
+#p4Modal [data-p4-panel="owner"] .p4-section>p,#p4Modal #p4OwnerBookingContext,#p4Modal #p4OwnerStatus{font-size:14px;line-height:1.5;overflow-wrap:anywhere}
+#p4Modal [data-p4-panel="owner"] button{min-height:44px;font-size:15px}
+#p4Modal [data-p4-panel="owner"] .p4-field>span{font-size:13px;text-transform:none;letter-spacing:normal}
+#p4Modal [data-p4-panel="owner"] .p4-field input{min-height:44px;font-size:16px}
+#p4Modal [data-p4-panel="owner"] a{display:inline-flex;align-items:center;min-height:44px;color:var(--wh75-accent-strong,#6d28d9)}

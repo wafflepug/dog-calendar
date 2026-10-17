@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.10.17.05",
-  "releaseName": "Direct Owner Care Link",
+  "assetRevision": "2026.10.18.01",
+  "releaseName": "Pet Onboarding and Owner Handoff",
   "careIteration": {
     "returningDogSuggestions": true,
     "reviewedCareInheritance": true,
