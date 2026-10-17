@@ -8931,6 +8931,8 @@ registerWaffleServiceWorker();
             if (target) window.setTimeout(() => target.click(), 0);
         } else if (action === 'intake') {
             const disclosure = card.querySelector('.directory-care-records-disclosure');
+            const toolsDisclosure = disclosure?.closest('.directory-care-more-actions');
+            if (toolsDisclosure) toolsDisclosure.open = true;
             if (disclosure) disclosure.open = true;
             target = disclosure?.querySelector('[data-create-intake-link]');
         } else if (action === 'safety') {
@@ -16892,13 +16894,12 @@ registerWaffleServiceWorker();
 
                                                 <button type="button" class="directory-care-brief-action" data-care-brief-action="emergency-contact">Emergency contact</button>
                                                 <details class="directory-care-more-actions">
-                                                    <summary aria-label="Manage stay and care tools">Manage stay &amp; care tools</summary>
-                                                <button type="button" class="directory-care-brief-action" data-care-brief-action="belongings">
-                                                    Items &amp; photos
-                                                </button>
+                                                    <summary aria-label="More profile tools">More tools</summary>
+                                                <div class="directory-care-more-actions-list">
                                                 <button type="button" class="directory-care-brief-action" data-care-brief-action="edit">
                                                     Edit care details
                                                 </button>
+                                                </div>
                                                 </details>
                                             </div>
                                         </section>

@@ -121,6 +121,7 @@ async function openRecords(page) {
   await expect(card).toHaveClass(/is-profile-active/);
   await expect(card.locator('[data-directory-detail="profile"]')).toHaveAttribute('data-profile-read-state', 'fresh');
   const records = card.locator('.directory-care-records-disclosure');
+  await revealSecondaryTools(page);
   await records.locator('summary').click();
   return { card, records };
 }
@@ -458,3 +459,10 @@ test('PDF return failure retains the saved document and retries the same guest',
   await expect(legacy).toContainText('OCR complete');
   expect(fixture.requests.get('get_legacy_intake_statuses').at(-1).stayKeys).toEqual([await card.getAttribute('data-directory-stay-key')]);
 });
+
+async function revealSecondaryTools(page) {
+  const tools = page.locator('.directory-card.is-profile-active .directory-care-more-actions');
+  if (await tools.count() && await tools.getAttribute('open') === null) {
+    await tools.locator(':scope > summary').click();
+  }
+}

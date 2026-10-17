@@ -57,6 +57,8 @@ on:
       - 'tests/today-queue.browser.spec.js'
       - 'tests/today-queue-runtime.browser.spec.js'
       - 'tests/dog-record-cache-age.test.js'
+      - 'playwright.care-profile-tools.config.js'
+      - 'tests/care-profile-tools.browser.spec.js'
       - 'playwright.care-profile-condensed.config.js'
       - 'tests/care-profile-opening-condensed.browser.spec.js'
       - 'tests/care-profile-exceptions.browser.spec.js'
@@ -173,6 +175,8 @@ on:
       - 'playwright.care-ui-clarity.config.js'
       - 'playwright.care-compact-controls.config.js'
       - 'playwright.care-master-compact.config.js'
+      - 'playwright.care-profile-tools.config.js'
+      - 'tests/care-profile-tools.browser.spec.js'
       - 'playwright.care-profile-condensed.config.js'
       - 'tests/care-profile-opening-condensed.browser.spec.js'
       - 'tests/care-profile-exceptions.browser.spec.js'
@@ -289,6 +293,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          - group: care-profile-tools
+            configs: playwright.care-profile-tools.config.js
           - group: care-profile-condensed
             configs: playwright.care-profile-condensed.config.js
           - group: care-status-empty-navigation

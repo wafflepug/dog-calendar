@@ -118,7 +118,8 @@ for (const [width, colorScheme] of [[320, 'light'], [320, 'dark'], [390, 'light'
     await expect(tools).toHaveCSS('outline-style', 'solid');
     await tools.press('Enter');
     await expect(brief.locator('.directory-care-more-actions')).toHaveAttribute('open', '');
-    await expect(brief.getByRole('button', { name: 'Items & photos' })).toBeVisible();
+    await expect(profile.locator('[data-v11160-tab="belongings"]')).toBeVisible();
+    await expect(brief.locator('[data-care-brief-action="belongings"]')).toHaveCount(0);
     await expect(brief.getByRole('button', { name: 'Edit care details' })).toBeVisible();
     await expect(brief.getByRole('button', { name: 'Delete this confirmed stay' })).toBeVisible();
     const bookingTools = profile.locator('.p4-directory-actions');
@@ -233,6 +234,7 @@ for (const [name, viewport, colorScheme] of [['320-light', { width: 320, height:
     expect(identityGeometry.items.every(item => !item.missing && item.left >= -1 && item.right <= identityGeometry.viewportWidth + 1 && item.width > 0 && item.height > 0 && item.textOverflow !== 'ellipsis' && item.whiteSpace !== 'nowrap'), JSON.stringify(identityGeometry)).toBeTruthy();
     expect(identityGeometry.items.find(item => item.selector === '.directory-profile-stay-dates').scrollWidth).toBeLessThanOrEqual(identityGeometry.items.find(item => item.selector === '.directory-profile-stay-dates').clientWidth + 1);
     const bookingTools = selectedProfile.locator('.p4-directory-actions');
+    await revealSecondaryTools(page);
     await expect(bookingTools.locator('summary')).toBeVisible();
     await bookingTools.locator('summary').click();
     await expect(bookingTools).toHaveAttribute('open', '');
@@ -351,7 +353,7 @@ for (const [name, viewport, colorScheme] of [['320-light', { width: 320, height:
     await expect(page.locator('.directory-dashboard-fused.is-profile-mode #v11190PdfOcrReviewNote')).toBeHidden();
     await expect(page.locator('.directory-dashboard-fused.is-profile-mode #directory-care-summary')).toBeVisible();
     await expect(careBrief.getByRole('heading', { name: 'Care essentials' })).toBeVisible();
-    await expect(careBrief.locator('.directory-care-more-actions > summary')).toHaveText('Manage stay & care tools');
+    await expect(careBrief.locator('.directory-care-more-actions > summary')).toHaveText('More tools');
     await page.keyboard.press('Tab');
     await careBrief.locator('.directory-care-more-actions > summary').focus();
     await expect(careBrief.locator('.directory-care-more-actions > summary')).toHaveCSS('outline-style', 'solid');
@@ -368,6 +370,7 @@ for (const [name, viewport, colorScheme] of [['320-light', { width: 320, height:
     await expect(careBrief.getByRole('heading', { name: 'Handover note', exact: true })).toBeVisible();
     await readiness.locator('summary').click();
     await expect(readiness).toHaveAttribute('open', '');
+    await revealSecondaryTools(page);
     await expect(records).toBeVisible();
     await expect(records).not.toHaveAttribute('open', '');
     await expect(contactDisclosure).toBeVisible();
@@ -380,8 +383,9 @@ for (const [name, viewport, colorScheme] of [['320-light', { width: 320, height:
     await expect(careBrief.getByRole('link', { name: 'Call owner' })).toHaveAttribute('href', 'tel:0400123456');
     expect(await careBrief.locator('.directory-care-brief-action:visible').evaluateAll(buttons => buttons.every(button => button.getBoundingClientRect().height >= 44))).toBeTruthy();
     const moreActions = careBrief.locator('.directory-care-more-actions');
-    await moreActions.locator('summary').click();
-    await expect(moreActions.getByRole('button', { name: 'Items & photos' })).toBeVisible();
+    await revealSecondaryTools(page);
+    await expect(sectionNav.locator('[data-v11160-tab="belongings"]')).toBeVisible();
+    await expect(moreActions.locator('[data-care-brief-action="belongings"]')).toHaveCount(0);
     await expect(moreActions.getByRole('button', { name: 'Edit care details' })).toBeVisible();
     expect(await moreActions.locator('.directory-care-brief-action:visible').evaluateAll(buttons => buttons.every(button => button.getBoundingClientRect().height >= 44))).toBeTruthy();
     await expect(page.locator('#directoryProfileBackBar')).toBeVisible();
@@ -499,6 +503,7 @@ test('Records & Forms opens legacy PDF OCR for the selected dog and stay', async
   await expect(card.locator('[data-directory-detail="profile"]')).toHaveAttribute('data-detail-loaded', 'true');
 
   const records = card.locator('.directory-care-records-disclosure');
+  await revealSecondaryTools(page);
   await records.locator('summary').click();
   const upload = records.locator('[data-care-record-upload]');
   await expect(upload).toBeVisible();
@@ -535,3 +540,10 @@ test('Care brief actions stay visible and keyboard focused in forced-colors mode
   }))).toMatchObject({ height: expect.any(Number), outline: 'solid', border: 'solid' });
   expect(await action.evaluate(button => button.getBoundingClientRect().height)).toBeGreaterThanOrEqual(44);
 });
+
+async function revealSecondaryTools(page) {
+  const tools = page.locator('.directory-card.is-profile-active .directory-care-more-actions');
+  if (await tools.count() && await tools.getAttribute('open') === null) {
+    await tools.locator(':scope > summary').click();
+  }
+}

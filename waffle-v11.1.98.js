@@ -272,15 +272,27 @@
     if (!isDeletableConfirmedCard(card)) return;
     const content = card.querySelector('.directory-profile-content');
     const tools = content?.querySelector('.directory-care-more-actions');
-    if (!content || !tools || tools.querySelector('[data-v11198-delete-confirmed]')) return;
+    if (!content || !tools) return;
 
-    const action = document.createElement('button');
-    action.type = 'button';
-    action.className = 'v11198-delete-stay';
-    action.dataset.v11198DeleteConfirmed = '';
-    action.setAttribute('aria-label', 'Delete this confirmed stay');
-    action.textContent = 'Delete Confirmed Stay';
-    tools.append(action);
+    let action = tools.querySelector('[data-v11198-delete-confirmed]');
+    if (!action) {
+      action = document.createElement('button');
+      action.type = 'button';
+      action.className = 'v11198-delete-stay';
+      action.dataset.v11198DeleteConfirmed = '';
+      action.setAttribute('aria-label', 'Delete this confirmed stay');
+      action.textContent = 'Delete Confirmed Stay';
+    }
+    let danger = tools.querySelector(':scope > .directory-care-danger-actions');
+    if (!danger) {
+      danger = document.createElement('div');
+      danger.className = 'directory-care-danger-actions';
+      danger.setAttribute('role', 'group');
+      danger.setAttribute('aria-label', 'Remove stay');
+      danger.innerHTML = '<span>Remove stay</span>';
+      tools.append(danger);
+    }
+    if (action.parentElement !== danger) danger.append(action);
   }
 
   function enhanceAllCards() {
