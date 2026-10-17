@@ -12,12 +12,13 @@ const sliceConst = name => {
 const categorySummary = app.slice(app.indexOf('function directoryCareCategorySummary'), app.indexOf('function renderDirectoryIntakeAttributes'));
 const intakeControl = app.slice(app.indexOf('function intakeAttributeControlHtml'), app.indexOf('function renderDirectoryIntakeAttributes'));
 const intakeRenderer = app.slice(app.indexOf('function renderDirectoryIntakeAttributes'), app.indexOf('function renderDirectoryCareProfile'));
+const sectionRuntime = app.slice(app.indexOf('const directoryCareSectionChoices = new Map();'), app.indexOf('async function openDirectoryGuestProfile'));
 const productionRenderer = `${sliceConst('CARE_SAFETY_FLAGS')}\n${sliceConst('INTAKE_ATTRIBUTE_UI_GROUPS')}\n${sliceConst('DIRECTORY_PROFILE_SECONDARY_TABS')}
 const careRiskRecordsCache = {}, directorySummaryRecordsCache = {}, belongingsRecordsCache = {};
 const directorySafetyReadFailures = new Set();
 function directoryProfileIdentityCacheKey(){return '';}
 function escapeDashboardHtml(value){return String(value == null ? '' : value).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[char]));}
-function switchDirectoryProfileSubTab(){}
+${sectionRuntime}
 function renderDirectoryCareProfile(){}
 function restoreDirectoryProfileEditDraft(){}
 function applyDirectoryProfileEditMode(){}

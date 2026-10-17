@@ -277,7 +277,7 @@ test('Care Brief shows cached safety before the profile read and refreshes feedi
   await expect(brief.locator('[data-care-brief-feeding]')).toHaveText('Times: 07:00 and 17:00 · Amount: 1 cup · Food: Sensitive formula');
   await expect(brief.locator('[data-care-brief-medication]')).toHaveText('Give after dinner');
   await expect(brief.locator('[data-care-brief-freshness]')).toHaveAttribute('data-state', 'saved');
-  await expect(brief.locator('[data-care-brief-freshness]')).toHaveText('Saved care record · update time not recorded');
+  await expect(brief.locator('[data-care-brief-freshness]')).toHaveText('Saved record · update time unknown');
   expect(fixture.profileCalls.get(key)).toBe(1);
 });
 

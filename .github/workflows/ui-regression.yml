@@ -57,6 +57,13 @@ on:
       - 'tests/today-queue.browser.spec.js'
       - 'tests/today-queue-runtime.browser.spec.js'
       - 'tests/dog-record-cache-age.test.js'
+      - 'playwright.care-status-empty-navigation.config.js'
+      - 'tests/care-freshness-clarity.test.js'
+      - 'tests/care-freshness-clarity.browser.spec.js'
+      - 'tests/care-empty-states.test.js'
+      - 'tests/care-empty-states.browser.spec.js'
+      - 'tests/care-profile-navigation.test.js'
+      - 'tests/care-profile-navigation.browser.spec.js'
       - 'playwright.care-summary-card-clarity.config.js'
       - 'tests/care-document-return.test.js'
       - 'tests/care-summary-updates.test.js'
@@ -161,6 +168,13 @@ on:
       - 'playwright.care-ui-clarity.config.js'
       - 'playwright.care-compact-controls.config.js'
       - 'playwright.care-master-compact.config.js'
+      - 'playwright.care-status-empty-navigation.config.js'
+      - 'tests/care-freshness-clarity.test.js'
+      - 'tests/care-freshness-clarity.browser.spec.js'
+      - 'tests/care-empty-states.test.js'
+      - 'tests/care-empty-states.browser.spec.js'
+      - 'tests/care-profile-navigation.test.js'
+      - 'tests/care-profile-navigation.browser.spec.js'
       - 'playwright.care-summary-card-clarity.config.js'
       - 'tests/care-document-return.test.js'
       - 'tests/care-summary-updates.test.js'
@@ -253,6 +267,7 @@ jobs:
           node --test tests/system-status-release.test.js
           node --test tests/care-navigation-continuity.test.js
           node --test tests/care-return-focus-identity.test.js
+          node --test tests/care-freshness-clarity.test.js tests/care-empty-states.test.js tests/care-profile-navigation.test.js
           node --test tests/care-summary-updates.test.js tests/care-document-return.test.js
           node --test tests/ui-workflow-parallel.test.js
 
@@ -264,6 +279,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          - group: care-status-empty-navigation
+            configs: playwright.care-status-empty-navigation.config.js
           - group: care-summary-card-clarity
             configs: playwright.care-summary-card-clarity.config.js
           - group: care-render-performance

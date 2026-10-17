@@ -12,14 +12,14 @@ const freshnessFor = new Function(`${source.slice(start, end)}; return getDirect
 test('Care overview freshness uses only a valid record update timestamp', () => {
   const fresh = freshnessFor({ updatedAt: '2026-09-17T08:30:00.000Z', retrievedAt: '2026-09-18T12:00:00.000Z' }, 'saved', 'resolved');
   assert.equal(fresh.state, 'fresh');
-  assert.equal(fresh.text, `Record updated ${new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date('2026-09-17T08:30:00.000Z'))}`);
+  assert.equal(fresh.text, `Saved record · updated ${new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date('2026-09-17T08:30:00.000Z'))}`);
   assert.deepEqual(fresh, freshnessFor({ updatedAt: '2026-09-17T08:30:00.000Z', retrievedAt: '2034-05-06T07:08:09.000Z' }, 'saved', 'resolved'));
 
   const missingTimestamp = freshnessFor({ retrievedAt: '2026-09-18T12:00:00.000Z' }, 'saved', 'resolved');
-  assert.deepEqual(missingTimestamp, { text: 'Saved care record · update time not recorded', state: 'saved' });
+  assert.deepEqual(missingTimestamp, { text: 'Saved record · update time unknown', state: 'saved' });
 
   const invalidTimestamp = freshnessFor({ updatedAt: 'not a timestamp' }, 'saved', 'resolved');
-  assert.deepEqual(invalidTimestamp, { text: 'Saved care record · update time not recorded', state: 'saved' });
+  assert.deepEqual(invalidTimestamp, { text: 'Saved record · update time unknown', state: 'saved' });
 });
 
 test('Care overview keeps loading, refresh failure, missing, and unresolved states distinct', () => {
