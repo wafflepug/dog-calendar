@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.10.17.04",
-  "releaseName": "Unified Care Profile Tools",
+  "assetRevision": "2026.10.17.05",
+  "releaseName": "Direct Owner Care Link",
   "careIteration": {
     "returningDogSuggestions": true,
     "reviewedCareInheritance": true,

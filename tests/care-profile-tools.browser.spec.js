@@ -62,6 +62,11 @@ for (const [name, width, colorScheme] of [['320-light', 320, 'light'], ['320-dar
     const tools = card.locator('.directory-care-more-actions');
     const summary = tools.locator(':scope > summary');
     const list = tools.locator(':scope > .directory-care-more-actions-list');
+    const ownerLink = card.locator('.directory-care-brief-actions > [data-p4-dir="owner"]');
+    await expect(ownerLink).toBeVisible();
+    await expect(ownerLink).toHaveAccessibleName('Owner Care Link for Milo');
+    await expect(card.locator('[data-p4-dir="owner"]')).toHaveCount(1);
+    await expect(tools.locator('[data-p4-dir="owner"]')).toHaveCount(0);
     await expect(summary).toHaveText('More tools');
     await expect(tools).not.toHaveAttribute('open', '');
     await expect(list.locator('[data-care-brief-action="belongings"]')).toHaveCount(0);
@@ -106,9 +111,8 @@ for (const [name, width, colorScheme] of [['320-light', 320, 'light'], ['320-dar
     await bookingTools.locator(':scope > summary').click();
     await expect(bookingTools).toHaveAttribute('open', '');
     const bookingButtons = bookingTools.locator('.p4-directory-action-list button[data-p4-dir]');
-    await expect(bookingButtons).toHaveCount(2);
-    await expect(bookingButtons.nth(0)).toContainText('Owner Care Link');
-    await expect(bookingButtons.nth(1)).toContainText('Book Again');
+    await expect(bookingButtons).toHaveCount(1);
+    await expect(bookingButtons.nth(0)).toContainText('Book Again');
     expect(reads).toEqual(initialReads);
     await expect(page.locator('#wh75SettingsPanel')).not.toHaveClass(/is-open/);
     await testInfo.attach(`care-profile-tools-expanded-${name}`, { body: await page.screenshot({ path: testInfo.outputPath(`care-profile-tools-expanded-${name}.png`), fullPage: true }), contentType: 'image/png' });
@@ -171,6 +175,34 @@ for (const [name, width, colorScheme] of [['320-light', 320, 'light'], ['320-dar
     });
     expect(geometry.scrollWidth).toBeLessThanOrEqual(geometry.clientWidth + 1);
     expect(geometry.buttons.every(button => button.height >= 44 && button.right <= width + 1 && !button.covered)).toBeTruthy();
+    // The share action is direct even with every secondary group closed.
+    await summary.click();
+    await expect(tools).not.toHaveAttribute('open', '');
+    await expect(ownerLink).toBeVisible();
+    await ownerLink.focus();
+    const unchangedTools = await ownerLink.evaluate(button => {
+      const card = button.closest('.directory-card');
+      const observer = new MutationObserver(() => {});
+      observer.observe(card, { childList: true, subtree: true, attributes: true });
+      window.WAFFLE_PHASE4_BOOKING.enhanceDirectory();
+      window.WAFFLE_PHASE4_BOOKING.enhanceDirectory();
+      const mutations = observer.takeRecords().length;
+      observer.disconnect();
+      return { mutations, sameButton: card.querySelector('[data-p4-dir="owner"]') === button, focused: document.activeElement === button };
+    });
+    expect(unchangedTools).toEqual({ mutations: 0, sameButton: true, focused: true });
+    const profileReadsBeforeShare = reads.filter(action => action === 'get_guest_profile').length;
+    const historyReadsBeforeShare = reads.filter(action => action === 'get_dog_history').length;
+    await ownerLink.click();
+    await expect(page.locator('#p4OwnerBookingContext')).toContainText('Dog ID #00017');
+    await expect(page.locator('#p4OwnerDog')).toHaveValue(booking.dogName);
+    await expect(page.locator('#p4OwnerStart')).toHaveValue(booking.startDate);
+    await expect(page.locator('#p4OwnerEnd')).toHaveValue(booking.endDate);
+    await expect.poll(() => reads.filter(action => action === 'get_dog_history').length).toBe(historyReadsBeforeShare + 1);
+    await page.locator('#p4Modal [data-p4-close]').click();
+    await expect(ownerLink).toBeFocused();
+    await expect(amount).toHaveValue('2 cups draft');
+    expect(reads.filter(action => action === 'get_guest_profile')).toHaveLength(profileReadsBeforeShare);
     await testInfo.attach(`care-profile-tools-${name}`, { body: await page.screenshot({ path: testInfo.outputPath(`care-profile-tools-${name}.png`), fullPage: true }), contentType: 'image/png' });
   });
 }
