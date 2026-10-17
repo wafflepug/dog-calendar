@@ -2,8 +2,8 @@
    Build: 2026.08.27.04
    Historical base styles remain compatibility sources during Phase 3A, but pages no longer
    reference them individually. Preserve this import order until modules are folded in. */
-@import url("waffle-app.css?build=2026.08.27.04&rev=2026.10.17.04");
-@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.10.17.04");
+@import url("waffle-app.css?build=2026.08.27.04&rev=2026.10.17.05");
+@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.10.17.05");
 @import url("waffle-v10.8.2.css?build=2026.08.27.04");
 @import url("waffle-v10.8.3.css?build=2026.08.27.04");
 @import url("waffle-v10.8.5.css?build=2026.08.27.04");
@@ -11,12 +11,12 @@
 @import url("waffle-v10.8.7.css?build=2026.08.27.04");
 @import url("waffle-v10.8.8.css?build=2026.08.27.04");
 @import url("waffle-v10.8.9.css?build=2026.08.27.04");
-@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.10.17.04");
+@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.10.17.05");
 @import url("waffle-v11.0.3.css?build=2026.08.27.04");
 @import url("waffle-v11.0.5.css?build=2026.08.27.04");
-@import url("waffle-v11.1.94.css?build=2026.10.17.04");
-@import url("waffle-v11.1.95.css?build=2026.10.17.04");
-@import url("waffle-v11.1.96.css?build=2026.10.17.04&rev=2026.10.17.04");
+@import url("waffle-v11.1.94.css?build=2026.10.17.05");
+@import url("waffle-v11.1.95.css?build=2026.10.17.05");
+@import url("waffle-v11.1.96.css?build=2026.10.17.05&rev=2026.10.17.05");
 
 /* ============================================================
    MOBILE FIRST-PAINT STABILITY GATE
@@ -2657,3 +2657,14 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-
 body.dark-theme[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-danger-actions { border-top-color: color-mix(in srgb, #f87171 55%, var(--wh-border, #475569)); }
 
 body.dark-theme[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-danger-actions > span { color: #fca5a5; }
+
+/* Owner care link stays in the selected care profile's first-level actions. */
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-actions > button[data-p4-dir="owner"] {
+  flex: 1 1 220px;
+  min-width: min(100%, 160px);
+  max-width: 100%;
+  min-height: 44px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-actions > button[data-p4-dir="owner"] small { display: none; }
