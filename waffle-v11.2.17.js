@@ -175,6 +175,41 @@
     actions.appendChild(button);
   }
 
+  function decorateProfileActions(card) {
+    const actions = card?.querySelector?.('[data-v110-operation-bar] .v110-operation-actions');
+    if (!actions) return;
+
+    const checkIn = actions.querySelector(':scope > [data-v110-checkin]');
+    const secondary = Array.from(actions.querySelectorAll(
+      '[data-v110-checkout], [data-v11217-early-checkout]'
+    ));
+    let more = actions.querySelector(':scope > .v11217-profile-more-actions');
+
+    if (checkIn && secondary.length) {
+      if (!more) {
+        more = document.createElement('details');
+        more.className = 'v11217-profile-more-actions';
+        more.innerHTML = '<summary>More actions</summary><div class="v11217-profile-more-actions-list"></div>';
+        actions.appendChild(more);
+      }
+      const list = more.querySelector('.v11217-profile-more-actions-list');
+      secondary.forEach(button => {
+        if (button.parentElement !== list) list.appendChild(button);
+      });
+    } else if (more) {
+      const list = more.querySelector('.v11217-profile-more-actions-list');
+      Array.from(list?.children || []).forEach(button => actions.appendChild(button));
+      more.remove();
+    }
+
+    if (!actions.dataset.profileMoreActionsGuard) {
+      actions.dataset.profileMoreActionsGuard = 'true';
+      actions.addEventListener('click', event => {
+        if (event.target?.closest?.('.v11217-profile-more-actions > summary')) event.stopPropagation();
+      });
+    }
+  }
+
   function profileHost(card) {
     return card?.querySelector?.('[data-directory-main-panel="profile"]') ||
       card?.querySelector?.('.directory-profile-content') || null;
@@ -225,6 +260,7 @@
   function decorateCard(card) {
     if (!card) return;
     decorateEarlyAction(card);
+    decorateProfileActions(card);
     decorateRosterActions(card);
     renderEarlyProfile(card);
   }

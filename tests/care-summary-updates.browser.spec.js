@@ -130,7 +130,10 @@ test('Care brief repeated rendering keeps DOM hosts and produces no DOM mutation
     </article>
   `);
   const briefCode = source.slice(helperStart, helperEnd) + source.slice(source.indexOf('    function renderDirectoryCareBrief('), source.indexOf('    function openCareReadinessTarget('));
+  const safetyFlagsStart = source.indexOf('    const CARE_SAFETY_FLAGS =');
+  const safetyFlags = source.slice(safetyFlagsStart, source.indexOf('    ];', safetyFlagsStart) + 6);
   await page.addScriptTag({ content: `
+    ${safetyFlags}
     window.directorySummaryRecordsCache = {};
     window.careRiskRecordsCache = { 'stay-a': { riskFlags: { allergy: true } } };
     window.belongingsRecordsCache = {};
