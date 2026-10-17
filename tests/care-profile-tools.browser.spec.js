@@ -194,6 +194,7 @@ for (const [name, width, colorScheme] of [['320-light', 320, 'light'], ['320-dar
     const profileReadsBeforeShare = reads.filter(action => action === 'get_guest_profile').length;
     const historyReadsBeforeShare = reads.filter(action => action === 'get_dog_history').length;
     await ownerLink.click();
+    await expect(page.locator('#p4OwnerLink')).toBeFocused();
     await expect(page.locator('#p4OwnerBookingContext')).toContainText('Dog ID #00017');
     await expect(page.locator('#p4OwnerDog')).toHaveValue(booking.dogName);
     await expect(page.locator('#p4OwnerStart')).toHaveValue(booking.startDate);
