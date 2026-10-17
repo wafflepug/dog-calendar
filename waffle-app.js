@@ -11508,18 +11508,24 @@ registerWaffleServiceWorker();
             ? 'You are offline. This saved list may be out of date; reconnect and refresh to check for changes.'
             : 'The last refresh failed. This saved list may be out of date; reconnect and refresh to check for changes.';
 
-        empty.hidden = true;
-        if (dashboard) dashboard.dataset.contextualEmptyVisible = 'false';
-        if (!title || !copy || !action || profileMode || search || cards.length || !['success', 'cached-failure', 'cached-offline'].includes(viewState)) return;
+        const setVisible = visible => {
+            if (empty.hidden === visible) empty.hidden = !visible;
+            if (dashboard && dashboard.dataset.contextualEmptyVisible !== String(visible)) dashboard.dataset.contextualEmptyVisible = String(visible);
+        };
+        if (!title || !copy || !action || profileMode || search || cards.length || !['success', 'cached-failure', 'cached-offline'].includes(viewState)) {
+            setVisible(false);
+            return;
+        }
+        let titleText, copyText, actionText, actionTarget;
 
         const labels = { current: 'Staying', future: 'Arriving', past: 'Past' };
         const others = activeView === 'current' ? ['future', 'past'] : activeView === 'future' ? ['current', 'past'] : ['current', 'future'];
         const destination = others.find(view => directoryRosterCount(view === 'current' ? 'v1082CurrentStayCount' : view === 'future' ? 'v1082FutureStayCount' : 'v1082PastStayCount') > 0);
         if (destination) {
-            title.textContent = isCachedFailure
+            titleText = isCachedFailure
                 ? `No ${labels[activeView].toLowerCase()} guests in the saved roster`
                 : `No ${labels[activeView].toLowerCase()} guests right now`;
-            copy.textContent = isCachedFailure
+            copyText = isCachedFailure
                 ? savedCopy
                 : activeView === 'current' && destination === 'future'
                     ? 'Guests with upcoming stays are listed under Arriving.'
@@ -11528,20 +11534,23 @@ registerWaffleServiceWorker();
                         : activeView === 'future'
                             ? 'There are no upcoming stays in the loaded arrival range.'
                             : `No completed stays are available. Review ${labels[destination].toLowerCase()} guests instead.`;
-            action.textContent = `View ${labels[destination]}`;
-            action.dataset.directoryEmptyAction = destination;
+            actionText = `View ${labels[destination]}`;
+            actionTarget = destination;
         } else {
-            title.textContent = isCachedFailure
+            titleText = isCachedFailure
                 ? `No ${labels[activeView].toLowerCase()} guests in the saved roster`
                 : `No ${labels[activeView].toLowerCase()} guests to show`;
-            copy.textContent = isCachedFailure
+            copyText = isCachedFailure
                 ? savedCopy
                 : 'There are no stays in this category yet. Add a booking to start a guest record.';
-            action.textContent = isCachedFailure ? 'Refresh guest list' : 'Add a booking';
-            action.dataset.directoryEmptyAction = isCachedFailure ? 'refresh' : 'add';
+            actionText = isCachedFailure ? 'Refresh guest list' : 'Add a booking';
+            actionTarget = isCachedFailure ? 'refresh' : 'add';
         }
-        empty.hidden = false;
-        if (dashboard) dashboard.dataset.contextualEmptyVisible = 'true';
+        for (const [host, value] of [[title, titleText], [copy, copyText], [action, actionText]]) {
+            if (host.textContent !== value) host.textContent = value;
+        }
+        if (action.dataset.directoryEmptyAction !== actionTarget) action.dataset.directoryEmptyAction = actionTarget;
+        setVisible(true);
     }
 
     function filterGuestDirectoryCards() {

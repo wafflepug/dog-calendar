@@ -168,3 +168,20 @@ test('empty-state content stays readable in light and dark themes at mobile and 
     }
   }
 });
+
+test('unchanged empty roster keeps its prompt and focused action without DOM mutations', async ({ page }) => {
+  await mount(page, { arriving: 1 });
+  const action = page.locator('#directory-empty-state button');
+  await action.focus();
+  const result = await page.evaluate(() => {
+    const prompt = document.getElementById('directory-empty-state');
+    const button = prompt.querySelector('button');
+    const observer = new MutationObserver(() => {});
+    observer.observe(prompt, { subtree: true, attributes: true, childList: true, characterData: true });
+    observer.observe(document.querySelector('.directory-dashboard-fused'), { attributes: true, attributeFilter: ['data-contextual-empty-visible'] });
+    updateDirectoryEmptyState(); updateDirectoryEmptyState();
+    const result = { mutations: observer.takeRecords().length, retained: prompt.querySelector('button') === button, focused: document.activeElement === button };
+    observer.disconnect(); return result;
+  });
+  expect(result).toEqual({ mutations: 0, retained: true, focused: true });
+});
