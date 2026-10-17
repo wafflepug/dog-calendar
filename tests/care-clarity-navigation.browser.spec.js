@@ -16,7 +16,19 @@ const pastBooking = {
 
 async function installPastReadOnlyFixture(page) {
   const actionReads = [];
-  await page.clock.install({ time: new Date('2026-10-14T12:00:00Z') });
+  // Fix the business date without replacing native input timestamps, timers or paint scheduling.
+  await page.addInitScript(() => {
+    const NativeDate = Date;
+    const fixedNow = NativeDate.UTC(2026, 9, 14, 12, 0, 0);
+    function FixedDate(...args) {
+      if (!new.target) return new NativeDate(fixedNow).toString();
+      return Reflect.construct(NativeDate, args.length ? args : [fixedNow], new.target);
+    }
+    FixedDate.prototype = NativeDate.prototype;
+    Object.setPrototypeOf(FixedDate, NativeDate);
+    FixedDate.now = () => fixedNow;
+    globalThis.Date = FixedDate;
+  });
   await page.route('**/*', async route => {
     const request = route.request();
     const url = request.url();
