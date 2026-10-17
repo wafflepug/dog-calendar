@@ -3,7 +3,11 @@ const path = require('node:path');
 const { test, expect } = require('@playwright/test');
 
 const root = path.resolve(__dirname, '..');
-const css = fs.readFileSync(path.join(root, 'waffle-app.css'), 'utf8');
+const runtimeCss = fs.readFileSync(path.join(root, 'waffle-runtime.css'), 'utf8');
+const importedCss = [...runtimeCss.matchAll(/@import url\("([^?\"]+)[^\"]*"\);/g)].map(match => fs.readFileSync(path.join(root, match[1]), 'utf8')).join('\n');
+const settingsSource = fs.readFileSync(path.join(root, 'waffle-ui.js'), 'utf8');
+const paletteCss = [...settingsSource.matchAll(/:root\[data-waffle-colour-style="[^"]+"\](?: body\.dark-theme)?\s*\{[^}]+\}/g)].map(match => match[0]).join('\n');
+const css = importedCss + '\n' + runtimeCss.replace(/@import[^;]+;/g, '') + '\n' + paletteCss;
 const appSource = fs.readFileSync(path.join(root, 'waffle-app.js'), 'utf8');
 const historySource = fs.readFileSync(path.join(root, 'waffle-v10.8.js'), 'utf8');
 const historyCss = fs.readFileSync(path.join(root, 'waffle-v10.8.css'), 'utf8');
@@ -38,7 +42,8 @@ test('Belongings recovery controls wrap, remain touch-sized, and expose keyboard
       await expect(buttons).toHaveCount(3);
       for (const button of await buttons.all()) {
         const box = await button.boundingBox();
-        expect(box.height).toBeGreaterThanOrEqual(44);
+        // WebKit can report a CSS 44px target a few thousandths below 44.
+        expect(box.height + 0.01).toBeGreaterThanOrEqual(44);
         expect(box.x).toBeGreaterThanOrEqual(0);
         expect(box.x + box.width).toBeLessThanOrEqual(width);
       }
@@ -52,6 +57,7 @@ test('Belongings recovery controls wrap, remain touch-sized, and expose keyboard
 });
 const readinessNavigator = appSource.slice(appSource.indexOf('function openCareReadinessTarget'), appSource.indexOf('function findDirectoryCareElement'));
 const briefTestCode = `
+  ${careFlags}
   const directoryProfileDetailCache = {};
   const belongingsRecordsCache = {};
   const directorySummaryRecordsCache = {};
@@ -67,9 +73,9 @@ const briefTestCode = `
   window.seedBriefFixture = card => { directoryProfileDetailCache['stay-a'] = { stayKey: 'stay-a', intakeAttributes: { feedingTimes: '7 am', foodAmount: '1 cup', medicationInstructions: 'With dinner' }, intakeAttributesSource: 'Saved profile' }; careRiskRecordsCache['stay-a'] = { riskFlags: { foodAllergy: true } }; card.dataset.intakeMethod = 'legacy'; renderDirectoryCareBrief(card); card.dataset.briefDebug = JSON.stringify({ key: card.dataset.stayKey, safety: card.querySelector('[data-care-brief-safety]')?.innerText, flags: careRiskRecordsCache['stay-a'] }); };
 `;
 function fixture(theme = '') {
-  return `<!doctype html><html><head><style>
+  return `<!doctype html><html data-waffle-ui-ready="true"><head><style>
     ${css}
-  </style></head><body class="${theme}"><main class="directory-card is-profile-active" data-stay-key="stay-a" data-directory-source-row="4"><div class="directory-profile-content">
+  </style></head><body class="${theme}" data-waffle-page="directory"><main class="directory-card is-profile-active" data-stay-key="stay-a" data-directory-source-row="4"><div class="directory-profile-content">
     <header class="directory-card-header"><div class="directory-photo-shell"><div class="directory-photo-media"><img class="directory-dog-photo" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Crect width='80' height='80' fill='%23cbd5e1'/%3E%3C/svg%3E" alt="Milo"></div></div><div class="directory-card-identity"><div class="directory-name-row"><button class="directory-dog-name-btn">A very long dog name that must wrap without clipping</button><span class="directory-dog-id">Dog ID #00017</span><span class="directory-status-tag tag-checked-out">Checked Out</span></div><button class="directory-primary-breed">Border Collie</button><div class="directory-stay-dates">📅 20 Sep 2026 – 22 Sep 2026</div></div></header>
     <section class="directory-care-brief" data-directory-care-brief aria-label="Care readiness"><div class="directory-care-brief-heading"><div><span class="directory-profile-section-kicker">Selected guest</span><h3>Care overview</h3></div><span class="directory-care-brief-freshness" data-care-brief-freshness role="status" aria-live="polite">Care details available · Saved profile</span></div><div class="directory-care-brief-grid"><section class="directory-care-brief-item directory-care-brief-safety" data-state="attention"><div class="directory-care-brief-note-heading"><h4>Safety</h4><button class="directory-care-brief-note-edit" data-care-readiness-action="safety">Review</button></div><div class="directory-care-brief-value" data-care-brief-safety data-state="attention"><span class="care-brief-alert">⚠ Food allergy</span></div></section><section class="directory-care-brief-item"><h4>Feeding</h4><p class="directory-care-brief-value" data-care-brief-feeding>7 am · 1 cup</p></section><section class="directory-care-brief-item"><h4>Medication</h4><p class="directory-care-brief-value" data-care-brief-medication>With dinner</p></section><section class="directory-care-brief-item"><h4>Owner</h4><p class="directory-care-brief-value directory-care-brief-contact"><strong>Alexandria Peterson-Smith</strong><span>0400 123 456</span></p></section><section class="directory-care-brief-item directory-care-brief-note"><div class="directory-care-brief-note-heading"><h4>Handover note</h4><button class="directory-care-brief-note-edit" data-care-brief-action="handover">Update</button></div><p class="directory-care-brief-value">Call before pickup.\nMedication is in the blue bag.</p></section></div><details class="directory-care-readiness"><summary><span>Other setup checks</span><strong data-care-readiness-summary>1 to review</strong></summary><div class="directory-care-readiness-list" data-care-readiness-list><div data-care-readiness-item="intake"><span data-care-readiness-status></span><small data-care-readiness-detail></small></div><div data-care-readiness-item="handover"><span data-care-readiness-status></span><small data-care-readiness-detail></small></div></div></details><div class="directory-care-brief-actions"><button class="directory-care-brief-action is-primary">Care details</button><a class="directory-care-brief-action" href="tel:+61400123456">Call owner</a><details class="directory-care-more-actions"><summary>More actions</summary></details></div></section>
     <div class="directory-attributes-grid directory-core-attributes"><button class="directory-attribute"><span class="directory-field-label">Owner</span><span class="directory-field-value">Alexandria Peterson-Smith with a very long family name</span></button><button class="directory-attribute"><span class="directory-field-label">Contact</span><span class="directory-field-value">0400 123 456</span></button><button class="directory-attribute directory-attribute-wide"><span class="directory-field-label">Notes</span><span class="directory-field-value">Long care notes wrap here and remain discoverable for the sitter.</span></button></div>
@@ -82,7 +88,7 @@ test('Care overview wraps long values and keeps controls usable at phone widths'
     await page.setViewportSize({ width, height: 900 });
     await page.setContent(fixture(theme));
     await page.addScriptTag({ content: actualRenderer });
-    await page.evaluate(() => renderDirectoryIntakeAttributes(document.querySelector('.directory-card'), { intakeAttributes: { medicationInstructions: 'Give after dinner; call owner if appetite changes.' }, intakeAttributesSource: 'Synthetic saved fixture' }));
+    await page.evaluate(() => renderDirectoryIntakeAttributes(document.querySelector('.directory-card'), { intakeAttributes: { feedingTimes: '06:30', friendlyDogs: 'Yes', medicationInstructions: 'Give after dinner; call owner if appetite changes.' }, intakeAttributesSource: 'Synthetic saved fixture' }));
     await expect(page.locator('[data-care-brief-safety]')).toContainText('Food allergy');
     await expect(page.locator('[data-care-brief-feeding]')).toContainText('7 am');
     if ([390, 412, 1440].includes(width)) await page.screenshot({ path: path.join(evidenceDir, `care-overview-${theme || 'light'}-${width}.png`), fullPage: true });
@@ -98,9 +104,12 @@ test('Care overview wraps long values and keeps controls usable at phone widths'
     await page.locator('[data-profile-subtab="behaviour"]').click();
     await expect(page.locator('[data-profile-subpanel="foodWalks"]')).toBeVisible();
     await expect(page.locator('[data-profile-subpanel="behaviour"]')).toBeVisible();
+    await expect(page.locator('[data-intake-read-attribute="feedingTimes"]')).toContainText('06:30');
+    await expect(page.locator('[data-intake-read-attribute="friendlyDogs"]')).toContainText('Yes');
+    await page.locator('.directory-card').evaluate(node => node.classList.add('is-profile-editing'));
     await expect(page.locator('[data-intake-attribute="feedingTimes"]')).toBeVisible();
     await expect(page.locator('[data-intake-attribute="friendlyDogs"]')).toBeVisible();
-    await page.evaluate(() => renderDirectoryIntakeAttributes(document.querySelector('.directory-card'), { intakeAttributes: { medicationInstructions: 'Updated saved fixture' }, intakeAttributesSource: 'Synthetic saved fixture' }));
+    await page.evaluate(() => renderDirectoryIntakeAttributes(document.querySelector('.directory-card'), { intakeAttributes: { feedingTimes: '06:30', friendlyDogs: 'Yes', medicationInstructions: 'Updated saved fixture' }, intakeAttributesSource: 'Synthetic saved fixture' }));
     await expect(page.locator('[data-profile-subpanel="foodWalks"]')).toBeVisible();
     await expect(page.locator('[data-profile-subpanel="behaviour"]')).toBeVisible();
     const behaviourToggle = page.locator('[data-profile-subtab="behaviour"]');
@@ -129,10 +138,10 @@ test('Care overview wraps long values and keeps controls usable at phone widths'
       chips: [...document.querySelectorAll('.directory-name-row > .directory-dog-id, .directory-name-row > .directory-status-tag')].map(node => ({ box: node.getBoundingClientRect(), fontSize: getComputedStyle(node).fontSize, whiteSpace: getComputedStyle(node).whiteSpace })),
       scrollWidth: document.documentElement.scrollWidth
     }));
-    expect(cardMetrics.photo.width).toBe(width <= 520 ? 72 : 88);
+    expect(cardMetrics.photo.width).toBe(width <= 600 ? 64 : 76);
     expect(cardMetrics.dogPhotoObjectFit).toBe('cover');
-    expect(cardMetrics.nameFontSize).toBe('22px');
-    expect(cardMetrics.chips.every(chip => chip.fontSize === '11px' && chip.whiteSpace !== 'nowrap')).toBeTruthy();
+    expect(cardMetrics.nameFontSize).toBe(width <= 600 ? '16px' : '20px');
+    expect(cardMetrics.chips.every(chip => parseFloat(chip.fontSize) >= 11 && chip.whiteSpace !== 'nowrap')).toBeTruthy();
     expect(cardMetrics.chips.every(chip => chip.box.right <= width && chip.whiteSpace !== 'nowrap')).toBeTruthy();
     expect(cardMetrics.scrollWidth).toBeLessThanOrEqual(width);
     await page.locator('button').first().focus();
@@ -189,6 +198,7 @@ test('curated Care summaries surface sitter instructions and keep disclosures re
 
       await page.locator('[data-profile-subtab="foodWalks"]').click();
       const savedFoodSummary = await food.textContent();
+      await card.evaluate(node => node.classList.add('is-profile-editing'));
       await page.locator('[data-intake-attribute="feedingTimes"]').fill('Unsaved draft time');
       await expect(food).toHaveText(savedFoodSummary);
 
@@ -232,6 +242,7 @@ test('curated Care summaries surface sitter instructions and keep disclosures re
       expect(wrap.whiteSpace).toBe('normal');
       expect(wrap.lineCount).toBeGreaterThanOrEqual(width <= 390 ? 2 : 1);
 
+      await card.evaluate(node => node.classList.add('is-profile-editing'));
       const select = page.locator('select.intake-profile-control').first();
       await page.locator('select.intake-profile-control').evaluateAll(nodes => nodes.forEach(node => { node.disabled = true; }));
       const selectContrast = await select.evaluate(node => {
@@ -328,6 +339,9 @@ test('long feeding times and medication instructions remain readable and editabl
       }), {feeding, medication});
       await page.locator('[data-profile-subtab="foodWalks"]').click();
       await page.locator('[data-profile-subtab="healthHome"]').click();
+      await expect(page.locator('[data-intake-read-attribute="feedingTimes"]')).toContainText(feeding);
+      await expect(page.locator('[data-intake-read-attribute="medicationInstructions"]')).toContainText(medication);
+      await page.locator('.directory-card').evaluate(node => node.classList.add('is-profile-editing'));
       const feedingControl = page.locator('[data-intake-attribute="feedingTimes"]');
       const medicationControl = page.locator('[data-intake-attribute="medicationInstructions"]');
       await expect(feedingControl).toHaveValue(feeding);
@@ -566,7 +580,7 @@ test('Care overview leads with essentials and history distinguishes actual from 
   const end = historySource.indexOf('\nfunction v108EnsureGalleryModal(', start);
   const renderer = historySource.slice(start, end);
   for (const theme of ['', 'dark-theme']) {
-    await page.setContent(`<style>${css}\n${historyCss}</style><body class="${theme}"><main class="directory-card is-profile-active"><div class="directory-profile-content"><section class="directory-care-brief"><div class="directory-care-brief-heading"><h3>Care overview</h3><span class="directory-care-brief-freshness">Care details available · Verified profile source with a deliberately long label</span></div><div class="directory-care-brief-grid"><section class="directory-care-brief-item directory-care-brief-safety"><h4>Safety</h4><span class="care-brief-alert">⚠ Food allergy</span></section><section class="directory-care-brief-item"><h4>Feeding</h4><p class="directory-care-brief-value">Long feeding directions wrap cleanly and remain readable.</p></section><section class="directory-care-brief-item"><h4>Medication</h4><p class="directory-care-brief-value">With dinner.</p></section><section class="directory-care-brief-item directory-care-brief-note"><h4>Handover note</h4><p class="directory-care-brief-value">Call before pickup.</p></section></div><details class="directory-care-readiness"><summary>Other setup checks</summary></details></section><section class="v108-history-panel"><div data-history></div></section></div></main></body>`);
+    await page.setContent(`<!doctype html><html data-waffle-ui-ready="true"><head><meta name="viewport" content="width=device-width, initial-scale=1"><style>${css}\n${historyCss}</style></head><body class="${theme}" data-waffle-page="directory"><main class="directory-card is-profile-active"><div class="directory-profile-content"><section class="directory-care-brief"><div class="directory-care-brief-heading"><h3>Care overview</h3><span class="directory-care-brief-freshness">Care details available · Verified profile source with a deliberately long label</span></div><div class="directory-care-brief-grid"><section class="directory-care-brief-item directory-care-brief-safety"><h4>Safety</h4><span class="care-brief-alert">⚠ Food allergy</span></section><section class="directory-care-brief-item"><h4>Feeding</h4><p class="directory-care-brief-value">Long feeding directions wrap cleanly and remain readable.</p></section><section class="directory-care-brief-item"><h4>Medication</h4><p class="directory-care-brief-value">With dinner.</p></section><section class="directory-care-brief-item directory-care-brief-note"><h4>Handover note</h4><p class="directory-care-brief-value">Call before pickup.</p></section></div><details class="directory-care-readiness"><summary>Other setup checks</summary></details></section><section class="v108-history-panel"><div data-history></div></section></div></main></body>`);
     await page.addScriptTag({ content: `function escapeDashboardHtml(v){return String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;')} function v10FormatDateLabel(v){return String(v||'')}\n${renderer}` });
     await page.evaluate(() => v108RenderHistory(document.querySelector('[data-history]'), {
     dogNumber: '00017', stayCount: 3, previousStays: [
@@ -592,6 +606,7 @@ test('Care overview leads with essentials and history distinguishes actual from 
     expect(appSource).not.toContain("class=\"directory-status-tag\" style=\"background:#e2e8f0");
     for (const width of [390, 412, 1440]) {
       await page.setViewportSize({ width, height: 844 });
+      await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
       const layout = await page.evaluate(() => ({
         documentWidth: document.documentElement.scrollWidth,
         viewportWidth: innerWidth,

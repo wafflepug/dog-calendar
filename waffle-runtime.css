@@ -2,8 +2,8 @@
    Build: 2026.08.27.04
    Historical base styles remain compatibility sources during Phase 3A, but pages no longer
    reference them individually. Preserve this import order until modules are folded in. */
-@import url("waffle-app.css?build=2026.08.27.04&rev=2026.10.17.02");
-@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.10.17.02");
+@import url("waffle-app.css?build=2026.08.27.04&rev=2026.10.17.03");
+@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.10.17.03");
 @import url("waffle-v10.8.2.css?build=2026.08.27.04");
 @import url("waffle-v10.8.3.css?build=2026.08.27.04");
 @import url("waffle-v10.8.5.css?build=2026.08.27.04");
@@ -11,12 +11,12 @@
 @import url("waffle-v10.8.7.css?build=2026.08.27.04");
 @import url("waffle-v10.8.8.css?build=2026.08.27.04");
 @import url("waffle-v10.8.9.css?build=2026.08.27.04");
-@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.10.17.02");
+@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.10.17.03");
 @import url("waffle-v11.0.3.css?build=2026.08.27.04");
 @import url("waffle-v11.0.5.css?build=2026.08.27.04");
-@import url("waffle-v11.1.94.css?build=2026.10.17.02");
-@import url("waffle-v11.1.95.css?build=2026.10.17.02");
-@import url("waffle-v11.1.96.css?build=2026.10.17.02&rev=2026.10.17.02");
+@import url("waffle-v11.1.94.css?build=2026.10.17.03");
+@import url("waffle-v11.1.95.css?build=2026.10.17.03");
+@import url("waffle-v11.1.96.css?build=2026.10.17.03&rev=2026.10.17.03");
 
 /* ============================================================
    MOBILE FIRST-PAINT STABILITY GATE
@@ -2477,3 +2477,164 @@ body.dark-theme .directory-empty-state button { border-color: #4f46e5; backgroun
 
 .directory-dashboard-fused[data-contextual-empty-visible="true"] .v1082-stay-panels .no-dogs,
 .directory-dashboard-fused[data-contextual-empty-visible="true"] .v1082-stay-panels .v1082-past-empty:not(.is-error) { display: none !important; }
+
+/* Care profile condensed: profile-opening-css.txt */
+/* Care profile opening: keep the photo and identity compact while retaining
+   explicit dates, readable name text, and 44px operational controls. */
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-card-header {
+  column-gap: 10px;
+  row-gap: 6px;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-dog-name-btn {
+  font-size: 20px !important;
+  line-height: 1.25;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-profile-stay-dates {
+  max-width: 360px;
+  gap: 4px 8px;
+  margin-top: 5px;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .v110-operation-bar {
+  gap: 8px;
+  margin: 7px 0 8px;
+  padding: 8px 10px;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .v110-operation-icon {
+  width: 36px;
+  height: 36px;
+  flex-basis: 36px;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .v110-operation-actions > button,
+body[data-waffle-page="directory"] .directory-card.is-profile-active .v11217-profile-more-actions > summary,
+body[data-waffle-page="directory"] .directory-card.is-profile-active .v11217-profile-more-actions-list > button {
+  box-sizing: border-box;
+  min-height: 44px;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .v11217-profile-more-actions {
+  min-width: 0;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .v11217-profile-more-actions > summary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  border: 1px solid var(--v10-border, #cbd5e1);
+  border-radius: 9px;
+  background: var(--v10-card-soft, #f8fafc);
+  color: var(--v10-text, #172033);
+  font-size: 13px;
+  font-weight: 900;
+  cursor: pointer;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .v11217-profile-more-actions-list {
+  display: grid;
+  gap: 7px;
+  margin-top: 7px;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .v11217-profile-more-actions-list > button {
+  width: 100%;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .v11217-profile-more-actions > summary:focus-visible,
+body[data-waffle-page="directory"] .directory-card.is-profile-active .v11217-profile-more-actions-list > button:focus-visible {
+  outline: 3px solid var(--v10-primary, #2563eb);
+  outline-offset: 2px;
+}
+body.dark-theme[data-waffle-page="directory"] .directory-card.is-profile-active .v11217-profile-more-actions > summary {
+  background: var(--v10-card-soft, #1e293b);
+  color: var(--v10-text, #f1f5f9);
+}
+@media (max-width: 600px) {
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-dog-name-btn { font-size: 16px !important; }
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-card-header {
+    grid-template-columns: 64px minmax(0, 1fr) !important;
+  }
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-photo-shell {
+    width: 64px !important;
+    height: 64px !important;
+    flex-basis: 64px;
+  }
+}
+
+/* Care profile condensed: profile-exceptions-css.txt */
+/* Condensed Care essentials: labelled rows with full critical instructions. */
+.directory-care-brief-row {
+    display: grid;
+    grid-template-columns: minmax(4rem, 5rem) minmax(0, 1fr);
+    align-items: start;
+    gap: 2px 8px;
+    width: 100%;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.directory-care-brief-row > strong {
+    color: var(--v10-muted, #475569);
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.directory-care-brief-row > span,
+.directory-care-brief-row details,
+.directory-care-brief-row summary {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.directory-care-brief-row details > summary {
+    cursor: pointer;
+}
+
+.directory-care-brief-row details > summary span {
+    color: var(--v10-primary, #0f6292);
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.directory-care-brief-row details > span {
+    display: block;
+    margin-top: 5px;
+    white-space: pre-wrap;
+}
+
+.directory-care-owner-inline {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 12px;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.directory-care-brief-safety[data-state="clear"] {
+    grid-column: auto;
+    min-height: 0;
+}
+
+/* Medication remains normal flowing text. Do not apply line clamping, max-height,
+   or overflow clipping to [data-care-brief-medication]. */
+
+.directory-care-brief-row details > summary { min-height: 44px; display: flex; align-items: center; flex-wrap: wrap; }
+.directory-care-brief-row details > summary:focus-visible { outline: 3px solid var(--v10-primary, #2563eb); outline-offset: 2px; }
+
+/* Care profile condensed: profile-missing-css.txt */
+/* Detailed Care: compact read-only labelled values, unchanged touch-friendly editor controls. */
+body[data-waffle-page="directory"] .directory-card.is-profile-active .intake-profile-editor-fields { display: none; }
+body[data-waffle-page="directory"] .directory-card.is-profile-active.is-profile-editing .intake-profile-editor-fields { display: block; }
+body[data-waffle-page="directory"] .directory-card.is-profile-active.is-profile-editing .intake-profile-read-view { display: none; }
+body[data-waffle-page="directory"] .directory-card.is-profile-active .intake-profile-read-fields { display: grid; gap: 4px 12px; }
+body[data-waffle-page="directory"] .directory-card.is-profile-active .intake-profile-read-field { display: grid; grid-template-columns: minmax(92px, 0.34fr) minmax(0, 1fr); gap: 8px; align-items: start; padding: 3px 0; }
+body[data-waffle-page="directory"] .directory-card.is-profile-active .intake-profile-read-label { font-weight: 650; font-size: 13px; line-height: 1.4; }
+body[data-waffle-page="directory"] .directory-card.is-profile-active .intake-profile-read-value { font-size: 14px; line-height: 1.4; white-space: pre-wrap; overflow-wrap: anywhere; }
+body[data-waffle-page="directory"] .directory-card.is-profile-active .intake-profile-missing { margin-top: 6px; }
+body[data-waffle-page="directory"] .directory-card.is-profile-active .intake-profile-missing > summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; }
+body[data-waffle-page="directory"] .directory-card.is-profile-active .intake-profile-missing ul { margin: 3px 0 6px; padding-left: 20px; }
+body[data-waffle-page="directory"] .directory-card.is-profile-active .intake-profile-medication-status { font-weight: 650; }
+@media (max-width: 360px) {
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .intake-profile-read-field { grid-template-columns: minmax(76px, 0.36fr) minmax(0, 1fr); gap: 6px; }
+}
+
+body[data-waffle-page="directory"] .intake-profile-missing > summary:focus-visible { outline: 3px solid var(--v10-primary, #2563eb); outline-offset: 2px; }
+
+.directory-care-brief-feeding-walks .directory-care-brief-subsection + .directory-care-brief-subsection { margin-top: 4px; padding-top: 4px; border-top: 1px solid var(--v10-border, #dbe3ea); }
+
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-name-row > .directory-dog-id { font-size: 11px; }

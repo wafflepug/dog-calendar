@@ -2247,7 +2247,8 @@ function applyDirectoryProfileEditMode(card) {
         )
         .forEach(control => {
             const state = directoryProfileEditDrafts.get(directoryProfileEditKey(card));
-            control.disabled = !editing || card.dataset.profileSaving === 'true' || !!state?.conflict;
+            const disabled = !editing || card.dataset.profileSaving === 'true' || !!state?.conflict;
+            if (control.disabled !== disabled) control.disabled = disabled;
         });
 
     const editButton =
@@ -8653,11 +8654,18 @@ registerWaffleServiceWorker();
         const profileRecord = getDirectoryCareBriefRecord(card);
         const validatedProfileRecord = getDirectoryValidatedCareProfileRecord(card);
         const ownerNameHost = brief.querySelector('[data-care-brief-owner-name]');
-        const safetyRecord = identityBlocked || identityAmbiguous || getDirectoryProfileReadIdentity(card).hasStableIds ? null : (
-            careRiskRecordsCache[stayKey] ||
-            belongingsRecordsCache[stayKey] ||
-            directorySummaryRecordsCache[stayKey] ||
-            null);
+        const safetyCandidate = identityBlocked || identityAmbiguous
+            ? null
+            : profileIdentity.hasStableIds
+                ? validatedProfileRecord
+                : (careRiskRecordsCache[stayKey] || belongingsRecordsCache[stayKey] || directorySummaryRecordsCache[stayKey] || null);
+        const safetyFlags = safetyCandidate?.riskFlags;
+        const validSafetyFlags = !!safetyFlags
+            && typeof safetyFlags === 'object'
+            && !Array.isArray(safetyFlags)
+            && CARE_SAFETY_FLAGS.every(flag => !Object.prototype.hasOwnProperty.call(safetyFlags, flag.key) || typeof safetyFlags[flag.key] === 'boolean');
+        const malformedSafetyFlags = !!safetyCandidate && safetyFlags !== undefined && !validSafetyFlags;
+        const safetyRecord = validSafetyFlags ? safetyCandidate : null;
         const attributes =
             profileRecord?.intakeAttributes && typeof profileRecord.intakeAttributes === 'object'
                 ? profileRecord.intakeAttributes
@@ -8730,8 +8738,10 @@ registerWaffleServiceWorker();
 
         if (safetyHost) {
             if (!safetyRecord) {
-                setDirectorySummaryData(safetyHost, 'state', 'pending');
-                setDirectorySummaryHtml(safetyHost, '<span class="care-brief-state is-pending">Safety profile not yet available</span>', 'careBriefGeneratedHtml');
+                setDirectorySummaryData(safetyHost, 'state', malformedSafetyFlags ? 'error' : 'pending');
+                setDirectorySummaryHtml(safetyHost, malformedSafetyFlags
+                    ? '<span class="care-brief-state is-error">Safety status unavailable</span>'
+                    : '<span class="care-brief-state is-pending">Safety profile not yet available</span>', 'careBriefGeneratedHtml');
             } else if (!activeFlags.length) {
                 setDirectorySummaryData(safetyHost, 'state', 'clear');
                 setDirectorySummaryHtml(safetyHost, '<span class="care-brief-state is-clear">✓ No active safety flags recorded</span>', 'careBriefGeneratedHtml');
@@ -8750,27 +8760,95 @@ registerWaffleServiceWorker();
         const profileReadState = card.querySelector('[data-directory-detail="profile"]')?.dataset.profileReadState || (attributes ? 'saved' : 'loading');
         const missingProfile = (identityBlocked && card.dataset.profileIdentityBlockedReason === 'missing') || profileReadState === 'not-found';
         const profileIdentityNeedsReview = identityAmbiguous || (identityBlocked && !missingProfile) || profileReadState === 'identity-conflict';
+        const compactCareValue = value => String(value ?? '').trim();
+        const renderCareRows = (host, rows, generatedKey) => {
+            const html = rows.map(({ key, label, value, expandable }) => {
+                const safeValue = escapeDashboardHtml(value);
+                const safeLabel = escapeDashboardHtml(label);
+                if (expandable) {
+                    const preview = escapeDashboardHtml(`${value.slice(0, 72).trimEnd()}…`);
+                    return `<span class="directory-care-brief-row" data-care-brief-row="${escapeDashboardHtml(key)}"><strong>${safeLabel}</strong><details><summary>${preview} <span>Show full food detail</span></summary><span>${safeValue}</span></details></span>`;
+                }
+                return `<span class="directory-care-brief-row" data-care-brief-row="${escapeDashboardHtml(key)}"><strong>${safeLabel}: </strong><span>${safeValue}</span></span>`;
+            }).join('');
+            const previous = directorySummaryHtmlState.get(host);
+            if (previous?.key === generatedKey && previous.generated === html) {
+                const withoutFoodDisclosureState = markup => {
+                    const template = document.createElement('template');
+                    template.innerHTML = String(markup);
+                    template.content.querySelectorAll('[data-care-brief-row="food"] details').forEach(details => { details.open = false; });
+                    return template.innerHTML;
+                };
+                const actual = host.innerHTML;
+                if (withoutFoodDisclosureState(actual) === withoutFoodDisclosureState(html)) {
+                    // Native disclosure state belongs to the person using this
+                    // profile. Update the snapshot without replacing its focused
+                    // summary or closing it during an otherwise identical render.
+                    directorySummaryHtmlState.set(host, { ...previous, actual });
+                    return;
+                }
+            }
+            const preserveExpandedFood = previous?.key === generatedKey
+                && !!host.querySelector('[data-care-brief-row="food"] details[open]');
+            setDirectorySummaryHtml(host, html, generatedKey);
+            if (preserveExpandedFood) {
+                const updatedFoodDetails = host.querySelector('[data-care-brief-row="food"] details');
+                if (updatedFoodDetails) updatedFoodDetails.open = true;
+                const updated = directorySummaryHtmlState.get(host);
+                if (updated) directorySummaryHtmlState.set(host, { ...updated, actual: host.innerHTML });
+            }
+        };
         const feedingParts = attributes
             ? [
-                ['Times', attributes.feedingTimes],
-                ['Amount', attributes.foodAmount],
-                ['Food', attributes.foodBrandType]
+                ['times', 'Times', compactCareValue(attributes.feedingTimes)],
+                ['amount', 'Amount', compactCareValue(attributes.foodAmount)],
+                ['food', 'Food', compactCareValue(attributes.foodBrandType)]
             ]
-                .map(([label, value]) => [label, String(value || '').trim()])
-                .filter(([, value]) => value)
-                .map(([label, value]) => `${label}: ${value}`)
             : [];
         if (feedingHost) {
-            setDirectorySummaryText(feedingHost, profileIdentityNeedsReview
+            const hasCareAttributes = !!attributes;
+            const savedFeedingValues = feedingParts.filter(([, , value]) => value);
+            const feedingState = profileIdentityNeedsReview
                 ? 'Care record needs identity review'
                 : missingProfile
                     ? 'No saved feeding instructions'
-                : attributes
-                    ? (feedingParts.length ? feedingParts.join(' · ') : 'No feeding instructions saved')
-                    : profileReadState === 'error'
-                        ? 'Feeding details unavailable'
-                        : 'Loading with full profile…');
-            feedingHost.classList.toggle('is-pending', !attributes && !missingProfile && !profileIdentityNeedsReview && profileReadState !== 'error');
+                    : hasCareAttributes
+                        ? (savedFeedingValues.length ? '' : 'No feeding instructions saved')
+                        : profileReadState === 'error'
+                            ? 'Feeding details unavailable'
+                            : 'Loading with full profile…';
+            if (feedingState) {
+                setDirectorySummaryText(feedingHost, feedingState);
+            } else {
+                renderCareRows(feedingHost, feedingParts.filter(([key]) => key !== 'food' || compactCareValue(attributes.foodBrandType)).map(([key, label, value]) => ({
+                    key, label, value: value || 'Not recorded',
+                    expandable: key === 'food' && value.length > 96
+                })), `careBriefFeedingRows:${profileIdentity.cacheKey}`);
+            }
+            feedingHost.classList.toggle('is-pending', !hasCareAttributes && !missingProfile && !profileIdentityNeedsReview && profileReadState !== 'error');
+        }
+
+        const walkParts = attributes
+            ? [
+                ['walks', 'Walks', compactCareValue(attributes.walksPerDay)],
+                ['duration', 'Duration', compactCareValue(attributes.walkDuration)]
+            ]
+            : [];
+        const walksHost = brief.querySelector('[data-care-brief-walks]');
+        if (walksHost) {
+            const savedWalkValues = walkParts.filter(([, , value]) => value);
+            const walksState = profileIdentityNeedsReview
+                ? 'Care record needs identity review'
+                : missingProfile
+                    ? 'No saved walking instructions'
+                    : attributes
+                        ? (savedWalkValues.length ? '' : 'No walking instructions saved')
+                        : profileReadState === 'error'
+                            ? 'Walking details unavailable'
+                            : 'Loading with full profile…';
+            if (walksState) setDirectorySummaryText(walksHost, walksState);
+            else renderCareRows(walksHost, walkParts.map(([key, label, value]) => ({ key, label, value: value || 'Not recorded' })), `careBriefWalkRows:${profileIdentity.cacheKey}`);
+            walksHost.classList.toggle('is-pending', !attributes && !missingProfile && !profileIdentityNeedsReview && profileReadState !== 'error');
         }
 
         const medicationText = String(
@@ -11150,12 +11228,13 @@ registerWaffleServiceWorker();
         }
         card.querySelectorAll('[data-profile-subtab]').forEach(button => {
             const isExpanded = expanded.has(button.dataset.profileSubtab);
-            button.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
+            const ariaExpanded = isExpanded ? 'true' : 'false';
+            if (button.getAttribute('aria-expanded') !== ariaExpanded) button.setAttribute('aria-expanded', ariaExpanded);
             button.classList.toggle('is-expanded', isExpanded);
         });
         card.querySelectorAll('[data-profile-subpanel]').forEach(panel => {
             const isExpanded = expanded.has(panel.dataset.profileSubpanel);
-            panel.hidden = !isExpanded;
+            if (panel.hidden !== !isExpanded) panel.hidden = !isExpanded;
             panel.closest('[data-care-category]')?.classList.toggle('is-expanded', isExpanded);
         });
     }
@@ -11739,6 +11818,35 @@ registerWaffleServiceWorker();
         `;
     }
 
+    function intakeAttributeReadViewHtml(fields, attributes, profileState, tabKey) {
+        const safe = value => escapeDashboardHtml(value);
+        const populated = fields.filter(field => String(attributes?.[field.key] ?? '').trim());
+        const rows = populated.map(field => `<div class="intake-profile-read-field" data-intake-read-attribute="${safe(field.key)}"><span class="intake-profile-read-label">${safe(field.label)}</span><span class="intake-profile-read-value">${safe(String(attributes[field.key]))}</span></div>`).join('');
+        if (profileState === 'identity-conflict') {
+            return '<p class="intake-profile-read-status">Care details are not verified for this stay.</p>' +
+                (tabKey === 'healthHome' ? '<p class="intake-profile-medication-status">Medication instructions are not verified.</p>' : '');
+        }
+        if (profileState === 'error') {
+            return `<p class="intake-profile-read-status">Profile refresh failed; missing details are not confirmed.</p><div class="intake-profile-read-fields">${rows}</div>` +
+                (tabKey === 'healthHome' ? '<p class="intake-profile-medication-status">Medication instructions are not verified.</p>' : '');
+        }
+        if (profileState === 'loading' || profileState === 'not-found') {
+            const status = profileState === 'loading' ? 'Care details are still loading.' :
+                profileState === 'error' ? 'Care details could not be verified.' : 'No saved care profile.';
+            return `<p class="intake-profile-read-status">${safe(status)}</p>` +
+                (tabKey === 'healthHome' ? `<p class="intake-profile-medication-status">${safe(profileState === 'not-found' ? 'Medication instructions not provided.' : 'Medication instructions are not verified.')}</p>` : '');
+        }
+        const missing = fields.filter(field => !String(attributes?.[field.key] ?? '').trim());
+        const medicationMissing = tabKey === 'healthHome' && missing.some(field => field.key === 'medicationInstructions');
+        const otherMissing = missing.filter(field => field.key !== 'medicationInstructions');
+        const medication = medicationMissing ? '<p class="intake-profile-medication-status" data-medication-instructions-state="missing">Medication instructions not provided.</p>' : '';
+        const disclosure = otherMissing.length
+            ? `<details class="intake-profile-missing" data-missing-category="${safe(tabKey)}"><summary>Missing information (${otherMissing.length})</summary><ul>${otherMissing.map(field => `<li>${safe(field.label)}</li>`).join('')}</ul></details>`
+            : '';
+        return `${medication}<div class="intake-profile-read-fields">${rows || (medication ? '' : '<p class="intake-profile-read-status">No details saved.</p>')}</div>${disclosure}`;
+    }
+    const directoryIntakeRenderSnapshots = new WeakMap();
+
     function directoryCareCategorySummary(tabKey, attributes, profileState, safetyRecord, safetyState) {
         if (tabKey === 'safety') {
             if (safetyState === 'error') return { text: 'Safety status unavailable', state: 'unknown' };
@@ -11812,11 +11920,11 @@ registerWaffleServiceWorker();
         const sourceLabel = source || (populatedCount ? 'Stored profile' : 'No intake saved yet');
         const summaryChip = card.querySelector('[data-intake-profile-summary]');
         if (summaryChip) {
-            summaryChip.hidden = populatedCount === 0;
-            summaryChip.textContent = populatedCount ? `${populatedCount} fields · ${sourceLabel}` : '';
+            const hidden = populatedCount === 0;
+            const text = populatedCount ? `${populatedCount} fields · ${sourceLabel}` : '';
+            if (summaryChip.hidden !== hidden) summaryChip.hidden = hidden;
+            if (summaryChip.textContent !== text) summaryChip.textContent = text;
         }
-        const sourceLine = card.querySelector('.directory-profile-source-line');
-        if (sourceLine) sourceLine.textContent = `📋 ${sourceLabel}`;
         return { attributes, sourceLabel };
     }
 
@@ -11866,9 +11974,20 @@ registerWaffleServiceWorker();
             : (careRiskRecordsCache[stayKey] || directorySummaryRecordsCache[stayKey] || belongingsRecordsCache[stayKey] || null);
         const safetyState = directorySafetyReadFailures.has(stayKey) ? 'error' : safetyRecord?.riskFlags && typeof safetyRecord.riskFlags === 'object' ? 'saved' : 'loading';
         const categoryIdPrefix = String(card.dataset.directorySourceRow || stayKey || card.id || 'profile').replace(/[^a-zA-Z0-9_-]/g, '-');
+        const previousSnapshot = directoryIntakeRenderSnapshots.get(host);
+        const previousIdentity = previousSnapshot?.identity || '';
+        const missingDisclosureState = previousIdentity === identity.key
+            ? new Map(previousSnapshot.disclosures || [])
+            : new Map();
+        if (previousIdentity === identity.key) {
+            host.querySelectorAll('.intake-profile-missing[data-missing-category]').forEach(details => {
+                missingDisclosureState.set(details.dataset.missingCategory, details.open);
+            });
+        }
         const cardsHtml = DIRECTORY_PROFILE_SECONDARY_TABS.map((tab, index) => {
             const active = expandedSubTabs.has(tab.key);
             const categoryId = `care-category-${categoryIdPrefix}-${tab.key}-${index}`;
+            const categoryFields = tab.fields.map(key => INTAKE_ATTRIBUTE_UI_GROUPS.flatMap(group => group.fields).find(field => field.key === key)).filter(Boolean);
             const groupsHtml = tab.groups.map(groupTitle => {
                 const group = INTAKE_ATTRIBUTE_UI_GROUPS.find(item => item.title === groupTitle);
                 if (!group) return '';
@@ -11876,12 +11995,12 @@ registerWaffleServiceWorker();
                     .filter(field => tab.fields.includes(field.key))
                     .map(field => intakeAttributeControlHtml(field, attributes[field.key], card.dataset.directorySourceRow || card.dataset.directoryStayKey))
                     .join('');
-                return `<section class="intake-profile-group"><div class="intake-profile-group-title">${escapeDashboardHtml(group.title)}</div><div class="intake-profile-grid">${fieldsHtml}</div></section>`;
+                return `<section class="intake-profile-group"><div class="intake-profile-editor-fields"><div class="intake-profile-group-title">${escapeDashboardHtml(group.title)}</div><div class="intake-profile-grid">${fieldsHtml}</div></div></section>`;
             }).join('');
             const summary = directoryCareCategorySummary(tab.key, attributes, profileReadState, safetyRecord, safetyState);
             const content = tab.key === 'safety'
                 ? '<div class="directory-profile-care-host" data-directory-profile-care><div class="intake-profile-empty">Loading safety settings…</div></div>'
-                : groupsHtml;
+                : `${groupsHtml}<div class="intake-profile-read-view" data-intake-read-category="${escapeDashboardHtml(tab.key)}">${intakeAttributeReadViewHtml(categoryFields, attributes, profileReadState, tab.key)}</div>`;
             return `
                 <section class="care-category-card${active ? ' is-expanded' : ''}" data-care-category="${escapeDashboardHtml(tab.key)}">
                     <h5 class="care-category-heading">
@@ -11895,21 +12014,49 @@ registerWaffleServiceWorker();
                 </section>`;
         }).join('');
 
-        host.innerHTML = `
+        const markup = `
             <div class="intake-profile-source directory-profile-source-line">
             📋 ${escapeDashboardHtml(sourceLabel)}
             </div>
             <div class="care-category-list" aria-label="Detailed care categories">${cardsHtml}</div>
         `;
-
-        host.querySelectorAll('[data-profile-subtab]').forEach(button => {
-            button.addEventListener('click', event => {
-                event.preventDefault();
-                event.stopPropagation();
-                switchDirectoryProfileSubTab(card, button.dataset.profileSubtab, true);
+        const normalizeDisclosureState = node => {
+            const normalized = node.cloneNode(true);
+            normalized.querySelectorAll('.intake-profile-missing').forEach(details => { details.open = false; });
+            normalized.querySelectorAll('[data-care-category]').forEach(category => { category.classList.remove('is-expanded'); });
+            normalized.querySelectorAll('[data-profile-subtab]').forEach(button => {
+                button.classList.remove('is-expanded');
+                button.setAttribute('aria-expanded', 'false');
             });
+            normalized.querySelectorAll('[data-profile-subpanel]').forEach(panel => { panel.hidden = false; });
+            normalized.querySelectorAll('[data-intake-attribute], [data-care-risk-flag]').forEach(control => {
+                control.disabled = false;
+                if (!String(control.getAttribute('style') || '').trim()) control.removeAttribute('style');
+            });
+            normalized.querySelectorAll('[data-directory-profile-care]').forEach(host => { host.replaceChildren(); });
+            return normalized.innerHTML;
+        };
+        const desiredMarkup = document.createElement('div');
+        desiredMarkup.innerHTML = markup;
+        const normalizedDesiredMarkup = normalizeDisclosureState(desiredMarkup);
+        const existingCategoryList = host.querySelector(':scope > .care-category-list');
+        const expectedCategoryCount = DIRECTORY_PROFILE_SECONDARY_TABS.length;
+        const expectedIntakeControlCount = desiredMarkup.querySelectorAll('[data-intake-attribute]').length;
+        const intactCategoryStructure = !!existingCategoryList &&
+            existingCategoryList.querySelectorAll(':scope > [data-care-category]').length === expectedCategoryCount &&
+            existingCategoryList.querySelectorAll('[data-profile-subpanel]').length === expectedCategoryCount &&
+            existingCategoryList.querySelectorAll('[data-intake-attribute]').length === expectedIntakeControlCount;
+        // Compare the app-generated snapshot, rather than browser-serialized live markup. Nested safety
+        // rendering, edit-mode disabled attributes, and native details state are owned by their controls.
+        // A missing/replaced category list still forces recovery if an error renderer replaced this host.
+        const snapshotChanged = previousSnapshot?.generated !== normalizedDesiredMarkup;
+        const mustReplace = previousIdentity !== identity.key || snapshotChanged || !intactCategoryStructure;
+        if (mustReplace) host.innerHTML = markup;
+        host.querySelectorAll('.intake-profile-missing[data-missing-category]').forEach(details => {
+            if (missingDisclosureState.has(details.dataset.missingCategory) && details.open !== missingDisclosureState.get(details.dataset.missingCategory)) {
+                details.open = missingDisclosureState.get(details.dataset.missingCategory);
+            }
         });
-
         if (host.dataset.careCategoryCardsBound !== 'true') {
             host.dataset.careCategoryCardsBound = 'true';
             host.addEventListener('click', event => {
@@ -11943,6 +12090,7 @@ registerWaffleServiceWorker();
         }
 
         applyDirectoryProfileEditMode(card);
+        directoryIntakeRenderSnapshots.set(host, { identity: identity.key, generated: normalizedDesiredMarkup, disclosures: Array.from(missingDisclosureState.entries()) });
     }
 
 
@@ -16699,25 +16847,32 @@ registerWaffleServiceWorker();
                                                     </div>
                                                 </section>
                                                 <section class="directory-care-brief-item">
-                                                    <div class="directory-care-brief-note-heading"><h4>Feeding</h4><button type="button" class="directory-care-brief-note-edit" data-care-readiness-action="feeding" aria-label="Review feeding details">Review</button></div>
-                                                    <p class="directory-care-brief-value is-pending" data-care-brief-feeding>
-                                                        Loading with full profile…
-                                                    </p>
-                                                </section>
-                                                <section class="directory-care-brief-item">
                                                     <div class="directory-care-brief-note-heading"><h4>Medication</h4><button type="button" class="directory-care-brief-note-edit" data-care-readiness-action="medication" aria-label="Review medication details">Review</button></div>
                                                     <p class="directory-care-brief-value is-pending" data-care-brief-medication>
                                                         Loading with full profile…
                                                     </p>
                                                 </section>
-                                                <section class="directory-care-brief-item">
+                                                <section class="directory-care-brief-item directory-care-brief-feeding-walks">
+                                                    <div class="directory-care-brief-note-heading"><h4>Feeding &amp; walks</h4><button type="button" class="directory-care-brief-note-edit" data-care-readiness-action="feeding" aria-label="Review feeding and walking details">Review</button></div>
+                                                    <div class="directory-care-brief-subsection">
+                                                    <div class="directory-care-brief-value is-pending" data-care-brief-feeding>
+                                                        Loading with full profile…
+                                                    </div>
+                                                    </div>
+                                                    <div class="directory-care-brief-subsection">
+                                                    <div class="directory-care-brief-value is-pending" data-care-brief-walks>
+                                                        Loading with full profile…
+                                                    </div>
+                                                    </div>
+                                                </section>
+                                                <section class="directory-care-brief-item directory-care-owner-item">
                                                     <h4>Owner</h4>
-                                                    <p class="directory-care-brief-value directory-care-brief-contact">
+                                                    <div class="directory-care-owner-inline">
                                                         <strong data-care-brief-owner-name>${escapeDashboardHtml(ownerName ? ownerName.trim() : 'Not provided')}</strong>
-                                                    </p>
-                                                <span class="directory-care-owner-action" data-care-brief-call-owner>
-                                                    <span class="directory-care-brief-action is-unavailable" aria-disabled="true">Call owner unavailable</span>
-                                                </span>
+                                                        <span class="directory-care-owner-action" data-care-brief-call-owner>
+                                                            <span class="directory-care-brief-action is-unavailable" aria-disabled="true">Call owner unavailable</span>
+                                                        </span>
+                                                    </div>
                                                 </section>
                                                 <section class="directory-care-brief-item directory-care-brief-note">
                                                     <div class="directory-care-brief-note-heading">

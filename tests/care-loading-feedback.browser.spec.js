@@ -256,8 +256,10 @@ test('Care Brief shows cached safety before the profile read and refreshes feedi
         intakeAttributes: {
           feedingTimes: '07:00 and 17:00',
           foodAmount: '1 cup',
-          foodBrandType: 'Sensitive formula',
-          medicationInstructions: 'Give after dinner'
+          foodBrandType: `Sensitive formula with a gradual ten day transition from the previous food, mixed in measured portions at each meal`,
+          walksPerDay: '2 walks',
+          walkDuration: '30 minutes each',
+          medicationInstructions: 'Give one tablet with dinner. If appetite changes, do not repeat the dose; call the owner before the next meal. Keep the medicine in its labelled pouch.'
         },
         intakeAttributesSource: 'Saved profile',
         riskFlags: { foodAllergy: true }
@@ -270,12 +272,22 @@ test('Care Brief shows cached safety before the profile read and refreshes feedi
 
   await expect(brief.locator('[data-care-brief-safety]')).toContainText('Food Allergy');
   await expect(brief.locator('[data-care-brief-feeding]')).toContainText('Loading with full profile');
+  await expect(brief.locator('[data-care-brief-walks]')).toContainText('Loading with full profile');
   await expect(brief.locator('[data-care-brief-medication]')).toContainText('Loading with full profile');
   expect(fixture.profileCalls.get(key)).toBeUndefined();
 
   await openProfile(page);
-  await expect(brief.locator('[data-care-brief-feeding]')).toHaveText('Times: 07:00 and 17:00 · Amount: 1 cup · Food: Sensitive formula');
-  await expect(brief.locator('[data-care-brief-medication]')).toHaveText('Give after dinner');
+  await expect(brief.locator('[data-care-brief-feeding] [data-care-brief-row="times"]')).toContainText('Times: 07:00 and 17:00');
+  await expect(brief.locator('[data-care-brief-feeding] [data-care-brief-row="amount"]')).toContainText('Amount: 1 cup');
+  const foodDetail = brief.locator('[data-care-brief-feeding] [data-care-brief-row="food"] details');
+  await expect(foodDetail.locator('summary')).toContainText('Show full food detail');
+  await foodDetail.locator('summary').click();
+  await expect(foodDetail).toContainText('Sensitive formula with a gradual ten day transition from the previous food, mixed in measured portions at each meal');
+  await expect(brief.locator('[data-care-brief-walks] [data-care-brief-row="walks"]')).toContainText('Walks: 2 walks');
+  await expect(brief.locator('[data-care-brief-walks] [data-care-brief-row="duration"]')).toContainText('Duration: 30 minutes each');
+  await expect(brief.locator('[data-care-brief-medication]')).toHaveText('Give one tablet with dinner. If appetite changes, do not repeat the dose; call the owner before the next meal. Keep the medicine in its labelled pouch.');
+  const essentialOrder = await brief.locator('.directory-care-brief-grid > .directory-care-brief-item').evaluateAll(items => items.map(item => item.querySelector('h4')?.textContent?.trim()));
+  expect(essentialOrder.slice(0, 3)).toEqual(['Safety', 'Medication', 'Feeding & walks']);
   await expect(brief.locator('[data-care-brief-freshness]')).toHaveAttribute('data-state', 'saved');
   await expect(brief.locator('[data-care-brief-freshness]')).toHaveText('Saved record · update time unknown');
   expect(fixture.profileCalls.get(key)).toBe(1);
@@ -315,7 +327,10 @@ test('Care overview labels saved values and keeps loading, empty, failed, and mi
   await expect(miloBrief.locator('[data-care-brief-medication]')).toHaveText('Loading with full profile…');
   fixture.release(miloKey);
   await expect(miloStatus).toHaveAttribute('data-state', 'fresh');
-  await expect(miloBrief.locator('[data-care-brief-feeding]')).toHaveText('Times: 7 am · Amount: 1 cup');
+  await expect(miloBrief.locator('[data-care-brief-feeding] [data-care-brief-row="times"]')).toContainText('Times: 7 am');
+  await expect(miloBrief.locator('[data-care-brief-feeding] [data-care-brief-row="amount"]')).toContainText('Amount: 1 cup');
+  await expect(miloBrief.locator('[data-care-brief-feeding] [data-care-brief-row="food"]')).toHaveCount(0);
+  await expect(miloBrief.locator('[data-care-brief-walks]')).toHaveText('No walking instructions saved');
   await expect(miloBrief.locator('[data-care-brief-medication]')).toHaveText('No medications recorded');
 
   miloStage = 'empty';
@@ -324,6 +339,7 @@ test('Care overview labels saved values and keeps loading, empty, failed, and mi
     await loadDirectoryProfileDetail(card, card.querySelector('[data-directory-detail="profile"]'), { force: true });
   });
   await expect(miloBrief.locator('[data-care-brief-feeding]')).toHaveText('No feeding instructions saved');
+  await expect(miloBrief.locator('[data-care-brief-walks]')).toHaveText('No walking instructions saved');
   await expect(miloBrief.locator('[data-care-brief-medication]')).toHaveText('No medication instructions saved');
 
   miloStage = 'error';
@@ -346,6 +362,7 @@ test('Care overview labels saved values and keeps loading, empty, failed, and mi
   await nala.locator('[data-retry-directory-profile-read]').click();
   await expect(nalaStatus).toHaveAttribute('data-state', 'not-found');
   await expect(nalaBrief.locator('[data-care-brief-feeding]')).toHaveText('No saved feeding instructions');
+  await expect(nalaBrief.locator('[data-care-brief-walks]')).toHaveText('No saved walking instructions');
   await expect(nalaBrief.locator('[data-care-brief-medication]')).toHaveText('No saved medication instructions');
 
   await page.evaluate(() => {

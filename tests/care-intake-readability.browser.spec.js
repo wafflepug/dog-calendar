@@ -3,7 +3,11 @@ const path = require('node:path');
 const { test, expect } = require('@playwright/test');
 
 const root = path.resolve(__dirname, '..');
-const css = fs.readFileSync(path.join(root, 'waffle-app.css'), 'utf8');
+const runtimeCss = fs.readFileSync(path.join(root, 'waffle-runtime.css'), 'utf8');
+const importedCss = [...runtimeCss.matchAll(/@import url\("([^?"]+)[^"]*"\);/g)].map(match => fs.readFileSync(path.join(root, match[1]), 'utf8')).join('\n');
+const settingsSource = fs.readFileSync(path.join(root, 'waffle-ui.js'), 'utf8');
+const paletteCss = [...settingsSource.matchAll(/:root\[data-waffle-colour-style="[^"]+"\](?: body\.dark-theme)?\s*\{[^}]+\}/g)].map(match => match[0]).join('\n');
+const css = importedCss + '\n' + runtimeCss.replace(/@import[^;]+;/g, '') + '\n' + paletteCss;
 const app = fs.readFileSync(path.join(root, 'waffle-app.js'), 'utf8');
 const sliceConst = name => {
   const start = app.indexOf(`const ${name}`);
@@ -27,8 +31,8 @@ window.renderActualIntake = renderDirectoryIntakeAttributes;
 `;
 
 function fixture(theme, accent) {
-  return `<!doctype html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"><style>${css}</style></head>
-    <body class="${theme}" style="${accent}"><main class="directory-card is-profile-active" data-stay-key="fixture-stay" data-directory-source-row="5">
+  return `<!doctype html><html data-waffle-ui-ready="true"><head><meta name="viewport" content="width=device-width, initial-scale=1"><style>${css}</style></head>
+    <body class="${theme}" data-waffle-page="directory" style="${accent}"><main class="directory-card is-profile-active" data-stay-key="fixture-stay" data-directory-source-row="5">
       <section data-directory-detail="profile" data-profile-read-state="saved"><div data-directory-main-panel="profile">
         <section class="directory-profile-section directory-profile-intake-section">
           <header class="directory-profile-section-header"><h3>Saved care profile</h3><div class="directory-profile-section-tools"><span class="intake-profile-source" data-intake-profile-summary></span><button type="button">Edit</button></div></header>
@@ -136,6 +140,76 @@ test('selected intake source and all category summary states stay readable and w
           }
         }
 
+      }
+    }
+  }
+});
+
+test('read-only care rows retain complete values, grouped missing labels, and unknown critical state', async ({ page }) => {
+  const feeding = '06:30 before the morning walk\n18:00 after the evening walk';
+  const medication = `Give with dinner. ${'If a dose is missed, contact the owner before changing the routine. '.repeat(14)}`;
+  for (const theme of ['', 'dark-theme']) {
+    for (const width of [320, 390, 1440]) {
+      await page.setViewportSize({ width, height: 880 });
+      await page.setContent(fixture(theme, '--wh75-accent:#7562db;--wh75-accent-ink:#4338ca;--wh75-accent-soft:#ede9fe'));
+      await page.addScriptTag({ content: productionRenderer });
+      await page.evaluate(({ feeding, medication }) => renderActualIntake(document.querySelector('.directory-card'), {
+        intakeAttributes: { feedingTimes: feeding, foodAmount: '1 cup', medicationInstructions: medication },
+        intakeAttributesSource: 'Synthetic saved profile'
+      }), { feeding, medication });
+      await page.locator('[data-profile-subtab="foodWalks"]').click();
+      await page.locator('[data-profile-subtab="healthHome"]').click();
+      await expect(page.locator('[data-intake-read-attribute="feedingTimes"] .intake-profile-read-value')).toHaveText(feeding);
+      await expect(page.locator('[data-intake-read-attribute="medicationInstructions"] .intake-profile-read-value')).toHaveText(medication);
+      await expect(page.locator('[data-profile-subpanel="foodWalks"] .intake-profile-missing')).toHaveCount(1);
+      await expect(page.locator('[data-profile-subpanel="healthHome"] .intake-profile-missing')).toHaveCount(1);
+      await expect(page.locator('[data-profile-subpanel="healthHome"] .intake-profile-missing')).not.toContainText('Medication Instructions');
+      const missing = page.locator('[data-profile-subpanel="foodWalks"] .intake-profile-missing');
+      await missing.locator('summary').click();
+      await expect(missing).toContainText('Food Allergies');
+      await page.evaluate(({ feeding, medication }) => renderActualIntake(document.querySelector('.directory-card'), {
+        intakeAttributes: { feedingTimes: `${feeding} updated`, foodAmount: '1.25 cups', medicationInstructions: medication },
+        intakeAttributesSource: 'Synthetic refreshed profile'
+      }), { feeding, medication });
+      await expect(page.locator('[data-profile-subpanel="foodWalks"] .intake-profile-missing')).toHaveAttribute('open', '');
+      await expect(page.locator('[data-profile-subpanel="foodWalks"] .intake-profile-missing')).toContainText('Food Allergies');
+      const disclosureStability = await page.evaluate(({ feeding, medication }) => {
+        const card = document.querySelector('.directory-card');
+        const category = card.querySelector('[data-care-category="foodWalks"]');
+        const disclosure = category.querySelector('.intake-profile-missing');
+        const summary = disclosure.querySelector('summary');
+        summary.focus();
+        const observer = new MutationObserver(() => {});
+        observer.observe(category, { attributes: true, childList: true, subtree: true });
+        renderActualIntake(card, { intakeAttributes: { feedingTimes: `${feeding} updated`, foodAmount: '1.25 cups', medicationInstructions: medication }, intakeAttributesSource: 'Synthetic refreshed profile' });
+        const mutationCount = observer.takeRecords().length;
+        observer.disconnect();
+        return { sameDisclosure: category.querySelector('.intake-profile-missing') === disclosure, open: disclosure.open, focused: document.activeElement === summary, mutationCount };
+      }, { feeding, medication });
+      expect(disclosureStability).toEqual({ sameDisclosure: true, open: true, focused: true, mutationCount: 0 });
+
+      await page.locator('.directory-card').evaluate(node => node.classList.add('is-profile-editing'));
+      await expect(page.locator('[data-intake-read-category="foodWalks"]')).toBeHidden();
+      await expect(page.locator('[data-intake-attribute="feedingTimes"]')).toBeVisible();
+      await expect(page.locator('[data-intake-attribute="medicationInstructions"]')).toHaveValue(medication);
+      await page.locator('.directory-card').evaluate(node => node.classList.remove('is-profile-editing'));
+      await expect(page.locator('[data-intake-read-category="healthHome"]')).toBeVisible();
+      await expect(page.locator('[data-intake-attribute="medicationInstructions"]')).toBeHidden();
+      await page.evaluate(() => {
+        document.querySelector('[data-directory-detail="profile"]').dataset.profileReadState = 'saved';
+        renderActualIntake(document.querySelector('.directory-card'), { intakeAttributes: { medicalConditions: 'Seasonal allergies' } });
+      });
+      await expect(page.locator('[data-intake-read-category="healthHome"] .intake-profile-medication-status')).toHaveText('Medication instructions not provided.');
+      await expect(page.locator('[data-intake-read-category="healthHome"] .intake-profile-missing')).not.toContainText('Medication Instructions');
+
+      for (const readState of ['loading', 'error', 'identity-conflict', 'not-found']) {
+        await page.evaluate(state => {
+          document.querySelector('[data-directory-detail="profile"]').dataset.profileReadState = state;
+          renderActualIntake(document.querySelector('.directory-card'), { intakeAttributes: {} });
+        }, readState);
+        await expect(page.locator('[data-intake-read-category="healthHome"] .intake-profile-missing')).toHaveCount(0);
+        await expect(page.locator('[data-intake-read-category="healthHome"] .intake-profile-medication-status')).toBeVisible();
+        if (readState !== 'not-found') await expect(page.locator('[data-care-category-summary="healthHome"]')).toHaveText({ loading: 'Loading care details…', error: 'Care details unavailable', 'identity-conflict': 'Review care record identity' }[readState]);
       }
     }
   }
