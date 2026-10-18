@@ -587,12 +587,13 @@
     const originalStayId = payload.stayId;
     const status = checkinButton ? 'checked_in' : 'checked_out';
     const original = button.textContent;
-    if (checkoutButton && !window.confirm(`Check out ${payload.dogName}?`)) return;
     const actions = button.closest('[data-v11217-roster-actions]') || button.parentElement;
     const actionName = status === 'checked_in' ? 'Check In' : 'Check Out';
     let activeButton = button;
-    const attempt = async () => {
-      if (!identityMatchesCard(card, payload, originalStayId)) return;
+    const attempt = async (checkoutNote = '') => {
+      if (!identityMatchesCard(card, payload, originalStayId)) return status === 'checked_out'
+        ? { message: 'This card changed while saving. The current stay was not moved; review its identity in Care.', retryable: false }
+        : false;
       activeButton = card.querySelector(status === 'checked_in' ? '[data-v11217-roster-checkin]' : '[data-v11217-roster-checkout]') || activeButton;
       if (!activeButton?.isConnected) {
         if (typeof window.v110ShowActionFeedback === 'function') window.v110ShowActionFeedback(card, `${actionName} is no longer available for this stay. Refresh Care and review its current status.`);
@@ -612,9 +613,13 @@
         throw new Error('This roster card changed. Reload the current stay before trying again.');
       }
       if (typeof window.v110SaveOperationalStatus !== 'function') throw new Error('Stay operations service is unavailable.');
-      const response = await window.v110SaveOperationalStatus(payload, status, card);
+      const savePayload = status === 'checked_out' && checkoutNote ? { ...payload, note: checkoutNote } : payload;
+      const response = await window.v110SaveOperationalStatus(savePayload, status, card);
       if (response?.queued) throw new Error('Stay operations cannot be queued offline. Nothing was saved.');
-      if (!identityMatchesCard(card, payload, originalStayId)) return;
+      if (!payload.stayId && savePayload.stayId) payload.stayId = savePayload.stayId;
+      if (!identityMatchesCard(card, payload, originalStayId)) return status === 'checked_out'
+        ? { message: 'This card changed while saving. The current stay was not moved; review its identity in Care.', retryable: false }
+        : false;
       if (status === 'checked_out' && typeof window.v1086MoveCheckedOutStayToPast === 'function') {
         window.v1086MoveCheckedOutStayToPast(card, payload);
       }
@@ -626,20 +631,156 @@
       });
       const feedbackHost = card;
       if (typeof window.v110ClearActionFeedback === 'function') window.v110ClearActionFeedback(feedbackHost, `${payload.dogName} ${status === 'checked_in' ? 'checked in' : 'checked out'} successfully.`);
+      return true;
     } catch (error) {
-      if (!identityMatchesCard(card, payload, originalStayId)) return;
+      if (!identityMatchesCard(card, payload, originalStayId)) return status === 'checked_out'
+        ? { message: 'This card changed while saving. The current stay was not moved; review its identity in Care.', retryable: false }
+        : false;
       const message = String(error?.message || error || 'Unknown error');
       const structural = /conflict|collision|duplicate|ambiguous|several .*match|multiple .*match|operation rows match|invalid stay|changed|reload|does not match|did not confirm|review .*booking/i.test(message);
       const guidance = structural ? ' Review the booking identity and refresh Care before taking another action.' : '';
       const retry = actionCanRetry(error);
-      if (typeof window.v110ShowActionFeedback === 'function') window.v110ShowActionFeedback(card, `${actionName} could not be saved. ${message}${guidance}`, retry ? attempt : null);
+      if (typeof window.v110ShowActionFeedback === 'function') window.v110ShowActionFeedback(card, `${actionName} could not be saved. ${message}${guidance}`, status === 'checked_in' && retry ? attempt : null);
+      return status === 'checked_out'
+        ? { message: `Check Out could not be saved. ${message}${guidance}`, retryable: retry }
+        : false;
     } finally {
       activeButton = card.querySelector(status === 'checked_in' ? '[data-v11217-roster-checkin]' : '[data-v11217-roster-checkout]') || activeButton;
       if (activeButton?.isConnected) { activeButton.disabled = false; activeButton.textContent = original; }
     }
     };
+    if (checkoutButton) {
+      openGuidedCheckout(card, button, attempt, payload);
+      return;
+    }
     await attempt();
   });
+
+  let guidedCheckoutAttempt = null;
+  let guidedCheckoutBusy = false;
+  function ensureGuidedCheckout() {
+    let modal = document.getElementById('v11217GuidedCheckout');
+    if (modal) return modal;
+    modal = document.createElement('div');
+    modal.id = 'v11217GuidedCheckout';
+    modal.className = 'v11217-modal';
+    modal.hidden = true;
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-labelledby', 'v11217GuidedCheckoutTitle');
+    modal.innerHTML = `<section class="v11217-modal-card">
+      <header class="v11217-modal-head"><div><small>DEPARTURE</small><h3 id="v11217GuidedCheckoutTitle">Check out</h3><p>Review this stay before confirming departure.</p></div><button type="button" class="v11217-modal-close" data-v11217-guided-close aria-label="Close checkout">×</button></header>
+      <div class="v11217-modal-body"><div class="v11217-modal-dog"><strong data-v11217-guided-dog></strong><span data-v11217-guided-dogid></span><span data-v11217-guided-dates></span></div>
+      <div class="v11217-guided-checklist"><p><strong>Belongings</strong><span data-v11217-guided-belongings>Not loaded · check Care before handover</span></p><p><strong>Medication reference</strong><span data-v11217-guided-medication>Not loaded · check Care before handover</span></p></div>
+      <div class="v11217-field"><label for="v11217GuidedCheckoutNote">Handover note (for this checkout)</label><textarea id="v11217GuidedCheckoutNote" data-v11217-guided-note maxlength="1000" placeholder="Optional handover details…"></textarea></div>
+      <div class="v11217-action-feedback" data-v11217-guided-feedback role="alert" aria-live="assertive" hidden></div></div>
+      <footer class="v11217-modal-actions"><button type="button" class="v11217-cancel" data-v11217-guided-close>Cancel</button><button type="button" class="v11217-confirm" data-v11217-guided-confirm>Confirm checkout</button></footer>
+      </section>`;
+    document.body.appendChild(modal);
+    modal.addEventListener('click', event => {
+      if (!guidedCheckoutBusy && (event.target === modal || event.target.closest('[data-v11217-guided-close]'))) closeGuidedCheckout();
+      if (event.target.closest('[data-v11217-guided-confirm]')) runGuidedCheckout();
+    });
+    modal.addEventListener('keydown', event => {
+      if (event.key === 'Escape') { event.preventDefault(); if (!guidedCheckoutBusy) closeGuidedCheckout(); }
+      if (event.key === 'Tab') {
+        const items = [...modal.querySelectorAll('button:not([disabled]),input:not([disabled]),textarea:not([disabled])')];
+        const first = items[0], last = items[items.length - 1];
+        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+      }
+    });
+    return modal;
+  }
+  let guidedTrigger = null;
+  function openGuidedCheckout(card, trigger, attempt, payload) {
+    if (guidedCheckoutBusy) return;
+    const modal = ensureGuidedCheckout();
+    guidedTrigger = trigger;
+    guidedCheckoutAttempt = attempt;
+    modal.querySelector('[data-v11217-guided-dog]').textContent = payload.dogName || 'Guest';
+    const dogNumber = card.dataset?.directoryDogNumber || card.querySelector('#dogNumber, [data-directory-dog-number], .directory-dog-number')?.textContent?.trim();
+    modal.querySelector('[data-v11217-guided-dogid]').textContent = dogNumber ? `Dog ID: ${dogNumber}` : '';
+    modal.querySelector('[data-v11217-guided-dates]').textContent = `${formatDate(payload.startDate)} → ${formatDate(payload.endDate)}`;
+    const loadedValue = selectors => {
+      for (const selector of selectors) {
+        const node = card.querySelector(selector);
+        if (node && !node.matches('[aria-busy="true"],[data-pending="true"],.is-pending,[data-loading="true"]')) {
+          const empty = node.querySelector('.belongings-summary-empty');
+          const list = node.querySelector('.belongings-summary-list');
+          const listText = list ? [...list.children].map(item => item.textContent.trim()).filter(Boolean).join(', ') : '';
+          const value = String(empty?.textContent || listText || node.dataset?.value || node.textContent || '').trim();
+          if (value && !/loading|not loaded|pending/i.test(value)) return value;
+        }
+      }
+      return 'Not loaded · check Care before handover';
+    };
+    modal.querySelector('[data-v11217-guided-belongings]').textContent = loadedValue(['[data-belongings-summary]']);
+    modal.querySelector('[data-v11217-guided-medication]').textContent = loadedValue(['[data-care-brief-medication]']);
+    modal.querySelector('[data-v11217-guided-note]').value = '';
+    modal.querySelector('[data-v11217-guided-feedback]').hidden = true;
+    modal.querySelector('[data-v11217-guided-confirm]').disabled = false;
+    modal.querySelector('[data-v11217-guided-confirm]').textContent = 'Confirm checkout';
+    modal.querySelectorAll('[data-v11217-guided-close]').forEach(button => { button.disabled = false; });
+    modal.hidden = false;
+    modal.querySelector('[data-v11217-guided-confirm]').focus();
+  }
+  function closeGuidedCheckout() {
+    const modal = document.getElementById('v11217GuidedCheckout');
+    if (!modal || modal.hidden) return;
+    modal.hidden = true;
+    guidedCheckoutAttempt = null;
+    const trigger = guidedTrigger;
+    guidedTrigger = null;
+    const visible = node => {
+      if (!node?.isConnected || !node.getClientRects().length || node.closest('[hidden],[aria-hidden="true"]')) return false;
+      for (let parent = node.parentElement; parent; parent = parent.parentElement) {
+        if (parent.tagName === 'DETAILS' && !parent.open && !parent.querySelector(':scope > summary')?.contains(node)) return false;
+      }
+      return true;
+    };
+    if (visible(trigger)) trigger.focus();
+    else {
+      const target = [...document.querySelectorAll('.directory-grid .directory-guest-tile-open')].find(visible) ||
+        document.querySelector('.directory-grid, .directory-dashboard-fused');
+      if (target) { if (!target.matches('button,a[href],input,select,textarea,[tabindex]')) target.setAttribute('tabindex', '-1'); target.focus(); }
+    }
+  }
+  async function runGuidedCheckout() {
+    const modal = ensureGuidedCheckout();
+    const confirm = modal.querySelector('[data-v11217-guided-confirm]');
+    if (confirm.disabled || !guidedCheckoutAttempt) return;
+    const attempt = guidedCheckoutAttempt;
+    confirm.disabled = true;
+    confirm.textContent = 'Checking out…';
+    modal.querySelector('[data-v11217-guided-note]').readOnly = true;
+    modal.querySelectorAll('[data-v11217-guided-close]').forEach(button => { button.disabled = true; });
+    try {
+      guidedCheckoutBusy = true;
+      const note = String(modal.querySelector('[data-v11217-guided-note]').value || '').trim();
+      const saved = await attempt(note);
+      if (saved === true) closeGuidedCheckout();
+      else {
+        const feedback = modal.querySelector('[data-v11217-guided-feedback]');
+        const info = saved && typeof saved === 'object' ? saved : { message: 'Checkout was not confirmed. Review the selected stay identity.', retryable: false };
+        feedback.textContent = info.message;
+        feedback.hidden = false;
+        confirm.textContent = info.retryable ? 'Retry checkout' : 'Checkout needs review';
+        confirm.disabled = !info.retryable;
+      }
+    } catch (error) {
+      const feedback = modal.querySelector('[data-v11217-guided-feedback]');
+      feedback.textContent = String(error?.message || error || 'Checkout could not be saved.');
+      feedback.hidden = false;
+      confirm.textContent = 'Checkout needs review';
+      confirm.disabled = true;
+    } finally {
+      guidedCheckoutBusy = false;
+      modal.querySelector('[data-v11217-guided-note]').readOnly = false;
+      modal.querySelectorAll('[data-v11217-guided-close]').forEach(button => { button.disabled = false; });
+      if (!confirm.disabled && confirm.textContent !== 'Retry checkout') confirm.textContent = 'Confirm checkout';
+    }
+  }
 
   document.addEventListener('click', event => {
     const earlyButton = event.target?.closest?.('[data-v11217-early-checkout]');
