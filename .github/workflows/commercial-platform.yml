@@ -1,0 +1,74 @@
+name: Commercial Platform Foundation
+on:
+  pull_request:
+    paths: ['_platform/**', '.github/workflows/commercial-platform.yml']
+  push:
+    branches: [main]
+    paths: ['_platform/**', '.github/workflows/commercial-platform.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  platform-security-and-journeys:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: _platform
+    env:
+      CI: 'true'
+      NO_UPDATE_NOTIFIER: 'true'
+      FIREBASE_CLI_DISABLE_UPDATE_CHECK: 'true'
+      PLATFORM_TEST_DATABASE_URL: postgresql://postgres:local-ci-admin@127.0.0.1:5432/palz_ci
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: palz_ci
+          POSTGRES_PASSWORD: local-ci-admin
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 10s
+          --health-timeout 5s --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: _platform/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run build
+      - run: npm test
+      - name: Test production PostgreSQL adapter against isolated service
+        run: node --import tsx --test tests/postgres.integration.ts
+      - run: npm audit --omit=dev --audit-level=high
+      - name: Install browser engines
+        run: npx playwright install --with-deps chromium webkit
+      - name: Test real local authentication and six viewport/browser combinations
+        run: npm run test:emulator
+      - name: Retain synthetic UI evidence only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: commercial-platform-ui
+          path: |
+            _platform/screenshots/
+            _platform/test-results/
+          retention-days: 7
+  legacy-publication-isolation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/jekyll-build-pages@v1
+        with:
+          source: ./
+          destination: ./_site
+      - name: Commercial server and source must never be published by Pages
+        run: |
+          test -f _site/index.html
+          test -f _site/care.js
+          test ! -e _site/_platform
+          test ! -e _site/src/server.ts
