@@ -88,6 +88,8 @@ test('roster actions are separate from profile open, isolate same-name dogs, ret
     ['stay-a', '11111111-1111-4111-8111-111111111111', 'checked_in']
   ]);
   await staying.locator('[data-v11217-roster-checkout]').click();
+  await expect(page.locator('#v11217GuidedCheckout')).toBeVisible();
+  await page.locator('[data-v11217-guided-confirm]').click();
   await expect(staying).toHaveAttribute('data-moved-to-past', 'true');
   await expect(staying.locator('[data-v11217-roster-actions]')).toHaveCount(0);
   expect(await page.evaluate(() => window.profileOpenCount)).toBe(0);

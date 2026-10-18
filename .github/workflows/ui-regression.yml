@@ -60,6 +60,12 @@ on:
       - 'playwright.care-profile-tools.config.js'
       - 'tests/care-profile-tools.browser.spec.js'
       - 'owner-handoff.js'
+      - 'playwright.arrival-checkout.config.js'
+      - 'tests/care-arrival-ready.browser.spec.js'
+      - 'tests/care-intake-status.browser.spec.js'
+      - 'tests/guided-checkout.browser.spec.js'
+      - 'tests/care-arrival-checkout-layout.browser.spec.js'
+      - 'tests/fixtures/guided-checkout-fixture.js'
       - 'playwright.owner-handoff.config.js'
       - 'tests/owner-handoff.browser.spec.js'
       - 'tests/boarding-owner-handoff.browser.spec.js'
@@ -182,6 +188,12 @@ on:
       - 'playwright.care-profile-tools.config.js'
       - 'tests/care-profile-tools.browser.spec.js'
       - 'owner-handoff.js'
+      - 'playwright.arrival-checkout.config.js'
+      - 'tests/care-arrival-ready.browser.spec.js'
+      - 'tests/care-intake-status.browser.spec.js'
+      - 'tests/guided-checkout.browser.spec.js'
+      - 'tests/care-arrival-checkout-layout.browser.spec.js'
+      - 'tests/fixtures/guided-checkout-fixture.js'
       - 'playwright.owner-handoff.config.js'
       - 'tests/owner-handoff.browser.spec.js'
       - 'tests/boarding-owner-handoff.browser.spec.js'
@@ -301,6 +313,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          - group: arrival-checkout
+            configs: playwright.arrival-checkout.config.js
           - group: owner-handoff
             configs: playwright.owner-handoff.config.js
           - group: care-profile-tools

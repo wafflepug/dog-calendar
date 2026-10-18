@@ -68,6 +68,8 @@ for (const width of [360, 1280]) {
     await expect(checkin).toHaveCount(0);
     await expect(card.locator('[data-v11217-roster-checkout]')).toBeEnabled();
     await card.locator('[data-v11217-roster-checkout]').click();
+    await expect(page.locator('#v11217GuidedCheckout')).toBeVisible();
+    await page.locator('[data-v11217-guided-confirm]').click();
     await expect(page.locator(`#past-directory-grid [data-directory-stay-id="${ids[0]}"]`)).toHaveCount(1);
     await expect(card.locator('[data-v11217-roster-actions]')).toHaveCount(0);
     await expect(page.locator(`[data-directory-stay-id="${ids[1]}"] [data-v11217-roster-checkin]`)).toBeEnabled();
@@ -93,13 +95,15 @@ test('offline and failed writes show inline feedback, offer no unsafe retry, and
   await page.evaluate(() => window.fail = true);
   await card.locator('.v11217-roster-more-actions > summary').click();
   await card.locator('[data-v11217-roster-checkout]').click();
-  const failed = card.locator(':scope > .v110-action-feedback');
+  await page.locator('[data-v11217-guided-confirm]').click();
+  const failed = page.locator('#v11217GuidedCheckout [data-v11217-guided-feedback]');
   await expect(failed).toHaveAttribute('role', 'alert');
   await expect(failed).toContainText(/Synthetic write failure/);
   await expect(failed.getByRole('button', {name:'Retry'})).toHaveCount(0);
   await expect(card.locator('[data-v11217-roster-checkin]')).toBeEnabled();
   await expect(card.locator('[data-v11217-roster-checkout]')).toBeEnabled();
   await expect(page.locator('#past-directory-grid .directory-card')).toHaveCount(0);
+  await page.locator('#v11217GuidedCheckout').getByRole('button', {name:'Cancel', exact:true}).click();
   await page.evaluate(() => window.fail = false);
   await card.locator('[data-v11217-roster-checkin]').click();
   await expect(card.locator('[data-v11217-roster-checkin]')).toHaveCount(0);

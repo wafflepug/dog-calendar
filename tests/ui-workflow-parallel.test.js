@@ -8,6 +8,7 @@ const workflow = readFileSync(path.join(__dirname, '../.github/workflows/ui-regr
 const jobs = Object.fromEntries([...workflow.matchAll(/^  ([\w-]+):\n([\s\S]*?)(?=^  [\w-]+:|$(?![\s\S]))/gm)]
   .filter(([text]) => /runs-on:/.test(text)).map(([, name, body]) => [name, body]));
 const expectedConfigs = [
+  'playwright.arrival-checkout.config.js',
   'playwright.owner-handoff.config.js',
   'playwright.care-profile-tools.config.js',
   'playwright.care-profile-condensed.config.js',
