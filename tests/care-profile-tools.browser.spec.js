@@ -122,7 +122,8 @@ for (const [name, width, colorScheme] of [['320-light', 320, 'light'], ['320-dar
     await expect(tools).not.toHaveAttribute('open', '');
     await expect(records).not.toHaveAttribute('open', '');
 
-    const readiness = card.locator('.directory-care-readiness');
+    await summary.click();
+    const readiness = tools.locator('.directory-care-readiness');
     await readiness.locator(':scope > summary').click();
     await readiness.locator('[data-care-readiness-action="intake"]').click();
     await expect(tools).toHaveAttribute('open', '');
