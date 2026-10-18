@@ -1,0 +1,15 @@
+node_modules/
+public/
+.local/
+.env
+.env.*
+!.env.example
+firebase-debug.log*
+ui-debug.log*
+*.sqlite*
+test-results/
+playwright-report/
+*.log
+audit-*.json
+screenshots/
+dist/

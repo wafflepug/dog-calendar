@@ -1,0 +1,35 @@
+{
+  "name": "palz-stay-commercial-foundation",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test tests/*.test.ts",
+    "test:emulator": "firebase emulators:exec --only auth --project demo-palz-stay \"node scripts/verify-emulator.mjs\"",
+    "dev": "npm run build && firebase emulators:exec --only auth --project demo-palz-stay --import=.local/auth --export-on-exit=.local/auth \"node dist/server.js\"",
+    "start": "node dist/server.js"
+  },
+  "dependencies": {
+    "@electric-sql/pglite": "0.5.10",
+    "firebase": "13.0.0",
+    "firebase-admin": "14.5.0",
+    "pg": "8.23.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.55.1",
+    "@types/node": "24",
+    "@types/pg": "8.23.1",
+    "esbuild": "0.28.2",
+    "firebase-tools": "15.34.0",
+    "tsx": "4.23.15",
+    "typescript": "7.0.2"
+  },
+  "overrides": {
+    "@grpc/grpc-js": "1.14.6"
+  }
+}
