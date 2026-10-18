@@ -1,11 +1,28 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { readFile, mkdtemp, rm } from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
 import { createHash } from 'node:crypto';
 import { PGlite } from '@electric-sql/pglite';
 import { createStore, DomainError } from '../src/database.js';
 
 const business = (name: string, slug: string) => ({name,slug,timezone:'Australia/Sydney',capacity:20});
+
+test('a clean nested data directory starts successfully and retains its business and dog across restart',async()=>{
+  const directory=await mkdtemp(join(tmpdir(),'palz-first-start-'));
+  const dataDir=join(directory,'new-parent','pg');
+  let store:Awaited<ReturnType<typeof createStore>>|undefined;
+  try {
+    store=await createStore({dataDir});
+    const b=await store.createBusiness('synthetic-owner',business('Fresh business','fresh-business'));
+    const dog=await store.createDog('synthetic-owner',b.id,{name:'Coco',breed:''});
+    await store.close();store=undefined;
+    store=await createStore({dataDir});
+    assert.deepEqual((await store.listBusinesses('synthetic-owner')).map(x=>x.id),[b.id]);
+    assert.equal((await store.getWorkspace('synthetic-owner',b.id)).dogs[0].id,dog.id);
+  } finally {await store?.close();await rm(directory,{recursive:true,force:true});}
+});
 
 test('restricted PostgreSQL role enforces tenant RLS, scoped foreign keys, and transaction context reset', async () => {
   const db = new PGlite() as any; await db.waitReady;

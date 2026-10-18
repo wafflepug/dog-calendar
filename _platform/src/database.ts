@@ -1,5 +1,5 @@
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
-import { readFile } from 'node:fs/promises';
+import { readFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { PGlite } from '@electric-sql/pglite';
@@ -64,6 +64,7 @@ export async function createStore(options: StoreOptions = {}): Promise<Store> {
     }
   } else {
     local = true;
+    if (options.dataDir) await mkdir(options.dataDir, {recursive:true});
     const pglite = new PGlite(options.dataDir);
     await pglite.waitReady;
     db = pglite as unknown as Db;
