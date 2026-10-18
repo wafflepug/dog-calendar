@@ -8,7 +8,8 @@
   const OWN = '[data-waffle-arrival-ready]';
   let observer = null;
   let refreshQueued = false;
-  let focusIndex = -1;
+  let focusAnchorCard = null;
+  let focusNextStayId = '';
 
   function today() {
     if (typeof window.getLocalTodayDateString === 'function') {
@@ -93,8 +94,19 @@
       button.addEventListener('click', () => {
         const cards = visibleCheckins(grid);
         if (!cards.length) return;
-        focusIndex = (focusIndex + 1) % cards.length;
-        cards[focusIndex].focus({ preventScroll: false });
+        let next = focusNextStayId ? cards.find(item => identity(item.closest(CARD)).stayId === focusNextStayId) : null;
+        if (!next && focusAnchorCard?.isConnected) {
+          const ordered = Array.from(grid.querySelectorAll(CARD));
+          const anchorIndex = ordered.indexOf(focusAnchorCard);
+          next = cards.find(item => ordered.indexOf(item.closest(CARD)) > anchorIndex);
+        }
+        next ||= cards[0];
+        const card = next.closest(CARD);
+        card?.querySelector('[data-v11217-roster-checkin]')?.focus({ preventScroll: false });
+        focusAnchorCard = card || null;
+        const currentIndex = cards.indexOf(next);
+        const following = cards[(currentIndex + 1) % cards.length];
+        focusNextStayId = following ? identity(following.closest(CARD)).stayId : '';
       });
       host.parentNode?.insertBefore(button, host);
     }

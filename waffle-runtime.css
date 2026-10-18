@@ -2,8 +2,8 @@
    Build: 2026.08.27.04
    Historical base styles remain compatibility sources during Phase 3A, but pages no longer
    reference them individually. Preserve this import order until modules are folded in. */
-@import url("waffle-app.css?build=2026.08.27.04&rev=2026.10.18.02");
-@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.10.18.02");
+@import url("waffle-app.css?build=2026.08.27.04&rev=2026.10.18.03");
+@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.10.18.03");
 @import url("waffle-v10.8.2.css?build=2026.08.27.04");
 @import url("waffle-v10.8.3.css?build=2026.08.27.04");
 @import url("waffle-v10.8.5.css?build=2026.08.27.04");
@@ -11,12 +11,12 @@
 @import url("waffle-v10.8.7.css?build=2026.08.27.04");
 @import url("waffle-v10.8.8.css?build=2026.08.27.04");
 @import url("waffle-v10.8.9.css?build=2026.08.27.04");
-@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.10.18.02");
+@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.10.18.03");
 @import url("waffle-v11.0.3.css?build=2026.08.27.04");
 @import url("waffle-v11.0.5.css?build=2026.08.27.04");
-@import url("waffle-v11.1.94.css?build=2026.10.18.02");
-@import url("waffle-v11.1.95.css?build=2026.10.18.02");
-@import url("waffle-v11.1.96.css?build=2026.10.18.02&rev=2026.10.18.02");
+@import url("waffle-v11.1.94.css?build=2026.10.18.03");
+@import url("waffle-v11.1.95.css?build=2026.10.18.03");
+@import url("waffle-v11.1.96.css?build=2026.10.18.03&rev=2026.10.18.03");
 
 /* ============================================================
    MOBILE FIRST-PAINT STABILITY GATE
@@ -2736,3 +2736,28 @@ body.dark-theme [data-waffle-arrival-next],body.dark-theme [data-arrival-review]
 #v11217GuidedCheckout .v11217-guided-checklist{display:grid;gap:8px;margin:12px 0}#v11217GuidedCheckout .v11217-guided-checklist p{display:grid;gap:4px;margin:0;padding:10px;border:1px solid var(--border,#cbd5e1);border-radius:10px;overflow-wrap:anywhere}
 
 #v11217GuidedCheckout .v11217-modal-head small{font-size:12px;line-height:1.4}#v11217GuidedCheckout .v11217-confirm{background:#92400e;border-color:#92400e;color:#fff}body.dark-theme #v11217GuidedCheckout .v11217-modal-head small{color:#fcd34d}
+
+/* Daily Care tools stay collapsed until deliberately opened. */
+body[data-waffle-page="directory"] .care-roster-focus{flex:1 1 100%;min-width:0;max-width:100%;margin-top:6px;border:1px solid var(--wh-border,#c6d0e4);border-radius:12px;background:var(--wh-surface,#fff);color:var(--wh-text,#17243b);font:500 14px/1.5 system-ui,sans-serif}
+.care-roster-focus[hidden],.v11217-departure-banner[hidden],.v11217-departure-banner [hidden]{display:none!important}
+.care-roster-focus>summary{box-sizing:border-box;min-height:44px;padding:10px 12px;cursor:pointer;font-weight:700;overflow-wrap:anywhere}
+.care-roster-focus [data-focus-options]{display:flex;flex-wrap:wrap;gap:8px;padding:4px 12px 10px}
+.care-roster-focus button{box-sizing:border-box;min-height:44px;min-width:44px;max-width:100%;padding:8px 10px;border:1px solid var(--wh-border,#c6d0e4);border-radius:10px;background:var(--wh-surface,#fff);color:inherit;font:650 14px/1.4 system-ui,sans-serif;white-space:normal;cursor:pointer}
+.care-roster-focus button[aria-pressed="true"]{background:#5b21b6;border-color:#5b21b6;color:#fff}
+.care-roster-focus button:disabled{opacity:.6;cursor:default}
+.care-roster-focus [data-focus-count]{display:inline-block;min-width:1.2em;margin-left:4px;font-weight:800}
+.care-roster-focus [data-focus-status]{margin:0;padding:0 12px 12px;overflow-wrap:anywhere}
+.v11217-departure-banner{display:flex;gap:8px;align-items:flex-start;max-width:100%;box-sizing:border-box;margin:0 0 12px;padding:8px 10px;border:1px solid var(--wh-border,#c6d0e4);border-radius:12px;background:var(--wh-surface,#fff);color:var(--wh-text,#17243b);font:500 14px/1.5 system-ui,sans-serif}
+.v11217-departure-banner details{flex:1;min-width:0}.v11217-departure-banner summary{min-height:44px;align-content:center;cursor:pointer;font-weight:700;overflow-wrap:anywhere}
+.v11217-departure-banner label{display:block;margin-top:8px;font-weight:650}
+.v11217-departure-banner textarea{box-sizing:border-box;width:100%;min-height:100px;padding:10px;border:1px solid var(--wh-border,#c6d0e4);border-radius:10px;background:var(--wh-surface,#fff);color:inherit;font:400 16px/1.5 system-ui,sans-serif;resize:vertical}
+.v11217-departure-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.v11217-departure-banner button{box-sizing:border-box;min-height:44px;min-width:44px;max-width:100%;padding:8px 10px;border:1px solid var(--wh-border,#c6d0e4);border-radius:10px;background:var(--wh-surface,#fff);color:inherit;font:650 14px/1.4 system-ui,sans-serif;white-space:normal;cursor:pointer}
+.v11217-departure-banner [data-v11217-departure-copy]{background:#5b21b6;border-color:#5b21b6;color:#fff}
+.v11217-departure-banner [data-v11217-departure-status]{margin:8px 0 0;overflow-wrap:anywhere}
+.care-roster-focus :focus-visible,.v11217-departure-banner :focus-visible{outline:3px solid var(--wh75-accent,#7c3aed);outline-offset:3px}
+[data-care-readiness-detail]:empty{display:none!important}
+.directory-care-readiness [data-care-readiness-summary][data-state="neutral"]{background:transparent;color:var(--wh-muted,#475569);border-color:transparent}
+body.dark-theme .care-roster-focus,body.dark-theme .v11217-departure-banner,body.dark-theme .care-roster-focus button:not([aria-pressed="true"]),body.dark-theme .v11217-departure-banner textarea,body.dark-theme .v11217-departure-banner [data-v11217-departure-dismiss],body.dark-theme .v11217-departure-banner [data-v11217-departure-share]{background:#172236;color:#e2e8f0;border-color:#526178}
+body.dark-theme .directory-care-readiness [data-care-readiness-summary][data-state="neutral"]{color:#cbd5e1}
+@media(max-width:600px){.care-roster-focus [data-focus-options]{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.care-roster-focus button{width:100%}.v11217-departure-banner{flex-wrap:wrap}.v11217-departure-banner details{flex-basis:100%}.v11217-departure-banner [data-v11217-departure-dismiss]{margin-left:auto}}

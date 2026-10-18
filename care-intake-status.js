@@ -5,6 +5,7 @@
 
   const linked = new WeakMap();
   const lastStates = new WeakMap();
+  const refreshingBrief = new WeakSet();
   let observers = new Map();
   let rootObserver = null;
 
@@ -103,6 +104,12 @@
     const previous = lastStates.get(card);
     if (previous !== signature) {
       lastStates.set(card, signature);
+      const refreshCareSetup = window.WAFFLE_REFRESH_CARE_SETUP;
+      if (card.isConnected && card.classList.contains('is-profile-active') && typeof refreshCareSetup === 'function' && !refreshingBrief.has(card)) {
+        refreshingBrief.add(card);
+        try { refreshCareSetup(card); }
+        finally { refreshingBrief.delete(card); }
+      }
       window.dispatchEvent(new CustomEvent('waffle:intake-status-updated', { detail: { code: state.code, stayKey: stayKey(card) } }));
     }
     return state;

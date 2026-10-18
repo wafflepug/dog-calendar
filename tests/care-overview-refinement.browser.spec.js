@@ -9,6 +9,7 @@ const settingsSource = fs.readFileSync(path.join(root, 'waffle-ui.js'), 'utf8');
 const paletteCss = [...settingsSource.matchAll(/:root\[data-waffle-colour-style="[^"]+"\](?: body\.dark-theme)?\s*\{[^}]+\}/g)].map(match => match[0]).join('\n');
 const css = importedCss + '\n' + runtimeCss.replace(/@import[^;]+;/g, '') + '\n' + paletteCss;
 const appSource = fs.readFileSync(path.join(root, 'waffle-app.js'), 'utf8');
+const intakeStatusSource = fs.readFileSync(path.join(root, 'care-intake-status.js'), 'utf8');
 const historySource = fs.readFileSync(path.join(root, 'waffle-v10.8.js'), 'utf8');
 const historyCss = fs.readFileSync(path.join(root, 'waffle-v10.8.css'), 'utf8');
 const evidenceDir = path.join(root, 'evidence', 'care-overview');
@@ -70,6 +71,7 @@ const briefTestCode = `
   ${briefFreshnessHelpers}
   ${briefRenderer}
   window.renderBrief = renderDirectoryCareBrief;
+  window.WAFFLE_REFRESH_CARE_SETUP = card => { if (card?.isConnected && card.classList.contains('is-profile-active')) renderDirectoryCareBrief(card); };
   window.seedBriefFixture = card => { directoryProfileDetailCache['stay-a'] = { stayKey: 'stay-a', intakeAttributes: { feedingTimes: '7 am', foodAmount: '1 cup', medicationInstructions: 'With dinner' }, intakeAttributesSource: 'Saved profile' }; careRiskRecordsCache['stay-a'] = { riskFlags: { foodAllergy: true } }; card.dataset.intakeMethod = 'legacy'; renderDirectoryCareBrief(card); card.dataset.briefDebug = JSON.stringify({ key: card.dataset.stayKey, safety: card.querySelector('[data-care-brief-safety]')?.innerText, flags: careRiskRecordsCache['stay-a'] }); };
 `;
 function fixture(theme = '') {
@@ -428,37 +430,45 @@ test('Care overview text and muted labels meet the scoped contrast targets in li
 
 test('readiness checklist updates from cached profile state, prioritizes gaps, and stays touch-sized', async ({ page }) => {
   await page.setContent(`<!doctype html><html><head><style>${css}</style></head><body><main class="directory-card is-profile-active" data-stay-key="milo|stay" data-directory-stay-key="milo|stay">
-    <section class="directory-care-brief" data-directory-care-brief>
+    <section class="directory-care-brief" data-directory-care-brief><div class="directory-care-brief-actions"><button data-p4-dir="owner">Owner care link</button></div>
       <details class="directory-care-readiness"><summary>Review checklist <strong data-care-readiness-summary></strong></summary><div class="directory-care-readiness-list" data-care-readiness-list>
       ${['intake','handover'].map(key => `<div class="directory-care-readiness-row" data-care-readiness-item="${key}"><span class="directory-care-readiness-copy"><strong>${key}</strong><small data-care-readiness-detail></small></span><span class="directory-care-readiness-status" data-care-readiness-status></span><button>Review</button></div>`).join('')}
       </div></details><section class="directory-care-brief-item directory-care-brief-safety"><div data-care-brief-safety></div></section><p data-care-brief-feeding></p><p data-care-brief-medication></p><span data-care-brief-freshness></span><span data-care-brief-call-owner></span>
       <section class="directory-care-brief-item directory-care-brief-note"><div class="directory-care-brief-note-heading"><h4>Handover note</h4><button class="directory-care-brief-note-edit" data-care-brief-action="handover" aria-label="Update handover">Update</button></div><p class="directory-care-brief-value">Call before pickup\nMedication is in the blue bag.</p></section>
-      <div data-directory-intake>Intake not sent</div><button data-directory-edit-field="notes" data-directory-current-value="" ></button>
+      <div data-directory-intake><span class="directory-intake-dot is-not-sent"></span>No digital intake on file</div><button data-directory-edit-field="notes" data-directory-current-value="" ></button>
     </section></main></body></html>`);
+  await page.addScriptTag({ content: intakeStatusSource });
   await page.addScriptTag({ content: briefTestCode });
   await page.evaluate(() => {
-    window.renderBrief(document.querySelector('.directory-card'));
+    WAFFLE_INTAKE_STATUS.refresh(document.querySelector('.directory-card'));
   });
-  await expect(page.locator('[data-care-readiness-summary]')).toHaveText('Needs intake');
+  await expect(page.locator('[data-care-readiness-summary]')).toHaveText('Add handover');
+  await expect(page.locator('[data-care-readiness-item="intake"]')).toHaveAttribute('data-compact-status-available', 'true');
+  await expect(page.locator('[data-care-readiness-item="intake"] [data-care-readiness-status]')).toHaveText('Not prepared');
   await expect(page.locator('[data-care-brief-safety]')).toContainText('Safety profile not yet available');
   await expect(page.locator('.directory-care-brief-safety')).toBeVisible();
   await page.evaluate(() => {
     const card = document.querySelector('.directory-card');
     card.dataset.intakeMethod = 'legacy';
-    window.renderBrief(card);
+    WAFFLE_INTAKE_STATUS.refresh(card);
   });
-  await expect(page.locator('[data-care-readiness-item="intake"]')).toHaveAttribute('data-state', 'ready');
-  await expect(page.locator('[data-care-readiness-summary]')).toHaveText('Needs handover');
+  await expect(page.locator('[data-care-readiness-item="intake"]')).toHaveAttribute('data-state', 'pending');
+  await expect(page.locator('[data-care-readiness-item="intake"] [data-care-readiness-status]')).toHaveText('Care profile available');
+  await expect(page.locator('[data-care-readiness-item="intake"] [data-care-readiness-detail]')).toHaveText('Current form completion not verified.');
+  await expect(page.locator('[data-care-readiness-summary]')).toHaveText('Add handover');
   await page.evaluate(() => {
     const card = document.querySelector('.directory-card');
     directoryProfileDetailCache[card.dataset.stayKey] = { intakeAttributes: { feedingTimes: '7 am', medicationInstructions: 'With dinner' } };
     careRiskRecordsCache[card.dataset.stayKey] = { riskFlags: {} };
-    card.querySelector('[data-directory-intake]').textContent = 'Intake complete';
+    card.dataset.intakeMethod = 'digital';
+    card.querySelector('[data-directory-intake]').innerHTML = '<span class="directory-intake-dot is-complete"></span><span>Intake complete</span><span class="directory-record-meta">18 Oct 2026</span>';
     card.querySelector('[data-directory-edit-field="notes"]').dataset.directoryCurrentValue = 'Call before pickup';
-    window.renderBrief(card);
+    WAFFLE_INTAKE_STATUS.refresh(card);
   });
-  await expect(page.locator('[data-care-readiness-summary]')).toHaveText('Setup complete');
-  await expect(page.locator('[data-care-readiness-summary]')).toHaveAttribute('data-state', 'ready');
+  await expect(page.locator('[data-care-readiness-item="intake"]')).toHaveAttribute('data-state', 'ready');
+  await expect(page.locator('[data-care-readiness-item="intake"] [data-care-readiness-status]')).toHaveText('Form received');
+  await expect(page.locator('[data-care-readiness-summary]')).toHaveText('Details');
+  await expect(page.locator('[data-care-readiness-summary]')).toHaveAttribute('data-state', 'neutral');
   await expect(page.locator('.directory-care-readiness > summary')).toHaveAttribute('aria-description', /setup checks only/);
   // A completed form and handover cannot override an unresolved dog identity.
   await page.evaluate(() => {
@@ -475,7 +485,7 @@ test('readiness checklist updates from cached profile state, prioritizes gaps, a
     delete card.dataset.profileIdentityBlockedReason;
     window.renderBrief(card);
   });
-  await expect(page.locator('[data-care-readiness-summary]')).toHaveText('Setup complete');
+  await expect(page.locator('[data-care-readiness-summary]')).toHaveText('Details');
   await expect(page.locator('[data-care-brief-safety]')).toHaveAttribute('data-state', 'clear');
   await expect(page.locator('.directory-care-brief-safety')).toHaveAttribute('data-state', 'clear');
   await page.evaluate(() => {

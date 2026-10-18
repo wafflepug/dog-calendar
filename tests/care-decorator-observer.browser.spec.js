@@ -34,9 +34,9 @@ test('Care count observer updates for late current and Past grids without duplic
 });
 
 test('repeated care-card decoration leaves unchanged DOM untouched and updates changed signals', async ({ page }) => {
-  const decorateStart = carePolish.indexOf('  function decorateCareCard(card) {');
+  const decorateStart = carePolish.indexOf('  function renderCareSignals(card) {');
   const decorateEnd = carePolish.indexOf('\n  function decorateAllCareCards()', decorateStart);
-  if (decorateStart < 0 || decorateEnd < 0) throw new Error('Could not locate the care-card decorator.');
+  if (decorateStart < 0 || decorateEnd < 0) throw new Error('Could not locate the care-signal and care-card decorators.');
   const decorator = carePolish.slice(decorateStart, decorateEnd);
   await page.setContent('<body><article id="current" class="directory-card is-profile-active" data-directory-stay-key="stay-1"><header class="directory-card-header"><span class="directory-status-tag tag-at-home">At Home</span></header><div data-directory-profile-roster-badges><button class="directory-guest-tile-open"></button></div></article><article id="past" class="directory-card is-profile-active" data-directory-stay-key="stay-2" data-v1082-past-stay="true"><header class="directory-card-header"><span class="directory-status-tag tag-checked-out">Checked Out</span></header><div data-directory-profile-roster-badges><button class="directory-guest-tile-open"></button></div></article></body>');
   const result = await page.evaluate(decorator => {

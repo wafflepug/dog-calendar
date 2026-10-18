@@ -8672,30 +8672,22 @@ registerWaffleServiceWorker();
                 : null;
         const activeFlags = safetyRecord ? getActiveCareFlags(safetyRecord) : [];
 
+        const intakeState = window.WAFFLE_INTAKE_STATUS?.getState(card)
+            || { code: 'unknown', label: 'Status unknown', detail: 'Current form completion not verified.' };
         const readinessItems = {
             intake: {
-                ready: ['digital', 'legacy'].includes(String(card.dataset.intakeMethod || '')) || /intake complete/i.test(card.querySelector('[data-directory-intake]')?.textContent || ''),
-                status: 'Not sent',
-                detail: 'Owner intake form'
+                ready: intakeState.code === 'complete',
+                pending: intakeState.code === 'unknown',
+                status: intakeState.label,
+                detail: intakeState.detail || ''
             },
             handover: {
                 ready: !!String(card.querySelector('[data-directory-edit-field="notes"]')?.dataset.directoryCurrentValue || card.dataset.v1088Notes || '').trim(),
                 status: 'Add note',
-                detail: 'Handover note'
+                detail: ''
             }
         };
-        const intakeText = String(card.querySelector('[data-directory-intake]')?.textContent || '');
-        if (readinessItems.intake.ready) {
-            readinessItems.intake.status = 'Complete';
-            readinessItems.intake.detail = 'Owner form received';
-        } else if (/awaiting owner/i.test(intakeText)) {
-            readinessItems.intake.status = 'Awaiting';
-            readinessItems.intake.detail = 'Waiting for owner';
-        }
-        if (readinessItems.handover.ready) {
-            readinessItems.handover.status = 'Ready';
-            readinessItems.handover.detail = 'Note recorded';
-        }
+        if (readinessItems.handover.ready) readinessItems.handover.status = 'Ready';
         const checklist = brief.querySelector('[data-care-readiness-list]');
         if (checklist) {
             Object.entries(readinessItems).forEach(([key, item]) => {
@@ -8703,19 +8695,17 @@ registerWaffleServiceWorker();
                 if (!row) return;
                 const status = row.querySelector('[data-care-readiness-status]');
                 const detail = row.querySelector('[data-care-readiness-detail]');
-                const needsAttention = !item.ready && item.status !== 'Loading';
+                const needsAttention = !item.ready && !item.pending && item.status !== 'Loading';
                 setDirectorySummaryData(row, 'state', needsAttention ? 'attention' : (item.ready ? 'ready' : 'pending'));
                 setDirectorySummaryText(status, item.status);
                 setDirectorySummaryText(detail, item.detail);
             });
-            const unresolved = Object.values(readinessItems).filter(item => !item.ready && item.status !== 'Loading').length;
             const summary = brief.querySelector('[data-care-readiness-summary]');
             if (summary) {
                 const identityNeedsReview = identityAmbiguous || identityBlocked;
                 setDirectorySummaryText(summary, identityNeedsReview ? 'Needs identity review'
-                    : !readinessItems.intake.ready ? 'Needs intake'
-                    : unresolved ? 'Needs handover' : 'Setup complete');
-                setDirectorySummaryData(summary, 'state', identityNeedsReview || unresolved ? 'attention' : 'ready');
+                    : !readinessItems.handover.ready ? 'Add handover' : 'Details');
+                setDirectorySummaryData(summary, 'state', identityNeedsReview || !readinessItems.handover.ready ? 'attention' : 'neutral');
                 setDirectorySummaryAttribute(summary.closest('summary'),
                     'aria-description',
                     'Intake and handover setup checks only. Review safety, feeding and medication separately.');
@@ -11653,6 +11643,8 @@ registerWaffleServiceWorker();
             document.querySelector('[data-v1082-stay-tab].is-active')?.dataset.v1082StayTab ||
             'current'
         );
+        const workflowFilter = window.WAFFLE_CARE_ROSTER_FOCUS;
+        workflowFilter?.beginFilterPass?.();
 
         let visibleMatches = 0;
         document
@@ -11661,12 +11653,8 @@ registerWaffleServiceWorker();
             )
             .forEach(card => {
                 if (profileMode) {
-                    card.style.display =
-                        card.classList.contains(
-                            'is-profile-active'
-                        )
-                            ? 'block'
-                            : 'none';
+                    const profileDisplay = card.classList.contains('is-profile-active') ? 'block' : 'none';
+                    if (card.style.display !== profileDisplay) card.style.display = profileDisplay;
                     return;
                 }
 
@@ -11693,39 +11681,59 @@ registerWaffleServiceWorker();
                     .filter(value => value && !/^(?:unknown|n\/a|not provided|none|-)$/i.test(value))
                     .join(' ').toLowerCase();
                 const matchesSearch = !search || identity.includes(search);
-                if (matchesView && matchesSearch) visibleMatches += 1;
+                const matchesWorkflow = activeView !== 'current' || !workflowFilter || typeof workflowFilter.matches !== 'function' || workflowFilter.matches(card);
+                const matchesAll = matchesView && matchesSearch && matchesWorkflow;
+                if (matchesAll) visibleMatches += 1;
 
-                card.style.display =
-                    matchesView && matchesSearch
-                        ? 'block'
-                        : 'none';
+                const nextDisplay = matchesAll ? 'block' : 'none';
+                if (card.style.display !== nextDisplay) card.style.display = nextDisplay;
             });
 
         updateDirectoryRosterSummary();
         const status = ensureDirectorySearchStatus();
         if (status) {
-            status.hidden = !search || profileMode;
-            status.closest('.guest-directory-toolbar')?.classList.toggle('has-search-status', Boolean(search) && !profileMode);
+            const workflowState = workflowFilter?.getState?.() || { mode: 'all' };
+            const hasWorkflowFilter = activeView === 'current' && workflowState.mode && workflowState.mode !== 'all';
+            const hideStatus = (!search && !hasWorkflowFilter) || profileMode;
+            const clearSearch = status.querySelector('[data-directory-search-clear]');
+            if (clearSearch && clearSearch.hidden !== !search) clearSearch.hidden = !search;
+            if (status.hidden !== hideStatus) status.hidden = hideStatus;
+            status.closest('.guest-directory-toolbar')?.classList.toggle('has-search-status', (Boolean(search) || Boolean(hasWorkflowFilter)) && !profileMode);
             const label = activeView === 'future' ? 'Arriving' : activeView === 'past' ? 'Past' : 'Staying';
             const message = status.querySelector('[data-directory-search-message]');
-            if (message && search) {
+            if (message && (search || hasWorkflowFilter)) {
                 const deferredControl = activeView === 'future' && document.querySelector('[data-v11196-expand-later]:not([hidden])');
                 const range = window.WAFFLE_V11196_FUTURE_RANGE;
                 const rangeStateKnown = typeof range?.isExpanded === 'function' && typeof range?.deferredCount === 'function';
                 const deferredArrivals = activeView === 'future' && (rangeStateKnown
                     ? Number(range.deferredCount()) > 0 && !range.isExpanded()
                     : deferredControl?.dataset?.v11196Action === 'expand');
+                const queryLabel = hasWorkflowFilter ? (workflowFilter?.labelForMode?.(workflowState.mode) || '') : '';
                 const nextMessage = visibleMatches
-                    ? `${visibleMatches} ${visibleMatches === 1 ? 'match' : 'matches'} in ${label}${deferredArrivals ? ' · next 7 days' : ''}`
-                    : deferredArrivals
+                    ? `${visibleMatches} ${visibleMatches === 1 ? 'match' : 'matches'}${queryLabel ? ` for ${queryLabel}` : ''} in ${label}${deferredArrivals ? ' · next 7 days' : ''}`
+                    : deferredArrivals && !hasWorkflowFilter
                         ? `No loaded arrivals match “${input.value.trim()}”. Later arrivals are not included until opened.`
-                        : `No guests match “${input.value.trim()}” in ${label}.`;
+                        : search && hasWorkflowFilter
+                            ? `No loaded guests match “${input.value.trim()}” and ${queryLabel} in ${label}.`
+                            : search
+                                ? `No guests match “${input.value.trim()}” in ${label}.`
+                                : `No loaded guests match ${queryLabel} in ${label}. Unknown or conflicting stay status is excluded.`;
                 if (message && message.textContent !== nextMessage) message.textContent = nextMessage;
             }
-            status.classList.toggle('is-empty', Boolean(search) && visibleMatches === 0);
+            status.classList.toggle('is-empty', (Boolean(search) || Boolean(hasWorkflowFilter)) && visibleMatches === 0);
         }
-        updateDirectoryEmptyState();
+        workflowFilter?.afterCanonicalFilter?.({ activeView, search, profileMode, visibleMatches });
+        if (workflowFilter && activeView === 'current' && workflowFilter.getState?.()?.mode !== 'all' && !profileMode) {
+            const empty = document.getElementById('directory-empty-state');
+            if (empty && !empty.hidden) empty.hidden = true;
+        } else updateDirectoryEmptyState();
     }
+
+    window.WAFFLE_REFRESH_CARE_SETUP = card => {
+        if (card?.isConnected) renderDirectoryCareBrief(card);
+    };
+
+    window.WAFFLE_REAPPLY_DIRECTORY_FILTER = filterGuestDirectoryCards;
 
     function updateDirectoryRosterSummary() {
         const summary = document.getElementById('directory-roster-summary');

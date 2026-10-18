@@ -4,7 +4,7 @@ module.exports = defineConfig({
   testDir: './tests',
   testMatch: 'care-mobile-hierarchy.browser.spec.js',
   timeout: 60000,
-  workers: 1,
+  workers: 2,
   reporter: 'list',
   webServer: {
     command: 'python -m http.server 4192 --bind 127.0.0.1',
