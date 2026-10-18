@@ -5072,6 +5072,12 @@ registerWaffleServiceWorker();
                         ? 'auto'
                         : 'smooth';
 
+                if (action === 'refresh') {
+                    const refresh = document.getElementById('refreshGuestDirectoryBtn');
+                    if (refresh && !refresh.disabled) refresh.click();
+                    return;
+                }
+
                 if (action === 'emergency-contact') {
                     openCareReadinessTarget(card, action);
                     return;
@@ -16830,40 +16836,21 @@ registerWaffleServiceWorker();
                                                 </span>
                                             </div>
 
-                                            <details class="directory-care-readiness">
-                                                <summary>
-                                                    <span>Booking setup</span>
-                                                    <strong data-care-readiness-summary>Loading</strong>
-                                                </summary>
-                                                <div class="directory-care-readiness-list" data-care-readiness-list>
-                                                    <div class="directory-care-readiness-row" data-care-readiness-item="intake" data-state="attention">
-                                                        <span class="directory-care-readiness-copy"><strong>Owner intake</strong><small data-care-readiness-detail>Owner intake form</small></span>
-                                                        <span class="directory-care-readiness-status" data-care-readiness-status>Not sent</span>
-                                                        <button type="button" data-care-readiness-action="intake" aria-label="Review intake form">Review</button>
-                                                    </div>
-                                                    <div class="directory-care-readiness-row" data-care-readiness-item="handover" data-state="attention">
-                                                        <span class="directory-care-readiness-copy"><strong>Handover</strong><small data-care-readiness-detail>Handover note</small></span>
-                                                        <span class="directory-care-readiness-status" data-care-readiness-status>Add note</span>
-                                                        <button type="button" data-care-readiness-action="handover" aria-label="Review handover note">Review</button>
-                                                    </div>
-                                                </div>
-                                            </details>
-
                                             <div class="directory-care-brief-grid">
                                                 <section class="directory-care-brief-item directory-care-brief-safety">
-                                                    <div class="directory-care-brief-note-heading"><h4>Safety</h4><button type="button" class="directory-care-brief-note-edit" data-care-readiness-action="safety" aria-label="Review safety details">Review</button></div>
+                                                    <div class="directory-care-brief-note-heading"><h4>Safety</h4></div>
                                                     <div class="directory-care-brief-value" data-care-brief-safety aria-live="polite">
                                                         <span class="care-brief-state is-pending">Safety profile not yet available</span>
                                                     </div>
                                                 </section>
                                                 <section class="directory-care-brief-item">
-                                                    <div class="directory-care-brief-note-heading"><h4>Medication</h4><button type="button" class="directory-care-brief-note-edit" data-care-readiness-action="medication" aria-label="Review medication details">Review</button></div>
+                                                    <div class="directory-care-brief-note-heading"><h4>Medication</h4></div>
                                                     <p class="directory-care-brief-value is-pending" data-care-brief-medication>
                                                         Loading with full profile…
                                                     </p>
                                                 </section>
                                                 <section class="directory-care-brief-item directory-care-brief-feeding-walks">
-                                                    <div class="directory-care-brief-note-heading"><h4>Feeding &amp; walks</h4><button type="button" class="directory-care-brief-note-edit" data-care-readiness-action="feeding" aria-label="Review feeding and walking details">Review</button></div>
+                                                    <div class="directory-care-brief-note-heading"><h4>Feeding &amp; walks</h4></div>
                                                     <div class="directory-care-brief-subsection">
                                                     <div class="directory-care-brief-value is-pending" data-care-brief-feeding>
                                                         Loading with full profile…
@@ -16875,19 +16862,18 @@ registerWaffleServiceWorker();
                                                     </div>
                                                     </div>
                                                 </section>
-                                                <section class="directory-care-brief-item directory-care-owner-item">
-                                                    <h4>Owner</h4>
+                                                <div class="directory-care-owner-line" aria-label="Owner contact">
+                                                    <strong class="directory-care-owner-label">Owner</strong>
                                                     <div class="directory-care-owner-inline">
                                                         <strong data-care-brief-owner-name>${escapeDashboardHtml(ownerName ? ownerName.trim() : 'Not provided')}</strong>
                                                         <span class="directory-care-owner-action" data-care-brief-call-owner>
                                                             <span class="directory-care-brief-action is-unavailable" aria-disabled="true">Call owner unavailable</span>
                                                         </span>
                                                     </div>
-                                                </section>
+                                                </div>
                                                 <section class="directory-care-brief-item directory-care-brief-note">
                                                     <div class="directory-care-brief-note-heading">
                                                         <h4>Handover note</h4>
-                                                        <button type="button" class="directory-care-brief-note-edit" data-care-brief-action="handover" aria-label="Update handover">Update</button>
                                                     </div>
                                                     <p class="directory-care-brief-value">${escapeDashboardHtml(notes ? notes.trim() : 'No handover note recorded')}</p>
                                                 </section>
@@ -16900,13 +16886,76 @@ registerWaffleServiceWorker();
                                                     Care details
                                                 </button>
 
-                                                <button type="button" class="directory-care-brief-action" data-care-brief-action="emergency-contact">Emergency contact</button>
                                                 <details class="directory-care-more-actions">
                                                     <summary aria-label="More profile tools">More tools</summary>
                                                 <div class="directory-care-more-actions-list">
                                                 <button type="button" class="directory-care-brief-action" data-care-brief-action="edit">
                                                     Edit care details
                                                 </button>
+                                                <button type="button" class="directory-care-brief-action" data-care-brief-action="refresh">Refresh records</button>
+                                                <button type="button" class="directory-care-brief-action" data-care-brief-action="handover" aria-label="Update handover">Update handover</button>
+                                                <button type="button" class="directory-care-brief-action" data-care-brief-action="emergency-contact">Emergency contact</button>
+                                        <details class="directory-care-contact-disclosure" data-directory-stay-contact>
+                                            <summary>
+                                                <span>
+                                                    <strong>Stay contact &amp; handover</strong>
+                                                    <small>Owner details and handover note</small>
+                                                </span>
+                                                <span class="directory-care-records-chevron" aria-hidden="true">⌄</span>
+                                            </summary>
+                                            <div class="directory-care-contact-body directory-attributes-grid directory-core-attributes">
+                                            <button
+                                                type="button"
+                                                class="directory-attribute"
+                                                data-directory-edit-field="ownerName"
+                                                data-directory-current-value="${escapeDashboardHtml(cleanOwnerName)}"
+                                                aria-label="Edit ${escapeDashboardHtml(dogName.trim())} owner">
+                                                <span class="directory-field-label">Owner</span>
+                                                <span class="directory-field-value">${escapeDashboardHtml(cleanOwnerName || 'Owner not provided')}</span>
+                                                <span class="directory-contact-edit-hint" aria-hidden="true">Edit</span>
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                class="directory-attribute"
+                                                data-directory-edit-field="phone"
+                                                data-directory-current-value="${escapeDashboardHtml(cleanPhone)}"
+                                                aria-label="Edit ${escapeDashboardHtml(dogName.trim())} contact">
+                                                <span class="directory-field-label">Contact</span>
+                                                <span class="directory-field-value">${escapeDashboardHtml(cleanPhone || 'Contact not provided')}</span>
+                                                <span class="directory-contact-edit-hint" aria-hidden="true">Edit</span>
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                class="directory-attribute directory-attribute-wide"
+                                                data-directory-edit-field="notes"
+                                                data-directory-current-value="${escapeDashboardHtml(cleanHandoverNote)}"
+                                                aria-label="Edit ${escapeDashboardHtml(dogName.trim())} handover note">
+                                                <span class="directory-field-label">Handover note</span>
+                                                <span class="directory-field-value">${escapeDashboardHtml(cleanHandoverNote || 'No handover note provided')}</span>
+                                                <span class="directory-contact-edit-hint" aria-hidden="true">Edit</span>
+                                            </button>
+                                        </div>
+                                        </details>
+                                                <details class="directory-care-readiness">
+                                                    <summary>
+                                                        <span>Booking setup</span>
+                                                        <strong data-care-readiness-summary>Loading</strong>
+                                                    </summary>
+                                                    <div class="directory-care-readiness-list" data-care-readiness-list>
+                                                        <div class="directory-care-readiness-row" data-care-readiness-item="intake" data-state="attention">
+                                                            <span class="directory-care-readiness-copy"><strong>Owner intake</strong><small data-care-readiness-detail>Owner intake form</small></span>
+                                                            <span class="directory-care-readiness-status" data-care-readiness-status>Not sent</span>
+                                                            <button type="button" data-care-readiness-action="intake" aria-label="Review intake form">Review</button>
+                                                        </div>
+                                                        <div class="directory-care-readiness-row" data-care-readiness-item="handover" data-state="attention">
+                                                            <span class="directory-care-readiness-copy"><strong>Handover</strong><small data-care-readiness-detail>Handover note</small></span>
+                                                            <span class="directory-care-readiness-status" data-care-readiness-status>Add note</span>
+                                                            <button type="button" data-care-readiness-action="handover" aria-label="Review handover note">Review</button>
+                                                        </div>
+                                                    </div>
+                                                </details>
                                                 </div>
                                                 </details>
                                             </div>
@@ -16977,49 +17026,7 @@ registerWaffleServiceWorker();
                                             </div>
                                         </details>
 
-                                        <details class="directory-care-contact-disclosure" data-directory-stay-contact>
-                                            <summary>
-                                                <span>
-                                                    <strong>Stay contact &amp; handover</strong>
-                                                    <small>Owner details and handover note</small>
-                                                </span>
-                                                <span class="directory-care-records-chevron" aria-hidden="true">⌄</span>
-                                            </summary>
-                                            <div class="directory-care-contact-body directory-attributes-grid directory-core-attributes">
-                                            <button
-                                                type="button"
-                                                class="directory-attribute"
-                                                data-directory-edit-field="ownerName"
-                                                data-directory-current-value="${escapeDashboardHtml(cleanOwnerName)}"
-                                                aria-label="Edit ${escapeDashboardHtml(dogName.trim())} owner">
-                                                <span class="directory-field-label">Owner</span>
-                                                <span class="directory-field-value">${escapeDashboardHtml(cleanOwnerName || 'Owner not provided')}</span>
-                                                <span class="directory-contact-edit-hint" aria-hidden="true">Edit</span>
-                                            </button>
 
-                                            <button
-                                                type="button"
-                                                class="directory-attribute"
-                                                data-directory-edit-field="phone"
-                                                data-directory-current-value="${escapeDashboardHtml(cleanPhone)}"
-                                                aria-label="Edit ${escapeDashboardHtml(dogName.trim())} contact">
-                                                <span class="directory-field-label">Contact</span>
-                                                <span class="directory-field-value">${escapeDashboardHtml(cleanPhone || 'Contact not provided')}</span>
-                                                <span class="directory-contact-edit-hint" aria-hidden="true">Edit</span>
-                                            </button>
-
-                                            <button
-                                                type="button"
-                                                class="directory-attribute directory-attribute-wide"
-                                                data-directory-edit-field="notes"
-                                                data-directory-current-value="${escapeDashboardHtml(cleanHandoverNote)}"
-                                                aria-label="Edit ${escapeDashboardHtml(dogName.trim())} handover note">
-                                                <span class="directory-field-label">Handover note</span>
-                                                <span class="directory-field-value">${escapeDashboardHtml(cleanHandoverNote || 'No handover note provided')}</span>
-                                                <span class="directory-contact-edit-hint" aria-hidden="true">Edit</span>
-                                            </button>
-                                        </div>
-                                        </details>
 
                                         <section
                                             class="directory-profile-section directory-profile-intake-section"

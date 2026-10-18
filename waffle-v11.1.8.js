@@ -437,7 +437,7 @@
       host.appendChild(signalsHost);
     }
     const signalsMarkup = signals.map(signal => `
-      <span class="v1118-care-signal" title="${esc(signal.label)}">
+      <span class="v1118-care-signal" data-v1118-signal-label="${esc(signal.label)}" title="${esc(signal.label)}">
         <span class="v1118-care-signal-icon" aria-hidden="true">${esc(signal.icon)}</span>
         <span>${esc(signal.label)}</span>
       </span>`).join('');

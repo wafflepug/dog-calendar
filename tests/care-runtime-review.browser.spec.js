@@ -128,6 +128,7 @@ test('Care detail editors stay readable and reachable in the actual directory ru
   await expect.poll(() => card.evaluate(el => el.classList.contains('is-profile-active'))).toBe(true);
   await page.waitForTimeout(1200);
   await expect(card.locator('[data-directory-edit-field="dogName"]')).toBeVisible();
+  await card.locator('.directory-care-more-actions > summary').click();
   await card.locator('[data-directory-stay-contact] summary').click();
 
   for (const width of [320, 390, 412, 1440]) {

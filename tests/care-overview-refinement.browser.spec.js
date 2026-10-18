@@ -609,9 +609,13 @@ test('Care overview leads with essentials and history distinguishes actual from 
     await expect(cards.nth(1)).toContainText('Originally scheduled 2026-06-05');
     await expect(cards.nth(1)).toContainText('Care record updates2026-06-02 · care profile');
     await expect(cards.nth(0)).toContainText('Safety monitor appetite.');
-    // The existing compact setup disclosure now leads the essentials; it does
-    // not introduce a second overview or duplicate any care instructions.
-    expect(appSource.indexOf('<details class="directory-care-readiness">')).toBeLessThan(appSource.indexOf('class="directory-care-brief-grid"'));
+    // Daily instructions lead the view; occasional setup lives in More tools.
+    const dailySummaryPosition = appSource.indexOf('class="directory-care-brief-grid"');
+    const sharedToolsPosition = appSource.indexOf('class="directory-care-more-actions-list"');
+    const setupPosition = appSource.indexOf('<details class="directory-care-readiness">');
+    expect(dailySummaryPosition).toBeGreaterThan(0);
+    expect(sharedToolsPosition).toBeGreaterThan(dailySummaryPosition);
+    expect(setupPosition).toBeGreaterThan(sharedToolsPosition);
     expect(appSource).toContain("'<span class=\"directory-status-tag tag-checked-out\">Checked Out</span>'");
     expect(appSource).not.toContain("class=\"directory-status-tag\" style=\"background:#e2e8f0");
     for (const width of [390, 412, 1440]) {

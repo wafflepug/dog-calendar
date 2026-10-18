@@ -2,8 +2,8 @@
    Build: 2026.08.27.04
    Historical base styles remain compatibility sources during Phase 3A, but pages no longer
    reference them individually. Preserve this import order until modules are folded in. */
-@import url("waffle-app.css?build=2026.08.27.04&rev=2026.10.18.03");
-@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.10.18.03");
+@import url("waffle-app.css?build=2026.08.27.04&rev=2026.10.18.04");
+@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.10.18.04");
 @import url("waffle-v10.8.2.css?build=2026.08.27.04");
 @import url("waffle-v10.8.3.css?build=2026.08.27.04");
 @import url("waffle-v10.8.5.css?build=2026.08.27.04");
@@ -11,12 +11,12 @@
 @import url("waffle-v10.8.7.css?build=2026.08.27.04");
 @import url("waffle-v10.8.8.css?build=2026.08.27.04");
 @import url("waffle-v10.8.9.css?build=2026.08.27.04");
-@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.10.18.03");
+@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.10.18.04");
 @import url("waffle-v11.0.3.css?build=2026.08.27.04");
 @import url("waffle-v11.0.5.css?build=2026.08.27.04");
-@import url("waffle-v11.1.94.css?build=2026.10.18.03");
-@import url("waffle-v11.1.95.css?build=2026.10.18.03");
-@import url("waffle-v11.1.96.css?build=2026.10.18.03&rev=2026.10.18.03");
+@import url("waffle-v11.1.94.css?build=2026.10.18.04");
+@import url("waffle-v11.1.95.css?build=2026.10.18.04");
+@import url("waffle-v11.1.96.css?build=2026.10.18.04&rev=2026.10.18.04");
 
 /* ============================================================
    MOBILE FIRST-PAINT STABILITY GATE
@@ -2761,3 +2761,113 @@ body[data-waffle-page="directory"] .care-roster-focus{flex:1 1 100%;min-width:0;
 body.dark-theme .care-roster-focus,body.dark-theme .v11217-departure-banner,body.dark-theme .care-roster-focus button:not([aria-pressed="true"]),body.dark-theme .v11217-departure-banner textarea,body.dark-theme .v11217-departure-banner [data-v11217-departure-dismiss],body.dark-theme .v11217-departure-banner [data-v11217-departure-share]{background:#172236;color:#e2e8f0;border-color:#526178}
 body.dark-theme .directory-care-readiness [data-care-readiness-summary][data-state="neutral"]{color:#cbd5e1}
 @media(max-width:600px){.care-roster-focus [data-focus-options]{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.care-roster-focus button{width:100%}.v11217-departure-banner{flex-wrap:wrap}.v11217-departure-banner details{flex-basis:100%}.v11217-departure-banner [data-v11217-departure-dismiss]{margin-left:auto}}
+
+/* Keep the daily care brief readable at a glance without adding category steps. */
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+  margin-top: 6px;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-grid > .directory-care-brief-item,
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-grid > .directory-care-brief-safety,
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-grid > .directory-care-brief-note {
+  box-sizing: border-box;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: 7px 0;
+  border: 0;
+  border-bottom: 1px solid var(--wh-border, #dbe3ea);
+  border-radius: 0;
+  background: transparent;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-grid > .directory-care-brief-item h4 {
+  margin: 0 0 3px;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-grid .directory-care-brief-value {
+  min-width: 0;
+  max-width: 100%;
+  max-height: none;
+  overflow: visible;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.45;
+  -webkit-line-clamp: unset;
+  line-clamp: unset;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-grid .directory-care-brief-subsection {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-grid .directory-care-brief-subsection + .directory-care-brief-subsection {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid var(--wh-border, #dbe3ea);
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-owner-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  min-width: 0;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--wh-border, #dbe3ea);
+  overflow-wrap: anywhere;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-owner-inline {
+  gap: 4px 10px;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-owner-label {
+  flex: 0 0 auto;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active [data-care-brief-call-owner] > .directory-care-brief-action,
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-actions > .directory-care-brief-action,
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-more-actions-list > .directory-care-brief-action {
+  box-sizing: border-box;
+  min-height: 44px;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-more-actions-list > .directory-care-readiness {
+  grid-column: 1 / -1;
+  min-width: 0;
+  margin: 0;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-more-actions-list > .directory-care-readiness > summary {
+  min-height: 44px;
+  overflow-wrap: anywhere;
+}
+body.dark-theme[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-grid > .directory-care-brief-item,
+body.dark-theme[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-grid > .directory-care-brief-safety,
+body.dark-theme[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-grid > .directory-care-brief-note,
+body.dark-theme[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-owner-line {
+  border-bottom-color: var(--wh-border, #475569);
+}
+
+/* Daily Care uses one glance; occasional contact editing and refresh share tools. */
+body[data-waffle-page="directory"] .directory-dashboard-fused.is-profile-mode .directory-profile-tools {display:none!important}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-more-actions-list > .directory-care-contact-disclosure {grid-column:1 / -1;width:100%;min-width:0;margin:0}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-more-actions-list > .directory-care-contact-disclosure > summary {min-height:44px;overflow-wrap:anywhere}
+/* Keep roster warnings as a fallback until this profile's safety state is known.
+   Reminder due is unique to the roster signals and always remains visible. */
+body[data-waffle-page="directory"] .directory-card.is-profile-active:has([data-care-brief-safety][data-state="attention"], [data-care-brief-safety][data-state="clear"]) [data-directory-profile-roster-badges] [data-v1118-care-signals] .v1118-care-signal:not([data-v1118-signal-label="Reminder due"]) {display:none}
+body[data-waffle-page="directory"] .directory-card.is-profile-active:has([data-care-brief-safety][data-state="attention"], [data-care-brief-safety][data-state="clear"]) [data-directory-profile-roster-badges] [data-v1118-care-signals]:not(:has([data-v1118-signal-label="Reminder due"])) {display:none}
+@media(min-width:769px){
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-grid > .directory-care-brief-item {display:grid;grid-template-columns:120px minmax(0,1fr);gap:4px 12px;align-items:start}
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-grid > .directory-care-brief-item .directory-care-brief-value {margin:0}
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-feeding-walks > .directory-care-brief-subsection {grid-column:2}
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-feeding-walks > .directory-care-brief-note-heading {grid-column:1;grid-row:1 / span 2}
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-owner-line {display:grid;grid-template-columns:120px minmax(0,1fr);gap:4px 12px}
+}
+
+/* Explicit closed content keeps nested summaries closed in Safari too. */
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-more-actions:not([open]) > .directory-care-more-actions-list,
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-more-actions:not([open]) > .directory-care-danger-actions {display:none!important}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .v110-operation-icon {width:24px;height:24px;min-width:24px;min-height:24px;font-size:15px}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .v110-operation-state {gap:7px;min-height:24px}
+
+/* Reset historical two-column spans before laying out the daily list. */
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-grid > * {grid-column:1 / -1}
+
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-more-actions-list button {min-height:44px}

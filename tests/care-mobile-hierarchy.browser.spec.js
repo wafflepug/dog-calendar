@@ -202,7 +202,7 @@ for (const [name, viewport, colorScheme] of [['320-light', { width: 320, height:
     await expect(selectedProfile.locator('[data-care-brief-freshness]')).toHaveAttribute('data-state', 'fresh');
     await expect(selectedProfile.locator('[data-care-brief-freshness]')).toContainText('Saved record · updated');
     await expect(selectedProfile.locator('[data-care-brief-freshness]')).toHaveAttribute('aria-description', /shared saved record.*does not confirm care instructions were reviewed/);
-    await expect(selectedProfile.locator('[data-directory-care-brief]')).not.toContainText('0400123456');
+    await expect(selectedProfile.locator('.directory-care-brief-grid')).not.toContainText('0400123456');
     await expect(selectedProfile.locator('[data-care-brief-owner-name]')).toHaveText('Alexandria Peterson-Smith');
     await expect(selectedProfile.locator('[data-care-brief-call-owner] a')).toHaveAttribute('href', 'tel:0400123456');
     await expect(selectedProfile.locator('.directory-guest-tile-photo')).toBeHidden();
@@ -267,6 +267,7 @@ for (const [name, viewport, colorScheme] of [['320-light', { width: 320, height:
     const records = page.locator('.directory-card.is-profile-active .directory-care-records-disclosure');
     const contactDisclosure = page.locator('.directory-card.is-profile-active [data-directory-stay-contact]');
     const readsBeforeHandoverEdit = [...actionReads];
+    await revealSecondaryTools(page);
     await careBrief.getByRole('button', { name: 'Update handover' }).click();
     await expect(contactDisclosure).toHaveAttribute('open', '');
     await expect(page.locator('#guestDetailEditModal')).toHaveClass(/open/);
@@ -278,6 +279,7 @@ for (const [name, viewport, colorScheme] of [['320-light', { width: 320, height:
     await page.locator('#cancelGuestDetailEdit').click();
     await contactDisclosure.locator('summary').click();
     await expect(contactDisclosure).not.toHaveAttribute('open', '');
+    await selectedProfile.locator('.directory-care-more-actions > summary').click();
     await page.keyboard.press('Tab');
     const profileTab = sectionNav.locator('[data-v11160-tab="profile"]');
     const belongingsTab = sectionNav.locator('[data-v11160-tab="belongings"]');
@@ -317,6 +319,7 @@ for (const [name, viewport, colorScheme] of [['320-light', { width: 320, height:
     await expect(page.locator('.directory-card.is-profile-active [data-directory-main-panel="profile"]')).toBeVisible();
     await selectedProfile.locator('[data-profile-subtab="foodWalks"]').click();
     await expect(selectedProfile.locator('[data-profile-subtab="foodWalks"]')).toHaveAttribute('aria-expanded', 'true');
+    await revealSecondaryTools(page);
     await selectedProfile.locator('[data-care-brief-action="emergency-contact"]').click();
     await expect(selectedProfile.locator('[data-profile-subtab="healthHome"]')).toHaveAttribute('aria-expanded', 'true');
     await expect(selectedProfile.locator('[data-profile-subtab="foodWalks"]')).toHaveAttribute('aria-expanded', 'true');
@@ -353,22 +356,22 @@ for (const [name, viewport, colorScheme] of [['320-light', { width: 320, height:
     await expect(page.locator('.directory-dashboard-fused.is-profile-mode .guest-directory-toolbar')).toBeHidden();
     await expect(page.locator('.directory-dashboard-fused.is-profile-mode #v11190ScanIntakePdfBtn')).toBeHidden();
     await expect(page.locator('.directory-dashboard-fused.is-profile-mode #v11190PdfOcrReviewNote')).toBeHidden();
-    await expect(page.locator('.directory-dashboard-fused.is-profile-mode #directory-care-summary')).toBeVisible();
+    await expect(page.locator('.directory-dashboard-fused.is-profile-mode #directory-care-summary')).toBeHidden();
     await expect(careBrief.getByRole('heading', { name: 'Care essentials' })).toBeVisible();
     await expect(careBrief.locator('.directory-care-more-actions > summary')).toHaveText('More tools');
     await page.keyboard.press('Tab');
     await careBrief.locator('.directory-care-more-actions > summary').focus();
     await expect(careBrief.locator('.directory-care-more-actions > summary')).toHaveCSS('outline-style', 'solid');
     const readiness = careBrief.locator('.directory-care-readiness');
-    expect(await readiness.evaluate(element => Boolean(element.compareDocumentPosition(element.parentElement.querySelector('.directory-care-brief-grid')) & Node.DOCUMENT_POSITION_FOLLOWING))).toBeTruthy();
-    await expect(careBrief.locator('.directory-care-brief-item:has([data-care-brief-owner-name]) [data-care-brief-call-owner]')).toHaveCount(1);
+    await expect(careBrief.locator('.directory-care-more-actions .directory-care-readiness')).toHaveCount(1);
+    await expect(careBrief.locator('.directory-care-owner-line [data-care-brief-call-owner]')).toHaveCount(1);
     await expect(careBrief.locator('[data-care-brief-call-owner]')).toHaveCount(1);
     await expect(readiness).toBeVisible();
     await expect(readiness).not.toHaveAttribute('open', '');
     await expect(careBrief.locator('[data-care-readiness-summary]')).toHaveText(/Needs identity review|Add handover|Details/);
     await expect(careBrief.locator('[data-care-brief-safety]')).toBeVisible();
     await expect(careBrief.locator('[data-care-brief-feeding]')).toBeVisible();
-    await expect(careBrief.getByRole('heading', { name: 'Owner', exact: true })).toBeVisible();
+    await expect(careBrief.locator('.directory-care-owner-label')).toBeVisible();
     await expect(careBrief.getByRole('heading', { name: 'Handover note', exact: true })).toBeVisible();
     await readiness.locator('summary').click();
     await expect(readiness).toHaveAttribute('open', '');
@@ -474,6 +477,7 @@ test('Call owner is unavailable without a valid phone number', async ({ page, ba
   await card.locator('[data-open-directory-profile]').click();
   await expect(card.locator('[data-directory-detail="profile"]')).toHaveAttribute('data-detail-loaded', 'true');
   const directoryReadsBeforeChecklist = actionReads.filter(action => action === 'get_guest_directory').length;
+  await revealSecondaryTools(page);
   await card.locator('.directory-care-readiness > summary').click();
   const careBrief = card.locator('[data-directory-care-brief]');
   await expect(careBrief.getByText('Call owner unavailable')).toHaveAttribute('aria-disabled', 'true');
@@ -532,6 +536,7 @@ test('Care brief actions stay visible and keyboard focused in forced-colors mode
   await expect.poll(() => page.locator('.directory-card[data-directory-stay-key]').count()).toBe(1);
   const card = page.locator('.directory-card[data-directory-stay-key]');
   await card.locator('[data-open-directory-profile]').click();
+  await revealSecondaryTools(page);
   await card.locator('.directory-care-readiness > summary').click();
   const action = card.locator('[data-care-brief-action="handover"]');
   await action.focus();

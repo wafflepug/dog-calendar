@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.10.18.03",
-  "releaseName": "Care Daily Workflows",
+  "assetRevision": "2026.10.18.04",
+  "releaseName": "Care Simple Glance",
   "careIteration": {
     "returningDogSuggestions": true,
     "reviewedCareInheritance": true,
