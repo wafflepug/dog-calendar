@@ -412,9 +412,55 @@
     if (status === 'LEAVING TODAY') signals.push({ icon: '👋', label: 'Checkout today', weight: 100 });
     if (status === 'ARRIVING TODAY') signals.push({ icon: '🛬', label: 'Arrival today', weight: 75 });
     if (reminderMatchesDog(dogName)) signals.push({ icon: '📌', label: 'Reminder due', weight: 98 });
-    if (!Number(summary.intakeFieldCount || 0)) signals.push({ icon: '📋', label: 'Intake missing', weight: 45 });
+    let intakeState = null;
+    if (typeof window.WAFFLE_INTAKE_STATUS?.getState === 'function') {
+      try { intakeState = window.WAFFLE_INTAKE_STATUS.getState(card); } catch (_) {}
+    }
+    if (intakeState?.code === 'not_prepared') signals.push({ icon: '📋', label: 'Intake missing', weight: 45 });
+    else if (intakeState?.code === 'link_ready') signals.push({ icon: '📋', label: 'Link ready', weight: 45 });
+    else if (intakeState?.code === 'unknown') signals.push({ icon: '📋', label: 'Intake unverified', weight: 45 });
+    else if (!intakeState && !Number(summary.intakeFieldCount || 0)) signals.push({ icon: '📋', label: 'Intake missing', weight: 45 });
     if (!phone || phone === 'N/A') signals.push({ icon: '☎️', label: 'Phone missing', weight: 55 });
     return signals;
+  }
+
+  function renderCareSignals(card) {
+    const button = card?.querySelector('.directory-guest-tile-open');
+    if (!button) return;
+    const host = card.querySelector('[data-directory-profile-roster-badges]') || button;
+    const signals = careSignals(card);
+    let signalsHost = host.querySelector('[data-v1118-care-signals]');
+    if (!signalsHost) {
+      signalsHost = document.createElement('span');
+      signalsHost.dataset.v1118CareSignals = '';
+      signalsHost.className = 'v1118-care-signals';
+      host.appendChild(signalsHost);
+    }
+    const signalsMarkup = signals.map(signal => `
+      <span class="v1118-care-signal" title="${esc(signal.label)}">
+        <span class="v1118-care-signal-icon" aria-hidden="true">${esc(signal.icon)}</span>
+        <span>${esc(signal.label)}</span>
+      </span>`).join('');
+    if (signalsHost.innerHTML !== signalsMarkup) signalsHost.innerHTML = signalsMarkup;
+    const isHidden = signals.length === 0;
+    if (signalsHost.hidden !== isHidden) signalsHost.hidden = isHidden;
+    const hasSignals = signals.length > 0;
+    if (card.classList.contains('has-v1118-care-signals') !== hasSignals) card.classList.toggle('has-v1118-care-signals', hasSignals);
+    const priorityScore = String(signals.reduce((sum, signal) => sum + signal.weight, 0));
+    if (card.dataset.v1118PriorityScore !== priorityScore) card.dataset.v1118PriorityScore = priorityScore;
+  }
+
+  function wireIntakeSignalRefresh() {
+    if (window.v1118IntakeSignalRefreshWired) return;
+    window.v1118IntakeSignalRefreshWired = true;
+    window.addEventListener('waffle:intake-status-updated', event => {
+      if (pageName() !== 'directory') return;
+      const stayKey = String(event?.detail?.stayKey || '');
+      if (!stayKey) return;
+      document.querySelectorAll('.directory-card[data-directory-stay-key]').forEach(card => {
+        if (String(card.dataset.directoryStayKey || '') === stayKey) renderCareSignals(card);
+      });
+    });
   }
 
   function decorateCareCard(card) {
@@ -449,28 +495,7 @@
       if (profileStatus.className !== profileClass) profileStatus.className = profileClass;
       if (profileStatus.textContent !== label) profileStatus.textContent = label;
     }
-    const signals = careSignals(card);
-    let signalsHost = host.querySelector('[data-v1118-care-signals]');
-    if (!signalsHost) {
-      signalsHost = document.createElement('span');
-      signalsHost.dataset.v1118CareSignals = '';
-      signalsHost.className = 'v1118-care-signals';
-      host.appendChild(signalsHost);
-    }
-    const signalsMarkup = signals.map(signal => `
-      <span class="v1118-care-signal" title="${esc(signal.label)}">
-        <span class="v1118-care-signal-icon" aria-hidden="true">${esc(signal.icon)}</span>
-        <span>${esc(signal.label)}</span>
-      </span>`).join('');
-    if (signalsHost.innerHTML !== signalsMarkup) signalsHost.innerHTML = signalsMarkup;
-    const isHidden = signals.length === 0;
-    if (signalsHost.hidden !== isHidden) signalsHost.hidden = isHidden;
-    const hasSignals = signals.length > 0;
-    if (card.classList.contains('has-v1118-care-signals') !== hasSignals) {
-      card.classList.toggle('has-v1118-care-signals', hasSignals);
-    }
-    const priorityScore = String(signals.reduce((sum, signal) => sum + signal.weight, 0));
-    if (card.dataset.v1118PriorityScore !== priorityScore) card.dataset.v1118PriorityScore = priorityScore;
+    renderCareSignals(card);
   }
 
   function decorateAllCareCards() {
@@ -695,6 +720,7 @@
     wireClicks();
     wireDeleteUndo();
     wireSaveFeedback();
+    wireIntakeSignalRefresh();
     wrapDirectoryRender();
     wrapOperationsRender();
     wireModalSkeletons();

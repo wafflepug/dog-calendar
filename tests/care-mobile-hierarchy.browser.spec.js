@@ -365,7 +365,7 @@ for (const [name, viewport, colorScheme] of [['320-light', { width: 320, height:
     await expect(careBrief.locator('[data-care-brief-call-owner]')).toHaveCount(1);
     await expect(readiness).toBeVisible();
     await expect(readiness).not.toHaveAttribute('open', '');
-    await expect(careBrief.locator('[data-care-readiness-summary]')).toContainText(/Needs|Setup complete/);
+    await expect(careBrief.locator('[data-care-readiness-summary]')).toHaveText(/Needs identity review|Add handover|Details/);
     await expect(careBrief.locator('[data-care-brief-safety]')).toBeVisible();
     await expect(careBrief.locator('[data-care-brief-feeding]')).toBeVisible();
     await expect(careBrief.getByRole('heading', { name: 'Owner', exact: true })).toBeVisible();

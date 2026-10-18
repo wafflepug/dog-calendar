@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.10.18.02",
-  "releaseName": "Care Arrivals and Guided Checkout",
+  "assetRevision": "2026.10.18.03",
+  "releaseName": "Care Daily Workflows",
   "careIteration": {
     "returningDogSuggestions": true,
     "reviewedCareInheritance": true,

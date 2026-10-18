@@ -524,12 +524,14 @@
         setEarlyFeedback('The selected booking changed while saving. Review its current identity and refresh Care before taking another action.');
         return;
       }
-      if (typeof window.v1086MoveCheckedOutStayToPast === 'function') window.v1086MoveCheckedOutStayToPast(card, p);
-
       if (response?.record?.stayId && !p.stayId && String(response.record.stayKey || '') === p.stayKey) {
         p.stayId = String(response.record.stayId);
         if (card.dataset) card.dataset.directoryStayId = p.stayId;
       }
+      if (typeof window.WAFFLE_DEPARTURE_MESSAGE?.publishVerified === 'function') {
+        window.WAFFLE_DEPARTURE_MESSAGE.publishVerified(p, response, card);
+      }
+      if (typeof window.v1086MoveCheckedOutStayToPast === 'function') window.v1086MoveCheckedOutStayToPast(card, p);
       allCards().filter(candidate => p.stayId
         ? payloadForCard(candidate).stayId.toLowerCase() === p.stayId.toLowerCase()
         : payloadForCard(candidate).stayKey === p.stayKey).forEach(decorateCard);
@@ -620,6 +622,9 @@
       if (!identityMatchesCard(card, payload, originalStayId)) return status === 'checked_out'
         ? { message: 'This card changed while saving. The current stay was not moved; review its identity in Care.', retryable: false }
         : false;
+      if (status === 'checked_out' && typeof window.WAFFLE_DEPARTURE_MESSAGE?.publishVerified === 'function') {
+        window.WAFFLE_DEPARTURE_MESSAGE.publishVerified(payload, response, card);
+      }
       if (status === 'checked_out' && typeof window.v1086MoveCheckedOutStayToPast === 'function') {
         window.v1086MoveCheckedOutStayToPast(card, payload);
       }
@@ -631,7 +636,7 @@
       });
       const feedbackHost = card;
       if (typeof window.v110ClearActionFeedback === 'function') window.v110ClearActionFeedback(feedbackHost, `${payload.dogName} ${status === 'checked_in' ? 'checked in' : 'checked out'} successfully.`);
-      return true;
+      return status === 'checked_out' ? { ok: true, payload, response } : true;
     } catch (error) {
       if (!identityMatchesCard(card, payload, originalStayId)) return status === 'checked_out'
         ? { message: 'This card changed while saving. The current stay was not moved; review its identity in Care.', retryable: false }
@@ -759,7 +764,9 @@
       guidedCheckoutBusy = true;
       const note = String(modal.querySelector('[data-v11217-guided-note]').value || '').trim();
       const saved = await attempt(note);
-      if (saved === true) closeGuidedCheckout();
+      if (saved?.ok === true || saved === true) {
+        closeGuidedCheckout();
+      }
       else {
         const feedback = modal.querySelector('[data-v11217-guided-feedback]');
         const info = saved && typeof saved === 'object' ? saved : { message: 'Checkout was not confirmed. Review the selected stay identity.', retryable: false };
