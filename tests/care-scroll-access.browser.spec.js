@@ -229,6 +229,8 @@ for (const [name, viewport, colorScheme, reducedMotion] of [
     const sectionNav = profile.locator('.v11160-desktop-tabs');
     const handover = careBrief.getByRole('button', { name: 'Update handover' });
 
+    await careBrief.locator('.directory-care-more-actions > summary').click();
+    await expect(handover).toBeVisible();
     await handover.click();
     const expectedScrollBehavior = viewport.width <= 768 || reducedMotion === 'reduce' ? 'auto' : 'smooth';
     await expect.poll(() => page.evaluate(() => window.__careActionScrollBehaviors)).toContain(expectedScrollBehavior);
@@ -271,6 +273,8 @@ for (const [name, viewport, colorScheme, reducedMotion] of [
     const detailReadActions = ['get_guest_profile', 'get_guest_belongings', 'get_dog_history', 'get_dog_master_profile'];
     const detailReadsBeforeLateHandover = actionReads.filter(action => detailReadActions.includes(action));
 
+    const moreTools = careBrief.locator('.directory-care-more-actions');
+    if (!await moreTools.evaluate(element => element.open)) await moreTools.locator(':scope > summary').click();
     await handover.click();
     await expect(page.locator('#guestDetailEditModal')).toHaveClass(/open/);
     await expect(page.locator('#guestDetailEditTitle')).toContainText('Edit Handover note');
