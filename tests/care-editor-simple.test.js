@@ -86,4 +86,3 @@ test('collapsing a focused profile panel returns focus to its toggle and leaves 
     assert.equal(h.panels[0].hidden, true);
     assert.equal(h.panels[1].hidden, false);
 });
-
