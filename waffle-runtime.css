@@ -2871,3 +2871,39 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active .v110-opera
 body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-grid > * {grid-column:1 / -1}
 
 body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-more-actions-list button {min-height:44px}
+
+/* Optional editor information follows the same touch and text rules as Care. */
+body[data-waffle-page="directory"] .directory-card:not(.is-profile-editing) .intake-profile-optional {display:none!important}
+body[data-waffle-page="directory"] .directory-card .intake-profile-optional {
+  min-width:0;
+  margin-top:8px;
+  border:1px solid var(--wh-border, #cbd5e1);
+  border-radius:10px;
+  background:var(--wh-surface, #fff);
+  color:var(--wh-text, #17243a);
+}
+body[data-waffle-page="directory"] .directory-card .intake-profile-optional > summary {
+  box-sizing:border-box;
+  min-height:44px;
+  padding:10px 12px;
+  cursor:pointer;
+  font-size:0.875rem;
+  font-weight:700;
+  line-height:1.5;
+  white-space:normal;
+  overflow-wrap:anywhere;
+}
+body[data-waffle-page="directory"] .directory-card .intake-profile-optional > .intake-profile-grid {padding:0 12px 12px}
+body[data-waffle-page="directory"] .directory-card .intake-profile-optional:not([open]) > .intake-profile-grid {display:none!important}
+body[data-waffle-page="directory"] .directory-card .intake-profile-optional > summary:focus-visible {
+  outline:3px solid var(--wh75-accent, #7c3aed);
+  outline-offset:3px;
+}
+body.dark-theme[data-waffle-page="directory"] .directory-card .intake-profile-optional {
+  background:var(--wh-surface, #17243a);
+  border-color:var(--wh-border, #475569);
+  color:var(--wh-text, #f8fafc);
+}
+@media(max-width:600px){
+  body[data-waffle-page="directory"] .directory-card.is-profile-editing .intake-profile-optional .intake-profile-grid {grid-template-columns:minmax(0,1fr)}
+}

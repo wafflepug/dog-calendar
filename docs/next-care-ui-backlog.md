@@ -1,3 +1,8 @@
+## Current Care UI iteration — 19 October 2026
+
+Three implemented refinements awaiting release verification: compact blank optional editor fields, focus-safe independent category collapse, and enlarged-text/touch-friendly disclosures. See [Care Simple Editor](care-simple-editor.md) for scope and test steps. This continues the daily-carer persona from [Care Simple Glance](care-simple-profile.md).
+
+Next ready item: a concise changed-field review before saving, using existing draft values and no new read.
 # Next UI backlog
 
 Completed and deployed 9 October 2026: PR204, Cleaner Care & Notification Recovery, release 2026.10.09.02.
