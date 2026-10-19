@@ -187,10 +187,16 @@ test('simple Care editor preserves optional drafts and category focus without ad
     await optional.scrollIntoViewIfNeeded();
     await page.screenshot({path:testInfo.outputPath(`care-optional-editor-${width}.png`)});
   }
+  // A newer saved record must win over the original draft baseline on discard.
+  await page.evaluate(data=>{
+    const card=document.querySelector('.directory-card.is-profile-active');
+    directoryProfileDetailCache[directoryProfileIdentityCacheKey(card)]=data;
+    window.__renderCondensedIntake(card,data);
+  },{...saved,intakeAttributes:{...saved.intakeAttributes,weight:'13 kg'}});
   await card.locator('[data-cancel-profile-edit]').click();
   await expect(card).not.toHaveClass(/is-profile-editing/);
   await expect(age).toHaveValue('');
-  await expect(card.locator('[data-intake-attribute="weight"]')).toHaveValue('12 kg');
+  await expect(card.locator('[data-intake-attribute="weight"]')).toHaveValue('13 kg');
   expect(reads.filter(x=>x==='get_guest_profile').length).toBe(before);
 });
 
