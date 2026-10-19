@@ -41,7 +41,7 @@ test('contract job preserves existing Node checks', () => {
     'care-state-preservation', 'care-past-classification', 'stay-operation-frontend', 'care-csv-integrity', 'care-confirmed-reconciliation',
     'confirmed-stay-identity', 'potential-confirm-dog-id', 'checkout-collision-safety',
     'system-status-sync', 'system-status-release', 'care-navigation-continuity',
-    'care-return-focus-identity', 'ui-workflow-parallel'].map(name => `tests/${name}.test.js`);
+    'care-return-focus-identity', 'care-editor-simple', 'ui-workflow-parallel'].map(name => `tests/${name}.test.js`);
   const actual = [...jobs.contracts.matchAll(/tests\/[\w-]+\.test\.js/g)].map(([file]) => file);
   assert.deepEqual(actual.sort(), expected.sort());
 });

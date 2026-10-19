@@ -14,10 +14,11 @@ const sliceConst = name => {
   return app.slice(start, app.indexOf('];', start) + 2);
 };
 const categorySummary = app.slice(app.indexOf('function directoryCareCategorySummary'), app.indexOf('function renderDirectoryIntakeAttributes'));
+const optionalEditorFields = app.slice(app.indexOf('const DIRECTORY_PROFILE_OPTIONAL_FIELDS'), app.indexOf('let careRiskRecordsCache'));
 const intakeControl = app.slice(app.indexOf('function intakeAttributeControlHtml'), app.indexOf('function renderDirectoryIntakeAttributes'));
 const intakeRenderer = app.slice(app.indexOf('function renderDirectoryIntakeAttributes'), app.indexOf('function renderDirectoryCareProfile'));
 const sectionRuntime = app.slice(app.indexOf('const directoryCareSectionChoices = new Map();'), app.indexOf('async function openDirectoryGuestProfile'));
-const productionRenderer = `${sliceConst('CARE_SAFETY_FLAGS')}\n${sliceConst('INTAKE_ATTRIBUTE_UI_GROUPS')}\n${sliceConst('DIRECTORY_PROFILE_SECONDARY_TABS')}
+const productionRenderer = `${sliceConst('CARE_SAFETY_FLAGS')}\n${sliceConst('INTAKE_ATTRIBUTE_UI_GROUPS')}\n${sliceConst('DIRECTORY_PROFILE_SECONDARY_TABS')}\n${optionalEditorFields}
 const careRiskRecordsCache = {}, directorySummaryRecordsCache = {}, belongingsRecordsCache = {};
 const directorySafetyReadFailures = new Set();
 function directoryProfileIdentityCacheKey(){return '';}

@@ -18,7 +18,7 @@ function harness(cards) {
 
 function card(stayId, dogId, stayKey) {
   const buttons = ['overview', 'foodWalks', 'behaviour', 'healthHome', 'safety'].map(key => ({ dataset: { profileSubtab: key }, getAttribute(name) { return this[name] ?? null; }, setAttribute(name, value) { this[name] = value; }, classList: { toggle() {} } }));
-  const panels = buttons.map(button => ({ dataset: { profileSubpanel: button.dataset.profileSubtab }, closest: () => ({ classList: { toggle() {} } }) }));
+  const panels = buttons.map(button => ({ dataset: { profileSubpanel: button.dataset.profileSubtab }, contains: () => false, closest: () => ({ classList: { toggle() {} } }) }));
   return { dataset: { directoryStayId: stayId, directoryDogId: dogId, directoryStayKey: stayKey }, querySelectorAll(selector) { return selector === '[data-profile-subtab]' ? buttons : panels; }, buttons, panels };
 }
 

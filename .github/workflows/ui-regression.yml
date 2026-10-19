@@ -312,7 +312,7 @@ jobs:
           node --test tests/care-navigation-continuity.test.js
           node --test tests/care-return-focus-identity.test.js
           node --test tests/care-freshness-clarity.test.js tests/care-empty-states.test.js tests/care-profile-navigation.test.js
-          node --test tests/care-summary-updates.test.js tests/care-document-return.test.js
+          node --test tests/care-summary-updates.test.js tests/care-document-return.test.js tests/care-editor-simple.test.js
           node --test tests/ui-workflow-parallel.test.js
 
   fixtures:

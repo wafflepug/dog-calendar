@@ -2313,7 +2313,10 @@ function setDirectoryProfileEditMode(
 
 function cancelDirectoryProfileEdit(card) {
     if (!card) return;
-    directoryProfileEditDrafts.delete(directoryProfileEditKey(card));
+    const editKey = directoryProfileEditKey(card);
+    const draft = directoryProfileEditDrafts.get(editKey);
+    if (draft) applyDirectoryProfileEditValues(card, draft.initial);
+    directoryProfileEditDrafts.delete(editKey);
 
     const stayKey =
         String(
@@ -2327,6 +2330,10 @@ function cancelDirectoryProfileEdit(card) {
         (!hasStableIds ? directoryProfileDetailCache[stayKey] : null);
 
     if (record) {
+        // Discard deliberately restores current saved values, even when the
+        // generated markup is unchanged and normal refreshes preserve inputs.
+        const host = card.querySelector('[data-directory-intake-attributes]');
+        if (host) directoryIntakeRenderSnapshots.delete(host);
         renderDirectoryIntakeAttributes(
             card,
             record
@@ -4551,6 +4558,24 @@ registerWaffleServiceWorker();
             groups: [], fields: []
         }
     ];
+
+    // Keep blank descriptive fields out of the way while leaving care and safety
+    // instructions directly visible in the editor.
+    const DIRECTORY_PROFILE_OPTIONAL_FIELDS = new Set([
+        'age', 'weight', 'sex', 'allowedTreats'
+    ]);
+
+    function directoryCareEditorGroupFields(group, tab, attributes) {
+        const fields = (group?.fields || []).filter(field => tab.fields.includes(field.key));
+        const optional = fields.filter(field =>
+            DIRECTORY_PROFILE_OPTIONAL_FIELDS.has(field.key) && !String(attributes?.[field.key] ?? '').trim()
+        );
+        const optionalKeys = new Set(optional.map(field => field.key));
+        return {
+            visible: fields.filter(field => !optionalKeys.has(field.key)),
+            optional
+        };
+    }
 
     let careRiskRecordsCache = {};
 
@@ -11232,6 +11257,16 @@ registerWaffleServiceWorker();
         });
         card.querySelectorAll('[data-profile-subpanel]').forEach(panel => {
             const isExpanded = expanded.has(panel.dataset.profileSubpanel);
+            if (!isExpanded && !panel.hidden && panel.contains(document.activeElement)) {
+                const toggle = card.querySelector(`[data-profile-subtab="${panel.dataset.profileSubpanel}"]`);
+                if (toggle) {
+                    try {
+                        toggle.focus({ preventScroll: true });
+                    } catch (_) {
+                        toggle.focus();
+                    }
+                }
+            }
             if (panel.hidden !== !isExpanded) panel.hidden = !isExpanded;
             panel.closest('[data-care-category]')?.classList.toggle('is-expanded', isExpanded);
         });
@@ -11997,7 +12032,10 @@ registerWaffleServiceWorker();
             : new Map();
         if (previousIdentity === identity.key) {
             host.querySelectorAll('.intake-profile-missing[data-missing-category]').forEach(details => {
-                missingDisclosureState.set(details.dataset.missingCategory, details.open);
+                missingDisclosureState.set(`missing:${details.dataset.missingCategory}`, details.open);
+            });
+            host.querySelectorAll('.intake-profile-optional[data-optional-category]').forEach(details => {
+                missingDisclosureState.set(`optional:${details.dataset.optionalCategory}`, details.open);
             });
         }
         const cardsHtml = DIRECTORY_PROFILE_SECONDARY_TABS.map((tab, index) => {
@@ -12007,11 +12045,16 @@ registerWaffleServiceWorker();
             const groupsHtml = tab.groups.map(groupTitle => {
                 const group = INTAKE_ATTRIBUTE_UI_GROUPS.find(item => item.title === groupTitle);
                 if (!group) return '';
-                const fieldsHtml = group.fields
-                    .filter(field => tab.fields.includes(field.key))
+                const { visible, optional } = directoryCareEditorGroupFields(group, tab, attributes);
+                const controlHtml = fields => fields
                     .map(field => intakeAttributeControlHtml(field, attributes[field.key], card.dataset.directorySourceRow || card.dataset.directoryStayKey))
                     .join('');
-                return `<section class="intake-profile-group intake-profile-editor-fields"><div class="intake-profile-group-title">${escapeDashboardHtml(group.title)}</div><div class="intake-profile-grid">${fieldsHtml}</div></section>`;
+                const fieldsHtml = controlHtml(visible);
+                const optionalKey = `${tab.key}-${group.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+                const optionalHtml = optional.length
+                    ? `<details class="intake-profile-optional" data-optional-category="${escapeDashboardHtml(optionalKey)}"><summary>More details (${optional.length})</summary><div class="intake-profile-grid">${controlHtml(optional)}</div></details>`
+                    : '';
+                return `<section class="intake-profile-group intake-profile-editor-fields"><div class="intake-profile-group-title">${escapeDashboardHtml(group.title)}</div>${fieldsHtml ? `<div class="intake-profile-grid">${fieldsHtml}</div>` : ''}${optionalHtml}</section>`;
             }).join('');
             const summary = directoryCareCategorySummary(tab.key, attributes, profileReadState, safetyRecord, safetyState);
             const content = tab.key === 'safety'
@@ -12038,7 +12081,7 @@ registerWaffleServiceWorker();
         `;
         const normalizeDisclosureState = node => {
             const normalized = node.cloneNode(true);
-            normalized.querySelectorAll('.intake-profile-missing').forEach(details => { details.open = false; });
+            normalized.querySelectorAll('.intake-profile-missing, .intake-profile-optional').forEach(details => { details.open = false; });
             normalized.querySelectorAll('[data-care-category]').forEach(category => { category.classList.remove('is-expanded'); });
             normalized.querySelectorAll('[data-profile-subtab]').forEach(button => {
                 button.classList.remove('is-expanded');
@@ -12069,8 +12112,15 @@ registerWaffleServiceWorker();
         const mustReplace = previousIdentity !== identity.key || snapshotChanged || !intactCategoryStructure;
         if (mustReplace) host.innerHTML = markup;
         host.querySelectorAll('.intake-profile-missing[data-missing-category]').forEach(details => {
-            if (missingDisclosureState.has(details.dataset.missingCategory) && details.open !== missingDisclosureState.get(details.dataset.missingCategory)) {
-                details.open = missingDisclosureState.get(details.dataset.missingCategory);
+            const stateKey = `missing:${details.dataset.missingCategory}`;
+            if (missingDisclosureState.has(stateKey) && details.open !== missingDisclosureState.get(stateKey)) {
+                details.open = missingDisclosureState.get(stateKey);
+            }
+        });
+        host.querySelectorAll('.intake-profile-optional[data-optional-category]').forEach(details => {
+            const stateKey = `optional:${details.dataset.optionalCategory}`;
+            if (missingDisclosureState.has(stateKey) && details.open !== missingDisclosureState.get(stateKey)) {
+                details.open = missingDisclosureState.get(stateKey);
             }
         });
         if (host.dataset.careCategoryCardsBound !== 'true') {
