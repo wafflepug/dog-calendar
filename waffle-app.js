@@ -2313,7 +2313,10 @@ function setDirectoryProfileEditMode(
 
 function cancelDirectoryProfileEdit(card) {
     if (!card) return;
-    directoryProfileEditDrafts.delete(directoryProfileEditKey(card));
+    const editKey = directoryProfileEditKey(card);
+    const draft = directoryProfileEditDrafts.get(editKey);
+    if (draft) applyDirectoryProfileEditValues(card, draft.initial);
+    directoryProfileEditDrafts.delete(editKey);
 
     const stayKey =
         String(
@@ -2327,6 +2330,10 @@ function cancelDirectoryProfileEdit(card) {
         (!hasStableIds ? directoryProfileDetailCache[stayKey] : null);
 
     if (record) {
+        // Discard deliberately restores current saved values, even when the
+        // generated markup is unchanged and normal refreshes preserve inputs.
+        const host = card.querySelector('[data-directory-intake-attributes]');
+        if (host) directoryIntakeRenderSnapshots.delete(host);
         renderDirectoryIntakeAttributes(
             card,
             record
