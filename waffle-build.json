@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.10.20.02",
-  "releaseName": "Care Read Efficiency",
+  "assetRevision": "2026.10.20.03",
+  "releaseName": "Care Startup and Refresh",
   "careIteration": {
     "returningDogSuggestions": true,
     "reviewedCareInheritance": true,

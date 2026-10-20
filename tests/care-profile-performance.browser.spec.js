@@ -5,7 +5,7 @@ const fullCalendar=fs.readFileSync('tests/fixtures/fullcalendar.global.min.js','
 const dogId='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',stayId='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 const booking={timestamp:'2026-10-01',dogName:'Performance Guest',breed:'Pug',startDate:'2026-10-08',endDate:'2026-10-12',ownerName:'Private Owner',phone:'0400123456',bookingType:'Boarding',dogId,stayId,dogNumber:'#00052'};
 async function fixture(page,{hold=false,fail=false,serverMetadata=false}={}) {
-  const reads=[];let release,blocked=new Promise(r=>release=r),failure=fail;
+  const reads=[],rosterReads=[];let release,blocked=new Promise(r=>release=r),failure=fail;
   await page.addInitScript(()=>{
     const NativeDate=Date,now=NativeDate.UTC(2026,9,10,1);
     function FixedDate(...args){if(!new.target)return new NativeDate(now).toString();return Reflect.construct(NativeDate,args.length?args:[now],new.target);}
@@ -22,7 +22,7 @@ async function fixture(page,{hold=false,fail=false,serverMetadata=false}={}) {
       if(!policy.policy.allowed)return route.fulfill({status:403,body:'Read-only fixture'});
       const params=new URL(url).searchParams,payload=JSON.parse(params.get('payload')||'{}'),callback=params.get('callback');
       let body={result:'success',records:[]};
-      if(policy.action==='get_guest_directory')body={result:'success',bookings:[booking],summaries:[]};
+      if(policy.action==='get_guest_directory'){rosterReads.push(payload);body={result:'success',bookings:[booking],summaries:[]};}
       if(policy.action==='get_guest_profile'){
         reads.push(payload);
         if(failure)return route.abort('failed');
@@ -33,7 +33,7 @@ async function fixture(page,{hold=false,fail=false,serverMetadata=false}={}) {
     }
     const type=request.resourceType();return route.fulfill({status:200,contentType:type==='stylesheet'?'text/css':type==='script'?'application/javascript':'image/svg+xml',body:type==='stylesheet'||type==='script'?'':'<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>'});
   });
-  return {reads,release:()=>release(),recover:()=>failure=false};
+  return {reads,rosterReads,release:()=>release(),recover:()=>failure=false};
 }
 async function ready(page,baseURL){
   await page.goto(`${baseURL}/directory.html`,{waitUntil:'domcontentloaded'});
@@ -73,6 +73,30 @@ test('server timing metadata flows through transport into the anonymous live sam
   await expect.poll(async()=>page.evaluate(()=>window.WAFFLE_CARE_PERFORMANCE.snapshot().some(s=>s.phase==='request-end'&&s.backendMs===8&&Number.isFinite(s.transportMs)&&s.serverCacheState==='miss'))).toBe(true);
   const samples=await page.evaluate(()=>window.WAFFLE_CARE_PERFORMANCE.snapshot());
   expect(JSON.stringify(samples)).not.toMatch(/Performance Guest|Private Owner|0400123456|stayKey|dogId|payload|https/);
+});
+test('online while hidden defers the directory roster read to one foreground refresh',async({page,baseURL})=>{
+  const f=await fixture(page);await ready(page,baseURL);await expect.poll(()=>f.rosterReads.length).toBeGreaterThan(0);
+  const beforeHiddenOnline=f.rosterReads.length;
+  await page.evaluate(()=>{
+    Object.defineProperty(document,'visibilityState',{configurable:true,get:()=> 'hidden'});
+    window.dispatchEvent(new Event('offline'));
+    window.dispatchEvent(new Event('online'));
+    window.dispatchEvent(new Event('online'));
+  });
+  await page.waitForTimeout(350);
+  const hiddenCount=f.rosterReads.length;
+  expect(hiddenCount).toBe(beforeHiddenOnline);
+  await page.evaluate(()=>{
+    Object.defineProperty(document,'visibilityState',{configurable:true,get:()=> 'visible'});
+    const event=new Event('pageshow');Object.defineProperty(event,'persisted',{value:true});window.dispatchEvent(event);
+    document.dispatchEvent(new Event('visibilitychange'));
+    window.dispatchEvent(new Event('focus'));
+  });
+  await expect.poll(()=>f.rosterReads.length).toBe(hiddenCount+1);
+  await page.waitForTimeout(400);
+  expect(f.rosterReads.length).toBe(hiddenCount+1);
+  await page.locator('#refreshGuestDirectoryBtn').evaluate(button=>button.click());
+  await expect.poll(()=>f.rosterReads.length).toBe(hiddenCount+2);
 });
 test('failed read has one explicit Retry; recovering makes one new request and retains identity',async({page,baseURL})=>{
   const f=await fixture(page,{fail:true});const card=await ready(page,baseURL);

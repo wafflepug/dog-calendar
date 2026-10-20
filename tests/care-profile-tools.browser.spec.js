@@ -4,37 +4,50 @@ const path = require('node:path');
 const { resolveLocalBackendAction } = require('../scripts/local-network-policy');
 const calendar = fs.readFileSync(path.join(__dirname, 'fixtures/fullcalendar.global.min.js'), 'utf8');
 const app = fs.readFileSync(path.join(__dirname, '..', 'waffle-app.js'), 'utf8');
+const care = fs.readFileSync(path.join(__dirname, '..', 'care.js'), 'utf8');
 
 const booking = { timestamp: '2026-10-16', dogName: 'Milo', breed: 'Collie', startDate: '2026-10-17', endDate: '2026-10-20', ownerName: 'Casey', phone: '+61400000000', notes: 'Call before pickup.', bookingType: 'Boarding', dogId: '11111111-1111-4111-8111-111111111111', stayId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', dogNumber: '#00017', stayKey: 'milo|2026-10-17|2026-10-20' };
 const profileRecord = { stayKey: booking.stayKey, identity: { stayKey: booking.stayKey, stayId: booking.stayId, dogId: booking.dogId }, resolution: { status: 'resolved', method: 'fixture' }, updatedAt: '2026-10-16T08:00:00Z', intakeAttributesSource: 'Saved profile', intakeAttributes: { feedingTimes: '8am and 6pm', foodAmount: '1 cup', foodBrandType: 'Sensitive formula', walksPerDay: '2 walks', walkDuration: '20 minutes', medicationInstructions: 'Give the saved medication with dinner. Call the owner if appetite changes.', notes: 'Give Milo time to settle after arrival.' }, riskFlags: { foodAllergy: true } };
 
-async function installFixture(page) {
+async function installFixture(page, { seedOperationsRows = false } = {}) {
   const reads = [];
-  await page.addInitScript(() => {
+  const pendingReads = new Set();
+  const csvCell = value => `"${String(value ?? '').replace(/"/g, '""')}"`;
+  const fixtureCsv = [
+    ['Timestamp', 'Dog Name', 'Breed', 'Start Date', 'End Date', 'Owner', 'Phone', 'Likes', 'Dislikes', 'Notes', 'Edit Link', 'Booking Type', 'Source', 'Dog ID', 'Stay ID', 'Dog Number'],
+    [booking.timestamp, booking.dogName, booking.breed, '17/10/2026', '20/10/2026', booking.ownerName, booking.phone, '', '', booking.notes, '', 'Boarding', 'Other', booking.dogId, booking.stayId, booking.dogNumber],
+  ].map(row => row.map(csvCell).join(',')).join('\n');
+  await page.addInitScript(({ csv, seedOperationsRows: seed }) => {
     const NativeDate = Date, now = NativeDate.UTC(2026, 9, 17, 12);
     function FixedDate(...args) { if (!new.target) return new NativeDate(now).toString(); return Reflect.construct(NativeDate, args.length ? args : [now], new.target); }
     FixedDate.prototype = NativeDate.prototype; Object.setPrototypeOf(FixedDate, NativeDate); FixedDate.now = () => now; globalThis.Date = FixedDate;
-  });
+    if (seed) localStorage.setItem('boardingDataCache', csv);
+  }, { csv: fixtureCsv, seedOperationsRows });
   await page.route('**/*', async route => {
     const request = route.request(), url = request.url();
     if (!['GET', 'HEAD'].includes(request.method())) return route.fulfill({ status: 405, body: 'Synthetic fixture blocks all writes' });
     if (url.includes('/waffle-app.js')) return route.fulfill({ status: 200, contentType: 'application/javascript', body: app.replace('function renderDirectoryCareProfile(card, record) {', 'window.__renderDirectoryCareProfile = renderDirectoryCareProfile;\n    function renderDirectoryCareProfile(card, record) {').replace('function renderDirectoryIntakeAttributes(card, record) {', 'window.__renderDirectoryIntake = renderDirectoryIntakeAttributes;\n    function renderDirectoryIntakeAttributes(card, record) {') });
+    if (url.includes('/care.js')) return route.fulfill({ status: 200, contentType: 'application/javascript', body: care.replace('  function prepare() {', '  function prepare() {\n    window.__carePreparePasses = (window.__carePreparePasses || 0) + 1;').replace('  function wrapFunction(name) {', '  window.__careSchedulePrepare = schedulePrepare;\n  window.__carePendingPrepareDelays = () => [...prepareTimers.keys()];\n  function wrapFunction(name) {') });
     if (url.includes('cdn.jsdelivr.net') && url.includes('fullcalendar')) return route.fulfill({ status: 200, contentType: 'application/javascript', body: calendar });
     if (url.includes('docs.google.com/spreadsheets') && url.includes('output=csv')) {
-      const row = [booking.timestamp, booking.dogName, booking.breed, '17/10/2026', '20/10/2026', booking.ownerName, booking.phone, '', '', booking.notes, '', 'Boarding', 'Other', booking.dogId, booking.stayId, booking.dogNumber];
-      return route.fulfill({ status: 200, contentType: 'text/csv', body: 'Timestamp,Dog Name,Breed,Start Date,End Date,Owner,Phone,Likes,Dislikes,Notes,Edit Link,Booking Type,Source,Dog ID,Stay ID,Dog Number\n' + row.join(',') });
+      return route.fulfill({ status: 200, contentType: 'text/csv', body: fixtureCsv });
     }
     if (url.includes('script.google')) {
       const resolved = resolveLocalBackendAction({ method: request.method(), url });
       if (!resolved.policy.allowed) return route.fulfill({ status: 403, body: 'Unapproved backend request' });
       const params = new URL(url).searchParams, callback = params.get('callback');
       reads.push(resolved.action);
+      pendingReads.add(request);
       let response = { result: 'success', records: [], bookings: [], summaries: [] };
       if (resolved.action === 'get_guest_directory') response = { result: 'success', bookings: [booking], summaries: [{ stayKey: booking.stayKey, riskFlags: profileRecord.riskFlags }], digitalIntakes: [], legacyIntakes: [] };
       if (resolved.action === 'get_guest_profile') response = { result: 'success', record: profileRecord };
       if (resolved.action === 'get_guest_belongings') response = { result: 'success', record: { stayKey: booking.stayKey, items: {}, photos: [] } };
       if (resolved.action === 'maintenance_status') response = { result: 'success', enabled: false };
-      return route.fulfill({ status: 200, contentType: callback ? 'application/javascript' : 'application/json', body: callback ? `${callback}(${JSON.stringify(response)});` : JSON.stringify(response) });
+      try {
+        return await route.fulfill({ status: 200, contentType: callback ? 'application/javascript' : 'application/json', body: callback ? `${callback}(${JSON.stringify(response)});` : JSON.stringify(response) });
+      } finally {
+        pendingReads.delete(request);
+      }
     }
     if (/^https?:/.test(url) && new URL(url).hostname !== '127.0.0.1') {
       const type = request.resourceType();
@@ -42,8 +55,68 @@ async function installFixture(page) {
     }
     return route.continue();
   });
+  Object.defineProperty(reads, 'pending', { value: pendingReads });
   return reads;
 }
+
+test('coalesced late Care preparation still adopts controls added after startup', async ({ page, baseURL }) => {
+  const reads = await installFixture(page, { seedOperationsRows: true });
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(`${baseURL}/directory.html?carePrepareFixture=1`, { waitUntil: 'domcontentloaded' });
+  await page.waitForFunction(() => document.documentElement.dataset.waffleUiReady === 'true');
+  const opener = page.locator('#directory-grid [data-open-directory-profile]');
+  await expect(opener).toHaveCount(1);
+  await opener.click();
+  const card = page.locator('.directory-card.is-profile-active');
+  await expect(card.locator('[data-v11160-tab="profile"]')).toBeVisible();
+  // Wait for the actual bounded startup/wrapper timer queue to drain before
+  // creating a new late-control burst; this is a lifecycle condition, not a
+  // fixed sleep or guessed hydration delay.
+  await page.waitForFunction(() => typeof window.__careSchedulePrepare === 'function'
+    && window.__carePendingPrepareDelays().length === 0);
+  await expect.poll(() => reads.pending.size).toBe(0);
+  const before = await page.evaluate(() => window.__carePreparePasses || 0);
+  const initialReads = [...reads];
+  const backfill = page.locator('#p4BackfillDogIds');
+  await expect(backfill).toHaveCount(1);
+  await page.evaluate(() => {
+    const toolbar = document.querySelector('.directory-roster-heading .guest-directory-toolbar');
+    const control = document.getElementById('p4BackfillDogIds');
+    if (!toolbar || !control) throw new Error('Expected the live Dog ID backfill control');
+    window.__lateCareBackfill = control;
+    control.remove();
+    toolbar.append(control);
+    const schedule = window.__careSchedulePrepare;
+    schedule([0, 80, 240, 650]);
+    schedule([0, 80, 240, 650]);
+    schedule([0, 80, 240, 650]);
+  });
+  await expect.poll(() => backfill.evaluate(node => node.parentElement?.classList.contains('care-record-maintenance-content') && node === window.__lateCareBackfill)).toBe(true);
+  await expect.poll(() => page.evaluate(() => window.__carePreparePasses || 0)).toBe(before + 4);
+  await page.waitForFunction(() => window.__carePendingPrepareDelays().length === 0);
+  expect(reads).toEqual(initialReads);
+  await page.locator('#directoryBackToGuestsBtn').click();
+  await page.locator('.care-record-maintenance > summary').click();
+  await expect(backfill).toBeVisible();
+  await backfill.focus();
+  await expect(backfill).toBeFocused();
+
+  const profileOpener = page.locator('#directory-grid [data-open-directory-profile]');
+  await profileOpener.click();
+  const reopenedCard = page.locator('.directory-card.is-profile-active');
+  const ownerLink = reopenedCard.locator('.directory-care-brief-actions > [data-p4-dir="owner"]');
+  await expect(ownerLink).toBeVisible();
+  const intentBaseline = [...reads];
+  await ownerLink.click();
+  await expect(page.locator('#p4Modal')).toBeVisible();
+  await page.locator('#p4TabReminders').click();
+  await expect(page.locator('#p4Reminders')).not.toContainText('Checking today and the next 7 days…');
+  const intentReads = reads.slice(intentBaseline.length);
+  expect(intentReads).toEqual(['get_intake_statuses', 'get_belongings']);
+  await page.locator('#p4TabInsights').click();
+  await expect(page.locator('#p4Insights')).toContainText('stays touching this month');
+  expect(reads.slice(intentBaseline.length)).toEqual(intentReads);
+});
 
 for (const [name, width, colorScheme] of [['320-light', 320, 'light'], ['320-dark', 320, 'dark'], ['390-light', 390, 'light'], ['390-dark', 390, 'dark'], ['1440-light', 1440, 'light'], ['1440-dark', 1440, 'dark']]) {
   test(`Care profile secondary tools behave correctly ${name}`, async ({ page, baseURL }, testInfo) => {
@@ -89,6 +162,9 @@ for (const [name, width, colorScheme] of [['320-light', 320, 'light'], ['320-dar
     // Wait for the independent startup Past-count read before measuring tools-only reads.
     await expect.poll(() => reads.filter(action => action === 'get_past_guest_directory').length).toBe(1);
     await expect(card.locator('[data-care-brief-medication]')).toHaveText(profileRecord.intakeAttributes.medicationInstructions);
+    // Wait for all currently dispatched route responses before capturing the
+    // tools-only baseline; Care intentionally leaves unused secondary data lazy.
+    await expect.poll(() => reads.pending.size).toBe(0);
     const initialReads = [...reads];
     await page.keyboard.press('Tab');
     await summary.focus();
