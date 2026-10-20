@@ -2,8 +2,8 @@
    Build: 2026.08.27.04
    Historical base styles remain compatibility sources during Phase 3A, but pages no longer
    reference them individually. Preserve this import order until modules are folded in. */
-@import url("waffle-app.css?build=2026.08.27.04&rev=2026.10.19.01");
-@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.10.19.01");
+@import url("waffle-app.css?build=2026.08.27.04&rev=2026.10.20.01");
+@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.10.20.01");
 @import url("waffle-v10.8.2.css?build=2026.08.27.04");
 @import url("waffle-v10.8.3.css?build=2026.08.27.04");
 @import url("waffle-v10.8.5.css?build=2026.08.27.04");
@@ -11,12 +11,12 @@
 @import url("waffle-v10.8.7.css?build=2026.08.27.04");
 @import url("waffle-v10.8.8.css?build=2026.08.27.04");
 @import url("waffle-v10.8.9.css?build=2026.08.27.04");
-@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.10.19.01");
+@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.10.20.01");
 @import url("waffle-v11.0.3.css?build=2026.08.27.04");
 @import url("waffle-v11.0.5.css?build=2026.08.27.04");
-@import url("waffle-v11.1.94.css?build=2026.10.19.01");
-@import url("waffle-v11.1.95.css?build=2026.10.19.01");
-@import url("waffle-v11.1.96.css?build=2026.10.19.01&rev=2026.10.19.01");
+@import url("waffle-v11.1.94.css?build=2026.10.20.01");
+@import url("waffle-v11.1.95.css?build=2026.10.20.01");
+@import url("waffle-v11.1.96.css?build=2026.10.20.01&rev=2026.10.20.01");
 
 /* ============================================================
    MOBILE FIRST-PAINT STABILITY GATE
@@ -2907,3 +2907,37 @@ body.dark-theme[data-waffle-page="directory"] .directory-card .intake-profile-op
 @media(max-width:600px){
   body[data-waffle-page="directory"] .directory-card.is-profile-editing .intake-profile-optional .intake-profile-grid {grid-template-columns:minmax(0,1fr)}
 }
+
+/* An optional inline review keeps editing on the current Care screen. */
+body[data-waffle-page="directory"] .directory-card .directory-profile-save-bar {flex-wrap:wrap}
+body[data-waffle-page="directory"] .directory-card .care-change-review {
+  box-sizing:border-box;flex:1 0 100%;width:100%;min-width:0;order:-1;
+  border:1px solid var(--wh-border, #cbd5e1);border-radius:10px;
+  background:var(--wh-surface, #fff);color:var(--wh-text, #17243a);
+}
+body[data-waffle-page="directory"] .directory-card .care-change-review[hidden] {display:none!important}
+body[data-waffle-page="directory"] .directory-card .care-change-review > summary {
+  box-sizing:border-box;min-height:44px;padding:10px 12px;cursor:pointer;
+  font-size:0.875rem;line-height:1.5;font-weight:700;white-space:normal;overflow-wrap:anywhere;
+}
+body[data-waffle-page="directory"] .directory-card .care-change-review:not([open]) > :not(summary) {display:none!important}
+body[data-waffle-page="directory"] .directory-card .care-change-row {min-width:0;margin:0 12px;padding:10px 0;border-top:1px solid var(--wh-border, #cbd5e1)}
+body[data-waffle-page="directory"] .directory-card .care-change-row-header {display:flex;flex-wrap:wrap;align-items:start;gap:6px;min-width:0}
+body[data-waffle-page="directory"] .directory-card :is(.care-change-jump,.care-change-undo) {
+  box-sizing:border-box;min-width:44px;min-height:44px;max-width:100%;height:auto;
+  padding:8px 10px;border:1px solid var(--wh-border, #cbd5e1);border-radius:8px;
+  background:transparent;color:inherit;font-size:0.875rem;line-height:1.5;white-space:normal;overflow-wrap:anywhere;
+}
+body[data-waffle-page="directory"] .directory-card .care-change-jump {flex:1 1 140px;text-align:left;font-weight:700}
+body[data-waffle-page="directory"] .directory-card .care-change-undo {flex:0 1 auto}
+body[data-waffle-page="directory"] .directory-card .care-change-values {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:8px;min-width:0}
+body[data-waffle-page="directory"] .directory-card .care-change-values > * {min-width:0;margin:0}
+body[data-waffle-page="directory"] .directory-card :is(.care-change-before,.care-change-after) {white-space:pre-wrap;overflow-wrap:anywhere;font-size:0.875rem;line-height:1.5}
+body[data-waffle-page="directory"] .directory-card .care-change-value-label {display:block;font-size:0.75rem;font-weight:700;margin-bottom:3px}
+body[data-waffle-page="directory"] .directory-card :is(.care-change-review > summary,.care-change-jump,.care-change-undo):focus-visible {outline:3px solid var(--wh75-accent, #7c3aed);outline-offset:3px}
+body[data-waffle-page="directory"] .directory-card .care-change-undo:disabled {opacity:0.65;cursor:not-allowed}
+body.dark-theme[data-waffle-page="directory"] .directory-card .care-change-review {background:var(--wh-surface, #17243a);color:var(--wh-text, #f8fafc);border-color:var(--wh-border, #475569)}
+@media(max-width:600px){
+  body[data-waffle-page="directory"] .directory-card .care-change-values {grid-template-columns:minmax(0,1fr)}
+}
+body[data-waffle-page="directory"] .directory-card [data-care-change-list] {list-style:none;margin:0;padding:0}

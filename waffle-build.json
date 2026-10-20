@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.10.19.01",
-  "releaseName": "Care Simple Editor",
+  "assetRevision": "2026.10.20.01",
+  "releaseName": "Care Change Review",
   "careIteration": {
     "returningDogSuggestions": true,
     "reviewedCareInheritance": true,

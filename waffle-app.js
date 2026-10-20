@@ -2159,6 +2159,180 @@ function applyDirectoryProfileEditValues(card, values) {
     });
 }
 
+function directoryProfileEditControl(card, key) {
+    const separator = String(key || '').indexOf(':');
+    if (separator < 0) return null;
+    const kind = key.slice(0, separator);
+    const name = key.slice(separator + 1);
+    return Array.from(card?.querySelectorAll('[data-intake-attribute], [data-care-risk-flag]') || []).find(control =>
+        kind === 'intake'
+            ? String(control.dataset.intakeAttribute || '').trim() === name
+            : kind === 'risk' && String(control.dataset.careRiskFlag || '').trim() === name
+    ) || null;
+}
+
+function directoryProfileEditFieldLabel(control, key) {
+    const label = key.startsWith('risk:')
+        ? control?.closest('.care-risk-option')?.querySelector('.care-risk-label')
+        : control?.closest('.intake-profile-field')?.querySelector('label');
+    return String(label?.textContent || '').trim() || 'Care detail';
+}
+
+function directoryProfileEditDisplayValue(key, value, isBefore) {
+    if (key.startsWith('risk:')) return value ? 'Flagged' : 'Not flagged';
+    const text = String(value ?? '');
+    return text.trim() ? text : isBefore ? 'Not provided' : 'Removed';
+}
+
+function updateDirectoryProfileChangeReview(card, state) {
+    const review = card?.querySelector('[data-care-change-review]');
+    const list = review?.querySelector('[data-care-change-list]');
+    if (!review || !list || !state) return;
+
+    const current = collectDirectoryProfileEditValues(card);
+    const changedKeys = [...new Set([...Object.keys(state.initial || {}), ...Object.keys(current)])]
+        .filter(key => current[key] !== state.initial[key]);
+    const isEditing = card.classList.contains('is-profile-editing');
+    const hidden = !isEditing || changedKeys.length === 0;
+    if (review.hidden !== hidden) review.hidden = hidden;
+    if (review.hidden) {
+        review.open = false;
+        return;
+    }
+
+    const count = review.querySelector('[data-care-change-count]');
+    if (count && count.textContent !== String(changedKeys.length)) count.textContent = String(changedKeys.length);
+    const existingRows = new Map(Array.from(list.children || []).map(row => [row.dataset.key, row]));
+    const changedSet = new Set(changedKeys);
+    existingRows.forEach((row, key) => {
+        if (!changedSet.has(key)) row.remove();
+    });
+
+    changedKeys.forEach(key => {
+        const control = directoryProfileEditControl(card, key);
+        let row = existingRows.get(key);
+        if (!row) {
+            row = document.createElement('li');
+            row.className = 'care-change-row';
+            row.dataset.key = key;
+            row.dataset.careChangeKey = key;
+
+            const jump = document.createElement('button');
+            jump.type = 'button';
+            jump.className = 'care-change-jump';
+            jump.dataset.careChangeJump = key;
+
+            const header = document.createElement('div');
+            header.className = 'care-change-row-header';
+
+            const values = document.createElement('div');
+            values.className = 'care-change-values';
+            const beforeLabel = document.createElement('span');
+            beforeLabel.className = 'care-change-value-label';
+            beforeLabel.textContent = 'Saved: ';
+            const before = document.createElement('span');
+            before.className = 'care-change-before';
+            before.dataset.careChangeBefore = '';
+            const afterLabel = document.createElement('span');
+            afterLabel.className = 'care-change-value-label';
+            afterLabel.textContent = 'Draft: ';
+            const after = document.createElement('span');
+            after.className = 'care-change-after';
+            after.dataset.careChangeAfter = '';
+            const beforeGroup = document.createElement('div');
+            const afterGroup = document.createElement('div');
+            beforeGroup.append(beforeLabel, before);
+            afterGroup.append(afterLabel, after);
+            values.append(beforeGroup, afterGroup);
+
+            const undo = document.createElement('button');
+            undo.type = 'button';
+            undo.className = 'care-change-undo';
+            undo.dataset.careChangeUndo = key;
+            undo.textContent = 'Undo';
+            header.append(jump, undo);
+            row.append(header, values);
+            list.appendChild(row);
+        }
+
+        const label = directoryProfileEditFieldLabel(control, key);
+        const jump = row.querySelector('[data-care-change-jump]');
+        const before = row.querySelector('[data-care-change-before]');
+        const after = row.querySelector('[data-care-change-after]');
+        const undo = row.querySelector('[data-care-change-undo]');
+        if (jump) {
+            if (jump.textContent !== label) jump.textContent = label;
+            const accessibleName = `Go to ${label}`;
+            if (jump.getAttribute('aria-label') !== accessibleName) jump.setAttribute('aria-label', accessibleName);
+            const disabled = !control || !!control.disabled;
+            if (jump.disabled !== disabled) jump.disabled = disabled;
+        }
+        const beforeValue = directoryProfileEditDisplayValue(key, state.initial[key], true);
+        const afterValue = directoryProfileEditDisplayValue(key, current[key], false);
+        if (before && before.textContent !== beforeValue) before.textContent = beforeValue;
+        if (after && after.textContent !== afterValue) after.textContent = afterValue;
+        const undoDisabled = !!(state.saving || state.conflict);
+        if (undo && undo.disabled !== undoDisabled) undo.disabled = undoDisabled;
+    });
+}
+
+function jumpToDirectoryProfileEditField(card, key) {
+    if (!card) return;
+    const state = directoryProfileEditDrafts.get(directoryProfileEditKey(card));
+    if (!state || state.saving || !card.classList.contains('is-profile-editing')) return;
+    validateDirectoryProfileEditContext(card, state);
+    if (state.conflict) {
+        applyDirectoryProfileEditMode(card);
+        updateDirectoryProfileEditFeedback(card);
+    }
+    const control = directoryProfileEditControl(card, key);
+    if (!control || control.disabled) return;
+
+    const optionalDetails = control.closest('.intake-profile-optional');
+    if (optionalDetails && !optionalDetails.open) optionalDetails.open = true;
+    const panel = control.closest('[data-profile-subpanel]');
+    if (panel?.hidden) {
+        const category = panel.dataset.profileSubpanel;
+        if (!category || !card.querySelector(`[data-profile-subtab="${category}"]`)) return;
+        switchDirectoryProfileSubTab(card, category, true);
+        if (panel.hidden) return;
+    }
+    if (typeof control.scrollIntoView === 'function') control.scrollIntoView({ behavior: 'auto', block: 'center' });
+    try { control.focus({ preventScroll: true }); }
+    catch (_) { control.focus(); }
+}
+
+function undoDirectoryProfileEditField(card, key) {
+    if (!card) return;
+    const state = directoryProfileEditDrafts.get(directoryProfileEditKey(card));
+    if (!state || state.saving || state.conflict || !card.classList.contains('is-profile-editing')) return;
+    validateDirectoryProfileEditContext(card, state);
+    if (state.saving || state.conflict || !Object.prototype.hasOwnProperty.call(state.initial || {}, key)) {
+        updateDirectoryProfileEditFeedback(card);
+        return;
+    }
+
+    const row = card.querySelector(`[data-care-change-key="${key}"]`);
+    const nextJump = row?.nextElementSibling?.querySelector('[data-care-change-jump]') || null;
+    const control = directoryProfileEditControl(card, key);
+    if (!control) return;
+    if (key.startsWith('risk:')) control.checked = !!state.initial[key];
+    else control.value = String(state.initial[key] ?? '');
+    state.values = collectDirectoryProfileEditValues(card);
+    state.failed = false;
+    state.failureMessage = '';
+    updateDirectoryProfileEditFeedback(card);
+
+    const review = card.querySelector('[data-care-change-review]');
+    const fallback = review?.hidden
+        ? (card.querySelector('[data-cancel-profile-edit]:not([hidden])') || card.querySelector('[data-toggle-profile-edit]'))
+        : nextJump || review?.querySelector('summary');
+    if (fallback && typeof fallback.focus === 'function') {
+        try { fallback.focus({ preventScroll: true }); }
+        catch (_) { fallback.focus(); }
+    }
+}
+
 function directoryProfileEditIsDirty(card, state = directoryProfileEditDrafts.get(directoryProfileEditKey(card))) {
     return !!state && JSON.stringify(collectDirectoryProfileEditValues(card)) !== JSON.stringify(state.initial);
 }
@@ -2186,19 +2360,22 @@ function updateDirectoryProfileEditFeedback(card, message, stateName) {
     const status = card?.querySelector('[data-directory-profile-edit-status]');
     const state = directoryProfileEditDrafts.get(directoryProfileEditKey(card));
     const saveButton = card?.querySelector('[data-save-belongings]');
-    if (!status || !state) return;
+    if (!state) return;
     const dirty = directoryProfileEditIsDirty(card, state);
-    status.textContent = message || (state.conflict
-        ? (state.conflictReason || 'Saved care details changed while you were editing. Discard this draft to load the latest profile.')
-        : state.saving
-            ? 'Saving care details…'
-            : state.failed
-                ? (state.failureMessage || 'Save failed. Your draft is still here. Try saving again or discard it.')
-                : dirty
-                    ? 'Unsaved changes.'
-                    : 'No unsaved changes.');
-    status.className = `directory-profile-edit-status${stateName || (state.conflict || state.failed ? ' is-error' : state.saving ? ' is-saving' : dirty ? ' is-unsaved' : ' is-clean')}`;
+    if (status) {
+        status.textContent = message || (state.conflict
+            ? (state.conflictReason || 'Saved care details changed while you were editing. Discard this draft to load the latest profile.')
+            : state.saving
+                ? 'Saving care details…'
+                : state.failed
+                    ? (state.failureMessage || 'Save failed. Your draft is still here. Try saving again or discard it.')
+                    : dirty
+                        ? 'Unsaved changes.'
+                        : 'No unsaved changes.');
+        status.className = `directory-profile-edit-status${stateName || (state.conflict || state.failed ? ' is-error' : state.saving ? ' is-saving' : dirty ? ' is-unsaved' : ' is-clean')}`;
+    }
     if (saveButton) saveButton.disabled = state.saving || state.conflict || !dirty;
+    updateDirectoryProfileChangeReview(card, state);
 }
 
 function restoreDirectoryProfileEditDraft(card, options = {}) {
@@ -2278,6 +2455,16 @@ function applyDirectoryProfileEditMode(card) {
     if (saveButton && editing && card.dataset.profileSaving !== 'true') {
         saveButton.disabled = !state || state.conflict || !directoryProfileEditIsDirty(card, state);
     }
+
+    const changeReview = card.querySelector('[data-care-change-review]');
+    if (changeReview && (!editing || !state)) {
+        changeReview.hidden = true;
+        changeReview.open = false;
+        changeReview.querySelector('[data-care-change-list]')?.replaceChildren();
+        const count = changeReview.querySelector('[data-care-change-count]');
+        if (count) count.textContent = '0';
+    }
+    if (editing && state) updateDirectoryProfileChangeReview(card, state);
 }
 
 
@@ -5040,6 +5227,20 @@ registerWaffleServiceWorker();
             );
 
         directoryGrid.addEventListener('click', async function(event) {
+            const changeJump = event.target.closest('[data-care-change-jump]');
+            if (changeJump) {
+                event.preventDefault();
+                event.stopPropagation();
+                jumpToDirectoryProfileEditField(changeJump.closest('.directory-card'), changeJump.dataset.careChangeJump);
+                return;
+            }
+            const changeUndo = event.target.closest('[data-care-change-undo]');
+            if (changeUndo) {
+                event.preventDefault();
+                event.stopPropagation();
+                undoDirectoryProfileEditField(changeUndo.closest('.directory-card'), changeUndo.dataset.careChangeUndo);
+                return;
+            }
             const resumeHosted = event.target.closest('[data-hosted-photo-resume]');
             if (resumeHosted) { event.preventDefault(); event.stopPropagation(); resumeHostedPhotoSession(resumeHosted.dataset.hostedPhotoResume); return; }
             const discardHosted = event.target.closest('[data-hosted-photo-discard]');
@@ -17121,6 +17322,10 @@ registerWaffleServiceWorker();
 
                                         <div class="directory-profile-save-bar">
                                             <div class="directory-profile-edit-status is-clean" data-directory-profile-edit-status role="status" aria-live="polite" aria-atomic="true">No unsaved changes.</div>
+                                            <details class="care-change-review" data-care-change-review hidden>
+                                                <summary>Review changes (<span data-care-change-count>0</span>)</summary>
+                                                <ul data-care-change-list></ul>
+                                            </details>
                                             <button
                                                 type="button"
                                                 class="belongings-save-btn"
