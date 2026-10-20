@@ -17,7 +17,7 @@ async function fixture(page, { reminders = [], profileRecord = record } = {}) {
   await page.route('**/*', async route => {
     const request = route.request(), url = request.url();
     if (!['GET', 'HEAD'].includes(request.method())) return route.fulfill({ status: 405, body: 'Synthetic fixture blocks all writes' });
-    if (url.includes('/waffle-app.js')) return route.fulfill({ status: 200, contentType: 'application/javascript', body: app.replace('function renderDirectoryIntakeAttributes(', 'window.__renderCondensedIntake = renderDirectoryIntakeAttributes;\n    function renderDirectoryIntakeAttributes(').replace('function switchDirectoryProfileSubTab(', 'window.__switchSimpleSection = switchDirectoryProfileSubTab;\n    function switchDirectoryProfileSubTab(') });
+    if (url.includes('/waffle-app.js')) return route.fulfill({ status: 200, contentType: 'application/javascript', body: app.replace('function renderDirectoryIntakeAttributes(', 'window.__renderCondensedIntake = renderDirectoryIntakeAttributes;\n    function renderDirectoryIntakeAttributes(').replace('function switchDirectoryProfileSubTab(', 'window.__switchSimpleSection = switchDirectoryProfileSubTab;\n    function switchDirectoryProfileSubTab(').replace('function updateDirectoryProfileEditFeedback(', 'window.__setCareEditTestState = changes => { const card=document.querySelector(".directory-card.is-profile-active"); Object.assign(directoryProfileEditDrafts.get(directoryProfileEditKey(card)),changes); updateDirectoryProfileEditFeedback(card); applyDirectoryProfileEditMode(card); };\nfunction updateDirectoryProfileEditFeedback(') });
     if (url.includes('cdn.jsdelivr.net') && url.includes('fullcalendar')) return route.fulfill({ status: 200, contentType: 'application/javascript', body: calendar });
     if (url.includes('docs.google.com/spreadsheets') && url.includes('output=csv')) return route.fulfill({ status: 200, contentType: 'text/csv', body: 'Timestamp,Dog Name,Breed,Start Date,End Date,Owner,Phone,Likes,Dislikes,Notes,Edit Link,Booking Type,Source,Dog ID,Stay ID,Dog Number\n' + [booking.timestamp, booking.dogName, booking.breed, '17/10/2026', '20/10/2026', booking.ownerName, booking.phone, '', '', booking.notes, '', 'Boarding', 'Other', booking.dogId, booking.stayId, booking.dogNumber].join(',') });
     if (url.includes('script.google')) {
@@ -231,5 +231,122 @@ test('Care text enlargement keeps daily information and editor actions readable'
     }
     await card.locator('[data-directory-detail="profile"]').scrollIntoViewIfNeeded();
     await page.screenshot({path:testInfo.outputPath(`care-large-text-${width}-${theme}.png`)});
+  }
+});
+
+async function openChangeReviewEditor(page,baseURL){
+  await page.goto(`${baseURL}/directory.html?careChangeReviewFixture=1`,{waitUntil:'domcontentloaded'});
+  await page.waitForFunction(()=>document.documentElement.dataset.waffleUiReady==='true');
+  await page.locator('#directory-grid [data-open-directory-profile]').click();
+  const card=page.locator('.directory-card.is-profile-active');
+  await expect(card.locator('[data-care-brief-medication]')).toHaveText(record.intakeAttributes.medicationInstructions);
+  await expect(card.locator('[data-care-change-review]')).toBeHidden();
+  await card.locator('.directory-care-more-actions > summary').click();
+  await card.locator('[data-care-brief-action="edit"]').click();
+  return card;
+}
+
+async function openCareCategory(card,key){
+  const toggle=card.locator(`[data-profile-subtab="${key}"]`);
+  if(await toggle.getAttribute('aria-expanded')!=='true')await toggle.click();
+}
+
+test('Care change review jumps to hidden fields and undoes only the chosen change',async({page,baseURL})=>{
+  await page.setViewportSize({width:390,height:900});
+  const reads=await fixture(page);
+  const card=await openChangeReviewEditor(page,baseURL);
+  const review=card.locator('[data-care-change-review]');
+  await expect(review).toBeHidden();
+  const readCount=reads.filter(x=>x==='get_guest_profile').length;
+  await openCareCategory(card,'foodWalks');
+  const amount=card.locator('[data-intake-attribute="foodAmount"]');
+  await amount.fill('2 cups');
+  await expect(amount).toBeFocused();
+  await expect(review).toBeVisible();
+  await expect(review).not.toHaveAttribute('open','');
+  await review.locator(':scope > summary').focus();await page.keyboard.press('Enter');
+  const row=key=>review.locator(`[data-care-change-key="${key}"]`);
+  await expect(row('intake:foodAmount').locator('[data-care-change-before]')).toHaveText('1 cup');
+  await expect(row('intake:foodAmount').locator('[data-care-change-after]')).toHaveText('2 cups');
+  await expect(row('intake:foodAmount').locator('[data-care-change-undo]')).toHaveAccessibleName('Undo change to Food Amount');
+  await openCareCategory(card,'healthHome');
+  const medication=card.locator('[data-intake-attribute="medicationInstructions"]');
+  const draftMedication='Give with food.\nCall <owner> before changing the dose.';
+  await medication.fill(draftMedication);
+  await expect(medication).toBeFocused();
+  await page.evaluate(data=>window.__renderCondensedIntake(document.querySelector('.directory-card.is-profile-active'),data),record);
+  await expect(medication).toBeFocused();
+  await expect(review).toHaveAttribute('open','');
+  await expect(row('intake:medicationInstructions').locator('[data-care-change-after]')).toHaveText(draftMedication);
+  const age=card.locator('[data-intake-attribute="age"]');
+  const optional=age.locator('xpath=ancestor::details[1]');
+  await optional.locator(':scope > summary').click();await age.fill('4 years');
+  await expect(row('intake:age').locator('[data-care-change-before]')).toHaveText('Not provided');
+  await optional.locator(':scope > summary').click();
+  await card.locator('[data-profile-subtab="healthHome"]').click();
+  await row('intake:age').locator('[data-care-change-jump]').click();
+  await expect(age).toBeFocused();await expect(optional).toHaveAttribute('open','');
+  await expect(card.locator('[data-profile-subtab="healthHome"]')).toHaveAttribute('aria-expanded','true');
+  await page.evaluate(()=>window.__setCareEditTestState({saving:true}));
+  await expect(row('intake:age').locator('[data-care-change-undo]')).toBeDisabled();
+  await row('intake:age').locator('[data-care-change-undo]').evaluate(button=>button.dispatchEvent(new MouseEvent('click',{bubbles:true})));
+  await expect(age).toHaveValue('4 years');
+  await page.evaluate(()=>window.__setCareEditTestState({saving:false,failed:true}));
+  await expect(row('intake:age').locator('[data-care-change-jump]')).toBeEnabled();
+  await expect(row('intake:age').locator('[data-care-change-undo]')).toBeEnabled();
+  await page.evaluate(()=>window.__setCareEditTestState({saving:false,conflict:true}));
+  await expect(row('intake:age').locator('[data-care-change-undo]')).toBeDisabled();
+  await page.evaluate(()=>window.__setCareEditTestState({conflict:false}));
+  await row('intake:foodAmount').locator('[data-care-change-undo]').click();
+  await expect(amount).toHaveValue('1 cup');await expect(age).toHaveValue('4 years');
+  await expect(medication).toHaveValue(draftMedication);
+  await expect(row('intake:foodAmount')).toHaveCount(0);
+  expect(await review.evaluate(el=>el.contains(document.activeElement))).toBe(true);
+  await row('intake:age').locator('[data-care-change-undo]').click();
+  await expect(age).toHaveValue('');await expect(medication).toHaveValue(draftMedication);
+  await row('intake:medicationInstructions').locator('[data-care-change-undo]').click();
+  await expect(review).toBeHidden();await expect(card.locator('[data-cancel-profile-edit]')).toBeFocused();
+  await expect(card.locator('.directory-profile-save-bar [data-save-belongings]')).toBeDisabled();
+  await openCareCategory(card,'safety');
+  const allergy=card.locator('[data-care-risk-flag="foodAllergy"]');
+  await allergy.uncheck();
+  if(!await review.evaluate(el=>el.open))await review.locator(':scope > summary').click();
+  await expect(row('risk:foodAllergy').locator('[data-care-change-before]')).toHaveText('Flagged');
+  await expect(row('risk:foodAllergy').locator('[data-care-change-after]')).toHaveText('Not flagged');
+  await row('risk:foodAllergy').locator('[data-care-change-undo]').click();
+  await expect(allergy).toBeChecked();await expect(review).toBeHidden();
+  await openCareCategory(card,'foodWalks');
+  await card.locator('[data-intake-attribute="feedingTimes"]').fill('');
+  if(!await review.evaluate(el=>el.open))await review.locator(':scope > summary').click();
+  await expect(row('intake:feedingTimes').locator('[data-care-change-after]')).toHaveText('Removed');
+  await card.locator('[data-cancel-profile-edit]').click();
+  await expect(review).toBeHidden();
+  await expect(card.locator('[data-intake-attribute="feedingTimes"]')).toHaveValue(record.intakeAttributes.feedingTimes);
+  expect(reads.filter(x=>x==='get_guest_profile').length).toBe(readCount);
+  await expect(page.locator('#guestDetailEditModal')).not.toHaveClass(/open/);
+});
+
+test('Care changed values remain complete and readable at enlarged phone and desktop text',async({page,baseURL},testInfo)=>{
+  await fixture(page);
+  const card=await openChangeReviewEditor(page,baseURL);
+  await openCareCategory(card,'healthHome');
+  const draft='Give with dinner.\nIf appetite changes, call the owner before the next meal. Never repeat a dose without checking.';
+  await card.locator('[data-intake-attribute="medicationInstructions"]').fill(draft);
+  const review=card.locator('[data-care-change-review]');
+  const summary=review.locator(':scope > summary');
+  await expect(review.locator('[data-care-change-undo]')).toBeHidden();
+  await summary.focus();await page.keyboard.press('Enter');
+  await page.addStyleTag({content:'.care-change-review :is(button,summary,.care-change-before,.care-change-after){font-size:24px!important;line-height:1.5!important}'});
+  for(const [width,dark] of [[320,false],[390,true],[1440,false]]){
+    await page.setViewportSize({width,height:900});await page.locator('body').evaluate((el,on)=>el.classList.toggle('dark-theme',on),dark);
+    await expect(review.locator('[data-care-change-after]')).toHaveText(draft);
+    expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+    for(const button of await review.locator('button,summary').all()){
+      const metrics=await button.evaluate(el=>{const r=el.getBoundingClientRect();return {left:r.left,right:r.right,height:r.height,scroll:el.scrollWidth,width:el.clientWidth}});
+      expect(metrics.height).toBeGreaterThanOrEqual(44);expect(metrics.left).toBeGreaterThanOrEqual(-1);expect(metrics.right).toBeLessThanOrEqual(width+1);expect(metrics.scroll).toBeLessThanOrEqual(metrics.width+1);
+    }
+    const after=review.locator('[data-care-change-after]');
+    expect(await after.evaluate(el=>el.scrollHeight<=el.clientHeight+1)).toBe(true);
+    await review.scrollIntoViewIfNeeded();await page.screenshot({path:testInfo.outputPath(`care-review-${width}-${dark?'dark':'light'}.png`)});
   }
 });

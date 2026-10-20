@@ -1,3 +1,6 @@
+## Current Care UI iteration — 20 October 2026
+
+Three implemented refinements awaiting release verification: an optional changed-field review, direct navigation to changed fields, and single-field Undo. See [Care Change Review](care-change-review.md) for acceptance checks and the next three scoped items. Prior Care Simple Editor refinements were merged in PR232 and published as 2026.10.19.01.
 ## Current Care UI iteration — 19 October 2026
 
 Three implemented refinements awaiting release verification: compact blank optional editor fields, focus-safe independent category collapse, and enlarged-text/touch-friendly disclosures. See [Care Simple Editor](care-simple-editor.md) for scope and test steps. This continues the daily-carer persona from [Care Simple Glance](care-simple-profile.md).
