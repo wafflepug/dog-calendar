@@ -2272,7 +2272,11 @@ function updateDirectoryProfileChangeReview(card, state) {
         if (before && before.textContent !== beforeValue) before.textContent = beforeValue;
         if (after && after.textContent !== afterValue) after.textContent = afterValue;
         const undoDisabled = !!(state.saving || state.conflict);
-        if (undo && undo.disabled !== undoDisabled) undo.disabled = undoDisabled;
+        if (undo) {
+            if (undo.disabled !== undoDisabled) undo.disabled = undoDisabled;
+            const undoName = `Undo change to ${label}`;
+            if (undo.getAttribute('aria-label') !== undoName) undo.setAttribute('aria-label', undoName);
+        }
     });
 }
 

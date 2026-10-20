@@ -268,6 +268,7 @@ test('Care change review jumps to hidden fields and undoes only the chosen chang
   const row=key=>review.locator(`[data-care-change-key="${key}"]`);
   await expect(row('intake:foodAmount').locator('[data-care-change-before]')).toHaveText('1 cup');
   await expect(row('intake:foodAmount').locator('[data-care-change-after]')).toHaveText('2 cups');
+  await expect(row('intake:foodAmount').locator('[data-care-change-undo]')).toHaveAccessibleName('Undo change to Food Amount');
   await openCareCategory(card,'healthHome');
   const medication=card.locator('[data-intake-attribute="medicationInstructions"]');
   const draftMedication='Give with food.\nCall <owner> before changing the dose.';
