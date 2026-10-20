@@ -315,6 +315,28 @@ function fresh(payload) {
     };
 }
 
+test('returned backend errors and saved fallbacks retain the failure cooldown; explicit retry bypasses it',async()=>{
+    let fail=true;
+    const h=setup({read:async payload=>fail?{data:{result:'error',error:'Synthetic unavailable'}}:{data:{result:'success',record:fresh(payload)}}});
+    const card=h.card(ids[0]);
+    await h.sandbox.read(card,{force:true});
+    await assert.rejects(h.sandbox.read(card),/Synthetic unavailable/);
+    assert.equal(h.calls.length,1);
+    fail=false;
+    await h.sandbox.read(card,{force:true});
+    assert.equal(h.calls.length,2);
+    await h.sandbox.read(card);
+    assert.equal(h.calls.length,2);
+
+    const saved=setup({read:async payload=>({data:{result:'success',record:fresh(payload)},offlineFallback:true,error:new Error('Synthetic offline fallback')})});
+    const savedCard=saved.card(ids[0]);
+    await saved.sandbox.read(savedCard,{force:true});
+    const retained=await saved.sandbox.read(savedCard);
+    assert.equal(retained.cachedOnly,true);
+    assert.equal(retained.refreshFailed,true);
+    assert.equal(saved.calls.length,1,'an observer must not immediately retry a known failed refresh');
+});
+
 test('timing events expose only opaque IDs, fixed timing fields, cache status, and outcome', async () => {
     const h = setup({ read: async payload => ({ data: { record: fresh(payload) }, offlineFallback: false, unchanged: false }) });
     await h.sandbox.read(h.card(ids[0]));

@@ -2221,15 +2221,34 @@ function directoryProfileEditDisplayValue(key, value, isBefore) {
     return text.trim() ? text : isBefore ? 'Not provided' : 'Removed';
 }
 
-function updateDirectoryProfileChangeReview(card, state) {
-    const review = card?.querySelector('[data-care-change-review]');
-    const list = review?.querySelector('[data-care-change-list]');
-    if (!review || !list || !state) return;
+function updateDirectoryProfileChangeCategoryCounts(card, changedKeys, isEditing) {
+    if (!card) return;
+    const counts = new Map();
+    if (isEditing) {
+        changedKeys.forEach(key => {
+            const control = directoryProfileEditControl(card, key);
+            const category = String(control?.closest('[data-profile-subpanel]')?.dataset.profileSubpanel || '');
+            if (category) counts.set(category, (counts.get(category) || 0) + 1);
+        });
+    }
+    card.querySelectorAll('[data-care-change-category-count]').forEach(badge => {
+        const count = counts.get(String(badge.dataset.careChangeCategoryCount || '')) || 0;
+        const text = count ? `${count} changed ${count === 1 ? 'field' : 'fields'}` : '';
+        if (badge.hidden !== !count) badge.hidden = !count;
+        if (badge.textContent !== text) badge.textContent = text;
+    });
+}
 
+function updateDirectoryProfileChangeReview(card, state) {
+    if (!card || !state) return;
     const current = collectDirectoryProfileEditValues(card);
     const changedKeys = [...new Set([...Object.keys(state.initial || {}), ...Object.keys(current)])]
         .filter(key => current[key] !== state.initial[key]);
     const isEditing = card.classList.contains('is-profile-editing');
+    updateDirectoryProfileChangeCategoryCounts(card, changedKeys, isEditing);
+    const review = card.querySelector('[data-care-change-review]');
+    const list = review?.querySelector('[data-care-change-list]');
+    if (!review || !list) return;
     const hidden = !isEditing || changedKeys.length === 0;
     if (review.hidden !== hidden) review.hidden = hidden;
     if (review.hidden) {
@@ -2505,6 +2524,7 @@ function applyDirectoryProfileEditMode(card) {
         const count = changeReview.querySelector('[data-care-change-count]');
         if (count) count.textContent = '0';
     }
+    if (!editing || !state) updateDirectoryProfileChangeCategoryCounts(card, [], false);
     if (editing && state) updateDirectoryProfileChangeReview(card, state);
 }
 
@@ -2514,6 +2534,7 @@ function setDirectoryProfileEditMode(
     editing
 ) {
     if (!card) return;
+    if (editing) card.querySelector('[data-care-save-recovery]')?.remove?.();
 
     card.classList.toggle(
         'is-profile-editing',
@@ -10072,7 +10093,8 @@ registerWaffleServiceWorker();
                         directoryProfileRecordMatchesIdentity(payload?.record, identity),
                     onCached: cachedResponse => { void notifyCached(cachedResponse, { fresh: false }); }
                 });
-                const responseRecord = result?.data?.record;
+                const responseFailed = result?.data?.result && result.data.result !== 'success';
+                const responseRecord = responseFailed ? null : result?.data?.record;
                 const superseded = (directoryProfileMutationVersions.get(key) || 0) !== entry.mutationVersion;
                 if (superseded) {
                     result = { ...result, data: { ...(result.data || {}), record: null }, superseded: true };
@@ -10085,10 +10107,18 @@ registerWaffleServiceWorker();
                     directoryProfileFreshAt.set(key, directoryProfileReadNow());
                     await notifyCached({ record: responseRecord }, { fresh: true });
                 }
-                const responseFailed = result?.data?.result && result.data.result !== 'success';
                 directoryProfileReadEvent(requestId, requestStartedAt, 'request-end', cacheStatus,
                     result?.identityMismatch || responseFailed ? 'error' : result?.offlineFallback ? 'offline' : 'success', result);
-                if (!result?.superseded) directoryProfileReadFailures.delete(key);
+                if (!result?.superseded) {
+                    directoryProfileReadFailures.delete(key);
+                    if (responseFailed || result?.offlineFallback || result?.identityMismatch) {
+                        const failure = new Error(String(result?.error?.message || result?.data?.error || 'Care profile refresh failed.'));
+                        directoryProfileReadFailures.set(key, { error: failure, expiresAt: directoryProfileReadNow() + DIRECTORY_PROFILE_READ_FAILURE_COOLDOWN_MS });
+                        while (directoryProfileReadFailures.size > DIRECTORY_PROFILE_READ_FAILURE_LIMIT) {
+                            directoryProfileReadFailures.delete(directoryProfileReadFailures.keys().next().value);
+                        }
+                    }
+                }
                 return result;
             } catch (error) {
                 const failure = error instanceof Error ? error : new Error(String(error || 'Care profile read failed.'));
@@ -12320,7 +12350,7 @@ registerWaffleServiceWorker();
                 <section class="care-category-card${active ? ' is-expanded' : ''}" data-care-category="${escapeDashboardHtml(tab.key)}">
                     <h5 class="care-category-heading">
                         <button type="button" class="care-category-toggle directory-profile-subtab${active ? ' is-expanded' : ''}" id="${escapeDashboardHtml(categoryId)}" aria-expanded="${active ? 'true' : 'false'}" aria-controls="${escapeDashboardHtml(categoryId)}-panel" data-profile-subtab="${escapeDashboardHtml(tab.key)}">
-                            <span class="care-category-title"><span aria-hidden="true">${escapeDashboardHtml(tab.icon)}</span><span>${escapeDashboardHtml(tab.label)}</span></span>
+                            <span class="care-category-title"><span aria-hidden="true">${escapeDashboardHtml(tab.icon)}</span><span>${escapeDashboardHtml(tab.label)}</span><span class="care-category-changed-count" data-care-change-category-count="${escapeDashboardHtml(tab.key)}" hidden></span></span>
                             <span class="care-category-summary" data-care-category-summary="${escapeDashboardHtml(tab.key)}" data-state="${escapeDashboardHtml(summary.state)}">${escapeDashboardHtml(summary.text)}</span>
                             <span class="care-category-chevron" aria-hidden="true">⌄</span>
                         </button>
@@ -13033,6 +13063,83 @@ registerWaffleServiceWorker();
         return payload;
     }
 
+    function isCareSaveRecoveryContextCurrent(card, stayKey, identity) {
+        if (!card || card.isConnected === false || directoryProfileEditKey(card) !== stayKey) return false;
+        const matches = Array.from(document.querySelectorAll('.directory-card[data-directory-stay-key]'))
+            .filter(candidate => directoryProfileEditKey(candidate) === stayKey);
+        return matches.length === 1 &&
+            (!identity.readCacheKey || getDirectoryProfileReadIdentity(card).cacheKey === identity.readCacheKey) &&
+            !directoryProfileEditIdentityConflicts(identity, getDirectoryProfileEditIdentity(card));
+    }
+
+    async function refreshSavedCareViewsReadOnly(card, payload, profileEdit, stayKey, identity) {
+        if (!isCareSaveRecoveryContextCurrent(card, stayKey, identity)) throw new Error('The selected stay changed. Open that stay again to refresh it.');
+        const refreshProfile = !!(profileEdit || payload.intakeAttributes);
+        const refreshBelongings = !!payload.items;
+        if (refreshProfile) {
+            const result = await window.WAFFLE_CARE_PROFILE_READS?.read(card, { force: true });
+            if (result?.identityMismatch || result?.offlineFallback || result?.superseded || result?.data?.result === 'error' || !result?.data?.record || result.data.record.resolution?.status === 'not_found') {
+                throw new Error('Saved care details could not be read from the server.');
+            }
+            if (!isCareSaveRecoveryContextCurrent(card, stayKey, identity)) throw new Error('The selected stay changed. Open that stay again to refresh it.');
+            const details = card.querySelector('[data-directory-detail="profile"]');
+            if (details) await loadDirectoryProfileDetail(card, details);
+        }
+        if (refreshBelongings) {
+            const result = await window.WAFFLE_CARE_BELONGINGS_READS?.read(card, { force: true });
+            if (result?.identityMismatch || result?.offlineFallback || result?.superseded || result?.data?.result === 'error' || !result?.data?.record || result.data.record.identityResolution?.status === 'not_found') {
+                throw new Error('Saved belongings details could not be read from the server.');
+            }
+            if (!isCareSaveRecoveryContextCurrent(card, stayKey, identity)) throw new Error('The selected stay changed. Open that stay again to refresh it.');
+            const details = card.querySelector('[data-directory-detail="belongings"]');
+            if (details) await loadDirectoryBelongingsDetail(card, details);
+        }
+    }
+
+    function appendCareSaveRefreshRetry(status, card, payload, profileEdit, stayKey, identity) {
+        if (!status || typeof document === 'undefined' || typeof status.append !== 'function') return;
+        const brief = profileEdit ? card.querySelector('[data-directory-care-brief]') : null;
+        if (brief) {
+            let notice = brief.querySelector('[data-care-save-recovery]');
+            if (!notice) {
+                notice = document.createElement('div');
+                notice.dataset.careSaveRecovery = '';
+                notice.className = 'directory-profile-edit-status is-success directory-care-save-recovery';
+                notice.setAttribute('role', 'status');
+                notice.setAttribute('aria-live', 'polite');
+                brief.append(notice);
+            }
+            notice.textContent = status.textContent;
+            status = notice;
+        }
+        const retry = document.createElement('button');
+        retry.type = 'button';
+        retry.className = 'directory-profile-refresh-retry';
+        retry.textContent = 'Retry refresh';
+        if (retry.style) retry.style.minHeight = '44px';
+        const message = document.createElement('span');
+        message.textContent = status.textContent;
+        status.replaceChildren(message, retry);
+        retry.addEventListener('click', async () => {
+            if (retry.disabled || !isCareSaveRecoveryContextCurrent(card, stayKey, identity)) return;
+            retry.disabled = true;
+            message.textContent = 'Your changes were saved. Refreshing the saved care details…';
+            try {
+                await refreshSavedCareViewsReadOnly(card, payload, profileEdit, stayKey, identity);
+                if (!isCareSaveRecoveryContextCurrent(card, stayKey, identity) || retry.isConnected === false) return;
+                message.textContent = 'Your changes were saved. Care details refreshed.';
+                status.className = 'directory-profile-edit-status is-success';
+                retry.remove();
+                status.tabIndex = -1;
+                status.focus?.({ preventScroll: true });
+            } catch (_) {
+                if (!isCareSaveRecoveryContextCurrent(card, stayKey, identity) || retry.isConnected === false) return;
+                message.textContent = 'Your changes were saved. The refresh is still unavailable.';
+                retry.disabled = false;
+            }
+        });
+        status.append(retry);
+    }
 
     async function saveBelongingsCard(card, button) {
         if (!card || !button) return;
@@ -13059,8 +13166,16 @@ registerWaffleServiceWorker();
         if (card.dataset.profileSaving === 'true' || (profileEdit && (!editState || editState.conflict || !directoryProfileEditIsDirty(card, editState)))) return;
 
         const originalText = button.innerText;
+        let recoveryError = null;
+        let savedPayload = null;
         button.disabled = true;
         button.innerText = '⏳ Saving...';
+        const saveStayKey = directoryProfileEditKey(card);
+        const saveReadIdentity = getDirectoryProfileReadIdentity(card);
+        const saveIdentity = { ...getDirectoryProfileEditIdentity(card), readCacheKey: saveReadIdentity.cacheKey };
+        const saveIdentityCard = { dataset: { ...card.dataset } };
+        let cardContextChanged = false;
+        const saveContextIsCurrent = () => isCareSaveRecoveryContextCurrent(card, saveStayKey, saveIdentity);
         if (profileEdit) {
             editState.saving = true;
             card.dataset.profileSaving = 'true';
@@ -13071,6 +13186,7 @@ registerWaffleServiceWorker();
 
         try {
             const payload = getBelongingsCardPayload(card);
+            savedPayload = payload;
             if (belongingsState) {
                 const key = directoryProfileEditKey(card);
                 const unique = Array.from(document.querySelectorAll('.directory-card[data-directory-stay-key]')).filter(candidate => directoryProfileEditKey(candidate) === key).length === 1;
@@ -13081,8 +13197,9 @@ registerWaffleServiceWorker();
             }
             await sendPayloadToAppsScript({ action: 'save_belongings', ...payload });
             serverSaved = true;
-            window.WAFFLE_CARE_BELONGINGS_READS?.invalidate(card);
-            if (profileEdit) window.WAFFLE_CARE_PROFILE_INVALIDATE?.(card);
+            cardContextChanged = !saveContextIsCurrent();
+            window.WAFFLE_CARE_BELONGINGS_READS?.invalidate(saveIdentityCard);
+            if (profileEdit) window.WAFFLE_CARE_PROFILE_INVALIDATE?.(saveIdentityCard);
 
             belongingsRecordsCache[payload.stayKey] = {
                 ...(belongingsRecordsCache[payload.stayKey] || {}),
@@ -13116,7 +13233,7 @@ registerWaffleServiceWorker();
                 riskFlags: payload.riskFlags
             };
 
-            const savedProfileIdentity = getDirectoryProfileReadIdentity(card);
+            const savedProfileIdentity = saveReadIdentity;
             if (directoryProfileDetailCache[savedProfileIdentity.cacheKey]) {
                 directoryProfileDetailCache[savedProfileIdentity.cacheKey] = mergeDirectoryCareRecordWithServerTimestamp(
                     directoryProfileDetailCache[savedProfileIdentity.cacheKey],
@@ -13153,10 +13270,10 @@ registerWaffleServiceWorker();
                     null
             };
 
-            if (payload.items) updateBelongingsSavedSummary(card, payload.items);
+            if (!cardContextChanged && payload.items) updateBelongingsSavedSummary(card, payload.items);
 
             if (payload.intakeAttributes) {
-                const profileIdentity = getDirectoryProfileReadIdentity(card);
+                const profileIdentity = saveReadIdentity;
                 if (profileIdentity.hasStableIds) {
                     // save_belongings still writes through the legacy key API;
                     // force a fresh identity-scoped profile read after that save.
@@ -13172,13 +13289,14 @@ registerWaffleServiceWorker();
                 }
             }
 
-            renderDirectoryCareBrief(card);
-
-            renderCareRiskDashboard(
-                getCurrentBoardingStays(
-                    localStorage.getItem('boardingDataCache') || ''
-                )
-            );
+            if (!cardContextChanged) {
+                renderDirectoryCareBrief(card);
+                renderCareRiskDashboard(
+                    getCurrentBoardingStays(
+                        localStorage.getItem('boardingDataCache') || ''
+                    )
+                );
+            }
 
             await invalidateWaffleClientCaches(
                 [
@@ -13186,6 +13304,9 @@ registerWaffleServiceWorker();
                     'audit'
                 ]
             );
+
+            cardContextChanged = !saveContextIsCurrent();
+            if (cardContextChanged) return;
 
             button.innerText = '✅ Saved';
 
@@ -13212,10 +13333,12 @@ registerWaffleServiceWorker();
                 updateBelongingsItemDraftFeedback(card, 'Belongings saved successfully.');
             }
 
-            setTimeout(() => { button.innerText = originalText; }, 1800);
+            setTimeout(() => { if (saveContextIsCurrent()) button.innerText = originalText; }, 1800);
         } catch (error) {
             console.error(error);
-            if (profileEdit && serverSaved) {
+            cardContextChanged = !saveContextIsCurrent();
+            if (profileEdit && serverSaved && !cardContextChanged) {
+                recoveryError = error;
                 directoryProfileEditDrafts.delete(profileKey);
                 card.dataset.profileSaving = 'false';
                 setDirectoryProfileEditMode(card, false);
@@ -13225,20 +13348,21 @@ registerWaffleServiceWorker();
                     status.className = 'directory-profile-edit-status is-success';
                 }
                 button.innerText = '✅ Saved';
-            } else if (profileEdit) {
+            } else if (profileEdit && !cardContextChanged) {
                 editState.saving = false;
                 editState.failed = true;
                 editState.failureMessage = `Save failed. Your draft is still here. ${error.message || String(error)}`;
                 card.dataset.profileSaving = 'false';
                 updateDirectoryProfileEditFeedback(card);
-            } else if (belongingsState && serverSaved) {
-                belongingsState.initial = JSON.parse(JSON.stringify(getBelongingsCardPayload(card).items || {}));
+            } else if (belongingsState && serverSaved && !cardContextChanged) {
+                recoveryError = error;
+                belongingsState.initial = JSON.parse(JSON.stringify(savedPayload?.items || {}));
                 belongingsState.values = JSON.parse(JSON.stringify(belongingsState.initial));
                 belongingsState.saving = false;
                 belongingsState.failed = false;
-                updateBelongingsItemDraftFeedback(card, 'Belongings saved. Some views may need a refresh.');
+                updateBelongingsItemDraftFeedback(card, 'Belongings saved. Some shared details could not be refreshed.');
                 button.innerText = '✅ Saved';
-            } else {
+            } else if (!cardContextChanged) {
                 if (belongingsState) {
                     belongingsState.saving = false;
                     belongingsState.failed = true;
@@ -13246,9 +13370,21 @@ registerWaffleServiceWorker();
                     updateBelongingsItemDraftFeedback(card);
                 } else alert('❌ BELONGINGS WERE NOT SAVED\n\n' + error.message);
             }
-            button.innerText = originalText;
+            if (!cardContextChanged) button.innerText = originalText;
         } finally {
-            if (profileEdit) {
+            if (cardContextChanged) {
+                if (editState) {
+                    editState.saving = false;
+                    if (serverSaved && directoryProfileEditDrafts.get(profileKey) === editState) directoryProfileEditDrafts.delete(profileKey);
+                }
+                if (belongingsState) {
+                    belongingsState.saving = false;
+                    if (serverSaved) {
+                        belongingsState.initial = JSON.parse(JSON.stringify(savedPayload?.items || {}));
+                        belongingsState.values = JSON.parse(JSON.stringify(belongingsState.initial));
+                    }
+                }
+            } else if (profileEdit) {
                 editState.saving = false;
                 card.dataset.profileSaving = 'false';
                 applyDirectoryProfileEditMode(card);
@@ -13256,6 +13392,14 @@ registerWaffleServiceWorker();
             } else {
                 if (belongingsState) updateBelongingsItemDraftFeedback(card);
                 else button.disabled = false;
+            }
+        }
+        if (serverSaved && recoveryError && !cardContextChanged) {
+            const status = card.querySelector(profileEdit ? '[data-directory-profile-edit-status]' : '[data-belongings-edit-status]');
+            if (status) {
+                status.textContent = 'Your changes were saved. Some shared details could not be refreshed.';
+                status.className = 'directory-profile-edit-status is-success';
+                appendCareSaveRefreshRetry(status, card, savedPayload || {}, profileEdit, saveStayKey, saveIdentity);
             }
         }
     }
@@ -16609,6 +16753,90 @@ registerWaffleServiceWorker();
     }
 
 
+    function directoryPhotoTilePreviewUrl(previewUrl, tileShell) {
+        const originalUrl = String(previewUrl || '').trim();
+        if (!originalUrl) return '';
+
+        let parsed;
+        try {
+            parsed = new URL(originalUrl, window.location.href);
+        } catch (_) {
+            return originalUrl;
+        }
+        if (parsed.protocol !== 'https:' || parsed.hostname !== 'drive.google.com' ||
+            parsed.pathname !== '/thumbnail' || !parsed.searchParams.get('id')) {
+            return originalUrl;
+        }
+
+        const cssWidth = Number(tileShell?.getBoundingClientRect?.().width) || 48;
+        const deviceScale = Math.max(1, Number(window.devicePixelRatio) || 1);
+        const targetWidth = cssWidth * deviceScale;
+        const renditionWidth = [320, 640, 960, 1280, 1600].find(width => width >= targetWidth) || 1600;
+        const currentWidth = Number(parsed.searchParams.get('sz')?.match(/^w(\d+)$/)?.[1]) || 0;
+        if (currentWidth === renditionWidth) return originalUrl;
+
+        parsed.searchParams.set('sz', `w${renditionWidth}`);
+        return parsed.toString();
+    }
+
+    function setDirectoryDogPhotoImage(host, selector, imageUrl, altText, className, originalUrl = '', showPlaceholder = true) {
+        if (!host) return;
+        const existing = host.querySelector(selector);
+        if (!imageUrl) {
+            if (existing?.tagName === 'IMG') {
+                if (!showPlaceholder) {
+                    existing.remove();
+                    return;
+                }
+                const placeholder = document.createElement('div');
+                placeholder.className = 'directory-photo-placeholder';
+                placeholder.setAttribute('aria-label', 'No dog profile photo');
+                placeholder.textContent = '🐶';
+                existing.replaceWith(placeholder);
+            }
+            return;
+        }
+
+        let image = existing;
+        if (!image || image.tagName !== 'IMG') {
+            image = document.createElement('img');
+            image.className = className;
+            image.loading = 'lazy';
+            const placeholder = showPlaceholder ? host.querySelector('.directory-photo-placeholder') : null;
+            if (placeholder) placeholder.replaceWith(image);
+            else host.appendChild(image);
+        }
+        if (image.getAttribute('src') !== imageUrl) image.setAttribute('src', imageUrl);
+        if (image.alt !== altText) image.alt = altText;
+        if (image.className !== className) image.className = className;
+        if (image.loading !== 'lazy') image.loading = 'lazy';
+
+        if (originalUrl) {
+            const previousOriginal = image.dataset.directoryPhotoOriginalUrl || '';
+            if (previousOriginal !== originalUrl) {
+                image.dataset.directoryPhotoOriginalUrl = originalUrl;
+                delete image.dataset.directoryPhotoFallbackAttempted;
+                delete image.dataset.directoryPhotoFailed;
+                image.style.removeProperty('display');
+            }
+            if (!image.dataset.directoryPhotoFallbackBound) {
+                image.dataset.directoryPhotoFallbackBound = 'true';
+                image.addEventListener('error', () => {
+                    const fallbackUrl = image.dataset.directoryPhotoOriginalUrl || '';
+                    if (!fallbackUrl) return;
+                    if (image.dataset.directoryPhotoFallbackAttempted === 'true' || image.getAttribute('src') === fallbackUrl) {
+                        image.dataset.directoryPhotoFailed = 'true';
+                        image.style.setProperty('display', 'none', 'important');
+                        image.closest('.directory-card')?.classList.remove('has-profile-photo');
+                        return;
+                    }
+                    image.dataset.directoryPhotoFallbackAttempted = 'true';
+                    image.setAttribute('src', fallbackUrl);
+                });
+            }
+        }
+    }
+
     function setDirectoryDogPhoto(stayKey, record) {
         const card =
             getDirectoryProfileCard(
@@ -16658,45 +16886,22 @@ registerWaffleServiceWorker();
          * The edit button is a sibling and must remain mounted.
          */
         if (!imageUrl) {
-            card.classList.remove(
-                'has-profile-photo'
-            );
-
-            if (media) {
-                media.innerHTML =
-                    '<div class="directory-photo-placeholder" aria-label="No dog profile photo">🐶</div>';
-            }
-
-            if (tileShell) {
-                tileShell.innerHTML = '';
-            }
-
+            if (card.classList.contains('has-profile-photo')) card.classList.remove('has-profile-photo');
+            setDirectoryDogPhotoImage(media, '.directory-dog-photo', '', '', 'directory-dog-photo');
+            setDirectoryDogPhotoImage(tileShell, '.directory-guest-tile-image', '', '', 'directory-guest-tile-image', '', false);
             return;
         }
 
-        card.classList.add(
-            'has-profile-photo'
-        );
+        setDirectoryDogPhotoImage(media, '.directory-dog-photo', imageUrl, dogName, 'directory-dog-photo');
 
-        if (media) {
-            media.innerHTML = `
-                <img
-                    src="${escapeDashboardHtml(imageUrl)}"
-                    alt="${escapeDashboardHtml(dogName)}"
-                    class="directory-dog-photo"
-                    loading="lazy">
-            `;
-        }
-
-        if (tileShell) {
-            tileShell.innerHTML = `
-                <img
-                    src="${escapeDashboardHtml(imageUrl)}"
-                    alt=""
-                    class="directory-guest-tile-image"
-                    loading="lazy">
-            `;
-        }
+        const previousTile = tileShell?.querySelector('.directory-guest-tile-image');
+        const previousOriginal = previousTile?.dataset.directoryPhotoOriginalUrl || '';
+        const fallbackActive = previousOriginal === imageUrl &&
+            previousTile?.dataset.directoryPhotoFallbackAttempted === 'true';
+        const tileUrl = fallbackActive ? imageUrl : directoryPhotoTilePreviewUrl(imageUrl, tileShell);
+        setDirectoryDogPhotoImage(tileShell, '.directory-guest-tile-image', tileUrl, '', 'directory-guest-tile-image', imageUrl);
+        const failedTile = tileShell?.querySelector('.directory-guest-tile-image')?.dataset.directoryPhotoFailed === 'true';
+        if (card.classList.contains('has-profile-photo') === failedTile) card.classList.toggle('has-profile-photo', !failedTile);
     }
 
     async function hydrateDirectoryDogPhotos(options = {}) {

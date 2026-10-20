@@ -93,6 +93,12 @@ on:
       - 'tests/canonical-organiser-loader.browser.spec.js'
       - 'tests/care-guest-card-clarity.browser.spec.js'
       - 'playwright.care-render-performance.config.js'
+      - 'playwright.care-photo-save.config.js'
+      - 'tests/care-photo-delivery.browser.spec.js'
+      - 'tests/care-category-changes.browser.spec.js'
+      - 'tests/care-save-recovery.browser.spec.js'
+      - 'tests/fixtures/care-polish-fixture.js'
+      - 'tests/care-photo-delivery.test.js'
       - 'tests/care-render-performance.browser.spec.js'
       - 'tests/care-directory-refresh-rendering.test.js'
       - 'tests/care-decorator-observer.test.js'
@@ -226,6 +232,12 @@ on:
       - 'tests/canonical-organiser-loader.browser.spec.js'
       - 'tests/care-guest-card-clarity.browser.spec.js'
       - 'playwright.care-render-performance.config.js'
+      - 'playwright.care-photo-save.config.js'
+      - 'tests/care-photo-delivery.browser.spec.js'
+      - 'tests/care-category-changes.browser.spec.js'
+      - 'tests/care-save-recovery.browser.spec.js'
+      - 'tests/fixtures/care-polish-fixture.js'
+      - 'tests/care-photo-delivery.test.js'
       - 'tests/care-render-performance.browser.spec.js'
       - 'tests/care-directory-refresh-rendering.test.js'
       - 'tests/care-decorator-observer.test.js'
@@ -313,7 +325,7 @@ jobs:
           node --test tests/care-navigation-continuity.test.js
           node --test tests/care-return-focus-identity.test.js
           node --test tests/care-freshness-clarity.test.js tests/care-empty-states.test.js tests/care-profile-navigation.test.js
-          node --test tests/care-summary-updates.test.js tests/care-document-return.test.js tests/care-editor-simple.test.js
+          node --test tests/care-summary-updates.test.js tests/care-document-return.test.js tests/care-editor-simple.test.js tests/care-photo-delivery.test.js
           node --test tests/ui-workflow-parallel.test.js
 
   fixtures:
@@ -340,6 +352,8 @@ jobs:
             configs: playwright.care-summary-card-clarity.config.js
           - group: care-render-performance
             configs: playwright.care-render-performance.config.js
+          - group: care-photo-save
+            configs: playwright.care-photo-save.config.js
           - group: owner-workflows
             configs: playwright.owner-workflows.config.js
           - group: master-compact

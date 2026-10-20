@@ -3,6 +3,10 @@
 Reviewed 17 September 2026. Repository: `wafflepug/dog-calendar`; always start implementation from current `origin/main` in an isolated worktree. Stack: static HTML/CSS, browser JavaScript, FullCalendar, Apps Script backend, Python contracts, Playwright. Keep production smoke checks read-only. Preserve existing theme settings, offline work, and early checkout behavior. Use Luna for bounded implementation; lead agent reviews design and integration. Complete relevant CI before merging.
 
 
+## Current Care iteration - 21 October 2026
+
+Three bundles: right-sized roster photo previews, category-level unsaved change counts and visible confirmed-save refresh recovery. See [Care Photo and Save Clarity](care-photo-save-clarity.md), release 2026.10.21.01. Release is pending exact-head checks and publication verification. Next: measure the complete mobile arrival-to-handover journey before removing repeated labels or scrolling.
+
 ## Owner priority: Care UI refinements next
 
 Candidate 14 October 2026: five compact controls and record refinements, [Care compact controls](care-compact-controls.md), release 2026.10.14.04. Next: simplify Dog record maintenance actions after a UI audit.
