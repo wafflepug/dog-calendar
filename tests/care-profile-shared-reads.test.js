@@ -315,13 +315,15 @@ function fresh(payload) {
     };
 }
 
-test('timing events expose only opaque IDs, phase, duration, cache status, and outcome', async () => {
+test('timing events expose only opaque IDs, fixed timing fields, cache status, and outcome', async () => {
     const h = setup({ read: async payload => ({ data: { record: fresh(payload) }, offlineFallback: false, unchanged: false }) });
     await h.sandbox.read(h.card(ids[0]));
     for (const event of h.events) {
         assert.equal(event.type, 'waffle:care-profile-read');
-        assert.deepEqual(Object.keys(event.detail).sort(), ['cacheStatus', 'elapsedMs', 'outcome', 'phase', 'requestId'].sort());
+        assert.deepEqual(Object.keys(event.detail).sort(), ['cacheStatus', 'elapsedMs', 'outcome', 'phase', 'requestId', 'serverCacheState', 'serverMs', 'transportMs'].sort());
         assert.equal(typeof event.detail.requestId, 'string');
+        assert.equal(event.detail.serverMs, null);
+        assert.equal(event.detail.serverCacheState, null);
         assert.ok(!JSON.stringify(event.detail).includes('same-name'));
     }
 });

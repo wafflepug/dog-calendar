@@ -11,11 +11,11 @@ function setup(page='directory') {
   vm.runInNewContext(source,{window,document,performance:{now:()=>clock},MutationObserver:Observer});
   return {api:window.WAFFLE_CARE_PERFORMANCE,emit:d=>events['waffle:care-profile-read']({detail:d}),click:target=>docEvents.click({target}),time:n=>clock=n,observer:()=>observer,timeout:()=>timer?.(),events};
 }
-test('live timing is directory-only and retains no private event values',()=>{
+test('live timing is directory-only, separates client transport from verified server duration and retains no private event values',()=>{
   assert.equal(setup('calendar').api,undefined);
-  const h=setup();h.emit({phase:'request-end',elapsedMs:125,cacheStatus:'miss',outcome:'success',requestId:'private dog name',payload:{phone:'0411111111'},url:'https://private'});
-  const s=h.api.snapshot()[0];assert.equal(s.readDurationMs,125);assert.equal(s.backendMs,null);
-  assert.deepEqual(Object.keys(s).sort(),['backendMs','cacheStatus','elapsedMs','kind','outcome','phase','readDurationMs'].sort());
+  const h=setup();h.emit({phase:'request-end',elapsedMs:125,transportMs:90,serverMs:7,serverCacheState:'hit',cacheStatus:'miss',outcome:'success',requestId:'private dog name',payload:{phone:'0411111111'},url:'https://private'});
+  const s=h.api.snapshot()[0];assert.equal(s.readDurationMs,125);assert.equal(s.transportMs,90);assert.equal(s.backendMs,7);assert.equal(s.serverCacheState,'hit');
+  assert.deepEqual(Object.keys(s).sort(),['backendMs','cacheStatus','elapsedMs','kind','outcome','phase','readDurationMs','serverCacheState','transportMs'].sort());
   assert.doesNotMatch(JSON.stringify(s),/private|0411111111|https/);
 });
 test('only finite durations and fixed status labels are accepted; samples and copies are bounded',()=>{
@@ -24,6 +24,10 @@ test('only finite durations and fixed status labels are accepted; samples and co
   for(let i=0;i<60;i++)h.emit({phase:'cache-applied',elapsedMs:i,cacheStatus:'saved'});
   const copy=h.api.snapshot();assert.equal(copy.length,50);assert.equal(copy.at(-1).elapsedMs,59);copy[0].phase='tampered';assert.notEqual(h.api.snapshot()[0].phase,'tampered');
   h.api.clear();assert.equal(h.api.snapshot().length,0);
+});
+test('unverified or invalid server metadata remains unavailable',()=>{
+  const h=setup();h.emit({phase:'request-end',elapsedMs:8,transportMs:Infinity,serverMs:-1,serverCacheState:'private key'});
+  const s=h.api.snapshot()[0];assert.equal(s.transportMs,null);assert.equal(s.backendMs,null);assert.equal(s.serverCacheState,null);
 });
 test('opening measures only selected card, separates shell from essentials and disconnects',()=>{
   const h=setup();let active=false,loaded=false;

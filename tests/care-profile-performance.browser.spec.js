@@ -4,7 +4,7 @@ const {resolveLocalBackendAction}=require('../scripts/local-network-policy');
 const fullCalendar=fs.readFileSync('tests/fixtures/fullcalendar.global.min.js','utf8');
 const dogId='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',stayId='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 const booking={timestamp:'2026-10-01',dogName:'Performance Guest',breed:'Pug',startDate:'2026-10-08',endDate:'2026-10-12',ownerName:'Private Owner',phone:'0400123456',bookingType:'Boarding',dogId,stayId,dogNumber:'#00052'};
-async function fixture(page,{hold=false,fail=false}={}) {
+async function fixture(page,{hold=false,fail=false,serverMetadata=false}={}) {
   const reads=[];let release,blocked=new Promise(r=>release=r),failure=fail;
   await page.addInitScript(()=>{
     const NativeDate=Date,now=NativeDate.UTC(2026,9,10,1);
@@ -27,7 +27,7 @@ async function fixture(page,{hold=false,fail=false}={}) {
         reads.push(payload);
         if(failure)return route.abort('failed');
         if(hold)await blocked;
-        body={result:'success',record:{stayKey:payload.stayKey,identity:{stayKey:payload.stayKey,dogId:payload.dogId,stayId:payload.stayId},resolution:{status:'resolved',method:'stay-id-unique-legacy-key'},requestSource:'Other',intakeAttributes:{medicationInstructions:'Verified evening dose'},intakeAttributesSource:'fixture'}};
+        body={result:'success',record:{stayKey:payload.stayKey,identity:{stayKey:payload.stayKey,dogId:payload.dogId,stayId:payload.stayId},resolution:{status:'resolved',method:'stay-id-unique-legacy-key'},requestSource:'Other',intakeAttributes:{medicationInstructions:'Verified evening dose'},intakeAttributesSource:'fixture'},...(serverMetadata?{serverElapsedMs:8,serverCacheState:'miss'}:{})};
       }
       return route.fulfill({status:200,contentType:callback?'application/javascript':'application/json',body:callback?`${callback}(${JSON.stringify(body)});`:JSON.stringify(body)});
     }
@@ -65,6 +65,14 @@ test('saved essentials paint while one shared fresh read waits, and anonymous ti
   expect(samples.every(s=>s.backendMs===null)).toBe(true);
   expect(JSON.stringify(samples)).not.toMatch(/Performance Guest|Private Owner|0400123456|stayKey|dogId|payload|https/);
   await testInfo.attach('anonymous-live-read-boundary.json',{body:JSON.stringify(samples,null,2),contentType:'application/json'});
+});
+test('server timing metadata flows through transport into the anonymous live sample',async({page,baseURL})=>{
+  await fixture(page,{serverMetadata:true});const card=await ready(page,baseURL);
+  await card.locator(':scope > [data-open-directory-profile]').click();
+  const detail=card.locator('[data-directory-detail="profile"]');await expect(detail).toHaveAttribute('data-detail-loaded','true');await expect(detail).toContainText('Verified evening dose');
+  await expect.poll(async()=>page.evaluate(()=>window.WAFFLE_CARE_PERFORMANCE.snapshot().some(s=>s.phase==='request-end'&&s.backendMs===8&&Number.isFinite(s.transportMs)&&s.serverCacheState==='miss'))).toBe(true);
+  const samples=await page.evaluate(()=>window.WAFFLE_CARE_PERFORMANCE.snapshot());
+  expect(JSON.stringify(samples)).not.toMatch(/Performance Guest|Private Owner|0400123456|stayKey|dogId|payload|https/);
 });
 test('failed read has one explicit Retry; recovering makes one new request and retains identity',async({page,baseURL})=>{
   const f=await fixture(page,{fail:true});const card=await ready(page,baseURL);

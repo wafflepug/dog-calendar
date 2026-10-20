@@ -186,6 +186,42 @@ test('Care brief repeated rendering keeps DOM hosts and produces no DOM mutation
   expect(result.safetyCleared).toBe(true);
   expect(result.changedMutations).toBeGreaterThan(0);
 });
+
+test('identical intake overview state avoids repeated attribute mutations', async ({ page }) => {
+  await page.setContent(`
+    <article class="directory-card" data-intake-method="none">
+      <div data-directory-intake="stay-a"></div>
+      <div data-directory-legacy="stay-a"></div>
+    </article>
+  `);
+  const start = source.indexOf('    function applyDirectoryIntakeMethodVisibility(');
+  const end = source.indexOf('    function setDirectoryIntakeStatus(', start);
+  await page.addScriptTag({ content: `
+    const directoryIntakeStatusCache = {};
+    const directoryLegacyIntakeCache = {};
+    function getEffectiveDirectoryDigitalIntakeRecord() { return null; }
+    ${source.slice(start, end)}
+    window.applyIntakeVisibility = applyDirectoryIntakeMethodVisibility;
+  ` });
+  const result = await page.evaluate(() => {
+    const card = document.querySelector('.directory-card');
+    const records = [];
+    const observer = new MutationObserver(batch => records.push(...batch));
+    observer.observe(card, { attributes: true, subtree: true });
+    // This is the prior unconditional overview assignment, measured against
+    // the same real DOM observer and unchanged state.
+    card.dataset.intakeMethod = 'none';
+    const beforeCount = observer.takeRecords().length;
+    applyIntakeVisibility('stay-a');
+    const afterCount = observer.takeRecords().length;
+    return { beforeCount, afterCount, method: card.dataset.intakeMethod, digitalVisible: !card.querySelector('[data-directory-intake]').hidden, legacyVisible: !card.querySelector('[data-directory-legacy]').hidden };
+  });
+  expect(result.beforeCount).toBe(1);
+  expect(result.afterCount).toBe(0);
+  expect(result.method).toBe('none');
+  expect(result.digitalVisible).toBe(true);
+  expect(result.legacyVisible).toBe(true);
+});
 const { resolveLocalBackendAction } = require('../scripts/local-network-policy');
 const path = require('node:path');
 const fullCalendar = fs.readFileSync(path.join(__dirname, 'fixtures', 'fullcalendar.global.min.js'), 'utf8');

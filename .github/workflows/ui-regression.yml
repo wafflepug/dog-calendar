@@ -303,6 +303,7 @@ jobs:
           node --test tests/local-network-policy.test.js
           node --test tests/waffle-bootstrap-lifecycle.test.js
           node --test tests/care-startup-priority.test.js tests/care-past-background-load.test.js tests/booking-plan.test.js tests/dog-record-cache-age.test.js tests/care-directory-refresh-rendering.test.js tests/care-decorator-observer.test.js tests/care-media-render-cache.test.js
+          node --test tests/care-profile-performance.test.js tests/care-profile-shared-reads.test.js tests/care-swr-cache-write-guard.test.js
           node --test tests/care-profile-readiness.test.js tests/care-overview-freshness.test.js tests/care-record-update-contract.test.js
           node --test tests/care-state-preservation.test.js tests/care-past-classification.test.js tests/stay-operation-frontend.test.js
           node --test tests/care-csv-integrity.test.js

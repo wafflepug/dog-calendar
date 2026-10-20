@@ -5,6 +5,7 @@
   const LIMIT = 50, MAX_MS = 3600000;
   const phases = new Set(['request-start', 'cache-applied', 'request-end', 'joined']);
   const caches = new Set(['memory', 'saved', 'miss', 'shared']);
+  const serverCaches = new Set(['hit', 'miss', 'unchanged']);
   const outcomes = new Set(['success', 'error', 'offline']);
   const samples = [];
   let observer = null, timer = null;
@@ -19,8 +20,11 @@
     const d = event.detail;
     if (!d || !phases.has(d.phase)) return;
     append({kind:'read', phase:d.phase, elapsedMs:duration(d.elapsedMs),
-      // This boundary includes cache work, callbacks, network and server time; backend time is unavailable.
-      readDurationMs:d.phase === 'request-end' ? duration(d.elapsedMs) : null, backendMs:null,
+      // transportMs is client end-to-end request time; serverMs is reported only by the versioned backend read.
+      readDurationMs:d.phase === 'request-end' ? duration(d.elapsedMs) : null,
+      transportMs:d.phase === 'request-end' && Number.isFinite(d.transportMs) && d.transportMs >= 0 ? duration(d.transportMs) : null,
+      backendMs:d.phase === 'request-end' && Number.isFinite(d.serverMs) && d.serverMs >= 0 ? duration(d.serverMs) : null,
+      serverCacheState:serverCaches.has(d.serverCacheState) ? d.serverCacheState : null,
       cacheStatus:caches.has(d.cacheStatus) ? d.cacheStatus : null,
       outcome:outcomes.has(d.outcome) ? d.outcome : null});
   });
@@ -36,10 +40,10 @@
       if (!card.classList.contains('is-profile-active')) return;
       if (!shellRecorded) {
         shellRecorded = true;
-        append({kind:'open',phase:'shell-render',elapsedMs:duration(performance.now()-start),readDurationMs:null,backendMs:null,cacheStatus:null,outcome:null});
+        append({kind:'open',phase:'shell-render',elapsedMs:duration(performance.now()-start),readDurationMs:null,transportMs:null,backendMs:null,serverCacheState:null,cacheStatus:null,outcome:null});
       }
       if (card.querySelector('[data-directory-detail="profile"]')?.dataset.detailLoaded === 'true') {
-        append({kind:'open',phase:'essentials-render',elapsedMs:duration(performance.now()-start),readDurationMs:null,backendMs:null,cacheStatus:null,outcome:null});
+        append({kind:'open',phase:'essentials-render',elapsedMs:duration(performance.now()-start),readDurationMs:null,transportMs:null,backendMs:null,serverCacheState:null,cacheStatus:null,outcome:null});
         stop();
       }
     };

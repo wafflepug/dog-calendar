@@ -202,6 +202,8 @@ async function putWaffleCachedResponse(
                 payload.version ||
                 ''
             ),
+        responseTag:
+            String(payload.responseTag || ''),
         variant:
             String(
                 payload.variant ||
@@ -332,6 +334,11 @@ function waffleReadRequestKey(payload) {
                     .map(String)
                     .sort()
                 : [],
+        dogId: String(payload?.dogId || ''),
+        stayId: String(payload?.stayId || ''),
+        dogName: String(payload?.dogName || ''),
+        breed: String(payload?.breed || ''),
+        masterKey: String(payload?.masterKey || ''),
         limit:
             Number(
                 payload?.limit ||
@@ -346,7 +353,8 @@ function waffleReadRequestKey(payload) {
             String(
                 payload?.knownVariant ||
                 ''
-            )
+            ),
+        knownResponseTag: String(payload?.knownResponseTag || '')
     };
 
     return JSON.stringify(normalized);
@@ -373,6 +381,7 @@ async function queryAppsScriptSWR(
         try { return options.shouldCacheResponse(responsePayload) !== false; }
         catch (_) { return false; }
     };
+    const retainedPayloadIsEligible = () => !!(cached?.payload && mayPersistResponse(cached.payload));
 
     const cached =
         cacheKey
@@ -385,7 +394,7 @@ async function queryAppsScriptSWR(
     let cacheApplied = false;
 
     if (
-        cached?.payload &&
+        retainedPayloadIsEligible() &&
         typeof options.onCached ===
             'function'
     ) {
@@ -407,7 +416,7 @@ async function queryAppsScriptSWR(
 
     if (
         navigator.onLine === false &&
-        cached?.payload
+        retainedPayloadIsEligible()
     ) {
         setWaffleConnectionStatus(
             'offline'
@@ -426,7 +435,7 @@ async function queryAppsScriptSWR(
 
     if (
         navigator.onLine === false &&
-        !cached?.payload
+        !retainedPayloadIsEligible()
     ) {
         throw new Error(
             'Offline and no saved data is available yet.'
@@ -437,23 +446,50 @@ async function queryAppsScriptSWR(
         ...payload
     };
 
+    // A conditional response is useful only when this exact cache slot still
+    // contains a payload accepted by the consumer's identity guard.
     if (
-        cached?.version &&
-        cached?.variant
+        retainedPayloadIsEligible() &&
+        String(cached?.version || '').length > 0 &&
+        String(cached?.variant || '').length > 0 &&
+        String(cached?.responseTag || '').length > 0
     ) {
         requestPayload.knownVersion =
             cached.version;
 
         requestPayload.knownVariant =
             cached.variant;
+        requestPayload.knownResponseTag = cached.responseTag;
     }
 
+    const requestStartedAt = typeof performance !== 'undefined' && performance.now
+        ? performance.now() : Date.now();
+    let response;
     try {
-        const response =
-            await queryAppsScript(
-                requestPayload,
-                options
-            );
+        response = await queryAppsScript(requestPayload, options);
+        // Older clients/backends may return an unchanged marker without a
+        // payload. Never manufacture success from an absent/invalid cache.
+        const unchangedMatchesRetained = () => response?.unchanged === true &&
+            response?.result === 'success' &&
+            retainedPayloadIsEligible() &&
+            !!String(cached?.version || '') && !!String(cached?.variant || '') && !!String(cached?.responseTag || '') &&
+            String(response.version || '') === String(cached.version) &&
+            String(response.variant || '') === String(cached.variant) &&
+            String(response.responseTag || '') === String(cached.responseTag);
+        if (response?.unchanged && !unchangedMatchesRetained()) {
+            const unconditionalPayload = { ...requestPayload };
+            delete unconditionalPayload.knownVersion;
+            delete unconditionalPayload.knownVariant;
+            delete unconditionalPayload.knownResponseTag;
+            response = await queryAppsScript(unconditionalPayload, { ...options, dedupe: false });
+            if (response?.unchanged) throw new Error('Conditional refresh returned no retained data.');
+        }
+
+    const responseMetadata = {
+        transportMs: Math.max(0, Math.round((typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now()) - requestStartedAt)),
+        serverMs: Number.isFinite(response?.serverElapsedMs) && response.serverElapsedMs >= 0 ? response.serverElapsedMs : null,
+        serverCacheState: ['hit', 'miss', 'unchanged'].includes(response?.serverCacheState) ? response.serverCacheState : null
+    };
 
         if (cacheKey === 'directory:stay-operations' &&
             (response?.result === 'success' || (response?.unchanged && cached?.payload?.result === 'success'))) {
@@ -476,7 +512,7 @@ async function queryAppsScriptSWR(
 
         if (
             response?.unchanged &&
-            cached?.payload
+            unchangedMatchesRetained()
         ) {
             if (mayPersistResponse(cached.payload)) {
                 await putWaffleCachedResponse(
@@ -491,6 +527,7 @@ async function queryAppsScriptSWR(
                 cacheApplied,
                 unchanged:
                     true,
+                ...responseMetadata,
                 offlineFallback:
                     false
             };
@@ -514,6 +551,7 @@ async function queryAppsScriptSWR(
             cacheApplied,
             unchanged:
                 false,
+            ...responseMetadata,
             offlineFallback:
                 false
         };
@@ -528,7 +566,7 @@ async function queryAppsScriptSWR(
                 );
             } catch (_) { /* Status metadata must never affect the read. */ }
         }
-        if (cached?.payload) {
+        if (retainedPayloadIsEligible()) {
             console.warn(
                 'Network refresh failed; using cached Waffle data:',
                 error
@@ -540,8 +578,7 @@ async function queryAppsScriptSWR(
                 cacheApplied,
                 unchanged:
                     true,
-                offlineFallback:
-                    true,
+                offlineFallback: true,
                 error
             };
         }
@@ -2196,7 +2233,7 @@ function updateDirectoryProfileChangeReview(card, state) {
     const hidden = !isEditing || changedKeys.length === 0;
     if (review.hidden !== hidden) review.hidden = hidden;
     if (review.hidden) {
-        review.open = false;
+        if (review.open) review.open = false;
         return;
     }
 
@@ -9885,7 +9922,7 @@ registerWaffleServiceWorker();
     const directoryProfileReadNow = () => typeof performance !== 'undefined' && performance.now
         ? performance.now()
         : Date.now();
-    const directoryProfileReadEvent = (requestId, startedAt, phase, cacheStatus, outcome) => {
+    const directoryProfileReadEvent = (requestId, startedAt, phase, cacheStatus, outcome, timing = {}) => {
         try {
             window.dispatchEvent(new CustomEvent('waffle:care-profile-read', {
                 detail: {
@@ -9893,7 +9930,10 @@ registerWaffleServiceWorker();
                     phase,
                     elapsedMs: Math.max(0, Math.round(directoryProfileReadNow() - startedAt)),
                     cacheStatus,
-                    outcome: outcome || null
+                    outcome: outcome || null,
+                    transportMs: Number.isFinite(timing.transportMs) ? timing.transportMs : null,
+                    serverMs: Number.isFinite(timing.serverMs) ? timing.serverMs : null,
+                    serverCacheState: ['hit', 'miss', 'unchanged'].includes(timing.serverCacheState) ? timing.serverCacheState : null
                 }
             }));
         } catch (_) { /* Timing is diagnostic only and must not affect reads. */ }
@@ -10037,7 +10077,9 @@ registerWaffleServiceWorker();
                     directoryProfileFreshAt.set(key, directoryProfileReadNow());
                     await notifyCached({ record: responseRecord }, { fresh: true });
                 }
-                directoryProfileReadEvent(requestId, requestStartedAt, 'request-end', cacheStatus, result?.identityMismatch ? 'error' : result?.offlineFallback ? 'offline' : 'success');
+                const responseFailed = result?.data?.result && result.data.result !== 'success';
+                directoryProfileReadEvent(requestId, requestStartedAt, 'request-end', cacheStatus,
+                    result?.identityMismatch || responseFailed ? 'error' : result?.offlineFallback ? 'offline' : 'success', result);
                 if (!result?.superseded) directoryProfileReadFailures.delete(key);
                 return result;
             } catch (error) {
@@ -15751,8 +15793,8 @@ registerWaffleServiceWorker();
 
         // These are independent records. Keep both states visible so a saved
         // legacy PDF cannot hide an outstanding digital intake link.
-        digitalStrip.hidden = false;
-        legacyStrip.hidden = false;
+        if (digitalStrip.hidden) digitalStrip.hidden = false;
+        if (legacyStrip.hidden) legacyStrip.hidden = false;
 
         const card =
             digitalStrip.closest(
@@ -15760,11 +15802,12 @@ registerWaffleServiceWorker();
             );
 
         if (card) {
-            card.dataset.intakeMethod = digitalComplete
+            const intakeMethod = digitalComplete
                 ? 'digital'
                 : legacyComplete
                     ? 'legacy'
                     : 'none';
+            if (card.dataset.intakeMethod !== intakeMethod) card.dataset.intakeMethod = intakeMethod;
         }
     }
 

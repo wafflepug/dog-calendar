@@ -2183,7 +2183,8 @@ function getGuestDirectoryPayload_() {
   var digitalIntakes =
     getIntakeStatusRecords_(
       stayKeys,
-      summaries
+      summaries,
+      rows
     );
 
   var legacyIntakes =
@@ -2606,12 +2607,14 @@ function getPastGuestDirectoryPayload_(data) {
   var digitalIntakes =
     getIntakeStatusRecords_(
       stayKeys,
-      summaries
+      summaries,
+      rows
     );
 
   var legacyIntakes =
     getLegacyIntakeStatusRecords_(
-      stayKeys
+      stayKeys,
+      rows
     );
 
   return {
@@ -2881,6 +2884,7 @@ function getVersionedWaffleRead_(
   ttlSeconds,
   builder
 ) {
+  var startedAt = Date.now();
   data =
     data &&
     typeof data === "object"
@@ -2901,22 +2905,8 @@ function getVersionedWaffleRead_(
 
   var knownVariant =
     String(data.knownVariant || "");
-
-  if (
-    knownVersion &&
-    knownVariant &&
-    knownVersion === version &&
-    knownVariant === variant
-  ) {
-    return {
-      result: "success",
-      action: action,
-      version: version,
-      variant: variant,
-      unchanged: true,
-      cacheHit: true
-    };
-  }
+  var knownResponseTag =
+    String(data.knownResponseTag || "");
 
   var cacheKey =
     waffleReadCacheKey_(
@@ -2936,12 +2926,39 @@ function getVersionedWaffleRead_(
     try {
       var parsed =
         JSON.parse(cached);
+      if (!parsed || !parsed.responseTag) throw new Error("Cached read has no response tag.");
+
+      // Version properties can remain unchanged after direct spreadsheet
+      // edits. Only validate a conditional request while the authoritative
+      // server snapshot is still present in CacheService (and parseable).
+      if (
+        knownVersion &&
+        knownVariant &&
+        knownResponseTag &&
+        knownVersion === version &&
+        knownVariant === variant &&
+        knownResponseTag === String(parsed.responseTag)
+      ) {
+        return {
+          result: "success",
+          action: action,
+          version: version,
+          variant: variant,
+          responseTag: parsed.responseTag,
+          unchanged: true,
+          cacheHit: true,
+          serverCacheState: "unchanged",
+          serverElapsedMs: Math.max(0, Date.now() - startedAt)
+        };
+      }
 
       parsed.result = "success";
       parsed.action = action;
       parsed.version = version;
       parsed.variant = variant;
       parsed.cacheHit = true;
+      parsed.serverCacheState = "hit";
+      parsed.serverElapsedMs = Math.max(0, Date.now() - startedAt);
 
       return parsed;
 
@@ -2965,6 +2982,7 @@ function getVersionedWaffleRead_(
   built.version = version;
   built.variant = variant;
   built.cacheHit = false;
+  built.responseTag = Utilities.getUuid();
   built.generatedAt =
     built.generatedAt ||
     new Date().toISOString();
@@ -2974,6 +2992,9 @@ function getVersionedWaffleRead_(
     built,
     ttlSeconds
   );
+
+  built.serverCacheState = "miss";
+  built.serverElapsedMs = Math.max(0, Date.now() - startedAt);
 
   return built;
 }
@@ -7081,7 +7102,7 @@ function getLegacyBookingCandidates_() {
 }
 
 
-function getLegacyIntakeStatusRecords_(stayKeys) {
+function getLegacyIntakeStatusRecords_(stayKeys, bookingRows) {
   var requestedKeys =
     (Array.isArray(stayKeys)
       ? stayKeys
@@ -7121,7 +7142,9 @@ function getLegacyIntakeStatusRecords_(stayKeys) {
     mainSheet.getLastRow();
 
   var mainValues =
-    mainLastRow >= 2
+    Array.isArray(bookingRows)
+      ? bookingRows
+      : mainLastRow >= 2
       ? mainSheet
           .getRange(
             1,
@@ -11415,7 +11438,7 @@ function createIntakeLinkForBooking_(mainSheet, rows, data) {
 }
 
 
-function getIntakeStatusRecords_(stayKeys, profileSummaries) {
+function getIntakeStatusRecords_(stayKeys, profileSummaries, bookingRows) {
   var requestedKeys =
     (Array.isArray(stayKeys)
       ? stayKeys
@@ -11431,10 +11454,9 @@ function getIntakeStatusRecords_(stayKeys, profileSummaries) {
     requested[key] = true;
   });
 
-  var mainValues =
-    getTargetSheet_()
-      .getDataRange()
-      .getValues();
+  var mainValues = Array.isArray(bookingRows)
+    ? bookingRows
+    : getTargetSheet_().getDataRange().getValues();
 
   var targets = [];
 
