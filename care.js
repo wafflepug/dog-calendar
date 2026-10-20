@@ -41,7 +41,7 @@
   ];
   const TAB_KEYS = new Set(TABS.map(item => item.key));
   const wrapped = new Set();
-  let prepareTimer = 0;
+  const prepareTimers = new Map();
   let cardAccessibilityId = 0;
   let stayLinkTrigger = null;
   let stayLinkPanel = null;
@@ -769,9 +769,17 @@
   }
 
   function schedulePrepare(delays = [0, 60, 180, 420, 900]) {
-    window.clearTimeout(prepareTimer);
-    prepareTimer = window.setTimeout(prepare, 0);
-    delays.filter(delay => delay > 0).forEach(delay => window.setTimeout(prepare, delay));
+    const requestedDelays = [...new Set([0, ...delays.filter(delay => delay > 0)])];
+    requestedDelays.forEach(delay => {
+      // Hooks, focus events and refreshes often request the same bounded
+      // compatibility pass together. Keep the earliest pending pass per delay.
+      if (prepareTimers.has(delay)) return;
+      const timer = window.setTimeout(() => {
+        prepareTimers.delete(delay);
+        prepare();
+      }, delay);
+      prepareTimers.set(delay, timer);
+    });
   }
 
   function wrapFunction(name) {

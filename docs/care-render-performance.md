@@ -1,4 +1,4 @@
-# Care rendering performance — 2026.10.16.03
+# Care rendering performance — 2026.10.20.03
 
 ## Changed-only summary follow-up
 
@@ -15,6 +15,12 @@ Photos remain loaded on intent. Reopening the Photos tab reuses the current gall
 Care status and flag decoration compares values before writing. Current/Past counts use one guarded observer, including late grids, and ignore unrelated profile content changes. Past Records & forms restores saved disclosure state only when binding a new full identity. Repeated decoration cannot undo a user close before the native toggle event; unseen identities start closed. Scheduled late compatibility passes remain so late modules and reminder results can still decorate cards.
 
 These changes remove avoidable client DOM work. They do not reduce Google Sheets or Apps Script server latency or promise a specific wall-clock improvement. Existing history loading is already deferred and was retained.
+
+## Care startup follow-up
+
+`care.js` now coalesces pending compatibility preparation timers by requested delay. A synthetic scheduler executes the actual extracted `schedulePrepare` function against the prior behavior under a three-request startup burst: the previous scheduler invokes `prepare` 10 times (the last immediate timer survives, while all 9 delayed callbacks survive), and the coalesced scheduler invokes it 4 times (one immediate and one for each distinct 80/240/650 ms compatibility delay). This measures prepare invocations only, not a page-load speedup. The distinct delays, wrapper-triggered late passes, and explicit profile loads remain available; this does not add requests or change secondary startup coordination.
+
+Phase 4 operations no longer render Insights or schedule the delayed Smart Reminders check at startup on Care. Care has no operations-home surface, so this previously caused two unused intake/belongings reads for an active arrival. The actual `phase4-operations.js` VM fixture measures those Care startup reads at 2 before the change and 0 after; opening Reminders or using its explicit Refresh still produces both reads, and selecting Insights still renders it. Other pages retain eager Insights and the delayed reminder check. Care data-change events refresh only a currently visible Reminders or Insights panel; hidden/unvisited panels load when selected.
 
 ## Testing matrix
 

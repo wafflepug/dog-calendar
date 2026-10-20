@@ -4593,9 +4593,11 @@ window.addEventListener(
             directoryConsolidatedLastFetch =
                 0;
 
-            loadGuestDirectoryConsolidated({
-                quiet: true
-            }).catch(() => {});
+            if (document.visibilityState !== 'hidden') {
+                loadGuestDirectoryConsolidated({
+                    quiet: true
+                }).catch(() => {});
+            }
         } else if (
             WAFFLE_PAGE ===
             'reminders'
@@ -5219,6 +5221,12 @@ registerWaffleServiceWorker();
             'focus',
             refreshDirectoryIntakesAfterReturn
         );
+
+        window.addEventListener('pageshow', function(event) {
+            if (!event.persisted || WAFFLE_PAGE !== 'directory') return;
+            directoryConsolidatedLastFetch = 0;
+            refreshDirectoryIntakesAfterReturn();
+        });
 
         document.addEventListener(
             'visibilitychange',
@@ -10202,6 +10210,7 @@ registerWaffleServiceWorker();
     }
     if (typeof window !== 'undefined') {
         if (typeof window.addEventListener === 'function') window.addEventListener('focus', revalidateSelectedDirectoryProfile);
+        if (typeof window.addEventListener === 'function') window.addEventListener('pageshow', event => { if (event.persisted) revalidateSelectedDirectoryProfile(); });
         if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') document.addEventListener('visibilitychange', revalidateSelectedDirectoryProfile);
     }
     function directoryProfileIdentityIsAmbiguous(card) {

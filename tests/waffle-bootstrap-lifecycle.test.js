@@ -5,15 +5,16 @@ const vm = require('node:vm');
 
 const source = fs.readFileSync('waffle-bootstrap.js', 'utf8');
 const start = source.indexOf('  let buildCheckPromise = null;');
-const endMarker = '  setInterval(checkBuild, 5 * 60 * 1000);';
+const endMarker = '  }, 5 * 60 * 1000);';
 const end = source.indexOf(endMarker, start) + endMarker.length;
 assert(start >= 0 && end > start);
 const lifecycleSource = source.slice(start, end);
 
-function harness({ fetchImpl, initialVisibility = 'visible' } = {}) {
+function harness({ fetchImpl, initialVisibility = 'visible', source = lifecycleSource } = {}) {
   const documentListeners = new Map();
   const windowListeners = new Map();
   let intervalCallback = null;
+  let intervalDelay = null;
   const document = {
     readyState: 'loading',
     visibilityState: initialVisibility,
@@ -30,12 +31,12 @@ function harness({ fetchImpl, initialVisibility = 'visible' } = {}) {
     fetch: fetchImpl || (async () => ({ ok: true, async json() { return { build: '' }; } })),
     showBuildUpdate() {},
     checkFirstPaintReady() {},
-    setInterval(callback) { intervalCallback = callback; return 1; },
+    setInterval(callback, delay) { intervalCallback = callback; intervalDelay = delay; return 1; },
     setTimeout,
     clearTimeout,
     console,
   };
-  vm.runInNewContext(`const BUILD = '2026.08.28.01';\nfunction startMaintenanceGate() {}\nfunction startFirstPaintGate() {}\nfunction parserLoadRuntime() {}\n${lifecycleSource}`, sandbox);
+  vm.runInNewContext(`const BUILD = '2026.08.28.01';\nfunction startMaintenanceGate() {}\nfunction startFirstPaintGate() {}\nfunction parserLoadRuntime() {}\n${source}`, sandbox);
   return {
     document,
     window,
@@ -46,6 +47,7 @@ function harness({ fetchImpl, initialVisibility = 'visible' } = {}) {
     },
     triggerPageShow(persisted = false) { for (const callback of windowListeners.get('pageshow') || []) callback({ persisted }); },
     triggerInterval() { intervalCallback?.(); },
+    intervalDelay() { return intervalDelay; },
   };
 }
 
@@ -105,5 +107,60 @@ test('persisted pageshow, hidden-visible, and interval each request a fresh prob
   page.triggerInterval();
   assert.equal(controlled.calls.length, 4);
   controlled.calls[3].resolve({ ok: true, async json() { return { build: '' }; } });
+  await settle();
+});
+
+test('hidden idle interval skips build fetch while visible interval and return probe remain fresh', async () => {
+  const legacySource = lifecycleSource.replace(
+    /  setInterval\(\(\) => \{\r?\n    if \(document\.visibilityState !== 'hidden'\) checkBuild\(\);\r?\n  \}, 5 \* 60 \* 1000\);/,
+    '  setInterval(checkBuild, 5 * 60 * 1000);'
+  );
+  assert.notEqual(legacySource, lifecycleSource);
+  const baseline = controlledFetch();
+  const baselinePage = harness({ fetchImpl: baseline.fetchImpl, source: legacySource });
+  baselinePage.triggerDOMContentLoaded();
+  baseline.calls[0].resolve({ ok: true, async json() { return { build: '' }; } });
+  await settle();
+  baselinePage.triggerVisibility('hidden');
+  const baselineBefore = baseline.calls.length;
+  baselinePage.triggerInterval();
+  await settle();
+  const beforeHiddenIntervalReads = baseline.calls.length - baselineBefore;
+
+  const controlled = controlledFetch();
+  const page = harness({ fetchImpl: controlled.fetchImpl });
+  assert.equal(page.intervalDelay(), 5 * 60 * 1000);
+  page.triggerDOMContentLoaded();
+  controlled.calls[0].resolve({ ok: true, async json() { return { build: '' }; } });
+  await settle();
+
+  page.triggerVisibility('hidden');
+  const beforeHiddenInterval = controlled.calls.length;
+  page.triggerInterval();
+  await settle();
+  const hiddenIntervalReads = controlled.calls.length - beforeHiddenInterval;
+  assert.equal(beforeHiddenIntervalReads, 1);
+  assert.equal(hiddenIntervalReads, 0);
+
+  page.triggerVisibility('visible');
+  assert.equal(controlled.calls.length, beforeHiddenInterval + 1);
+  controlled.calls.at(-1).resolve({ ok: true, async json() { return { build: '' }; } });
+  await settle();
+  page.triggerInterval();
+  assert.equal(controlled.calls.length, beforeHiddenInterval + 2);
+  controlled.calls.at(-1).resolve({ ok: true, async json() { return { build: '' }; } });
+  await settle();
+});
+
+test('initial mount still probes while hidden, then returning to foreground revalidates', async () => {
+  const controlled = controlledFetch();
+  const page = harness({ fetchImpl: controlled.fetchImpl, initialVisibility: 'hidden' });
+  page.triggerDOMContentLoaded();
+  assert.equal(controlled.calls.length, 1);
+  controlled.calls[0].resolve({ ok: true, async json() { return { build: '' }; } });
+  await settle();
+  page.triggerVisibility('visible');
+  assert.equal(controlled.calls.length, 2);
+  controlled.calls[1].resolve({ ok: true, async json() { return { build: '' }; } });
   await settle();
 });
