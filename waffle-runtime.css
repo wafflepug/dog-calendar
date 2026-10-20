@@ -2,8 +2,8 @@
    Build: 2026.08.27.04
    Historical base styles remain compatibility sources during Phase 3A, but pages no longer
    reference them individually. Preserve this import order until modules are folded in. */
-@import url("waffle-app.css?build=2026.08.27.04&rev=2026.10.21.01");
-@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.10.21.01");
+@import url("waffle-app.css?build=2026.08.27.04&rev=2026.10.21.02");
+@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.10.21.02");
 @import url("waffle-v10.8.2.css?build=2026.08.27.04");
 @import url("waffle-v10.8.3.css?build=2026.08.27.04");
 @import url("waffle-v10.8.5.css?build=2026.08.27.04");
@@ -11,12 +11,12 @@
 @import url("waffle-v10.8.7.css?build=2026.08.27.04");
 @import url("waffle-v10.8.8.css?build=2026.08.27.04");
 @import url("waffle-v10.8.9.css?build=2026.08.27.04");
-@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.10.21.01");
+@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.10.21.02");
 @import url("waffle-v11.0.3.css?build=2026.08.27.04");
 @import url("waffle-v11.0.5.css?build=2026.08.27.04");
-@import url("waffle-v11.1.94.css?build=2026.10.21.01");
-@import url("waffle-v11.1.95.css?build=2026.10.21.01");
-@import url("waffle-v11.1.96.css?build=2026.10.21.01&rev=2026.10.21.01");
+@import url("waffle-v11.1.94.css?build=2026.10.21.02");
+@import url("waffle-v11.1.95.css?build=2026.10.21.02");
+@import url("waffle-v11.1.96.css?build=2026.10.21.02&rev=2026.10.21.02");
 
 /* ============================================================
    MOBILE FIRST-PAINT STABILITY GATE
@@ -2708,12 +2708,14 @@ body.dark-theme .owner-handoff-actions button:not(.primary){background:#22304a;c
 
 [data-waffle-arrival-next]{display:inline-flex;align-items:center;justify-content:center;min-height:44px;max-width:100%;margin:0 0 .7rem;padding:.6rem .9rem;border:1px solid var(--wh75-accent,#7c3aed);border-radius:12px;color:var(--wh75-accent-strong,#6021b0);background:var(--wh-surface,#fff);font:750 15px/1.4 system-ui,sans-serif;cursor:pointer;white-space:normal}
 [data-waffle-arrival-next][hidden]{display:none!important}
-[data-waffle-arrival-ready]{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.4rem;margin:0 12px .6rem;padding:.5rem .65rem;border:1px solid var(--wh-border,#c6d0e4);border-radius:12px;background:var(--wh-surface-soft,#f4f2ff);color:var(--wh-text,#17243b);font:650 14px/1.45 system-ui,sans-serif}
+[data-waffle-arrival-ready]{display:flex;align-items:center;justify-content:space-between;gap:.6rem;width:calc(100% - 24px);min-width:0;min-height:44px;box-sizing:border-box;margin:0 12px .6rem;padding:.5rem .65rem;border:1px solid var(--wh-border,#c6d0e4);border-radius:12px;background:var(--wh-surface-soft,#f4f2ff);color:var(--wh-text,#17243b);font:650 14px/1.45 system-ui,sans-serif;text-align:left;white-space:normal;overflow-wrap:anywhere;cursor:pointer}
+[data-arrival-copy]{display:grid;flex:1;min-width:0;gap:2px}
+[data-arrival-copy] strong{font:inherit;overflow-wrap:anywhere}
+[data-arrival-detail]{font:400 12px/1.4 system-ui,sans-serif;color:var(--wh-muted,#475569);overflow-wrap:anywhere}
+[data-arrival-detail][hidden]{display:none!important}
+[data-arrival-action]{flex:0 0 auto;font-weight:750;white-space:nowrap}
 .directory-card.is-profile-active [data-waffle-arrival-ready]{display:none}
-[data-arrival-details]{max-width:100%;min-width:0;font-weight:400}
-[data-arrival-details]>summary{display:list-item;min-height:44px;align-content:center;cursor:pointer;font-weight:650}
-[data-arrival-detail]{display:block;max-width:100%;overflow-wrap:anywhere}
-[data-arrival-review]{min-height:44px;margin-top:.35rem;padding:.5rem .7rem;border:1px solid var(--wh-border,#c6d0e4);border-radius:9px;background:var(--wh-surface,#fff);color:inherit;font:650 14px/1.4 system-ui,sans-serif;cursor:pointer}
+[data-waffle-arrival-ready]:focus-visible{outline:3px solid var(--wh75-accent,#7c3aed);outline-offset:3px}
 #v11217GuidedCheckout{z-index:2147482600;box-sizing:border-box}
 #v11217GuidedCheckout[hidden],#v11217GuidedCheckout [hidden]{display:none!important}
 #v11217GuidedCheckout .v11217-modal-card{display:flex;flex-direction:column;min-height:0;max-height:calc(100dvh - 32px);overflow:hidden}
@@ -2726,9 +2728,13 @@ body.dark-theme .owner-handoff-actions button:not(.primary){background:#22304a;c
 #v11217GuidedCheckout label{font-size:14px;line-height:1.5}
 
 #v11217GuidedCheckout textarea{box-sizing:border-box;width:100%;min-height:76px;padding:.65rem;border:1px solid var(--wh-border,#c6d0e4);border-radius:10px;background:var(--wh-surface,#fff);color:inherit;font:400 16px/1.5 system-ui,sans-serif;resize:vertical}
-#v11217GuidedCheckout :focus-visible,[data-waffle-arrival-next]:focus-visible,[data-arrival-review]:focus-visible{outline:3px solid var(--wh75-accent,#7c3aed);outline-offset:3px}
+#v11217GuidedCheckout [data-v11217-guided-review-care]{align-self:flex-start;max-width:100%;padding:.55rem .75rem;border:1px solid var(--wh-border,#c6d0e4);border-radius:10px;background:var(--wh-surface,#fff);color:var(--wh75-accent-strong,#6021b0);font:700 14px/1.4 system-ui,sans-serif;white-space:normal;overflow-wrap:anywhere}
+#v11217GuidedCheckout [data-v11217-guided-review-care][hidden]{display:none!important}
+#v11217GuidedCheckout :focus-visible,[data-waffle-arrival-next]:focus-visible{outline:3px solid var(--wh75-accent,#7c3aed);outline-offset:3px}
 body.dark-theme .directory-compact-intake-status,body.dark-theme [data-waffle-arrival-ready]{background:#22304a;color:#e2e8f0;border-color:#526178}
+body.dark-theme [data-arrival-detail]{color:#cbd5e1}
 body.dark-theme .directory-compact-intake-status[data-state="complete"]{background:#14532d;color:#dcfce7;border-color:#4ade80}
+body.dark-theme #v11217GuidedCheckout [data-v11217-guided-review-care]{background:#172236;color:#e2e8f0;border-color:#526178}
 body.dark-theme .directory-compact-intake-status[data-state="link_ready"]{background:#172554;color:#dbeafe;border-color:#60a5fa}
 body.dark-theme [data-waffle-arrival-next],body.dark-theme [data-arrival-review],body.dark-theme #v11217GuidedCheckout textarea{background:#172236;color:#e2e8f0;border-color:#526178}
 @media(max-width:820px){#v11217GuidedCheckout .v11217-modal-actions{gap:.5rem}#v11217GuidedCheckout .v11217-modal-actions button{padding:.65rem .5rem}}

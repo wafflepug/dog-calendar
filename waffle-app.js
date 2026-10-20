@@ -11237,6 +11237,7 @@ registerWaffleServiceWorker();
         const opener = card?.querySelector('[data-open-directory-profile]') ||
             (card?.matches?.('[data-open-directory-profile]') ? card : null);
         const search = document.getElementById('guestDirectorySearch');
+        const openerViewportTop = Number(opener?.getBoundingClientRect?.().top);
 
         directoryProfileNavigationOrigin = {
             stayKey: String(card?.dataset?.directoryStayKey || '').trim(),
@@ -11248,6 +11249,7 @@ registerWaffleServiceWorker();
                 'directorySourceRow', 'v1088OwnerName', 'directoryDogName',
                 'directoryStartDate', 'directoryEndDate'
             ].map(key => [key, String(card?.dataset?.[key] || '').trim()])),
+            openerViewportTop: Number.isFinite(openerViewportTop) ? openerViewportTop : null,
             opener
         };
     }
@@ -11308,24 +11310,6 @@ registerWaffleServiceWorker();
                 activeElement.isConnected
             ) {
                 return;
-            }
-
-            const maxScroll = Math.max(
-                0,
-                (Number(document.documentElement?.scrollHeight) || 0) -
-                    (Number(window.innerHeight) || 0)
-            );
-            const requested = Math.max(0, Number(origin.scrollTop) || 0);
-            const targetScroll = Math.min(requested, maxScroll);
-
-            try {
-                window.scrollTo({
-                    top: targetScroll,
-                    left: 0,
-                    behavior: 'auto'
-                });
-            } catch (_) {
-                try { window.scrollTo(0, targetScroll); } catch (_) {}
             }
 
             const stayKey = origin.openerStayKey;
@@ -11396,6 +11380,28 @@ registerWaffleServiceWorker();
                 document.getElementById('guestDirectorySearch') ||
                 document.querySelector('[data-v1082-stay-tab]') ||
                 document.getElementById('directory-grid');
+
+            const maxScroll = Math.max(
+                0,
+                (Number(document.documentElement?.scrollHeight) || 0) -
+                    (Number(window.innerHeight) || 0)
+            );
+            const requested = Math.max(0, Number(origin.scrollTop) || 0);
+            const currentScroll = getDirectoryWindowScrollTop();
+            const openerTop = Number(opener?.getBoundingClientRect?.().top);
+            const originalOpenerTop = Number(origin.openerViewportTop);
+            const hasAnchor = opener && origin.openerViewportTop !== null &&
+                Number.isFinite(openerTop) && Number.isFinite(originalOpenerTop);
+            const targetScroll = Math.max(0, Math.min(
+                hasAnchor ? currentScroll + openerTop - originalOpenerTop : requested,
+                maxScroll
+            ));
+
+            try {
+                window.scrollTo({ top: targetScroll, left: 0, behavior: 'auto' });
+            } catch (_) {
+                try { window.scrollTo(0, targetScroll); } catch (_) {}
+            }
 
             if (fallback && typeof fallback.focus === 'function') {
                 try { fallback.focus({ preventScroll: true }); }

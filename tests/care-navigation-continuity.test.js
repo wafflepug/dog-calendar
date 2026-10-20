@@ -14,7 +14,8 @@ test('Care navigation origin is captured once and restored after Back', () => {
   assert.match(app, /restoreDirectoryProfileNavigationOrigin\(options\)/);
   assert.match(app, /focus\(\{ preventScroll: true \}\)/);
   assert.match(app, /requestAnimationFrame\(\(\) => window\.requestAnimationFrame/);
-  assert.match(app, /const targetScroll = Math\.min\(requested, maxScroll\)/);
+  assert.match(app, /currentScroll \+ openerTop - originalOpenerTop/);
+  assert.match(app, /openerViewportTop/);
 });
 
 test('continuity does not add persistent storage or profile reads', () => {
