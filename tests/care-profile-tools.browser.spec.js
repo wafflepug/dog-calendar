@@ -9,7 +9,7 @@ const care = fs.readFileSync(path.join(__dirname, '..', 'care.js'), 'utf8');
 const booking = { timestamp: '2026-10-16', dogName: 'Milo', breed: 'Collie', startDate: '2026-10-17', endDate: '2026-10-20', ownerName: 'Casey', phone: '+61400000000', notes: 'Call before pickup.', bookingType: 'Boarding', dogId: '11111111-1111-4111-8111-111111111111', stayId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', dogNumber: '#00017', stayKey: 'milo|2026-10-17|2026-10-20' };
 const profileRecord = { stayKey: booking.stayKey, identity: { stayKey: booking.stayKey, stayId: booking.stayId, dogId: booking.dogId }, resolution: { status: 'resolved', method: 'fixture' }, updatedAt: '2026-10-16T08:00:00Z', intakeAttributesSource: 'Saved profile', intakeAttributes: { feedingTimes: '8am and 6pm', foodAmount: '1 cup', foodBrandType: 'Sensitive formula', walksPerDay: '2 walks', walkDuration: '20 minutes', medicationInstructions: 'Give the saved medication with dinner. Call the owner if appetite changes.', notes: 'Give Milo time to settle after arrival.' }, riskFlags: { foodAllergy: true } };
 
-async function installFixture(page) {
+async function installFixture(page, { seedOperationsRows = false } = {}) {
   const reads = [];
   const pendingReads = new Set();
   const csvCell = value => `"${String(value ?? '').replace(/"/g, '""')}"`;
@@ -17,12 +17,12 @@ async function installFixture(page) {
     ['Timestamp', 'Dog Name', 'Breed', 'Start Date', 'End Date', 'Owner', 'Phone', 'Likes', 'Dislikes', 'Notes', 'Edit Link', 'Booking Type', 'Source', 'Dog ID', 'Stay ID', 'Dog Number'],
     [booking.timestamp, booking.dogName, booking.breed, '17/10/2026', '20/10/2026', booking.ownerName, booking.phone, '', '', booking.notes, '', 'Boarding', 'Other', booking.dogId, booking.stayId, booking.dogNumber],
   ].map(row => row.map(csvCell).join(',')).join('\n');
-  await page.addInitScript(({ csv }) => {
+  await page.addInitScript(({ csv, seedOperationsRows: seed }) => {
     const NativeDate = Date, now = NativeDate.UTC(2026, 9, 17, 12);
     function FixedDate(...args) { if (!new.target) return new NativeDate(now).toString(); return Reflect.construct(NativeDate, args.length ? args : [now], new.target); }
     FixedDate.prototype = NativeDate.prototype; Object.setPrototypeOf(FixedDate, NativeDate); FixedDate.now = () => now; globalThis.Date = FixedDate;
-    localStorage.setItem('boardingDataCache', csv);
-  }, { csv: fixtureCsv });
+    if (seed) localStorage.setItem('boardingDataCache', csv);
+  }, { csv: fixtureCsv, seedOperationsRows });
   await page.route('**/*', async route => {
     const request = route.request(), url = request.url();
     if (!['GET', 'HEAD'].includes(request.method())) return route.fulfill({ status: 405, body: 'Synthetic fixture blocks all writes' });
@@ -60,7 +60,7 @@ async function installFixture(page) {
 }
 
 test('coalesced late Care preparation still adopts controls added after startup', async ({ page, baseURL }) => {
-  const reads = await installFixture(page);
+  const reads = await installFixture(page, { seedOperationsRows: true });
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(`${baseURL}/directory.html?carePrepareFixture=1`, { waitUntil: 'domcontentloaded' });
   await page.waitForFunction(() => document.documentElement.dataset.waffleUiReady === 'true');
