@@ -10,6 +10,19 @@ const saveStart = source.indexOf('async function saveBelongingsCard');
 const saveEnd = source.indexOf('    function makeHostedPhotoRequestToken', saveStart);
 assert.ok(helperStart >= 0 && helperEnd > helperStart && saveStart >= 0 && saveEnd > saveStart);
 
+function extractFunction(name) {
+  let start = source.indexOf(`async function ${name}(`);
+  if (start < 0) start = source.indexOf(`function ${name}(`);
+  assert.notEqual(start, -1, `missing ${name}`);
+  const open = source.indexOf('{', start);
+  let depth = 0;
+  for (let i = open; i < source.length; i++) {
+    if (source[i] === '{') depth++;
+    if (source[i] === '}' && --depth === 0) return source.slice(start, i + 1);
+  }
+  throw new Error(`Could not extract ${name}`);
+}
+
 function makeProfileHarness({ count = 1, values = { 'data-intake-attribute': 'notes', value: 'Saved note' } } = {}) {
   const control = {
     dataset: values['data-intake-attribute']
@@ -17,11 +30,13 @@ function makeProfileHarness({ count = 1, values = { 'data-intake-attribute': 'no
       : { careRiskFlag: values['data-care-risk-flag'] },
     value: values.value ?? '',
     checked: !!values.checked,
-    disabled: false
+    disabled: false,
+    closest: () => null
   };
   const status = { textContent: '', className: '' };
   const save = { disabled: true };
   const card = {
+    isConnected: true,
     dataset: { directoryStayKey: 'milo|2026-09-20|2026-09-22' },
     classList: { contains: name => name === 'is-profile-editing' },
     querySelectorAll: () => [control],
@@ -35,7 +50,8 @@ function makeProfileHarness({ count = 1, values = { 'data-intake-attribute': 'no
     directoryProfileEditDrafts: new Map(),
     document: { querySelectorAll: () => Array.from({ length: count }, () => card) },
     directoryProfileEditIdentityConflicts: () => false,
-    getDirectoryProfileEditIdentity: () => ({ breed: 'mutt', ownerName: 'owner', phone: '123' })
+    getDirectoryProfileEditIdentity: () => ({ breed: 'mutt', ownerName: 'owner', phone: '123' }),
+    getDirectoryProfileReadIdentity: candidate => ({ valid: true, stayKey: candidate.dataset.directoryStayKey, cacheKey: candidate.dataset.directoryStayKey, hasStableIds: false })
   };
   vm.runInNewContext(`${source.slice(helperStart, helperEnd)}\nthis.restore = restoreDirectoryProfileEditDraft; this.feedback = updateDirectoryProfileEditFeedback;`, sandbox);
   return { sandbox, card, control, status, save };
@@ -87,6 +103,7 @@ test('inline Care refresh conflict and duplicate stays retain the draft and bloc
 
 test('inline Care save freezes controls and preserves the draft with visible failure feedback', async () => {
   const card = {
+    isConnected: true,
     dataset: { directoryStayKey: 'milo|2026-09-20|2026-09-22', profileSaving: 'false' },
     querySelector: () => status
   };
@@ -104,6 +121,9 @@ test('inline Care save freezes controls and preserves the draft with visible fai
   const sandbox = {
     directoryProfileEditDrafts: new Map([['milo|2026-09-20|2026-09-22', state]]),
     directoryProfileEditKey: () => 'milo|2026-09-20|2026-09-22',
+    directoryProfileEditIdentityConflicts: () => false,
+    getDirectoryProfileEditIdentity: () => ({ breed: 'mutt', ownerName: 'owner', phone: '123' }),
+    getDirectoryProfileReadIdentity: candidate => ({ valid: true, stayKey: candidate.dataset.directoryStayKey, cacheKey: candidate.dataset.directoryStayKey, hasStableIds: false }),
     directoryProfileEditIsDirty: () => true,
     validateDirectoryProfileEditContext() {},
     updateDirectoryProfileEditFeedback: (_card, message) => { status.textContent = message || state.failureMessage || 'Saving care details…'; },
@@ -111,10 +131,17 @@ test('inline Care save freezes controls and preserves the draft with visible fai
     getBelongingsCardPayload: () => ({ stayKey: card.dataset.directoryStayKey, dogName: 'Milo', riskFlags: {}, intakeAttributes: { notes: control.value } }),
     sendPayloadToAppsScript: () => new Promise((_resolve, reject) => { rejectSend = reject; }),
     belongingsRecordsCache: {}, careRiskRecordsCache: {}, directoryBelongingsDetailCache: {}, directoryProfileDetailCache: {},
+    document: { querySelectorAll: () => [card] },
     renderDirectoryCareBrief() {}, renderCareRiskDashboard() {}, getCurrentBoardingStays: () => [], localStorage: { getItem: () => '' },
     invalidateWaffleClientCaches: async () => {}, setDirectoryProfileEditMode() {}, setTimeout() {}, console: { error() {} }
   };
-  vm.runInNewContext(`${source.slice(saveStart, saveEnd)}\nthis.save = saveBelongingsCard;`, sandbox);
+  vm.runInNewContext([
+    extractFunction('isCareSaveRecoveryContextCurrent'),
+    extractFunction('refreshSavedCareViewsReadOnly'),
+    extractFunction('appendCareSaveRefreshRetry'),
+    source.slice(saveStart, saveEnd),
+    'this.save = saveBelongingsCard;'
+  ].join('\n'), sandbox);
 
   const saving = sandbox.save(card, button);
   await Promise.resolve();
@@ -143,4 +170,40 @@ test('server-rejected identity retains an inline draft and blocks Save even with
   assert.equal(h.control.value, 'Typed draft');
   assert.equal(h.save.disabled, true);
   assert.match(h.status.textContent, /identity needs review/);
+});
+
+test('a delayed save settles its original draft without updating a replacement dog', async () => {
+  for (const saved of [true, false]) {
+    const card={isConnected:true,dataset:{directoryStayKey:'stay-a',stayKey:'stay-a',directoryDogId:'dog-a'},querySelector:()=>null};
+    const state={initial:{'intake:notes':'Old'},values:{'intake:notes':'Draft'},saving:false};
+    const drafts=new Map([['stay-a',state]]);
+    let resolveSave,rejectSave,uiUpdates=0;
+    const invalidated=[];
+    const sandbox={
+      directoryProfileEditDrafts:drafts,belongingsItemDrafts:new Map(),
+      directoryProfileEditKey:c=>c.dataset.directoryStayKey,
+      getDirectoryProfileEditIdentity:()=>({ownerName:'casey'}),directoryProfileEditIdentityConflicts:()=>false,
+      getDirectoryProfileReadIdentity:c=>({valid:true,stayKey:c.dataset.directoryStayKey,cacheKey:c.dataset.directoryDogId,hasStableIds:true}),
+      validateDirectoryProfileEditContext(){},directoryProfileEditIsDirty:()=>true,
+      applyDirectoryProfileEditMode(){uiUpdates++;},updateDirectoryProfileEditFeedback(){uiUpdates++;},
+      getBelongingsCardPayload:()=>({stayKey:'stay-a',dogName:'Milo',riskFlags:{},intakeAttributes:{notes:'Draft'}}),
+      sendPayloadToAppsScript:()=>new Promise((resolve,reject)=>{resolveSave=resolve;rejectSave=reject;}),
+      document:{querySelectorAll:()=>[card]},window:{WAFFLE_CARE_BELONGINGS_READS:{invalidate:c=>invalidated.push(c.dataset.directoryDogId)}},
+      belongingsRecordsCache:{},careRiskRecordsCache:{},directoryProfileDetailCache:{},directoryBelongingsDetailCache:{},
+      invalidateWaffleClientCaches:async()=>{},console:{error(){}},setTimeout(){},
+      renderDirectoryCareBrief(){uiUpdates++;},renderCareRiskDashboard(){uiUpdates++;},
+      setDirectoryProfileEditMode(){uiUpdates++;},localStorage:{getItem:()=>''},getCurrentBoardingStays:()=>[]
+    };
+    vm.runInNewContext(`${extractFunction('isCareSaveRecoveryContextCurrent')}\n${source.slice(saveStart,saveEnd)}\nthis.save=saveBelongingsCard;`,sandbox);
+    const button={innerText:'Save',disabled:false,closest:()=>({})};
+    const pending=sandbox.save(card,button);
+    const before=uiUpdates;
+    card.dataset.directoryDogId='dog-b';
+    if(saved)resolveSave({result:'success'});else rejectSave(new Error('Synthetic rejection'));
+    await pending;
+    assert.equal(uiUpdates,before,'old result must not change replacement UI');
+    assert.equal(state.saving,false,'old draft cannot remain locked');
+    assert.equal(drafts.has('stay-a'),!saved);
+    assert.deepEqual(invalidated,saved?['dog-a']:[],'invalidate the saved identity, never the replacement');
+  }
 });

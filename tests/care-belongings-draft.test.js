@@ -107,9 +107,10 @@ test('photo note is restored in memory across refresh without enabling the check
 
 function saveHarness(send) {
   const control = { disabled: false };
-  const status = { textContent: '', className: '' };
+  const status = { textContent: '', className: '', children: [], append(child) { this.children.push(child); }, replaceChildren(...children) { this.children = children; this.textContent = children.map(child => child.textContent || '').join(''); }, focus() {} };
   const save = { disabled: false };
   const discard = { hidden: false, disabled: false };
+  const detail = { dataset: { detailLoaded: 'true', detailLoading: 'false' } };
   const card = {
     dataset: { stayKey: 'stay-a', directoryStayKey: 'stay-a' },
     classList: { contains: () => false },
@@ -117,6 +118,7 @@ function saveHarness(send) {
       if (selector === '[data-belongings-edit-status]') return status;
       if (selector === '[data-save-belongings]') return save;
       if (selector === '[data-discard-belongings-draft]') return discard;
+      if (selector === '[data-directory-detail="belongings"]') return detail;
       return null;
     },
     querySelectorAll: () => [control]
@@ -129,8 +131,13 @@ function saveHarness(send) {
     directoryProfileEditKey: c => c.dataset.directoryStayKey,
     directoryProfileEditIdentityConflicts: () => false,
     getDirectoryProfileEditIdentity: () => ({ breed: 'mutt', ownerName: 'owner', phone: '123' }),
+    getDirectoryProfileReadIdentity: () => ({ valid: true, stayKey: card.dataset.directoryStayKey, cacheKey: card.dataset.directoryStayKey }),
     directoryProfileEditIsDirty: () => false,
-    document: { querySelectorAll: () => [card] },
+    document: {
+      querySelectorAll: () => [card],
+      createElement: tag => ({ tagName: tag, style: {}, disabled: false, addEventListener(_name, callback) { this.click = callback; }, remove() { this.removed = true; } })
+    },
+    window: { WAFFLE_CARE_BELONGINGS_READS: { async read() { context.readOnlyCalls++; return { data: { record: { stayKey: card.dataset.directoryStayKey } } }; } } },
     collectBelongingsItems: () => ({ blankets: { present: true, description: 'Blue fleece' } }),
     belongingsItemsEqual: (a, b) => JSON.stringify(a) === JSON.stringify(b),
     updateBelongingsItemDraftFeedback(target, message) {
@@ -145,9 +152,18 @@ function saveHarness(send) {
     renderDirectoryCareBrief() {}, renderCareRiskDashboard() {}, getCurrentBoardingStays: () => [],
     localStorage: { getItem: () => '' }, invalidateWaffleClientCaches: async () => {}, setDirectoryProfileEditMode() {}, setTimeout() {}, console: { error() {} }
   };
+  context.readOnlyCalls = 0;
+  context.loadDirectoryBelongingsDetail = async (_card, _details) => { context.renderRefreshCalls++; };
+  context.renderRefreshCalls = 0;
   const button = { disabled: false, innerText: 'Save Belongings', closest: () => null };
   vm.createContext(context);
-  vm.runInContext(`${extractFunction('saveBelongingsCard')}\nthis.save = saveBelongingsCard;`, context);
+  vm.runInContext([
+    extractFunction('isCareSaveRecoveryContextCurrent'),
+    extractFunction('refreshSavedCareViewsReadOnly'),
+    extractFunction('appendCareSaveRefreshRetry'),
+    extractFunction('saveBelongingsCard'),
+    'this.save = saveBelongingsCard;'
+  ].join('\n'), context);
   return { context, state, card, control, status, button, calls };
 }
 
@@ -175,6 +191,34 @@ test('successful belongings save advances baseline and keeps later edits saveabl
   await h.context.save(h.card, h.button);
   assert.equal(h.calls.length, 2);
   assert.equal(h.state.initial.blankets.description, 'Red blanket');
+});
+
+test('confirmed belongings save reports refresh failure and offers a read-only retry for the same stay', async () => {
+  const h = saveHarness(async () => ({}));
+  h.context.invalidateWaffleClientCaches = async () => { throw new Error('fixture cache refresh failed'); };
+  await h.context.save(h.card, h.button);
+  assert.equal(h.calls.length, 1);
+  assert.equal(h.state.initial.blankets.description, 'Blue fleece');
+  assert.match(h.status.textContent, /Your changes were saved.*could not be refreshed/);
+  const retry = h.status.children.find(child => child.tagName === 'button');
+  assert.equal(retry.textContent, 'Retry refresh');
+  await retry.click();
+  assert.equal(h.calls.length, 1, 'refresh retry never resends the mutation');
+  assert.equal(h.context.readOnlyCalls, 1);
+  assert.equal(h.context.renderRefreshCalls, 1);
+  assert.match(h.status.children[0].textContent, /Care details refreshed/);
+});
+
+test('read-only save recovery does not update a card after its stay identity changes', async () => {
+  const h = saveHarness(async () => ({}));
+  h.context.invalidateWaffleClientCaches = async () => { throw new Error('fixture cache refresh failed'); };
+  await h.context.save(h.card, h.button);
+  const retry = h.status.children.find(child => child.tagName === 'button');
+  h.card.dataset.directoryStayKey = 'stay-b';
+  await retry.click();
+  assert.equal(h.context.readOnlyCalls, 0);
+  assert.equal(h.context.renderRefreshCalls, 0);
+  assert.equal(h.calls.length, 1);
 });
 
 function hostedCheckHarness(responses) {
