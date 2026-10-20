@@ -11,13 +11,14 @@ assert.ok(variantStart >= 0 && cacheKeyStart > variantStart && readStart > cache
 
 const cacheEntries = new Map();
 const sandbox = {
-  Utilities: { formatDate: () => '2026-10-13' },
+  Utilities: { formatDate: () => '2026-10-13', getUuid: (() => { let id = 0; return () => `snapshot-${++id}`; })() },
   Session: { getScriptTimeZone: () => 'Australia/Sydney' },
   STAY_OPERATION_IDENTITY_VERSION_V11226_: 1,
   WAFFLE_CACHE_NAMESPACE_: 'test',
+  WAFFLE_CACHE_MAX_CHARS_: 100000,
   getWaffleDataVersion_: () => 'directory-v1',
   waffleCacheFingerprint_: value => value,
-  CacheService: { getScriptCache: () => ({ get: key => cacheEntries.get(key) || null, remove: key => cacheEntries.delete(key) }) },
+  CacheService: { getScriptCache: () => ({ get: key => cacheEntries.get(key) || null, remove: key => cacheEntries.delete(key), put: (key, value) => cacheEntries.set(key, value) }) },
   safePutWaffleCache_: (key, value) => cacheEntries.set(key, JSON.stringify(value))
 };
 vm.createContext(sandbox);
@@ -42,7 +43,7 @@ assert.equal(refreshed.unchanged, undefined, 'legacy Past metadata cannot receiv
 assert.equal(refreshed.cacheHit, false);
 assert.equal(pastBuilds, 1, 'legacy Past metadata causes a fresh payload build');
 assert.equal(refreshed.bookings[0].dogNumber, '#00012');
-const unchangedPast = sandbox.getVersionedWaffleRead_('directory', 'get_past_guest_directory', {knownVersion: 'directory-v1', knownVariant: pastVariant}, 20, () => { throw new Error('Current Past metadata should keep its unchanged fast path'); });
+const unchangedPast = sandbox.getVersionedWaffleRead_('directory', 'get_past_guest_directory', {knownVersion: refreshed.version, knownVariant: refreshed.variant, knownResponseTag: refreshed.responseTag}, 20, () => { throw new Error('Current Past metadata and response tag should keep its unchanged fast path'); });
 assert.equal(unchangedPast.unchanged, true);
 
 for (const action of ['get_guest_directory', 'get_stay_operations']) {
@@ -51,11 +52,13 @@ for (const action of ['get_guest_directory', 'get_stay_operations']) {
 }
 
 let otherBuilds = 0;
+const otherFirst = sandbox.getVersionedWaffleRead_('directory', 'get_guest_directory', {}, 20, () => { otherBuilds += 1; return {}; });
 const other = sandbox.getVersionedWaffleRead_('directory', 'get_guest_directory', {
-  knownVersion: 'directory-v1',
-  knownVariant: sandbox.waffleReadVariant_('get_guest_directory', {})
+  knownVersion: otherFirst.version,
+  knownVariant: otherFirst.variant,
+  knownResponseTag: otherFirst.responseTag
 }, 20, () => { otherBuilds += 1; return {}; });
 assert.equal(other.unchanged, true, 'matching non-Past metadata retains the unchanged fast path');
-assert.equal(otherBuilds, 0);
+assert.equal(otherBuilds, 1, 'only the initial full response builds the non-Past payload');
 
 console.log('Past directory cache contract tests passed');

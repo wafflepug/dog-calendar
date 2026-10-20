@@ -1,5 +1,11 @@
 # Care rendering performance — 2026.10.16.03
 
+## Changed-only summary follow-up
+
+The intake overview now writes `data-intake-method` only when its value changes and only unhides digital/legacy strips when hidden. The hidden profile change-review disclosure is closed only when it is actually open. Summary, safety, digital intake and legacy PDF render calls still run on refresh, so changed or removed information, refresh failures, and time-sensitive freshness labels remain observable. No response is skipped or cached by stay key alone.
+
+The focused browser fixture compares a repeated same-value overview assignment with `MutationObserver` records, then asserts that the guarded renderer produces zero records while both independent strips remain visible. Existing summary fixtures cover changed intake/legacy links, changed feeding and safety flags, flag removal, and transient legacy refresh failure retention. Browser execution requires the repository's Playwright dependency.
+
 ## Behavior
 
 The directory booking signature includes the rendered CSV fields and stable Stay ID. Unchanged responses keep mounted profiles. Changed booking responses still rebuild the schedule data, but the directory reconciles cards using unique Stay ID + Dog ID + stay key and the original generated markup. Only matching unchanged cards can survive. Missing or duplicate identity falls back to replacement; no identity is inferred from names. Changed cards and removed visits follow the existing selected-profile recovery behavior.

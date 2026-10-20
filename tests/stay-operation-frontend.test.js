@@ -160,3 +160,10 @@ test('actual client read keys separate UUID-scoped operation requests', () => {
   assert.notEqual(h.waffleReadRequestKey({ action: 'get_stay_operations', stayIds: [idA] }), h.waffleReadRequestKey({ action: 'get_stay_operations', stayIds: [idB] }));
   assert.equal(h.waffleReadRequestKey({ action: 'get_stay_operations', stayIds: [idA, idB] }), h.waffleReadRequestKey({ action: 'get_stay_operations', stayIds: [idB, idA] }));
 });
+test('actual client read keys include server cache variant identities and all conditional tokens', () => {
+  const h = harness();
+  const base = { action: 'get_dog_master_profile', masterKey: 'master-a', dogId: idA, stayId: idB, dogName: 'Milo', breed: 'Pug', knownVersion: 'v1', knownVariant: 'variant-1', knownResponseTag: 'tag-1' };
+  for (const [field, value] of [['dogId', idC], ['stayId', idA], ['masterKey', 'master-b'], ['dogName', 'Milo Two'], ['breed', 'Beagle'], ['knownVersion', 'v2'], ['knownVariant', 'variant-2'], ['knownResponseTag', 'tag-2']]) {
+    assert.notEqual(h.waffleReadRequestKey(base), h.waffleReadRequestKey({ ...base, [field]: value }), field + ' must partition in-flight reads');
+  }
+});

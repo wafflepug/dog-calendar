@@ -23,6 +23,7 @@ jobs:
 
           node --check apps-script/Code.js
           node --test tests/care-past-cache-contract.test.js tests/care-past-classification.test.js tests/care-record-identity-persistence.test.js tests/care-record-identity-google-harness.test.js
+          node --test tests/care-profile-backend-read-count.test.js
           node --check apps-script/WaffleAIProvider.js
           node --check apps-script/WaffleAICalendarFast.js
           node --check apps-script/WaffleAIHealth.js
