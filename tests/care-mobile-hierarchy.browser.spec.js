@@ -536,6 +536,10 @@ test('Care brief actions stay visible and keyboard focused in forced-colors mode
   await expect.poll(() => page.locator('.directory-card[data-directory-stay-key]').count()).toBe(1);
   const card = page.locator('.directory-card[data-directory-stay-key]');
   await card.locator('[data-open-directory-profile]').click();
+  // Profile selection can rebuild the card while the shared profile read is
+  // still settling. Wait for the rendered profile detail before opening its
+  // readiness disclosure so the test exercises the disclosure, not that race.
+  await expect(card.locator('[data-directory-detail="profile"]')).toHaveAttribute('data-detail-loaded', 'true');
   await revealSecondaryTools(page);
   await card.locator('.directory-care-readiness > summary').click();
   const action = card.locator('[data-care-brief-action="handover"]');

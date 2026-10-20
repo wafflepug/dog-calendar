@@ -24,7 +24,21 @@ test.describe.configure({ mode: 'serial' });
 
 async function installContinuityFixture(page) {
   let profileReadCount = 0;
-  await page.clock.setFixedTime(new Date('2026-09-18T12:00:00Z'));
+  // Fix booking-date comparisons without installing Playwright's clock. The
+  // shell reveals after native animation frames, which the full clock can
+  // stall in WebKit before the UI-ready marker is set.
+  await page.addInitScript(() => {
+    const NativeDate = Date;
+    const fixedNow = NativeDate.UTC(2026, 8, 18, 12, 0, 0);
+    function FixedDate(...args) {
+      if (!new.target) return new NativeDate(fixedNow).toString();
+      return Reflect.construct(NativeDate, args.length ? args : [fixedNow], new.target);
+    }
+    FixedDate.prototype = NativeDate.prototype;
+    Object.setPrototypeOf(FixedDate, NativeDate);
+    FixedDate.now = () => fixedNow;
+    globalThis.Date = FixedDate;
+  });
   await page.route('**/*', async route => {
     const request = route.request();
     if (!['GET', 'HEAD'].includes(request.method())) return route.fulfill({ status: 405, body: 'fixture' });
@@ -153,6 +167,7 @@ test('Back restores the filtered list and opener focus', async ({ page, baseURL 
     const style = getComputedStyle(element);
     return style.outlineStyle !== 'none' && style.outlineColor !== style.backgroundColor;
   })).toBe(true);
+  const openerTopBeforeProfile = await openerLocator.evaluate(element => element.getBoundingClientRect().top);
   await page.keyboard.press('Enter');
   const selectedProfile = page.locator('.directory-card.is-profile-active');
   await expect(selectedProfile.locator('[data-toggle-profile-edit]')).toHaveAttribute('aria-label', 'Edit detailed care for Continuity Dog');
@@ -189,6 +204,12 @@ test('Back restores the filtered list and opener focus', async ({ page, baseURL 
   expect(refreshedOpenerLabel).toContain('00001');
   expect(refreshedOpenerLabel).toContain('Casey');
   const readsBeforeBack = readProfileCount();
+  await selectedProfile.evaluate(card => {
+    const spacer = document.createElement('div');
+    spacer.dataset.continuitySpacer = '';
+    spacer.style.height = '120px';
+    card.parentElement.insertBefore(spacer, card);
+  });
   await page.locator('#directoryBackToGuestsBtn').evaluate(button => button.click());
   await expect(page.locator('.directory-dashboard-fused.is-profile-mode')).toHaveCount(0);
   await expect(page.locator('#guestDirectorySearch')).toHaveValue('continuity');
@@ -196,6 +217,9 @@ test('Back restores the filtered list and opener focus', async ({ page, baseURL 
     isOpener: document.activeElement?.matches?.('[data-open-directory-profile]') === true,
     active: document.activeElement?.outerHTML?.slice(0, 220) || ''
   }))).toMatchObject({ isOpener: true });
+  await expect.poll(() => page.evaluate(() => document.querySelector('#directory-grid [data-open-directory-profile]')?.getBoundingClientRect().top)).toBeGreaterThanOrEqual(openerTopBeforeProfile - 2);
+  await expect.poll(() => page.evaluate(() => document.querySelector('#directory-grid [data-open-directory-profile]')?.getBoundingClientRect().top)).toBeLessThanOrEqual(openerTopBeforeProfile + 2);
+  await page.locator('[data-continuity-spacer]').evaluate(element => element.remove());
   await page.waitForTimeout(200);
   expect(readProfileCount()).toBe(readsBeforeBack);
 

@@ -26,6 +26,8 @@
       dogId: String(d.directoryDogId || ''),
       stayKey: String(d.directoryStayKey || d.stayKey || ''),
       name: String(d.directoryDogName || d.dogName || ''),
+      dogNumber: String(d.directoryDogNumber || d.dogNumber || ''),
+      owner: String(d.v1088OwnerName || d.directoryOwnerName || d.ownerName || ''),
       start: String(d.directoryStartDate || d.startDate || '').slice(0, 10),
       end: String(d.directoryEndDate || d.endDate || '').slice(0, 10)
     };
@@ -60,27 +62,40 @@
     return { d, op };
   }
 
-  function signature(state) {
-    return JSON.stringify(state || {});
+  function signature(card, state) {
+    return JSON.stringify({ state: state || {}, displayIdentity: identity(card) });
   }
 
   function updateIndicator(card, root, state) {
     const code = String(state?.code || 'unknown');
-    const label = code === 'complete' ? 'Intake complete' : code === 'link_ready' || code === 'not_prepared' ? 'Review intake' : 'Review care';
+    const fallbackLabels = {
+      complete: 'Intake complete',
+      link_ready: 'Link ready',
+      not_prepared: 'Not prepared',
+      unknown: 'Status unknown'
+    };
+    const label = String(state?.label || fallbackLabels[code] || 'Status unknown');
+    const detail = String(state?.detail || (code === 'unknown' ? 'Care details have not loaded.' : 'Check the care profile for any outstanding items.'));
     if (!root) {
-      root = document.createElement('section');
+      root = document.createElement('button');
+      root.type = 'button';
       root.dataset.waffleArrivalReady = '';
-      root.innerHTML = `<span data-arrival-label></span><details data-arrival-details><summary>Details</summary><span data-arrival-detail></span><button type="button" data-arrival-review>Review care</button></details>`;
-      root.querySelector('[data-arrival-review]').addEventListener('click', event => {
+      root.innerHTML = `<span data-arrival-copy><strong data-arrival-label></strong><small data-arrival-detail></small></span><span data-arrival-action aria-hidden="true">Review care</span>`;
+      root.addEventListener('click', event => {
         event.preventDefault(); event.stopPropagation();
         card.querySelector('.directory-guest-tile-open')?.click();
       });
     }
     root.querySelector('[data-arrival-label]').textContent = label;
-    const detail = String(state?.detail || (code === 'unknown' ? 'Care details have not loaded.' : 'Check the care profile for any outstanding items.'));
-    root.querySelector('[data-arrival-detail]').textContent = detail;
-    root.dataset.stateSignature = signature(state);
-    root.setAttribute('aria-label', `Arrival care: ${label}`);
+    const detailNode = root.querySelector('[data-arrival-detail]');
+    const detailText = code === 'complete' ? '' : detail;
+    detailNode.textContent = detailText;
+    detailNode.hidden = !detailText;
+    const d = identity(card);
+    root.dataset.stateSignature = signature(card, state);
+    const dogIdentity = [d.name, d.dogNumber ? `Dog Number ${d.dogNumber}` : '', d.owner ? `owner ${d.owner}` : '', d.start && d.end ? `${d.start} to ${d.end}` : ''].filter(Boolean).join(', ');
+    root.setAttribute('aria-label', `Review care for ${dogIdentity || 'this dog'}: ${label}${detailText ? `. ${detailText}` : ''}`);
+    root.title = detail;
     return root;
   }
 
@@ -144,7 +159,7 @@
       let node = card.querySelector(OWN);
       const visible = activeView === 'current' && card.style.display !== 'none' && getComputedStyle(card).display !== 'none' && !card.closest('[hidden]');
       if (!valid || dup || !visible) { if (node) node.remove(); return; }
-      const sig = signature(status);
+      const sig = signature(card, status);
       if (!node) node = updateIndicator(card, null, status);
       else if (node.dataset.stateSignature !== sig) updateIndicator(card, node, status);
       if (!node.isConnected) (card.querySelector('.directory-guest-tile-open') || card).insertAdjacentElement('afterend', node);
@@ -174,7 +189,7 @@
       if (meaningful) scheduleRefresh();
     });
     const scope = grid.closest('.directory-dashboard-fused') || document.querySelector('.v1082-stay-panels') || grid.parentElement;
-    observer.observe(scope, { subtree: true, childList: true, attributes: true, attributeFilter: ['data-directory-stay-id', 'data-directory-dog-id', 'data-directory-stay-key', 'data-directory-start-date', 'data-directory-end-date', 'data-v1082-past-stay', 'style', 'class', 'hidden'] });
+    observer.observe(scope, { subtree: true, childList: true, attributes: true, attributeFilter: ['data-directory-stay-id', 'data-directory-dog-id', 'data-directory-dog-number', 'data-directory-stay-key', 'data-directory-start-date', 'data-directory-end-date', 'data-directory-owner-name', 'data-v1088-owner-name', 'data-v1082-past-stay', 'style', 'class', 'hidden'] });
     document.querySelectorAll('[data-v1082-stay-tab]').forEach(tab => tab.addEventListener('click', () => setTimeout(scheduleRefresh, 0)));
     document.getElementById('guestDirectorySearch')?.addEventListener('input', scheduleRefresh);
   }

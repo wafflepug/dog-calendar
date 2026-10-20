@@ -69,11 +69,31 @@ test('Care arrival and guided checkout remain reachable at the configured viewpo
 
   const next = page.locator('[data-waffle-arrival-next]');
   await expect(next).toBeVisible();
+  const arrivalStatus = selected.locator('[data-waffle-arrival-ready]');
+  await expect(arrivalStatus).toBeVisible();
+  const light = await arrivalStatus.evaluate(node => ({ height: node.getBoundingClientRect().height, background: getComputedStyle(node).backgroundColor }));
+  expect(light.height).toBeGreaterThanOrEqual(44);
+  await measureNoOverflow(page);
+  if (testInfo.project.name === 'chromium-390') {
+    const dir = path.join(root, 'output', 'care-journey-final-results');
+    fs.mkdirSync(dir, { recursive: true });
+    await page.screenshot({ path: path.join(dir, 'arrival-390-light.png') });
+  }
+  await page.evaluate(() => document.body.classList.add('dark-theme'));
+  const dark = await arrivalStatus.evaluate(node => ({ height: node.getBoundingClientRect().height, background: getComputedStyle(node).backgroundColor }));
+  expect(dark.height).toBeGreaterThanOrEqual(44);
+  expect(dark.background).not.toBe(light.background);
+  await measureNoOverflow(page);
+  if (testInfo.project.name === 'chromium-390') {
+    const dir = path.join(root, 'output', 'care-journey-final-results');
+    await page.screenshot({ path: path.join(dir, 'arrival-390-dark.png') });
+  }
+  await page.evaluate(() => document.body.classList.remove('dark-theme'));
   await next.click();
   await expect(selected.locator('[data-v11217-roster-checkin]')).toBeFocused();
 
   if (testInfo.project.name === 'chromium-390' || testInfo.project.name === 'chromium-1440') {
-    const dir = path.join(root, 'output', 'releases', '2026.10.18.02');
+    const dir = path.join(root, 'output', 'care-journey-final-results');
     fs.mkdirSync(dir, { recursive: true });
     await page.screenshot({ path: path.join(dir, `care-arrival-checkout-${testInfo.project.use.viewport.width}.png`), fullPage: true });
   }
@@ -121,7 +141,7 @@ test('Care arrival and guided checkout remain reachable at the configured viewpo
   expect(layout.modalScrollWidth).toBeLessThanOrEqual(testInfo.project.use.viewport.width);
   if (testInfo.project.use.viewport.width <= 390) expect(layout.bodyScroll).toBeGreaterThanOrEqual(layout.bodyClient);
   if (testInfo.project.name === 'chromium-390' || testInfo.project.name === 'chromium-1440') {
-    const dir = path.join(root, 'output', 'releases', '2026.10.18.02');
+    const dir = path.join(root, 'output', 'care-journey-final-results');
     fs.mkdirSync(dir, { recursive: true });
     await page.screenshot({ path: path.join(dir, `guided-checkout-${testInfo.project.use.viewport.width}.png`) });
   }

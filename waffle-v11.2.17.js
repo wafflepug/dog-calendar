@@ -576,9 +576,9 @@
     }
   }
 
-  document.addEventListener('click', async event => {
+  async function handleGuidedRosterAction(event, profileCheckoutButton = null) {
     const checkinButton = event.target?.closest?.('[data-v11217-roster-checkin]');
-    const checkoutButton = event.target?.closest?.('[data-v11217-roster-checkout]');
+    const checkoutButton = event.target?.closest?.('[data-v11217-roster-checkout]') || profileCheckoutButton;
     const button = checkinButton || checkoutButton;
     if (!button) return;
     event.preventDefault();
@@ -659,10 +659,27 @@
       return;
     }
     await attempt();
-  });
+  }
+  document.addEventListener('click', handleGuidedRosterAction);
 
   let guidedCheckoutAttempt = null;
   let guidedCheckoutBusy = false;
+  let guidedCheckoutCard = null;
+  let guidedCheckoutPayload = null;
+  let guidedReviewDraft = null;
+  window.addEventListener('click', event => {
+    const profileCheckout = event.target?.closest?.('.directory-card.is-profile-active [data-v110-checkout]');
+    if (!profileCheckout || !guidedReviewDraft) return;
+    const card = profileCheckout.closest('.directory-card');
+    if (!card?.isConnected || !card.classList.contains('is-profile-active') || !sameGuidedStay(guidedReviewDraft, payloadForCard(card))) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    handleGuidedRosterAction(event, profileCheckout);
+  }, true);
+  function sameGuidedStay(a, b) {
+    return !!a && !!b && !!a.stayId && !!a.dogId && !!a.stayKey &&
+      String(a.stayId) === String(b.stayId) && String(a.dogId) === String(b.dogId) && String(a.stayKey) === String(b.stayKey);
+  }
   function ensureGuidedCheckout() {
     let modal = document.getElementById('v11217GuidedCheckout');
     if (modal) return modal;
@@ -677,12 +694,14 @@
       <header class="v11217-modal-head"><div><small>DEPARTURE</small><h3 id="v11217GuidedCheckoutTitle">Check out</h3><p>Review this stay before confirming departure.</p></div><button type="button" class="v11217-modal-close" data-v11217-guided-close aria-label="Close checkout">×</button></header>
       <div class="v11217-modal-body"><div class="v11217-modal-dog"><strong data-v11217-guided-dog></strong><span data-v11217-guided-dogid></span><span data-v11217-guided-dates></span></div>
       <div class="v11217-guided-checklist"><p><strong>Belongings</strong><span data-v11217-guided-belongings>Not loaded · check Care before handover</span></p><p><strong>Medication reference</strong><span data-v11217-guided-medication>Not loaded · check Care before handover</span></p></div>
+      <button type="button" data-v11217-guided-review-care hidden>Review Care · note kept</button>
       <div class="v11217-field"><label for="v11217GuidedCheckoutNote">Handover note (for this checkout)</label><textarea id="v11217GuidedCheckoutNote" data-v11217-guided-note maxlength="1000" placeholder="Optional handover details…"></textarea></div>
       <div class="v11217-action-feedback" data-v11217-guided-feedback role="alert" aria-live="assertive" hidden></div></div>
       <footer class="v11217-modal-actions"><button type="button" class="v11217-cancel" data-v11217-guided-close>Cancel</button><button type="button" class="v11217-confirm" data-v11217-guided-confirm>Confirm checkout</button></footer>
       </section>`;
     document.body.appendChild(modal);
     modal.addEventListener('click', event => {
+      if (event.target.closest('[data-v11217-guided-review-care]')) { reviewGuidedCare(); return; }
       if (!guidedCheckoutBusy && (event.target === modal || event.target.closest('[data-v11217-guided-close]'))) closeGuidedCheckout();
       if (event.target.closest('[data-v11217-guided-confirm]')) runGuidedCheckout();
     });
@@ -703,6 +722,8 @@
     const modal = ensureGuidedCheckout();
     guidedTrigger = trigger;
     guidedCheckoutAttempt = attempt;
+    guidedCheckoutCard = card;
+    guidedCheckoutPayload = { ...payload };
     modal.querySelector('[data-v11217-guided-dog]').textContent = payload.dogName || 'Guest';
     const dogNumber = card.dataset?.directoryDogNumber || card.querySelector('#dogNumber, [data-directory-dog-number], .directory-dog-number')?.textContent?.trim();
     modal.querySelector('[data-v11217-guided-dogid]').textContent = dogNumber ? `Dog ID: ${dogNumber}` : '';
@@ -720,9 +741,18 @@
       }
       return 'Not loaded · check Care before handover';
     };
-    modal.querySelector('[data-v11217-guided-belongings]').textContent = loadedValue(['[data-belongings-summary]']);
-    modal.querySelector('[data-v11217-guided-medication]').textContent = loadedValue(['[data-care-brief-medication]']);
-    modal.querySelector('[data-v11217-guided-note]').value = '';
+    const belongings = loadedValue(['[data-belongings-summary]']);
+    const medication = loadedValue(['[data-care-brief-medication]']);
+    modal.querySelector('[data-v11217-guided-belongings]').textContent = belongings;
+    modal.querySelector('[data-v11217-guided-medication]').textContent = medication;
+    const exactStay = { stayId: payload.stayId, dogId: payload.dogId, stayKey: payload.stayKey };
+    const restoreDraft = sameGuidedStay(guidedReviewDraft, exactStay);
+    modal.querySelector('[data-v11217-guided-note]').value = restoreDraft ? guidedReviewDraft.note : '';
+    if (restoreDraft) guidedReviewDraft = null;
+    const missingEvidence = /^Not loaded\b/.test(belongings) || /^Not loaded\b/.test(medication);
+    const reviewCare = modal.querySelector('[data-v11217-guided-review-care]');
+    const hasStableIdentity = !!exactStay.stayId && !!exactStay.dogId && !!exactStay.stayKey;
+    reviewCare.hidden = !missingEvidence || !hasStableIdentity || !card.querySelector('.directory-guest-tile-open');
     modal.querySelector('[data-v11217-guided-feedback]').hidden = true;
     modal.querySelector('[data-v11217-guided-confirm]').disabled = false;
     modal.querySelector('[data-v11217-guided-confirm]').textContent = 'Confirm checkout';
@@ -730,11 +760,41 @@
     modal.hidden = false;
     modal.querySelector('[data-v11217-guided-confirm]').focus();
   }
+  function reviewGuidedCare() {
+    if (guidedCheckoutBusy || !guidedCheckoutCard || !guidedCheckoutPayload) return;
+    const expected = { stayId: guidedCheckoutPayload.stayId, dogId: guidedCheckoutPayload.dogId, stayKey: guidedCheckoutPayload.stayKey };
+    const matchingCards = [...document.querySelectorAll('.directory-card')].filter(candidate => sameGuidedStay(expected, payloadForCard(candidate)));
+    const card = matchingCards.length === 1 ? matchingCards[0] : null;
+    if (!card || !card.querySelector('.directory-guest-tile-open')) {
+      const modal = ensureGuidedCheckout();
+      const feedback = modal.querySelector('[data-v11217-guided-feedback]');
+      feedback.textContent = 'This stay changed or is no longer uniquely identifiable. The note is still here; review the current stay identity in Care before continuing.';
+      feedback.hidden = false;
+      return;
+    }
+    guidedReviewDraft = { ...expected, note: String(ensureGuidedCheckout().querySelector('[data-v11217-guided-note]').value || '').slice(0, 1000) };
+    const modal = ensureGuidedCheckout();
+    modal.hidden = true;
+    guidedCheckoutAttempt = null;
+    guidedTrigger = null;
+    guidedCheckoutCard = null;
+    guidedCheckoutPayload = null;
+    card.querySelector('.directory-guest-tile-open').click();
+      if (card.isConnected && card.classList.contains('is-profile-active')) {
+        const backControl = document.getElementById('directoryBackToGuestsBtn');
+        if (backControl?.isConnected && backControl.getClientRects().length && !backControl.closest('[hidden],[aria-hidden="true"]')) {
+          try { backControl.focus({ preventScroll: true }); }
+          catch (_) { backControl.focus(); }
+        }
+      }
+  }
   function closeGuidedCheckout() {
     const modal = document.getElementById('v11217GuidedCheckout');
     if (!modal || modal.hidden) return;
     modal.hidden = true;
     guidedCheckoutAttempt = null;
+    guidedCheckoutCard = null;
+    guidedCheckoutPayload = null;
     const trigger = guidedTrigger;
     guidedTrigger = null;
     const visible = node => {

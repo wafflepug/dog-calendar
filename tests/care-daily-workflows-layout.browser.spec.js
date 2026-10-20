@@ -77,3 +77,138 @@ test('the complete Care runtime combines filters, truthful setup and optional ve
   expect(runtimeErrors).toEqual([]);
   if(['chromium-390','chromium-1440'].includes(testInfo.project.name))await page.screenshot({path:path.join(out,`care-departure-${testInfo.project.name}.png`),fullPage:false});
 });
+
+test('checkout bridge keeps Fern exact and preserves the note through Care review and cancel',async({page,baseURL},testInfo)=>{
+  await page.setViewportSize({width:390,height:844});
+  const runtimeErrors=[];
+  const writeRequests=[];
+  page.on('pageerror',error=>runtimeErrors.push(error.message));
+  page.on('request',request=>{
+    if(request.url().includes('script.google.com')&&!['GET','HEAD'].includes(request.method()))writeRequests.push(request.method());
+  });
+  const fixture=await install(page);
+  await page.goto(`${baseURL}/directory.html?checkoutCareBridgeFixture=1`,{waitUntil:'domcontentloaded'});
+  await page.waitForFunction(()=>document.documentElement.dataset.waffleUiReady==='true'&&window.WAFFLE_CARE_ROSTER_FOCUS);
+  const focus=page.locator('[data-care-roster-focus]');
+  if(!await focus.evaluate(node=>node.open))await focus.locator('summary').click();
+  await focus.locator('[data-focus-mode="leaving"]').click();
+
+  const fern=page.locator(`#directory-grid [data-directory-stay-id="${bookings[2].stayId}"]`);
+  const checkout=fern.locator('[data-v11217-roster-checkout]');
+  await expect(checkout).toBeVisible();
+  expect(fixture.reads.filter(action=>action==='get_guest_profile')).toHaveLength(0);
+  await checkout.click();
+  const modal=page.locator('#v11217GuidedCheckout');
+  const note=modal.locator('[data-v11217-guided-note]');
+  await expect(modal).toBeVisible();
+  await expect(modal.locator('[data-v11217-guided-dog]')).toHaveText('Fern');
+  await expect(modal.locator('[data-v11217-guided-medication]')).toContainText('Not loaded');
+  await expect(modal.locator('[data-v11217-guided-review-care]')).toBeVisible();
+  const handoverNote='Fern’s evening dose is in the blue pouch; Casey will collect at 5pm.';
+  await note.fill(handoverNote);
+
+  const screenshotDir=path.join(__dirname,'..','output','care-journey-runtime-rerun');
+  fs.mkdirSync(screenshotDir,{recursive:true});
+  await page.screenshot({path:path.join(screenshotDir,`${testInfo.project.name}-390-light-checkout-review.png`),fullPage:false});
+  await page.locator('body').evaluate(node=>node.classList.add('dark-theme'));
+  await page.screenshot({path:path.join(screenshotDir,`${testInfo.project.name}-390-dark-checkout-review.png`),fullPage:false});
+  await page.locator('body').evaluate(node=>node.classList.remove('dark-theme'));
+
+  await modal.locator('[data-v11217-guided-review-care]').click();
+  await expect(modal).toBeHidden();
+  const activeFern=page.locator(`.directory-card.is-profile-active[data-directory-stay-id="${bookings[2].stayId}"]`);
+  await expect(activeFern).toHaveCount(1);
+  await expect(activeFern.locator('[data-directory-detail="profile"]')).toHaveAttribute('data-profile-read-state','fresh');
+  await expect(activeFern.locator('[data-care-brief-medication]')).toHaveText('No medication instructions saved');
+  const back=page.locator('#directoryBackToGuestsBtn');
+  await expect(back).toBeVisible();
+  await expect(back).toBeFocused();
+  expect(await back.evaluate(node=>!node.closest('[hidden]')&&!document.getElementById('v11217GuidedCheckout').contains(document.activeElement))).toBe(true);
+  await page.screenshot({path:path.join(screenshotDir,`${testInfo.project.name}-390-light-care-profile.png`),fullPage:false});
+  await page.locator('body').evaluate(node=>node.classList.add('dark-theme'));
+  await page.screenshot({path:path.join(screenshotDir,`${testInfo.project.name}-390-dark-care-profile.png`),fullPage:false});
+  await page.locator('body').evaluate(node=>node.classList.remove('dark-theme'));
+  expect(fixture.reads.filter(action=>action==='get_guest_profile')).toHaveLength(1);
+  await expect(page.locator(`.directory-card.is-profile-active[data-directory-stay-id="${bookings[0].stayId}"]`)).toHaveCount(0);
+  await expect(page.locator(`.directory-card.is-profile-active[data-directory-stay-id="${bookings[1].stayId}"]`)).toHaveCount(0);
+
+  await back.click();
+  await expect(activeFern).toHaveCount(0);
+  await expect(fern).toBeVisible();
+  await expect(fern).toHaveAttribute('data-directory-stay-id',bookings[2].stayId);
+  await checkout.click();
+  await expect(modal).toBeVisible();
+  await expect(note).toHaveValue(handoverNote);
+  expect(fixture.reads.filter(action=>action==='get_guest_profile')).toHaveLength(1);
+  await modal.locator('[data-v11217-guided-close]').last().click();
+  await expect(modal).toBeHidden();
+  await checkout.click();
+  await expect(modal).toBeVisible();
+  await expect(note).toHaveValue('');
+  await modal.locator('[data-v11217-guided-close]').last().click();
+  await expect(modal).toBeHidden();
+  expect(fixture.reads.filter(action=>action==='get_guest_profile')).toHaveLength(1);
+  expect(writeRequests).toEqual([]);
+  expect(runtimeErrors).toEqual([]);
+});
+
+test('matching pending checkout note follows the profile checkout action without legacy confirmation',async({page,baseURL})=>{
+  await page.setViewportSize({width:390,height:844});
+  const runtimeErrors=[];
+  const writeRequests=[];
+  const legacyDialogs=[];
+  page.on('pageerror',error=>runtimeErrors.push(error.message));
+  page.on('request',request=>{
+    if(request.url().includes('script.google.com')&&!['GET','HEAD'].includes(request.method()))writeRequests.push(request.method());
+  });
+  page.on('dialog',async dialog=>{
+    legacyDialogs.push({type:dialog.type(),message:dialog.message()});
+    await dialog.dismiss();
+  });
+  const fixture=await install(page);
+  await page.goto(`${baseURL}/directory.html?checkoutCareBridgeFixture=1`,{waitUntil:'domcontentloaded'});
+  await page.waitForFunction(()=>document.documentElement.dataset.waffleUiReady==='true'&&window.WAFFLE_CARE_ROSTER_FOCUS);
+  const focus=page.locator('[data-care-roster-focus]');
+  if(!await focus.evaluate(node=>node.open))await focus.locator('summary').click();
+  await focus.locator('[data-focus-mode="leaving"]').click();
+  const fern=page.locator(`#directory-grid [data-directory-stay-id="${bookings[2].stayId}"]`);
+  await expect(fern.locator('[data-v11217-roster-checkout]')).toBeVisible();
+  expect(fixture.reads.filter(action=>action==='get_guest_profile')).toHaveLength(0);
+  await fern.locator('[data-v11217-roster-checkout]').click();
+  const modal=page.locator('#v11217GuidedCheckout');
+  const note=modal.locator('[data-v11217-guided-note]');
+  await expect(modal).toBeVisible();
+  await expect(modal.locator('[data-v11217-guided-review-care]')).toBeVisible();
+  const handoverNote='Fern’s evening dose is in the blue pouch; Casey will collect at 5pm.';
+  await note.fill(handoverNote);
+  await modal.locator('[data-v11217-guided-review-care]').click();
+  await expect(modal).toBeHidden();
+  const activeFern=page.locator(`.directory-card.is-profile-active[data-directory-stay-id="${bookings[2].stayId}"]`);
+  await expect(activeFern.locator('[data-directory-detail="profile"]')).toHaveAttribute('data-profile-read-state','fresh');
+  await expect(activeFern.locator('[data-care-brief-medication]')).toHaveText('No medication instructions saved');
+  const back=page.locator('#directoryBackToGuestsBtn');
+  await expect(back).toBeFocused();
+  const profileCheckout=activeFern.locator('[data-v110-checkout]:visible').first();
+  await expect(profileCheckout).toBeVisible();
+  await profileCheckout.click();
+  await expect(modal).toBeVisible();
+  await expect(note).toHaveValue(handoverNote);
+  expect(fixture.reads.filter(action=>action==='get_guest_profile')).toHaveLength(1);
+  expect(legacyDialogs).toEqual([]);
+  expect(writeRequests).toEqual([]);
+
+  await modal.locator('[data-v11217-guided-close]').last().click();
+  await expect(modal).toBeHidden();
+  await back.click();
+  await expect(activeFern).toHaveCount(0);
+  await expect(fern).toBeVisible();
+  await fern.locator('[data-v11217-roster-checkout]').click();
+  await expect(modal).toBeVisible();
+  await expect(note).toHaveValue('');
+  await modal.locator('[data-v11217-guided-close]').last().click();
+  await expect(modal).toBeHidden();
+  expect(fixture.reads.filter(action=>action==='get_guest_profile')).toHaveLength(1);
+  expect(legacyDialogs).toEqual([]);
+  expect(writeRequests).toEqual([]);
+  expect(runtimeErrors).toEqual([]);
+});

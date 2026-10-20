@@ -10,7 +10,7 @@ async function setup(page) {
     window.getLocalTodayDateString = () => '2026-10-18';
     window.reads = 0;
     window.v110OperationForStay = () => null;
-    window.WAFFLE_INTAKE_STATUS = { getState: card => ({ code: card.dataset.intake || 'unknown', detail: card.dataset.detail || '' }) };
+    window.WAFFLE_INTAKE_STATUS = { getState: card => ({ code: card.dataset.intake || 'unknown', label: card.dataset.label || '', detail: card.dataset.detail || '' }) };
   });
   await page.addScriptTag({ content: addon });
 }
@@ -49,28 +49,45 @@ test('only unique, current arrivals receive one compact indicator and retain Che
   await expect(page.locator('[data-v11217-roster-checkin]').nth(1)).toBeFocused();
 });
 
-test('unknown intake never claims readiness and deliberate Review care opens the existing tile', async ({ page }) => {
+test('arrival status keeps its truthful label and opens Care in one activation', async ({ page }) => {
   await setup(page);
   await addCard(page, { stayId: 's1', dogId: 'd1', key: 'unknown', intake: 'unknown' });
+  await page.locator('.directory-card').evaluate(card => {
+    card.dataset.label = 'Care profile available';
+    card.dataset.detail = 'Current form completion not verified.';
+    card.dataset.directoryDogNumber = '0017';
+    card.dataset.v1088OwnerName = 'Jamie Lee';
+  });
+  await page.evaluate(() => window.WAFFLE_ARRIVAL_READY.refresh());
   const indicator = page.locator('[data-waffle-arrival-ready]');
+  await expect(indicator).toContainText('Care profile available');
+  await expect(indicator).toContainText('Current form completion not verified.');
   await expect(indicator).toContainText('Review care');
-  await expect(indicator).not.toContainText('Ready');
-  await indicator.locator('details').locator('summary').click();
-  const summaryOpen = await indicator.locator('details').getAttribute('open');
+  await expect(indicator).toHaveAccessibleName(/Review care for Milo, Dog Number 0017, owner Jamie Lee, 2026-10-18 to 2026-10-20: Care profile available.*Current form completion not verified/i);
+  await expect(indicator.locator('details')).toHaveCount(0);
+  await indicator.focus();
   await page.evaluate(() => { window.savedArrivalNode = document.querySelector('[data-waffle-arrival-ready]'); });
-  const review = indicator.locator('[data-arrival-review]');
-  await review.focus();
   await page.evaluate(() => {
     const card = document.querySelector('.directory-card');
-    card.dataset.intake = 'link_ready'; card.dataset.detail = 'Owner link sent';
+    card.dataset.intake = 'link_ready'; card.dataset.label = 'Link ready'; card.dataset.detail = 'Refresh Care after owner submits.';
     window.WAFFLE_ARRIVAL_READY.refresh();
   });
-  expect(summaryOpen).not.toBeNull();
+  await expect(indicator).toContainText('Link ready');
+  await expect(indicator).toContainText('Refresh Care after owner submits.');
   expect(await page.evaluate(() => window.savedArrivalNode === document.querySelector('[data-waffle-arrival-ready]'))).toBe(true);
-  await expect(indicator.locator('details')).toHaveAttribute('open', '');
-  await expect(review).toBeFocused();
-  await indicator.locator('[data-arrival-review]').click();
+  await expect(indicator).toBeFocused();
+  await page.evaluate(() => {
+    const card = document.querySelector('.directory-card');
+    card.dataset.directoryDogName = 'Milo Two';
+    card.dataset.directoryDogNumber = '0018';
+    card.dataset.v1088OwnerName = 'Jordan Lee';
+    window.WAFFLE_ARRIVAL_READY.refresh();
+  });
+  await expect(indicator).toHaveAccessibleName(/Review care for Milo Two, Dog Number 0018, owner Jordan Lee, 2026-10-18 to 2026-10-20: Link ready/i);
+  expect(await page.evaluate(() => window.reads)).toBe(0);
+  await indicator.click();
   await expect(page.locator('.directory-card')).toHaveAttribute('data-opened', 'true');
+  expect(await page.evaluate(() => window.reads)).toBe(0);
 });
 
 test('check-in click remains outside profile and rendering is idempotent with no added reads', async ({ page }) => {

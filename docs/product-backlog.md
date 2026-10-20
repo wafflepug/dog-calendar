@@ -5,7 +5,9 @@ Reviewed 17 September 2026. Repository: `wafflepug/dog-calendar`; always start i
 
 ## Current Care iteration - 21 October 2026
 
-Three bundles: right-sized roster photo previews, category-level unsaved change counts and visible confirmed-save refresh recovery. See [Care Photo and Save Clarity](care-photo-save-clarity.md), release 2026.10.21.01. Release is pending exact-head checks and publication verification. Next: measure the complete mobile arrival-to-handover journey before removing repeated labels or scrolling.
+Current candidate: [Care journey simplification](care-journey-simplification.md), release 2026.10.21.02. Audit the existing arrival, departure, daily summary, returning-dog setup and list continuity before changing them. Preserve the established direct operations, explicit identity review and lazy loading. Exact-head checks and publication verification are required before release.
+
+Previous release: [Care Photo and Save Clarity](care-photo-save-clarity.md), 2026.10.21.01, merged in PR #236 and published. It adds right-sized roster previews, category-level unsaved change counts and visible confirmed-save refresh recovery.
 
 ## Owner priority: Care UI refinements next
 

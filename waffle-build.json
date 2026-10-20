@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.10.21.01",
-  "releaseName": "Care Photo and Save Clarity",
+  "assetRevision": "2026.10.21.02",
+  "releaseName": "Care Journey Clarity",
   "careIteration": {
     "returningDogSuggestions": true,
     "reviewedCareInheritance": true,
