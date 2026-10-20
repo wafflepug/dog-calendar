@@ -24,7 +24,21 @@ test.describe.configure({ mode: 'serial' });
 
 async function installContinuityFixture(page) {
   let profileReadCount = 0;
-  await page.clock.setFixedTime(new Date('2026-09-18T12:00:00Z'));
+  // Fix booking-date comparisons without installing Playwright's clock. The
+  // shell reveals after native animation frames, which the full clock can
+  // stall in WebKit before the UI-ready marker is set.
+  await page.addInitScript(() => {
+    const NativeDate = Date;
+    const fixedNow = NativeDate.UTC(2026, 8, 18, 12, 0, 0);
+    function FixedDate(...args) {
+      if (!new.target) return new NativeDate(fixedNow).toString();
+      return Reflect.construct(NativeDate, args.length ? args : [fixedNow], new.target);
+    }
+    FixedDate.prototype = NativeDate.prototype;
+    Object.setPrototypeOf(FixedDate, NativeDate);
+    FixedDate.now = () => fixedNow;
+    globalThis.Date = FixedDate;
+  });
   await page.route('**/*', async route => {
     const request = route.request();
     if (!['GET', 'HEAD'].includes(request.method())) return route.fulfill({ status: 405, body: 'fixture' });
