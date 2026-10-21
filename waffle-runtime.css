@@ -2966,6 +2966,11 @@ body[data-waffle-page="directory"] .directory-care-save-recovery {
 body[data-waffle-page="directory"] .directory-care-save-recovery > span {flex:1 1 200px;min-width:0;overflow-wrap:anywhere}
 body[data-waffle-page="directory"] .directory-profile-refresh-retry {min-height:44px;white-space:normal}
 
+/* A returning guest row must stay still while Back restores its scroll anchor. */
+body[data-waffle-page="directory"] .directory-card-fused > .directory-guest-tile-open {
+  animation:none!important;
+}
+
 /* Give Calendar view labels their own row instead of competing with Refresh. */
 @media (max-width:820px) {
   body[data-waffle-page="calendar"] #wh65Calendar .wh65-toolbar {

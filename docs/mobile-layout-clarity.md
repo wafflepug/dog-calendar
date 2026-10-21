@@ -6,6 +6,8 @@ The header reserves safe-area space and scroll clearance. Footer labels wrap wit
 
 On mobile Calendar, the date and Month/Fortnight/Week selector occupy their own row, with previous/next and Refresh below. This prevents the Week label colliding with Refresh. Calendar buttons retain at least 44px height and can wrap at larger text sizes. Settings also closes with Escape while other dialogs retain their own Escape handling.
 
+Returning guest rows no longer run a vertical entrance animation. The animation previously moved a row during Back's anchor measurement, leaving a small scroll-position drift. The existing strict position and identity checks remain in place.
+
 ## Verification matrix
 
 Use synthetic fixtures; do not modify live guests to verify layout.
