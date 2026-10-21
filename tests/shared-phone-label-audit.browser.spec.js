@@ -266,27 +266,44 @@ test('shared phone labels across phone, tablet and landscape viewports',async({p
 });
 
 test('three digit booking count stays readable at 200 percent text size',async({page,baseURL},info)=>{
- const fixture=await install(page,{futureBookingCount:123});
+ const fixture=await install(page,{bookingOverrides:[{stayId:bookings[1].stayId,startDate:'2026-10-20',endDate:'2026-10-22',stayKey:'milo|2026-10-20|2026-10-22'}]});
  await page.setViewportSize({width:320,height:640});
  await page.goto(`${baseURL}/directory.html?dailyCareFixture=1`,{waitUntil:'domcontentloaded'});
  await settle(page);
  await page.locator('[data-v1082-stay-tab="future"]').click();
  const status=page.locator('#v1082FutureStayCount');
  await expect(status).toBeVisible();
- await expect(status).toHaveText('123');
- const initial=await status.evaluate(element=>({text:element.innerText,font:parseFloat(getComputedStyle(element).fontSize)}));
- expect(initial.text).toBe('123');
+ await expect(status).toHaveText('1');
  for(const theme of ['light','dark']){
   await page.evaluate(dark=>document.body.classList.toggle('dark-theme',dark),theme==='dark');
-  const font=await status.evaluate(element=>{const before=parseFloat(getComputedStyle(element).fontSize);element.dataset.phoneAuditBaseFont=String(before);element.dataset.phoneAuditInlineFont=element.style.getPropertyValue('font-size');element.dataset.phoneAuditInlinePriority=element.style.getPropertyPriority('font-size');element.style.setProperty('font-size',`${before*2}px`,'important');return{before,target:before*2,inline:element.style.getPropertyValue('font-size'),priority:element.style.getPropertyPriority('font-size'),attribute:element.getAttribute('style')}});
-  await expect.poll(()=>status.evaluate(element=>parseFloat(getComputedStyle(element).fontSize)),{timeout:2000}).toBeGreaterThanOrEqual(font.target);
+  const fonts=await page.evaluate(()=>{
+   // Stress the real count badge without rendering 123 unrelated Care profiles.
+   document.querySelector('#v1082FutureStayCount').textContent='123';
+   const nodes=[...document.querySelectorAll('.directory-roster-filters button strong,.directory-roster-filters button > span:first-child,.directory-roster-filters .v1086-stay-tab-count')].filter(element=>!element.childElementCount&&element.getClientRects().length&&getComputedStyle(element).visibility!=='hidden');
+   return nodes.map(element=>{
+    const before=parseFloat(getComputedStyle(element).fontSize);
+    element.dataset.phoneAuditBaseFont=String(before);
+    element.dataset.phoneAuditInlineFont=element.style.getPropertyValue('font-size');
+    element.dataset.phoneAuditInlinePriority=element.style.getPropertyPriority('font-size');
+    element.style.setProperty('font-size',`${before*2}px`,'important');
+    return{text:element.textContent.trim(),before};
+   });
+  });
+  expect(fonts.some(font=>font.text==='123')).toBe(true);
+  await expect.poll(()=>page.evaluate(()=>[...document.querySelectorAll('[data-phone-audit-base-font]')].every(element=>parseFloat(getComputedStyle(element).fontSize)>=Number(element.dataset.phoneAuditBaseFont)*2)),{timeout:2000}).toBe(true);
   await expect.poll(()=>page.evaluate(()=>{const nav=document.querySelector('#wh75MobileBottomNav');return nav&&parseFloat(getComputedStyle(document.body).paddingBottom)>=nav.getBoundingClientRect().height-1}),{timeout:2000}).toBe(true);
   const geometry=await textOverlaps(page);
   expect(geometry.viewport.docWidth).toBeLessThanOrEqual(321);
   if(geometry.navRect)expect(parseFloat(geometry.viewport.bodyPaddingBottom)).toBeGreaterThanOrEqual(geometry.navRect.height-1);
   expect(geometry.overlaps,JSON.stringify(geometry.overlaps)).toEqual([]);
+  const labels=await page.locator('[data-phone-audit-base-font]').evaluateAll(elements=>elements.map(element=>{
+   const box=element.getBoundingClientRect(),button=element.closest('button').getBoundingClientRect(),range=document.createRange();range.selectNodeContents(element);
+   return{text:element.textContent.trim(),contained:[...range.getClientRects()].every(r=>r.left>=box.left-1&&r.right<=box.right+1&&r.top>=button.top-1&&r.bottom<=button.bottom+1)};
+  }));
   await capture(page,info,`123-count-200-${theme}-320.png`);
-  await status.evaluate(element=>{element.style.setProperty('font-size',element.dataset.phoneAuditInlineFont,element.dataset.phoneAuditInlinePriority);delete element.dataset.phoneAuditInlineFont;delete element.dataset.phoneAuditInlinePriority;delete element.dataset.phoneAuditBaseFont;});
+  expect(labels.some(label=>label.text==='123')).toBe(true);
+  expect(labels.every(label=>label.contained),JSON.stringify(labels)).toBe(true);
+  await page.evaluate(()=>{for(const element of document.querySelectorAll('[data-phone-audit-base-font]')){element.style.setProperty('font-size',element.dataset.phoneAuditInlineFont,element.dataset.phoneAuditInlinePriority);delete element.dataset.phoneAuditInlineFont;delete element.dataset.phoneAuditInlinePriority;delete element.dataset.phoneAuditBaseFont;}});
  }
- expect(fixture.bookings.filter(booking=>booking.startDate==='2026-10-20')).toHaveLength(123);
+ expect(fixture.reads.filter(action=>action==='get_guest_profile')).toHaveLength(0);
 });

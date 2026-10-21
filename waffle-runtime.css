@@ -2971,6 +2971,31 @@ body[data-waffle-page="directory"] .directory-card-fused > .directory-guest-tile
   animation:none!important;
 }
 
+@media (max-width:700px) {
+  body[data-waffle-page="directory"] .directory-roster-filters :is(.v1086-stay-tab-count,.v1082-stay-tab > strong) {
+    width:auto;height:auto;max-width:100%;line-height:1.2!important;
+    overflow-wrap:anywhere;white-space:normal;
+  }
+  body[data-waffle-page="directory"] .directory-roster-filters :is(.v1086-stay-tab-copy strong,.v1082-stay-tab > span:first-child) {
+    white-space:normal;overflow:visible;overflow-wrap:anywhere;
+  }
+}
+@media (max-width:480px) {
+  body[data-waffle-page="directory"] .directory-roster-filters {
+    display:flex!important;flex-wrap:wrap;
+  }
+  body[data-waffle-page="directory"] .directory-roster-filters .v1082-stay-tab {
+    flex:1 1 0;min-width:max-content;max-width:100%;
+    grid-template-columns:minmax(0,1fr)!important;justify-items:center;row-gap:4px;
+  }
+  body[data-waffle-page="directory"] .directory-roster-filters .v1086-stay-tab-copy strong {
+    white-space:nowrap!important;
+  }
+  body[data-waffle-page="directory"] .directory-roster-filters .v1086-stay-tab-count {
+    justify-self:center;
+  }
+}
+
 /* Give Calendar view labels their own row instead of competing with Refresh. */
 @media (max-width:820px) {
   body[data-waffle-page="calendar"] #wh65Calendar .wh65-toolbar {

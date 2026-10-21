@@ -11,15 +11,8 @@ const digitalIntakes=[{stayKey:bookings[0].stayKey,status:'Complete',submittedAt
 function profile(booking) {
   return {stayKey:booking.stayKey,identity:{stayKey:booking.stayKey,stayId:booking.stayId,dogId:booking.dogId},resolution:{status:'resolved',method:'fixture'},updatedAt:'2026-10-18T00:00:00Z',riskFlags:{},intakeAttributesSource:'Saved profile',intakeAttributes:{feedingTimes:'8am and 6pm',foodAmount:'1 cup',foodBrandType:'Sensitive formula',notes:booking.notes}};
 }
-async function install(page,{bookingOverrides=[],futureBookingCount}={}) {
+async function install(page,{bookingOverrides=[]}={}) {
   const fixtureBookings=bookings.map(booking=>({...booking,...(bookingOverrides.find(override=>override.stayId===booking.stayId)||{})}));
-  if(Number.isInteger(futureBookingCount)&&futureBookingCount>0){
-    const arrival='2026-10-20';
-    for(let index=0;index<futureBookingCount;index++){
-      const sequence=String(index+1).padStart(12,'0'),dogName=`Synthetic Guest ${index+1}`;
-      fixtureBookings.push({...bookings[0],dogName,startDate:arrival,endDate:'2026-10-22',stayKey:`${dogName.toLowerCase()}|${arrival}|2026-10-22`,dogId:`99999999-9999-4999-8999-${sequence}`,stayId:`eeeeeeee-eeee-4eee-8eee-${sequence}`,dogNumber:`#${String(index+1).padStart(3,'0')}`,ownerName:'Synthetic fixture'});
-    }
-  }
   const reads=[];
   await page.addInitScript(()=>{
     const NativeDate=Date, now=NativeDate.UTC(2026,9,18,2);

@@ -8,6 +8,8 @@ On mobile Calendar, the date and Month/Fortnight/Week selector occupy their own 
 
 Returning guest rows no longer run a vertical entrance animation. The animation previously moved a row during Back's anchor measurement, leaving a small scroll-position drift. The existing strict position and identity checks remain in place.
 
+On narrow Care screens, Staying/Arriving/Past labels sit above their counts. Badges expand with their text instead of clipping a three-digit value into a fixed circle. The larger-text test checks the actual text ranges of both labels and numbers, including text that an overflow-clipping rule could otherwise hide.
+
 ## Verification matrix
 
 Use synthetic fixtures; do not modify live guests to verify layout.
