@@ -122,7 +122,7 @@ async function runWorkload(browser, name, source) {
   await flushFrames(page);
   const lateLauncherSuppressed = await page.locator('button.wh-sitter-tools-relocated[hidden][aria-hidden="true"]').count() === 1;
 
-  // Removing and replacing a relevant header must hydrate its replacement too.
+  // Replacing the content header must retain one brand in the active navigation location.
   await page.evaluate(() => {
     document.querySelector('.calendar-header-branding')?.remove();
     const replacement = document.createElement('header');
@@ -130,7 +130,11 @@ async function runWorkload(browser, name, source) {
     document.body.appendChild(replacement);
   });
   await flushFrames(page);
-  const replacementHeaderHydrated = await page.locator('.calendar-header-branding #whPalzStayMobileShellBrand').count() === 1;
+  const brandLocation = await page.locator('#wh75MobileTopbar').count()
+    ? '#wh75MobileTopbar #whPalzStayMobileShellBrand'
+    : '.calendar-header-branding #whPalzStayMobileShellBrand';
+  const replacementHeaderHydrated = await page.locator(brandLocation).count() === 1 &&
+    await page.locator('#whPalzStayMobileShellBrand').count() === 1;
   const relevantControls = await snapshot(page);
   await page.close();
 

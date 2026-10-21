@@ -267,6 +267,7 @@
     'sunset-coral',
     'warm-honey'
   ]);
+  let bottomNavResizeObserver = null;
   let observer = null;
   let frame = 0;
 
@@ -357,7 +358,8 @@
       #wh75MenuButton,#wh75MobileBottomNav,#wh75MobileDrawer,#wh75DrawerBackdrop,#wh75SettingsBackdrop,#wh75SettingsPanel { display:none; }
 
       @media (max-width:820px) {
-        body { padding-bottom:calc(82px + env(safe-area-inset-bottom))!important; }
+        body { padding-bottom:max(calc(82px + env(safe-area-inset-bottom)),calc(var(--wh75-mobile-nav-height,82px) + 12px))!important; }
+        html,body { scroll-padding-bottom:max(96px,calc(var(--wh75-mobile-nav-height,82px) + 12px)); }
         body .app-tabs { display:none!important; }
         body .theme-toggle-header { display:none!important; }
         body #v10QuickAddButton { display:none!important; }
@@ -409,12 +411,15 @@
         #wh75MobileBottomNav {
           display:grid;position:fixed;left:0;right:0;bottom:0;z-index:2147481795;grid-template-columns:repeat(5,minmax(0,1fr));
           min-height:70px;padding:7px 6px calc(6px + env(safe-area-inset-bottom));box-sizing:border-box;
-          border-top:1px solid var(--wh75-line);background:color-mix(in srgb,var(--wh75-shell) 94%,transparent);backdrop-filter:blur(16px);
+          border-top:1px solid var(--wh75-line);background:var(--wh75-shell);backdrop-filter:none;
           box-shadow:0 -7px 24px rgba(15,23,42,.10);
         }
         .wh75-bottom-item {
           min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border:0;background:transparent;
           color:var(--wh75-muted);text-decoration:none;font:inherit;font-size:9px;font-weight:850;cursor:pointer;border-radius:12px;
+        }
+        #wh75MobileBottomNav .wh75-bottom-item > span:last-child {
+          box-sizing:border-box;width:100%!important;min-width:0!important;max-width:100%!important;white-space:normal!important;overflow-wrap:anywhere!important;text-align:center!important;line-height:1.15;
         }
         .wh75-bottom-item .wh75-bottom-icon { height:28px;min-width:28px;display:inline-flex;align-items:center;justify-content:center;font-size:18px;border-radius:9px; }
         .wh75-bottom-item.is-active { color:var(--wh75-accent-strong); }
@@ -584,6 +589,31 @@
     syncSettingsUi();
   }
 
+  function ensureBottomNavClearance() {
+    const nav = document.getElementById('wh75MobileBottomNav');
+    if (!nav || !document.body) return;
+    if (!isMobile()) {
+      bottomNavResizeObserver?.disconnect();
+      bottomNavResizeObserver = null;
+      document.body.style.removeProperty('--wh75-mobile-nav-height');
+      return;
+    }
+    if (typeof ResizeObserver !== 'function') return;
+    const syncHeight = () => {
+      const height = Math.ceil(nav.getBoundingClientRect().height);
+      if (height <= 0) return;
+      const value = `${height}px`;
+      if (document.body.style.getPropertyValue('--wh75-mobile-nav-height') !== value) {
+        document.body.style.setProperty('--wh75-mobile-nav-height', value);
+      }
+    };
+    if (!bottomNavResizeObserver) {
+      bottomNavResizeObserver = new ResizeObserver(syncHeight);
+      bottomNavResizeObserver.observe(nav);
+    }
+    syncHeight();
+  }
+
   function colourOption(key, name, note, one, two, three) {
     return `<button class="wh75-colour-option" type="button" data-wh75-colour="${key}" aria-pressed="false"><span class="wh75-swatch" aria-hidden="true"><i style="background:${one}"></i><i style="background:${two}"></i><i style="background:${three}"></i></span><span><span class="wh75-colour-name">${escapeHtml(name)}</span><span class="wh75-colour-note">${escapeHtml(note)}</span></span><span class="wh75-check" aria-hidden="true">✓</span></button>`;
   }
@@ -714,8 +744,9 @@
     document.querySelectorAll('#wh75MobileDrawer a').forEach(link => link.addEventListener('click', () => closeDrawer(false)));
     window.addEventListener('keydown', event => {
       if (event.key !== 'Escape' || event.defaultPrevented) return;
-      // Dialogs own Escape; a closed navigation drawer must not steal focus.
-      if (event.target?.closest?.('[role="dialog"][aria-modal="true"]')) return;
+      // Other dialogs own Escape; Settings is handled by this shell.
+      const activeDialog = event.target?.closest?.('[role="dialog"][aria-modal="true"]');
+      if (activeDialog && activeDialog.id !== 'wh75SettingsPanel') return;
       if (document.getElementById('wh75SettingsPanel')?.classList.contains('is-open')) closeSettings();
       else if (document.getElementById('wh75MobileDrawer')?.classList.contains('is-open')) closeDrawer(true);
     });
@@ -757,6 +788,7 @@
     ensureStyles();
     applyColourStyle(savedColourStyle(), false);
     ensureShell();
+    ensureBottomNavClearance();
     syncCalendarView();
     syncSettingsUi();
     ensureThemeObserver();
@@ -766,7 +798,7 @@
     apply();
     processDeferredAdd();
     const media = window.matchMedia?.(MOBILE_QUERY);
-    media?.addEventListener?.('change', () => { syncCalendarView(); if (!isMobile()) { closeDrawer(false); closeSettings(); } });
+    media?.addEventListener?.('change', () => { syncCalendarView(); if (!isMobile()) { closeDrawer(false); closeSettings(); } ensureBottomNavClearance(); });
     window.addEventListener('pageshow', apply);
     window.v11175MobileSitterShellVersion = VERSION;
     window.WAFFLE_APPEARANCE = Object.freeze({

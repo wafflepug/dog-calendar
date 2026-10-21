@@ -5,7 +5,7 @@
   'use strict';
   if (window.WAFFLE_SITTER_NAVIGATION) return;
 
-  const VERSION = '1.4.2';
+  const VERSION = '1.4.3';
   const DESKTOP_QUERY = '(min-width: 821px)';
   const DEFAULT_TOOLS_HREF = 'reminders.html';
   const MOBILE_SEARCH_AVATAR = 'waffle-search-avatar-v1181.svg?v=1.0.2';
@@ -13,6 +13,7 @@
   let originalToolsLauncher = null;
   let originalToolsHref = '';
   const desktopActionLocations = new Map();
+  const mobileTopbarLocations = new Map();
   let observer = null;
   let scheduled = false;
 
@@ -56,7 +57,17 @@
       .wh-sitter-settings-action:focus-visible{outline:3px solid var(--wh75-ring,rgba(124,58,237,.22));outline-offset:2px}
       .wh-sitter-settings-action-icon{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;background:var(--wh75-accent-soft,#f3e8ff);color:var(--wh75-accent-ink,#4c1d95);font-size:18px}
       .wh-sitter-settings-action strong{display:block;font-size:12px;font-weight:900}.wh-sitter-settings-action small{display:block;margin-top:2px;color:var(--wh75-muted,#64748b);font-size:9px;font-weight:700;line-height:1.35}.wh-sitter-settings-chevron{color:var(--wh75-muted,#64748b);font-size:18px;font-weight:900}
+      #wh75MobileTopbar{display:none}
       @media(max-width:820px){
+        html,body{scroll-padding-top:calc(64px + env(safe-area-inset-top,0px))}
+        #wh75MobileTopbar{position:sticky;top:0;z-index:2147481800;display:block;width:100%;height:calc(64px + env(safe-area-inset-top,0px));box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);background:var(--wh75-shell,#fff);border-bottom:1px solid var(--wh75-line,#e2e8f0);isolation:isolate}
+        #wh75MobileTopbar #wh75MenuButton{position:absolute!important;top:calc(env(safe-area-inset-top,0px) + 10px)!important;left:calc(12px + env(safe-area-inset-left,0px))!important;right:auto!important;z-index:1!important}
+        #wh75MobileTopbar #whPalzStayMobileShellBrand,#wh75MobileTopbar #whPalzStayMobileBrand{position:absolute!important;top:calc(env(safe-area-inset-top,0px) + 8px)!important;left:calc(50% + (env(safe-area-inset-left,0px) - env(safe-area-inset-right,0px))/2)!important;z-index:0!important;transform:translateX(-50%)!important;width:min(176px,calc(100vw - 144px - env(safe-area-inset-left,0px) - env(safe-area-inset-right,0px)))!important;height:48px!important;margin:0!important;display:flex!important;align-items:center!important;justify-content:center!important;overflow:visible!important}
+        body[data-waffle-page].wh75-mobile-topbar-ready .calendar-header-branding{min-height:0!important;height:0!important;margin:0!important;padding:0!important;border:0!important;overflow:hidden!important}
+        body[data-waffle-page="calendar"][data-wh75-mobile-view="today"].wh75-mobile-topbar-ready .v10-ops-heading{min-height:0!important;margin:0!important;padding:0!important;gap:0!important}
+        body[data-waffle-page="calendar"][data-wh75-mobile-view="today"] #wh75MobileTopbar #whPalzStayMobileShellBrand{display:none!important}
+        body[data-waffle-page="calendar"]:not([data-wh75-mobile-view="today"]) #wh75MobileTopbar #whPalzStayMobileBrand,
+        body:not([data-waffle-page="calendar"]) #wh75MobileTopbar #whPalzStayMobileBrand{display:none!important}
         body #wh80MobileHeaderRail{display:none!important;visibility:hidden!important;pointer-events:none!important}
         #wh75MobileDrawer .wh-sitter-mobile-tool-icon{overflow:hidden!important;padding:0!important}
         #wh75MobileDrawer .wh-sitter-mobile-tool-icon img{display:block;width:100%;height:100%;max-width:none;object-fit:cover;border-radius:inherit}
@@ -184,6 +195,42 @@
     if (pageName() !== 'calendar') return;
     const heading = document.querySelector('.v10-ops-heading');
     if (heading && !document.getElementById('whPalzStayMobileBrand')) heading.appendChild(createMobileBrand('whPalzStayMobileBrand'));
+  }
+
+  function ensureMobileTopbar() {
+    let topbar = document.getElementById('wh75MobileTopbar');
+    if (isDesktop()) {
+      if (topbar) {
+        const nodes = [...topbar.children];
+        nodes.forEach(node => {
+          const location = mobileTopbarLocations.get(node);
+          if (!location) return;
+          if (location.next && location.next.parentNode === location.parent) location.parent.insertBefore(node, location.next);
+          else location.parent.appendChild(node);
+          mobileTopbarLocations.delete(node);
+        });
+        topbar.remove();
+      }
+      if (document.body?.classList.contains('wh75-mobile-topbar-ready')) document.body.classList.remove('wh75-mobile-topbar-ready');
+      return;
+    }
+    if (!topbar && document.body) {
+      topbar = document.createElement('header');
+      topbar.id = 'wh75MobileTopbar';
+      topbar.setAttribute('aria-label', 'Waffle House navigation');
+      document.body.prepend(topbar);
+    }
+    if (!topbar) return;
+    if (!document.body.classList.contains('wh75-mobile-topbar-ready')) document.body.classList.add('wh75-mobile-topbar-ready');
+
+    const menu = document.getElementById('wh75MenuButton');
+    const brands = [document.getElementById('whPalzStayMobileShellBrand'), document.getElementById('whPalzStayMobileBrand')].filter(Boolean);
+    const nodes = [menu, ...brands].filter(Boolean);
+
+    nodes.forEach(node => {
+      if (!mobileTopbarLocations.has(node)) mobileTopbarLocations.set(node, { parent:node.parentNode, next:node.nextSibling });
+      if (node.parentNode !== topbar) topbar.appendChild(node);
+    });
   }
 
   function rememberDesktopAction(node) {
@@ -361,6 +408,7 @@
     suppressOutlookPopover();
     ensureSidebar();
     ensureMobileBranding();
+    ensureMobileTopbar();
     ensureDesktopSidebarTools();
     ensureMobileSidebarTools();
     ensureToolsInSettings();
@@ -374,8 +422,8 @@
     requestAnimationFrame(maintain);
   }
 
-  const NAVIGATION_MUTATION_ROOTS = '#wh75MobileDrawer,#wh75SettingsPanel,#wh75SettingsBackdrop,#wh80MobileHeaderRail,.calendar-header-branding,.v10-ops-heading,#whSitterDesktopSidebar,#whSitterMobileHeaderTools,#whSitterToolsSettingsSection';
-  const NAVIGATION_OWNED_NODES = '#whSitterDesktopSidebar,#whSitterMobileHeaderTools,#whSitterToolsSettingsSection,#whPalzStayMobileShellBrand,#whPalzStayMobileBrand,#whSitterDesktopTools';
+  const NAVIGATION_MUTATION_ROOTS = '#wh75MenuButton,#wh75MobileDrawer,#wh75SettingsPanel,#wh75SettingsBackdrop,#wh80MobileHeaderRail,.calendar-header-branding,.v10-ops-heading,#whSitterDesktopSidebar,#whSitterMobileHeaderTools,#whSitterToolsSettingsSection';
+  const NAVIGATION_OWNED_NODES = '#wh75MobileTopbar,#whSitterDesktopSidebar,#whSitterMobileHeaderTools,#whSitterToolsSettingsSection,#whPalzStayMobileShellBrand,#whPalzStayMobileBrand,#whSitterDesktopTools';
 
   function isNavigationOwnedNode(node) {
     return node instanceof Element && (node.matches(NAVIGATION_OWNED_NODES) || !!node.closest(NAVIGATION_OWNED_NODES));

@@ -72,6 +72,10 @@ on:
       - 'tests/care-arrival-checkout-layout.browser.spec.js'
       - 'tests/fixtures/guided-checkout-fixture.js'
       - 'playwright.owner-handoff.config.js'
+      - 'playwright.phone-clearance.config.js'
+      - 'tests/care-phone-clearance.browser.spec.js'
+      - 'tests/shared-phone-label-audit.browser.spec.js'
+      - 'tests/fixtures/care-daily-workflows.js'
       - 'tests/owner-handoff.browser.spec.js'
       - 'tests/boarding-owner-handoff.browser.spec.js'
       - 'playwright.care-profile-condensed.config.js'
@@ -211,6 +215,10 @@ on:
       - 'tests/care-arrival-checkout-layout.browser.spec.js'
       - 'tests/fixtures/guided-checkout-fixture.js'
       - 'playwright.owner-handoff.config.js'
+      - 'playwright.phone-clearance.config.js'
+      - 'tests/care-phone-clearance.browser.spec.js'
+      - 'tests/shared-phone-label-audit.browser.spec.js'
+      - 'tests/fixtures/care-daily-workflows.js'
       - 'tests/owner-handoff.browser.spec.js'
       - 'tests/boarding-owner-handoff.browser.spec.js'
       - 'playwright.care-profile-condensed.config.js'
@@ -342,6 +350,8 @@ jobs:
             configs: playwright.arrival-checkout.config.js
           - group: owner-handoff
             configs: playwright.owner-handoff.config.js
+          - group: phone-clearance
+            configs: playwright.phone-clearance.config.js
           - group: care-profile-tools
             configs: playwright.care-profile-tools.config.js
           - group: care-profile-condensed
@@ -425,6 +435,7 @@ jobs:
             playwright-report/
             test-results/
             evidence/
+            output/phone-clearance-evidence/
 
   placement:
     name: Placement shard ${{ matrix.shard }}
