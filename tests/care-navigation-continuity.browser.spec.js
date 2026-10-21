@@ -103,6 +103,8 @@ test('Back restores the filtered list and opener focus', async ({ page, baseURL 
   }
   await page.locator('#guestDirectorySearch').evaluate(input => input.blur());
   await page.setViewportSize(originalViewport);
+  await expect(page.locator('#wh75MobileTopbar')).toHaveCount(originalViewport.width <= 820 ? 1 : 0);
+  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   const openerLabel = await page.locator('#directory-grid [data-open-directory-profile]').getAttribute('aria-label');
   expect(openerLabel).toContain('00001');
   expect(openerLabel).toContain('Casey');

@@ -27,7 +27,7 @@ async function setup(page, baseURL, { share = false, clipboardFails = false } = 
 
 const valid = { link: 'https://care.example.test/stay/AbC123', dogName: 'Milo', startDate: '2026-11-10', endDate: '2026-11-13' };
 
-async function setupOwnerDialog(page) {
+async function setupOwnerDialog(page, baseURL = 'http://127.0.0.1:4327') {
   await page.setContent('<body data-waffle-page="booking"><div id="p4Modal" class="p4-modal"><section class="p4-card" role="dialog" aria-modal="true"><header class="p4-head"><h2>Booking</h2><button data-p4-close type="button">Close</button></header><nav class="p4-tabs"></nav><div class="p4-body"><section class="p4-panel" data-p4-panel="booking" hidden></section><section class="p4-panel" data-p4-panel="capacity" hidden></section><section class="p4-panel" data-p4-panel="owner"></section></div></section></div></body>');
   await page.evaluate(() => {
     document.documentElement.dataset.waffleUiReady = 'true';
@@ -49,7 +49,7 @@ async function setupOwnerDialog(page) {
   });
   await page.addScriptTag({ path: helper });
   await page.addScriptTag({ content: coreScript.slice(styleStart, styleEnd) + '\nstyle();' });
-  await page.addStyleTag({ url: 'http://127.0.0.1:4327/waffle-runtime.css' });
+  await page.addStyleTag({ url: `${baseURL}/waffle-runtime.css` });
   await page.addScriptTag({ content: bookingScript });
   await page.evaluate(() => { window.WAFFLE_PHASE4_BOOKING.fillOwner({ dogName: 'Milo', breed: 'Kelpie', ownerName: 'Alex', startDate: '2026-11-10', endDate: '2026-11-13' }); document.getElementById('p4Modal').hidden = false; });
 }
@@ -184,6 +184,68 @@ test('same-name identities block owner-link generation before any write', async 
   await expect(page.locator('#p4OwnerStatus')).toContainText(/more than one Dog ID/i);
   expect(await page.evaluate(() => window.fixtureWrites.length)).toBe(0);
   expect(await page.evaluate(() => window.fixtureReads.map(item => item.action))).not.toContain('get_dog_history');
+});
+
+test('owner phone and stay date labels stay clear of their fields on phone viewports', async ({ page, baseURL }, testInfo) => {
+  await setupOwnerDialog(page, baseURL);
+  const sizes = [
+    { width: 320, height: 700 }, { width: 360, height: 740 },
+    { width: 375, height: 780 }, { width: 390, height: 844 },
+    { width: 412, height: 850 }, { width: 430, height: 900 },
+    { width: 667, height: 320 }, { width: 667, height: 360 }
+  ];
+  await page.locator('#p4OwnerDetails > summary').click();
+  await page.locator('#p4OwnerPhone').fill('0400 111 222 · owner phone contact details');
+  await page.locator('#p4OwnerDog').fill('Milo, the very long named family dog of Alexandria Peterson-Smith');
+  for (const viewport of sizes) {
+    await page.setViewportSize(viewport);
+    for (const textScale of [1, 2]) {
+      await page.locator('#p4Modal').evaluate((modal, scale) => {
+        for (const element of modal.querySelectorAll('[data-p4-panel="owner"] .p4-field span, [data-p4-panel="owner"] .p4-field input, [data-p4-panel="owner"] button')) {
+          if (!element.dataset.auditBaseFont) element.dataset.auditBaseFont = getComputedStyle(element).fontSize;
+          element.style.fontSize = `${parseFloat(element.dataset.auditBaseFont) * scale}px`;
+        }
+      }, textScale);
+      for (const dark of [false, true]) {
+        await page.locator('body').evaluate((node, value) => node.classList.toggle('dark-theme', value), dark);
+        const layout = await page.locator('#p4Modal [data-p4-panel="owner"] .p4-field').evaluateAll(fields => fields.map(field => {
+          const label = field.querySelector('span').getBoundingClientRect();
+          const input = field.querySelector('input').getBoundingClientRect();
+          return { labelBottom: label.bottom, inputTop: input.top, inputBottom: input.bottom, right: input.right, left: input.left,
+            fieldRight: field.getBoundingClientRect().right, labelFont: parseFloat(getComputedStyle(field.querySelector('span')).fontSize),
+            baseLabelFont: parseFloat(field.querySelector('span').dataset.auditBaseFont), inputFont: parseFloat(getComputedStyle(field.querySelector('input')).fontSize),
+            baseInputFont: parseFloat(field.querySelector('input').dataset.auditBaseFont) };
+        }));
+        expect(layout.length).toBe(4);
+        expect(layout.every(item => item.labelBottom <= item.inputTop + 1), JSON.stringify({ viewport, textScale, dark, layout })).toBeTruthy();
+        expect(layout.every(item => item.inputBottom - item.inputTop >= 44 && item.right <= item.fieldRight + 1 && item.left >= 0), JSON.stringify({ viewport, textScale, dark, layout })).toBeTruthy();
+        expect(layout.every(item => item.labelFont >= 13 * textScale && item.inputFont >= 16 * textScale), JSON.stringify({ viewport, textScale, dark, layout })).toBeTruthy();
+        expect(layout.every(item => item.labelFont >= item.baseLabelFont * textScale && item.inputFont >= item.baseInputFont * textScale), JSON.stringify({ viewport, textScale, dark, layout })).toBeTruthy();
+        if (textScale === 2 && dark && [320, 390, 667].includes(viewport.width)) {
+          const screenshotPath = testInfo.outputPath(`owner-handoff-${viewport.width}x${viewport.height}-200-percent-dark.png`);
+          await page.screenshot({ path: screenshotPath });
+          await testInfo.attach(`owner-handoff-${viewport.width}x${viewport.height}-200-percent-dark.png`, { path: screenshotPath, contentType: 'image/png' });
+          await page.locator('#p4OwnerEnd').scrollIntoViewIfNeeded();
+          const datePath = testInfo.outputPath(`owner-dates-${viewport.width}x${viewport.height}-200-percent-dark.png`);
+          await page.screenshot({ path: datePath });
+          await testInfo.attach(`owner-dates-${viewport.width}x${viewport.height}-200-percent-dark.png`, { path: datePath, contentType: 'image/png' });
+        }
+      }
+    }
+  }
+  await page.locator('body').evaluate(node => node.classList.remove('dark-theme'));
+  await page.locator('#p4OwnerLink').click();
+  await expect(page.locator('.owner-handoff')).toBeVisible();
+  const ownerButtons = page.locator('#p4Modal [data-p4-panel="owner"] button:visible');
+  for (const button of await ownerButtons.all()) {
+    await button.scrollIntoViewIfNeeded();
+    const reachable = await button.evaluate(element => {
+      const rect = element.getBoundingClientRect();
+      const hit = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
+      return rect.height >= 44 && rect.top >= 0 && rect.bottom <= innerHeight && (hit === element || element.contains(hit));
+    });
+    expect(reachable).toBeTruthy();
+  }
 });
 
 

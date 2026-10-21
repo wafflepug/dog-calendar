@@ -1,3 +1,9 @@
+## Current Care UI iteration — 21 October 2026
+
+Mobile layout clarity: reserve shared space for the existing menu and logo, keep Care Back clear of navigation, and verify long labels, enlarged text, dialogs and responsive transitions. See [Mobile layout clarity](mobile-layout-clarity.md) for acceptance steps. Publication depends on the candidate's checks and live verification.
+
+Next ready item: audit multi-dog arrivals and repeated day-care booking for narrow-screen clarity, preserving exact identities and current read/save behaviour.
+
 ## Current Care UI iteration — 20 October 2026
 
 Three implemented refinements awaiting release verification: an optional changed-field review, direct navigation to changed fields, and single-field Undo. See [Care Change Review](care-change-review.md) for acceptance checks and the next three scoped items. Prior Care Simple Editor refinements were merged in PR232 and published as 2026.10.19.01.

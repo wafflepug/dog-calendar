@@ -11,7 +11,8 @@ const digitalIntakes=[{stayKey:bookings[0].stayKey,status:'Complete',submittedAt
 function profile(booking) {
   return {stayKey:booking.stayKey,identity:{stayKey:booking.stayKey,stayId:booking.stayId,dogId:booking.dogId},resolution:{status:'resolved',method:'fixture'},updatedAt:'2026-10-18T00:00:00Z',riskFlags:{},intakeAttributesSource:'Saved profile',intakeAttributes:{feedingTimes:'8am and 6pm',foodAmount:'1 cup',foodBrandType:'Sensitive formula',notes:booking.notes}};
 }
-async function install(page) {
+async function install(page,{bookingOverrides=[]}={}) {
+  const fixtureBookings=bookings.map(booking=>({...booking,...(bookingOverrides.find(override=>override.stayId===booking.stayId)||{})}));
   const reads=[];
   await page.addInitScript(()=>{
     const NativeDate=Date, now=NativeDate.UTC(2026,9,18,2);
@@ -25,7 +26,7 @@ async function install(page) {
     if(url.includes('cdn.jsdelivr.net')&&url.includes('fullcalendar'))return route.fulfill({status:200,contentType:'application/javascript',body:calendar});
     if(url.includes('docs.google.com/spreadsheets')&&url.includes('output=csv')){
       const date=value=>value.split('-').reverse().join('/');
-      const rows=bookings.map(b=>[b.timestamp,b.dogName,b.breed,date(b.startDate),date(b.endDate),b.ownerName,b.phone,'','',b.notes,'','Boarding','Other',b.dogId,b.stayId,b.dogNumber].map(value=>'"'+String(value).replaceAll('"','""')+'"').join(','));
+      const rows=fixtureBookings.map(b=>[b.timestamp,b.dogName,b.breed,date(b.startDate),date(b.endDate),b.ownerName,b.phone,'','',b.notes,'','Boarding',b.source||'Other',b.dogId,b.stayId,b.dogNumber].map(value=>'"'+String(value).replaceAll('"','""')+'"').join(','));
       return route.fulfill({status:200,contentType:'text/csv',body:'Timestamp,Dog Name,Breed,Start Date,End Date,Owner,Phone,Likes,Dislikes,Notes,Edit Link,Booking Type,Source,Dog ID,Stay ID,Dog Number\n'+rows.join('\n')});
     }
     if(url.includes('script.google')){
@@ -34,15 +35,15 @@ async function install(page) {
       const params=new URL(url).searchParams,callback=params.get('callback');let payload={};try{payload=JSON.parse(params.get('payload')||'{}');}catch(_){}
       reads.push(resolved.action);
       let result={result:'success',records:[],bookings:[],summaries:[]};
-      if(resolved.action==='get_guest_directory')result={result:'success',bookings,summaries:bookings.map(b=>({stayKey:b.stayKey,riskFlags:{}})),digitalIntakes,legacyIntakes:[]};
+      if(resolved.action==='get_guest_directory')result={result:'success',bookings:fixtureBookings,summaries:fixtureBookings.map(b=>({stayKey:b.stayKey,riskFlags:{}})),digitalIntakes,legacyIntakes:[]};
       if(resolved.action==='get_intake_statuses')result={result:'success',records:digitalIntakes};
-      if(resolved.action==='get_stay_operations')result={result:'success',records:[{...bookings[2],status:'checked_in',checkedInAt:'2026-10-17T02:00:00Z'}]};
+      if(resolved.action==='get_stay_operations')result={result:'success',records:[{...fixtureBookings[2],status:'checked_in',checkedInAt:'2026-10-17T02:00:00Z'}]};
       if(resolved.action==='get_data_versions')result={result:'success',versions:{stayOperationIdentityVersion:1,careRecordIdentityWritesEnabled:false}};
       if(resolved.action==='get_guest_profile'){
-        const booking=bookings.find(b=>b.stayId===payload.stayId)||bookings.find(b=>b.stayKey===payload.stayKey);
+        const booking=fixtureBookings.find(b=>b.stayId===payload.stayId)||fixtureBookings.find(b=>b.stayKey===payload.stayKey);
         result={result:'success',record:booking?profile(booking):null};
       }
-      if(resolved.action==='get_belongings')result={result:'success',records:bookings.map(profile)};
+      if(resolved.action==='get_belongings')result={result:'success',records:fixtureBookings.map(profile)};
       if(resolved.action==='get_guest_belongings')result={result:'success',record:{stayKey:payload.stayKey,items:{},photos:[]}};
       if(resolved.action==='maintenance_status')result={result:'success',enabled:false};
       return route.fulfill({status:200,contentType:callback?'application/javascript':'application/json',body:callback?`${callback}(${JSON.stringify(result)});`:JSON.stringify(result)});
@@ -52,6 +53,6 @@ async function install(page) {
     }
     return route.continue();
   });
-  return {reads,bookings};
+  return {reads,bookings:fixtureBookings};
 }
 module.exports={install,bookings};
