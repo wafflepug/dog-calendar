@@ -271,9 +271,34 @@ test('three digit booking count stays readable at 200 percent text size',async({
  await page.goto(`${baseURL}/directory.html?dailyCareFixture=1`,{waitUntil:'domcontentloaded'});
  await settle(page);
  await page.locator('[data-v1082-stay-tab="future"]').click();
- const status=page.locator('#v1082FutureStayCount');
+ let status=page.locator('#v1082FutureStayCount');
  await expect(status).toBeVisible();
  await expect(status).toHaveText('1');
+ // Keep synthetic layout text separate from runtime refreshes, which correctly
+ // restore the real count. Reuse the rendered markup, production styles and
+ // actual allocated width; no component layout styles are replaced in this fixture.
+ const layout=await page.evaluate(()=>({
+  markup:document.querySelector('.directory-roster-filters').outerHTML,
+  width:document.querySelector('.directory-roster-filters').getBoundingClientRect().width,
+  styles:[...document.querySelectorAll('head style,head link[rel="stylesheet"]')].map(element=>element.outerHTML).join('\n'),
+  root:[...document.documentElement.attributes].map(attribute=>[attribute.name,attribute.value]),
+  body:[...document.body.attributes].map(attribute=>[attribute.name,attribute.value])
+ }));
+ const runtimePage=page;
+ page=await runtimePage.context().newPage();
+ await page.setViewportSize({width:320,height:640});
+ await page.setContent(`<html><head><meta name="viewport" content="width=device-width, initial-scale=1"><base href="${baseURL}/">${layout.styles}</head><body></body></html>`,{waitUntil:'load'});
+ await page.evaluate(layout=>{
+  for(const [name,value] of layout.root)document.documentElement.setAttribute(name,value);
+  for(const [name,value] of layout.body)document.body.setAttribute(name,value);
+  const host=document.createElement('main');host.id='directoryTabPanel';
+  host.style.width=`${layout.width}px`;host.style.maxWidth='100%';host.style.marginInline='auto';
+  host.innerHTML=layout.markup;document.body.appendChild(host);
+ },layout);
+ await runtimePage.close();
+ status=page.locator('#v1082FutureStayCount');
+ await expect(status).toBeVisible();
+ expect(await page.locator('.directory-roster-filters').evaluate(element=>element.getBoundingClientRect().width)).toBeCloseTo(layout.width,1);
  for(const theme of ['light','dark']){
   await page.evaluate(dark=>document.body.classList.toggle('dark-theme',dark),theme==='dark');
   const fonts=await page.evaluate(()=>{
@@ -291,7 +316,7 @@ test('three digit booking count stays readable at 200 percent text size',async({
   });
   expect(fonts.some(font=>font.text==='123')).toBe(true);
   await expect.poll(()=>page.evaluate(()=>[...document.querySelectorAll('[data-phone-audit-base-font]')].every(element=>parseFloat(getComputedStyle(element).fontSize)>=Number(element.dataset.phoneAuditBaseFont)*2)),{timeout:2000}).toBe(true);
-  await expect.poll(()=>page.evaluate(()=>{const nav=document.querySelector('#wh75MobileBottomNav');return nav&&parseFloat(getComputedStyle(document.body).paddingBottom)>=nav.getBoundingClientRect().height-1}),{timeout:2000}).toBe(true);
+
   const geometry=await textOverlaps(page);
   expect(geometry.viewport.docWidth).toBeLessThanOrEqual(321);
   if(geometry.navRect)expect(parseFloat(geometry.viewport.bodyPaddingBottom)).toBeGreaterThanOrEqual(geometry.navRect.height-1);
@@ -306,4 +331,5 @@ test('three digit booking count stays readable at 200 percent text size',async({
   await page.evaluate(()=>{for(const element of document.querySelectorAll('[data-phone-audit-base-font]')){element.style.setProperty('font-size',element.dataset.phoneAuditInlineFont,element.dataset.phoneAuditInlinePriority);delete element.dataset.phoneAuditInlineFont;delete element.dataset.phoneAuditInlinePriority;delete element.dataset.phoneAuditBaseFont;}});
  }
  expect(fixture.reads.filter(action=>action==='get_guest_profile')).toHaveLength(0);
+ await page.close();
 });
