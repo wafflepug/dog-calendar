@@ -216,6 +216,22 @@ test('weekly same-day visits expand into three independent occurrences', async (
   ]);
 });
 
+test('changing the input mode cannot relabel an existing overnight range as a single day', async ({ page }) => {
+  await setup(page);
+  await addDog(page, 'Luna', dogA);
+  await addVisit(page, '2026-11-10', '2026-11-12');
+  await page.locator('#p4PlanMode').selectOption('same-day');
+  await page.locator('#p4PlanStart').fill('2026-11-20');
+  await page.locator('#p4PlanAddVisit').click();
+  await expect(page.locator('#p4PlanVisits .p4-plan-item > span')).toHaveText([
+    'Overnight stay · Tue, 10 Nov 2026 – Thu, 12 Nov 2026',
+    'Same-day visit · Fri, 20 Nov 2026'
+  ]);
+  await page.locator('#p4PlanNext').click();
+  await expect(page.locator('#p4PlanSave')).toBeDisabled();
+  expect(await page.evaluate(() => window.fixtureWrites)).toEqual([]);
+});
+
 test('a newly created Dog ID is reused by later visits for that dog', async ({ page }) => {
   await setup(page);
   await addDog(page, 'Poppy', '');

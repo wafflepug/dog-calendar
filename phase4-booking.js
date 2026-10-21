@@ -169,8 +169,8 @@ function planDateLabel(value){
   if(!year||!month||!day)return String(value||'');
   return new Intl.DateTimeFormat('en-AU',{weekday:'short',day:'numeric',month:'short',year:'numeric',timeZone:'UTC'}).format(new Date(Date.UTC(year,month-1,day)));
 }
-function planVisitLabel(visit,mode){
-  const sameDay=mode==='same-day'||visit.startDate===visit.endDate;
+function planVisitLabel(visit){
+  const sameDay=visit.startDate===visit.endDate;
   return sameDay?`Same-day visit · ${planDateLabel(visit.startDate)}`:`Overnight stay · ${planDateLabel(visit.startDate)} – ${planDateLabel(visit.endDate)}`;
 }
 function reviewPlan(){
