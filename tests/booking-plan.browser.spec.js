@@ -95,7 +95,7 @@ async function reviewAndSave(page) {
 }
 
 async function capturePlanEvidence(page, name, width, dark) {
-  const evidenceDir = path.join(root, 'output', 'releases', '2026.10.16.01', 'evidence');
+  const evidenceDir = path.join(root, 'output', 'releases', '2026.10.22.01', 'evidence');
   fs.mkdirSync(evidenceDir, { recursive: true });
   await page.setViewportSize({ width, height: 844 });
   await page.emulateMedia({ colorScheme: dark ? 'dark' : 'light' });
@@ -109,6 +109,16 @@ test('two dogs and two date ranges save four distinct confirmed stay intents', a
   await addDog(page, 'Milo', dogB);
   await addVisit(page, '2026-11-10', '2026-11-12');
   await addVisit(page, '2026-11-20', '2026-11-22');
+  await openReview(page);
+  await expect(page.locator('[data-p4-review-count]')).toHaveText('2 dogs · 2 dates · 4 total stays');
+  await expect(page.locator('[data-p4-review-dog]')).toHaveCount(2);
+  await expect(page.locator('[data-p4-review-dog]').nth(0).locator('strong')).toContainText('Luna · Dog #00001 · Pug');
+  await expect(page.locator('[data-p4-review-dog]').nth(1).locator('strong')).toContainText('Milo · Dog #00002 · Terrier');
+  await expect(page.locator('[data-p4-review-visit]').first()).toHaveText('Overnight stay · Tue, 10 Nov 2026 – Thu, 12 Nov 2026');
+  await expect(page.locator('[data-p4-review-visit]').nth(1)).toHaveText('Overnight stay · Fri, 20 Nov 2026 – Sun, 22 Nov 2026');
+  await expect(page.locator('[data-p4-review-visit]')).toHaveCount(4);
+  await expect(page.locator('#p4PlanRows')).toBeHidden();
+  await expect(page.locator('.p4-plan-review-contact')).toHaveCount(1);
   await reviewAndSave(page);
   const writes = await page.evaluate(() => window.fixtureWrites);
   expect(writes).toHaveLength(4);
@@ -117,6 +127,10 @@ test('two dogs and two date ranges save four distinct confirmed stay intents', a
   expect(writes.every(row => row.action === 'create_boarding' && row.ownerName === 'Alex' && row.phone === '0400000000')).toBe(true);
   await expect(page.locator('#p4PlanRows [data-p4-result-dog]')).toHaveCount(2);
   await expect(page.locator('#p4PlanRows [data-p4-result-status="saved"]')).toHaveCount(4);
+  await expect(page.locator('.p4-plan-review-count')).toBeVisible();
+  await expect(page.locator('.p4-plan-review-contact')).toBeVisible();
+  await expect(page.locator('.p4-plan-review-dogs')).toBeHidden();
+  await expect(page.locator('#p4PlanRows')).toBeVisible();
 });
 
 test('guided steps announce progress and require each section before advancing', async ({ page }, testInfo) => {
@@ -127,14 +141,14 @@ test('guided steps announce progress and require each section before advancing',
   await expect(nav.getByRole('button')).toHaveCount(4);
   await nav.locator('[data-p4-plan-step="0"]').click();
   await expect(nav.locator('[aria-current="step"]')).toContainText('Owner');
-  if (testInfo.project.name === 'chromium') await capturePlanEvidence(page, 'owner-320-light.png', 320, false);
+  if (['chromium', 'chromium-390'].includes(testInfo.project.name)) await capturePlanEvidence(page, 'owner-320-light.png', 320, false);
   await page.locator('#p4PlanNext').click();
   await expect(page.locator('#p4PlanStepLabel')).toHaveText('Step 2 of 4 · Dogs');
   await expect(page.locator('#p4PlanNext')).toBeVisible();
   await page.locator('#p4PlanNext').click();
   await expect(page.locator('#p4PlanStepLabel')).toContainText('Dogs');
   await expect(page.locator('#p4PlanStatus')).toContainText('Add at least one dog');
-  if (testInfo.project.name === 'chromium') await capturePlanEvidence(page, 'dogs-390-dark.png', 390, true);
+  if (['chromium', 'chromium-390'].includes(testInfo.project.name)) await capturePlanEvidence(page, 'dogs-390-dark.png', 390, true);
   await addDog(page, 'Luna', dogA);
   await page.locator('#p4PlanNext').click();
   await expect(page.locator('#p4PlanStepLabel')).toContainText('Dates');
@@ -143,7 +157,7 @@ test('guided steps announce progress and require each section before advancing',
   await expect(page.locator('#p4PlanStepLabel')).toContainText('Review');
   await expect(nav.locator('[aria-current="step"]')).toContainText('Review');
   await expect(page.locator('#p4PlanSave')).toBeEnabled();
-  if (testInfo.project.name === 'chromium') {
+  if (['chromium', 'chromium-390'].includes(testInfo.project.name)) {
     await capturePlanEvidence(page, 'review-1440-light.png', 1440, false);
     await capturePlanEvidence(page, 'review-390-dark.png', 390, true);
   }
@@ -158,6 +172,43 @@ test('weekly same-day visits expand into three independent occurrences', async (
   await page.locator('#p4PlanUntil').fill('2026-11-16');
   await page.locator('#p4PlanWeekly').click();
   await expect(page.locator('#p4PlanVisits .p4-plan-item')).toHaveCount(3);
+  await expect(page.locator('#p4PlanVisits .p4-plan-item').first()).toContainText('Same-day visit · Mon, 2 Nov 2026');
+  await expect(page.locator('#p4PlanVisits [data-p4-plan-remove-visit]').first()).toHaveAccessibleName('Remove Same-day visit · Mon, 2 Nov 2026');
+  await openReview(page);
+  await expect(page.locator('[data-p4-review-count]')).toHaveText('1 dog · 3 dates · 3 total stays');
+  const review = page.locator('#p4PlanPreview');
+  await expect(review.locator('[data-p4-review-dog]')).toHaveCount(1);
+  await expect(review.locator('[data-p4-review-dog] strong')).toContainText('Luna · Dog #00001 · Pug');
+  await expect(review.locator('[data-p4-review-visit]')).toHaveText([
+    'Same-day visit · Mon, 2 Nov 2026', 'Same-day visit · Mon, 9 Nov 2026', 'Same-day visit · Mon, 16 Nov 2026'
+  ]);
+  await expect(review.locator('.p4-plan-review-contact')).toHaveCount(1);
+  await expect(review.locator('.p4-plan-review-contact')).toContainText('Shared owner: Alex · Phone: 0400000000');
+  for (const width of [320, 390, 1440]) {
+    await page.setViewportSize({ width, height: 844 });
+    await page.evaluate(dark => document.body.classList.toggle('dark-theme', dark), width === 390);
+    const layout = await page.evaluate(() => {
+      const host = document.querySelector('#p4PlanPreview');
+      const card = host.querySelector('[data-p4-review-dog]');
+      return { host: host.scrollWidth <= host.clientWidth, card: card.scrollWidth <= card.clientWidth };
+    });
+    expect(layout, `review should wrap without overflow at ${width}px`).toEqual({ host: true, card: true });
+    if (width === 390) {
+      const contrast = await review.locator('[data-p4-review-dog]').evaluate(card => {
+        const style = getComputedStyle(card);
+        const luminance = color => {
+          const channels = color.match(/[\d.]+/g).slice(0, 3).map(Number).map(value => {
+            const normalized = value / 255;
+            return normalized <= 0.04045 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
+          });
+          return channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722;
+        };
+        const foreground = luminance(style.color), background = luminance(style.backgroundColor);
+        return (Math.max(foreground, background) + 0.05) / (Math.min(foreground, background) + 0.05);
+      });
+      expect(contrast, 'review dates remain readable in dark mode').toBeGreaterThanOrEqual(4.5);
+    }
+  }
   await reviewAndSave(page);
   const writes = await page.evaluate(() => window.fixtureWrites);
   expect(writes.map(row => [row.startDate, row.endDate])).toEqual([
@@ -199,6 +250,8 @@ test('resume retries only the failed visit with its original stable intent', asy
   await expect(page.locator('#p4PlanVisits .p4-plan-item')).toHaveCount(2);
   await openReview(page);
   await page.locator('#p4PlanSave').click();
+  await expect(page.locator('.p4-plan-review-dogs')).toBeHidden();
+  await expect(page.locator('#p4PlanRows')).toBeVisible();
   await expect(page.locator('#p4PlanRows')).toContainText('saved');
   await expect(page.locator('#p4PlanRows')).toContainText('temporary outage');
   await page.locator('#p4PlanDisclosure summary').click();

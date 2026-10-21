@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.10.21.03",
-  "releaseName": "Mobile Layout Clarity",
+  "assetRevision": "2026.10.22.01",
+  "releaseName": "Arrival and Visit Plan Clarity",
   "careIteration": {
     "returningDogSuggestions": true,
     "reviewedCareInheritance": true,

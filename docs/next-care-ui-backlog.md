@@ -1,4 +1,10 @@
-## Current Care UI iteration — 21 October 2026
+## Current Care UI iteration — 22 October 2026
+
+Implemented candidate 2026.10.22.01: [Arrival and visit-plan clarity](arrival-planner-clarity.md). Adds owner context to arriving cards, explicit same-day labels, readable per-dog schedules with shared owner contact once, and separate intake/Care preparation cues. Existing identities, partial-save recovery and lazy reads remain unchanged. CI and exact-release verification determine publication status.
+
+Next ready item: compact departure handover, auditing existing checkout and retained notes before changing them.
+
+## Previous Care UI iteration — 21 October 2026
 
 Mobile layout clarity: reserve shared space for the existing menu and logo, keep Care Back clear of navigation, and verify long labels, enlarged text, dialogs and responsive transitions. See [Mobile layout clarity](mobile-layout-clarity.md) for acceptance steps. Publication depends on the candidate's checks and live verification.
 

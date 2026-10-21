@@ -17239,7 +17239,9 @@ registerWaffleServiceWorker();
                                 const directoryStayKey = potentialKey;
                                 const stayDateLabel =
                                     `${formatStayDateShort(startParsed)} – ${formatStayDateShort(endParsed)}`;
-                                const rosterContext = `Check-in ${formatStayDateShort(startParsed)} · Check-out ${formatStayDateShort(endParsed)}`;
+                                const rosterContext = startParsed === endParsed
+                                    ? `Same-day care · ${formatStayDateShort(startParsed)}`
+                                    : `Check-in ${formatStayDateShort(startParsed)} · Check-out ${formatStayDateShort(endParsed)}`;
                                 const rosterStatus = hasBeenPickedUp
                                     ? 'Checked out'
                                     : (isCurrentlyAtHome ? 'Staying' : 'Arriving');
@@ -17282,6 +17284,7 @@ registerWaffleServiceWorker();
                                                 <span class="directory-guest-tile-name">${escapeDashboardHtml(dogName.trim())}</span>
                                                 ${dogNumber ? `<span class="directory-dog-id">Dog ID ${escapeDashboardHtml(dogNumber)}</span>` : ''}
                                                 <span class="directory-roster-context">${escapeDashboardHtml(rosterContext)}</span>
+                                                ${startParsed >= localTodayStr && cleanOwnerName && !/^(n\/a|unknown)$/i.test(cleanOwnerName) ? `<span class="directory-roster-owner">Owner: ${escapeDashboardHtml(cleanOwnerName)}</span>` : ''}
                                             </span>
                                             <span class="directory-roster-status${hasBeenPickedUp ? ' is-past' : ''}">${rosterStatus}</span>
                                         </button>
