@@ -138,10 +138,29 @@ test('Care defers later arrivals until requested, keeps total count, and leaves 
   expect(twinLabels[0]).not.toBe(twinLabels[1]);
   expect(twinLabels[0]).toContain('Dog Number 00007');
   expect(twinLabels[1]).toContain('Dog Number 00008');
+  for (const button of await twinButtons.all()) {
+    await expect(button.locator('.directory-roster-owner')).toHaveText('Owner: Ada Owner');
+    await expect(button.locator('.directory-roster-owner')).toHaveCount(1);
+  }
   const invalidNumberLabel = await page.locator('[data-open-directory-profile][aria-label^="Open Invalid Number Pup"]').getAttribute('aria-label');
   expect(invalidNumberLabel).not.toContain('Dog Number Other');
   const lazyDetails = await page.locator('[data-v11196-synthetic-future="true"] [data-directory-detail="profile"]').evaluateAll(details => details.every(detail => detail.dataset.detailLoaded === 'false'));
   expect(lazyDetails).toBe(true);
+});
+
+test('later same-day arrivals show one date and an explicit service label without loading Care', async ({ page }) => {
+  await mountCareRange(page);
+  await page.evaluate(() => {
+    const event = window.fixtureEvents[1];
+    event.end = event.start;
+    event.extendedProps.rawEndDate = event.start;
+    window.WAFFLE_V11196_FUTURE_RANGE.updateEvents(window.fixtureEvents);
+  });
+  await page.getByRole('button', { name: /View 1 later arrivals/ }).click();
+  const card = page.locator('[data-v11196-synthetic-future="true"]');
+  await expect(card.locator('.directory-roster-context')).toContainText('Same-day care');
+  await expect(card.locator('.directory-roster-owner')).toHaveText('Owner: Ada Owner');
+  await expect(card.locator('[data-directory-detail="profile"]')).toHaveAttribute('data-detail-loaded', 'false');
 });
 
 test('Care search stays lazy until requested and reports identity matches across expanded arrivals', async ({ page }) => {

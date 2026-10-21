@@ -47,8 +47,8 @@ test('the shipped loader opens Multiple visits from Add and restores a reusable 
     await expect(modal).toBeVisible();
     await expect(page.locator('#p4PlanDisclosure')).toHaveAttribute('open', '');
     await page.locator('#p4PlanOwner').fill('Fixture owner');
-    const captureRuntime = process.env.WAFFLE_CAPTURE_UI_EVIDENCE === '1' && testInfo.project.name === 'chromium';
-    const evidenceDir = path.resolve(__dirname, '..', 'output', 'releases', '2026.10.16.01', 'evidence');
+    const captureRuntime = process.env.WAFFLE_CAPTURE_UI_EVIDENCE === '1' && ['chromium', 'chromium-390'].includes(testInfo.project.name);
+    const evidenceDir = path.resolve(__dirname, '..', 'output', 'releases', '2026.10.22.01', 'evidence');
     if (captureRuntime) {
       fs.mkdirSync(evidenceDir, { recursive: true });
       const darkOwner = width === 1440;
@@ -75,6 +75,27 @@ test('the shipped loader opens Multiple visits from Add and restores a reusable 
     await expect(page.locator('#p4PlanStepLabel')).toContainText('Dogs');
     await expect(page.locator('#p4Dog')).toHaveValue('Unsaved fixture guest');
     await expect(page.locator('#p4PlanOwner')).toHaveValue('Fixture owner');
+    await page.locator('[data-p4-plan-step="0"]').click();
+    await page.locator('#p4PlanPhone').fill('0400000000');
+    await page.locator('#p4PlanNext').click();
+    await page.locator('#p4DogIdentity').selectOption('');
+    await page.locator('#p4Breed').fill('Pug');
+    await page.locator('#p4PlanAddDog').click();
+    await page.locator('#p4PlanNext').click();
+    await page.locator('#p4PlanMode').selectOption('same-day');
+    await page.locator('#p4PlanStart').fill('2026-11-02');
+    await page.locator('#p4PlanUntil').fill('2026-11-16');
+    await page.locator('#p4PlanWeekly').click();
+    await page.locator('#p4PlanNext').click();
+    await expect(page.locator('[data-p4-review-count]')).toHaveText('1 dog · 3 dates · 3 total stays');
+    await expect(page.locator('[data-p4-review-visit]')).toHaveCount(3);
+    await expect(page.locator('#p4PlanRows')).toBeHidden();
+    await expect(page.locator('.p4-plan-review-contact')).toHaveCount(1);
+    if (captureRuntime) {
+      await page.evaluate(dark => document.body.classList.toggle('dark-theme', dark), width === 390);
+      await page.screenshot({ path: path.join(evidenceDir, `runtime-review-${width}.png`), fullPage: true });
+    }
+    expect(await page.locator('.p4-plan-review').evaluate(node => node.scrollWidth <= node.clientWidth)).toBe(true);
     await modal.locator('[data-p4-close]').click();
   }
   expect(writes).toEqual([]);

@@ -40,6 +40,8 @@ test('only unique, current arrivals receive one compact indicator and retain Che
   await addCard(page, { stayId: 's6', dogId: 'd6', key: 'collision' });
   await expect(page.locator('#directory-grid [data-waffle-arrival-ready]')).toHaveCount(4);
   await expect(page.locator('[data-waffle-arrival-ready]').first()).toContainText('Intake complete');
+  await expect(page.locator('[data-waffle-arrival-ready]').first().locator('[data-arrival-step]')).toHaveText(['Intake', 'Care']);
+  await expect(page.locator('[data-waffle-arrival-ready]').first().locator('[data-arrival-care]')).toHaveText('Review instructions');
   await expect(page.locator('[data-v11217-roster-checkin]')).toHaveCount(6);
   await expect(page.locator('[data-waffle-arrival-ready]')).toHaveCount(4);
   await expect(page.locator('[data-waffle-arrival-next]')).toHaveText('Next arrival · 4');
@@ -119,4 +121,31 @@ test('authoritative operation collision excludes a card; quick-focus control hid
   await addCard(page, { stayId: 'clear', dogId: 'd2', key: 'k2', past: true });
   await expect(page.locator('[data-waffle-arrival-ready]')).toHaveCount(0);
   await expect(page.locator('[data-waffle-arrival-next]')).toBeHidden();
+});
+
+test('same-name household arrivals keep separate review targets and never imply care is verified', async ({ page }) => {
+  await setup(page);
+  await addCard(page, { stayId: 's1', dogId: 'd1', key: 'milo-a', intake: 'complete' });
+  await addCard(page, { stayId: 's2', dogId: 'd2', key: 'milo-b', intake: 'unknown' });
+  await page.evaluate(() => {
+    document.querySelectorAll('.directory-card').forEach((card, i) => {
+      card.dataset.directoryDogNumber = i ? '00018' : '00017';
+      card.dataset.v1088OwnerName = 'Alex';
+    });
+    window.WAFFLE_ARRIVAL_READY.refresh();
+  });
+  const reviews = page.locator('[data-waffle-arrival-ready]');
+  await expect(reviews).toHaveCount(2);
+  await expect(reviews.nth(0)).toHaveAccessibleName(/Dog Number 00017.*Review feeding, medication and safety before check-in/);
+  await expect(reviews.nth(1)).toHaveAccessibleName(/Dog Number 00018.*Status unknown/);
+  await expect(reviews.nth(0)).not.toContainText(/care (complete|verified|ready)/i);
+  await reviews.nth(1).click();
+  await expect(page.locator('[data-directory-stay-id="s2"]')).toHaveAttribute('data-opened', 'true');
+  await expect(page.locator('[data-directory-stay-id="s1"]')).not.toHaveAttribute('data-opened', 'true');
+  await page.evaluate(() => {
+    window.v110OperationDisplayState = card => ({ code: card.dataset.directoryStayId === 's2' ? 'checked_in' : 'date_active' });
+    window.WAFFLE_ARRIVAL_READY.refresh();
+  });
+  await expect(reviews).toHaveCount(1);
+  expect(await page.evaluate(() => window.reads)).toBe(0);
 });

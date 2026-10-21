@@ -3,7 +3,11 @@
 Reviewed 17 September 2026. Repository: `wafflepug/dog-calendar`; always start implementation from current `origin/main` in an isolated worktree. Stack: static HTML/CSS, browser JavaScript, FullCalendar, Apps Script backend, Python contracts, Playwright. Keep production smoke checks read-only. Preserve existing theme settings, offline work, and early checkout behavior. Use Luna for bounded implementation; lead agent reviews design and integration. Complete relevant CI before merging.
 
 
-## Current Care iteration - 21 October 2026
+## Current Care iteration - 22 October 2026
+
+Implemented candidate 2026.10.22.01: [Arrival and visit-plan clarity](arrival-planner-clarity.md). Refines arriving-dog owner/date context, per-dog repeated-visit review, and compact intake/Care preparation. Preserve the existing stable identities, direct check-in and partial-save recovery. Next: audit compact departure handover. Publication remains subject to exact-head CI and live verification.
+
+## Previous Care iteration - 21 October 2026
 
 Current candidate: [Care journey simplification](care-journey-simplification.md), release 2026.10.21.02. Audit the existing arrival, departure, daily summary, returning-dog setup and list continuity before changing them. Preserve the established direct operations, explicit identity review and lazy loading. Exact-head checks and publication verification are required before release.
 

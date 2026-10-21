@@ -106,6 +106,8 @@ test('Care guest cards show identity, dates, status and urgent flags without ove
   await page.keyboard.press('Enter');
   await expect(card.locator('[data-v11217-roster-actions] [data-v11217-early-checkout]')).toBeVisible();
   const sameDay = page.locator('#directory-grid > .directory-card[data-directory-dog-id="' + sameDayDogId + '"]');
+  await expect(sameDay.locator(':scope > .directory-guest-tile-open .directory-roster-context')).toHaveText('Same-day care · 17 Oct');
+  await expect(sameDay.locator(':scope > .directory-guest-tile-open .directory-roster-owner')).toHaveText('Owner: Sam Owner');
   await expect(sameDay.locator('[data-v11217-roster-actions] > button')).toHaveCount(1);
   await expect(sameDay.locator('[data-v11217-roster-checkin]')).toBeVisible();
   await sameDay.locator('.v11217-roster-more-actions > summary').click();

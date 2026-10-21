@@ -80,7 +80,7 @@
       root = document.createElement('button');
       root.type = 'button';
       root.dataset.waffleArrivalReady = '';
-      root.innerHTML = `<span data-arrival-copy><strong data-arrival-label></strong><small data-arrival-detail></small></span><span data-arrival-action aria-hidden="true">Review care</span>`;
+      root.innerHTML = `<span data-arrival-copy><span data-arrival-checklist-row><span data-arrival-step>Intake</span><strong data-arrival-label></strong></span><small data-arrival-detail></small><span data-arrival-checklist-row><span data-arrival-step>Care</span><span data-arrival-care>Review instructions</span></span></span><span data-arrival-action aria-hidden="true">Review care</span>`;
       root.addEventListener('click', event => {
         event.preventDefault(); event.stopPropagation();
         card.querySelector('.directory-guest-tile-open')?.click();
@@ -94,8 +94,8 @@
     const d = identity(card);
     root.dataset.stateSignature = signature(card, state);
     const dogIdentity = [d.name, d.dogNumber ? `Dog Number ${d.dogNumber}` : '', d.owner ? `owner ${d.owner}` : '', d.start && d.end ? `${d.start} to ${d.end}` : ''].filter(Boolean).join(', ');
-    root.setAttribute('aria-label', `Review care for ${dogIdentity || 'this dog'}: ${label}${detailText ? `. ${detailText}` : ''}`);
-    root.title = detail;
+    root.setAttribute('aria-label', `Review care for ${dogIdentity || 'this dog'}: ${label}${detailText ? `. ${detailText}` : ''}. Review feeding, medication and safety before check-in.`);
+    root.title = `${detail} Review feeding, medication and safety before check-in.`;
     return root;
   }
 
