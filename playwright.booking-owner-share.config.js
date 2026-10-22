@@ -11,5 +11,3 @@ module.exports = defineConfig({
   projects: [{ name: 'chromium', use: { browserName: 'chromium' } }, { name: 'webkit', use: { browserName: 'webkit' } }],
   webServer: { command: `"${python}" -m http.server 4331 --bind 127.0.0.1`, url: 'http://127.0.0.1:4331/waffle-runtime.css', cwd: __dirname, reuseExistingServer: false, timeout: 10000, stdout: 'ignore', stderr: 'ignore' }
 });
-
-

@@ -176,12 +176,3 @@ test('copy fallback selects the link; returned action stays usable at 320 and 14
   }
   expect(await page.evaluate(() => window.fixtureClipboardWrites)).toHaveLength(1);
 });
-
-
-
-
-
-
-
-
-
