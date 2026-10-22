@@ -4,8 +4,7 @@ const path = require('node:path');
 const { resolveLocalBackendAction } = require('../scripts/local-network-policy');
 const calendar = fs.readFileSync(path.join(__dirname, 'fixtures/fullcalendar.global.min.js'), 'utf8');
 
-test('the shipped loader opens Multiple visits from Add and restores a reusable menu', async ({ page, baseURL }, testInfo) => {
-  const writes = [];
+async function installReadOnlyRuntime(page, writes) {
   await page.route('**/*', async route => {
     const req = route.request(), url = req.url();
     if (!['GET', 'HEAD'].includes(req.method())) {
@@ -33,6 +32,11 @@ test('the shipped loader opens Multiple visits from Add and restores a reusable 
     }
     return route.continue();
   });
+}
+
+test('the shipped loader opens Multiple visits from Add and restores a reusable menu', async ({ page, baseURL }, testInfo) => {
+  const writes = [];
+  await installReadOnlyRuntime(page, writes);
   for (const width of [390, 1440]) {
     await page.setViewportSize({ width, height: 844 });
     await page.goto(`${baseURL}/directory.html?bookingPlanRuntime=1`, { waitUntil: 'domcontentloaded' });
@@ -97,6 +101,86 @@ test('the shipped loader opens Multiple visits from Add and restores a reusable 
     }
     expect(await page.locator('.p4-plan-review').evaluate(node => node.scrollWidth <= node.clientWidth)).toBe(true);
     await modal.locator('[data-p4-close]').click();
+  }
+  expect(writes).toEqual([]);
+});
+
+
+test('the shipped booking modal keeps returning Care compact, editable and reachable', async ({ page, baseURL }, testInfo) => {
+  const writes = [];
+  await installReadOnlyRuntime(page, writes);
+  for (const width of [320, 1440]) {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto(baseURL + '/directory.html?returningCareRuntime=1', { waitUntil: 'domcontentloaded' });
+    await page.waitForFunction(() => document.documentElement.dataset.waffleUiReady === 'true' && window.WAFFLE_PHASE4_BOOKING?.openPlan);
+    await page.evaluate(() => {
+      const query = window.queryAppsScript, dogId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+      window.returningRuntimeReads = [];
+      const readFixture = async (payload, options) => {
+        if (!['list_dog_identities', 'get_dog_history'].includes(payload.action)) return query(payload, options);
+        window.returningRuntimeReads.push(payload.action);
+        if (payload.action === 'list_dog_identities') return { result: 'success', identities: [{ dogId, dogNumber: '00017', dogName: 'Fixture Luna', breed: 'Pug', ownerName: 'Alex Example' }] };
+        return { result: 'success', history: {
+          previousStays: [{ stayId: 'fixture-prior', stayKey: 'Fixture Luna|2026-10-01|2026-10-06', startDate: '2026-10-01', endDate: '2026-10-06' }],
+          latestCompletedProfile: { sourceDogId: dogId, sourceStayId: 'fixture-prior', sourceStayKey: 'Fixture Luna|2026-10-01|2026-10-06', sourceStartDate: '2026-10-01', sourceEndDate: '2026-10-06', intakeAttributes: { feedingTimes: '7 am and 5 pm', foodAllergies: 'Chicken', sleepLocation: 'Own bed' }, riskFlags: { foodAllergy: true, escapeRisk: false } }
+        } };
+      };
+      window.queryAppsScript = readFixture;
+      if (window.queryAppsScript !== readFixture) throw new Error('Read-only fixture hook unavailable');
+    });
+    const add = width < 768 ? page.locator('#wh75MobileBottomNav [data-wh78-quick-add]') : page.locator('#v10QuickAddButton');
+    await add.click();
+    await page.locator('[data-v10-quick-action="visit-plan"]').click();
+    const modal = page.locator('#p4Modal');
+    await expect(modal).toBeVisible();
+    await page.locator('#p4PlanOwner').fill('Alex Example');
+    await page.locator('#p4PlanNext').click();
+    await page.locator('#p4LoadDogIdentities').click();
+    await expect(page.locator('#p4DogIdentity option[value="aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"]')).toHaveCount(1);
+    await page.locator('#p4DogIdentity').selectOption('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');
+    const source = page.locator('.p4-care-source'), summary = page.locator('.p4-care-disclosure summary');
+    await expect(source).toContainText('Dog ID #00017');
+    await expect(source).toContainText('From stay ending 6 Oct 2026');
+    await expect(page.locator('#p4CareConfirm')).toBeHidden();
+    await source.scrollIntoViewIfNeeded();
+    if (testInfo.project.name === 'chromium') {
+      const dir = path.resolve(__dirname, '..', 'output', 'releases', '2026.10.22.03', 'evidence');
+      fs.mkdirSync(dir, { recursive: true });
+      await page.screenshot({ path: path.join(dir, 'runtime-returning-care-' + width + '.png') });
+    }
+    const readsBefore = await page.evaluate(() => window.returningRuntimeReads.length);
+    await summary.click();
+    const feeding = page.locator('[data-p4-care-profile="feedingTimes"]');
+    await feeding.fill('6:30 am and 5 pm');
+    await page.locator('#p4CareConfirm').check();
+    await summary.click();
+    await expect(page.locator('[data-p4-care-decision]')).toHaveText('Reviewed care selected for copying.');
+    await summary.click();
+    await expect(feeding).toHaveValue('6:30 am and 5 pm');
+    await expect(page.locator('#p4CareConfirm')).toBeChecked();
+    for (const dark of [false, true]) {
+      await page.evaluate(dark => document.body.classList.toggle('dark-theme', dark), dark);
+      await page.locator('#p4CareConfirm').scrollIntoViewIfNeeded();
+      const layout = await modal.evaluate(node => {
+        const confirm = node.querySelector('#p4CareConfirm').closest('label'), box = confirm.getBoundingClientRect();
+        const hit = document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2);
+        const body = node.querySelector('.p4-body').getBoundingClientRect();
+        return { width: innerWidth, docWidth: document.documentElement.scrollWidth, height: box.height, hit: hit === confirm || confirm.contains(hit), inBody: box.top >= body.top - 1 && box.bottom <= body.bottom + 1 };
+      });
+      expect(layout.docWidth).toBeLessThanOrEqual(layout.width);
+      expect(layout.height).toBeGreaterThanOrEqual(44);
+      expect(layout.hit && layout.inBody, JSON.stringify(layout)).toBe(true);
+    }
+    await page.locator('#p4PlanAddDog').click();
+    await page.locator('#p4PlanNext').click();
+    await expect(page.locator('#p4PlanStepLabel')).toContainText('Dates');
+    await expect(page.locator('#p4ReturningMini')).toBeHidden();
+    await page.locator('#p4PlanDisclosure > summary').click();
+    await expect(source).toBeVisible();
+    await expect(page.locator('#p4CareConfirm')).toBeChecked();
+    expect(await page.evaluate(() => window.returningRuntimeReads.length)).toBe(readsBefore);
+    await modal.locator('[data-p4-close]').click();
+    await expect(modal).toBeHidden();
   }
   expect(writes).toEqual([]);
 });

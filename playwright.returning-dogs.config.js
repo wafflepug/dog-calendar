@@ -7,5 +7,9 @@ module.exports = defineConfig({
   fullyParallel: false,
   workers: 1,
   reporter: 'line',
-  use: { browserName: 'chromium', headless: true, viewport: { width: 1280, height: 900 } }
+  use: { headless: true, viewport: { width: 1280, height: 900 } },
+  projects: [
+    { name: 'chromium', use: { browserName: 'chromium' } },
+    { name: 'webkit', use: { browserName: 'webkit' } }
+  ]
 });

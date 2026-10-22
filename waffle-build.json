@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.10.22.02",
-  "releaseName": "Compact Departure Handover",
+  "assetRevision": "2026.10.22.03",
+  "releaseName": "Compact Returning Care Review",
   "careIteration": {
     "returningDogSuggestions": true,
     "reviewedCareInheritance": true,

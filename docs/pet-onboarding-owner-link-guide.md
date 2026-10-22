@@ -17,7 +17,7 @@ You only enter booking basics here. The owner completes the detailed care form u
 
 1. Open **Add → Boarding → Choose returning dog**. You can also use **Care → select the existing dog → More tools → Booking tools → Book Again**.
 2. Choose the existing dog by **Dog ID, owner and breed**. Two dogs can have the same name, so check the Dog ID before continuing.
-3. Enter the new stay dates. Review any saved care details before choosing to reuse them.
+3. Enter the new stay dates. Check the completed-source date and open **Review saved care** if you want to reuse it. Review and edit the saved instructions, then explicitly approve copying them. Editing again clears approval; review and approve again. Without approval, the booking does not copy saved care.
 4. Select **Create Confirmed Stay**. When the stay is saved, its owner message appears in the same booking panel.
 5. Choose **Copy message**, paste it into the owner’s chat and send. Ask the owner to review saved details and update anything that has changed.
 
