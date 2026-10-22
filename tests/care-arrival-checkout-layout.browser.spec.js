@@ -16,6 +16,7 @@ const intakeStatus = read('care-intake-status.js');
 const arrivalReady = read('care-arrival-ready.js');
 const mobileCheckout = read('waffle-v11.2.19.js');
 const touchScroll = read('quick-add-touch-scroll.js');
+const evidenceDir = path.join(root, 'output', 'releases', '2026.10.22.02', 'evidence');
 
 async function installVisualRuntime(page, baseURL, card) {
   await page.evaluate(() => {
@@ -75,9 +76,8 @@ test('Care arrival and guided checkout remain reachable at the configured viewpo
   expect(light.height).toBeGreaterThanOrEqual(44);
   await measureNoOverflow(page);
   if (testInfo.project.name === 'chromium-390') {
-    const dir = path.join(root, 'output', 'care-journey-final-results');
-    fs.mkdirSync(dir, { recursive: true });
-    await page.screenshot({ path: path.join(dir, 'arrival-390-light.png') });
+    fs.mkdirSync(evidenceDir, { recursive: true });
+    await page.screenshot({ path: path.join(evidenceDir, 'arrival-390-light.png') });
   }
   await page.evaluate(() => document.body.classList.add('dark-theme'));
   const dark = await arrivalStatus.evaluate(node => ({ height: node.getBoundingClientRect().height, background: getComputedStyle(node).backgroundColor }));
@@ -85,17 +85,15 @@ test('Care arrival and guided checkout remain reachable at the configured viewpo
   expect(dark.background).not.toBe(light.background);
   await measureNoOverflow(page);
   if (testInfo.project.name === 'chromium-390') {
-    const dir = path.join(root, 'output', 'care-journey-final-results');
-    await page.screenshot({ path: path.join(dir, 'arrival-390-dark.png') });
+    await page.screenshot({ path: path.join(evidenceDir, 'arrival-390-dark.png') });
   }
   await page.evaluate(() => document.body.classList.remove('dark-theme'));
   await next.click();
   await expect(selected.locator('[data-v11217-roster-checkin]')).toBeFocused();
 
   if (testInfo.project.name === 'chromium-390' || testInfo.project.name === 'chromium-1440') {
-    const dir = path.join(root, 'output', 'care-journey-final-results');
-    fs.mkdirSync(dir, { recursive: true });
-    await page.screenshot({ path: path.join(dir, `care-arrival-checkout-${testInfo.project.use.viewport.width}.png`), fullPage: true });
+    fs.mkdirSync(evidenceDir, { recursive: true });
+    await page.screenshot({ path: path.join(evidenceDir, `care-arrival-checkout-${testInfo.project.use.viewport.width}.png`), fullPage: true });
   }
 
   const card = page.getByTestId('selected-card');
@@ -141,10 +139,35 @@ test('Care arrival and guided checkout remain reachable at the configured viewpo
   expect(layout.modalScrollWidth).toBeLessThanOrEqual(testInfo.project.use.viewport.width);
   if (testInfo.project.use.viewport.width <= 390) expect(layout.bodyScroll).toBeGreaterThanOrEqual(layout.bodyClient);
   if (testInfo.project.name === 'chromium-390' || testInfo.project.name === 'chromium-1440') {
-    const dir = path.join(root, 'output', 'care-journey-final-results');
-    fs.mkdirSync(dir, { recursive: true });
-    await page.screenshot({ path: path.join(dir, `guided-checkout-${testInfo.project.use.viewport.width}.png`) });
+    fs.mkdirSync(evidenceDir, { recursive: true });
+    await page.screenshot({ path: path.join(evidenceDir, `guided-checkout-${testInfo.project.use.viewport.width}.png`) });
   }
+  await page.evaluate(() => {
+    const modal = document.querySelector('#v11217GuidedCheckout');
+    modal.querySelectorAll('h3,p,strong,small,span,label,button,textarea').forEach(node => node.style.setProperty('font-size', '20px', 'important'));
+  });
+  await note.evaluate(node => node.scrollIntoView({ block: 'center' }));
+  const enlarged = await page.evaluate(() => {
+    const modal = document.querySelector('#v11217GuidedCheckout');
+    const body = modal.querySelector('.v11217-modal-body');
+    const note = modal.querySelector('[data-v11217-guided-note]').getBoundingClientRect();
+    const bodyRect = body.getBoundingClientRect();
+    const actions = modal.querySelector('.v11217-modal-actions');
+    return {
+      bodyScroll: body.scrollHeight,
+      bodyClient: body.clientHeight,
+      noteReachable: note.bottom > bodyRect.top && note.top < bodyRect.bottom,
+      buttons: [...actions.querySelectorAll('button')].map(button => {
+        const r = button.getBoundingClientRect();
+        const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+        return { height: r.height, bottom: r.bottom, hit: hit === button || button.contains(hit) };
+      }),
+      height: innerHeight
+    };
+  });
+  expect(enlarged.noteReachable, JSON.stringify(enlarged)).toBe(true);
+  expect(enlarged.buttons.every(button => button.height >= 44 && button.bottom <= enlarged.height && button.hit), JSON.stringify(enlarged)).toBe(true);
+  await page.evaluate(() => document.querySelector('#v11217GuidedCheckout').querySelectorAll('*').forEach(node => node.style.removeProperty('font-size')));
   await expect.poll(() => page.evaluate(() => window.writes.length)).toBe(0);
   await measureNoOverflow(page);
   if (testInfo.project.use.viewport.width <= 390) {

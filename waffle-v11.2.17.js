@@ -691,10 +691,10 @@
     modal.setAttribute('aria-modal', 'true');
     modal.setAttribute('aria-labelledby', 'v11217GuidedCheckoutTitle');
     modal.innerHTML = `<section class="v11217-modal-card">
-      <header class="v11217-modal-head"><div><small>DEPARTURE</small><h3 id="v11217GuidedCheckoutTitle">Check out</h3><p>Review this stay before confirming departure.</p></div><button type="button" class="v11217-modal-close" data-v11217-guided-close aria-label="Close checkout">×</button></header>
-      <div class="v11217-modal-body"><div class="v11217-modal-dog"><strong data-v11217-guided-dog></strong><span data-v11217-guided-dogid></span><span data-v11217-guided-dates></span></div>
-      <div class="v11217-guided-checklist"><p><strong>Belongings</strong><span data-v11217-guided-belongings>Not loaded · check Care before handover</span></p><p><strong>Medication reference</strong><span data-v11217-guided-medication>Not loaded · check Care before handover</span></p></div>
-      <button type="button" data-v11217-guided-review-care hidden>Review Care · note kept</button>
+      <header class="v11217-modal-head"><div><small>DEPARTURE</small><h3 id="v11217GuidedCheckoutTitle" tabindex="-1">Check out</h3><p>Review this stay before confirming departure.</p></div><button type="button" class="v11217-modal-close" data-v11217-guided-close aria-label="Close checkout">×</button></header>
+      <div class="v11217-modal-body"><div class="v11217-modal-dog"><strong data-v11217-guided-dog></strong><span data-v11217-guided-dogid></span><div class="v11217-guided-dates"><span><small>Booked stay</small><span data-v11217-guided-dates></span></span><span><small data-v11217-guided-checkout-caption>Checkout today</small><span data-v11217-guided-checkout-today></span></span></div></div>
+      <div class="v11217-guided-checklist"><section><strong>Belongings</strong><div data-v11217-guided-belongings>Not available in this summary</div></section><section><strong>Medication</strong><div data-v11217-guided-medication>Not available in this summary</div></section></div>
+      <div class="v11217-guided-missing" data-v11217-guided-missing hidden><span>Some Care details are not available here. Review Care before handover.</span><button type="button" data-v11217-guided-review-care>Review Care · note kept</button></div>
       <div class="v11217-field"><label for="v11217GuidedCheckoutNote">Handover note (for this checkout)</label><textarea id="v11217GuidedCheckoutNote" data-v11217-guided-note maxlength="1000" placeholder="Optional handover details…"></textarea></div>
       <div class="v11217-action-feedback" data-v11217-guided-feedback role="alert" aria-live="assertive" hidden></div></div>
       <footer class="v11217-modal-actions"><button type="button" class="v11217-cancel" data-v11217-guided-close>Cancel</button><button type="button" class="v11217-confirm" data-v11217-guided-confirm>Confirm checkout</button></footer>
@@ -708,10 +708,17 @@
     modal.addEventListener('keydown', event => {
       if (event.key === 'Escape') { event.preventDefault(); if (!guidedCheckoutBusy) closeGuidedCheckout(); }
       if (event.key === 'Tab') {
-        const items = [...modal.querySelectorAll('button:not([disabled]),input:not([disabled]),textarea:not([disabled])')];
+        const visible = node => {
+          if (!node.isConnected || node.disabled || node.closest('[hidden],[aria-hidden="true"],[inert]') || !node.getClientRects().length) return false;
+          const style = getComputedStyle(node);
+          return style.visibility !== 'hidden' && style.display !== 'none';
+        };
+        const items = [...modal.querySelectorAll('button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),a[href],[tabindex]:not([tabindex="-1"])')].filter(visible);
         const first = items[0], last = items[items.length - 1];
-        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+        const heading = modal.querySelector('#v11217GuidedCheckoutTitle');
+        if (event.shiftKey && (document.activeElement === first || document.activeElement === heading)) { event.preventDefault(); (last || heading).focus(); }
         else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+        else if (!items.length) { event.preventDefault(); heading.focus(); }
       }
     });
     return modal;
@@ -728,37 +735,49 @@
     const dogNumber = card.dataset?.directoryDogNumber || card.querySelector('#dogNumber, [data-directory-dog-number], .directory-dog-number')?.textContent?.trim();
     modal.querySelector('[data-v11217-guided-dogid]').textContent = dogNumber ? `Dog ID: ${dogNumber}` : '';
     modal.querySelector('[data-v11217-guided-dates]').textContent = `${formatDate(payload.startDate)} → ${formatDate(payload.endDate)}`;
+    const today = todayKey();
+    modal.querySelector('[data-v11217-guided-checkout-today]').textContent = formatDate(today);
     const loadedValue = selectors => {
       for (const selector of selectors) {
         const node = card.querySelector(selector);
         if (node && !node.matches('[aria-busy="true"],[data-pending="true"],.is-pending,[data-loading="true"]')) {
           const empty = node.querySelector('.belongings-summary-empty');
           const list = node.querySelector('.belongings-summary-list');
-          const listText = list ? [...list.children].map(item => item.textContent.trim()).filter(Boolean).join(', ') : '';
-          const value = String(empty?.textContent || listText || node.dataset?.value || node.textContent || '').trim();
-          if (value && !/loading|not loaded|pending/i.test(value)) return value;
+          const listItems = list ? [...list.children].map(item => item.textContent.trim()).filter(Boolean) : [];
+          const value = String(empty?.textContent || node.dataset?.value || (list ? '' : node.textContent) || '').trim();
+          if ((listItems.length || value) && !/loading|not loaded|pending/i.test([value, ...listItems].join(' '))) return { value, listItems };
         }
       }
-      return 'Not loaded · check Care before handover';
+      return null;
     };
     const belongings = loadedValue(['[data-belongings-summary]']);
     const medication = loadedValue(['[data-care-brief-medication]']);
-    modal.querySelector('[data-v11217-guided-belongings]').textContent = belongings;
-    modal.querySelector('[data-v11217-guided-medication]').textContent = medication;
+    const renderEvidence = (target, evidence) => {
+      target.replaceChildren();
+      if (!evidence) { target.textContent = 'Not available in this summary'; return; }
+      if (evidence.listItems.length) {
+        const list = document.createElement('ul');
+        evidence.listItems.forEach(item => { const li = document.createElement('li'); li.textContent = item; list.appendChild(li); });
+        target.appendChild(list);
+      } else target.textContent = evidence.value;
+    };
+    renderEvidence(modal.querySelector('[data-v11217-guided-belongings]'), belongings);
+    renderEvidence(modal.querySelector('[data-v11217-guided-medication]'), medication);
     const exactStay = { stayId: payload.stayId, dogId: payload.dogId, stayKey: payload.stayKey };
     const restoreDraft = sameGuidedStay(guidedReviewDraft, exactStay);
     modal.querySelector('[data-v11217-guided-note]').value = restoreDraft ? guidedReviewDraft.note : '';
     if (restoreDraft) guidedReviewDraft = null;
-    const missingEvidence = /^Not loaded\b/.test(belongings) || /^Not loaded\b/.test(medication);
+    const missingEvidence = !belongings || !medication;
     const reviewCare = modal.querySelector('[data-v11217-guided-review-care]');
     const hasStableIdentity = !!exactStay.stayId && !!exactStay.dogId && !!exactStay.stayKey;
+    modal.querySelector('[data-v11217-guided-missing]').hidden = !missingEvidence;
     reviewCare.hidden = !missingEvidence || !hasStableIdentity || !card.querySelector('.directory-guest-tile-open');
     modal.querySelector('[data-v11217-guided-feedback]').hidden = true;
     modal.querySelector('[data-v11217-guided-confirm]').disabled = false;
     modal.querySelector('[data-v11217-guided-confirm]').textContent = 'Confirm checkout';
     modal.querySelectorAll('[data-v11217-guided-close]').forEach(button => { button.disabled = false; });
     modal.hidden = false;
-    modal.querySelector('[data-v11217-guided-confirm]').focus();
+    modal.querySelector('#v11217GuidedCheckoutTitle').focus();
   }
   function reviewGuidedCare() {
     if (guidedCheckoutBusy || !guidedCheckoutCard || !guidedCheckoutPayload) return;

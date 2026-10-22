@@ -16,9 +16,11 @@ test('same-day checkout reviews selected identity, opens without writes, and con
   const dialog = page.getByRole('dialog', { name: 'Check out' });
   await expect(dialog).toBeVisible();
   await expect(dialog).toContainText('Dog ID: #0017');
-  await expect(dialog).toContainText('Blue lead, Food tub');
+  await expect(dialog.locator('[data-v11217-guided-belongings] li')).toHaveText(['Blue lead', 'Food tub']);
   await expect(dialog).toContainText('Return blue inhaler');
-  await expect(dialog).toContainText('18 Oct 2026');
+  await expect(dialog.locator('[data-v11217-guided-dates]')).toContainText('18 Oct 2026');
+  await expect(dialog.locator('[data-v11217-guided-checkout-caption]')).toHaveText('Checkout today');
+  await expect(dialog.locator('[data-v11217-guided-checkout-today]')).toHaveText('18 Oct 2026');
   await expect.poll(() => page.evaluate(() => window.writes.length)).toBe(0);
   const confirm = dialog.locator('[data-v11217-guided-confirm]');
   await dialog.locator('[data-v11217-guided-note]').fill('Blue lead handed to owner');
@@ -74,13 +76,17 @@ test('transport failure stays retryable in the guided sheet and duplicate confir
   expect(await page.evaluate(() => window.writes.map(write => write.note))).toEqual(['Keep the blue lead note', 'Keep the blue lead note']);
 });
 
-test('queued offline result is not treated as saved and unavailable evidence is stated plainly', async ({ page }) => {
+test('queued offline result is not treated as saved and missing evidence shares one review prompt', async ({ page }) => {
   await setup(page, { loadedEvidence: false });
   await page.evaluate(() => { window.queued = true; });
   const card = page.getByTestId('selected-card');
   await openCheckout(card);
   const dialog = page.locator('#v11217GuidedCheckout');
-  await expect(dialog).toContainText('Not loaded · check Care before handover');
+  await expect(dialog.locator('[data-v11217-guided-missing]')).toContainText('Some Care details are not available here');
+  await expect(dialog.locator('[data-v11217-guided-belongings]')).toHaveText('Not available in this summary');
+  await expect(dialog.locator('[data-v11217-guided-medication]')).toHaveText('Not available in this summary');
+  await expect(dialog.locator('[data-v11217-guided-missing]')).toContainText('Review Care · note kept');
+  await expect(dialog.locator('[data-v11217-guided-missing]')).toHaveCount(1);
   await dialog.locator('[data-v11217-guided-note]').fill('Retain this note on failure');
   await dialog.locator('[data-v11217-guided-confirm]').click();
   await expect(dialog).toContainText('cannot be queued');
@@ -165,7 +171,59 @@ test('checkout keeps full medication detail and distinguishes no medication from
   await openCheckout(card);
   await expect(dialog.locator('[data-v11217-guided-medication]')).toHaveText('No medication instructions saved');
   await expect(dialog.locator('[data-v11217-guided-review-care]')).toBeVisible();
-  await expect(dialog.locator('[data-v11217-guided-belongings]')).toContainText('Not loaded');
+  await expect(dialog.locator('[data-v11217-guided-belongings]')).toHaveText('Not available in this summary');
+});
+
+test('neutral initial focus and visible keyboard trap do not confirm checkout', async ({ page }) => {
+  await setup(page, { loadedEvidence: false });
+  await openCheckout(page.getByTestId('selected-card'));
+  const dialog = page.locator('#v11217GuidedCheckout');
+  const heading = dialog.locator('#v11217GuidedCheckoutTitle');
+  const confirm = dialog.locator('[data-v11217-guided-confirm]');
+  const close = dialog.locator('[data-v11217-guided-close]').first();
+  await expect(heading).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(dialog).toBeVisible();
+  await expect.poll(() => page.evaluate(() => window.writes.length)).toBe(0);
+  await page.keyboard.press('Shift+Tab');
+  await expect(confirm).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(close).toBeFocused();
+  await expect(dialog.locator('[data-v11217-guided-review-care]')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(dialog).toBeHidden();
+  await expect.poll(() => page.evaluate(() => window.writes.length)).toBe(0);
+});
+
+test('loaded details hide the review action and keyboard navigation skips it', async ({ page }) => {
+  await setup(page);
+  await openCheckout(page.getByTestId('selected-card'));
+  const dialog = page.locator('#v11217GuidedCheckout');
+  await expect(dialog.locator('[data-v11217-guided-review-care]')).toBeHidden();
+  await page.keyboard.press('Tab');
+  await expect(dialog.locator('[data-v11217-guided-close]').first()).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(dialog.locator('[data-v11217-guided-note]')).toBeFocused();
+  await page.keyboard.press('Shift+Tab');
+  await expect(dialog.locator('[data-v11217-guided-close]').first()).toBeFocused();
+  expect(await page.evaluate(() => window.writes.length)).toBe(0);
+});
+
+test('explicit empty belongings stay distinct from pending list evidence', async ({ page }) => {
+  await setup(page);
+  const card = page.getByTestId('selected-card');
+  const evidence = card.locator('[data-belongings-summary]');
+  await evidence.evaluate(node => { node.innerHTML = '<span class="belongings-summary-empty">No belongings recorded</span>'; });
+  await openCheckout(card);
+  const dialog = page.locator('#v11217GuidedCheckout');
+  await expect(dialog.locator('[data-v11217-guided-belongings]')).toHaveText('No belongings recorded');
+  await expect(dialog.locator('[data-v11217-guided-missing]')).toBeHidden();
+  await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await evidence.evaluate(node => { node.innerHTML = '<ul class="belongings-summary-list"><li>Loading belongings…</li></ul>'; });
+  await openCheckout(card);
+  await expect(dialog.locator('[data-v11217-guided-belongings]')).toHaveText('Not available in this summary');
+  await expect(dialog.locator('[data-v11217-guided-review-care]')).toBeVisible();
+  expect(await page.evaluate(() => window.writes.length)).toBe(0);
 });
 
 test('checkout without a note leaves the supported note field empty and can proceed for a second guest', async ({ page }) => {

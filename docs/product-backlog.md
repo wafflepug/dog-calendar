@@ -5,7 +5,9 @@ Reviewed 17 September 2026. Repository: `wafflepug/dog-calendar`; always start i
 
 ## Current Care iteration - 22 October 2026
 
-Implemented candidate 2026.10.22.01: [Arrival and visit-plan clarity](arrival-planner-clarity.md). Refines arriving-dog owner/date context, per-dog repeated-visit review, and compact intake/Care preparation. Preserve the existing stable identities, direct check-in and partial-save recovery. Next: audit compact departure handover. Publication remains subject to exact-head CI and live verification.
+Implemented candidate 2026.10.22.02: [Compact departure handover](departure-handover-clarity.md). Separates loaded belongings into a short list, keeps medication instructions complete, consolidates unavailable-detail guidance and labels booked dates separately from checkout today. Initial keyboard focus is on the heading, with visible-only navigation. No extra profile read or backend change. Publication requires exact-head checks and live verification.
+
+Next ready item: audit returning-dog booking setup so the existing Dog ID, dated source and explicit care reuse are clear without repeated prompts. Preserve same-name separation, stale-response guards and lazy reads.
 
 ## Previous Care iteration - 21 October 2026
 

@@ -28,8 +28,8 @@ The shortcut uses information already loaded on the page. It does not download e
 
 ## Checkout due today
 1. In **Care → Staying**, choose **Check Out** for the correct dog. If Check In is still the primary action, expand **More actions**.
-2. Check the dog identity and stay dates in the departure sheet. Same-name dogs remain separate bookings.
-3. Review the loaded belongings and medication reference. **Not loaded** means the sheet cannot verify that information. Choose **Review Care · note kept** to inspect the same guest's Care profile. To continue checkout, either use that profile's existing **Check Out** action or choose **Back to Staying** and reopen **Check Out**; both restore the note for that exact stay. The sheet does not fetch a profile in the background.
+2. Check the dog identity, **Booked stay** dates and **Checkout today** date in the departure sheet. Same-name dogs remain separate bookings.
+3. Review each listed belonging and the complete medication instructions. **Not available in this summary** means that the sheet cannot verify that information; it does not mean none or already returned. One shared message directs you to review Care. Choose **Review Care · note kept** to inspect the same guest's Care profile. To continue checkout, either use that profile's existing **Check Out** action or choose **Back to Staying** and reopen **Check Out**; both restore the note for that exact stay. The sheet does not fetch a profile in the background.
 4. Optionally add a handover note. It belongs to this checkout, not to the dog’s permanent care instructions.
 5. Choose **Confirm checkout**. Wait for a verified save; only then does the stay move to **Past**.
 
