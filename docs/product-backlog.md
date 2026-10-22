@@ -5,6 +5,10 @@ Reviewed 17 September 2026. Repository: `wafflepug/dog-calendar`; always start i
 
 ## Current Care iteration - 23 October 2026
 
+Candidate 2026.10.23.02: [Multi-visit completion and sharing](multi-visit-completion.md). Compact next-action guidance and deliberate selection of each saved stay's own returned owner link. Keep queued/failed outcomes truthful, successful intents frozen, and sharing separate from sending. This branch builds on pending PR #242; neither candidate is published while the broader UI gate remains unresolved.
+
+Release priority: investigate and resolve the existing phone-regression gate before publishing these candidates. Preserve the read-count and hit-test requirements; establish a repeatable cause rather than retrying indefinitely or weakening assertions. Next feature item: audit queued-plan recovery messaging using the existing queue/reconciliation states, without automatic resubmission or additional background polling.
+
 Candidate 2026.10.23.01: [Multi-visit Care and owner sharing](multi-visit-care-polish.md). Five scoped improvements: captured per-dog care choice, explicit pre-save dog editing, compact dog context on Dates, a primary owner care-link copy action after booking, and bounded cached browser CI setup. Preserve identity guards, explicit inheritance, immutable started save intents, lazy reads and read-only production smoke.
 
 Next ready item: compact multi-visit completion guidance from existing saved/queued/failed result data.

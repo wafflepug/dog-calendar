@@ -28,7 +28,7 @@ You only enter booking basics here. The owner completes the detailed care form u
 3. Use that dog's **Edit** action to make changes before saving starts. Choose **Update dog** to apply them, or **Cancel** to keep the original. Changing saved instructions requires review again or a deliberate choice to copy no saved care.
 4. On **Dates**, check the compact dog list before adding visit dates. Review the complete dog/date schedule on **Review**.
 5. Confirm once. If some visits are queued or failed, use the existing Resume action; do not start a replacement plan for successful visits. Editing is unavailable after saving starts.
-6. Share each saved stay's own form from Care. The single-booking Copy action does not send a combined message for a multi-visit plan.
+6. Expand **Share a saved stay’s care form**, choose one saved dog/date result, and check its Dog ID and dates before copying. Paste that stay’s link into the owner’s usual chat and check the recipient before sending. Copying does not send a message. Queued or failed stays have no sharing action. If a saved stay has no returned link, prepare it later from **Care → Owner Care Link**.
 
 ## Share the form later, or send it again
 
@@ -55,7 +55,7 @@ The existing owner form and its required safety questions remain in place. Owner
 |---|---|
 | Saved on this device / awaiting sync | Keep the page available and check sync status. Once the stay appears in Care, use Owner Care Link there. Do not create the same stay again. To enter a different pet, use Add another dog. |
 | Save failed | Your entries remain. Check the connection, then use the retry button. |
-| Stay saved but no care link returned | Choose Prepare owner care link in the saved booking result, or open Owner Care Link in Care. The booking does not need to be recreated. |
+| Stay saved but no care link returned | For a single booking, choose **Prepare owner care link** in the saved booking result, or open **Care → Owner Care Link**. For a multi-visit plan, prepare the link later from **Care → Owner Care Link**. The booking does not need to be recreated. |
 | Copy was blocked | The text is selected. Press and hold to copy on your phone, or use Ctrl+C on a computer; then paste it into the owner’s chat. |
 | Sharing cancelled | Nothing is marked as delivered. The message remains ready to copy or share. |
 | More than one Dog ID has the same name | Stop and verify the correct record. The app blocks the current name/date link action when it cannot safely distinguish the dogs; do not rename or merge dogs just to bypass this check. |
