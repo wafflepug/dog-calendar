@@ -15,7 +15,7 @@ const styleEnd = core.indexOf('\nlet active=', styleStart);
 
 async function setup(page) {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.setContent('<div id="p4Modal" class="p4-modal"><section class="p4-card" role="dialog"><header class="p4-head"><h2>Booking</h2><button data-p4-close type="button">Close</button></header><nav class="p4-tabs"></nav><div class="p4-body"><section class="p4-panel" data-p4-panel="booking"></section><section data-p4-panel="capacity"></section><section data-p4-panel="owner"></section></div></section></div>');
+  await page.setContent('<div id="p4Modal" class="p4-modal"><section class="p4-card" role="dialog"><header class="p4-head"><h2>Booking</h2><button data-p4-close type="button">Close</button></header><nav class="p4-tabs"></nav><div class="p4-body"><section class="p4-panel" data-p4-panel="booking"></section><section data-p4-panel="capacity" hidden></section><section data-p4-panel="owner" hidden></section></div></section></div>');
   await page.evaluate(({ dogA, dogB, newDogA }) => {
     window.fixtureWrites = [];
     window.fixtureReads = [];
@@ -94,6 +94,29 @@ async function reviewAndSave(page) {
   await expect(page.locator('#p4PlanStatus')).toContainText('confirmed saved');
 }
 
+async function openSavedCare(page) {
+  const disclosure = page.locator('#p4ReturningMini .p4-care-disclosure');
+  if (await disclosure.getAttribute('open') === null) await disclosure.locator('summary').click();
+  await expect(disclosure).toHaveAttribute('open', '');
+}
+
+async function captureCarePlanStage(page, stage, testInfo) {
+  if (process.env.WAFFLE_CAPTURE_UI_EVIDENCE !== '1' || testInfo.project.name !== 'chromium') return;
+  const dir = path.join(root, 'output', 'releases', '2026.10.23.01', 'evidence');
+  fs.mkdirSync(dir, { recursive: true });
+  for (const width of [320, 1440]) {
+    await page.setViewportSize({ width, height: 844 });
+    for (const dark of [false, true]) {
+      await page.evaluate(dark => document.body.classList.toggle('dark-theme', dark), dark);
+      await expect(page.locator('#p4PlanStageHeading')).toBeVisible();
+      expect(await page.locator('#p4PlanDisclosure').evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
+      await page.screenshot({ path: path.join(dir, `plan-${stage}-${width}-${dark ? 'dark' : 'light'}.png`), fullPage: true });
+    }
+  }
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.evaluate(() => document.body.classList.remove('dark-theme'));
+}
+
 async function capturePlanEvidence(page, name, width, dark) {
   const evidenceDir = path.join(root, 'output', 'releases', '2026.10.22.01', 'evidence');
   fs.mkdirSync(evidenceDir, { recursive: true });
@@ -131,6 +154,211 @@ test('two dogs and two date ranges save four distinct confirmed stay intents', a
   await expect(page.locator('.p4-plan-review-contact')).toBeVisible();
   await expect(page.locator('.p4-plan-review-dogs')).toBeHidden();
   await expect(page.locator('#p4PlanRows')).toBeVisible();
+});
+
+test('each added dog keeps its own reviewed-care snapshot and Dates context', async ({ page }, testInfo) => {
+  await setup(page);
+  await page.evaluate(({ dogA }) => {
+    const core = window.WAFFLE_PHASE4_CORE, original = core.read;
+    window.WAFFLE_PHASE4_CORE.read = async payload => {
+      if (payload.action === 'get_dog_history') return { history: {
+        previousStays: [{ stayId: 'stay-exact', stayKey: 'Luna|2026-10-01|2026-10-06', startDate: '2026-10-01', endDate: '2026-10-06', status: 'checked_out', actualCheckoutDate: '2026-10-05' }],
+        latestCompletedProfile: { sourceDogId: dogA, sourceStayId: 'stay-exact', sourceStayKey: 'Luna|2026-10-01|2026-10-06', sourceEndDate: '2026-10-06', sourceCompletedDate: '2026-10-05', intakeAttributes: { feedingTimes: '7 am', foodAllergies: 'Chicken' }, riskFlags: { foodAllergy: true, escapeRisk: false } }
+      } };
+      return original(payload);
+    };
+  }, { dogA });
+  await page.locator('#p4Dog').fill('Luna');
+  await page.locator('#p4LoadDogIdentities').click();
+  await page.locator('#p4DogIdentity').selectOption(dogA);
+  await openSavedCare(page);
+  await expect(page.locator('[data-p4-care-profile="feedingTimes"]')).toHaveValue('7 am');
+  await openSavedCare(page);
+  await page.locator('[data-p4-care-profile="feedingTimes"]').fill('6:30 am');
+  await page.locator('#p4CareConfirm').check();
+  const readCount = await page.evaluate(() => window.fixtureReads.length);
+  await page.locator('#p4PlanAddDog').click();
+  const dogRow = page.locator('#p4PlanDogs [data-p4-plan-dog]').first();
+  await expect(dogRow).toContainText('Dog ID #00001');
+  await expect(dogRow).toHaveAttribute('data-p4-dog-id', dogA);
+  await expect(dogRow).toContainText('Saved care selected');
+  await expect(dogRow).toContainText('Source completed 2026-10-05');
+  await captureCarePlanStage(page, 'dogs', testInfo);
+  await page.locator('#p4Dog').fill('Changed current form');
+  await page.locator('#p4Breed').fill('Changed breed');
+  await page.locator('#p4PlanNext').click();
+  await expect(page.locator('#p4PlanStepLabel')).toContainText('Dates');
+  const dateContext = page.locator('#p4PlanVisits [data-p4-dates-dog]');
+  await expect(dateContext).toContainText('Dog ID #00001');
+  await expect(dateContext).toHaveAttribute('data-p4-dog-id', dogA);
+  await expect(dateContext).toContainText('Saved care selected');
+  await expect(dateContext).toContainText('Source completed 2026-10-05');
+  await captureCarePlanStage(page, 'dates', testInfo);
+  await page.locator('#p4PlanMode').selectOption('same-day');
+  await page.locator('#p4PlanStart').fill('2026-11-10');
+  await page.locator('#p4PlanAddVisit').click();
+  await page.locator('#p4PlanNext').click();
+  await page.locator('#p4PlanSave').click();
+  await expect(page.locator('#p4PlanStatus')).toContainText('confirmed saved');
+  const write = (await page.evaluate(() => window.fixtureWrites))[0];
+  expect(write.dogName).toBe('Luna');
+  expect(write.breed).toBe('Pug');
+  expect(write.dogId).toBe(dogA);
+  expect(write.inheritCareReview).toEqual({
+    sourceDogId: dogA, sourceStayId: 'stay-exact', sourceStayKey: 'Luna|2026-10-01|2026-10-06',
+    sourceEndDate: '2026-10-06', sourceCompletedDate: '2026-10-05', confirmed: true,
+    profile: { feedingTimes: '6:30 am', foodAllergies: 'Chicken' }, riskFlags: { foodAllergy: true, escapeRisk: false }
+  });
+  expect(write).not.toHaveProperty('careDraft');
+  expect(write).not.toHaveProperty('careSource');
+  expect(await page.evaluate(() => window.fixtureReads.length)).toBe(readCount);
+  if (process.env.WAFFLE_CAPTURE_UI_EVIDENCE === '1' && ['chromium', 'chromium-390'].includes(testInfo.project.name)) {
+    const dir = path.join(root, 'output', 'releases', '2026.10.23.01', 'evidence');
+    fs.mkdirSync(dir, { recursive: true });
+    for (const width of [320, 1440]) {
+      await page.setViewportSize({ width, height: 844 });
+      const dark = width === 320;
+      await page.evaluate(value => document.body.classList.toggle('dark-theme', value), dark);
+      await page.screenshot({ path: path.join(dir, `plan-care-context-${width}-${dark ? 'dark' : 'light'}.png`), fullPage: true });
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1)).toBe(true);
+    }
+  }
+});
+
+test('dog edits are targeted, cancelable, care changes require reconfirmation, and remove names the exact dog', async ({ page }) => {
+  await setup(page);
+  await page.evaluate(({ dogA }) => {
+    const core = window.WAFFLE_PHASE4_CORE, original = core.read;
+    core.read = async payload => {
+      if (payload.action !== 'get_dog_history') return original(payload);
+      window.fixtureReads.push(payload);
+      if (payload.dogId === dogA) return { history: {
+        previousStays: [{ stayId: 'stay-exact', stayKey: 'Luna|2026-10-01|2026-10-06', startDate: '2026-10-01', endDate: '2026-10-06', status: 'checked_out' }],
+        latestCompletedProfile: { sourceDogId: dogA, sourceStayId: 'stay-exact', sourceStayKey: 'Luna|2026-10-01|2026-10-06', sourceEndDate: '2026-10-06', sourceCompletedDate: '2026-10-06', intakeAttributes: { feedingTimes: '7 am' }, riskFlags: { foodAllergy: true } }
+      } };
+      return new Promise(resolve => { window.resolveDogBHistory = () => resolve({ history: { previousStays: [], stayCount: 0 } }); });
+    };
+  }, { dogA });
+  await page.locator('#p4Dog').fill('Luna');
+  await page.locator('#p4LoadDogIdentities').click();
+  await page.locator('#p4DogIdentity').selectOption(dogA);
+  await openSavedCare(page);
+  await expect(page.locator('[data-p4-care-profile="feedingTimes"]')).toHaveValue('7 am');
+  await page.locator('#p4PlanAddDog').click();
+  const originalLuna = page.locator('#p4PlanDogs [data-p4-plan-dog]').first();
+  await expect(originalLuna).toContainText('No care copied');
+  await expect(originalLuna).toContainText('Source completed 2026-10-06');
+  await addDog(page, 'Milo', dogB);
+  const readCount = await page.evaluate(() => window.fixtureReads.length);
+  const luna = page.getByRole('button', { name: 'Edit Luna · Dog ID #00001' });
+  await luna.focus();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#p4Dog')).toHaveValue('Luna');
+  await page.locator('#p4PlanDogCancel').click();
+  await expect(page.locator('#p4DogIdentity')).toHaveValue(dogB);
+  await expect(page.locator('#p4ReturningMini')).not.toContainText('Loading this Dog ID');
+  await expect(page.locator('#p4ReturningMini')).toContainText('Saved care was not captured');
+  await luna.click();
+  await page.locator('#p4PlanNext').click();
+  await expect(page.locator('#p4PlanStatus')).toContainText('Update or cancel the current dog edit');
+  await page.locator('#p4PlanBack').click();
+  await expect(page.locator('#p4PlanStepLabel')).toContainText('Dogs');
+  await page.locator('#p4PlanDisclosure > summary').click();
+  await expect(page.locator('#p4PlanDisclosure')).toHaveAttribute('open', '');
+  await expect(page.locator('#p4DogIdentity')).toBeDisabled();
+  await expect(page.locator('#p4DogIdentity')).toHaveValue(dogA);
+  await expect(page.locator('[data-p4-care-profile="feedingTimes"]')).toHaveValue('7 am');
+  const readsBeforeIdentityAttempt = await page.evaluate(() => window.fixtureReads.length);
+  await page.evaluate(dogB => { const select = document.querySelector('#p4DogIdentity'); select.value = dogB; select.dispatchEvent(new Event('change', { bubbles: true })); }, dogB);
+  await expect(page.locator('#p4DogIdentity')).toHaveValue(dogA);
+  await expect(page.locator('[data-p4-care-profile="feedingTimes"]')).toHaveValue('7 am');
+  expect(await page.evaluate(() => window.fixtureReads.length)).toBe(readsBeforeIdentityAttempt);
+  await openSavedCare(page);
+  await page.locator('[data-p4-care-profile="feedingTimes"]').fill('6 am');
+  await page.locator('#p4Breed').fill('Edited Pug');
+  await expect(page.locator('#p4CareConfirm')).not.toBeChecked();
+  await page.locator('#p4PlanDogUpdate').click();
+  await expect(page.locator('#p4PlanStatus')).toContainText('Review and confirm care');
+  await expect(page.locator('#p4PlanDogs [data-p4-plan-dog]')).toHaveCount(2);
+  await page.locator('#p4CareConfirm').check();
+  await page.locator('#p4PlanDogUpdate').click();
+  await expect(page.getByRole('button', { name: 'Edit Luna · Dog ID #00001' })).toBeFocused();
+  const updatedLuna = page.locator(`#p4PlanDogs [data-p4-dog-id="${dogA}"]`);
+  await expect(updatedLuna).toContainText('Saved care selected');
+  const editUpdated = page.getByRole('button', { name: 'Edit Luna · Dog ID #00001' });
+  await editUpdated.click();
+  await expect(page.locator('#p4Breed')).toHaveValue('Edited Pug');
+  await openSavedCare(page);
+  await page.evaluate(() => window.resolveDogBHistory?.());
+  await expect(page.locator('[data-p4-care-profile="feedingTimes"]')).toHaveValue('6 am');
+  await expect(page.locator('#p4ReturningMini')).toHaveAttribute('data-source-dog-id', dogA);
+  await page.locator('[data-p4-care-profile="feedingTimes"]').fill('');
+  await page.locator('[data-p4-care-risk="foodAllergy"]').selectOption('');
+  await expect(page.locator('#p4CareConfirm')).toBeDisabled();
+  await expect(page.locator('#p4PlanDogOmitCare')).toBeVisible();
+  await page.locator('#p4PlanDogOmitCare').click();
+  await expect(updatedLuna).toContainText('No care copied');
+  await page.getByRole('button', { name: 'Edit Luna · Dog ID #00001' }).click();
+  await openSavedCare(page);
+  await expect(page.locator('#p4Dog')).toHaveJSProperty('readOnly', true);
+  await page.locator('#p4Breed').fill('Temporary breed');
+  await page.locator('#p4PlanDogCancel').click();
+  await expect(page.getByRole('button', { name: 'Edit Luna · Dog ID #00001' })).toBeFocused();
+  await expect(updatedLuna).toContainText('Luna');
+  await expect(updatedLuna).not.toContainText('Temporary breed');
+  await expect(page.locator('#p4Dog')).toHaveValue('Luna');
+  await expect(page.getByRole('button', { name: 'Remove Milo · Dog ID #00002' })).toHaveCount(1);
+  await page.getByRole('button', { name: 'Remove Milo · Dog ID #00002' }).click();
+  await expect(page.getByRole('button', { name: 'Edit Luna · Dog ID #00001' })).toBeFocused();
+  await expect(page.locator('#p4PlanDogs [data-p4-plan-dog]')).toHaveCount(1);
+  await expect(page.locator('#p4PlanDogs')).not.toContainText('Milo');
+  expect(await page.evaluate(() => window.fixtureReads.length)).toBe(readCount);
+  await page.locator('#p4PlanDisclosure > summary').click();
+  await expect(page.locator('#p4DogIdentity')).toBeEnabled();
+  expect(await page.evaluate(() => window.fixtureWrites)).toEqual([]);
+});
+
+test('an omitted unchanged saved-care source can be explicitly approved while editing', async ({ page }) => {
+  await setup(page);
+  await page.evaluate(dogId => {
+    const original = window.WAFFLE_PHASE4_CORE.read;
+    window.WAFFLE_PHASE4_CORE.read = async payload => {
+      if (payload.action !== 'get_dog_history') return original(payload);
+      window.fixtureReads.push(payload);
+      return { history: {
+        previousStays: [{ stayId: 'completed-source', stayKey: 'Luna|2026-10-01|2026-10-05', startDate: '2026-10-01', endDate: '2026-10-05' }],
+        latestCompletedProfile: { sourceDogId: dogId, sourceStayId: 'completed-source', sourceStayKey: 'Luna|2026-10-01|2026-10-05', sourceEndDate: '2026-10-05', intakeAttributes: { feedingTimes: '7 am' }, riskFlags: { escapeRisk: false } }
+      } };
+    };
+  }, dogA);
+  await page.locator('#p4LoadDogIdentities').click();
+  await page.locator('#p4DogIdentity').selectOption(dogA);
+  await expect(page.locator('[data-p4-care-profile="feedingTimes"]')).toHaveValue('7 am');
+  await page.locator('#p4PlanAddDog').click();
+  await expect(page.locator('#p4PlanDogs')).toContainText('No care copied');
+  const readCount = await page.evaluate(() => window.fixtureReads.length);
+  await page.getByRole('button', { name: 'Edit Luna · Dog ID #00001' }).click();
+  await openSavedCare(page);
+  await page.locator('#p4CareConfirm').check();
+  await page.locator('#p4PlanDogUpdate').click();
+  await expect(page.locator('#p4PlanDogs')).toContainText('Saved care selected');
+  await page.getByRole('button', { name: 'Edit Luna · Dog ID #00001' }).click();
+  await openSavedCare(page);
+  await page.locator('#p4CareConfirm').uncheck();
+  await page.locator('#p4PlanDogUpdate').click();
+  await expect(page.locator('#p4PlanDogs')).toContainText('No care copied');
+  await page.getByRole('button', { name: 'Edit Luna · Dog ID #00001' }).click();
+  await openSavedCare(page);
+  await page.locator('#p4CareConfirm').check();
+  await page.locator('#p4PlanDogUpdate').click();
+  await expect(page.locator('#p4PlanDogs')).toContainText('Saved care selected');
+  expect(await page.evaluate(() => window.fixtureReads.length)).toBe(readCount);
+  await addVisit(page, '2026-11-10', '2026-11-11');
+  await reviewAndSave(page);
+  const [write] = await page.evaluate(() => window.fixtureWrites);
+  expect(write.inheritCareReview).toMatchObject({ sourceDogId: dogA, sourceStayId: 'completed-source', confirmed: true, profile: { feedingTimes: '7 am' }, riskFlags: { escapeRisk: false } });
+  expect(write).not.toHaveProperty('careReviewHtml');
+  expect(write).not.toHaveProperty('careDraft');
 });
 
 test('guided steps announce progress and require each section before advancing', async ({ page }, testInfo) => {
@@ -312,6 +540,9 @@ test('queued result freezes plan controls and is not reported as saved', async (
   await expect(page.locator('#p4PlanRows')).toContainText('queued');
   await expect(page.locator('#p4PlanOwner')).toBeDisabled();
   await expect(page.locator('#p4PlanAddVisit')).toBeDisabled();
+  await page.locator('[data-p4-plan-step="1"]').click();
+  await expect(page.getByRole('button', { name: 'Edit Luna · Dog ID #00001' })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Remove Luna · Dog ID #00001' })).toBeDisabled();
   await expect(page.locator('#p4PlanSave')).toBeEnabled();
   await expect(page.locator('#p4PlanStatus')).toContainText('queued');
 });

@@ -5,6 +5,7 @@ const path = require('node:path');
 const test = require('node:test');
 
 const workflow = readFileSync(path.join(__dirname, '../.github/workflows/ui-regression.yml'), 'utf8').replace(/\r\n/g, '\n');
+const homeGuestsWorkflow = readFileSync(path.join(__dirname, '../.github/workflows/home-guests.yml'), 'utf8').replace(/\r\n/g, '\n');
 const jobs = Object.fromEntries([...workflow.matchAll(/^  ([\w-]+):\n([\s\S]*?)(?=^  [\w-]+:|$(?![\s\S]))/gm)]
   .filter(([text]) => /runs-on:/.test(text)).map(([, name, body]) => [name, body]));
 const expectedConfigs = [
@@ -15,6 +16,7 @@ const expectedConfigs = [
   'playwright.owner-handoff.config.js',
   'playwright.care-profile-tools.config.js',
   'playwright.care-profile-condensed.config.js',
+  'playwright.booking-owner-share.config.js',
   'playwright.care-status-empty-navigation.config.js', 'playwright.care-summary-card-clarity.config.js', 'playwright.care-render-performance.config.js',
   'playwright.care-profile.config.js', 'playwright.care-ui-polish.config.js',
   'playwright.care-roster.config.js', 'playwright.care-ui-refinements.config.js',
@@ -30,11 +32,16 @@ const expectedConfigs = [
 test('parallel fixture matrix retains every existing configuration exactly once', () => {
   assert.deepEqual(Object.keys(jobs).sort(), ['contracts', 'fixtures', 'placement', 'ui-regression']);
   const configs = [...jobs.fixtures.matchAll(/^\s+configs: (.+)$/gm)].flatMap(([, line]) => line.trim().split(/\s+/));
-  assert.deepEqual(configs.sort(), expectedConfigs.slice().sort());
+  assert.equal(new Set(configs).size, configs.length, 'fixture configs must not be duplicated');
+  for (const config of expectedConfigs) assert.equal(configs.filter(value => value === config).length, 1, `${config} must remain in exactly one fixture group`);
+  for (const changedPath of ['playwright.booking-owner-share.config.js', 'tests/booking-owner-share.browser.spec.js']) {
+    assert.equal(workflow.split('\n').filter(line => line.trim() === `- '${changedPath}'`).length, 2, `${changedPath} must trigger both PR and push workflows`);
+  }
   for (const name of ['contracts', 'fixtures', 'placement']) assert.doesNotMatch(jobs[name], /\bneeds:/);
   assert.match(jobs.fixtures, /fail-fast: false/);
   assert.match(jobs.fixtures, /--config="\$config" --output="test-results\/\$FIXTURE_GROUP-\$name"/);
-  assert.match(jobs.fixtures, /install --with-deps chromium firefox webkit/);
+  assert.match(jobs.fixtures, /install-deps chromium firefox webkit/);
+  assert.match(jobs.fixtures, /install chromium firefox webkit/);
 });
 
 test('contract job preserves existing Node checks', () => {
@@ -63,7 +70,8 @@ test('placement runs all three shards with the existing runner and real exit cod
   assert.match(jobs.placement, /shard: \[1, 2, 3\]/);
   assert.match(jobs.placement, /fail-fast: false/);
   assert.match(jobs.placement, /npm run test:ui:local -- --shard=\$\{\{ matrix.shard \}\}\/3/);
-  assert.match(jobs.placement, /install --with-deps chromium firefox webkit/);
+  assert.match(jobs.placement, /install-deps chromium firefox webkit/);
+  assert.match(jobs.placement, /install chromium firefox webkit/);
   assert.match(jobs.placement, /test_exit=\$\?[\s\S]*node scripts\/summarize-ui-regression.js[\s\S]*exit "\$test_exit"/);
   assert.doesNotMatch(workflow, /continue-on-error: true|--pass-with-no-tests|--retries|--fully-parallel/);
 });
@@ -83,11 +91,28 @@ test('required ui-regression gate runs on failures and accepts only complete suc
   }
 });
 
-test('browser installation stalls fail within five minutes', () => {
+test('browser setup is cached, bounded, complete, and reported separately from tests', () => {
   for (const name of ['fixtures', 'placement']) {
-    assert.match(jobs[name], /- name: Install dependencies and [^\n]+\n\s+timeout-minutes: 5\n\s+run: \|/);
+    assert.match(jobs[name], /- name: Cache Playwright browsers\n\s+id: browser_cache\n\s+uses: actions\/cache@v4\n\s+timeout-minutes: 3\n\s+with:\n\s+path: ~\/\.cache\/ms-playwright\n\s+key: playwright-chromium-firefox-webkit-\$\{\{ runner\.os \}\}-\$\{\{ runner\.arch \}\}-\$\{\{ hashFiles\('package-lock\.json'\) \}\}/);
+    assert.match(jobs[name], /- name: Install (fixture|placement) dependencies\n\s+id: install_dependencies\n\s+timeout-minutes: 5\n\s+run: npm ci --no-audit --no-fund/);
+    assert.match(jobs[name], /- name: Install (fixture|placement) browser system dependencies and browsers\n\s+id: install_browsers\n\s+timeout-minutes: 8\n\s+run: \|/);
     assert.match(jobs[name], /npm ci --no-audit --no-fund/);
+    assert.match(jobs[name], /install-deps chromium firefox webkit\n\s+node node_modules\/@playwright\/test\/cli\.js install chromium firefox webkit/);
+    assert.match(jobs[name], /- name: Report (fixture|placement) setup failure\n\s+if: failure\(\) && \(steps\.browser_cache\.outcome == 'failure' \|\| steps\.browser_cache\.outcome == 'cancelled'[\s\S]*steps\.install_dependencies\.outcome == 'failure'[\s\S]*steps\.install_browsers\.outcome == 'failure' \|\| steps\.install_browsers\.outcome == 'cancelled'\)/);
+    assert.match(jobs[name], /Browser cache restoration, npm dependency installation, or browser\/system dependency setup failed or timed out/);
+    assert.match(jobs[name], /- name: Run (fixture configurations|cross-device UI placement regression)/);
   }
+  const homeCacheKey = homeGuestsWorkflow.match(/^\s+key: (.+)$/m)?.[1];
+  const uiCacheKey = jobs.fixtures.match(/^\s+key: (.+)$/m)?.[1];
+  assert.match(homeCacheKey ?? '', /^playwright-chromium-\$\{\{ runner\.os \}\}-\$\{\{ runner\.arch \}\}-\$\{\{ hashFiles\('package-lock\.json'\) \}\}$/);
+  assert.match(uiCacheKey ?? '', /^playwright-chromium-firefox-webkit-\$\{\{ runner\.os \}\}-\$\{\{ runner\.arch \}\}-\$\{\{ hashFiles\('package-lock\.json'\) \}\}$/);
+  assert.notEqual(homeCacheKey, uiCacheKey, 'Chromium-only and three-browser jobs need distinct immutable cache keys');
+  assert.match(homeGuestsWorkflow, /timeout-minutes: 5\n\s+run: npm ci --no-audit --no-fund/);
+  assert.match(homeGuestsWorkflow, /timeout-minutes: 8[\s\S]*?install-deps chromium\n[\s\S]*?install chromium/);
+  assert.match(homeGuestsWorkflow, /Cache Playwright browsers\n\s+id: browser_cache/);
+  assert.match(homeGuestsWorkflow, /Report browser test setup failure\n\s+if: failure\(\) && \(steps\.browser_cache\.outcome == 'failure' \|\| steps\.browser_cache\.outcome == 'cancelled'[\s\S]*steps\.install_dependencies\.outcome == 'failure'[\s\S]*steps\.install_browsers\.outcome == 'failure' \|\| steps\.install_browsers\.outcome == 'cancelled'\)/);
+  assert.match(homeGuestsWorkflow, /Browser cache restoration, npm dependency installation, or Chromium\/system dependency setup failed or timed out[\s\S]*Run Home Guest browser tests/);
+  assert.doesNotMatch(`${workflow}\n${homeGuestsWorkflow}`, /^\s*continue-on-error:/m);
 });
 
 test('browser setup avoids the Azure Ubuntu mirror without changing package signatures', () => {

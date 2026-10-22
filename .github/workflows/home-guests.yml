@@ -8,12 +8,49 @@ permissions:
 jobs:
   guest-contract:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - run: npm ci
-      - run: node node_modules/@playwright/test/cli.js install --with-deps chromium
-      - run: node node_modules/@playwright/test/cli.js test --config=playwright.home.config.js
-      - run: node node_modules/@playwright/test/cli.js test --config=playwright.first-open.config.js
+          cache: npm
+      - name: Cache Playwright browsers
+        id: browser_cache
+        uses: actions/cache@v4
+        timeout-minutes: 3
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('package-lock.json') }}
+      - name: Install npm dependencies
+        id: install_dependencies
+        timeout-minutes: 5
+        run: npm ci --no-audit --no-fund
+      - name: Install browser system dependencies and Chromium
+        id: install_browsers
+        timeout-minutes: 8
+        run: |
+          set -euo pipefail
+          for source in /etc/apt/sources.list /etc/apt/sources.list.d/*.list /etc/apt/sources.list.d/*.sources /etc/apt/apt-mirrors*.txt; do
+            if [[ -f "$source" ]]; then
+              sudo sed -i 's|azure.archive.ubuntu.com|archive.ubuntu.com|g' "$source"
+            fi
+          done
+          node node_modules/@playwright/test/cli.js install-deps chromium
+          node node_modules/@playwright/test/cli.js install chromium
+      - name: Report browser test setup failure
+        if: failure() && (steps.browser_cache.outcome == 'failure' || steps.browser_cache.outcome == 'cancelled' || steps.install_dependencies.outcome == 'failure' || steps.install_dependencies.outcome == 'cancelled' || steps.install_browsers.outcome == 'failure' || steps.install_browsers.outcome == 'cancelled')
+        run: |
+          {
+            echo '## Browser test setup failed before tests'
+            echo
+            echo 'Browser cache restoration, npm dependency installation, or Chromium/system dependency setup failed or timed out. The Home Guest browser tests did not run.'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Run Home Guest browser tests
+        timeout-minutes: 10
+        run: node node_modules/@playwright/test/cli.js test --config=playwright.home.config.js
+      - name: Run first-open browser tests
+        timeout-minutes: 10
+        run: node node_modules/@playwright/test/cli.js test --config=playwright.first-open.config.js

@@ -175,6 +175,8 @@ test('the shipped booking modal keeps returning Care compact, editable and reach
     await page.locator('#p4PlanNext').click();
     await expect(page.locator('#p4PlanStepLabel')).toContainText('Dates');
     await expect(page.locator('#p4ReturningMini')).toBeHidden();
+    await expect(page.locator('#p4PlanVisits [data-p4-dates-dog]')).toContainText('Fixture Luna');
+    await expect(page.locator('#p4PlanVisits [data-p4-dates-dog]')).toContainText('Saved care selected');
     await page.locator('#p4PlanDisclosure > summary').click();
     await expect(source).toBeVisible();
     await expect(page.locator('#p4CareConfirm')).toBeChecked();
