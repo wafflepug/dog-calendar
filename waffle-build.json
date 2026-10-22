@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.10.22.01",
-  "releaseName": "Arrival and Visit Plan Clarity",
+  "assetRevision": "2026.10.22.02",
+  "releaseName": "Compact Departure Handover",
   "careIteration": {
     "returningDogSuggestions": true,
     "reviewedCareInheritance": true,

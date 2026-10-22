@@ -1,8 +1,8 @@
 ## Current Care UI iteration — 22 October 2026
 
-Implemented candidate 2026.10.22.01: [Arrival and visit-plan clarity](arrival-planner-clarity.md). Adds owner context to arriving cards, explicit same-day labels, readable per-dog schedules with shared owner contact once, and separate intake/Care preparation cues. Existing identities, partial-save recovery and lazy reads remain unchanged. CI and exact-release verification determine publication status.
+Implemented candidate 2026.10.22.02: [Compact departure handover](departure-handover-clarity.md). Separates loaded belongings into a short list, keeps medication instructions complete, consolidates unavailable-detail guidance and labels booked dates separately from checkout today. Initial keyboard focus is on the heading, with visible-only navigation. No extra profile read or backend change. Publication requires exact-head checks and live verification.
 
-Next ready item: compact departure handover, auditing existing checkout and retained notes before changing them.
+Next ready item: audit returning-dog booking setup so the existing Dog ID, dated source and explicit care reuse are clear without repeated prompts. Preserve same-name separation, stale-response guards and lazy reads.
 
 ## Previous Care UI iteration — 21 October 2026
 

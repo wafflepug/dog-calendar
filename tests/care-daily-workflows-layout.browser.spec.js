@@ -102,7 +102,7 @@ test('checkout bridge keeps Fern exact and preserves the note through Care revie
   const note=modal.locator('[data-v11217-guided-note]');
   await expect(modal).toBeVisible();
   await expect(modal.locator('[data-v11217-guided-dog]')).toHaveText('Fern');
-  await expect(modal.locator('[data-v11217-guided-medication]')).toContainText('Not loaded');
+  await expect(modal.locator('[data-v11217-guided-medication]')).toHaveText('Not available in this summary');
   await expect(modal.locator('[data-v11217-guided-review-care]')).toBeVisible();
   const handoverNote='Fern’s evening dose is in the blue pouch; Casey will collect at 5pm.';
   await note.fill(handoverNote);

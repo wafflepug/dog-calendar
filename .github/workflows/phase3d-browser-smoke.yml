@@ -36,7 +36,7 @@ jobs:
         run: |
           set -euo pipefail
           base="https://wafflepug.github.io/dog-calendar"
-          for attempt in $(seq 1 24); do
+          for attempt in $(seq 1 72); do
             release="$(curl -fsSL --max-time 20 "$base/waffle-release.json?_=${GITHUB_RUN_ID}-${attempt}" || true)"
             deployment="$(curl -fsSL --max-time 20 "$base/waffle-deployment.json?_=${GITHUB_RUN_ID}-${attempt}" || true)"
             if RELEASE="$release" DEPLOYMENT="$deployment" EXPECTED_RELEASE="$EXPECTED_RELEASE" python3 - <<'PY'
@@ -55,7 +55,7 @@ jobs:
               echo "Phase 3D release assets and exact commit manifest are live on Pages."
               exit 0
             fi
-            echo "Pages release assets not current yet ($attempt/24); waiting..."
+            echo "Pages release assets not current yet ($attempt/72); waiting..."
             sleep 5
           done
           echo "Pages did not expose the expected Phase 3D release metadata."

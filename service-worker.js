@@ -1,6 +1,6 @@
 /* Waffle House Boarding — recovery service worker */
 
-const WAFFLE_SW_VERSION = 'v11.4.118-arrival-planner-2026.10.22.01';
+const WAFFLE_SW_VERSION = 'v11.4.119-departure-handover-2026.10.22.02';
 const WAFFLE_CACHE_PREFIX = 'waffle-house-';
 const APP_SHELL_CACHE = `${WAFFLE_CACHE_PREFIX}shell-${WAFFLE_SW_VERSION}`;
 const RUNTIME_CACHE = `${WAFFLE_CACHE_PREFIX}runtime-${WAFFLE_SW_VERSION}`;
@@ -13,20 +13,20 @@ const APP_SHELL = [
   './audit.html',
   './maintenance.html',
   './system-status.html',
-  './system-status-sync.js?build=2026.08.28.01&rev=2026.10.22.01',
-  './system-status-release.js?build=2026.08.28.01&rev=2026.10.22.01',
+  './system-status-sync.js?build=2026.08.28.01&rev=2026.10.22.02',
+  './system-status-release.js?build=2026.08.28.01&rev=2026.10.22.02',
   './waffle-build.json',
   './waffle-release.json',
-'./waffle-bootstrap.js?v=2026.08.28.01&rev=2026.10.22.01',
+'./waffle-bootstrap.js?v=2026.08.28.01&rev=2026.10.22.02',
   './waffle-diagnostics.js?build=2026.08.28.01',
-  './waffle-csv.js?build=2026.08.28.01&rev=2026.10.22.01',
-  './care-profile-performance.js?build=2026.08.28.01&rev=2026.10.22.01',
-  './care-startup-priority.js?build=2026.08.28.01&rev=2026.10.22.01',
-  './owner-handoff.js?build=2026.08.28.01&rev=2026.10.22.01',
-  './care-intake-status.js?build=2026.08.28.01&rev=2026.10.22.01',
-  './care-arrival-ready.js?build=2026.08.28.01&rev=2026.10.22.01',
-  './care-roster-focus.js?build=2026.08.28.01&rev=2026.10.22.01',
-  './care-departure-message.js?build=2026.08.28.01&rev=2026.10.22.01',
+  './waffle-csv.js?build=2026.08.28.01&rev=2026.10.22.02',
+  './care-profile-performance.js?build=2026.08.28.01&rev=2026.10.22.02',
+  './care-startup-priority.js?build=2026.08.28.01&rev=2026.10.22.02',
+  './owner-handoff.js?build=2026.08.28.01&rev=2026.10.22.02',
+  './care-intake-status.js?build=2026.08.28.01&rev=2026.10.22.02',
+  './care-arrival-ready.js?build=2026.08.28.01&rev=2026.10.22.02',
+  './care-roster-focus.js?build=2026.08.28.01&rev=2026.10.22.02',
+  './care-departure-message.js?build=2026.08.28.01&rev=2026.10.22.02',
   './calendar.js?build=2026.08.28.01',
   './care.js?build=2026.08.28.01',
   './organiser.js?build=2026.08.28.01',
@@ -39,11 +39,11 @@ const APP_SHELL = [
   './waffle-ai.js?build=2026.08.28.01',
   './phase4.js?build=2026.08.28.01',
   './phase4-core.js?build=2026.08.28.01',
-  './booking-plan.js?build=2026.08.28.01&rev=2026.10.22.01',
+  './booking-plan.js?build=2026.08.28.01&rev=2026.10.22.02',
   './phase4-booking.js?build=2026.08.28.01',
   './phase4-operations.js?build=2026.08.28.01',
   './phase4-ai-actions.js?build=2026.08.28.01',
-'./waffle-runtime.css?v=2026.08.28.01&rev=2026.10.22.01',
+'./waffle-runtime.css?v=2026.08.28.01&rev=2026.10.22.02',
   './waffle-maintenance-v2.webp?v=2026.08.28.02',
   './waffle-logo.png',
   './waffle-logo-dark.png',
