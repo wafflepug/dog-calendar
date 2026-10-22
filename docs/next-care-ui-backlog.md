@@ -1,8 +1,8 @@
 ## Current Care UI iteration — 22 October 2026
 
-Implemented candidate 2026.10.22.02: [Compact departure handover](departure-handover-clarity.md). Separates loaded belongings into a short list, keeps medication instructions complete, consolidates unavailable-detail guidance and labels booked dates separately from checkout today. Initial keyboard focus is on the heading, with visible-only navigation. No extra profile read or backend change. Publication requires exact-head checks and live verification.
+Candidate 2026.10.22.03: [Compact returning Care review](returning-care-review.md). Three scoped improvements: a collapsed saved-care review with visible Dog ID and completed-source date, topical grouping of populated fields and saved alerts, and a clear opt-in copy decision that requires review again after edits. Preserve exact identities, dated sources, partial-save recovery and lazy reads. Publication requires final-head CI and exact live-release verification.
 
-Next ready item: audit returning-dog booking setup so the existing Dog ID, dated source and explicit care reuse are clear without repeated prompts. Preserve same-name separation, stale-response guards and lazy reads.
+Next ready item: audit per-dog reviewed Care context in multi-visit plans, so the captured source and copy choice remain clear when adding another dog or returning from Dates. Preserve frozen successful save intents and explicit identity selection.
 
 ## Previous Care UI iteration — 21 October 2026
 
