@@ -15,3 +15,11 @@ The existing Resume action continues to use the frozen plan intents. Successful 
 5. If a saved stay has no returned link, prepare it later from **Care → Owner Care Link**. A queued or failed stay has no sharing action.
 
 Browser coverage uses synthetic write responses and validates one dog across two dates, two dogs across two dates, saved/queued/failed result states, a missing link, clipboard failure, long labels, keyboard focus, and 320/390/1440px in light and dark themes. The browser suite is not evidence of a real guest write or a production release.
+
+## Task Completion Report
+
+**Built Deliverables:** Compact completion guidance, one exact saved-stay sharing selector, explicit copy with manual fallback, retained selection/focus during save updates, coordinated candidate assets, and updated onboarding guides. Luna implemented the UI; the lead reviewed it and added the browser tests.
+
+**Testing Matrix:** All 66 planner/runtime cases and 12 single-booking sharing cases passed in Chromium/WebKit. All 374 Node checks and five Python contracts passed. To verify manually: save two dogs across two dates, choose each saved stay and check its copied link; simulate a queued/failed response and resume only unfinished intents; deny clipboard access and check the selected fallback. Cover missing links/IDs, keyboard, 320/390/1440px, both themes and enlarged text. Physical-phone validation remains manual.
+
+**Next Backlog Item:** Resolve the existing phone-regression gate before release, then audit truthful queued-plan recovery guidance. This candidate depends on PR #242 and is not deployed. See PR #243 for the current branch and CI status.
