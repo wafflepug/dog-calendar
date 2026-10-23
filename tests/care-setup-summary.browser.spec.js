@@ -24,7 +24,7 @@ test.describe('consolidated care setup summary', () => {
     await page.addScriptTag({ content: source });
     const status = page.locator('[data-compact-intake-status]');
     await expect(status).toHaveCount(1);
-    await expect(status).toHaveText('Link ready');
+    await expect(status).toHaveText('Awaiting owner');
     await expect(page.locator('[data-care-readiness-item="intake"]')).toHaveAttribute('data-compact-status-available', 'true');
     await expect(page.locator('#owner-care')).toBeAttached();
     await expect(page.locator('[data-care-readiness-action="intake"]')).toHaveText('Review');
@@ -40,7 +40,7 @@ test.describe('consolidated care setup summary', () => {
     await page.setContent(fixture({ method: 'digital', intake: '<span class="directory-intake-dot is-complete"></span><span>Intake complete</span><span class="directory-record-meta">Stored profile</span>' }));
     await page.addScriptTag({ content: source });
     const getState = () => page.evaluate(() => WAFFLE_INTAKE_STATUS.getState(document.querySelector('.directory-card')));
-    expect(await getState()).toMatchObject({ code: 'unknown', label: 'Saved care available', detail: 'Current form completion not verified.' });
+    expect(await getState()).toMatchObject({ code: 'unknown', label: 'Saved care available', detail: 'Current form completion is not verified. Check Records & forms for submitted answers.' });
     await page.locator('.directory-card').evaluate(card => { card.dataset.intakeMethod = 'legacy'; });
     await expect.poll(async () => (await getState()).label).toBe('Care profile available');
     expect(await getState()).toMatchObject({ code: 'unknown' });
