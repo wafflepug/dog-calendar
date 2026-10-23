@@ -16,7 +16,7 @@ const intakeStatus = read('care-intake-status.js');
 const arrivalReady = read('care-arrival-ready.js');
 const mobileCheckout = read('waffle-v11.2.19.js');
 const touchScroll = read('quick-add-touch-scroll.js');
-const evidenceDir = path.join(root, 'output', 'releases', '2026.10.22.02', 'evidence');
+const evidenceDir = path.join(root, 'output', 'releases', '2026.10.23.05', 'evidence');
 
 async function installVisualRuntime(page, baseURL, card) {
   await page.evaluate(() => {
@@ -58,7 +58,7 @@ async function measureNoOverflow(page) {
 }
 
 test('Care arrival and guided checkout remain reachable at the configured viewport', async ({ page, baseURL }, testInfo) => {
-  const { selected } = await setup(page);
+  const { selected, other } = await setup(page);
   await installVisualRuntime(page, baseURL, await selected.elementHandle());
 
   const owner = selected.locator('.directory-care-brief-actions [data-p4-dir="owner"]');
@@ -70,8 +70,23 @@ test('Care arrival and guided checkout remain reachable at the configured viewpo
 
   const next = page.locator('[data-waffle-arrival-next]');
   await expect(next).toBeVisible();
+  await expect(next).toHaveText('Next arrival · 2');
+  await expect(selected.locator('[data-waffle-arrival-ready]')).toHaveCount(0);
+  await next.click();
+  await expect(selected.locator('[data-v11217-roster-checkin]')).toBeFocused();
+
+  await selected.locator('[data-directory-intake]').evaluate(strip => {
+    strip.innerHTML = '<div class="directory-intake-state"><span class="directory-intake-dot is-not-sent"></span><span class="directory-record-status">No digital intake on file</span></div>';
+  });
+  await page.evaluate(card => {
+    window.WAFFLE_INTAKE_STATUS.refresh(card);
+    window.WAFFLE_ARRIVAL_READY.refresh();
+  }, await selected.elementHandle());
+  await expect(compactIntake).toHaveText('Not prepared');
   const arrivalStatus = selected.locator('[data-waffle-arrival-ready]');
   await expect(arrivalStatus).toBeVisible();
+  await expect(arrivalStatus.locator('[data-arrival-label]')).toHaveText('Not prepared');
+  await expect(arrivalStatus.locator('[data-arrival-detail]')).toHaveText('No digital intake link is recorded.');
   const light = await arrivalStatus.evaluate(node => ({ height: node.getBoundingClientRect().height, background: getComputedStyle(node).backgroundColor }));
   expect(light.height).toBeGreaterThanOrEqual(44);
   await measureNoOverflow(page);
@@ -89,7 +104,7 @@ test('Care arrival and guided checkout remain reachable at the configured viewpo
   }
   await page.evaluate(() => document.body.classList.remove('dark-theme'));
   await next.click();
-  await expect(selected.locator('[data-v11217-roster-checkin]')).toBeFocused();
+  await expect(other.locator('[data-v11217-roster-checkin]')).toBeFocused();
 
   if (testInfo.project.name === 'chromium-390' || testInfo.project.name === 'chromium-1440') {
     fs.mkdirSync(evidenceDir, { recursive: true });

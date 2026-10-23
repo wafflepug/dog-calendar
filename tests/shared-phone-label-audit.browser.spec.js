@@ -10,6 +10,18 @@ async function settle(page){
  await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))));
 }
 
+async function clickControl(page,menu){
+ await expect(menu).toBeVisible();await expect(menu).toBeEnabled();
+ const point=await menu.evaluate(button=>{
+  const box=button.getBoundingClientRect(),x=box.left+box.width/2,y=box.top+box.height/2;
+  const hit=document.elementFromPoint(x,y);
+  return{x,y,reachable:hit===button||button.contains(hit),width:box.width,height:box.height};
+ });
+ expect(point.reachable,'the visible control centre receives pointer input').toBe(true);
+ expect(point.width).toBeGreaterThanOrEqual(44);expect(point.height).toBeGreaterThanOrEqual(44);
+ await page.mouse.click(point.x,point.y);
+}
+
 async function capture(page,info,name){
  const folder=path.join(__dirname,'..','output','phone-clearance-evidence','shared',info.project.name);
  fs.mkdirSync(folder,{recursive:true});
@@ -90,10 +102,19 @@ async function textOverlaps(page){
  });
 }
 
-test('shared phone labels across phone, tablet and landscape viewports',async({page,baseURL},info)=>{
+for(const [route,view] of [['today','today'],['calendar','calendar']])
+test(`${route}: shared phone labels across phone, tablet and landscape viewports`,async({page,baseURL},info)=>{
  const fixture=await install(page,{bookingOverrides:[{stayId:bookings[0].stayId,dogName:'Alexandria Peterson-Smith-Wellington and Family',ownerName:'Morgan River-Davies',dogNumber:'#12345',source:'Referral from our exceptionally long campaign source',stayKey:'alexandria peterson-smith-wellington and family|2026-10-18|2026-10-20'}]});
+  // Keep intentional periodic data polling outside the short resize-only read
+  // assertion. The real callbacks still run throughout the layout journey;
+  // resize handlers and their requests remain active in the measured window.
+  await page.addInitScript(()=>{
+   const nativeSetInterval=window.setInterval.bind(window);
+   window.setInterval=(callback,delay,...args)=>typeof callback!=='function'
+    ?nativeSetInterval(callback,delay,...args)
+    :nativeSetInterval(()=>{if(!window.__phoneAuditPauseIntervals)callback(...args);},delay);
+  });
   const runs=[];
-  for(const [route,view] of [['today','today'],['calendar','calendar']]){
    await page.goto(`${baseURL}/index.html?view=${view}&ownerWorkflowFixture=1`,{waitUntil:'domcontentloaded'});await settle(page);
    for(const [name,width,height] of viewports){
     await page.setViewportSize({width,height});
@@ -118,7 +139,7 @@ test('shared phone labels across phone, tablet and landscape viewports',async({p
      if(name==='320')await capture(page,info,`${route}-320-${theme}-opening.png`);
      const menu=page.locator('#wh75MenuButton');
      if(name==='320'&&theme==='dark'&&await menu.isVisible()){
-      await menu.click();await expect(page.locator('#wh75MobileDrawer')).toHaveClass(/is-open/);
+      await clickControl(page,page.locator('#wh75MenuButton'));await expect(page.locator('#wh75MobileDrawer')).toHaveClass(/is-open/);
       runs.push({route:`${route}-menu`,viewport:name,theme,geometry:await textOverlaps(page)});
       await page.keyboard.press('Escape');
       await expect(page.locator('#wh75MobileDrawer')).not.toHaveClass(/is-open/);
@@ -214,6 +235,8 @@ test('shared phone labels across phone, tablet and landscape viewports',async({p
     return{menu:!!window.__phoneAuditMenu,brand:!!window.__phoneAuditBrand};
    });
    expect(mobileNodes).toEqual({menu:true,brand:true});
+   await page.evaluate(()=>{window.__phoneAuditPauseIntervals=true;});
+   await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))));
    const readsBeforeResize=fixture.reads.length;
    await page.setViewportSize({width:821,height:1024});
    await expect(page.locator('#wh75MobileTopbar')).toHaveCount(0);
@@ -233,10 +256,11 @@ test('shared phone labels across phone, tablet and landscape viewports',async({p
    const repeatedResizeMutations=await page.evaluate(()=>{window.__phoneAuditObserver.disconnect();return window.__phoneAuditMutations;});
    expect(repeatedResizeMutations,`${route} repeated header maintenance does not mutate the header or body classes`).toEqual([]);
    expect(fixture.reads.length,`${route} resize does not add backend reads: ${JSON.stringify(fixture.reads.slice(readsBeforeResize))}`).toBe(readsBeforeResize);
+   await page.evaluate(()=>{window.__phoneAuditPauseIntervals=false;});
    const restored=await page.evaluate(()=>({menuSame:window.__phoneAuditMenu===document.querySelector('#wh75MenuButton'),brandSame:window.__phoneAuditBrand===(document.querySelector('#whPalzStayMobileShellBrand')||document.querySelector('#whPalzStayMobileBrand')),brandCount:[...document.querySelectorAll('#whPalzStayMobileShellBrand,#whPalzStayMobileBrand')].filter(e=>e.getClientRects().length&&getComputedStyle(e).visibility!=='hidden').length}));
    expect(restored).toEqual({menuSame:true,brandSame:true,brandCount:1});
    const menu=page.locator('#wh75MenuButton');
-   await menu.click();
+   await clickControl(page,page.locator('#wh75MenuButton'));
    await expect(page.locator('#wh75MobileDrawer')).toHaveClass(/is-open/);
    const drawerLayers=await page.evaluate(()=>{
     const topbar=document.querySelector('#wh75MobileTopbar'),drawer=document.querySelector('#wh75MobileDrawer'),backdrop=document.querySelector('#wh75DrawerBackdrop');
@@ -246,7 +270,7 @@ test('shared phone labels across phone, tablet and landscape viewports',async({p
    expect(drawerLayers.drawerZ).toBeGreaterThan(drawerLayers.topbarZ);
    expect(drawerLayers.backdropZ).toBeGreaterThan(drawerLayers.topbarZ);
    expect(drawerLayers.backdropOpen&&drawerLayers.rightHeaderHit).toBe(true);
-   await page.locator('#wh75MobileDrawer [data-wh75-settings]').click();
+   await clickControl(page,page.locator('#wh75MobileDrawer [data-wh75-settings]'));
    await expect(page.locator('#wh75SettingsPanel')).toBeVisible();
    const settingsLayers=await page.evaluate(()=>({topbarZ:+getComputedStyle(document.querySelector('#wh75MobileTopbar')).zIndex,backdropZ:+getComputedStyle(document.querySelector('#wh75SettingsBackdrop')).zIndex,panelZ:+getComputedStyle(document.querySelector('#wh75SettingsPanel')).zIndex,backdropOpen:document.querySelector('#wh75SettingsBackdrop').classList.contains('is-open')}));
    expect(settingsLayers.backdropZ).toBeGreaterThan(settingsLayers.topbarZ);
@@ -256,9 +280,8 @@ test('shared phone labels across phone, tablet and landscape viewports',async({p
    const settingsClosed=page.locator('#wh75SettingsPanel');
    await expect(settingsClosed).not.toHaveClass(/is-open/);
    await expect.poll(()=>settingsClosed.evaluate(panel=>{const r=panel.getBoundingClientRect(),s=getComputedStyle(panel);return s.pointerEvents==='none'||Number(s.opacity)===0||r.bottom<=0||r.top>=innerHeight}),{timeout:2000}).toBe(true);
-  }
   const output=path.join(__dirname,'..','output','phone-clearance-evidence','shared');fs.mkdirSync(output,{recursive:true});
-  fs.writeFileSync(path.join(output,`${info.project.name}.json`),JSON.stringify({fixtureReads:fixture.reads,runs},null,2));
+  fs.writeFileSync(path.join(output,`${info.project.name}-${route}.json`),JSON.stringify({fixtureReads:fixture.reads,runs},null,2));
   const defects=runs.flatMap(run=>run.geometry.overlaps.map(overlap=>({route:run.route,viewport:run.viewport,theme:run.theme,...overlap})));
   console.log(`PHONE_LABEL_AUDIT ${JSON.stringify({runs:runs.length,routes:[...new Set(runs.map(r=>r.route))],defects})}`);
   expect(runs.every(run=>run.geometry.viewport.docWidth<=run.geometry.viewport.width+1),'No viewport should have horizontal overflow').toBe(true);

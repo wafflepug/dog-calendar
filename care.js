@@ -42,6 +42,7 @@
   const TAB_KEYS = new Set(TABS.map(item => item.key));
   const wrapped = new Set();
   const prepareTimers = new Map();
+  const panelReassertionTimers = new Map();
   let cardAccessibilityId = 0;
   let stayLinkTrigger = null;
   let stayLinkPanel = null;
@@ -123,9 +124,25 @@
     if (!card || !contentHost(card)) return false;
 
     /* Ask the existing content layers to create their content containers only.
-       Their tab buttons remain legacy and are hidden by this layer. */
-    callNamed('v108EnhanceCard', [card]);
-    callNamed('v110EnhanceCareCard', [card]);
+       Their tab buttons remain legacy and are hidden by this layer. Recheck
+       them only while their expected containers are still missing. */
+    const photo = card.querySelector('.directory-photo-shell');
+    const photoTools = card.querySelector('.directory-care-photo-tools > div');
+    const galleryButton = card.querySelector('[data-v108-gallery]');
+    const misplacedPhotoControls = !!photo && (
+      !galleryButton ||
+      (!!photoTools && galleryButton.parentElement !== photoTools) ||
+      (!!photoTools && Array.from(card.querySelectorAll('[data-upload-dog-photo]'))
+        .some(button => button.parentElement !== photoTools))
+    );
+    const needsV108 = card.dataset.v108Enhanced !== 'true' ||
+      !card.querySelector('[data-directory-main-panel="history"]') ||
+      misplacedPhotoControls;
+    const needsV110 = !card.querySelector('[data-v110-tab="master"]') ||
+      !card.querySelector('[data-v110-tab="media"]') ||
+      (card.dataset.v1082PastStay !== 'true' && !card.querySelector('[data-v110-operation-bar]'));
+    if (needsV108) callNamed('v108EnhanceCard', [card]);
+    if (needsV110) callNamed('v110EnhanceCareCard', [card]);
 
     if (!panel(card, 'history')) createPanel(card, 'history');
     if (!panel(card, 'media')) createPanel(card, 'media');
@@ -237,11 +254,11 @@
       if (!tab || !content) return;
       const tabId = `care-tab-${cardId}-${item.key}`;
       const panelId = `care-panel-${cardId}-${item.key}`;
-      tab.id = tabId;
-      tab.setAttribute('aria-controls', panelId);
-      content.id = panelId;
-      content.setAttribute('role', 'tabpanel');
-      content.setAttribute('aria-labelledby', tabId);
+      if (tab.id !== tabId) tab.id = tabId;
+      if (tab.getAttribute('aria-controls') !== panelId) tab.setAttribute('aria-controls', panelId);
+      if (content.id !== panelId) content.id = panelId;
+      if (content.getAttribute('role') !== 'tabpanel') content.setAttribute('role', 'tabpanel');
+      if (content.getAttribute('aria-labelledby') !== tabId) content.setAttribute('aria-labelledby', tabId);
     });
   }
 
@@ -259,22 +276,25 @@
     nav.querySelectorAll('[data-v11160-tab]').forEach(button => {
       const active = button.dataset.v11160Tab === key;
       button.classList.toggle('is-active', active);
-      button.setAttribute('aria-selected', active ? 'true' : 'false');
-      button.setAttribute('tabindex', button.dataset.v11160Tab === focusedTab ? '0' : '-1');
+      const selected = active ? 'true' : 'false';
+      const tabindex = button.dataset.v11160Tab === focusedTab ? '0' : '-1';
+      if (button.getAttribute('aria-selected') !== selected) button.setAttribute('aria-selected', selected);
+      if (button.getAttribute('tabindex') !== tabindex) button.setAttribute('tabindex', tabindex);
     });
 
     managedPanels(card).forEach(item => {
       const itemKey = item.dataset.directoryMainPanel || item.dataset.v110Panel || '';
       const active = itemKey === key;
-      item.dataset.v11160ManagedPanel = 'true';
-      item.hidden = !active;
+      if (item.dataset.v11160ManagedPanel !== 'true') item.dataset.v11160ManagedPanel = 'true';
+      if (item.hidden !== !active) item.hidden = !active;
       item.classList.toggle('is-v11160-active', active);
-      item.setAttribute('aria-hidden', active ? 'false' : 'true');
-      if (active) item.setAttribute('tabindex', '0');
-      else item.removeAttribute('tabindex');
+      const ariaHidden = active ? 'false' : 'true';
+      if (item.getAttribute('aria-hidden') !== ariaHidden) item.setAttribute('aria-hidden', ariaHidden);
+      if (active && item.getAttribute('tabindex') !== '0') item.setAttribute('tabindex', '0');
+      else if (!active && item.hasAttribute('tabindex')) item.removeAttribute('tabindex');
     });
 
-    card.dataset.v11160ActiveTab = key;
+    if (card.dataset.v11160ActiveTab !== key) card.dataset.v11160ActiveTab = key;
   }
 
   function html(value) {
@@ -700,6 +720,28 @@
     }
   }
 
+  function schedulePanelReassertions(card, key) {
+    let timers = panelReassertionTimers.get(card);
+    if (!timers) {
+      timers = new Map();
+      panelReassertionTimers.set(card, timers);
+    }
+    [0, 60, 180, 420].forEach(delay => {
+      const previous = timers.get(delay);
+      if (previous?.key === key) return;
+      if (previous) window.clearTimeout(previous.timer);
+      const entry = { key, timer: null };
+      entry.timer = window.setTimeout(() => {
+        if (timers.get(delay) !== entry) return;
+        timers.delete(delay);
+        if (!timers.size) panelReassertionTimers.delete(card);
+        if (!isDesktopCare() || !card.isConnected || card.dataset.v11160ActiveTab !== key) return;
+        setVisualState(card, key);
+      }, delay);
+      timers.set(delay, entry);
+    });
+  }
+
   function select(card, key, options = {}) {
     if (!card || !TAB_KEYS.has(key) || !isDesktopCare()) return;
     ensurePanels(card);
@@ -710,12 +752,7 @@
 
     /* Existing loaders may update legacy panel state asynchronously. The new
        component simply reasserts its own selected panel after those renders. */
-    [0, 60, 180, 420].forEach(delay => {
-      window.setTimeout(() => {
-        if (!isDesktopCare() || !card.isConnected || card.dataset.v11160ActiveTab !== key) return;
-        setVisualState(card, key);
-      }, delay);
-    });
+    schedulePanelReassertions(card, key);
 
     if (options.focus) {
       window.setTimeout(() => newNav(card)?.querySelector(`[data-v11160-tab="${key}"]`)?.focus(), 0);
@@ -730,7 +767,7 @@
     const legacy = oldTabs(card);
     if (legacy) {
       legacy.classList.add('v11160-legacy-tabs');
-      legacy.setAttribute('aria-hidden', 'true');
+      if (legacy.getAttribute('aria-hidden') !== 'true') legacy.setAttribute('aria-hidden', 'true');
       legacy.inert = true;
     }
 
@@ -739,11 +776,23 @@
     const wanted = TAB_KEYS.has(card.dataset.v11160ActiveTab)
       ? card.dataset.v11160ActiveTab
       : selectedFromLegacy(card);
-    select(card, wanted, { load: restoreLoad, focus: false });
+    /* Repeated startup, focus, resize and wrapped-render passes converge on
+       the current tab. Keep those compatibility passes from re-running the
+       loader and scheduling four more panel reassertions when nothing changed. */
+    if (restoreLoad || card.dataset.v11160ActiveTab !== wanted || !newNav(card)) {
+      select(card, wanted, { load: restoreLoad, focus: false });
+    } else {
+      /* Keep the compatibility window for late legacy renderers, but don't
+         reload the selected tab merely because another prepare pass ran. */
+      schedulePanelReassertions(card, wanted);
+    }
   }
 
   function teardownCard(card) {
     if (!card) return;
+    const pendingReassertions = panelReassertionTimers.get(card);
+    pendingReassertions?.forEach(entry => window.clearTimeout(entry.timer));
+    panelReassertionTimers.delete(card);
     newNav(card)?.remove();
     card.classList.remove('v11160-desktop-profile');
     delete card.dataset.v11160ActiveTab;

@@ -301,17 +301,21 @@ test('desktop preparation loads the restored selected panel once and no other pa
   const prepareStart = care.indexOf('function prepareCard');
   const prepareEnd = care.indexOf('function teardownCard', prepareStart);
   const calls = [];
+  const reassertions = [];
   const card = { dataset: { v11160ActiveTab: 'media', v11160RestoreLoad: 'true' }, classList: { add() {} } };
   const sandbox = {
     TAB_KEYS: new Set(['profile', 'belongings', 'history', 'media', 'master']),
     isDesktopCare: () => true, contentHost: () => ({}), ensurePanels: () => true,
     oldTabs: () => null, buildNav() {}, selectedFromLegacy: () => 'profile',
+    newNav: () => ({}),
+    schedulePanelReassertions: (_card, key) => reassertions.push(key),
     select: (_card, key, options) => calls.push({ key, load: options.load })
   };
   vm.runInNewContext(`${care.slice(consumeStart, consumeEnd)}\n${care.slice(prepareStart, prepareEnd)}\nthis.prepare = prepareCard;`, sandbox);
   sandbox.prepare(card);
   sandbox.prepare(card);
-  assert.deepEqual(calls, [{ key: 'media', load: true }, { key: 'media', load: false }]);
+  assert.deepEqual(calls, [{ key: 'media', load: true }], 'restoring the selected media panel loads it once');
+  assert.deepEqual(reassertions, ['media'], 'repeated preparation retains the selected-panel reassertion path');
 });
 
 test('direct editor opening on duplicate legacy keys disables Save', () => {

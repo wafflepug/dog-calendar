@@ -5,6 +5,7 @@ const { resolveLocalBackendAction } = require('../scripts/local-network-policy')
 const calendar = fs.readFileSync(path.join(__dirname, 'fixtures/fullcalendar.global.min.js'), 'utf8');
 const app = fs.readFileSync(path.join(__dirname, '..', 'waffle-app.js'), 'utf8');
 const care = fs.readFileSync(path.join(__dirname, '..', 'care.js'), 'utf8');
+const careStartup = fs.readFileSync(path.join(__dirname, '..', 'care-startup-priority.js'), 'utf8');
 
 const booking = { timestamp: '2026-10-16', dogName: 'Milo', breed: 'Collie', startDate: '2026-10-17', endDate: '2026-10-20', ownerName: 'Casey', phone: '+61400000000', notes: 'Call before pickup.', bookingType: 'Boarding', dogId: '11111111-1111-4111-8111-111111111111', stayId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', dogNumber: '#00017', stayKey: 'milo|2026-10-17|2026-10-20' };
 const profileRecord = { stayKey: booking.stayKey, identity: { stayKey: booking.stayKey, stayId: booking.stayId, dogId: booking.dogId }, resolution: { status: 'resolved', method: 'fixture' }, updatedAt: '2026-10-16T08:00:00Z', intakeAttributesSource: 'Saved profile', intakeAttributes: { feedingTimes: '8am and 6pm', foodAmount: '1 cup', foodBrandType: 'Sensitive formula', walksPerDay: '2 walks', walkDuration: '20 minutes', medicationInstructions: 'Give the saved medication with dinner. Call the owner if appetite changes.', notes: 'Give Milo time to settle after arrival.' }, riskFlags: { foodAllergy: true } };
@@ -27,7 +28,8 @@ async function installFixture(page, { seedOperationsRows = false } = {}) {
     const request = route.request(), url = request.url();
     if (!['GET', 'HEAD'].includes(request.method())) return route.fulfill({ status: 405, body: 'Synthetic fixture blocks all writes' });
     if (url.includes('/waffle-app.js')) return route.fulfill({ status: 200, contentType: 'application/javascript', body: app.replace('function renderDirectoryCareProfile(card, record) {', 'window.__renderDirectoryCareProfile = renderDirectoryCareProfile;\n    function renderDirectoryCareProfile(card, record) {').replace('function renderDirectoryIntakeAttributes(card, record) {', 'window.__renderDirectoryIntake = renderDirectoryIntakeAttributes;\n    function renderDirectoryIntakeAttributes(card, record) {') });
-    if (url.includes('/care.js')) return route.fulfill({ status: 200, contentType: 'application/javascript', body: care.replace('  function prepare() {', '  function prepare() {\n    window.__carePreparePasses = (window.__carePreparePasses || 0) + 1;').replace('  function wrapFunction(name) {', '  window.__careSchedulePrepare = schedulePrepare;\n  window.__carePendingPrepareDelays = () => [...prepareTimers.keys()];\n  function wrapFunction(name) {') });
+    if (url.includes('/care-startup-priority.js')) return route.fulfill({ status: 200, contentType: 'application/javascript', body: `${careStartup}\n;(() => { const startup = window.WAFFLE_CARE_STARTUP; if (!startup) return; const schedule = startup.schedule.bind(startup); startup.schedule = (key, callback) => { const promise = schedule(key, callback); if (String(key) === 'ai-health') window.__careAiHealthStartupPromise = promise; return promise; }; })();` });
+    if (url.includes('/care.js')) return route.fulfill({ status: 200, contentType: 'application/javascript', body: care.replace('  function prepare() {', '  function prepare() {\n    window.__carePreparePasses = (window.__carePreparePasses || 0) + 1;').replace('  function wrapFunction(name) {', '  window.__carePrepareCard = prepareCard;\n  window.__careSchedulePrepare = schedulePrepare;\n  window.__carePendingPrepareDelays = () => [...prepareTimers.keys()];\n  window.__carePendingPanelReassertions = () => [...panelReassertionTimers.values()].reduce((sum, timers) => sum + timers.size, 0);\n  function wrapFunction(name) {') });
     if (url.includes('cdn.jsdelivr.net') && url.includes('fullcalendar')) return route.fulfill({ status: 200, contentType: 'application/javascript', body: calendar });
     if (url.includes('docs.google.com/spreadsheets') && url.includes('output=csv')) {
       return route.fulfill({ status: 200, contentType: 'text/csv', body: fixtureCsv });
@@ -118,6 +120,59 @@ test('coalesced late Care preparation still adopts controls added after startup'
   expect(reads.slice(intentBaseline.length)).toEqual(intentReads);
 });
 
+test('a repeated Care preparation preserves the profile and produces no repeated DOM writes or profile reads', async ({ page, baseURL }) => {
+  const reads = await installFixture(page);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(`${baseURL}/directory.html?carePreparationPerfFixture=1`, { waitUntil: 'domcontentloaded' });
+  await page.waitForFunction(() => document.documentElement.dataset.waffleUiReady === 'true'
+    && typeof window.__carePrepareCard === 'function');
+  const opener = page.locator('#directory-grid [data-open-directory-profile]');
+  await expect(opener).toHaveCount(1);
+  await opener.click();
+  const card = page.locator('.directory-card.is-profile-active');
+  const details = card.locator('[data-directory-detail="profile"]');
+  await expect(details).toHaveAttribute('data-detail-loaded', 'true');
+  await expect(details).toContainText('Give the saved medication with dinner. Call the owner if appetite changes.');
+  await expect.poll(() => reads.pending.size).toBe(0);
+  await page.waitForFunction(() => window.__carePendingPanelReassertions() === 0);
+  const beforeReadCount = reads.filter(action => action === 'get_guest_profile').length;
+
+  await card.evaluate(node => {
+    window.__careTabPanelMutationCount = 0;
+    const observer = new MutationObserver(records => { window.__careTabPanelMutationCount += records.length; });
+    const options = { attributes: true, attributeFilter: ['aria-controls', 'aria-hidden', 'aria-labelledby', 'aria-selected', 'class', 'hidden', 'id', 'role', 'tabindex'] };
+    observer.observe(node.querySelector('.v11160-desktop-tabs'), options);
+    node.querySelectorAll('[data-v11160-managed-panel="true"]').forEach(panel => observer.observe(panel, options));
+    window.__careTabPanelObserver = observer;
+    window.__carePrepareCard(node);
+    window.__carePrepareCard(node);
+    window.__carePrepareCard(node);
+  });
+  await page.waitForFunction(() => window.__carePendingPanelReassertions() === 0);
+  const mutations = await page.evaluate(() => {
+    window.__careTabPanelObserver.disconnect();
+    return window.__careTabPanelMutationCount;
+  });
+
+  expect(mutations).toBe(0);
+  expect(reads.filter(action => action === 'get_guest_profile')).toHaveLength(beforeReadCount);
+  expect(reads).not.toContain('save_guest_profile');
+  await expect(details).toContainText('Give the saved medication with dinner. Call the owner if appetite changes.');
+
+  const repairedControls = await card.evaluate(node => {
+    const photo = node.querySelector('.directory-photo-shell');
+    const tools = node.querySelector('.directory-care-photo-tools > div');
+    const gallery = node.querySelector('[data-v108-gallery]');
+    const operationBar = node.querySelector('[data-v110-operation-bar]');
+    if (!photo || !tools || !gallery || !operationBar) throw new Error('Expected initialized photo and operation controls');
+    photo.append(gallery);
+    operationBar.remove();
+    window.__carePrepareCard(node);
+    return { galleryReturned: gallery.parentElement === tools, operationBarRestored: !!node.querySelector('[data-v110-operation-bar]') };
+  });
+  expect(repairedControls).toEqual({ galleryReturned: true, operationBarRestored: true });
+});
+
 for (const [name, width, colorScheme] of [['320-light', 320, 'light'], ['320-dark', 320, 'dark'], ['390-light', 390, 'light'], ['390-dark', 390, 'dark'], ['1440-light', 1440, 'light'], ['1440-dark', 1440, 'dark']]) {
   test(`Care profile secondary tools behave correctly ${name}`, async ({ page, baseURL }, testInfo) => {
     const reads = await installFixture(page);
@@ -161,6 +216,11 @@ for (const [name, width, colorScheme] of [['320-light', 320, 'light'], ['320-dar
 
     // Wait for the independent startup Past-count read before measuring tools-only reads.
     await expect.poll(() => reads.filter(action => action === 'get_past_guest_directory').length).toBe(1);
+    // The Apps Script health check is a separately scheduled Care startup job.
+    // Await the scheduler's real returned promise so a late health read cannot
+    // race the interaction baseline; do not use an elapsed-time delay here.
+    await page.waitForFunction(() => window.__careAiHealthStartupPromise instanceof Promise);
+    await page.evaluate(() => window.__careAiHealthStartupPromise);
     await expect(card.locator('[data-care-brief-medication]')).toHaveText(profileRecord.intakeAttributes.medicationInstructions);
     // Wait for all currently dispatched route responses before capturing the
     // tools-only baseline; Care intentionally leaves unused secondary data lazy.
