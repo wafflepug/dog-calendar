@@ -127,7 +127,7 @@ for (const [width, colorScheme] of [[320, 'light'], [320, 'dark'], [390, 'light'
     await bookingTools.locator('summary').focus();
     await bookingTools.locator('summary').press('Enter');
     await expect(bookingTools).toHaveAttribute('open', '');
-    await expect(profile.locator('.directory-care-brief-actions > [data-p4-dir="owner"]')).toBeVisible();
+    await expect(profile.locator('.directory-care-brief-actions > [data-care-owner-link-group] > [data-p4-dir="owner"]')).toBeVisible();
     await expect(bookingTools.locator('[data-p4-dir="owner"]')).toHaveCount(0);
     await expect(bookingTools.getByRole('button', { name: /Book Again/ })).toBeVisible();
     expect(actionReads).not.toContain('get_guest_belongings');
@@ -239,7 +239,7 @@ for (const [name, viewport, colorScheme] of [['320-light', { width: 320, height:
     await expect(bookingTools.locator('summary')).toBeVisible();
     await bookingTools.locator('summary').click();
     await expect(bookingTools).toHaveAttribute('open', '');
-    await expect(selectedProfile.locator('.directory-care-brief-actions > [data-p4-dir="owner"]')).toBeVisible();
+    await expect(selectedProfile.locator('.directory-care-brief-actions > [data-care-owner-link-group] > [data-p4-dir="owner"]')).toBeVisible();
     await expect(bookingTools.locator('[data-p4-dir="owner"]')).toHaveCount(0);
     await expect(bookingTools.locator('[data-p4-dir="again"]')).toBeVisible();
     await bookingTools.locator('summary').click();

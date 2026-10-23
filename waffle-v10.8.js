@@ -484,10 +484,10 @@ document.addEventListener('click',event=>{const b=event.target.closest('[data-v1
 
 /* ---------------- V10.7 Care History tab ---------------- */
 function v108EnhanceCard(card){
-    if(!card||card.dataset.v108Enhanced==='true')return;card.dataset.v108Enhanced='true';
+    if(!card)return;if(card.dataset.v108Enhanced!=='true')card.dataset.v108Enhanced='true';
     const tabs=card.querySelector('.directory-main-profile-tabs');if(tabs&&!tabs.querySelector('[data-directory-main-tab="history"]'))tabs.insertAdjacentHTML('beforeend','<button type="button" class="directory-main-profile-tab" role="tab" aria-selected="false" data-directory-main-tab="history"><span aria-hidden="true">🕘</span><span>History</span></button>');
     const bel=card.querySelector('[data-directory-main-panel="belongings"]');if(bel&&!card.querySelector('[data-directory-main-panel="history"]'))bel.insertAdjacentHTML('afterend',`<section class="directory-main-profile-panel v108-history-panel" role="tabpanel" data-directory-main-panel="history" hidden><div data-v108-history>${v101SkeletonHtml('audit',3)}</div></section>`);
-    const photo=card.querySelector('.directory-photo-shell');if(photo&&!photo.querySelector('[data-v108-gallery]'))photo.insertAdjacentHTML('beforeend','<button type="button" class="v108-gallery-button" data-v108-gallery title="Photo gallery" aria-label="Open dog photo gallery">▦</button>');
+    const photo=card.querySelector('.directory-photo-shell'),tools=card.querySelector('.directory-care-photo-tools > div');let gallery=card.querySelector('[data-v108-gallery]');if(!gallery&&(tools||photo)){const target=tools||photo;target.insertAdjacentHTML('beforeend','<button type="button" class="v108-gallery-button" data-v108-gallery title="Photo gallery" aria-label="Open dog photo gallery">Photo gallery</button>');gallery=target.querySelector('[data-v108-gallery]');}else if(gallery&&tools&&gallery.parentElement!==tools)tools.appendChild(gallery);if(photo)photo.querySelectorAll('[data-v108-gallery], [data-upload-dog-photo]').forEach(button=>{if(tools)tools.appendChild(button)});
 }
 function v108EnhanceCards(){document.querySelectorAll('.directory-card[data-directory-stay-key]').forEach(v108EnhanceCard);}
 

@@ -5,6 +5,8 @@ Reviewed 17 September 2026. Repository: `wafflepug/dog-calendar`; always start i
 
 ## Current Care iteration - 23 October 2026
 
+Candidate 2026.10.23.04: [Care profile quick actions](care-profile-quick-actions.md). Compact truthful freshness with full provenance on demand, unobstructed avatars with the existing photo controls in More tools, and one grouped owner-link action with its existing form-status badge. Preserve exact guest identity, explicit uploads/sharing, unknown states, stable DOM and lazy reads. Current-head CI is required before release.
+
 Candidate 2026.10.23.03: [Care profile clarity](care-profile-cleanup.md). Three UI refinements: one compact return control without a repeated dog name, expandable long handover notes, and text-first Care section tabs. Preserve short notes, visible Safety/Medication, exact guest context, lazy reads and keyboard navigation. Builds on the published multi-visit release; publication requires current-head CI.
 
 Published 2026.10.23.02: [Multi-visit completion and sharing](multi-visit-completion.md), merged in PR #243, including PR #242. All 21 pre-merge workflows passed. The live asset revision and deployment commit c4b31e00dd5d0c0326928c7dcd79e7e170186b1d were verified; backend attribution and maintenance state stayed unchanged. Duplicate post-merge checks may still be running. Keep queued/failed outcomes truthful, successful intents frozen, and sharing separate from sending.

@@ -104,7 +104,7 @@ test('coalesced late Care preparation still adopts controls added after startup'
   const profileOpener = page.locator('#directory-grid [data-open-directory-profile]');
   await profileOpener.click();
   const reopenedCard = page.locator('.directory-card.is-profile-active');
-  const ownerLink = reopenedCard.locator('.directory-care-brief-actions > [data-p4-dir="owner"]');
+  const ownerLink = reopenedCard.locator('.directory-care-brief-actions > [data-care-owner-link-group] > [data-p4-dir="owner"]');
   await expect(ownerLink).toBeVisible();
   const intentBaseline = [...reads];
   await ownerLink.click();
@@ -135,7 +135,7 @@ for (const [name, width, colorScheme] of [['320-light', 320, 'light'], ['320-dar
     const tools = card.locator('.directory-care-more-actions');
     const summary = tools.locator(':scope > summary');
     const list = tools.locator(':scope > .directory-care-more-actions-list');
-    const ownerLink = card.locator('.directory-care-brief-actions > [data-p4-dir="owner"]');
+    const ownerLink = card.locator('.directory-care-brief-actions > [data-care-owner-link-group] > [data-p4-dir="owner"]');
     await expect(ownerLink).toBeVisible();
     await expect(ownerLink).toHaveAccessibleName('Owner Care Link for Milo');
     await expect(card.locator('[data-p4-dir="owner"]')).toHaveCount(1);

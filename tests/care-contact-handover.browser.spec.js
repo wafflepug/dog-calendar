@@ -74,7 +74,8 @@ test('stay contact and handover is readable, editable and tied to the selected d
   await expect(profileHeader.locator('.directory-status-tag')).toHaveCount(1);
   await expect(profileHeader.locator('.directory-stay-dates')).toContainText('Check-in');
   await expect(profileHeader.locator('.directory-stay-dates')).toContainText('Check-out');
-  await expect(profileHeader.locator('[data-upload-dog-photo]')).toBeVisible();
+  await expect(profileHeader.locator('[data-upload-dog-photo]')).toHaveCount(0);
+  await expect(card.locator('.directory-care-photo-tools [data-upload-dog-photo]')).toHaveCount(1);
   await expect(profileHeader.locator('[data-v1117-care-source-badge]')).toContainText('MadPaws');
   await expect(profileHeader.locator('[data-v1118-care-signals]')).toContainText('Medication');
   await expect(profileHeader.locator('[data-v1118-care-signals]')).toContainText('Food allergy');
@@ -104,7 +105,13 @@ test('stay contact and handover is readable, editable and tied to the selected d
     window.WAFFLE_V1118.decorateAllCareCards();
   });
   await expect(profileHeader.locator('.directory-status-tag')).toHaveText('At Home');
-  const handover = card.locator('.directory-care-brief-note .directory-care-brief-value');
+  const handoverHost = card.locator('.directory-care-brief-note .directory-care-brief-value');
+  const noteDisclosure = handoverHost.locator('[data-care-brief-note-disclosure]');
+  await expect(noteDisclosure).not.toHaveAttribute('open', '');
+  await expect(noteDisclosure.locator('[data-care-brief-note-full]')).toBeHidden();
+  await noteDisclosure.locator('summary').click();
+  const handover = noteDisclosure.locator('[data-care-brief-note-full]');
+  await expect(handover).toBeVisible();
   await expect(handover).toHaveText(selectedNote);
   expect(await handover.textContent()).toBe(selectedNote);
   await expect(handover).toHaveCSS('text-align', 'start');

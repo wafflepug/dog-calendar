@@ -76,6 +76,16 @@
     const actions = card.querySelector('.directory-care-brief-actions');
     const owner = actions?.querySelector('[data-p4-dir="owner"], [data-firstlevel-owner-care-link], #firstlevelOwnerCareLink, .firstlevelOwnerCareLink');
     if (!actions || !owner) return null;
+    let group = actions.querySelector(':scope > .directory-owner-care-action-group');
+    if (!group) {
+      group = document.createElement('div');
+      group.className = 'directory-owner-care-action-group';
+      group.dataset.careOwnerLinkGroup = '';
+      group.setAttribute('role', 'group');
+      group.setAttribute('aria-label', 'Owner Care link and form status');
+      actions.insertBefore(group, owner);
+    }
+    if (owner.parentElement !== group) group.appendChild(owner);
     let node = actions.querySelector('[data-compact-intake-status]');
     if (!node) {
       node = document.createElement('span');
@@ -83,8 +93,9 @@
       node.className = 'directory-compact-intake-status';
       node.setAttribute('role', 'status');
       node.setAttribute('aria-live', 'polite');
-      owner.insertAdjacentElement('afterend', node);
+      group.appendChild(node);
     }
+    if (node.parentElement !== group) group.appendChild(node);
     const state = stateFor(card);
     const signature = JSON.stringify(state);
     if (node.dataset.stateSignature !== signature) {

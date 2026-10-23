@@ -9211,7 +9211,31 @@ registerWaffleServiceWorker();
                     return { offline: readStatus?.dataset.freshnessOffline === 'true', refreshFailed: readStatus?.dataset.freshnessRefreshFailed === 'true' };
                 })()
             );
-            setDirectorySummaryText(freshnessHost, freshness.text);
+            const freshnessSummary = freshnessHost.querySelector('[data-care-brief-freshness-summary]');
+            const freshnessDetail = freshnessHost.querySelector('[data-care-brief-freshness-detail]');
+            if (freshnessSummary && freshnessDetail) {
+                const updatedDate = validatedProfileRecord?.updatedAt ? new Date(validatedProfileRecord.updatedAt) : null;
+                const validUpdatedDate = updatedDate && Number.isFinite(updatedDate.getTime()) && updatedDate.getTime() <= Date.now() ? updatedDate : null;
+                const formattedUpdatedDate = validUpdatedDate
+                    ? new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short', ...(validUpdatedDate.getFullYear() !== new Date().getFullYear() ? { year: 'numeric' } : {}) }).format(validUpdatedDate)
+                    : '';
+                const compactFreshness = (() => {
+                    if (freshness.state === 'fresh') return formattedUpdatedDate ? `Saved · ${formattedUpdatedDate}` : 'Saved · time unknown';
+                    if (freshness.state === 'saved') return 'Saved · time unknown';
+                    if (freshness.state === 'offline') return 'Offline · saved care';
+                    if (freshness.state === 'refreshing') return 'Refreshing saved care';
+                    if (freshness.state === 'loading') return 'Loading care record…';
+                    if (freshness.state === 'missing') return 'No saved care record';
+                    if (freshness.state === 'unresolved' || freshness.state === 'identity-conflict') return 'Care record identity needs review';
+                    if (freshness.state === 'error') return freshness.text.includes('saved record') ? 'Refresh failed · saved care' : 'Care record unavailable';
+                    return freshness.text;
+                })();
+                setDirectorySummaryText(freshnessSummary, `${compactFreshness} · Details`);
+                setDirectorySummaryText(freshnessDetail, freshness.text);
+            } else {
+                // Keep extracted legacy render harnesses and older simple hosts compatible.
+                setDirectorySummaryText(freshnessHost, freshness.text);
+            }
             setDirectorySummaryData(freshnessHost, 'state', freshness.state);
             setDirectorySummaryAttribute(freshnessHost, 'role', 'status');
             setDirectorySummaryAttribute(freshnessHost, 'aria-live', 'polite');
@@ -9230,7 +9254,12 @@ registerWaffleServiceWorker();
             setDirectorySummaryText(feedingHost, 'Care record needs identity review');
             setDirectorySummaryText(medicationHost, 'Care record needs identity review');
             if (freshnessHost) {
-                setDirectorySummaryText(freshnessHost, 'Shared name and dates · review the care record identity');
+                const conflictText = 'Shared name and dates · review the care record identity';
+                const summary = freshnessHost.querySelector('[data-care-brief-freshness-summary]');
+                if (summary) {
+                    setDirectorySummaryText(summary, conflictText);
+                    setDirectorySummaryText(freshnessHost.querySelector('[data-care-brief-freshness-detail]'), conflictText);
+                } else setDirectorySummaryText(freshnessHost, conflictText);
                 setDirectorySummaryData(freshnessHost, 'state', 'identity-conflict');
             }
         }
@@ -13460,6 +13489,13 @@ registerWaffleServiceWorker();
             modal.setAttribute('aria-hidden', 'true');
         }
 
+        // Closing pauses the hosted session; its loading cover must not block Care.
+        const contextCard = hostedBelongingsPhotoContext?.card;
+        if (contextCard?.querySelector('[data-v1089-upload-loading]') &&
+                typeof v1089SetCardUploadLoading === 'function') {
+            v1089SetCardUploadLoading(contextCard, false);
+        }
+
         // Keep the frame, source, and context alive. A hidden modal is a paused
         // view of the same in-memory session, not a cancelled upload.
         syncHostedPhotoSessionControls();
@@ -17344,14 +17380,6 @@ registerWaffleServiceWorker();
                                                         class="directory-photo-placeholder"
                                                         aria-label="No dog profile photo">🐶</div>
                                                 </div>
-                                                <button
-                                                    type="button"
-                                                    class="directory-photo-edit-button"
-                                                    data-upload-dog-photo
-                                                    title="Change and position dog profile photo"
-                                                    aria-label="Change and position ${escapeDashboardHtml(dogName.trim())} profile photo">
-                                                    ✎
-                                                </button>
                                             </div>
 
                                             <div class="directory-card-identity">
@@ -17392,14 +17420,18 @@ registerWaffleServiceWorker();
                                                 <div>
                                                     <h3>Care essentials</h3>
                                                 </div>
-                                                <span
+                                                <div
                                                     class="directory-care-brief-freshness"
                                                     data-care-brief-freshness
                                                     role="status"
                                                     aria-live="polite"
                                                     data-state="loading">
-                                                    Stay details ready · care details loading
-                                                </span>
+                                                    <details class="directory-care-freshness-details">
+                                                        <summary><span data-care-brief-freshness-summary>Loading care record… · Details</span></summary>
+                                                        <span data-care-brief-freshness-detail data-care-brief-freshness-full>Loading care record…</span>
+                                                        <small>Update time is for the shared saved record, including intake, photo and booking changes; it does not confirm care instructions were reviewed.</small>
+                                                    </details>
+                                                </div>
                                             </div>
 
                                             <div class="directory-care-brief-grid">
@@ -17455,6 +17487,12 @@ registerWaffleServiceWorker();
                                                 <details class="directory-care-more-actions">
                                                     <summary aria-label="More profile tools">More tools</summary>
                                                 <div class="directory-care-more-actions-list">
+                                                <section class="directory-care-photo-tools" aria-label="Photo tools">
+                                                    <strong>Photo tools</strong>
+                                                    <div>
+                                                        <button type="button" class="directory-photo-edit-button" data-upload-dog-photo title="Change and position dog profile photo" aria-label="Change and position ${escapeDashboardHtml(dogName.trim())} profile photo">Change profile photo</button>
+                                                    </div>
+                                                </section>
                                                 <button type="button" class="directory-care-brief-action" data-care-brief-action="edit">
                                                     Edit care details
                                                 </button>
