@@ -8,6 +8,8 @@ The source is the existing digital intake `submittedAt` field. The owner submiss
 
 Stored profile fallbacks can contain a profile update date rather than a form submission date. They remain **Saved care available** / **Care profile available**, with current form completion unverified. Their update date is not presented as a receipt. A context mismatch removes old receipt evidence and reports unknown status until current evidence replaces it. Dates display in the browser's local timezone, consistently with existing record timestamps.
 
+Records & forms retains a valid stored-profile date with an explicit **Updated** label. It carries no receipt metadata and cannot supply the compact form-received date. This preserves useful record age while keeping form submission distinct.
+
 No backend deployment, schema change, live guest write, external message or paid service is involved. This candidate includes the owner guidance from PR #249; its current-head CI and publication attribution remain required before calling the candidate live.
 
 ## Testing matrix
