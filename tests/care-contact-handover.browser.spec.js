@@ -104,7 +104,13 @@ test('stay contact and handover is readable, editable and tied to the selected d
     window.WAFFLE_V1118.decorateAllCareCards();
   });
   await expect(profileHeader.locator('.directory-status-tag')).toHaveText('At Home');
-  const handover = card.locator('.directory-care-brief-note .directory-care-brief-value');
+  const handoverHost = card.locator('.directory-care-brief-note .directory-care-brief-value');
+  const noteDisclosure = handoverHost.locator('[data-care-brief-note-disclosure]');
+  await expect(noteDisclosure).not.toHaveAttribute('open', '');
+  await expect(noteDisclosure.locator('[data-care-brief-note-full]')).toBeHidden();
+  await noteDisclosure.locator('summary').click();
+  const handover = noteDisclosure.locator('[data-care-brief-note-full]');
+  await expect(handover).toBeVisible();
   await expect(handover).toHaveText(selectedNote);
   expect(await handover.textContent()).toBe(selectedNote);
   await expect(handover).toHaveCSS('text-align', 'start');
