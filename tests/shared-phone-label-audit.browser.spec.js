@@ -12,6 +12,10 @@ async function settle(page){
 
 async function clickControl(page,menu){
  await expect(menu).toBeVisible();await expect(menu).toBeEnabled();
+ await expect.poll(()=>menu.evaluate(button=>{
+  const box=button.getBoundingClientRect(),hit=document.elementFromPoint(box.left+box.width/2,box.top+box.height/2);
+  return hit===button||button.contains(hit);
+ }),{message:'control becomes reachable after its native open/close transition'}).toBe(true);
  const point=await menu.evaluate(button=>{
   const box=button.getBoundingClientRect(),x=box.left+box.width/2,y=box.top+box.height/2;
   const hit=document.elementFromPoint(x,y);

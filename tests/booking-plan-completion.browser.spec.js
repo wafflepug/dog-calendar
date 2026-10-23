@@ -244,6 +244,36 @@ test('a saved-visits check locks competing actions, ignores a repeated click and
   expect(await page.evaluate(() => window.fixtureWrites)).toHaveLength(1);
 });
 
+test('a saved-visits check leaves focus alone after the user moves outside the dialog', async ({ page, baseURL }) => {
+  await setup(page, baseURL, { newDog: true, outcomes: ['queued'] });
+  await page.locator('#p4PlanSave').click();
+  await expect(page.locator('#p4PlanSave')).toHaveText('Check saved visits');
+  await page.evaluate(() => {
+    window.historyReadStarted = false;
+    window.resolveHistoryRead = null;
+    window.WAFFLE_PHASE4_CORE.read = payload => {
+      if (payload.action === 'list_dog_identities') return Promise.resolve({ result: 'success', identities: [
+        { dogId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', dogName: 'Luna', dogNumber: '00002' }
+      ] });
+      window.historyReadStarted = true;
+      return new Promise(resolve => { window.resolveHistoryRead = () => resolve({ result: 'success', history: {
+        dogId: payload.dogId, previousStays: [{ dogId: payload.dogId,
+          stayId: window.fixtureWrites[0].stayId, startDate: window.fixtureWrites[0].startDate,
+          endDate: window.fixtureWrites[0].endDate, bookingType: 'Boarding' }]
+      } }); });
+    };
+    const outside = document.createElement('button');
+    outside.type = 'button'; outside.id = 'outsideRecoveryFocus'; outside.textContent = 'Outside dialog';
+    document.body.append(outside);
+  });
+  await page.locator('#p4PlanSave').click();
+  await expect.poll(() => page.evaluate(() => window.historyReadStarted)).toBe(true);
+  await page.locator('#outsideRecoveryFocus').focus();
+  await page.evaluate(() => window.resolveHistoryRead());
+  await expect(page.locator('[data-p4-result-status="saved"]')).toHaveCount(1);
+  await expect(page.locator('#outsideRecoveryFocus')).toBeFocused();
+});
+
 test('failed, mismatched and duplicate history reads keep a queued row unconfirmed and block repeated checks', async ({ page, baseURL }) => {
   await setup(page, baseURL, { outcomes: ['queued', 'saved'] });
   await page.locator('#p4PlanSave').click();

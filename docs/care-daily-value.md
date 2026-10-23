@@ -22,6 +22,17 @@ No paid dependency, authentication change, Apps Script deployment or automatic o
 
 Evidence is stored under `output/releases/2026.10.23.05/` and focused test logs. Physical-phone checks remain manual. Publication is separate from local implementation and requires current-head CI and exact deployed-release verification.
 
+## Local validation snapshot
+
+- MVP readiness: 375 Node tests and five Python contracts passed.
+- Arrival component: 42 Chromium/WebKit cases; arrival/checkout responsive integration: six cases passed.
+- Profile read journey suite: five cases passed, including cold open, identity switch, Back, warm return, invalidation/changed data and explicit Retry.
+- Targeted Care preparation and late-controls checks passed in both engines. The broader tools run exposed startup-timing assumptions; its corrected affected cases passed in both engines.
+- Focused booking recovery covers mixed results, original payload preservation, exact verification, ambiguous/failed/duplicate history, shared history reads, repeated confirmation and focus restoration. The earlier broad planner run was 86/90; the identified old-copy, original-plan locking and recovery-focus cases subsequently passed targeted Chromium/WebKit checks. This is not a claim that the entire planner suite was rerun green.
+- Latest WebKit phone audits: Today 29 configurations and Calendar 30, both with zero recorded overlap defects. Resize-only request counting pauses intentional interval polls during its measurement; actual resize handlers remain active and strict request equality is retained. Menu/settings checks use real pointer input after verifying touch size and the hit target.
+
+Full current-head GitHub CI remains required. This candidate is committed/pushed for review and has not been deployed. Local synthetic tests do not prove production booking writes or physical-device behavior.
+
 ## Next Backlog Item
 
 Simplify departure completion using the existing checkout, belongings and handover flow, showing only unresolved items and keeping explicit checkout confirmation.
