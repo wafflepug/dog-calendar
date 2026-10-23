@@ -232,7 +232,7 @@ test('shared phone labels across phone, tablet and landscape viewports',async({p
    await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))));
    const repeatedResizeMutations=await page.evaluate(()=>{window.__phoneAuditObserver.disconnect();return window.__phoneAuditMutations;});
    expect(repeatedResizeMutations,`${route} repeated header maintenance does not mutate the header or body classes`).toEqual([]);
-   expect(fixture.reads.length,`${route} resize does not add backend reads`).toBe(readsBeforeResize);
+   expect(fixture.reads.length,`${route} resize does not add backend reads: ${JSON.stringify(fixture.reads.slice(readsBeforeResize))}`).toBe(readsBeforeResize);
    const restored=await page.evaluate(()=>({menuSame:window.__phoneAuditMenu===document.querySelector('#wh75MenuButton'),brandSame:window.__phoneAuditBrand===(document.querySelector('#whPalzStayMobileShellBrand')||document.querySelector('#whPalzStayMobileBrand')),brandCount:[...document.querySelectorAll('#whPalzStayMobileShellBrand,#whPalzStayMobileBrand')].filter(e=>e.getClientRects().length&&getComputedStyle(e).visibility!=='hidden').length}));
    expect(restored).toEqual({menuSame:true,brandSame:true,brandCount:1});
    const menu=page.locator('#wh75MenuButton');

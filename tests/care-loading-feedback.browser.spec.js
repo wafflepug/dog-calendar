@@ -289,7 +289,8 @@ test('Care Brief shows cached safety before the profile read and refreshes feedi
   const essentialOrder = await brief.locator('.directory-care-brief-grid > .directory-care-brief-item').evaluateAll(items => items.map(item => item.querySelector('h4')?.textContent?.trim()));
   expect(essentialOrder.slice(0, 3)).toEqual(['Safety', 'Medication', 'Feeding & walks']);
   await expect(brief.locator('[data-care-brief-freshness]')).toHaveAttribute('data-state', 'saved');
-  await expect(brief.locator('[data-care-brief-freshness]')).toHaveText('Saved record · update time unknown');
+  await expect(brief.locator('[data-care-brief-freshness-summary]')).toHaveText('Saved · time unknown · Details');
+  await expect(brief.locator('[data-care-brief-freshness-detail]')).toHaveText('Saved record · update time unknown');
   expect(fixture.profileCalls.get(key)).toBe(1);
 });
 
