@@ -16170,6 +16170,10 @@ registerWaffleServiceWorker();
         const submitted = submittedAt
             ? formatAuditTimestamp(submittedAt)
             : '';
+        const profileUpdatedAt = record.storedProfileFallback
+            ? getTrustedDirectoryIntakeReceiptTimestamp(record.submittedAt)
+            : '';
+        const profileUpdated = profileUpdatedAt ? formatAuditTimestamp(profileUpdatedAt) : '';
         const receiptCard = strip.closest('.directory-card');
         const receiptIdentity = receiptCard ? [
             String(receiptCard.dataset.directoryStayKey || receiptCard.dataset.stayKey || ''),
@@ -16187,7 +16191,7 @@ registerWaffleServiceWorker();
                     <span class="directory-intake-dot is-complete"></span>
                     <span class="directory-record-status">Intake complete</span>
                     ${record.storedProfileFallback || submitted ? `
-                        <span class="directory-record-meta"${submittedAt && receiptIdentity ? ` data-intake-received-at="${escapeDashboardHtml(submittedAt)}" data-intake-received-for="${escapeDashboardHtml(receiptIdentity)}"` : ''}>${record.storedProfileFallback ? 'Stored profile' : ''}${record.storedProfileFallback && submitted ? ' · ' : ''}${submitted ? escapeDashboardHtml(submitted) : ''}</span>
+                        <span class="directory-record-meta"${submittedAt && receiptIdentity ? ` data-intake-received-at="${escapeDashboardHtml(submittedAt)}" data-intake-received-for="${escapeDashboardHtml(receiptIdentity)}"` : ''}>${record.storedProfileFallback ? 'Stored profile' : ''}${profileUpdated ? ` · Updated ${escapeDashboardHtml(profileUpdated)}` : ''}${submitted ? escapeDashboardHtml(submitted) : ''}</span>
                     ` : ''}
                 </div>
                 <div class="directory-intake-actions">

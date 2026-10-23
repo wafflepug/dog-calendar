@@ -236,6 +236,8 @@ test('legacy OCR labels are truthful and stay separate from file metadata', asyn
   const digital = records.locator('[data-directory-intake]');
   await expect(digital.locator('.directory-record-status')).toHaveText('Intake complete');
   await expect(digital.locator('.directory-record-meta')).toContainText('Stored profile');
+  await expect(digital.locator('.directory-record-meta')).toContainText('Updated');
+  await expect(digital.locator('[data-intake-received-at]')).toHaveCount(0);
   await expect(digital.locator('.directory-record-meta')).toContainText(/18.*2026/);
 
   const legacy = records.locator('[data-directory-legacy]');
