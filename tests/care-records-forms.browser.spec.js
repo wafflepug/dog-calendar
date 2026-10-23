@@ -434,7 +434,9 @@ test('PDF uploader cancel return refreshes only its stay without claiming an upl
   await page.keyboard.press('Enter');
   await expect.poll(() => page.evaluate(() => window.__pdfPopupOpens)).toBe(1);
   await page.evaluate(() => { window.__pdfPopup.closed = true; });
-  await expect.poll(() => fixture.calls.get('get_legacy_intake_statuses') || 0).toBe(1);
+  // The real close watcher and shared reader can be delayed by a busy browser.
+  // Require the same single scoped read, within the suite's bounded read window.
+  await expect.poll(() => fixture.calls.get('get_legacy_intake_statuses') || 0, { timeout: 15000 }).toBe(1);
   expect(fixture.requests.get('get_legacy_intake_statuses').at(-1).stayKeys).toEqual([await card.getAttribute('data-directory-stay-key')]);
   await expect(records.locator('[data-directory-legacy]')).toContainText('No legacy PDF on file');
   await expect(records.locator('[data-directory-legacy]')).not.toContainText(/uploaded|saved successfully/i);

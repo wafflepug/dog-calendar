@@ -2,8 +2,8 @@
    Build: 2026.08.27.04
    Historical base styles remain compatibility sources during Phase 3A, but pages no longer
    reference them individually. Preserve this import order until modules are folded in. */
-@import url("waffle-app.css?build=2026.08.27.04&rev=2026.10.23.05");
-@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.10.23.05");
+@import url("waffle-app.css?build=2026.08.27.04&rev=2026.10.23.06");
+@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.10.23.06");
 @import url("waffle-v10.8.2.css?build=2026.08.27.04");
 @import url("waffle-v10.8.3.css?build=2026.08.27.04");
 @import url("waffle-v10.8.5.css?build=2026.08.27.04");
@@ -11,12 +11,12 @@
 @import url("waffle-v10.8.7.css?build=2026.08.27.04");
 @import url("waffle-v10.8.8.css?build=2026.08.27.04");
 @import url("waffle-v10.8.9.css?build=2026.08.27.04");
-@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.10.23.05");
+@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.10.23.06");
 @import url("waffle-v11.0.3.css?build=2026.08.27.04");
 @import url("waffle-v11.0.5.css?build=2026.08.27.04");
-@import url("waffle-v11.1.94.css?build=2026.10.23.05");
-@import url("waffle-v11.1.95.css?build=2026.10.23.05");
-@import url("waffle-v11.1.96.css?build=2026.10.23.05&rev=2026.10.23.05");
+@import url("waffle-v11.1.94.css?build=2026.10.23.06");
+@import url("waffle-v11.1.95.css?build=2026.10.23.06");
+@import url("waffle-v11.1.96.css?build=2026.10.23.06&rev=2026.10.23.06");
 
 /* ============================================================
    MOBILE FIRST-PAINT STABILITY GATE
@@ -3109,3 +3109,39 @@ body[data-waffle-page="directory"] .directory-card-fused > .directory-guest-tile
 .owner-handoff-options[open]>summary::after{content:'−'}
 .owner-handoff-secondary{display:grid;gap:.6rem;min-width:0;padding:.5rem 0}
 .owner-handoff-secondary>*{min-width:0;max-width:100%;box-sizing:border-box}
+
+/* Departure review: routine belongings on demand; unresolved evidence stays visible. */
+#v11217GuidedCheckout .v11217-guided-evidence { min-width:0; }
+#v11217GuidedCheckout [data-v11217-guided-belongings-details] {
+  min-width:0;margin-top:6px;border:1px solid var(--wh-border,#cbd5e1);border-radius:10px;
+}
+#v11217GuidedCheckout [data-v11217-guided-belongings-details] > summary {
+  box-sizing:border-box;display:list-item;list-style-position:inside;min-height:44px;padding:10px 12px;
+  font-size:14px;font-weight:700;line-height:1.5;cursor:pointer;white-space:normal;overflow-wrap:anywhere;
+}
+#v11217GuidedCheckout [data-v11217-guided-belongings-details] > summary:focus-visible {
+  outline:3px solid var(--wh75-accent,#7c3aed);outline-offset:2px;
+}
+#v11217GuidedCheckout [data-v11217-guided-belongings-details]:not([open]) > :not(summary) { display:none!important; }
+#v11217GuidedCheckout [data-v11217-guided-belongings-details] > [data-v11217-guided-belongings] { padding:0 12px 10px;min-width:0;overflow-wrap:anywhere; }
+#v11217GuidedCheckout .v11217-guided-unknown {
+  margin-top:6px;padding:8px 10px;border-left:3px solid #b45309;background:var(--wh-surface-soft,#fffbeb);
+  font-size:14px;line-height:1.5;white-space:normal;overflow-wrap:anywhere;
+}
+body.dark-theme #v11217GuidedCheckout .v11217-guided-unknown { border-left-color:#fbbf24;background:var(--wh-surface-soft,#253149); }
+
+/* Care routine previews retain useful values before expansion. */
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-routine-details { min-width:0;max-width:100%; }
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-routine-details > summary {
+  box-sizing:border-box;display:list-item;list-style-position:inside;min-height:44px;max-width:100%;padding:10px 0;
+  cursor:pointer;font-size:14px;font-weight:700;line-height:1.5;white-space:normal;overflow-wrap:anywhere;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-routine-details > summary:focus-visible {
+  outline:3px solid var(--wh75-accent,#7c3aed);outline-offset:2px;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-routine-values { min-width:0;max-width:100%;overflow-wrap:anywhere; }
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-routine-details:not([open]) > .directory-care-routine-values { display:none!important; }
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-more-actions-list > [data-p4-dir="again"] {
+  box-sizing:border-box;width:100%;max-width:100%;min-width:0;min-height:44px;white-space:normal;overflow-wrap:anywhere;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-more-actions-list > [data-p4-dir="again"] small { display:none; }

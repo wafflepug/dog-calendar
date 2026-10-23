@@ -86,7 +86,7 @@ test('Care arrival and guided checkout remain reachable at the configured viewpo
   const arrivalStatus = selected.locator('[data-waffle-arrival-ready]');
   await expect(arrivalStatus).toBeVisible();
   await expect(arrivalStatus.locator('[data-arrival-label]')).toHaveText('Not prepared');
-  await expect(arrivalStatus.locator('[data-arrival-detail]')).toHaveText('No digital intake link is recorded.');
+  await expect(arrivalStatus.locator('[data-arrival-detail]')).toHaveText('No digital intake link is recorded for this stay.');
   const light = await arrivalStatus.evaluate(node => ({ height: node.getBoundingClientRect().height, background: getComputedStyle(node).backgroundColor }));
   expect(light.height).toBeGreaterThanOrEqual(44);
   await measureNoOverflow(page);
@@ -112,6 +112,7 @@ test('Care arrival and guided checkout remain reachable at the configured viewpo
   }
 
   const card = page.getByTestId('selected-card');
+  await card.locator('[data-belongings-summary]').evaluate(node => node.setAttribute('aria-busy', 'true'));
   await card.locator('.v11217-roster-more-actions summary').click();
   await card.locator('[data-v11217-roster-checkout]').click();
   const dialog = page.locator('#v11217GuidedCheckout');
@@ -121,6 +122,8 @@ test('Care arrival and guided checkout remain reachable at the configured viewpo
   const note = dialog.locator('[data-v11217-guided-note]');
   await expect(cancel).toBeVisible();
   await expect(confirm).toBeVisible();
+  await expect(dialog.locator('[data-v11217-guided-belongings-unknown]')).toBeVisible();
+  await expect(dialog.locator('[data-v11217-guided-missing]')).toBeVisible();
   const layout = await page.evaluate(() => {
     const nav = document.querySelector('#wh75MobileBottomNav');
     const modal = document.querySelector('#v11217GuidedCheckout');
@@ -153,6 +156,21 @@ test('Care arrival and guided checkout remain reachable at the configured viewpo
   expect(layout.noteFontSize).toBeGreaterThanOrEqual(16);
   expect(layout.modalScrollWidth).toBeLessThanOrEqual(testInfo.project.use.viewport.width);
   if (testInfo.project.use.viewport.width <= 390) expect(layout.bodyScroll).toBeGreaterThanOrEqual(layout.bodyClient);
+  const lightUnknown = await dialog.locator('[data-v11217-guided-belongings-unknown]').evaluate(node => getComputedStyle(node).backgroundColor);
+  await page.evaluate(() => document.body.classList.add('dark-theme'));
+  const darkCheckout = await page.evaluate(() => {
+    const modal = document.querySelector('#v11217GuidedCheckout');
+    const unknown = getComputedStyle(modal.querySelector('[data-v11217-guided-belongings-unknown]')).backgroundColor;
+    const actions = [...modal.querySelectorAll('.v11217-modal-actions button')].map(button => {
+      const rect = button.getBoundingClientRect();
+      const hit = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
+      return { height: rect.height, bottom: rect.bottom, hit: hit === button || button.contains(hit) };
+    });
+    return { unknown, actions, height: innerHeight };
+  });
+  expect(darkCheckout.unknown).not.toBe(lightUnknown);
+  expect(darkCheckout.actions.every(button => button.height >= 44 && button.bottom <= darkCheckout.height && button.hit), JSON.stringify(darkCheckout)).toBe(true);
+  await page.evaluate(() => document.body.classList.remove('dark-theme'));
   if (testInfo.project.name === 'chromium-390' || testInfo.project.name === 'chromium-1440') {
     fs.mkdirSync(evidenceDir, { recursive: true });
     await page.screenshot({ path: path.join(evidenceDir, `guided-checkout-${testInfo.project.use.viewport.width}.png`) });

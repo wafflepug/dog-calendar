@@ -195,7 +195,7 @@ for (const [name, width, colorScheme] of [['320-light', 320, 'light'], ['320-dar
     const list = tools.locator(':scope > .directory-care-more-actions-list');
     const ownerLink = card.locator('.directory-care-brief-actions > [data-care-owner-link-group] > [data-p4-dir="owner"]');
     await expect(ownerLink).toBeVisible();
-    await expect(ownerLink).toHaveAccessibleName('Owner Care Link for Milo');
+    await expect(ownerLink).toHaveAccessibleName('Prepare owner form — Owner Care Link for Milo');
     await expect(card.locator('[data-p4-dir="owner"]')).toHaveCount(1);
     await expect(tools.locator('[data-p4-dir="owner"]')).toHaveCount(0);
     await expect(summary).toHaveText('More tools');
@@ -250,7 +250,7 @@ for (const [name, width, colorScheme] of [['320-light', 320, 'light'], ['320-dar
     await bookingTools.locator(':scope > summary').click();
     await expect(bookingTools).toHaveAttribute('open', '');
     const bookingButtons = bookingTools.locator('.p4-directory-action-list button[data-p4-dir]');
-    const againButton = bookingTools.locator('[data-p4-dir="again"]');
+    const againButton = list.locator(':scope > [data-p4-dir="again"]');
     const ownerButton = bookingTools.locator('[data-p4-dir="owner"]');
     const historyButton = bookingTools.locator('[data-p4-dir="history"]');
     await expect(againButton).toHaveCount(1);
@@ -263,7 +263,7 @@ for (const [name, width, colorScheme] of [['320-light', 320, 'light'], ['320-dar
       await expect(historyButton).toHaveAccessibleName(`Stay history for ${booking.dogName}`);
       await expect(historyButton).toContainText('Stay history');
     }
-    await expect(bookingButtons).toHaveCount(1 + historyCount);
+    await expect(bookingButtons).toHaveCount(historyCount);
     expect(reads).toEqual(initialReads);
     await expect(page.locator('#wh75SettingsPanel')).not.toHaveClass(/is-open/);
     await testInfo.attach(`care-profile-tools-expanded-${name}`, { body: await page.screenshot({ path: testInfo.outputPath(`care-profile-tools-expanded-${name}.png`), fullPage: true }), contentType: 'image/png' });

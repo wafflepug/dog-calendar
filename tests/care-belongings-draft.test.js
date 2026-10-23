@@ -199,7 +199,7 @@ test('confirmed belongings save reports refresh failure and offers a read-only r
   await h.context.save(h.card, h.button);
   assert.equal(h.calls.length, 1);
   assert.equal(h.state.initial.blankets.description, 'Blue fleece');
-  assert.match(h.status.textContent, /Your changes were saved.*could not be refreshed/);
+  assert.match(h.status.textContent, /Saved to the shared Care record.*could not be refreshed/);
   const retry = h.status.children.find(child => child.tagName === 'button');
   assert.equal(retry.textContent, 'Retry refresh');
   await retry.click();

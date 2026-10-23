@@ -693,8 +693,8 @@
     modal.innerHTML = `<section class="v11217-modal-card">
       <header class="v11217-modal-head"><div><small>DEPARTURE</small><h3 id="v11217GuidedCheckoutTitle" tabindex="-1">Check out</h3><p>Review this stay before confirming departure.</p></div><button type="button" class="v11217-modal-close" data-v11217-guided-close aria-label="Close checkout">×</button></header>
       <div class="v11217-modal-body"><div class="v11217-modal-dog"><strong data-v11217-guided-dog></strong><span data-v11217-guided-dogid></span><div class="v11217-guided-dates"><span><small>Booked stay</small><span data-v11217-guided-dates></span></span><span><small data-v11217-guided-checkout-caption>Checkout today</small><span data-v11217-guided-checkout-today></span></span></div></div>
-      <div class="v11217-guided-checklist"><section><strong>Belongings</strong><div data-v11217-guided-belongings>Not available in this summary</div></section><section><strong>Medication</strong><div data-v11217-guided-medication>Not available in this summary</div></section></div>
-      <div class="v11217-guided-missing" data-v11217-guided-missing hidden><span>Some Care details are not available here. Review Care before handover.</span><button type="button" data-v11217-guided-review-care>Review Care · note kept</button></div>
+      <div class="v11217-guided-checklist"><section class="v11217-guided-evidence" data-v11217-guided-belongings-section><strong>Belongings</strong><details data-v11217-guided-belongings-details><summary data-v11217-guided-belongings-summary></summary><div data-v11217-guided-belongings></div></details><div class="v11217-guided-unknown" data-v11217-guided-belongings-unknown hidden>Not available in this summary</div></section><section class="v11217-guided-evidence" data-v11217-guided-medication-section><strong>Medication</strong><div data-v11217-guided-medication></div><div class="v11217-guided-unknown" data-v11217-guided-medication-unknown hidden>Not available in this summary</div></section></div>
+      <div class="v11217-guided-missing" data-v11217-guided-missing hidden><span>Care details are unavailable in this summary. Review the missing details before handover.</span><button type="button" data-v11217-guided-review-care>Review Care · note kept</button></div>
       <div class="v11217-field"><label for="v11217GuidedCheckoutNote">Handover note (for this checkout)</label><textarea id="v11217GuidedCheckoutNote" data-v11217-guided-note maxlength="1000" placeholder="Optional handover details…"></textarea></div>
       <div class="v11217-action-feedback" data-v11217-guided-feedback role="alert" aria-live="assertive" hidden></div></div>
       <footer class="v11217-modal-actions"><button type="button" class="v11217-cancel" data-v11217-guided-close>Cancel</button><button type="button" class="v11217-confirm" data-v11217-guided-confirm>Confirm checkout</button></footer>
@@ -754,15 +754,30 @@
     const medication = loadedValue(['[data-care-brief-medication]']);
     const renderEvidence = (target, evidence) => {
       target.replaceChildren();
-      if (!evidence) { target.textContent = 'Not available in this summary'; return; }
+      if (!evidence) return;
       if (evidence.listItems.length) {
         const list = document.createElement('ul');
         evidence.listItems.forEach(item => { const li = document.createElement('li'); li.textContent = item; list.appendChild(li); });
         target.appendChild(list);
       } else target.textContent = evidence.value;
     };
-    renderEvidence(modal.querySelector('[data-v11217-guided-belongings]'), belongings);
-    renderEvidence(modal.querySelector('[data-v11217-guided-medication]'), medication);
+    const setEvidence = (kind, evidence) => {
+      const details = modal.querySelector(`[data-v11217-guided-${kind}-details]`);
+      const content = modal.querySelector(`[data-v11217-guided-${kind}]`);
+      const unknown = modal.querySelector(`[data-v11217-guided-${kind}-unknown]`);
+      unknown.hidden = !!evidence;
+      if (details) {
+        const summary = modal.querySelector(`[data-v11217-guided-${kind}-summary]`);
+        details.open = false;
+        details.hidden = !evidence;
+        if (evidence) summary.textContent = evidence.listItems.length
+          ? `${evidence.listItems.length} listed · review`
+          : 'Recorded details · review';
+      }
+      renderEvidence(content, evidence);
+    };
+    setEvidence('belongings', belongings);
+    setEvidence('medication', medication);
     const exactStay = { stayId: payload.stayId, dogId: payload.dogId, stayKey: payload.stayKey };
     const restoreDraft = sameGuidedStay(guidedReviewDraft, exactStay);
     modal.querySelector('[data-v11217-guided-note]').value = restoreDraft ? guidedReviewDraft.note : '';

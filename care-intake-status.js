@@ -29,7 +29,7 @@
     const hasPreparedLink = !!prepared && prepared.identity === currentIdentity;
     if (strip?.getAttribute('aria-busy') === 'true') {
       return hasPreparedLink
-        ? { code: 'link_ready', label: 'Link ready', detail: 'Refresh Care after owner submits.' }
+        ? { code: 'link_ready', label: 'Link ready', action: 'Open sharing options', detail: 'The link is ready. Choose when to copy it and send it to the owner.' }
         : { code: 'unknown', label: 'Loading', detail: 'Checking owner intake status.' };
     }
     const dot = strip?.querySelector('.directory-intake-dot');
@@ -37,21 +37,21 @@
     if (strip && dot?.classList.contains('is-complete') && /intake complete/i.test(text)) {
       const meta = strip.querySelector('.directory-record-meta');
       if (/stored profile/i.test(meta?.textContent || '')) {
-        if (hasPreparedLink) return { code: 'link_ready', label: 'Link ready', detail: 'Refresh Care after owner submits.' };
-        return { code: 'unknown', label: card.dataset.intakeMethod === 'legacy' ? 'Care profile available' : 'Saved care available', detail: 'Current form completion not verified.' };
+        if (hasPreparedLink) return { code: 'link_ready', label: 'Link ready', action: 'Open sharing options', detail: 'The link is ready. Choose when to copy it and send it to the owner.' };
+        return { code: 'unknown', label: card.dataset.intakeMethod === 'legacy' ? 'Care profile available' : 'Saved care available', action: 'Check owner form options', detail: 'Current form completion is not verified. Check Records & forms for submitted answers.' };
       }
-      return { code: 'complete', label: 'Form received', detail: 'Owner intake is marked complete.', method: 'digital' };
+      return { code: 'complete', label: 'Form received', action: 'Owner form options', detail: 'Review the submitted answers in Records & forms.', method: 'digital' };
     }
-    if (hasPreparedLink) return { code: 'link_ready', label: 'Link ready', detail: 'Refresh Care after owner submits.' };
-    if (!strip) return { code: 'unknown', label: 'Status unknown', detail: 'Refresh Care after owner submits.' };
-    if (card.dataset.intakeMethod === 'legacy') return { code: 'unknown', label: 'Care profile available', detail: 'Current form completion not verified.' };
-    if (dot?.classList.contains('is-awaiting')) return { code: 'link_ready', label: 'Link ready', detail: 'Refresh Care after owner submits.' };
+    if (hasPreparedLink) return { code: 'link_ready', label: 'Link ready', action: 'Open sharing options', detail: 'The link is ready. Choose when to copy it and send it to the owner.' };
+    if (!strip) return { code: 'unknown', label: 'Status unknown', action: 'Check owner form options', detail: 'Status is not available. Check Records & forms for submitted answers.' };
+    if (card.dataset.intakeMethod === 'legacy') return { code: 'unknown', label: 'Care profile available', action: 'Check owner form options', detail: 'Current form completion is not verified. Check Records & forms for submitted answers.' };
+    if (dot?.classList.contains('is-awaiting')) return { code: 'link_ready', label: 'Awaiting owner', action: 'Follow up with owner', detail: 'This form has not been received yet. Follow up with the owner if they still need to complete it.' };
     if (dot?.classList.contains('is-not-sent') && /no digital intake on file/i.test(text)) {
       const prepared = linked.get(card);
-      if (prepared && prepared.identity === currentIdentity) return { code: 'link_ready', label: 'Link ready', detail: 'Refresh Care after owner submits.' };
-      return { code: 'not_prepared', label: 'Not prepared', detail: 'No digital intake link is recorded.' };
+      if (prepared && prepared.identity === currentIdentity) return { code: 'link_ready', label: 'Link ready', action: 'Open sharing options', detail: 'The link is ready. Choose when to copy it and send it to the owner.' };
+      return { code: 'not_prepared', label: 'Not prepared', action: 'Prepare owner form', detail: 'No digital intake link is recorded for this stay.' };
     }
-    return { code: 'unknown', label: 'Status unknown', detail: 'Refresh Care after owner submits.' };
+    return { code: 'unknown', label: 'Status unknown', action: 'Check owner form options', detail: 'Status is not available. Check Records & forms for submitted answers.' };
   }
   function selected(card, d) {
     if (!card?.matches?.('.is-profile-active') || !d || !d.dogName || !d.startDate || !d.endDate) return false;
@@ -109,6 +109,18 @@
         node.removeAttribute('title');
         node.removeAttribute('aria-description');
       }
+    }
+    const actionLabel = state.action || 'Owner Care Link';
+    const dogName = String(card.dataset.directoryDogName || card.dataset.dogName || '').trim();
+    const accessibleName = `${actionLabel} — Owner Care Link${dogName ? ` for ${dogName}` : ''}`;
+    const actionButtonLabel = owner.querySelector('span');
+    const actionHint = owner.querySelector('small');
+    if (actionButtonLabel && actionButtonLabel.textContent !== actionLabel) actionButtonLabel.textContent = actionLabel;
+    if (owner.getAttribute('aria-label') !== accessibleName) owner.setAttribute('aria-label', accessibleName);
+    if (actionHint && state.detail && actionHint.textContent !== state.detail) actionHint.textContent = state.detail;
+    if (owner.getAttribute('aria-description') !== state.detail) {
+      if (state.detail) owner.setAttribute('aria-description', state.detail);
+      else owner.removeAttribute('aria-description');
     }
     const readiness = card.querySelector('[data-care-readiness-item="intake"]');
     if (readiness && readiness.dataset.compactStatusAvailable !== 'true') readiness.dataset.compactStatusAvailable = 'true';

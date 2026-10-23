@@ -276,6 +276,10 @@ test(`${route}: shared phone labels across phone, tablet and landscape viewports
    expect(drawerLayers.backdropOpen&&drawerLayers.rightHeaderHit).toBe(true);
    await clickControl(page,page.locator('#wh75MobileDrawer [data-wh75-settings]'));
    await expect(page.locator('#wh75SettingsPanel')).toBeVisible();
+   // This panel retains a layout box while closed. Visibility alone does
+   // not establish that the pointer action opened it and its backdrop.
+   await expect(page.locator('#wh75SettingsPanel')).toHaveClass(/is-open/);
+   await expect(page.locator('#wh75SettingsBackdrop')).toHaveClass(/is-open/);
    const settingsLayers=await page.evaluate(()=>({topbarZ:+getComputedStyle(document.querySelector('#wh75MobileTopbar')).zIndex,backdropZ:+getComputedStyle(document.querySelector('#wh75SettingsBackdrop')).zIndex,panelZ:+getComputedStyle(document.querySelector('#wh75SettingsPanel')).zIndex,backdropOpen:document.querySelector('#wh75SettingsBackdrop').classList.contains('is-open')}));
    expect(settingsLayers.backdropZ).toBeGreaterThan(settingsLayers.topbarZ);
    expect(settingsLayers.panelZ).toBeGreaterThan(settingsLayers.topbarZ);

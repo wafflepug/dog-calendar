@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.10.23.05",
-  "releaseName": "Care Daily Workflow Clarity",
+  "assetRevision": "2026.10.23.06",
+  "releaseName": "Care Owner Workflow",
   "careIteration": {
     "returningDogSuggestions": true,
     "reviewedCareInheritance": true,

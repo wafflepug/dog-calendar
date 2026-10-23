@@ -5,6 +5,8 @@ Reviewed 17 September 2026. Repository: `wafflepug/dog-calendar`; always start i
 
 ## Current Care iteration - 23 October 2026
 
+Candidate 2026.10.23.06: [Care owner workflow](care-owner-workflow.md). Five refinements: compact departure belongings, routine previews with essential values visible, direct Book Again in More tools, contextual owner-form follow-up, and truthful shared-save feedback. Preserve visible medication, exact guest identity, draft recovery and lazy reads. Next: simplify the existing owner sharing dialog without extra entry points or background polling. Publication requires current-head CI and deployment attribution.
+
 Candidate 2026.10.23.05: [Care daily workflow value](care-daily-value.md). Three scoped improvements: queued booking verification and safe partial resume, measured changed-only Care preparation, and arrival exceptions without duplicate completed-intake prompts. Use existing authoritative reads only on an explicit recovery action; retain exact identities, immutable attempted payloads, lazy profile reads, visible safety/medication and Next arrival focus. Inherits the pending Care profile quick-action/clarity changes; full current-head CI is required before publication.
 
 
