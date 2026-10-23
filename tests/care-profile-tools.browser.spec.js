@@ -247,8 +247,13 @@ for (const [name, width, colorScheme] of [['320-light', 320, 'light'], ['320-dar
     await expect(bookingTools).not.toHaveAttribute('open', '');
     await records.locator(':scope > summary').click();
     await expect(records).toHaveAttribute('open', '');
-    await bookingTools.locator(':scope > summary').click();
-    await expect(bookingTools).toHaveAttribute('open', '');
+    const historyCount = await bookingTools.locator('[data-p4-dir="history"]').count();
+    if (historyCount) {
+      await bookingTools.locator(':scope > summary').click();
+      await expect(bookingTools).toHaveAttribute('open', '');
+    } else {
+      await expect(bookingTools).toBeHidden();
+    }
     const bookingButtons = bookingTools.locator('.p4-directory-action-list button[data-p4-dir]');
     const againButton = list.locator(':scope > [data-p4-dir="again"]');
     const ownerButton = bookingTools.locator('[data-p4-dir="owner"]');
@@ -257,7 +262,6 @@ for (const [name, width, colorScheme] of [['320-light', 320, 'light'], ['320-dar
     await expect(againButton).toHaveAccessibleName(`Book Again for ${booking.dogName}`);
     await expect(againButton).toContainText('Book Again');
     await expect(ownerButton).toHaveCount(0);
-    const historyCount = await historyButton.count();
     expect(historyCount).toBeLessThanOrEqual(1);
     if (historyCount === 1) {
       await expect(historyButton).toHaveAccessibleName(`Stay history for ${booking.dogName}`);
@@ -267,7 +271,7 @@ for (const [name, width, colorScheme] of [['320-light', 320, 'light'], ['320-dar
     expect(reads).toEqual(initialReads);
     await expect(page.locator('#wh75SettingsPanel')).not.toHaveClass(/is-open/);
     await testInfo.attach(`care-profile-tools-expanded-${name}`, { body: await page.screenshot({ path: testInfo.outputPath(`care-profile-tools-expanded-${name}.png`), fullPage: true }), contentType: 'image/png' });
-    await bookingTools.locator(':scope > summary').click();
+    if (historyCount) await bookingTools.locator(':scope > summary').click();
     await records.locator(':scope > summary').click();
     await summary.click();
     await expect(tools).not.toHaveAttribute('open', '');

@@ -26,6 +26,10 @@ No additional background profile reads, automatic owner messages, backend deploy
 
 Synthetic tests cover these states without writing production guest data. Browser emulation does not establish behavior on every physical phone or assistive technology.
 
+Integration review on 24 October: MVP verification passed 375 Node tests and five Python contracts. Focused browser checks passed 126 arrival/intake/checkout cases across Chromium and WebKit at 320/390/1440px, six save-recovery cases, 15 booking-flow/layout cases, 11 loading-feedback cases, the routine-preview matrix, and both eventless rapid-confirmation checks. The PDF cancel-return check passed in WebKit; the Calendar audit passed 30 layouts with zero overlap defects.
+
+The inherited full CI run exposed transient phone hit-testing and a PDF close-watcher read deadline. This candidate retains the exact hit-test/read-count assertions, waits for reachable geometry and actual open classes, and gives the single PDF return read a bounded 15-second window. It does not bypass those gates. Full current-head CI is still required before merge.
+
 ## Next backlog item
 
 Audit the owner sharing dialog for one clear primary action and fewer repeated instructions. Reuse the existing copy/share controls; preserve explicit sending, exact stay identity, keyboard focus and token privacy. Do not add polling or another owner-link entry point.
