@@ -16,14 +16,12 @@ async function clickControl(page,menu){
   const box=button.getBoundingClientRect(),hit=document.elementFromPoint(box.left+box.width/2,box.top+box.height/2);
   return hit===button||button.contains(hit);
  }),{message:'control becomes reachable after its native open/close transition'}).toBe(true);
- const point=await menu.evaluate(button=>{
-  const box=button.getBoundingClientRect(),x=box.left+box.width/2,y=box.top+box.height/2;
-  const hit=document.elementFromPoint(x,y);
-  return{x,y,reachable:hit===button||button.contains(hit),width:box.width,height:box.height};
- });
- expect(point.reachable,'the visible control centre receives pointer input').toBe(true);
- expect(point.width).toBeGreaterThanOrEqual(44);expect(point.height).toBeGreaterThanOrEqual(44);
- await page.mouse.click(point.x,point.y);
+ // Use the normal pointer action after the explicit size/hit-target gate.
+ // It waits for moving drawer controls to settle and rechecks interception;
+ // manually sampling coordinates then clicking can race the transition.
+ const size=await menu.boundingBox();
+ expect(size.width).toBeGreaterThanOrEqual(44);expect(size.height).toBeGreaterThanOrEqual(44);
+ await menu.click();
 }
 
 async function capture(page,info,name){
