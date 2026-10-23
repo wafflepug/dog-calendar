@@ -30,7 +30,7 @@ const briefHtml = `
   <div data-directory-detail="profile" data-profile-read-state="saved"></div>
 </article>`;
 
-test('care essentials lead with exceptions, preserve full medication, and label feeding and walks at phone and desktop sizes', async ({ page }) => {
+async function setupBrief(page) {
   await page.setContent(`<!doctype html><html data-waffle-ui-ready="true"><head><style>${css}</style></head><body data-waffle-page="directory"><main>${briefHtml}</main></body></html>`);
   await page.addScriptTag({ content: `
     ${careFlags}
@@ -58,7 +58,10 @@ test('care essentials lead with exceptions, preserve full medication, and label 
     window.renderBrief = renderDirectoryCareBrief;
     renderBrief(document.querySelector('.directory-card'));
   ` });
+}
 
+test('care essentials lead with exceptions, preserve full medication, and label feeding and walks at phone and desktop sizes', async ({ page }) => {
+  await setupBrief(page);
   const card = page.locator('.directory-card');
   const brief = card.locator('[data-directory-care-brief]');
   const medication = brief.locator('[data-care-brief-medication]');
@@ -184,4 +187,23 @@ test('care essentials lead with exceptions, preserve full medication, and label 
   });
   await expect(medication).toHaveText('Care record needs identity review');
   await expect(brief).not.toContainText('Private instructions');
+});
+
+
+test('owner contact uses quiet missing text and restores the real phone action without a read', async ({ page }) => {
+  await setupBrief(page);
+  await page.locator('.directory-card').evaluate(card => { card.dataset.v1088Phone = ''; window.renderBrief(card); });
+  const host = page.locator('[data-care-brief-call-owner]');
+  await expect(host).toHaveText('Phone unavailable');
+  await expect(host.locator('button,a,[aria-disabled]')).toHaveCount(0);
+  for (const width of [320, 390, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    await expect(host.locator('.directory-owner-contact-missing')).toBeVisible();
+    expect(await host.evaluate(node => node.scrollWidth <= node.clientWidth + 1)).toBe(true);
+  }
+  await page.locator('.directory-card').evaluate(card => { card.dataset.v1088Phone = '+61 400 123 456'; window.renderBrief(card); });
+  await expect(host.getByRole('link', { name: 'Call owner', exact: true })).toHaveAttribute('href', 'tel:+61400123456');
+  await page.locator('.directory-card').evaluate(card => { card.dataset.v1088Phone = ''; window.renderBrief(card); });
+  await expect(host).toHaveText('Phone unavailable');
+  await expect(host.getByRole('link')).toHaveCount(0);
 });

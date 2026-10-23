@@ -54,12 +54,23 @@
     status.setAttribute('role', 'status');
     status.setAttribute('aria-live', 'polite');
     status.textContent = 'Ready to copy.';
-    let copyPending = false;
+    let actionPending = false;
+    const actionButtons = [copyButton];
+    function beginAction(message) {
+      if (actionPending || !card.isConnected) return false;
+      actionPending = true;
+      actionButtons.forEach(button => { button.disabled = true; });
+      status.textContent = message;
+      return true;
+    }
+    function endAction() {
+      actionPending = false;
+      if (card.isConnected) actionButtons.forEach(button => { button.disabled = false; });
+    }
     copyButton.addEventListener('click', async () => {
-      if (copyPending || !card.isConnected) return;
+      if (actionPending || !card.isConnected) return;
       const focusWasOnControls = document.activeElement === copyButton || document.activeElement === linkField || document.activeElement === document.body || document.activeElement === document.documentElement;
-      copyPending = true;
-      copyButton.disabled = true;
+      if (!beginAction('Copying link…')) return;
       let restoreFocus = false;
       try {
         if (!navigator.clipboard?.writeText) throw Error('Clipboard unavailable');
@@ -85,11 +96,8 @@
           status.textContent = 'Copy was blocked. The link is available in the field above for manual copying.';
         }
       } finally {
-        copyPending = false;
-        if (card.isConnected) {
-          copyButton.disabled = false;
-          if (restoreFocus) copyButton.focus();
-        }
+        endAction();
+        if (card.isConnected && restoreFocus) copyButton.focus();
       }
     });
     actions.appendChild(copyButton);
@@ -117,6 +125,8 @@
     const secondaryActions = document.createElement('div');
     secondaryActions.className = 'owner-handoff-actions';
     async function copy(value, success, fallbackField) {
+      const startingFocus = document.activeElement;
+      if (!beginAction('Copying message…')) return;
       try {
         if (!navigator.clipboard?.writeText) throw Error('Clipboard unavailable');
         await navigator.clipboard.writeText(value);
@@ -124,10 +134,13 @@
         status.textContent = success;
       } catch (_) {
         if (!card.isConnected) return;
-        fallbackField.focus();
-        fallbackField.select();
-        status.textContent = 'Copy was blocked. The text is selected: press and hold to copy, then paste it into the owner’s chat.';
-      }
+        const active = document.activeElement;
+        if (active === startingFocus || active === document.body || active === document.documentElement) {
+          fallbackField.focus();
+          fallbackField.select();
+          status.textContent = 'Copy was blocked. The text is selected: press and hold to copy, then paste it into the owner’s chat.';
+        } else status.textContent = 'Copy was blocked. The message is available above for manual copying.';
+      } finally { endAction(); }
     }
     function secondaryButton(text, handler) {
       const button = document.createElement('button');
@@ -135,13 +148,13 @@
       button.textContent = text;
       button.addEventListener('click', handler);
       secondaryActions.appendChild(button);
+      actionButtons.push(button);
       return button;
     }
     secondaryButton('Copy message', () => copy(message, 'Message copied. Paste it into the owner’s chat and send.', messageField)).className = 'primary';
     if (typeof navigator.share === 'function') {
       secondaryButton('Share', async event => {
-        const button = event.currentTarget;
-        button.disabled = true;
+        if (!beginAction('Opening share sheet…')) return;
         try {
           await navigator.share({ title: `${dog} — owner care form`, text: message });
           if (!card.isConnected) return;
@@ -150,7 +163,7 @@
           if (!card.isConnected) return;
           if (error?.name === 'AbortError') status.textContent = 'Sharing cancelled. Your message is still ready to copy or share.';
           else status.textContent = 'Sharing is unavailable. Choose Copy message and paste it into the owner’s chat.';
-        } finally { button.disabled = false; }
+        } finally { endAction(); }
       });
     }
     secondary.append(context, messageLabel, secondaryActions);

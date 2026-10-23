@@ -348,7 +348,7 @@ test('validation errors release the prepare lock and corrected dates can be retr
   await expect(page.locator('#p4OwnerStatus')).not.toHaveText('');
   await expect(page.locator('#p4OwnerLink')).toBeEnabled();
   expect(await page.evaluate(() => window.fixtureWrites.length)).toBe(0);
-  await page.locator('#p4OwnerDetails > summary').click();
+  await expect(page.locator('#p4OwnerDetails')).toHaveAttribute('open', '');
   await page.locator('#p4OwnerStart').fill('2026-11-10');
   await page.locator('#p4OwnerEnd').fill('2026-11-13');
   await page.locator('#p4OwnerLink').click();

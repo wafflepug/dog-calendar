@@ -9283,7 +9283,7 @@ registerWaffleServiceWorker();
             );
             setDirectorySummaryHtml(callActionHost, phone
                 ? `<a class="directory-care-brief-action" href="tel:${escapeDashboardHtml(phone)}" aria-label="Call owner">Call owner</a>`
-                : '<span class="directory-care-brief-action is-unavailable" aria-disabled="true" title="No valid owner phone number">Call owner unavailable</span>', 'careBriefGeneratedHtml');
+                : '<span class="directory-owner-contact-missing">Phone unavailable</span>', 'careBriefGeneratedHtml');
         }
     }
 
@@ -17525,7 +17525,7 @@ registerWaffleServiceWorker();
                                                     <div class="directory-care-owner-inline">
                                                         <strong data-care-brief-owner-name>${escapeDashboardHtml(ownerName ? ownerName.trim() : 'Not provided')}</strong>
                                                         <span class="directory-care-owner-action" data-care-brief-call-owner>
-                                                            <span class="directory-care-brief-action is-unavailable" aria-disabled="true">Call owner unavailable</span>
+                                                            <span class="directory-owner-contact-missing">Phone unavailable</span>
                                                         </span>
                                                     </div>
                                                 </div>

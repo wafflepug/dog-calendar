@@ -132,3 +132,61 @@ test('native share cancellation does not claim the message was sent', async ({ p
   await expect(card.getByRole('status')).not.toContainText(/sent|delivered/i);
   expect(await page.evaluate(() => window.__shareCalls)).toHaveLength(1);
 });
+
+test('pending link copy blocks competing message and share actions', async ({ page, baseURL }) => {
+  await setup(page, baseURL, { clipboard: 'pending' });
+  const card = page.locator('.owner-handoff-compact');
+  await card.locator('summary').click();
+  await card.getByRole('button', { name: 'Copy owner care link', exact: true }).click();
+  await expect(card.getByRole('status')).toHaveText('Copying link…');
+  const message = card.getByRole('button', { name: 'Copy message', exact: true });
+  const share = card.getByRole('button', { name: 'Share', exact: true });
+  await expect(message).toBeDisabled();
+  await expect(share).toBeDisabled();
+  await message.evaluate(button => button.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+  await share.evaluate(button => button.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+  expect(await page.evaluate(() => window.__writes)).toEqual([stay.link]);
+  expect(await page.evaluate(() => window.__shareCalls)).toHaveLength(0);
+  await page.evaluate(() => window.resolveCopy());
+  await expect(message).toBeEnabled();
+  await expect(share).toBeEnabled();
+});
+
+test('pending message copy blocks a second intent and releases all actions after failure', async ({ page, baseURL }) => {
+  await setup(page, baseURL, { clipboard: 'pending' });
+  const card = page.locator('.owner-handoff-compact');
+  await card.locator('summary').click();
+  const message = card.getByRole('button', { name: 'Copy message', exact: true });
+  const link = card.getByRole('button', { name: 'Copy owner care link', exact: true });
+  const expected = await card.getByLabel('Message to owner').inputValue();
+  await message.click();
+  await expect(card.getByRole('status')).toHaveText('Copying message…');
+  await expect(link).toBeDisabled();
+  await link.evaluate(button => button.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+  await page.locator('#elsewhere').focus();
+  await page.evaluate(() => window.rejectCopy(new Error('blocked')));
+  await expect(card.getByRole('status')).toContainText('available above for manual copying');
+  await expect(page.locator('#elsewhere')).toBeFocused();
+  await expect(link).toBeEnabled();
+  await expect(message).toBeEnabled();
+  expect(await page.evaluate(() => window.__writes)).toEqual([expected]);
+});
+
+test('a pending native share blocks competing actions and cancellation releases them', async ({ page, baseURL }) => {
+  await setup(page, baseURL);
+  await page.evaluate(() => { window.__share = data => { window.__shareCalls.push(data); return new Promise((resolve, reject) => { window.rejectShare = reject; }); }; });
+  const card = page.locator('.owner-handoff-compact');
+  await card.locator('summary').click();
+  const share = card.getByRole('button', { name: 'Share', exact: true });
+  const copy = card.getByRole('button', { name: 'Copy owner care link', exact: true });
+  await share.click();
+  await expect(copy).toBeDisabled();
+  await share.evaluate(button => button.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+  await copy.evaluate(button => button.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+  expect(await page.evaluate(() => window.__shareCalls)).toHaveLength(1);
+  expect(await page.evaluate(() => window.__writes)).toHaveLength(0);
+  await page.evaluate(() => { const error = new Error('cancelled'); error.name = 'AbortError'; window.rejectShare(error); });
+  await expect(card.getByRole('status')).toContainText('cancelled');
+  await expect(share).toBeEnabled();
+  await expect(copy).toBeEnabled();
+});
