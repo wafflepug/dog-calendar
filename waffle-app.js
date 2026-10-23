@@ -7839,6 +7839,20 @@ registerWaffleServiceWorker();
         return '🐾';
     }
 
+    function getTrustedDirectoryIntakeReceiptTimestamp(value) {
+        const raw = String(value || '');
+        const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(?:Z|([+-])(\d{2}):(\d{2}))$/.exec(raw);
+        if (!match) return '';
+        const [, yearText, monthText, dayText, hourText, minuteText, secondText, , offsetHourText, offsetMinuteText] = match;
+        const year = Number(yearText), month = Number(monthText), day = Number(dayText);
+        const hour = Number(hourText), minute = Number(minuteText), second = Number(secondText);
+        const leap = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+        const monthDays = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+        if (month < 1 || month > 12 || day < 1 || day > monthDays[month - 1] || hour > 23 || minute > 59 || second > 59) return '';
+        if (offsetHourText !== undefined && (Number(offsetHourText) > 23 || Number(offsetMinuteText) > 59)) return '';
+        return Number.isFinite(Date.parse(raw)) ? raw : '';
+    }
+
     function formatAuditTimestamp(value) {
         const date = new Date(value);
         if (Number.isNaN(date.getTime())) return String(value || '');
@@ -16150,9 +16164,21 @@ registerWaffleServiceWorker();
         }
 
         const status = String(record.status || 'Awaiting Owner');
-        const submitted = record.submittedAt
-            ? formatAuditTimestamp(record.submittedAt)
+        const submittedAt = !record.storedProfileFallback
+            ? getTrustedDirectoryIntakeReceiptTimestamp(record.submittedAt)
             : '';
+        const submitted = submittedAt
+            ? formatAuditTimestamp(submittedAt)
+            : '';
+        const receiptCard = strip.closest('.directory-card');
+        const receiptIdentity = receiptCard ? [
+            String(receiptCard.dataset.directoryStayKey || receiptCard.dataset.stayKey || ''),
+            String(receiptCard.dataset.directoryDogId || ''),
+            String(receiptCard.dataset.directoryStayId || ''),
+            String(receiptCard.dataset.directoryDogName || receiptCard.dataset.dogName || '').trim().toLocaleLowerCase(),
+            String(receiptCard.dataset.directoryStartDate || receiptCard.dataset.startDate || ''),
+            String(receiptCard.dataset.directoryEndDate || receiptCard.dataset.endDate || '')
+        ].join('|') : '';
 
         if (status === 'Complete') {
             setDirectorySummaryHtml(strip, `
@@ -16161,7 +16187,7 @@ registerWaffleServiceWorker();
                     <span class="directory-intake-dot is-complete"></span>
                     <span class="directory-record-status">Intake complete</span>
                     ${record.storedProfileFallback || submitted ? `
-                        <span class="directory-record-meta">${record.storedProfileFallback ? 'Stored profile' : ''}${record.storedProfileFallback && submitted ? ' · ' : ''}${submitted ? escapeDashboardHtml(submitted) : ''}</span>
+                        <span class="directory-record-meta"${submittedAt && receiptIdentity ? ` data-intake-received-at="${escapeDashboardHtml(submittedAt)}" data-intake-received-for="${escapeDashboardHtml(receiptIdentity)}"` : ''}>${record.storedProfileFallback ? 'Stored profile' : ''}${record.storedProfileFallback && submitted ? ' · ' : ''}${submitted ? escapeDashboardHtml(submitted) : ''}</span>
                     ` : ''}
                 </div>
                 <div class="directory-intake-actions">

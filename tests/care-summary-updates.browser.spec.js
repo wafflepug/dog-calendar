@@ -4,11 +4,13 @@ const fs = require('node:fs');
 const source = fs.readFileSync('waffle-app.js', 'utf8');
 const helperStart = source.indexOf('    const directorySummaryHtmlState =');
 const helperEnd = source.indexOf('    function renderDirectoryCareBrief(', helperStart);
+const receiptHelperStart = source.indexOf('    function getTrustedDirectoryIntakeReceiptTimestamp(');
+const receiptHelperEnd = source.indexOf('    function formatAuditTimestamp(', receiptHelperStart);
 const digitalStart = source.indexOf('    function setDirectoryIntakeStatus(');
 const digitalEnd = source.indexOf('    function renderDirectoryCareBriefForStay(', digitalStart);
 const legacyStart = source.indexOf('    function setDirectoryLegacyIntakeStatus(');
 const legacyEnd = source.indexOf('    async function hydrateDirectoryLegacyIntakes(', legacyStart);
-const summaryCode = source.slice(helperStart, helperEnd) + source.slice(digitalStart, digitalEnd) + source.slice(legacyStart, legacyEnd);
+const summaryCode = source.slice(receiptHelperStart, receiptHelperEnd) + source.slice(helperStart, helperEnd) + source.slice(digitalStart, digitalEnd) + source.slice(legacyStart, legacyEnd);
 
 test('canonical aggregate skips identical writes and distinguishes unavailable safety', async ({ page }) => {
   const ai = fs.readFileSync('waffle-ai.js', 'utf8');
@@ -106,6 +108,43 @@ test('identical digital and legacy summaries retain action nodes and transient f
   expect(result.digitalUpdated).toBe(true);
   expect(result.legacyUpdated).toBe(true);
   expect(result.failureRetained).toBe(true);
+});
+
+test('digital receipt metadata is bound to the current identity and clears on fallback or status changes', async ({ page }) => {
+  await page.setContent(`
+    <article class="directory-card" data-directory-stay-key="stay-a" data-directory-dog-id="dog-a" data-directory-stay-id="booking-a" data-directory-dog-name="Milo" data-directory-start-date="2026-10-20" data-directory-end-date="2026-10-22">
+      <div data-directory-intake="stay-a"></div>
+    </article>
+  `);
+  await page.addScriptTag({ content: `
+    function getStoredDigitalProfileIntakeStatus() { return null; }
+    function escapeDashboardHtml(value) { return String(value ?? '').replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;').replaceAll('>', '&gt;'); }
+    function formatAuditTimestamp(value) { return String(value); }
+    function applyDirectoryIntakeMethodVisibility() {}
+    function renderDirectoryCareBriefForStay() {}
+    ${summaryCode}
+    window.setDirectoryIntakeStatus = setDirectoryIntakeStatus;
+  ` });
+  const result = await page.evaluate(() => {
+    const strip = document.querySelector('[data-directory-intake]');
+    const valid = { status: 'Complete', submittedAt: '2026-10-22T14:30:00.000Z' };
+    setDirectoryIntakeStatus('stay-a', valid);
+    const receipt = strip.querySelector('[data-intake-received-at]');
+    const expectedIdentity = 'stay-a|dog-a|booking-a|milo|2026-10-20|2026-10-22';
+    const validIdentity = receipt?.dataset.intakeReceivedFor === expectedIdentity;
+    const stored = { ...valid, storedProfileFallback: true };
+    setDirectoryIntakeStatus('stay-a', stored);
+    const fallbackClear = !strip.querySelector('[data-intake-received-at]') && !strip.querySelector('[data-intake-received-for]') && strip.textContent.includes('Stored profile');
+    setDirectoryIntakeStatus('stay-a', { ...valid, submittedAt: '2026-02-30T14:30:00Z' });
+    const invalidClear = !strip.querySelector('[data-intake-received-at]');
+    setDirectoryIntakeStatus('stay-a', { status: 'Awaiting Owner', submittedAt: valid.submittedAt });
+    const awaitingClear = !strip.querySelector('[data-intake-received-at]');
+    setDirectoryIntakeStatus('stay-a', valid);
+    setDirectoryIntakeStatus('stay-a', null);
+    const nullClear = !strip.querySelector('[data-intake-received-at]');
+    return { validIdentity, fallbackClear, invalidClear, awaitingClear, nullClear };
+  });
+  expect(result).toEqual({ validIdentity: true, fallbackClear: true, invalidClear: true, awaitingClear: true, nullClear: true });
 });
 
 test('Care brief repeated rendering keeps DOM hosts and produces no DOM mutations', async ({ page }) => {
