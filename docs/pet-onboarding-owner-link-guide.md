@@ -9,13 +9,15 @@ The usual flow is **Add stay → Copy owner care link → Send in your usual own
 3. Select **Create Booking** once. Wait for the saved confirmation.
 4. Choose **Copy owner care link**. If **Prepare owner care link** appears instead, select it first. If neither action is available, open Owner Care Link in Care; do not recreate the booking.
 5. Open your usual conversation with the owner, paste the link, check the recipient and send. Open **Other sharing options** for a prepared message or native Share when available.
-6. If adding another pet, choose **Add another dog** after the first stay is saved.
+6. For another pet with the same owner, choose **Add dog for same owner** after the first stay is confirmed. Review the copied owner, phone and dates, then enter the next dog. For a different owner, choose **Add another dog** to start clean.
+
+Boarding opens on your current page. Closing and reopening an unfinished form keeps its entries for this page session; **Start over** clears it explicitly. Reloading the page can lose an unsaved draft.
 
 You only enter booking basics here. The owner completes the detailed care form using their link.
 
 ## A dog who has stayed before
 
-1. Open **Add → Boarding → Choose returning dog**. You can also use **Care → select the existing dog → More tools → Booking tools → Book Again**.
+1. Open **Add → Boarding → Choose returning dog**. You can also use **Care → select the existing dog → More tools → Book Again**.
 2. Choose the existing dog by **Dog ID, owner and breed**. Two dogs can have the same name, so check the Dog ID before continuing.
 3. Enter the new stay dates. Check the completed-source date and open **Review saved care** if you want to reuse it. Review and edit the saved instructions, then explicitly approve copying them. Editing again clears approval; review and approve again. Without approval, the booking does not copy saved care.
 4. Select **Create Confirmed Stay**. When the stay is saved, the owner care-link action appears in the same booking panel.
