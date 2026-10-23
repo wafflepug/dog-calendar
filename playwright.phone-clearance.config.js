@@ -2,7 +2,7 @@ const {defineConfig}=require('@playwright/test');
 const python=process.env.WAFFLE_PYTHON||(process.platform==='win32'?'python':'python3');
 module.exports=defineConfig({
  testDir:'./tests',
- testMatch:['care-phone-clearance.browser.spec.js','shared-phone-label-audit.browser.spec.js'],
+ testMatch:['care-phone-clearance.browser.spec.js','shared-phone-label-audit.browser.spec.js','care-profile-cleanup.browser.spec.js'],
  timeout:180000,
  expect:{timeout:15000},
  workers:1,

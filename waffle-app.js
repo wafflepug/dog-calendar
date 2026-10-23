@@ -9019,6 +9019,42 @@ registerWaffleServiceWorker();
         const medicationHost = brief.querySelector('[data-care-brief-medication]');
         const freshnessHost = brief.querySelector('[data-care-brief-freshness]');
         const callActionHost = brief.querySelector('[data-care-brief-call-owner]');
+        const handoverNoteHost = brief.querySelector('[data-care-brief-handover-note]');
+
+        if (handoverNoteHost) {
+            const noteField = card.querySelector('[data-directory-edit-field="notes"]');
+            const note = String(noteField?.dataset.directoryCurrentValue ?? card.dataset.v1088Notes ?? '').trim();
+            const unchangedRenderedNote = handoverNoteHost.dataset.careBriefNoteRendered === 'true'
+                && handoverNoteHost.dataset.careBriefHandoverNote === note;
+            if (!unchangedRenderedNote) {
+                const disclosureHadFocus = !!handoverNoteHost.querySelector('[data-care-brief-note-disclosure] summary')
+                    && handoverNoteHost.querySelector('[data-care-brief-note-disclosure] summary') === document.activeElement;
+                if (note.length > 180) {
+                    const preview = `${note.slice(0, 120).trimEnd()}…`;
+                    handoverNoteHost.innerHTML = `
+                        <details data-care-brief-note-disclosure>
+                            <summary aria-label="Read full handover note">
+                                <span data-care-brief-note-preview>${escapeDashboardHtml(preview)}</span>
+                                <span class="directory-care-note-read-label directory-care-note-read-collapsed">Read full note</span>
+                                <span class="directory-care-note-read-label directory-care-note-read-expanded">Show less</span>
+                            </summary>
+                            <div data-care-brief-note-full>${escapeDashboardHtml(note)}</div>
+                        </details>`;
+                } else {
+                    handoverNoteHost.textContent = note || 'No handover note recorded';
+                }
+                handoverNoteHost.dataset.careBriefHandoverNote = note;
+                handoverNoteHost.dataset.careBriefNoteRendered = 'true';
+                if (disclosureHadFocus) {
+                    const updatedSummary = handoverNoteHost.querySelector('[data-care-brief-note-disclosure] summary');
+                    if (updatedSummary) updatedSummary.focus();
+                    else {
+                        handoverNoteHost.tabIndex = -1;
+                        handoverNoteHost.focus();
+                    }
+                }
+            }
+        }
 
         if (ownerNameHost) {
             const ownerField = card.querySelector('[data-directory-edit-field="ownerName"]');
@@ -15610,6 +15646,15 @@ registerWaffleServiceWorker();
 
             patchGuestRecordInCachedCsv(context, record);
 
+            if (context.fieldKey === 'notes') {
+                const savedNote = String(record.notes ?? value).trim();
+                context.trigger.dataset.directoryCurrentValue = savedNote;
+                const fieldValue = context.trigger.querySelector('.directory-field-value');
+                if (fieldValue) fieldValue.textContent = savedNote || 'No handover note provided';
+                context.card.dataset.v1088Notes = savedNote;
+                renderDirectoryCareBrief(context.card);
+            }
+
             const oldStayKey =
                 response.oldStayKey ||
                 context.oldStayKey ||
@@ -17396,7 +17441,7 @@ registerWaffleServiceWorker();
                                                     <div class="directory-care-brief-note-heading">
                                                         <h4>Handover note</h4>
                                                     </div>
-                                                    <p class="directory-care-brief-value">${escapeDashboardHtml(notes ? notes.trim() : 'No handover note recorded')}</p>
+                                                    <div class="directory-care-brief-value" data-care-brief-handover-note>${escapeDashboardHtml(notes ? notes.trim() : 'No handover note recorded')}</div>
                                                 </section>
                                             </div>
 

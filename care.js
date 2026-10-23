@@ -33,11 +33,11 @@
 
   const VERSION = '11.1.60';
   const TABS = [
-    { key: 'profile', icon: '🐶', label: 'Overview' },
-    { key: 'belongings', icon: '🧳', label: 'Items' },
-    { key: 'media', icon: '📸', label: 'Photos' },
-    { key: 'history', icon: '🕘', label: 'Stay history' },
-    { key: 'master', icon: '⭐', label: 'Dog record' }
+    { key: 'profile', label: 'Overview' },
+    { key: 'belongings', label: 'Items' },
+    { key: 'media', label: 'Photos' },
+    { key: 'history', label: 'Stay history' },
+    { key: 'master', label: 'Dog record' }
   ];
   const TAB_KEYS = new Set(TABS.map(item => item.key));
   const wrapped = new Set();
@@ -176,7 +176,7 @@
         id="care-tab-${card.dataset.v11160A11yId || (card.dataset.v11160A11yId = String(++cardAccessibilityId))}-${item.key}"
         data-v11160-tab="${item.key}" aria-controls="care-panel-${card.dataset.v11160A11yId}-${item.key}"
         aria-selected="false" tabindex="-1">
-        <span aria-hidden="true">${item.icon}</span><span>${item.label}</span>
+        <span>${item.label}</span>
       </button>`).join('');
 
     syncPanelSemantics(card, nav);

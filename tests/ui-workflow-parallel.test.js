@@ -127,3 +127,14 @@ test('browser setup avoids the Azure Ubuntu mirror without changing package sign
 test('reruns upload separate artifacts for each attempt', () => {
   for (const name of ['fixtures', 'placement']) assert.ok(jobs[name].includes('${{ github.run_attempt }}'));
 });
+
+test('Care timing setup preserves a required bounded test step after dependency installation', () => {
+  const timing = readFileSync(path.join(__dirname, '..', '.github/workflows/care-profile-read-timing.yml'), 'utf8').replace(/\r\n/g, '\n');
+  assert.match(timing, /timeout-minutes: 30/);
+  assert.match(timing, /key: playwright-chromium-\$\{\{ runner\.os \}\}-\$\{\{ runner\.arch \}\}-\$\{\{ hashFiles\('package-lock\.json'\) \}\}/);
+  assert.match(timing, /timeout-minutes: 8[\s\S]*install-deps chromium[\s\S]*install chromium/);
+  assert.match(timing, /Report browser test setup failure[\s\S]*if: failure\(\)/);
+  assert.match(timing, /Run bounded cold and warm checks\n\s+timeout-minutes: 10\n\s+run: node node_modules\/@playwright\/test\/cli.js test --config=playwright.care-profile-timing.config.js/);
+  assert.ok(timing.includes('s|azure.archive.ubuntu.com|archive.ubuntu.com|g'));
+  assert.doesNotMatch(timing, /continue-on-error|--allow-unauthenticated|trusted=yes/);
+});
