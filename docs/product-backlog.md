@@ -5,6 +5,8 @@ Reviewed 17 September 2026. Repository: `wafflepug/dog-calendar`; always start i
 
 ## Current Care iteration - 24 October 2026
 
+Candidate 2026.10.24.02: [Care owner guidance](care-owner-guidance.md). Five improvements: inline owner-field validation, guarded keyboard preparation, quieter unavailable contact details, coordinated copy/share actions, and scoped guest-history progress/retry. Preserve explicit operations, exact identities and no background history reads. Next: audit verified owner-form receipt context using existing evidence. Publication requires full current-head CI and live attribution.
+
 Candidate 2026.10.24.01: [Care sharing clarity](care-sharing-clarity.md). Three improvements: one primary action after owner-form preparation, compact sharing options without duplicate link controls, and recoverable clipboard feedback without duplicate clicks or stale focus. Preserve exact stay context, explicit owner sending, lazy reads and token privacy. Next: audit owner form validation errors for clear field-level guidance. Current-head CI and live attribution are required before publication.
 
 ## Current Care iteration - 23 October 2026

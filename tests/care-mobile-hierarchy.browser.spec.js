@@ -474,7 +474,8 @@ test('Call owner is unavailable without a valid phone number', async ({ page, ba
   await revealSecondaryTools(page);
   await card.locator('.directory-care-readiness > summary').click();
   const careBrief = card.locator('[data-directory-care-brief]');
-  await expect(careBrief.getByText('Call owner unavailable')).toHaveAttribute('aria-disabled', 'true');
+  await expect(careBrief.locator('.directory-owner-contact-missing')).toHaveText('Phone unavailable');
+  await expect(careBrief.locator('.directory-owner-contact-missing')).not.toHaveAttribute('aria-disabled', 'true');
   await expect(careBrief.locator('a[href^="tel:"]')).toHaveCount(0);
   await expect(card.locator('[data-directory-stay-contact]')).not.toHaveAttribute('open', '');
   const buttons = careBrief.locator('.directory-care-brief-action');
