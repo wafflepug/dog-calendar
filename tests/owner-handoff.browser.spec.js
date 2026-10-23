@@ -125,6 +125,62 @@ test('invalid and non-HTTP links produce no actionable card', async ({ page, bas
   }
 });
 
+test('compact boarding mode leads with one copy action and keeps secondary sharing closed', async ({ page, baseURL, browserName }, testInfo) => {
+  await setup(page, baseURL, { share: true });
+  await page.evaluate(data => window.WAFFLE_OWNER_HANDOFF.render(document.querySelector('#handoff'), data, { compact: true }), valid);
+  const card = page.locator('.owner-handoff-compact');
+  await expect(card.getByRole('button', { name: 'Copy owner care link', exact: true })).toBeVisible();
+  await expect(card.locator('button:visible')).toHaveCount(1);
+  await expect(card.getByLabel('Owner care link')).toBeHidden();
+  await expect(card.locator('[data-secondary-options]')).not.toHaveAttribute('open', '');
+  await expect(card).toContainText('Milo');
+  expect(await page.evaluate(() => ({ copies: window.__clipboardWrites, shares: window.__shareCalls }))).toEqual({ copies: [], shares: [] });
+
+  const width = page.viewportSize()?.width;
+  if (browserName === 'chromium' && (width === 320 || width === 1440)) {
+    for (const dark of [false, true]) {
+      await page.locator('body').evaluate((body, value) => body.classList.toggle('dark-theme', value), dark);
+      const metrics = await card.evaluate(node => {
+        const button = node.querySelector('button.primary').getBoundingClientRect();
+        return { scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth, height: button.height, left: button.left, right: button.right };
+      });
+      expect(metrics.scroll).toBeLessThanOrEqual(metrics.client);
+      expect(metrics.height).toBeGreaterThanOrEqual(44);
+      expect(metrics.left).toBeGreaterThanOrEqual(0);
+      expect(metrics.right).toBeLessThanOrEqual(metrics.client + 1);
+      const screenshotPath = testInfo.outputPath(`owner-handoff-compact-${width}-${dark ? 'dark' : 'light'}.png`);
+      await page.screenshot({ path: screenshotPath, fullPage: true });
+      await testInfo.attach(`owner-handoff-compact-${width}-${dark ? 'dark' : 'light'}`, { path: screenshotPath, contentType: 'image/png' });
+    }
+    await page.locator('body').evaluate(body => body.classList.remove('dark-theme'));
+  }
+
+  await card.getByRole('button', { name: 'Copy owner care link' }).click();
+  expect(await page.evaluate(() => window.__clipboardWrites)).toEqual([valid.link]);
+  await card.locator('[data-secondary-options] > summary').click();
+  await expect(card.getByLabel('Owner care link')).toBeVisible();
+  await expect(card.getByRole('button', { name: 'Copy message', exact: true })).toBeVisible();
+  await expect(card.getByRole('button', { name: 'Copy link', exact: true })).toBeVisible();
+  await expect(card.getByRole('button', { name: 'Share', exact: true })).toBeVisible();
+  expect(await page.evaluate(() => window.__shareCalls.length)).toBe(0);
+  await card.getByRole('button', { name: 'Share', exact: true }).click();
+  await expect.poll(() => page.evaluate(() => window.__shareCalls.length)).toBe(1);
+});
+
+test('compact copy failure reveals and selects only the owner care link', async ({ page, baseURL }) => {
+  await setup(page, baseURL, { clipboardFails: true });
+  await page.evaluate(data => window.WAFFLE_OWNER_HANDOFF.render(document.querySelector('#handoff'), data, { compact: true }), valid);
+  const card = page.locator('.owner-handoff-compact');
+  await expect(card.getByLabel('Owner care link')).toBeHidden();
+  await card.getByRole('button', { name: 'Copy owner care link' }).click();
+  const field = card.getByLabel('Owner care link');
+  await expect(field).toBeVisible();
+  await expect(field).toBeFocused();
+  expect(await field.evaluate(element => ({ value: element.value, start: element.selectionStart, end: element.selectionEnd }))).toEqual({ value: valid.link, start: 0, end: valid.link.length });
+  await expect(card.getByRole('status')).toContainText(/selected|press and hold/i);
+  await expect(card.locator('button:visible')).toHaveCount(1);
+});
+
 test('phase-4 owner dialog reuses an unchanged prepare, shows the owner card, and reads no guest history', async ({ page, browserName }, testInfo) => {
   await setupOwnerDialog(page);
   await page.locator('#p4OwnerLink').click();

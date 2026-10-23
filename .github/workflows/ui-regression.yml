@@ -72,6 +72,8 @@ on:
       - 'tests/care-arrival-checkout-layout.browser.spec.js'
       - 'tests/fixtures/guided-checkout-fixture.js'
       - 'playwright.owner-handoff.config.js'
+      - 'playwright.booking-owner-share.config.js'
+      - 'tests/booking-owner-share.browser.spec.js'
       - 'playwright.phone-clearance.config.js'
       - 'tests/care-phone-clearance.browser.spec.js'
       - 'tests/shared-phone-label-audit.browser.spec.js'
@@ -114,6 +116,7 @@ on:
       - 'tests/booking-plan.test.js'
       - 'tests/booking-plan.browser.spec.js'
       - 'tests/booking-plan-runtime.browser.spec.js'
+      - 'tests/booking-plan-completion.browser.spec.js'
       - 'tests/care-source-compact.browser.spec.js'
       - 'tests/care-past-records-compact.browser.spec.js'
       - 'tests/care-record-dialog-readability.browser.spec.js'
@@ -215,6 +218,8 @@ on:
       - 'tests/care-arrival-checkout-layout.browser.spec.js'
       - 'tests/fixtures/guided-checkout-fixture.js'
       - 'playwright.owner-handoff.config.js'
+      - 'playwright.booking-owner-share.config.js'
+      - 'tests/booking-owner-share.browser.spec.js'
       - 'playwright.phone-clearance.config.js'
       - 'tests/care-phone-clearance.browser.spec.js'
       - 'tests/shared-phone-label-audit.browser.spec.js'
@@ -257,6 +262,7 @@ on:
       - 'tests/booking-plan.test.js'
       - 'tests/booking-plan.browser.spec.js'
       - 'tests/booking-plan-runtime.browser.spec.js'
+      - 'tests/booking-plan-completion.browser.spec.js'
       - 'tests/care-source-compact.browser.spec.js'
       - 'tests/care-past-records-compact.browser.spec.js'
       - 'tests/care-record-dialog-readability.browser.spec.js'
@@ -349,7 +355,7 @@ jobs:
           - group: arrival-checkout
             configs: playwright.arrival-checkout.config.js
           - group: owner-handoff
-            configs: playwright.owner-handoff.config.js
+            configs: playwright.owner-handoff.config.js playwright.booking-owner-share.config.js
           - group: phone-clearance
             configs: playwright.phone-clearance.config.js
           - group: care-profile-tools
@@ -400,17 +406,37 @@ jobs:
         with:
           node-version: '20'
           cache: npm
-      - name: Install dependencies and fixture browsers
+      - name: Cache Playwright browsers
+        id: browser_cache
+        uses: actions/cache@v4
+        timeout-minutes: 3
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-firefox-webkit-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('package-lock.json') }}
+      - name: Install fixture dependencies
+        id: install_dependencies
         timeout-minutes: 5
+        run: npm ci --no-audit --no-fund
+      - name: Install fixture browser system dependencies and browsers
+        id: install_browsers
+        timeout-minutes: 8
         run: |
           set -euo pipefail
-          npm ci --no-audit --no-fund
           for source in /etc/apt/sources.list /etc/apt/sources.list.d/*.list /etc/apt/sources.list.d/*.sources /etc/apt/apt-mirrors*.txt; do
             if [[ -f "$source" ]]; then
               sudo sed -i 's|azure.archive.ubuntu.com|archive.ubuntu.com|g' "$source"
             fi
           done
-          node node_modules/@playwright/test/cli.js install --with-deps chromium firefox webkit
+          node node_modules/@playwright/test/cli.js install-deps chromium firefox webkit
+          node node_modules/@playwright/test/cli.js install chromium firefox webkit
+      - name: Report fixture setup failure
+        if: failure() && (steps.browser_cache.outcome == 'failure' || steps.browser_cache.outcome == 'cancelled' || steps.install_dependencies.outcome == 'failure' || steps.install_dependencies.outcome == 'cancelled' || steps.install_browsers.outcome == 'failure' || steps.install_browsers.outcome == 'cancelled')
+        run: |
+          {
+            echo '## Browser test setup failed before tests'
+            echo
+            echo 'Browser cache restoration, npm dependency installation, or browser/system dependency setup failed or timed out. This fixture group did not run.'
+          } >> "$GITHUB_STEP_SUMMARY"
       - name: Run fixture configurations
         env:
           FIXTURE_CONFIGS: ${{ matrix.configs }}
@@ -453,17 +479,37 @@ jobs:
         with:
           node-version: '20'
           cache: npm
-      - name: Install dependencies and placement browsers
+      - name: Cache Playwright browsers
+        id: browser_cache
+        uses: actions/cache@v4
+        timeout-minutes: 3
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-firefox-webkit-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('package-lock.json') }}
+      - name: Install placement dependencies
+        id: install_dependencies
         timeout-minutes: 5
+        run: npm ci --no-audit --no-fund
+      - name: Install placement browser system dependencies and browsers
+        id: install_browsers
+        timeout-minutes: 8
         run: |
           set -euo pipefail
-          npm ci --no-audit --no-fund
           for source in /etc/apt/sources.list /etc/apt/sources.list.d/*.list /etc/apt/sources.list.d/*.sources /etc/apt/apt-mirrors*.txt; do
             if [[ -f "$source" ]]; then
               sudo sed -i 's|azure.archive.ubuntu.com|archive.ubuntu.com|g' "$source"
             fi
           done
-          node node_modules/@playwright/test/cli.js install --with-deps chromium firefox webkit
+          node node_modules/@playwright/test/cli.js install-deps chromium firefox webkit
+          node node_modules/@playwright/test/cli.js install chromium firefox webkit
+      - name: Report placement setup failure
+        if: failure() && (steps.browser_cache.outcome == 'failure' || steps.browser_cache.outcome == 'cancelled' || steps.install_dependencies.outcome == 'failure' || steps.install_dependencies.outcome == 'cancelled' || steps.install_browsers.outcome == 'failure' || steps.install_browsers.outcome == 'cancelled')
+        run: |
+          {
+            echo '## Browser test setup failed before tests'
+            echo
+            echo 'Browser cache restoration, npm dependency installation, or browser/system dependency setup failed or timed out. This placement shard did not run.'
+          } >> "$GITHUB_STEP_SUMMARY"
       - name: Run cross-device UI placement regression
         env:
           WAFFLE_BASE_URL: http://127.0.0.1:4173

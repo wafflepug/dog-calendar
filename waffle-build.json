@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.10.22.03",
-  "releaseName": "Compact Returning Care Review",
+  "assetRevision": "2026.10.23.02",
+  "releaseName": "Multi-visit Completion and Sharing",
   "careIteration": {
     "returningDogSuggestions": true,
     "reviewedCareInheritance": true,
