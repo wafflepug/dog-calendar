@@ -22,6 +22,12 @@ These changes remove avoidable client DOM work. They do not reduce Google Sheets
 
 Phase 4 operations no longer render Insights or schedule the delayed Smart Reminders check at startup on Care. Care has no operations-home surface, so this previously caused two unused intake/belongings reads for an active arrival. The actual `phase4-operations.js` VM fixture measures those Care startup reads at 2 before the change and 0 after; opening Reminders or using its explicit Refresh still produces both reads, and selecting Insights still renders it. Other pages retain eager Insights and the delayed reminder check. Care data-change events refresh only a currently visible Reminders or Insights panel; hidden/unvisited panels load when selected.
 
+## Selected-profile preparation follow-up
+
+Repeated compatibility preparation still runs its bounded delayed panel reassertions for late legacy renderers. Pending reassertions are coalesced per card and delay; a newly selected tab replaces queued work for the older tab. When the card already has its selected tab, preparation no longer calls that tab's loader again. Panel IDs, roles, ARIA state, visibility, and focus order are written only when a value changes. Existing enhancer calls are retried when the history panel, legacy tabs, operation bar, or late/replaced photo controls are missing or misplaced.
+
+A browser observer attached only to the Care tablist and managed panels measured 525 attribute mutation records for one repeated preparation with the prior `care.js` from `HEAD`; the updated source measured 0. In both runs, opening the selected profile issued one profile read, while the measured repeated preparation issued 0 additional profile reads. Cold open, switching to a second stable Dog/Stay identity, Back, warm return, invalidation and changed-record rendering are covered by a synthetic two-dog browser fixture. Reads remain identity checked; the fixture blocks non-read backend actions.
+
 ## Testing matrix
 
 1. Open Staying and select a guest. Leave a draft field focused and a disclosure open. Apply an unchanged directory response: the card and details nodes, focus, text and disclosure should remain.
@@ -35,6 +41,8 @@ Phase 4 operations no longer render Insights or schedule the delayed Smart Remin
 
 Automated browser fixtures block all external mutation actions and use synthetic guests. Physical-device/assistive-technology checks remain manual.
 
+The phone resize read-count gate pauses interval timers only for the measured resize window so a scheduled background refresh cannot be mistaken for resize-triggered work. Its read-count equality checks remain unchanged. This is test isolation; it does not alter production polling.
+
 ## Next backlog item
 
-Audit repeated summary rendering after unchanged metadata responses. Apply only changed flags/overview fragments while preserving honest freshness and error states. Measure DOM mutations and request counts rather than guessing at perceived speed.
+Continue auditing repeated summary rendering after unchanged metadata responses. Apply only changed flags/overview fragments while preserving honest freshness and error states. Measure DOM mutations and request counts rather than guessing at perceived speed.

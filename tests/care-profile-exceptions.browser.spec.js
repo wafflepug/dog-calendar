@@ -65,10 +65,15 @@ test('care essentials lead with exceptions, preserve full medication, and label 
   await expect(brief.locator('[data-care-brief-safety] .care-brief-alert')).toHaveCount(1);
   await expect(brief.locator('[data-care-brief-safety]')).toContainText('Food allergy');
   await expect(medication).toHaveText('Give one tablet with dinner. If appetite changes, do not repeat the dose; call the owner before the next meal. Keep the medicine in its labelled pouch.');
+  const feedingRoutine = brief.locator('[data-care-brief-feeding] [data-care-routine-disclosure]');
+  const walkingRoutine = brief.locator('[data-care-brief-walks] [data-care-routine-disclosure]');
+  await expect(feedingRoutine).not.toHaveAttribute('open', '');
+  await expect(walkingRoutine).not.toHaveAttribute('open', '');
+  await expect(feedingRoutine.locator('summary')).toHaveText('Feeding · Times 07:00 and 17:00 · Amount 1 measured cup');
+  await expect(walkingRoutine.locator('summary')).toHaveText('Walking · Walks 2 walks · Duration 30 minutes each');
   await expect(brief.locator('[data-care-brief-feeding] [data-care-brief-row="times"]')).toContainText('Times: 07:00 and 17:00');
   await expect(brief.locator('[data-care-brief-feeding] [data-care-brief-row="amount"]')).toContainText('Amount: 1 measured cup');
-  const foodDisclosure = brief.locator('[data-care-brief-feeding] [data-care-brief-row="food"] details');
-  await expect(foodDisclosure.locator('summary')).toContainText('Show full food detail');
+  const foodDisclosure = feedingRoutine;
   await foodDisclosure.locator('summary').focus();
   await page.keyboard.press('Enter');
   await expect(foodDisclosure).toContainText('Sensitive formula with a gradual ten day transition from the previous food, mixed in measured portions at each meal');
@@ -82,19 +87,19 @@ test('care essentials lead with exceptions, preserve full medication, and label 
     window.renderBrief(card);
     const mutations = observer.takeRecords().length;
     observer.disconnect();
-    return { sameNode: host.querySelector('details') === details, open: details.open, focused: document.activeElement === summary, mutations };
+      return { sameNode: host.querySelector('[data-care-routine-disclosure]') === details, open: details.open, focused: document.activeElement === summary, mutations };
   });
   expect(disclosureStability).toEqual({ sameNode: true, open: true, focused: true, mutations: 0 });
   const foodDisclosureIdentity = await page.evaluate(() => {
     window.fixture.intakeAttributes.foodBrandType = 'Updated routine food transition with a complete gradual introduction over ten days in small, measured portions at each meal';
     const card = document.querySelector('.directory-card');
     window.renderBrief(card);
-    const afterSameIdentityUpdate = card.querySelector('[data-care-brief-feeding] details');
+    const afterSameIdentityUpdate = card.querySelector('[data-care-brief-feeding] [data-care-routine-disclosure]');
     const sameIdentityStayedOpen = afterSameIdentityUpdate.open;
     card.dataset.stayKey = 'milo|different-stay';
     card.dataset.directoryStayKey = 'milo|different-stay';
     window.renderBrief(card);
-    return { sameIdentityStayedOpen, newIdentityReset: !card.querySelector('[data-care-brief-feeding] details').open };
+    return { sameIdentityStayedOpen, newIdentityReset: !card.querySelector('[data-care-brief-feeding] [data-care-routine-disclosure]').open };
   });
   expect(foodDisclosureIdentity).toEqual({ sameIdentityStayedOpen: true, newIdentityReset: true });
 
@@ -121,6 +126,8 @@ test('care essentials lead with exceptions, preserve full medication, and label 
     await page.locator('body').evaluate((body, className) => { body.className = className; }, theme);
     for (const width of [320, 390, 1440]) {
       await page.setViewportSize({ width, height: 900 });
+      await feedingRoutine.evaluate(node => { node.open = false; });
+      await walkingRoutine.evaluate(node => { node.open = false; });
       await expect(medication).toBeVisible();
       const layout = await medication.evaluate(node => {
         const style = getComputedStyle(node);
@@ -134,6 +141,21 @@ test('care essentials lead with exceptions, preserve full medication, and label 
       expect(layout.maxHeight).toBe('none');
       expect(layout.height).toBeGreaterThan(0);
       expect(layout.scrollHeight).toBeLessThanOrEqual(layout.height + 1);
+      for (const summary of [feedingRoutine.locator('summary'), walkingRoutine.locator('summary')]) {
+        const geometry = await summary.evaluate(node => {
+          const rect = node.getBoundingClientRect();
+          return { width: rect.width, right: rect.right, height: rect.height, scrollWidth: node.scrollWidth, clientWidth: node.clientWidth };
+        });
+        expect(geometry.width).toBeGreaterThan(0);
+        expect(geometry.right).toBeLessThanOrEqual(width + 1);
+        expect(geometry.height).toBeGreaterThanOrEqual(44);
+        expect(geometry.scrollWidth).toBeLessThanOrEqual(geometry.clientWidth + 1);
+      }
+      if ([390, 1440].includes(width)) {
+        const output = path.join(root, 'output', 'releases', '2026.10.23.06');
+        fs.mkdirSync(output, { recursive: true });
+        await page.screenshot({ path: path.join(output, `care-priorities-${width}-${theme || 'light'}.png`), fullPage: false });
+      }
     }
   }
 

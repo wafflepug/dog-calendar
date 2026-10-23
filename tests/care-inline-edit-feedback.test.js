@@ -119,6 +119,7 @@ test('inline Care save freezes controls and preserves the draft with visible fai
   let rejectSend;
   const state = { initial: { 'intake:notes': 'Saved note' }, values: { 'intake:notes': 'Typed draft' }, conflict: false, failed: false, saving: false };
   const sandbox = {
+    window: {},
     directoryProfileEditDrafts: new Map([['milo|2026-09-20|2026-09-22', state]]),
     directoryProfileEditKey: () => 'milo|2026-09-20|2026-09-22',
     directoryProfileEditIdentityConflicts: () => false,

@@ -16,6 +16,10 @@ test('same-day checkout reviews selected identity, opens without writes, and con
   const dialog = page.getByRole('dialog', { name: 'Check out' });
   await expect(dialog).toBeVisible();
   await expect(dialog).toContainText('Dog ID: #0017');
+  await expect(dialog.locator('[data-v11217-guided-belongings-summary]')).toHaveText('2 listed · review');
+  await expect(dialog.locator('[data-v11217-guided-belongings-details]')).toHaveJSProperty('open', false);
+  await expect(dialog.locator('[data-v11217-guided-medication]')).toHaveText('Return blue inhaler');
+  await dialog.locator('[data-v11217-guided-belongings-summary]').click();
   await expect(dialog.locator('[data-v11217-guided-belongings] li')).toHaveText(['Blue lead', 'Food tub']);
   await expect(dialog).toContainText('Return blue inhaler');
   await expect(dialog.locator('[data-v11217-guided-dates]')).toContainText('18 Oct 2026');
@@ -82,9 +86,9 @@ test('queued offline result is not treated as saved and missing evidence shares 
   const card = page.getByTestId('selected-card');
   await openCheckout(card);
   const dialog = page.locator('#v11217GuidedCheckout');
-  await expect(dialog.locator('[data-v11217-guided-missing]')).toContainText('Some Care details are not available here');
-  await expect(dialog.locator('[data-v11217-guided-belongings]')).toHaveText('Not available in this summary');
-  await expect(dialog.locator('[data-v11217-guided-medication]')).toHaveText('Not available in this summary');
+  await expect(dialog.locator('[data-v11217-guided-missing]')).toContainText('Care details are unavailable in this summary');
+  await expect(dialog.locator('[data-v11217-guided-belongings-unknown]')).toHaveText('Not available in this summary');
+  await expect(dialog.locator('[data-v11217-guided-medication-unknown]')).toHaveText('Not available in this summary');
   await expect(dialog.locator('[data-v11217-guided-missing]')).toContainText('Review Care · note kept');
   await expect(dialog.locator('[data-v11217-guided-missing]')).toHaveCount(1);
   await dialog.locator('[data-v11217-guided-note]').fill('Retain this note on failure');
@@ -171,7 +175,31 @@ test('checkout keeps full medication detail and distinguishes no medication from
   await openCheckout(card);
   await expect(dialog.locator('[data-v11217-guided-medication]')).toHaveText('No medication instructions saved');
   await expect(dialog.locator('[data-v11217-guided-review-care]')).toBeVisible();
-  await expect(dialog.locator('[data-v11217-guided-belongings]')).toHaveText('Not available in this summary');
+  await expect(dialog.locator('[data-v11217-guided-belongings-unknown]')).toHaveText('Not available in this summary');
+});
+
+test('reopening checkout for a guest with unknown medication clears the previous guest instructions', async ({ page }) => {
+  await setup(page, { secondCheckout: true });
+  const first = page.getByTestId('selected-card');
+  await openCheckout(first);
+  const dialog = page.locator('#v11217GuidedCheckout');
+  await expect(dialog.locator('[data-v11217-guided-medication]')).toHaveText('Return blue inhaler');
+  await dialog.locator('[data-v11217-guided-close].v11217-cancel').click();
+
+  const next = page.locator('[data-directory-stay-id="stay-c"]');
+  await next.evaluate(card => {
+    const medication = document.createElement('span');
+    medication.dataset.careBriefMedication = '';
+    medication.setAttribute('aria-busy', 'true');
+    medication.textContent = 'Instructions for the previous guest';
+    card.appendChild(medication);
+  });
+  await openCheckout(next);
+  await expect(dialog.locator('[data-v11217-guided-medication-unknown]')).toHaveText('Not available in this summary');
+  await expect(dialog.locator('[data-v11217-guided-medication]')).toBeEmpty();
+  await expect(dialog).not.toContainText('Return blue inhaler');
+  await expect(dialog).not.toContainText('Instructions for the previous guest');
+  expect(await page.evaluate(() => window.writes.length)).toBe(0);
 });
 
 test('neutral initial focus and visible keyboard trap do not confirm checkout', async ({ page }) => {
@@ -195,7 +223,7 @@ test('neutral initial focus and visible keyboard trap do not confirm checkout', 
   await expect.poll(() => page.evaluate(() => window.writes.length)).toBe(0);
 });
 
-test('loaded details hide the review action and keyboard navigation skips it', async ({ page }) => {
+test('loaded belongings stay collapsed until reviewed and their disclosure works by keyboard', async ({ page }) => {
   await setup(page);
   await openCheckout(page.getByTestId('selected-card'));
   const dialog = page.locator('#v11217GuidedCheckout');
@@ -203,7 +231,11 @@ test('loaded details hide the review action and keyboard navigation skips it', a
   await page.keyboard.press('Tab');
   await expect(dialog.locator('[data-v11217-guided-close]').first()).toBeFocused();
   await page.keyboard.press('Tab');
-  await expect(dialog.locator('[data-v11217-guided-note]')).toBeFocused();
+  await expect(dialog.locator('[data-v11217-guided-belongings-summary]')).toBeFocused();
+  await expect(dialog.locator('[data-v11217-guided-belongings-details]')).toHaveJSProperty('open', false);
+  await page.keyboard.press('Enter');
+  await expect(dialog.locator('[data-v11217-guided-belongings-details]')).toHaveJSProperty('open', true);
+  await expect(dialog.locator('[data-v11217-guided-belongings] li')).toHaveCount(2);
   await page.keyboard.press('Shift+Tab');
   await expect(dialog.locator('[data-v11217-guided-close]').first()).toBeFocused();
   expect(await page.evaluate(() => window.writes.length)).toBe(0);
@@ -221,7 +253,7 @@ test('explicit empty belongings stay distinct from pending list evidence', async
   await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
   await evidence.evaluate(node => { node.innerHTML = '<ul class="belongings-summary-list"><li>Loading belongings…</li></ul>'; });
   await openCheckout(card);
-  await expect(dialog.locator('[data-v11217-guided-belongings]')).toHaveText('Not available in this summary');
+  await expect(dialog.locator('[data-v11217-guided-belongings-unknown]')).toHaveText('Not available in this summary');
   await expect(dialog.locator('[data-v11217-guided-review-care]')).toBeVisible();
   expect(await page.evaluate(() => window.writes.length)).toBe(0);
 });

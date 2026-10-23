@@ -455,7 +455,7 @@ test('readiness checklist updates from cached profile state, prioritizes gaps, a
   });
   await expect(page.locator('[data-care-readiness-item="intake"]')).toHaveAttribute('data-state', 'pending');
   await expect(page.locator('[data-care-readiness-item="intake"] [data-care-readiness-status]')).toHaveText('Care profile available');
-  await expect(page.locator('[data-care-readiness-item="intake"] [data-care-readiness-detail]')).toHaveText('Current form completion not verified.');
+  await expect(page.locator('[data-care-readiness-item="intake"] [data-care-readiness-detail]')).toHaveText('Current form completion is not verified. Check Records & forms for submitted answers.');
   await expect(page.locator('[data-care-readiness-summary]')).toHaveText('Add handover');
   await page.evaluate(() => {
     const card = document.querySelector('.directory-card');

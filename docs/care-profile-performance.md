@@ -24,6 +24,12 @@ No paid service, database migration or customer data mutation is introduced. Waf
 
 Browser fixtures are read-only and synthetic. Physical device checks remain manual. Final test/deployment results are in the task completion message.
 
+## Repeated preparation audit — 2026.10.23
+
+An unchanged selected-profile preparation previously re-ran the selected tab loader and the normal delayed reassertions. On the actual prior `care.js` source, a browser `MutationObserver` scoped to the Care tablist and managed panels recorded 525 attribute mutations during one repeated preparation (21 repeated writes across 25 IDs, roles, ARIA and visibility attributes). The updated code retains the bounded delayed reassertions, coalesces pending callbacks per card and delay, skips the loader when the selected tab is already prepared, and guards same-value state writes; a three-call preparation burst recorded 0 tab/panel attribute mutations. The cold open remained one identity-scoped profile request, and repeated preparation added 0 requests.
+
+The synthetic read-only browser fixture also measures cold open, a switch to a second Dog/Stay identity, Back, warm return, then invalidation and a changed response. It observes one read for each cold identity, no read for the warm return, and one explicit refresh read after invalidation; reopening renders the changed record without another read. External write actions are blocked. This measures requests and DOM mutations, not elapsed-time improvement.
+
 ## Next Backlog Item
 
 Use measured read durations to target repeated Apps Script spreadsheet reads and cache suitable summary data, without changing the current boarding workflow.

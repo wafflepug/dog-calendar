@@ -5,6 +5,7 @@ const { resolveLocalBackendAction } = require('../scripts/local-network-policy')
 const calendar = fs.readFileSync(path.join(__dirname, 'fixtures/fullcalendar.global.min.js'), 'utf8');
 const app = fs.readFileSync(path.join(__dirname, '..', 'waffle-app.js'), 'utf8');
 const care = fs.readFileSync(path.join(__dirname, '..', 'care.js'), 'utf8');
+const careStartup = fs.readFileSync(path.join(__dirname, '..', 'care-startup-priority.js'), 'utf8');
 
 const booking = { timestamp: '2026-10-16', dogName: 'Milo', breed: 'Collie', startDate: '2026-10-17', endDate: '2026-10-20', ownerName: 'Casey', phone: '+61400000000', notes: 'Call before pickup.', bookingType: 'Boarding', dogId: '11111111-1111-4111-8111-111111111111', stayId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', dogNumber: '#00017', stayKey: 'milo|2026-10-17|2026-10-20' };
 const profileRecord = { stayKey: booking.stayKey, identity: { stayKey: booking.stayKey, stayId: booking.stayId, dogId: booking.dogId }, resolution: { status: 'resolved', method: 'fixture' }, updatedAt: '2026-10-16T08:00:00Z', intakeAttributesSource: 'Saved profile', intakeAttributes: { feedingTimes: '8am and 6pm', foodAmount: '1 cup', foodBrandType: 'Sensitive formula', walksPerDay: '2 walks', walkDuration: '20 minutes', medicationInstructions: 'Give the saved medication with dinner. Call the owner if appetite changes.', notes: 'Give Milo time to settle after arrival.' }, riskFlags: { foodAllergy: true } };
@@ -27,7 +28,8 @@ async function installFixture(page, { seedOperationsRows = false } = {}) {
     const request = route.request(), url = request.url();
     if (!['GET', 'HEAD'].includes(request.method())) return route.fulfill({ status: 405, body: 'Synthetic fixture blocks all writes' });
     if (url.includes('/waffle-app.js')) return route.fulfill({ status: 200, contentType: 'application/javascript', body: app.replace('function renderDirectoryCareProfile(card, record) {', 'window.__renderDirectoryCareProfile = renderDirectoryCareProfile;\n    function renderDirectoryCareProfile(card, record) {').replace('function renderDirectoryIntakeAttributes(card, record) {', 'window.__renderDirectoryIntake = renderDirectoryIntakeAttributes;\n    function renderDirectoryIntakeAttributes(card, record) {') });
-    if (url.includes('/care.js')) return route.fulfill({ status: 200, contentType: 'application/javascript', body: care.replace('  function prepare() {', '  function prepare() {\n    window.__carePreparePasses = (window.__carePreparePasses || 0) + 1;').replace('  function wrapFunction(name) {', '  window.__careSchedulePrepare = schedulePrepare;\n  window.__carePendingPrepareDelays = () => [...prepareTimers.keys()];\n  function wrapFunction(name) {') });
+    if (url.includes('/care-startup-priority.js')) return route.fulfill({ status: 200, contentType: 'application/javascript', body: `${careStartup}\n;(() => { const startup = window.WAFFLE_CARE_STARTUP; if (!startup) return; const schedule = startup.schedule.bind(startup); startup.schedule = (key, callback) => { const promise = schedule(key, callback); if (String(key) === 'ai-health') window.__careAiHealthStartupPromise = promise; return promise; }; })();` });
+    if (url.includes('/care.js')) return route.fulfill({ status: 200, contentType: 'application/javascript', body: care.replace('  function prepare() {', '  function prepare() {\n    window.__carePreparePasses = (window.__carePreparePasses || 0) + 1;').replace('  function wrapFunction(name) {', '  window.__carePrepareCard = prepareCard;\n  window.__careSchedulePrepare = schedulePrepare;\n  window.__carePendingPrepareDelays = () => [...prepareTimers.keys()];\n  window.__carePendingPanelReassertions = () => [...panelReassertionTimers.values()].reduce((sum, timers) => sum + timers.size, 0);\n  function wrapFunction(name) {') });
     if (url.includes('cdn.jsdelivr.net') && url.includes('fullcalendar')) return route.fulfill({ status: 200, contentType: 'application/javascript', body: calendar });
     if (url.includes('docs.google.com/spreadsheets') && url.includes('output=csv')) {
       return route.fulfill({ status: 200, contentType: 'text/csv', body: fixtureCsv });
@@ -75,11 +77,10 @@ test('coalesced late Care preparation still adopts controls added after startup'
   await page.waitForFunction(() => typeof window.__careSchedulePrepare === 'function'
     && window.__carePendingPrepareDelays().length === 0);
   await expect.poll(() => reads.pending.size).toBe(0);
-  const before = await page.evaluate(() => window.__carePreparePasses || 0);
   const initialReads = [...reads];
   const backfill = page.locator('#p4BackfillDogIds');
   await expect(backfill).toHaveCount(1);
-  await page.evaluate(() => {
+  const pendingDelays = await page.evaluate(() => {
     const toolbar = document.querySelector('.directory-roster-heading .guest-directory-toolbar');
     const control = document.getElementById('p4BackfillDogIds');
     if (!toolbar || !control) throw new Error('Expected the live Dog ID backfill control');
@@ -90,10 +91,14 @@ test('coalesced late Care preparation still adopts controls added after startup'
     schedule([0, 80, 240, 650]);
     schedule([0, 80, 240, 650]);
     schedule([0, 80, 240, 650]);
+    return window.__carePendingPrepareDelays().sort((left, right) => left - right);
   });
+  expect(pendingDelays).toEqual([0, 80, 240, 650]);
   await expect.poll(() => backfill.evaluate(node => node.parentElement?.classList.contains('care-record-maintenance-content') && node === window.__lateCareBackfill)).toBe(true);
-  await expect.poll(() => page.evaluate(() => window.__carePreparePasses || 0)).toBe(before + 4);
   await page.waitForFunction(() => window.__carePendingPrepareDelays().length === 0);
+  await expect(backfill).toHaveCount(1);
+  expect(await backfill.evaluate(node => node === window.__lateCareBackfill
+    && node.parentElement?.classList.contains('care-record-maintenance-content'))).toBe(true);
   expect(reads).toEqual(initialReads);
   await page.locator('#directoryBackToGuestsBtn').click();
   await page.locator('.care-record-maintenance > summary').click();
@@ -104,7 +109,7 @@ test('coalesced late Care preparation still adopts controls added after startup'
   const profileOpener = page.locator('#directory-grid [data-open-directory-profile]');
   await profileOpener.click();
   const reopenedCard = page.locator('.directory-card.is-profile-active');
-  const ownerLink = reopenedCard.locator('.directory-care-brief-actions > [data-p4-dir="owner"]');
+  const ownerLink = reopenedCard.locator('.directory-care-brief-actions > [data-care-owner-link-group] > [data-p4-dir="owner"]');
   await expect(ownerLink).toBeVisible();
   const intentBaseline = [...reads];
   await ownerLink.click();
@@ -116,6 +121,59 @@ test('coalesced late Care preparation still adopts controls added after startup'
   await page.locator('#p4TabInsights').click();
   await expect(page.locator('#p4Insights')).toContainText('stays touching this month');
   expect(reads.slice(intentBaseline.length)).toEqual(intentReads);
+});
+
+test('a repeated Care preparation preserves the profile and produces no repeated DOM writes or profile reads', async ({ page, baseURL }) => {
+  const reads = await installFixture(page);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(`${baseURL}/directory.html?carePreparationPerfFixture=1`, { waitUntil: 'domcontentloaded' });
+  await page.waitForFunction(() => document.documentElement.dataset.waffleUiReady === 'true'
+    && typeof window.__carePrepareCard === 'function');
+  const opener = page.locator('#directory-grid [data-open-directory-profile]');
+  await expect(opener).toHaveCount(1);
+  await opener.click();
+  const card = page.locator('.directory-card.is-profile-active');
+  const details = card.locator('[data-directory-detail="profile"]');
+  await expect(details).toHaveAttribute('data-detail-loaded', 'true');
+  await expect(details).toContainText('Give the saved medication with dinner. Call the owner if appetite changes.');
+  await expect.poll(() => reads.pending.size).toBe(0);
+  await page.waitForFunction(() => window.__carePendingPanelReassertions() === 0);
+  const beforeReadCount = reads.filter(action => action === 'get_guest_profile').length;
+
+  await card.evaluate(node => {
+    window.__careTabPanelMutationCount = 0;
+    const observer = new MutationObserver(records => { window.__careTabPanelMutationCount += records.length; });
+    const options = { attributes: true, attributeFilter: ['aria-controls', 'aria-hidden', 'aria-labelledby', 'aria-selected', 'class', 'hidden', 'id', 'role', 'tabindex'] };
+    observer.observe(node.querySelector('.v11160-desktop-tabs'), options);
+    node.querySelectorAll('[data-v11160-managed-panel="true"]').forEach(panel => observer.observe(panel, options));
+    window.__careTabPanelObserver = observer;
+    window.__carePrepareCard(node);
+    window.__carePrepareCard(node);
+    window.__carePrepareCard(node);
+  });
+  await page.waitForFunction(() => window.__carePendingPanelReassertions() === 0);
+  const mutations = await page.evaluate(() => {
+    window.__careTabPanelObserver.disconnect();
+    return window.__careTabPanelMutationCount;
+  });
+
+  expect(mutations).toBe(0);
+  expect(reads.filter(action => action === 'get_guest_profile')).toHaveLength(beforeReadCount);
+  expect(reads).not.toContain('save_guest_profile');
+  await expect(details).toContainText('Give the saved medication with dinner. Call the owner if appetite changes.');
+
+  const repairedControls = await card.evaluate(node => {
+    const photo = node.querySelector('.directory-photo-shell');
+    const tools = node.querySelector('.directory-care-photo-tools > div');
+    const gallery = node.querySelector('[data-v108-gallery]');
+    const operationBar = node.querySelector('[data-v110-operation-bar]');
+    if (!photo || !tools || !gallery || !operationBar) throw new Error('Expected initialized photo and operation controls');
+    photo.append(gallery);
+    operationBar.remove();
+    window.__carePrepareCard(node);
+    return { galleryReturned: gallery.parentElement === tools, operationBarRestored: !!node.querySelector('[data-v110-operation-bar]') };
+  });
+  expect(repairedControls).toEqual({ galleryReturned: true, operationBarRestored: true });
 });
 
 for (const [name, width, colorScheme] of [['320-light', 320, 'light'], ['320-dark', 320, 'dark'], ['390-light', 390, 'light'], ['390-dark', 390, 'dark'], ['1440-light', 1440, 'light'], ['1440-dark', 1440, 'dark']]) {
@@ -135,9 +193,9 @@ for (const [name, width, colorScheme] of [['320-light', 320, 'light'], ['320-dar
     const tools = card.locator('.directory-care-more-actions');
     const summary = tools.locator(':scope > summary');
     const list = tools.locator(':scope > .directory-care-more-actions-list');
-    const ownerLink = card.locator('.directory-care-brief-actions > [data-p4-dir="owner"]');
+    const ownerLink = card.locator('.directory-care-brief-actions > [data-care-owner-link-group] > [data-p4-dir="owner"]');
     await expect(ownerLink).toBeVisible();
-    await expect(ownerLink).toHaveAccessibleName('Owner Care Link for Milo');
+    await expect(ownerLink).toHaveAccessibleName('Prepare owner form — Owner Care Link for Milo');
     await expect(card.locator('[data-p4-dir="owner"]')).toHaveCount(1);
     await expect(tools.locator('[data-p4-dir="owner"]')).toHaveCount(0);
     await expect(summary).toHaveText('More tools');
@@ -161,6 +219,11 @@ for (const [name, width, colorScheme] of [['320-light', 320, 'light'], ['320-dar
 
     // Wait for the independent startup Past-count read before measuring tools-only reads.
     await expect.poll(() => reads.filter(action => action === 'get_past_guest_directory').length).toBe(1);
+    // The Apps Script health check is a separately scheduled Care startup job.
+    // Await the scheduler's real returned promise so a late health read cannot
+    // race the interaction baseline; do not use an elapsed-time delay here.
+    await page.waitForFunction(() => window.__careAiHealthStartupPromise instanceof Promise);
+    await page.evaluate(() => window.__careAiHealthStartupPromise);
     await expect(card.locator('[data-care-brief-medication]')).toHaveText(profileRecord.intakeAttributes.medicationInstructions);
     // Wait for all currently dispatched route responses before capturing the
     // tools-only baseline; Care intentionally leaves unused secondary data lazy.
@@ -184,15 +247,31 @@ for (const [name, width, colorScheme] of [['320-light', 320, 'light'], ['320-dar
     await expect(bookingTools).not.toHaveAttribute('open', '');
     await records.locator(':scope > summary').click();
     await expect(records).toHaveAttribute('open', '');
-    await bookingTools.locator(':scope > summary').click();
-    await expect(bookingTools).toHaveAttribute('open', '');
+    const historyCount = await bookingTools.locator('[data-p4-dir="history"]').count();
+    if (historyCount) {
+      await bookingTools.locator(':scope > summary').click();
+      await expect(bookingTools).toHaveAttribute('open', '');
+    } else {
+      await expect(bookingTools).toBeHidden();
+    }
     const bookingButtons = bookingTools.locator('.p4-directory-action-list button[data-p4-dir]');
-    await expect(bookingButtons).toHaveCount(1);
-    await expect(bookingButtons.nth(0)).toContainText('Book Again');
+    const againButton = list.locator(':scope > [data-p4-dir="again"]');
+    const ownerButton = bookingTools.locator('[data-p4-dir="owner"]');
+    const historyButton = bookingTools.locator('[data-p4-dir="history"]');
+    await expect(againButton).toHaveCount(1);
+    await expect(againButton).toHaveAccessibleName(`Book Again for ${booking.dogName}`);
+    await expect(againButton).toContainText('Book Again');
+    await expect(ownerButton).toHaveCount(0);
+    expect(historyCount).toBeLessThanOrEqual(1);
+    if (historyCount === 1) {
+      await expect(historyButton).toHaveAccessibleName(`Stay history for ${booking.dogName}`);
+      await expect(historyButton).toContainText('Stay history');
+    }
+    await expect(bookingButtons).toHaveCount(historyCount);
     expect(reads).toEqual(initialReads);
     await expect(page.locator('#wh75SettingsPanel')).not.toHaveClass(/is-open/);
     await testInfo.attach(`care-profile-tools-expanded-${name}`, { body: await page.screenshot({ path: testInfo.outputPath(`care-profile-tools-expanded-${name}.png`), fullPage: true }), contentType: 'image/png' });
-    await bookingTools.locator(':scope > summary').click();
+    if (historyCount) await bookingTools.locator(':scope > summary').click();
     await records.locator(':scope > summary').click();
     await summary.click();
     await expect(tools).not.toHaveAttribute('open', '');

@@ -69,18 +69,23 @@
   function updateIndicator(card, root, state) {
     const code = String(state?.code || 'unknown');
     const fallbackLabels = {
-      complete: 'Intake complete',
+      complete: 'Form received',
       link_ready: 'Link ready',
       not_prepared: 'Not prepared',
       unknown: 'Status unknown'
     };
     const label = String(state?.label || fallbackLabels[code] || 'Status unknown');
-    const detail = String(state?.detail || (code === 'unknown' ? 'Care details have not loaded.' : 'Check the care profile for any outstanding items.'));
+    const fallbackDetails = {
+      link_ready: 'Refresh Care after owner submits.',
+      not_prepared: 'No digital intake link is recorded.',
+      unknown: 'Current form completion is not verified.'
+    };
+    const detail = String(state?.detail || fallbackDetails[code] || '');
     if (!root) {
       root = document.createElement('button');
       root.type = 'button';
       root.dataset.waffleArrivalReady = '';
-      root.innerHTML = `<span data-arrival-copy><span data-arrival-checklist-row><span data-arrival-step>Intake</span><strong data-arrival-label></strong></span><small data-arrival-detail></small><span data-arrival-checklist-row><span data-arrival-step>Care</span><span data-arrival-care>Review instructions</span></span></span><span data-arrival-action aria-hidden="true">Review care</span>`;
+      root.innerHTML = `<span data-arrival-copy><strong data-arrival-label></strong><small data-arrival-detail></small></span><span data-arrival-action aria-hidden="true">Review care</span>`;
       root.addEventListener('click', event => {
         event.preventDefault(); event.stopPropagation();
         card.querySelector('.directory-guest-tile-open')?.click();
@@ -92,10 +97,12 @@
     detailNode.textContent = detailText;
     detailNode.hidden = !detailText;
     const d = identity(card);
+    root.dataset.state = code;
     root.dataset.stateSignature = signature(card, state);
     const dogIdentity = [d.name, d.dogNumber ? `Dog Number ${d.dogNumber}` : '', d.owner ? `owner ${d.owner}` : '', d.start && d.end ? `${d.start} to ${d.end}` : ''].filter(Boolean).join(', ');
-    root.setAttribute('aria-label', `Review care for ${dogIdentity || 'this dog'}: ${label}${detailText ? `. ${detailText}` : ''}. Review feeding, medication and safety before check-in.`);
-    root.title = `${detail} Review feeding, medication and safety before check-in.`;
+    root.setAttribute('aria-label', `Review care for ${dogIdentity || 'this dog'}: ${label}${detailText ? `. ${detailText}` : ''}.`);
+    if (detailText) root.title = detailText;
+    else root.removeAttribute('title');
     return root;
   }
 
@@ -137,10 +144,16 @@
 
   function visibleCheckins(grid) {
     if (!grid || grid.closest('[hidden]') || grid.closest('.directory-dashboard-fused')?.classList.contains('is-profile-mode')) return [];
-    return Array.from(grid.querySelectorAll('.directory-card'))
-      .filter(card => card.querySelector(OWN) && !card.hidden && card.style.display !== 'none' && getComputedStyle(card).display !== 'none' && !card.closest('[hidden]'))
-      .map(card => card.querySelector('[data-v11217-roster-checkin]'))
-      .filter(control => control && !control.disabled);
+    const seen = new Set();
+    return Array.from(grid.querySelectorAll('.directory-card')).filter(card => {
+      if (card.hidden || card.style.display === 'none' || getComputedStyle(card).display === 'none' || card.closest('[hidden]')) return false;
+      const status = intake(card);
+      const found = evidence(card, status);
+      if (!found || seen.has(found.d.stayId)) return false;
+      seen.add(found.d.stayId);
+      const control = card.querySelector('[data-v11217-roster-checkin]');
+      return !!control && !control.disabled;
+    }).map(card => card.querySelector('[data-v11217-roster-checkin]'));
   }
 
   function refresh() {
@@ -158,7 +171,8 @@
       if (id.stayId) seen.add(id.stayId);
       let node = card.querySelector(OWN);
       const visible = activeView === 'current' && card.style.display !== 'none' && getComputedStyle(card).display !== 'none' && !card.closest('[hidden]');
-      if (!valid || dup || !visible) { if (node) node.remove(); return; }
+      const hasException = !['complete'].includes(String(status?.code || 'unknown'));
+      if (!valid || dup || !visible || !hasException) { if (node) node.remove(); return; }
       const sig = signature(card, status);
       if (!node) node = updateIndicator(card, null, status);
       else if (node.dataset.stateSignature !== sig) updateIndicator(card, node, status);

@@ -3,11 +3,25 @@
 Reviewed 17 September 2026. Repository: `wafflepug/dog-calendar`; always start implementation from current `origin/main` in an isolated worktree. Stack: static HTML/CSS, browser JavaScript, FullCalendar, Apps Script backend, Python contracts, Playwright. Keep production smoke checks read-only. Preserve existing theme settings, offline work, and early checkout behavior. Use Luna for bounded implementation; lead agent reviews design and integration. Complete relevant CI before merging.
 
 
+## Current Care iteration - 24 October 2026
+
+Candidate 2026.10.24.01: [Care sharing clarity](care-sharing-clarity.md). Three improvements: one primary action after owner-form preparation, compact sharing options without duplicate link controls, and recoverable clipboard feedback without duplicate clicks or stale focus. Preserve exact stay context, explicit owner sending, lazy reads and token privacy. Next: audit owner form validation errors for clear field-level guidance. Current-head CI and live attribution are required before publication.
+
 ## Current Care iteration - 23 October 2026
 
-Candidate 2026.10.23.02: [Multi-visit completion and sharing](multi-visit-completion.md). Compact next-action guidance and deliberate selection of each saved stay's own returned owner link. Keep queued/failed outcomes truthful, successful intents frozen, and sharing separate from sending. This branch builds on pending PR #242; neither candidate is published while the broader UI gate remains unresolved.
+Candidate 2026.10.23.06: [Care owner workflow](care-owner-workflow.md). Five refinements: compact departure belongings, routine previews with essential values visible, direct Book Again in More tools, contextual owner-form follow-up, and truthful shared-save feedback. Preserve visible medication, exact guest identity, draft recovery and lazy reads. Next: simplify the existing owner sharing dialog without extra entry points or background polling. Publication requires current-head CI and deployment attribution.
 
-Release priority: investigate and resolve the existing phone-regression gate before publishing these candidates. Preserve the read-count and hit-test requirements; establish a repeatable cause rather than retrying indefinitely or weakening assertions. Next feature item: audit queued-plan recovery messaging using the existing queue/reconciliation states, without automatic resubmission or additional background polling.
+Candidate 2026.10.23.05: [Care daily workflow value](care-daily-value.md). Three scoped improvements: queued booking verification and safe partial resume, measured changed-only Care preparation, and arrival exceptions without duplicate completed-intake prompts. Use existing authoritative reads only on an explicit recovery action; retain exact identities, immutable attempted payloads, lazy profile reads, visible safety/medication and Next arrival focus. Inherits the pending Care profile quick-action/clarity changes; full current-head CI is required before publication.
+
+
+
+Candidate 2026.10.23.04: [Care profile quick actions](care-profile-quick-actions.md). Compact truthful freshness with full provenance on demand, unobstructed avatars with the existing photo controls in More tools, and one grouped owner-link action with its existing form-status badge. Preserve exact guest identity, explicit uploads/sharing, unknown states, stable DOM and lazy reads. Current-head CI is required before release.
+
+Candidate 2026.10.23.03: [Care profile clarity](care-profile-cleanup.md). Three UI refinements: one compact return control without a repeated dog name, expandable long handover notes, and text-first Care section tabs. Preserve short notes, visible Safety/Medication, exact guest context, lazy reads and keyboard navigation. Builds on the published multi-visit release; publication requires current-head CI.
+
+Published 2026.10.23.02: [Multi-visit completion and sharing](multi-visit-completion.md), merged in PR #243, including PR #242. All 21 pre-merge workflows passed. The live asset revision and deployment commit c4b31e00dd5d0c0326928c7dcd79e7e170186b1d were verified; backend attribution and maintenance state stayed unchanged. Duplicate post-merge checks may still be running. Keep queued/failed outcomes truthful, successful intents frozen, and sharing separate from sending.
+
+Release priority: retain the full phone-regression gate and required read-count/hit-test assertions. Its previously failing checks passed on the tested PR #243 head; this does not establish a general cause for the earlier intermittent failures. The Care timing workflow's setup is now separately bounded and cached after its earlier 10-minute job expired during dependency installation. Next feature item: audit queued-plan recovery messaging using existing queue/reconciliation states, without automatic resubmission or additional background polling.
 
 Candidate 2026.10.23.01: [Multi-visit Care and owner sharing](multi-visit-care-polish.md). Five scoped improvements: captured per-dog care choice, explicit pre-save dog editing, compact dog context on Dates, a primary owner care-link copy action after booking, and bounded cached browser CI setup. Preserve identity guards, explicit inheritance, immutable started save intents, lazy reads and read-only production smoke.
 

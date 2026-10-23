@@ -4,8 +4,14 @@ const {resolveLocalBackendAction}=require('../scripts/local-network-policy');
 const fullCalendar=fs.readFileSync('tests/fixtures/fullcalendar.global.min.js','utf8');
 const dogId='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',stayId='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 const booking={timestamp:'2026-10-01',dogName:'Performance Guest',breed:'Pug',startDate:'2026-10-08',endDate:'2026-10-12',ownerName:'Private Owner',phone:'0400123456',bookingType:'Boarding',dogId,stayId,dogNumber:'#00052'};
-async function fixture(page,{hold=false,fail=false,serverMetadata=false}={}) {
+const dogId2='cccccccc-cccc-4ccc-8ccc-cccccccccccc',stayId2='dddddddd-dddd-4ddd-8ddd-dddddddddddd';
+const booking2={timestamp:'2026-10-02',dogName:'Second Guest',breed:'Terrier',startDate:'2026-10-09',endDate:'2026-10-13',ownerName:'Another Owner',phone:'0400555123',bookingType:'Boarding',dogId:dogId2,stayId:stayId2,dogNumber:'#00053'};
+async function fixture(page,{hold=false,fail=false,serverMetadata=false,multiple=false}={}) {
   const reads=[],rosterReads=[];let release,blocked=new Promise(r=>release=r),failure=fail;
+  const bookings=multiple?[booking,booking2]:[booking],profileValues=new Map();
+  const csvHeader='Timestamp,Dog Name,Breed,Start Date,End Date,Owner,Phone,Likes,Dislikes,Notes,Edit Link,Booking Type,Dog ID,Stay ID,Dog Number';
+  const csvRow=b=>[b.timestamp,b.dogName,b.breed,b.startDate,b.endDate,b.ownerName,b.phone,'','','','',b.bookingType,b.dogId,b.stayId,b.dogNumber].join(',');
+  const rosterCsv=[csvHeader,...bookings.map(csvRow)].join('\n');
   await page.addInitScript(()=>{
     const NativeDate=Date,now=NativeDate.UTC(2026,9,10,1);
     function FixedDate(...args){if(!new.target)return new NativeDate(now).toString();return Reflect.construct(NativeDate,args.length?args:[now],new.target);}
@@ -16,24 +22,24 @@ async function fixture(page,{hold=false,fail=false,serverMetadata=false}={}) {
     if(!['GET','HEAD'].includes(request.method()))throw new Error('Mutation blocked');
     if(new URL(url).hostname==='127.0.0.1')return route.continue();
     if(url.includes('cdn.jsdelivr.net')&&url.includes('fullcalendar'))return route.fulfill({status:200,contentType:'application/javascript',body:fullCalendar});
-    if(url.includes('docs.google.com')&&url.includes('output=csv'))return route.fulfill({status:200,contentType:'text/csv',body:"Timestamp,Dog Name,Breed,Start Date,End Date,Owner,Phone,Likes,Dislikes,Notes,Edit Link,Booking Type,Dog ID,Stay ID,Dog Number\n2026-10-01,Performance Guest,Pug,2026-10-08,2026-10-12,Private Owner,0400123456,,,,,Boarding,"+dogId+','+stayId+',#00052'});
+    if(url.includes('docs.google.com')&&url.includes('output=csv'))return route.fulfill({status:200,contentType:'text/csv',body:rosterCsv});
     if(url.includes('script.google')){
       const policy=resolveLocalBackendAction({method:request.method(),url});
       if(!policy.policy.allowed)return route.fulfill({status:403,body:'Read-only fixture'});
       const params=new URL(url).searchParams,payload=JSON.parse(params.get('payload')||'{}'),callback=params.get('callback');
       let body={result:'success',records:[]};
-      if(policy.action==='get_guest_directory'){rosterReads.push(payload);body={result:'success',bookings:[booking],summaries:[]};}
+      if(policy.action==='get_guest_directory'){rosterReads.push(payload);body={result:'success',bookings,summaries:[]};}
       if(policy.action==='get_guest_profile'){
         reads.push(payload);
         if(failure)return route.abort('failed');
         if(hold)await blocked;
-        body={result:'success',record:{stayKey:payload.stayKey,identity:{stayKey:payload.stayKey,dogId:payload.dogId,stayId:payload.stayId},resolution:{status:'resolved',method:'stay-id-unique-legacy-key'},requestSource:'Other',intakeAttributes:{medicationInstructions:'Verified evening dose'},intakeAttributesSource:'fixture'},...(serverMetadata?{serverElapsedMs:8,serverCacheState:'miss'}:{})};
+        body={result:'success',record:{stayKey:payload.stayKey,identity:{stayKey:payload.stayKey,dogId:payload.dogId,stayId:payload.stayId},resolution:{status:'resolved',method:'stay-id-unique-legacy-key'},requestSource:'Other',intakeAttributes:{medicationInstructions:profileValues.get(payload.dogId)||'Verified evening dose'},intakeAttributesSource:'fixture'},...(serverMetadata?{serverElapsedMs:8,serverCacheState:'miss'}:{})};
       }
       return route.fulfill({status:200,contentType:callback?'application/javascript':'application/json',body:callback?`${callback}(${JSON.stringify(body)});`:JSON.stringify(body)});
     }
     const type=request.resourceType();return route.fulfill({status:200,contentType:type==='stylesheet'?'text/css':type==='script'?'application/javascript':'image/svg+xml',body:type==='stylesheet'||type==='script'?'':'<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>'});
   });
-  return {reads,rosterReads,release:()=>release(),recover:()=>failure=false};
+  return {reads,rosterReads,release:()=>release(),recover:()=>failure=false,changeProfile:(id,value)=>profileValues.set(id,value)};
 }
 async function ready(page,baseURL){
   await page.goto(`${baseURL}/directory.html`,{waitUntil:'domcontentloaded'});
@@ -73,6 +79,41 @@ test('server timing metadata flows through transport into the anonymous live sam
   await expect.poll(async()=>page.evaluate(()=>window.WAFFLE_CARE_PERFORMANCE.snapshot().some(s=>s.phase==='request-end'&&s.backendMs===8&&Number.isFinite(s.transportMs)&&s.serverCacheState==='miss'))).toBe(true);
   const samples=await page.evaluate(()=>window.WAFFLE_CARE_PERFORMANCE.snapshot());
   expect(JSON.stringify(samples)).not.toMatch(/Performance Guest|Private Owner|0400123456|stayKey|dogId|payload|https/);
+});
+test('cold open, dog switch, Back and warm return keep reads identity-scoped while changed data appears after invalidation',async({page,baseURL})=>{
+  const f=await fixture(page,{multiple:true});await ready(page,baseURL);
+  const first=page.locator('#directory-grid > .directory-card').nth(0),second=page.locator('#directory-grid > .directory-card').nth(1);
+  await first.locator(':scope > [data-open-directory-profile]').click();
+  await expect(first).toHaveClass(/is-profile-active/);
+  await expect(first.locator('[data-directory-detail="profile"]')).toContainText('Verified evening dose');
+  await expect.poll(()=>f.reads.length).toBe(1);
+  expect(f.reads[0]).toMatchObject({dogId,stayId});
+
+  await page.locator('#directoryBackToGuestsBtn').click();
+  await second.locator(':scope > [data-open-directory-profile]').click();
+  await expect(second).toHaveClass(/is-profile-active/);
+  await expect(second.locator('[data-directory-detail="profile"]')).toContainText('Verified evening dose');
+  await expect.poll(()=>f.reads.length).toBe(2);
+  expect(f.reads[1]).toMatchObject({dogId:dogId2,stayId:stayId2});
+
+  await page.locator('#directoryBackToGuestsBtn').click();
+  await first.locator(':scope > [data-open-directory-profile]').click();
+  await expect(first).toHaveClass(/is-profile-active/);
+  await expect(first.locator('[data-directory-detail="profile"]')).toContainText('Verified evening dose');
+  expect(f.reads).toHaveLength(2,'returning to a fresh profile should reuse its identity-checked memory result');
+
+  f.changeProfile(dogId,'Changed after refresh');
+  await page.evaluate(async()=>{
+    const card=document.querySelector('.directory-card.is-profile-active');
+    window.WAFFLE_CARE_PROFILE_INVALIDATE(card);
+    await window.WAFFLE_CARE_PROFILE_READS.read(card,{force:true});
+  });
+  expect(f.reads).toHaveLength(3);
+  expect(f.reads[2]).toMatchObject({dogId,stayId});
+  await page.locator('#directoryBackToGuestsBtn').click();
+  await first.locator(':scope > [data-open-directory-profile]').click();
+  await expect(first.locator('[data-directory-detail="profile"]')).toContainText('Changed after refresh');
+  expect(f.reads).toHaveLength(3,'reopening after an explicit refresh should render the changed record without another read');
 });
 test('online while hidden defers the directory roster read to one foreground refresh',async({page,baseURL})=>{
   const f=await fixture(page);await ready(page,baseURL);await expect.poll(()=>f.rosterReads.length).toBeGreaterThan(0);

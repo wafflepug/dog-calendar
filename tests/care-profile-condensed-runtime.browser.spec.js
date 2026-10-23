@@ -78,7 +78,7 @@ test('actual Care profile stays compact, keeps exceptions visible and preserves 
     const tools = brief.locator('.directory-care-more-actions');
     await expect(brief.locator('[data-care-readiness-action="safety"], [data-care-readiness-action="feeding"], [data-care-readiness-action="medication"]')).toHaveCount(0);
     await expect(brief.locator('[data-care-brief-call-owner] a')).toBeVisible();
-    await expect(brief.locator('.directory-care-brief-actions > [data-p4-dir="owner"]')).toBeVisible();
+    await expect(brief.locator('.directory-care-brief-actions > [data-care-owner-link-group] > [data-p4-dir="owner"]')).toBeVisible();
     await expect(brief.locator('.directory-care-brief-note')).toContainText(booking.notes);
     await expect(page.locator('#directoryProfileBackBar .directory-profile-tools')).toBeHidden();
     await expect(card.locator('[data-directory-profile-roster-badges] [data-v1118-care-signals]')).toBeHidden();

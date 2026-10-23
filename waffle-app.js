@@ -2425,8 +2425,12 @@ function updateDirectoryProfileEditFeedback(card, message, stateName) {
     if (status) {
         status.textContent = message || (state.conflict
             ? (state.conflictReason || 'Saved care details changed while you were editing. Discard this draft to load the latest profile.')
+            : state.queued
+                ? (state.queuedDraftMatches === false
+                    ? `A pending update exists for this stay key. This draft was not queued. Check Pending Sync, refresh and review Care, then reload before editing.`
+                    : 'Queued on this device. Shared Care is unconfirmed. Check Pending Sync, refresh and review Care, then reload before editing.')
             : state.saving
-                ? 'Saving care details…'
+                ? 'Saving care details to the shared Care record…'
                 : state.failed
                     ? (state.failureMessage || 'Save failed. Your draft is still here. Try saving again or discard it.')
                     : dirty
@@ -2434,7 +2438,7 @@ function updateDirectoryProfileEditFeedback(card, message, stateName) {
                         : 'No unsaved changes.');
         status.className = `directory-profile-edit-status${stateName || (state.conflict || state.failed ? ' is-error' : state.saving ? ' is-saving' : dirty ? ' is-unsaved' : ' is-clean')}`;
     }
-    if (saveButton) saveButton.disabled = state.saving || state.conflict || !dirty;
+    if (saveButton) saveButton.disabled = state.saving || state.queued || state.conflict || !dirty;
     updateDirectoryProfileChangeReview(card, state);
 }
 
@@ -2463,7 +2467,7 @@ function handleDirectoryProfileEditInput(event) {
     const card = control.closest('.directory-card');
     if (!card?.classList.contains('is-profile-editing')) return;
     const state = directoryProfileEditDrafts.get(directoryProfileEditKey(card));
-    if (!state || state.saving) return;
+    if (!state || state.saving || state.queued) return;
     state.values = collectDirectoryProfileEditValues(card);
     state.failed = false;
     state.failureMessage = '';
@@ -2484,7 +2488,7 @@ function applyDirectoryProfileEditMode(card) {
         )
         .forEach(control => {
             const state = directoryProfileEditDrafts.get(directoryProfileEditKey(card));
-            const disabled = !editing || card.dataset.profileSaving === 'true' || !!state?.conflict;
+            const disabled = !editing || card.dataset.profileSaving === 'true' || !!state?.queued || !!state?.conflict;
             if (control.disabled !== disabled) control.disabled = disabled;
         });
 
@@ -2506,14 +2510,14 @@ function applyDirectoryProfileEditMode(card) {
     if (cancelButton) {
         cancelButton.hidden =
             !editing;
-        cancelButton.disabled = card.dataset.profileSaving === 'true';
+        cancelButton.disabled = card.dataset.profileSaving === 'true' || !!directoryProfileEditDrafts.get(directoryProfileEditKey(card))?.queued;
         if (editing) cancelButton.textContent = 'Discard changes';
     }
 
     const saveButton = card.querySelector('[data-save-belongings]');
     const state = directoryProfileEditDrafts.get(directoryProfileEditKey(card));
     if (saveButton && editing && card.dataset.profileSaving !== 'true') {
-        saveButton.disabled = !state || state.conflict || !directoryProfileEditIsDirty(card, state);
+        saveButton.disabled = !state || state.queued || state.conflict || !directoryProfileEditIsDirty(card, state);
     }
 
     const changeReview = card.querySelector('[data-care-change-review]');
@@ -2564,6 +2568,10 @@ function cancelDirectoryProfileEdit(card) {
     if (!card) return;
     const editKey = directoryProfileEditKey(card);
     const draft = directoryProfileEditDrafts.get(editKey);
+    if (draft?.queued) {
+        updateDirectoryProfileEditFeedback(card);
+        return;
+    }
     if (draft) applyDirectoryProfileEditValues(card, draft.initial);
     directoryProfileEditDrafts.delete(editKey);
 
@@ -9019,6 +9027,42 @@ registerWaffleServiceWorker();
         const medicationHost = brief.querySelector('[data-care-brief-medication]');
         const freshnessHost = brief.querySelector('[data-care-brief-freshness]');
         const callActionHost = brief.querySelector('[data-care-brief-call-owner]');
+        const handoverNoteHost = brief.querySelector('[data-care-brief-handover-note]');
+
+        if (handoverNoteHost) {
+            const noteField = card.querySelector('[data-directory-edit-field="notes"]');
+            const note = String(noteField?.dataset.directoryCurrentValue ?? card.dataset.v1088Notes ?? '').trim();
+            const unchangedRenderedNote = handoverNoteHost.dataset.careBriefNoteRendered === 'true'
+                && handoverNoteHost.dataset.careBriefHandoverNote === note;
+            if (!unchangedRenderedNote) {
+                const disclosureHadFocus = !!handoverNoteHost.querySelector('[data-care-brief-note-disclosure] summary')
+                    && handoverNoteHost.querySelector('[data-care-brief-note-disclosure] summary') === document.activeElement;
+                if (note.length > 180) {
+                    const preview = `${note.slice(0, 120).trimEnd()}…`;
+                    handoverNoteHost.innerHTML = `
+                        <details data-care-brief-note-disclosure>
+                            <summary aria-label="Read full handover note">
+                                <span data-care-brief-note-preview>${escapeDashboardHtml(preview)}</span>
+                                <span class="directory-care-note-read-label directory-care-note-read-collapsed">Read full note</span>
+                                <span class="directory-care-note-read-label directory-care-note-read-expanded">Show less</span>
+                            </summary>
+                            <div data-care-brief-note-full>${escapeDashboardHtml(note)}</div>
+                        </details>`;
+                } else {
+                    handoverNoteHost.textContent = note || 'No handover note recorded';
+                }
+                handoverNoteHost.dataset.careBriefHandoverNote = note;
+                handoverNoteHost.dataset.careBriefNoteRendered = 'true';
+                if (disclosureHadFocus) {
+                    const updatedSummary = handoverNoteHost.querySelector('[data-care-brief-note-disclosure] summary');
+                    if (updatedSummary) updatedSummary.focus();
+                    else {
+                        handoverNoteHost.tabIndex = -1;
+                        handoverNoteHost.focus();
+                    }
+                }
+            }
+        }
 
         if (ownerNameHost) {
             const ownerField = card.querySelector('[data-directory-edit-field="ownerName"]');
@@ -9053,39 +9097,44 @@ registerWaffleServiceWorker();
         const missingProfile = (identityBlocked && card.dataset.profileIdentityBlockedReason === 'missing') || profileReadState === 'not-found';
         const profileIdentityNeedsReview = identityAmbiguous || (identityBlocked && !missingProfile) || profileReadState === 'identity-conflict';
         const compactCareValue = value => String(value ?? '').trim();
-        const renderCareRows = (host, rows, generatedKey) => {
-            const html = rows.map(({ key, label, value, expandable }) => {
+        const renderCareRows = (host, rows, generatedKey, routineLabel) => {
+            const rowsHtml = rows.map(({ key, label, value }) => {
                 const safeValue = escapeDashboardHtml(value);
                 const safeLabel = escapeDashboardHtml(label);
-                if (expandable) {
-                    const preview = escapeDashboardHtml(`${value.slice(0, 72).trimEnd()}…`);
-                    return `<span class="directory-care-brief-row" data-care-brief-row="${escapeDashboardHtml(key)}"><strong>${safeLabel}</strong><details><summary>${preview} <span>Show full food detail</span></summary><span>${safeValue}</span></details></span>`;
-                }
                 return `<span class="directory-care-brief-row" data-care-brief-row="${escapeDashboardHtml(key)}"><strong>${safeLabel}: </strong><span>${safeValue}</span></span>`;
             }).join('');
+            const savedCount = rows.filter(({ value }) => String(value || '').trim() && value !== 'Not recorded').length;
+            const summaryKeys = routineLabel === 'Feeding' ? ['times', 'amount'] : ['walks', 'duration'];
+            const summaryLabels = { times: 'Times', amount: 'Amount', walks: 'Walks', duration: 'Duration' };
+            const summaryParts = rows
+                .filter(({ key, value }) => summaryKeys.includes(key) && String(value || '').trim() && value !== 'Not recorded')
+                .map(({ key, value }) => `${summaryLabels[key]} ${value}`);
+            const summaryText = summaryParts.length
+                ? `${routineLabel} · ${summaryParts.join(' · ')}`
+                : `${routineLabel} routine · ${savedCount} saved detail${savedCount === 1 ? '' : 's'}`;
+            const html = `<details class="directory-care-routine-details" data-care-routine-disclosure><summary>${escapeDashboardHtml(summaryText)}</summary><div class="directory-care-routine-values">${rowsHtml}</div></details>`;
             const previous = directorySummaryHtmlState.get(host);
             if (previous?.key === generatedKey && previous.generated === html) {
-                const withoutFoodDisclosureState = markup => {
+                const actual = host.innerHTML;
+                const withoutDisclosureState = markup => {
                     const template = document.createElement('template');
                     template.innerHTML = String(markup);
-                    template.content.querySelectorAll('[data-care-brief-row="food"] details').forEach(details => { details.open = false; });
+                    template.content.querySelectorAll('[data-care-routine-disclosure]').forEach(details => { details.open = false; });
                     return template.innerHTML;
                 };
-                const actual = host.innerHTML;
-                if (withoutFoodDisclosureState(actual) === withoutFoodDisclosureState(html)) {
+                if (withoutDisclosureState(actual) === withoutDisclosureState(html)) {
                     // Native disclosure state belongs to the person using this
-                    // profile. Update the snapshot without replacing its focused
-                    // summary or closing it during an otherwise identical render.
+                    // profile. Keep it open across an otherwise identical render.
                     directorySummaryHtmlState.set(host, { ...previous, actual });
                     return;
                 }
             }
-            const preserveExpandedFood = previous?.key === generatedKey
-                && !!host.querySelector('[data-care-brief-row="food"] details[open]');
+            const preserveOpenRoutine = previous?.key === generatedKey
+                && !!host.querySelector('[data-care-routine-disclosure][open]');
             setDirectorySummaryHtml(host, html, generatedKey);
-            if (preserveExpandedFood) {
-                const updatedFoodDetails = host.querySelector('[data-care-brief-row="food"] details');
-                if (updatedFoodDetails) updatedFoodDetails.open = true;
+            if (preserveOpenRoutine) {
+                const updatedRoutineDetails = host.querySelector('[data-care-routine-disclosure]');
+                if (updatedRoutineDetails) updatedRoutineDetails.open = true;
                 const updated = directorySummaryHtmlState.get(host);
                 if (updated) directorySummaryHtmlState.set(host, { ...updated, actual: host.innerHTML });
             }
@@ -9113,9 +9162,8 @@ registerWaffleServiceWorker();
                 setDirectorySummaryText(feedingHost, feedingState);
             } else {
                 renderCareRows(feedingHost, feedingParts.filter(([key]) => key !== 'food' || compactCareValue(attributes.foodBrandType)).map(([key, label, value]) => ({
-                    key, label, value: value || 'Not recorded',
-                    expandable: key === 'food' && value.length > 96
-                })), `careBriefFeedingRows:${profileIdentity.cacheKey}`);
+                    key, label, value: value || 'Not recorded'
+                })), `careBriefFeedingRows:${profileIdentity.cacheKey}`, 'Feeding');
             }
             feedingHost.classList.toggle('is-pending', !hasCareAttributes && !missingProfile && !profileIdentityNeedsReview && profileReadState !== 'error');
         }
@@ -9139,7 +9187,7 @@ registerWaffleServiceWorker();
                             ? 'Walking details unavailable'
                             : 'Loading with full profile…';
             if (walksState) setDirectorySummaryText(walksHost, walksState);
-            else renderCareRows(walksHost, walkParts.map(([key, label, value]) => ({ key, label, value: value || 'Not recorded' })), `careBriefWalkRows:${profileIdentity.cacheKey}`);
+            else renderCareRows(walksHost, walkParts.map(([key, label, value]) => ({ key, label, value: value || 'Not recorded' })), `careBriefWalkRows:${profileIdentity.cacheKey}`, 'Walking');
             walksHost.classList.toggle('is-pending', !attributes && !missingProfile && !profileIdentityNeedsReview && profileReadState !== 'error');
         }
 
@@ -9175,7 +9223,31 @@ registerWaffleServiceWorker();
                     return { offline: readStatus?.dataset.freshnessOffline === 'true', refreshFailed: readStatus?.dataset.freshnessRefreshFailed === 'true' };
                 })()
             );
-            setDirectorySummaryText(freshnessHost, freshness.text);
+            const freshnessSummary = freshnessHost.querySelector('[data-care-brief-freshness-summary]');
+            const freshnessDetail = freshnessHost.querySelector('[data-care-brief-freshness-detail]');
+            if (freshnessSummary && freshnessDetail) {
+                const updatedDate = validatedProfileRecord?.updatedAt ? new Date(validatedProfileRecord.updatedAt) : null;
+                const validUpdatedDate = updatedDate && Number.isFinite(updatedDate.getTime()) && updatedDate.getTime() <= Date.now() ? updatedDate : null;
+                const formattedUpdatedDate = validUpdatedDate
+                    ? new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short', ...(validUpdatedDate.getFullYear() !== new Date().getFullYear() ? { year: 'numeric' } : {}) }).format(validUpdatedDate)
+                    : '';
+                const compactFreshness = (() => {
+                    if (freshness.state === 'fresh') return formattedUpdatedDate ? `Saved · ${formattedUpdatedDate}` : 'Saved · time unknown';
+                    if (freshness.state === 'saved') return 'Saved · time unknown';
+                    if (freshness.state === 'offline') return 'Offline · saved care';
+                    if (freshness.state === 'refreshing') return 'Refreshing saved care';
+                    if (freshness.state === 'loading') return 'Loading care record…';
+                    if (freshness.state === 'missing') return 'No saved care record';
+                    if (freshness.state === 'unresolved' || freshness.state === 'identity-conflict') return 'Care record identity needs review';
+                    if (freshness.state === 'error') return freshness.text.includes('saved record') ? 'Refresh failed · saved care' : 'Care record unavailable';
+                    return freshness.text;
+                })();
+                setDirectorySummaryText(freshnessSummary, `${compactFreshness} · Details`);
+                setDirectorySummaryText(freshnessDetail, freshness.text);
+            } else {
+                // Keep extracted legacy render harnesses and older simple hosts compatible.
+                setDirectorySummaryText(freshnessHost, freshness.text);
+            }
             setDirectorySummaryData(freshnessHost, 'state', freshness.state);
             setDirectorySummaryAttribute(freshnessHost, 'role', 'status');
             setDirectorySummaryAttribute(freshnessHost, 'aria-live', 'polite');
@@ -9194,7 +9266,12 @@ registerWaffleServiceWorker();
             setDirectorySummaryText(feedingHost, 'Care record needs identity review');
             setDirectorySummaryText(medicationHost, 'Care record needs identity review');
             if (freshnessHost) {
-                setDirectorySummaryText(freshnessHost, 'Shared name and dates · review the care record identity');
+                const conflictText = 'Shared name and dates · review the care record identity';
+                const summary = freshnessHost.querySelector('[data-care-brief-freshness-summary]');
+                if (summary) {
+                    setDirectorySummaryText(summary, conflictText);
+                    setDirectorySummaryText(freshnessHost.querySelector('[data-care-brief-freshness-detail]'), conflictText);
+                } else setDirectorySummaryText(freshnessHost, conflictText);
                 setDirectorySummaryData(freshnessHost, 'state', 'identity-conflict');
             }
         }
@@ -13129,18 +13206,18 @@ registerWaffleServiceWorker();
         retry.addEventListener('click', async () => {
             if (retry.disabled || !isCareSaveRecoveryContextCurrent(card, stayKey, identity)) return;
             retry.disabled = true;
-            message.textContent = 'Your changes were saved. Refreshing the saved care details…';
+            message.textContent = 'Your changes were saved to the shared Care record. Refreshing its details…';
             try {
                 await refreshSavedCareViewsReadOnly(card, payload, profileEdit, stayKey, identity);
                 if (!isCareSaveRecoveryContextCurrent(card, stayKey, identity) || retry.isConnected === false) return;
-                message.textContent = 'Your changes were saved. Care details refreshed.';
+                message.textContent = 'Your changes were saved to the shared Care record. Care details refreshed.';
                 status.className = 'directory-profile-edit-status is-success';
                 retry.remove();
                 status.tabIndex = -1;
                 status.focus?.({ preventScroll: true });
             } catch (_) {
                 if (!isCareSaveRecoveryContextCurrent(card, stayKey, identity) || retry.isConnected === false) return;
-                message.textContent = 'Your changes were saved. The refresh is still unavailable.';
+                message.textContent = 'Your changes were saved to the shared Care record. The refresh is still unavailable.';
                 retry.disabled = false;
             }
         });
@@ -13165,6 +13242,10 @@ registerWaffleServiceWorker();
         }
         const profileKey = directoryProfileEditKey(card);
         const editState = profileEdit ? directoryProfileEditDrafts.get(profileKey) : null;
+        if (profileEdit && editState?.queued) {
+            updateDirectoryProfileEditFeedback(card);
+            return;
+        }
         if (profileEdit && editState) {
             validateDirectoryProfileEditContext(card, editState);
             if (editState.conflict) updateDirectoryProfileEditFeedback(card);
@@ -13201,7 +13282,51 @@ registerWaffleServiceWorker();
                     throw new Error('This stay changed or is ambiguous. Your draft is retained.');
                 }
             }
-            await sendPayloadToAppsScript({ action: 'save_belongings', ...payload });
+            if (profileEdit && editState && typeof window.v108QueueAll === 'function') {
+                const queuedEntries = await window.v108QueueAll();
+                if (!saveContextIsCurrent()) {
+                    cardContextChanged = true;
+                    return;
+                }
+                const existingQueueEntry = queuedEntries.find(entry =>
+                    entry?.payload?.action === 'save_belongings' && entry.payload.stayKey === payload.stayKey
+                );
+                if (existingQueueEntry) {
+                    const mutationId = String(existingQueueEntry.payload?.clientMutationId || existingQueueEntry.id || 'unavailable');
+                    editState.queued = true;
+                    editState.clientMutationId = mutationId;
+                    editState.queuedPayload = Object.freeze({ ...existingQueueEntry.payload });
+                    editState.queuedIdentity = Object.freeze({ ...saveIdentity });
+                    editState.queuedDraftMatches = false;
+                    editState.legacyQueueMatch = true;
+                    editState.saving = false;
+                    card.dataset.profileSaving = 'false';
+                    updateDirectoryProfileEditFeedback(card);
+                    button.innerText = 'Queued on this device';
+                    return;
+                }
+            }
+            const saveReceipt = await sendPayloadToAppsScript({ action: 'save_belongings', ...payload });
+            if (saveReceipt?.queued === true) {
+                const mutationId = String(saveReceipt.clientMutationId || saveReceipt.queueId || saveReceipt.id || '').trim();
+                if (profileEdit && editState) {
+                    editState.queued = true;
+                    editState.clientMutationId = mutationId || 'unavailable';
+                    editState.queuedPayload = Object.freeze({ ...payload, clientMutationId: mutationId });
+                    editState.queuedIdentity = Object.freeze({ ...saveIdentity });
+                    editState.queuedDraftMatches = true;
+                    editState.legacyQueueMatch = false;
+                    editState.saving = false;
+                    cardContextChanged = !saveContextIsCurrent();
+                    if (!cardContextChanged) {
+                        card.dataset.profileSaving = 'false';
+                        updateDirectoryProfileEditFeedback(card);
+                        button.innerText = 'Queued on this device';
+                    }
+                    return;
+                }
+                throw new Error(`The response says this save was queued${mutationId ? ` (ID ${mutationId})` : ''}; the shared Care record is not confirmed. Check Pending Sync before trying again.`);
+            }
             serverSaved = true;
             cardContextChanged = !saveContextIsCurrent();
             window.WAFFLE_CARE_BELONGINGS_READS?.invalidate(saveIdentityCard);
@@ -13325,7 +13450,7 @@ registerWaffleServiceWorker();
                 );
                 const status = card.querySelector('[data-directory-profile-edit-status]');
                 if (status) {
-                    status.textContent = 'Care details saved successfully.';
+                    status.textContent = 'Saved to the shared Care record. Its update time is shown in Care essentials when available.';
                     status.className = 'directory-profile-edit-status is-success';
                 }
             }
@@ -13350,7 +13475,7 @@ registerWaffleServiceWorker();
                 setDirectoryProfileEditMode(card, false);
                 const status = card.querySelector('[data-directory-profile-edit-status]');
                 if (status) {
-                    status.textContent = 'Your changes were saved. Refresh the profile if its other views look out of date.';
+                    status.textContent = 'Saved to the shared Care record. Its update time is shown in Care essentials when available; refresh the profile if other views look out of date.';
                     status.className = 'directory-profile-edit-status is-success';
                 }
                 button.innerText = '✅ Saved';
@@ -13403,7 +13528,7 @@ registerWaffleServiceWorker();
         if (serverSaved && recoveryError && !cardContextChanged) {
             const status = card.querySelector(profileEdit ? '[data-directory-profile-edit-status]' : '[data-belongings-edit-status]');
             if (status) {
-                status.textContent = 'Your changes were saved. Some shared details could not be refreshed.';
+                status.textContent = 'Saved to the shared Care record. Its update time is shown in Care essentials when available; some details could not be refreshed.';
                 status.className = 'directory-profile-edit-status is-success';
                 appendCareSaveRefreshRetry(status, card, savedPayload || {}, profileEdit, saveStayKey, saveIdentity);
             }
@@ -13422,6 +13547,13 @@ registerWaffleServiceWorker();
         if (modal) {
             modal.style.display = 'none';
             modal.setAttribute('aria-hidden', 'true');
+        }
+
+        // Closing pauses the hosted session; its loading cover must not block Care.
+        const contextCard = hostedBelongingsPhotoContext?.card;
+        if (contextCard?.querySelector('[data-v1089-upload-loading]') &&
+                typeof v1089SetCardUploadLoading === 'function') {
+            v1089SetCardUploadLoading(contextCard, false);
         }
 
         // Keep the frame, source, and context alive. A hidden modal is a paused
@@ -15610,6 +15742,15 @@ registerWaffleServiceWorker();
 
             patchGuestRecordInCachedCsv(context, record);
 
+            if (context.fieldKey === 'notes') {
+                const savedNote = String(record.notes ?? value).trim();
+                context.trigger.dataset.directoryCurrentValue = savedNote;
+                const fieldValue = context.trigger.querySelector('.directory-field-value');
+                if (fieldValue) fieldValue.textContent = savedNote || 'No handover note provided';
+                context.card.dataset.v1088Notes = savedNote;
+                renderDirectoryCareBrief(context.card);
+            }
+
             const oldStayKey =
                 response.oldStayKey ||
                 context.oldStayKey ||
@@ -17299,14 +17440,6 @@ registerWaffleServiceWorker();
                                                         class="directory-photo-placeholder"
                                                         aria-label="No dog profile photo">🐶</div>
                                                 </div>
-                                                <button
-                                                    type="button"
-                                                    class="directory-photo-edit-button"
-                                                    data-upload-dog-photo
-                                                    title="Change and position dog profile photo"
-                                                    aria-label="Change and position ${escapeDashboardHtml(dogName.trim())} profile photo">
-                                                    ✎
-                                                </button>
                                             </div>
 
                                             <div class="directory-card-identity">
@@ -17347,14 +17480,18 @@ registerWaffleServiceWorker();
                                                 <div>
                                                     <h3>Care essentials</h3>
                                                 </div>
-                                                <span
+                                                <div
                                                     class="directory-care-brief-freshness"
                                                     data-care-brief-freshness
                                                     role="status"
                                                     aria-live="polite"
                                                     data-state="loading">
-                                                    Stay details ready · care details loading
-                                                </span>
+                                                    <details class="directory-care-freshness-details">
+                                                        <summary><span data-care-brief-freshness-summary>Loading care record… · Details</span></summary>
+                                                        <span data-care-brief-freshness-detail data-care-brief-freshness-full>Loading care record…</span>
+                                                        <small>Update time is for the shared saved record, including intake, photo and booking changes; it does not confirm care instructions were reviewed.</small>
+                                                    </details>
+                                                </div>
                                             </div>
 
                                             <div class="directory-care-brief-grid">
@@ -17396,7 +17533,7 @@ registerWaffleServiceWorker();
                                                     <div class="directory-care-brief-note-heading">
                                                         <h4>Handover note</h4>
                                                     </div>
-                                                    <p class="directory-care-brief-value">${escapeDashboardHtml(notes ? notes.trim() : 'No handover note recorded')}</p>
+                                                    <div class="directory-care-brief-value" data-care-brief-handover-note>${escapeDashboardHtml(notes ? notes.trim() : 'No handover note recorded')}</div>
                                                 </section>
                                             </div>
 
@@ -17410,6 +17547,12 @@ registerWaffleServiceWorker();
                                                 <details class="directory-care-more-actions">
                                                     <summary aria-label="More profile tools">More tools</summary>
                                                 <div class="directory-care-more-actions-list">
+                                                <section class="directory-care-photo-tools" aria-label="Photo tools">
+                                                    <strong>Photo tools</strong>
+                                                    <div>
+                                                        <button type="button" class="directory-photo-edit-button" data-upload-dog-photo title="Change and position dog profile photo" aria-label="Change and position ${escapeDashboardHtml(dogName.trim())} profile photo">Change profile photo</button>
+                                                    </div>
+                                                </section>
                                                 <button type="button" class="directory-care-brief-action" data-care-brief-action="edit">
                                                     Edit care details
                                                 </button>

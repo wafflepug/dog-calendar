@@ -76,10 +76,14 @@ test('Care profile clears fixed navigation and keeps controls readable across vi
   if(await control.isVisible()){
    const label=(await control.innerText()).trim();
    await control.scrollIntoViewIfNeeded();
-   const reach=await control.evaluate(element=>{
+   const measureReach=()=>control.evaluate(element=>{
     const r=element.getBoundingClientRect(),header=document.querySelector('#wh75MobileTopbar')?.getBoundingClientRect(),footer=document.querySelector('#wh75MobileBottomNav')?.getBoundingClientRect(),hit=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);
     return{top:r.top,bottom:r.bottom,height:r.height,clearOfHeader:!header||r.top>=header.bottom,clearOfFooter:!footer||r.bottom<=footer.top,hit:hit&&(hit===element||element.contains(hit))};
    });
+   // Resize and scroll can still be settling after scrollIntoViewIfNeeded.
+   // Keep the same hit-test gate, and wait for the actual reachable geometry.
+   await expect.poll(async()=>{const r=await measureReach();return r.height>=44&&r.clearOfHeader&&r.clearOfFooter&&r.hit;},{message:`${label} becomes reachable after scrolling`}).toBe(true);
+   const reach=await measureReach();
    expect(reach.height,`${label} has a touch-sized target`).toBeGreaterThanOrEqual(44);
    expect(reach.clearOfHeader&&reach.clearOfFooter&&reach.hit,`${label} is scrollable into an unobstructed hit-test position: ${JSON.stringify(reach)}`).toBe(true);
   }

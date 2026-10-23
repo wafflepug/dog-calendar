@@ -3,7 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const source = fs.readFileSync(path.join(__dirname, '..', 'care-intake-status.js'), 'utf8');
-const markup = (extra = '') => `<body><main id="directory-grid"><article class="directory-card is-profile-active" data-directory-stay-key="milo|2026-10-20|2026-10-22" data-directory-dog-name="Milo" data-directory-start-date="2026-10-20" data-directory-end-date="2026-10-22" data-directory-stay-id="stay-1" data-directory-dog-id="dog-1"><section data-directory-care-brief><div class="directory-care-brief-actions"><button data-p4-dir="owner" id="firstlevelOwnerCareLink">Owner care</button></div><div data-care-readiness-item="intake"></div></section><div data-directory-intake ${extra}></div><details data-directory-records><summary>Records &amp; forms</summary><button data-create-intake-link>Copy link</button><a href="/intake.pdf">PDF</a></details></article></main></body>`;
+const markup = (extra = '') => `<body><main id="directory-grid"><article class="directory-card is-profile-active" data-directory-stay-key="milo|2026-10-20|2026-10-22" data-directory-dog-name="Milo" data-directory-start-date="2026-10-20" data-directory-end-date="2026-10-22" data-directory-stay-id="stay-1" data-directory-dog-id="dog-1"><section data-directory-care-brief><div class="directory-care-brief-actions"><button data-p4-dir="owner" id="firstlevelOwnerCareLink"><span>Owner Care Link</span><small>Send or copy this guest’s care link</small></button></div><div data-care-readiness-item="intake"></div></section><div data-directory-intake ${extra}></div><details data-directory-records><summary>Records &amp; forms</summary><button data-create-intake-link>Copy link</button><a href="/intake.pdf">PDF</a></details></article></main></body>`;
 
 test.describe('compact care intake status', () => {
   test('maps canonical states without network reads, preserves controls, and ignores an ambiguous wrong stay', async ({ page }) => {
@@ -13,11 +13,19 @@ test.describe('compact care intake status', () => {
     expect(await state()).toMatchObject({ code: 'unknown', label: 'Loading' });
     await page.locator('[data-directory-intake]').evaluate(el => { el.removeAttribute('aria-busy'); el.innerHTML = '<span class="directory-intake-dot is-not-sent"></span>No digital intake on file'; });
     await expect.poll(async () => (await state()).code).toBe('not_prepared');
+    await expect(page.locator('#firstlevelOwnerCareLink')).toHaveAccessibleName('Prepare owner form — Owner Care Link for Milo');
     await page.locator('[data-directory-intake]').evaluate(el => { el.innerHTML = '<span class="directory-intake-dot is-awaiting"></span>Awaiting owner'; });
     await expect.poll(async () => (await state()).code).toBe('link_ready');
+    await expect(page.locator('[data-compact-intake-status]')).toHaveText('Awaiting owner');
+    await expect(page.locator('#firstlevelOwnerCareLink span')).toHaveText('Follow up with owner');
+    await expect(page.locator('#firstlevelOwnerCareLink')).toHaveAccessibleName('Follow up with owner — Owner Care Link for Milo');
+    await expect(page.locator('#firstlevelOwnerCareLink small')).toContainText('not been received');
     await page.locator('[data-directory-intake]').evaluate(el => { el.removeAttribute('aria-busy'); el.innerHTML = '<span class="directory-intake-dot is-complete"></span><span>Intake complete</span>'; });
     await expect.poll(async () => (await state()).code).toBe('complete');
     expect(await state()).toMatchObject({ label: 'Form received', method: 'digital' });
+    await expect(page.locator('#firstlevelOwnerCareLink span')).toHaveText('Owner form options');
+    await expect(page.locator('#firstlevelOwnerCareLink')).toHaveAccessibleName('Owner form options — Owner Care Link for Milo');
+    await expect(page.locator('#firstlevelOwnerCareLink')).toHaveAttribute('aria-description', /Records & forms/);
     await page.locator('[data-directory-intake]').evaluate(el => el.setAttribute('aria-busy', 'true'));
     await expect.poll(async () => (await state()).label).toBe('Loading');
     expect(await state()).toMatchObject({ code: 'unknown' });
@@ -30,11 +38,11 @@ test.describe('compact care intake status', () => {
     await page.locator('[data-directory-intake]').evaluate(el => { el.innerHTML = '<span class="directory-intake-dot is-not-sent"></span>No digital intake on file'; });
     await page.locator('.directory-card').evaluate(card => { card.dataset.intakeMethod = 'legacy'; });
     await expect.poll(async () => (await state()).label).toBe('Care profile available');
-    expect(await state()).toMatchObject({ code: 'unknown', detail: 'Current form completion not verified.' });
+    expect(await state()).toMatchObject({ code: 'unknown', detail: 'Current form completion is not verified. Check Records & forms for submitted answers.' });
     await page.locator('.directory-card').evaluate(card => { card.dataset.intakeMethod = 'none'; });
     await page.locator('[data-directory-intake]').evaluate(el => { el.innerHTML = '<span class="directory-intake-dot is-complete"></span><span>Intake complete</span><span class="directory-record-meta">Stored profile</span>'; });
     await expect.poll(async () => (await state()).label).toBe('Saved care available');
-    expect(await state()).toMatchObject({ code: 'unknown', detail: 'Current form completion not verified.' });
+    expect(await state()).toMatchObject({ code: 'unknown', detail: 'Current form completion is not verified. Check Records & forms for submitted answers.' });
     await page.locator('[data-directory-intake]').evaluate(el => { el.textContent = 'Digital intake unavailable'; });
     await expect.poll(async () => (await state()).code).toBe('unknown');
 
@@ -42,10 +50,36 @@ test.describe('compact care intake status', () => {
     expect(await state()).toMatchObject({ code: 'unknown' });
     await page.locator('[data-directory-intake]').evaluate(el => { el.innerHTML = '<span class="directory-intake-dot is-not-sent"></span>No digital intake on file'; });
     await expect.poll(async () => (await state()).code).toBe('not_prepared');
+    await expect(page.locator('#firstlevelOwnerCareLink span')).toHaveText('Prepare owner form');
     expect(await page.locator('[data-compact-intake-status]').textContent()).not.toContain('secret.invalid');
     await expect(page.locator('#firstlevelOwnerCareLink')).toHaveCount(1);
     await expect(page.locator('[data-create-intake-link]')).toBeAttached();
     await expect(page.locator('details a[href="/intake.pdf"]')).toBeAttached();
+  });
+
+  test('contextual action stays singular and updates with truthful state without extra reads', async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 740 });
+    await page.setContent(markup());
+    await page.addScriptTag({ content: source });
+    const card = page.locator('.directory-card');
+    const owner = page.locator('#firstlevelOwnerCareLink');
+    await page.locator('[data-directory-intake]').evaluate(el => { el.innerHTML = '<span class="directory-intake-dot is-not-sent"></span>No digital intake on file'; });
+    await expect(owner.locator('span')).toHaveText('Prepare owner form');
+    await expect(card.locator('.directory-owner-care-action-group [data-p4-dir="owner"]')).toHaveCount(1);
+    await page.locator('[data-directory-intake]').evaluate(el => { el.innerHTML = '<span class="directory-intake-dot is-awaiting"></span>Awaiting owner'; });
+    await expect(owner.locator('span')).toHaveText('Follow up with owner');
+    await page.evaluate(() => window.dispatchEvent(new CustomEvent('waffle:owner-care-link-ready', { detail: { dogName: 'Milo', startDate: '2026-10-20', endDate: '2026-10-22', link: 'https://secret.invalid/token', dogId: 'dog-1', stayId: 'stay-1' } })));
+    await page.locator('[data-directory-intake]').evaluate(el => { el.innerHTML = '<span class="directory-intake-dot is-not-sent"></span>No digital intake on file'; });
+    await expect(owner.locator('span')).toHaveText('Open sharing options');
+    await expect(owner).toHaveAccessibleName('Open sharing options — Owner Care Link for Milo');
+    await expect(page.locator('[data-compact-intake-status]')).toHaveText('Link ready');
+    expect(await page.evaluate(() => ({ actions: document.querySelectorAll('.directory-owner-care-action-group [data-p4-dir="owner"]').length, statuses: document.querySelectorAll('[data-compact-intake-status]').length, reads: window.fixtureReads?.length || 0 }))).toEqual({ actions: 1, statuses: 1, reads: 0 });
+    for (const dark of [false, true]) {
+      await page.locator('body').evaluate((node, enabled) => node.classList.toggle('dark-theme', enabled), dark);
+      const layout = await owner.evaluate(node => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth, height: node.getBoundingClientRect().height }));
+      expect(layout.scroll).toBeLessThanOrEqual(layout.client);
+      expect(layout.height).toBeGreaterThan(0);
+    }
   });
 
   test('accepts a prepared link only for the exact selected stay; canonical completion wins', async ({ page }) => {

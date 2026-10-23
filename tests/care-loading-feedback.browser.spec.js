@@ -279,17 +279,20 @@ test('Care Brief shows cached safety before the profile read and refreshes feedi
   await openProfile(page);
   await expect(brief.locator('[data-care-brief-feeding] [data-care-brief-row="times"]')).toContainText('Times: 07:00 and 17:00');
   await expect(brief.locator('[data-care-brief-feeding] [data-care-brief-row="amount"]')).toContainText('Amount: 1 cup');
-  const foodDetail = brief.locator('[data-care-brief-feeding] [data-care-brief-row="food"] details');
-  await expect(foodDetail.locator('summary')).toContainText('Show full food detail');
-  await foodDetail.locator('summary').click();
-  await expect(foodDetail).toContainText('Sensitive formula with a gradual ten day transition from the previous food, mixed in measured portions at each meal');
+  const feedingRoutine = brief.locator('[data-care-brief-feeding] [data-care-routine-disclosure]');
+  const walkingRoutine = brief.locator('[data-care-brief-walks] [data-care-routine-disclosure]');
+  await expect(feedingRoutine).not.toHaveAttribute('open', '');
+  await expect(walkingRoutine).not.toHaveAttribute('open', '');
+  await feedingRoutine.locator('summary').click();
+  await expect(feedingRoutine).toContainText('Sensitive formula with a gradual ten day transition from the previous food, mixed in measured portions at each meal');
   await expect(brief.locator('[data-care-brief-walks] [data-care-brief-row="walks"]')).toContainText('Walks: 2 walks');
   await expect(brief.locator('[data-care-brief-walks] [data-care-brief-row="duration"]')).toContainText('Duration: 30 minutes each');
   await expect(brief.locator('[data-care-brief-medication]')).toHaveText('Give one tablet with dinner. If appetite changes, do not repeat the dose; call the owner before the next meal. Keep the medicine in its labelled pouch.');
   const essentialOrder = await brief.locator('.directory-care-brief-grid > .directory-care-brief-item').evaluateAll(items => items.map(item => item.querySelector('h4')?.textContent?.trim()));
   expect(essentialOrder.slice(0, 3)).toEqual(['Safety', 'Medication', 'Feeding & walks']);
   await expect(brief.locator('[data-care-brief-freshness]')).toHaveAttribute('data-state', 'saved');
-  await expect(brief.locator('[data-care-brief-freshness]')).toHaveText('Saved record · update time unknown');
+  await expect(brief.locator('[data-care-brief-freshness-summary]')).toHaveText('Saved · time unknown · Details');
+  await expect(brief.locator('[data-care-brief-freshness-detail]')).toHaveText('Saved record · update time unknown');
   expect(fixture.profileCalls.get(key)).toBe(1);
 });
 
