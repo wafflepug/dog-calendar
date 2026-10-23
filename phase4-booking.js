@@ -266,6 +266,7 @@ function reviewPlan(){
     }
   }
   const retryRows=planResumeRows();if(!retryRows.length){void reconcileQueuedPlanRows();return}
+  p.locked=true;
   planSetLocked(true);
   const status=$('p4PlanStatus'),button=$('p4PlanSave'),savedBefore=p.rows.filter(row=>row.status==='saved').length;
   button.disabled=true;
@@ -286,6 +287,7 @@ function reviewPlan(){
     const done=p.rows.length>0&&p.rows.every(row=>row.status==='saved');
     button.textContent=done?'Confirm planned visits':'Resume planned visits';
     button.disabled=done;
+    p.locked=false;
     planSetLocked(false);
     renderPlan();
     if(done)status.textContent=`All ${savedAfter} planned visits are confirmed saved. You can clear this completed plan when ready.`;

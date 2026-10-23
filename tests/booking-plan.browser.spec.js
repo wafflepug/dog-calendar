@@ -538,13 +538,15 @@ test('queued result freezes plan controls and is not reported as saved', async (
   await openReview(page);
   await page.locator('#p4PlanSave').click();
   await expect(page.locator('#p4PlanRows')).toContainText('queued');
+  await expect(page.locator('[data-p4-result-status="queued"]')).toHaveCount(1);
   await expect(page.locator('#p4PlanOwner')).toBeDisabled();
   await expect(page.locator('#p4PlanAddVisit')).toBeDisabled();
   await page.locator('[data-p4-plan-step="1"]').click();
   await expect(page.getByRole('button', { name: 'Edit Luna · Dog ID #00001' })).toBeDisabled();
   await expect(page.getByRole('button', { name: 'Remove Luna · Dog ID #00001' })).toBeDisabled();
   await expect(page.locator('#p4PlanSave')).toBeEnabled();
-  await expect(page.locator('#p4PlanStatus')).toContainText('queued');
+  await expect(page.locator('#p4PlanStatus')).toHaveText('Waiting for sync confirmation');
+  await expect(page.locator('#p4PlanStatus')).not.toContainText('saved');
 });
 
 test('same-name identity collision is blocked before any plan write', async ({ page }) => {
