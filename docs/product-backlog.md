@@ -3,6 +3,10 @@
 Reviewed 17 September 2026. Repository: `wafflepug/dog-calendar`; always start implementation from current `origin/main` in an isolated worktree. Stack: static HTML/CSS, browser JavaScript, FullCalendar, Apps Script backend, Python contracts, Playwright. Keep production smoke checks read-only. Preserve existing theme settings, offline work, and early checkout behavior. Use Luna for bounded implementation; lead agent reviews design and integration. Complete relevant CI before merging.
 
 
+## Current Care iteration - 24 October 2026
+
+Candidate 2026.10.24.01: [Care sharing clarity](care-sharing-clarity.md). Three improvements: one primary action after owner-form preparation, compact sharing options without duplicate link controls, and recoverable clipboard feedback without duplicate clicks or stale focus. Preserve exact stay context, explicit owner sending, lazy reads and token privacy. Next: audit owner form validation errors for clear field-level guidance. Current-head CI and live attribution are required before publication.
+
 ## Current Care iteration - 23 October 2026
 
 Candidate 2026.10.23.06: [Care owner workflow](care-owner-workflow.md). Five refinements: compact departure belongings, routine previews with essential values visible, direct Book Again in More tools, contextual owner-form follow-up, and truthful shared-save feedback. Preserve visible medication, exact guest identity, draft recovery and lazy reads. Next: simplify the existing owner sharing dialog without extra entry points or background polling. Publication requires current-head CI and deployment attribution.

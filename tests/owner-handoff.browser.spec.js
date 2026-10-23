@@ -158,9 +158,9 @@ test('compact boarding mode leads with one copy action and keeps secondary shari
   await card.getByRole('button', { name: 'Copy owner care link' }).click();
   expect(await page.evaluate(() => window.__clipboardWrites)).toEqual([valid.link]);
   await card.locator('[data-secondary-options] > summary').click();
-  await expect(card.getByLabel('Owner care link')).toBeVisible();
+  await expect(card.getByLabel('Owner care link')).toBeHidden();
   await expect(card.getByRole('button', { name: 'Copy message', exact: true })).toBeVisible();
-  await expect(card.getByRole('button', { name: 'Copy link', exact: true })).toBeVisible();
+  await expect(card.getByRole('button', { name: 'Copy link', exact: true })).toHaveCount(0);
   await expect(card.getByRole('button', { name: 'Share', exact: true })).toBeVisible();
   expect(await page.evaluate(() => window.__shareCalls.length)).toBe(0);
   await card.getByRole('button', { name: 'Share', exact: true }).click();
@@ -185,8 +185,10 @@ test('phase-4 owner dialog reuses an unchanged prepare, shows the owner card, an
   await setupOwnerDialog(page);
   await page.locator('#p4OwnerLink').click();
   await expect(page.locator('.owner-handoff')).toBeVisible();
+  await expect(page.locator('#p4OwnerPrepare')).toBeHidden();
+  await expect(page.getByRole('button', { name: 'Copy owner care link', exact: true })).toBeVisible();
   expect(await page.getByLabel('Message to owner').inputValue()).toContain('Milo');
-  await page.locator('#p4OwnerLink').click();
+  await page.evaluate(() => window.WAFFLE_PHASE4_BOOKING.createOwnerCareLink());
   await expect.poll(() => page.evaluate(() => window.fixtureWrites.length)).toBe(1);
   expect(await page.evaluate(() => window.fixtureReads.map(item => item.action))).not.toContain('get_dog_history');
   if (browserName === 'chromium' && ['chromium-390', 'chromium-1440'].includes(testInfo.project.name)) {
@@ -203,6 +205,40 @@ test('editing stay dates invalidates and removes a previously prepared message',
   await page.locator('#p4OwnerDetails > summary').click();
   await page.locator('#p4OwnerEnd').fill('2026-11-14');
   await expect(page.locator('.owner-handoff')).toHaveCount(0);
+  await expect(page.locator('#p4OwnerPrepare')).toBeVisible();
+});
+
+test('owner dialog has one primary step and restores preparation after dates change', async ({ page }) => {
+  await setupOwnerDialog(page);
+  const primaries = page.locator('[data-p4-panel="owner"] button.primary:visible');
+  await expect(primaries).toHaveCount(1);
+  await page.locator('#p4OwnerLink').click();
+  await expect(page.locator('#p4OwnerPrepare')).toBeHidden();
+  await expect(primaries).toHaveCount(1);
+  await expect(primaries).toHaveText('Copy owner care link');
+  await expect(page.getByLabel('Message to owner')).toBeHidden();
+  await page.locator('#p4OwnerDetails > summary').click();
+  await page.locator('#p4OwnerEnd').fill('2026-11-14');
+  await expect(page.locator('#p4LinkResult')).toBeEmpty();
+  await expect(page.locator('#p4OwnerPrepare')).toBeVisible();
+  await expect(primaries).toHaveCount(1);
+  expect(await page.evaluate(() => window.fixtureWrites.length)).toBe(1);
+  expect(await page.evaluate(() => window.fixtureReads.map(item => item.action))).not.toContain('get_dog_history');
+});
+
+test('an unusable returned link keeps preparation available for explicit retry', async ({ page }) => {
+  await setupOwnerDialog(page);
+  await page.evaluate(() => { window.fixtureWriteHandler = async () => ({ intake: { link: 'https://name:secret@care.example.test/form' } }); });
+  await page.locator('#p4OwnerLink').click();
+  await expect(page.locator('#p4OwnerStatus')).toContainText('The owner care link was not returned.');
+  await expect(page.locator('#p4OwnerPrepare')).toBeVisible();
+  await expect(page.locator('#p4OwnerLink')).toBeEnabled();
+  await expect(page.locator('.owner-handoff')).toHaveCount(0);
+  await page.evaluate(() => { window.fixtureWriteHandler = async () => ({ intake: { link: 'https://care.example.test/retry' } }); });
+  await page.locator('#p4OwnerLink').click();
+  await expect(page.locator('#p4OwnerPrepare')).toBeHidden();
+  await expect(page.getByRole('button', { name: 'Copy owner care link', exact: true })).toBeVisible();
+  expect(await page.evaluate(() => window.fixtureWrites.length)).toBe(2);
 });
 
 test('switching the guest while a link write is pending never renders the stale result and restores Prepare', async ({ page }) => {

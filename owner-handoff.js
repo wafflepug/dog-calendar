@@ -27,7 +27,7 @@
     heading.tabIndex = -1;
     const hint = document.createElement('p');
     const stayDate = start && end ? (start === end ? ` · ${start}` : ` · ${start}–${end}`) : '';
-    hint.textContent = `For ${dog}${stayDate}. Copy the owner care link and paste it into their usual chat; Waffle has not sent it.`;
+    hint.textContent = `For ${dog}${stayDate}. Paste the copied link into the owner’s chat.`;
     const linkLabel = document.createElement('label');
     linkLabel.className = 'owner-handoff-message owner-handoff-link-label';
     const linkCaption = document.createElement('span');
@@ -53,18 +53,43 @@
     status.className = 'owner-handoff-status';
     status.setAttribute('role', 'status');
     status.setAttribute('aria-live', 'polite');
-    status.textContent = 'The link is ready to copy. Choose the button when you are ready to share it.';
+    status.textContent = 'Ready to copy.';
+    let copyPending = false;
     copyButton.addEventListener('click', async () => {
+      if (copyPending || !card.isConnected) return;
+      const focusWasOnControls = document.activeElement === copyButton || document.activeElement === linkField || document.activeElement === document.body || document.activeElement === document.documentElement;
+      copyPending = true;
+      copyButton.disabled = true;
+      let restoreFocus = false;
       try {
         if (!navigator.clipboard?.writeText) throw Error('Clipboard unavailable');
         await navigator.clipboard.writeText(link);
+        if (!card.isConnected) return;
         status.textContent = 'Owner care link copied. Paste it into the owner’s usual chat and send.';
+        const active = document.activeElement;
+        if (!linkLabel.hidden) {
+          linkLabel.hidden = true;
+          restoreFocus = focusWasOnControls && (active === linkField || active === copyButton || active === document.body);
+        }
       } catch (_) {
-        card.insertBefore(linkLabel, actions);
+        if (!card.isConnected) return;
+        if (linkLabel.parentNode !== card) card.insertBefore(linkLabel, actions);
         linkLabel.hidden = false;
-        linkField.focus();
-        linkField.select();
-        status.textContent = 'Copy was blocked. The link is selected: press and hold to copy, then paste it into the owner’s chat.';
+        const active = document.activeElement;
+        const canSelectFallback = focusWasOnControls && (active === linkField || active === copyButton || active === document.body || active === document.documentElement);
+        if (canSelectFallback) {
+          linkField.focus();
+          linkField.select();
+          status.textContent = 'Copy was blocked. The link is selected: press and hold to copy, then paste it into the owner’s chat.';
+        } else {
+          status.textContent = 'Copy was blocked. The link is available in the field above for manual copying.';
+        }
+      } finally {
+        copyPending = false;
+        if (card.isConnected) {
+          copyButton.disabled = false;
+          if (restoreFocus) copyButton.focus();
+        }
       }
     });
     actions.appendChild(copyButton);
@@ -72,11 +97,8 @@
     const other = document.createElement('details');
     other.className = 'owner-handoff-options';
     other.dataset.secondaryOptions = 'true';
-    other.addEventListener('toggle', () => {
-      if (other.open && linkLabel.parentNode === secondary) linkLabel.hidden = false;
-    });
     const summary = document.createElement('summary');
-    summary.textContent = 'Other sharing options and stay details';
+    summary.textContent = 'More options';
     const secondary = document.createElement('div');
     secondary.className = 'owner-handoff-secondary';
     const context = document.createElement('p');
@@ -98,8 +120,10 @@
       try {
         if (!navigator.clipboard?.writeText) throw Error('Clipboard unavailable');
         await navigator.clipboard.writeText(value);
+        if (!card.isConnected) return;
         status.textContent = success;
       } catch (_) {
+        if (!card.isConnected) return;
         fallbackField.focus();
         fallbackField.select();
         status.textContent = 'Copy was blocked. The text is selected: press and hold to copy, then paste it into the owner’s chat.';
@@ -114,23 +138,24 @@
       return button;
     }
     secondaryButton('Copy message', () => copy(message, 'Message copied. Paste it into the owner’s chat and send.', messageField)).className = 'primary';
-    secondaryButton('Copy link', () => copy(link, 'Link copied. Paste it into the owner’s chat and send.', linkField));
     if (typeof navigator.share === 'function') {
       secondaryButton('Share', async event => {
         const button = event.currentTarget;
         button.disabled = true;
         try {
           await navigator.share({ title: `${dog} — owner care form`, text: message });
+          if (!card.isConnected) return;
           status.textContent = 'Share sheet closed. Check your chosen app to confirm the message was sent.';
         } catch (error) {
+          if (!card.isConnected) return;
           if (error?.name === 'AbortError') status.textContent = 'Sharing cancelled. Your message is still ready to copy or share.';
           else status.textContent = 'Sharing is unavailable. Choose Copy message and paste it into the owner’s chat.';
         } finally { button.disabled = false; }
       });
     }
-    secondary.append(context, linkLabel, messageLabel, secondaryActions);
+    secondary.append(context, messageLabel, secondaryActions);
     other.append(summary, secondary);
-    card.append(heading, hint, actions, other, status);
+    card.append(heading, hint, linkLabel, actions, other, status);
     host.appendChild(card);
     return card;
   }

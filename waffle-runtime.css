@@ -2,8 +2,8 @@
    Build: 2026.08.27.04
    Historical base styles remain compatibility sources during Phase 3A, but pages no longer
    reference them individually. Preserve this import order until modules are folded in. */
-@import url("waffle-app.css?build=2026.08.27.04&rev=2026.10.23.06");
-@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.10.23.06");
+@import url("waffle-app.css?build=2026.08.27.04&rev=2026.10.24.01");
+@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.10.24.01");
 @import url("waffle-v10.8.2.css?build=2026.08.27.04");
 @import url("waffle-v10.8.3.css?build=2026.08.27.04");
 @import url("waffle-v10.8.5.css?build=2026.08.27.04");
@@ -11,12 +11,12 @@
 @import url("waffle-v10.8.7.css?build=2026.08.27.04");
 @import url("waffle-v10.8.8.css?build=2026.08.27.04");
 @import url("waffle-v10.8.9.css?build=2026.08.27.04");
-@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.10.23.06");
+@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.10.24.01");
 @import url("waffle-v11.0.3.css?build=2026.08.27.04");
 @import url("waffle-v11.0.5.css?build=2026.08.27.04");
-@import url("waffle-v11.1.94.css?build=2026.10.23.06");
-@import url("waffle-v11.1.95.css?build=2026.10.23.06");
-@import url("waffle-v11.1.96.css?build=2026.10.23.06&rev=2026.10.23.06");
+@import url("waffle-v11.1.94.css?build=2026.10.24.01");
+@import url("waffle-v11.1.95.css?build=2026.10.24.01");
+@import url("waffle-v11.1.96.css?build=2026.10.24.01&rev=2026.10.24.01");
 
 /* ============================================================
    MOBILE FIRST-PAINT STABILITY GATE
@@ -3145,3 +3145,9 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-
   box-sizing:border-box;width:100%;max-width:100%;min-width:0;min-height:44px;white-space:normal;overflow-wrap:anywhere;
 }
 body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-more-actions-list > [data-p4-dir="again"] small { display:none; }
+
+/* Keep one primary action in the prepared owner sharing dialog. */
+[data-p4-panel="owner"] [hidden]{display:none!important}
+[data-p4-panel="owner"] #p4LinkResult:empty{display:none}
+[data-p4-panel="owner"] .owner-handoff-compact{min-width:0;max-width:100%}
+[data-p4-panel="owner"] .owner-handoff-compact :is(p,h4,label,textarea,button,summary){overflow-wrap:anywhere;max-width:100%;box-sizing:border-box}
