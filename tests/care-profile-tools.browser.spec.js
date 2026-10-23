@@ -77,11 +77,10 @@ test('coalesced late Care preparation still adopts controls added after startup'
   await page.waitForFunction(() => typeof window.__careSchedulePrepare === 'function'
     && window.__carePendingPrepareDelays().length === 0);
   await expect.poll(() => reads.pending.size).toBe(0);
-  const before = await page.evaluate(() => window.__carePreparePasses || 0);
   const initialReads = [...reads];
   const backfill = page.locator('#p4BackfillDogIds');
   await expect(backfill).toHaveCount(1);
-  await page.evaluate(() => {
+  const pendingDelays = await page.evaluate(() => {
     const toolbar = document.querySelector('.directory-roster-heading .guest-directory-toolbar');
     const control = document.getElementById('p4BackfillDogIds');
     if (!toolbar || !control) throw new Error('Expected the live Dog ID backfill control');
@@ -92,10 +91,14 @@ test('coalesced late Care preparation still adopts controls added after startup'
     schedule([0, 80, 240, 650]);
     schedule([0, 80, 240, 650]);
     schedule([0, 80, 240, 650]);
+    return window.__carePendingPrepareDelays().sort((left, right) => left - right);
   });
+  expect(pendingDelays).toEqual([0, 80, 240, 650]);
   await expect.poll(() => backfill.evaluate(node => node.parentElement?.classList.contains('care-record-maintenance-content') && node === window.__lateCareBackfill)).toBe(true);
-  await expect.poll(() => page.evaluate(() => window.__carePreparePasses || 0)).toBe(before + 4);
   await page.waitForFunction(() => window.__carePendingPrepareDelays().length === 0);
+  await expect(backfill).toHaveCount(1);
+  expect(await backfill.evaluate(node => node === window.__lateCareBackfill
+    && node.parentElement?.classList.contains('care-record-maintenance-content'))).toBe(true);
   expect(reads).toEqual(initialReads);
   await page.locator('#directoryBackToGuestsBtn').click();
   await page.locator('.care-record-maintenance > summary').click();
@@ -247,8 +250,20 @@ for (const [name, width, colorScheme] of [['320-light', 320, 'light'], ['320-dar
     await bookingTools.locator(':scope > summary').click();
     await expect(bookingTools).toHaveAttribute('open', '');
     const bookingButtons = bookingTools.locator('.p4-directory-action-list button[data-p4-dir]');
-    await expect(bookingButtons).toHaveCount(1);
-    await expect(bookingButtons.nth(0)).toContainText('Book Again');
+    const againButton = bookingTools.locator('[data-p4-dir="again"]');
+    const ownerButton = bookingTools.locator('[data-p4-dir="owner"]');
+    const historyButton = bookingTools.locator('[data-p4-dir="history"]');
+    await expect(againButton).toHaveCount(1);
+    await expect(againButton).toHaveAccessibleName(`Book Again for ${booking.dogName}`);
+    await expect(againButton).toContainText('Book Again');
+    await expect(ownerButton).toHaveCount(0);
+    const historyCount = await historyButton.count();
+    expect(historyCount).toBeLessThanOrEqual(1);
+    if (historyCount === 1) {
+      await expect(historyButton).toHaveAccessibleName(`Stay history for ${booking.dogName}`);
+      await expect(historyButton).toContainText('Stay history');
+    }
+    await expect(bookingButtons).toHaveCount(1 + historyCount);
     expect(reads).toEqual(initialReads);
     await expect(page.locator('#wh75SettingsPanel')).not.toHaveClass(/is-open/);
     await testInfo.attach(`care-profile-tools-expanded-${name}`, { body: await page.screenshot({ path: testInfo.outputPath(`care-profile-tools-expanded-${name}.png`), fullPage: true }), contentType: 'image/png' });
