@@ -3,7 +3,7 @@ const python = process.env.WAFFLE_PYTHON || (process.platform === 'win32' ? 'pyt
 
 module.exports = defineConfig({
   testDir: './tests',
-  testMatch: ['booking-plan.browser.spec.js', 'booking-plan-runtime.browser.spec.js', 'booking-plan-completion.browser.spec.js'],
+  testMatch: ['booking-plan.browser.spec.js', 'booking-plan-runtime.browser.spec.js', 'booking-plan-completion.browser.spec.js', 'returning-booking-flow.browser.spec.js'],
   timeout: 90000,
   expect: { timeout: 12000 },
   workers: 1,

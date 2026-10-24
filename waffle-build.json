@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.10.24.04",
-  "releaseName": "Faster Pet Onboarding",
+  "assetRevision": "2026.10.24.05",
+  "releaseName": "Returning Booking Flow",
   "careIteration": {
     "returningDogSuggestions": true,
     "reviewedCareInheritance": true,

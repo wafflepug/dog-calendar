@@ -75,6 +75,13 @@ async function fillRequiredBooking(page) {
   await page.locator('#p4End').fill('2026-11-04');
 }
 
+async function loadCareCollapsed(page) {
+  await page.locator('[data-p4-load-saved-care]').click();
+  const review = page.locator('.p4-care-disclosure');
+  await expect(review).toHaveJSProperty('open', true);
+  await review.locator('summary').click();
+}
+
 test('returning dog suggestion requires evidence and explicit Dog ID selection', async ({ page }) => {
   await openBooking(page);
   await page.locator('#p4Dog').fill('Luna');
@@ -86,6 +93,7 @@ test('returning dog suggestion requires evidence and explicit Dog ID selection',
   await expect(page.locator('[data-p4-suggest]')).toHaveCount(2);
   await expect(page.locator('#p4DogIdentity')).toHaveValue('');
   await page.locator('#p4DogIdentity').selectOption(dogA);
+  await loadCareCollapsed(page);
   await expect(page.locator('#p4CareConfirm')).toBeHidden();
   await expect(page.locator('.p4-care-disclosure')).toHaveJSProperty('open', false);
   await expect(page.locator('.p4-care-source')).toContainText('Luna');
@@ -129,6 +137,7 @@ test('reviewed fields are editable, unchecked inheritance stays off, and retries
   await page.locator('#p4LoadDogIdentities').click();
   await fillRequiredBooking(page);
   await page.locator('#p4DogIdentity').selectOption(dogA);
+  await loadCareCollapsed(page);
   await page.locator('.p4-care-disclosure summary').click();
   await page.locator('[data-p4-care-profile="feedingTimes"]').fill('6:30 am');
   await page.locator('#p4CareConfirm').check();
@@ -184,14 +193,16 @@ test('a slower prior Dog ID history response cannot replace the current selectio
       : original(payload);
   });
   await page.locator('#p4DogIdentity').selectOption(dogA);
+  await page.locator('[data-p4-load-saved-care]').click();
   await expect.poll(() => page.evaluate(() => Boolean(window.pendingHistories?.['aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa']))).toBe(true);
   await page.locator('#p4DogIdentity').selectOption(dogB);
+  await page.locator('[data-p4-load-saved-care]').click();
   await expect.poll(() => page.evaluate(() => Boolean(window.pendingHistories?.['bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb']))).toBe(true);
   await page.evaluate(id => window.pendingHistories[id]({ history: {
     previousStays: [{ stayId: 'stay-luna-2', stayKey: 'Luna|2025-01-01|2025-01-02', endDate: '2025-01-02' }],
     latestCompletedProfile: { sourceDogId: id, sourceStayId: 'stay-luna-2', sourceStayKey: 'Luna|2025-01-01|2025-01-02', sourceEndDate: '2025-01-02', intakeAttributes: { foodBrandType: 'Lamb kibble' }, riskFlags: {} }
   } }), dogB);
-  await page.locator('.p4-care-disclosure summary').click();
+  await expect(page.locator('.p4-care-disclosure')).toHaveJSProperty('open', true);
   await expect(page.locator('[data-p4-care-profile="foodBrandType"]')).toHaveValue('Lamb kibble');
   await page.evaluate(id => window.pendingHistories[id]({ history: {
     previousStays: [{ stayId: 'stay-luna-1', stayKey: 'Luna|2026-01-01|2026-01-03', endDate: '2026-01-03' }],
@@ -232,6 +243,7 @@ test('unchecked care is omitted; checking and then editing requires review again
   await page.locator('#p4LoadDogIdentities').click();
   await fillRequiredBooking(page);
   await page.locator('#p4DogIdentity').selectOption(dogA);
+  await loadCareCollapsed(page);
   await expect(page.locator('[data-p4-care-decision]')).toHaveText('Saved care not selected for copying.');
   await page.locator('.p4-care-disclosure summary').click();
   const readsBeforeEdits = await page.evaluate(() => window.fixtureReads.length);
@@ -265,6 +277,7 @@ test('returning care remains readable and reachable at phone, desktop, theme, an
   await page.locator('#p4LoadDogIdentities').click();
   await fillRequiredBooking(page);
   await page.locator('#p4DogIdentity').selectOption(dogA);
+  await loadCareCollapsed(page);
   const summary = page.locator('.p4-care-disclosure summary');
   const disclosure = page.locator('.p4-care-disclosure');
   const confirm = page.locator('#p4CareConfirm');
@@ -323,6 +336,7 @@ test('a history failure after switching identity clears previously loaded care',
   await page.locator('#p4LoadDogIdentities').click();
   await fillRequiredBooking(page);
   await page.locator('#p4DogIdentity').selectOption(dogA);
+  await loadCareCollapsed(page);
   await expect(page.locator('#p4ReturningMini')).toContainText('Chicken');
   await page.evaluate(() => {
     const core = window.WAFFLE_PHASE4_CORE;
@@ -330,7 +344,8 @@ test('a history failure after switching identity clears previously loaded care',
     core.read = payload => payload.action === 'get_dog_history' ? Promise.reject(new Error('offline')) : original(payload);
   });
   await page.locator('#p4DogIdentity').selectOption(dogB);
-  await expect(page.locator('#p4ReturningMini')).toContainText('Care history is unavailable');
+  await page.locator('[data-p4-load-saved-care]').click();
+  await expect(page.locator('#p4ReturningMini')).toContainText('Saved care could not be loaded');
   await expect(page.locator('#p4ReturningMini')).not.toContainText('Chicken');
   await expect(page.locator('#p4CareConfirm')).toHaveCount(0);
 });
@@ -341,6 +356,7 @@ test('an existing identity without completed Care cannot approve or copy a curre
   await page.locator('#p4LoadDogIdentities').click();
   await fillRequiredBooking(page);
   await page.locator('#p4DogIdentity').selectOption(dogA);
+  await page.locator('[data-p4-load-saved-care]').click();
   await expect(page.locator('#p4ReturningMini')).toContainText('No completed earlier stay with saved care details is available');
   await expect(page.locator('#p4ReturningMini')).toContainText('Dog ID #00001');
   await expect(page.locator('#p4CareConfirm')).toHaveCount(0);
