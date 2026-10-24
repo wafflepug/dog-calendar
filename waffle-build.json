@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.10.24.03",
-  "releaseName": "Care Intake Receipt",
+  "assetRevision": "2026.10.24.04",
+  "releaseName": "Faster Pet Onboarding",
   "careIteration": {
     "returningDogSuggestions": true,
     "reviewedCareInheritance": true,

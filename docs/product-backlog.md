@@ -5,6 +5,8 @@ Reviewed 17 September 2026. Repository: `wafflepug/dog-calendar`; always start i
 
 ## Current Care iteration - 24 October 2026
 
+Candidate 2026.10.24.04: [Faster pet onboarding](faster-pet-onboarding.md). Open Boarding directly from Care, retain interrupted drafts in memory, copy only confirmed shared-owner/date context for another dog, and remove speculative name-prefill reads while typing. Preserve exact returning Dog ID review, save locks and explicit owner sharing. Next: measure the returning-dog-to-dates transition. Full current-head CI and publication attribution are required.
+
 Candidate 2026.10.24.03: [Care intake receipt context](care-intake-receipt.md). Show verified digital submission time in existing status details, bind it to the selected guest/stay, and retain unknown wording for stored profile fallbacks. No extra touchpoint, startup read or inferred delivery. Next: audit repeated Records & forms completion messaging. Full current-head CI and publication attribution are required.
 
 Candidate 2026.10.24.02: [Care owner guidance](care-owner-guidance.md). Five improvements: inline owner-field validation, guarded keyboard preparation, quieter unavailable contact details, coordinated copy/share actions, and scoped guest-history progress/retry. Preserve explicit operations, exact identities and no background history reads. Next: audit verified owner-form receipt context using existing evidence. Publication requires full current-head CI and live attribution.
