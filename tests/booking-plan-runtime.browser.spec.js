@@ -138,6 +138,21 @@ test('the shipped booking modal keeps returning Care compact, editable and reach
     await page.locator('#p4LoadDogIdentities').click();
     await expect(page.locator('#p4DogIdentity option[value="aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"]')).toHaveCount(1);
     await page.locator('#p4DogIdentity').selectOption('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');
+    expect(await page.evaluate(() => window.returningRuntimeReads.filter(action => action === 'get_dog_history').length)).toBe(0);
+    await expect(page.locator('#p4CareConfirm')).toHaveCount(0);
+    const loadCare = page.locator('[data-p4-load-saved-care]');
+    await loadCare.scrollIntoViewIfNeeded();
+    const idleLayout = await loadCare.evaluate(node => {
+      const r = node.getBoundingClientRect(), hit = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+      return { height: r.height, reachable: hit === node || node.contains(hit), overflow: document.documentElement.scrollWidth > innerWidth };
+    });
+    expect(idleLayout.height).toBeGreaterThanOrEqual(44);
+    expect(idleLayout.reachable).toBe(true);
+    expect(idleLayout.overflow).toBe(false);
+    await page.screenshot({ path: testInfo.outputPath(`returning-optional-review-${width}.png`) });
+    await page.locator('[data-p4-load-saved-care]').click();
+    await expect(page.locator('.p4-care-disclosure')).toHaveAttribute('open', '');
+    await page.locator('.p4-care-disclosure summary').click();
     const source = page.locator('.p4-care-source'), summary = page.locator('.p4-care-disclosure summary');
     await expect(source).toContainText('Dog ID #00017');
     await expect(source).toContainText('From stay ending 6 Oct 2026');

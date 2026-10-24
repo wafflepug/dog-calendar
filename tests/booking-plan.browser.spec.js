@@ -60,7 +60,7 @@ async function addDog(page, name, identity) {
     await page.locator('#p4LoadDogIdentities').click();
     await expect(page.locator(`#p4DogIdentity option[value="${identity}"]`)).toHaveCount(1);
     await page.locator('#p4DogIdentity').selectOption(identity);
-    await expect.poll(() => page.evaluate(() => window.fixtureReads.some(x => x.action === 'get_dog_history'))).toBeTruthy();
+    await expect(page.locator('[data-p4-load-saved-care]')).toBeVisible();
   } else {
     await page.locator('#p4DogIdentity').selectOption('');
   }
@@ -95,6 +95,8 @@ async function reviewAndSave(page) {
 }
 
 async function openSavedCare(page) {
+  const load = page.locator('[data-p4-load-saved-care]');
+  if (await load.count()) await load.click();
   const disclosure = page.locator('#p4ReturningMini .p4-care-disclosure');
   if (await disclosure.getAttribute('open') === null) await disclosure.locator('summary').click();
   await expect(disclosure).toHaveAttribute('open', '');
@@ -257,7 +259,7 @@ test('dog edits are targeted, cancelable, care changes require reconfirmation, a
   await page.locator('#p4PlanDogCancel').click();
   await expect(page.locator('#p4DogIdentity')).toHaveValue(dogB);
   await expect(page.locator('#p4ReturningMini')).not.toContainText('Loading this Dog ID');
-  await expect(page.locator('#p4ReturningMini')).toContainText('Saved care was not captured');
+  await expect(page.locator('[data-p4-load-saved-care]')).toBeEnabled();
   await luna.click();
   await page.locator('#p4PlanNext').click();
   await expect(page.locator('#p4PlanStatus')).toContainText('Update or cancel the current dog edit');
@@ -333,6 +335,7 @@ test('an omitted unchanged saved-care source can be explicitly approved while ed
   }, dogA);
   await page.locator('#p4LoadDogIdentities').click();
   await page.locator('#p4DogIdentity').selectOption(dogA);
+  await openSavedCare(page);
   await expect(page.locator('[data-p4-care-profile="feedingTimes"]')).toHaveValue('7 am');
   await page.locator('#p4PlanAddDog').click();
   await expect(page.locator('#p4PlanDogs')).toContainText('No care copied');
@@ -576,6 +579,8 @@ test('same-name dogs remain unselected until the exact identity card is chosen',
   await matchingCards.nth(1).click();
   await expect(page.locator('#p4DogIdentity')).toHaveValue(dogC);
   await expect(page.locator(`#p4IdentityCards [data-p4-identity="${dogC}"]`)).toHaveAttribute('aria-pressed', 'true');
+  expect(await page.evaluate(() => window.fixtureReads.filter(x => x.action === 'get_dog_history'))).toHaveLength(0);
+  await page.locator('[data-p4-load-saved-care]').click();
   await expect.poll(() => page.evaluate(() => window.fixtureReads.some(x => x.action === 'get_dog_history' && x.dogId === 'dddddddd-dddd-4ddd-8ddd-dddddddddddd'))).toBeTruthy();
   expect(await page.evaluate(() => window.fixtureWrites)).toHaveLength(0);
 });
