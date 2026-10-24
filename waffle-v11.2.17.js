@@ -666,16 +666,8 @@
   let guidedCheckoutBusy = false;
   let guidedCheckoutCard = null;
   let guidedCheckoutPayload = null;
-  let guidedReviewDraft = null;
-  window.addEventListener('click', event => {
-    const profileCheckout = event.target?.closest?.('.directory-card.is-profile-active [data-v110-checkout]');
-    if (!profileCheckout || !guidedReviewDraft) return;
-    const card = profileCheckout.closest('.directory-card');
-    if (!card?.isConnected || !card.classList.contains('is-profile-active') || !sameGuidedStay(guidedReviewDraft, payloadForCard(card))) return;
-    event.preventDefault();
-    event.stopImmediatePropagation();
-    handleGuidedRosterAction(event, profileCheckout);
-  }, true);
+  let guidedReviewPromise = null;
+  let guidedReviewSequence = 0;
   function sameGuidedStay(a, b) {
     return !!a && !!b && !!a.stayId && !!a.dogId && !!a.stayKey &&
       String(a.stayId) === String(b.stayId) && String(a.dogId) === String(b.dogId) && String(a.stayKey) === String(b.stayKey);
@@ -694,14 +686,14 @@
       <header class="v11217-modal-head"><div><small>DEPARTURE</small><h3 id="v11217GuidedCheckoutTitle" tabindex="-1">Check out</h3><p>Review this stay before confirming departure.</p></div><button type="button" class="v11217-modal-close" data-v11217-guided-close aria-label="Close checkout">×</button></header>
       <div class="v11217-modal-body"><div class="v11217-modal-dog"><strong data-v11217-guided-dog></strong><span data-v11217-guided-dogid></span><div class="v11217-guided-dates"><span><small>Booked stay</small><span data-v11217-guided-dates></span></span><span><small data-v11217-guided-checkout-caption>Checkout today</small><span data-v11217-guided-checkout-today></span></span></div></div>
       <div class="v11217-guided-checklist"><section class="v11217-guided-evidence" data-v11217-guided-belongings-section><strong>Belongings</strong><details data-v11217-guided-belongings-details><summary data-v11217-guided-belongings-summary></summary><div data-v11217-guided-belongings></div></details><div class="v11217-guided-unknown" data-v11217-guided-belongings-unknown hidden>Not available in this summary</div></section><section class="v11217-guided-evidence" data-v11217-guided-medication-section><strong>Medication</strong><div data-v11217-guided-medication></div><div class="v11217-guided-unknown" data-v11217-guided-medication-unknown hidden>Not available in this summary</div></section></div>
-      <div class="v11217-guided-missing" data-v11217-guided-missing hidden><span>Care details are unavailable in this summary. Review the missing details before handover.</span><button type="button" data-v11217-guided-review-care>Review Care · note kept</button></div>
+      <div class="v11217-guided-missing" data-v11217-guided-missing hidden><span data-v11217-guided-missing-message>Care details are unavailable in this summary. Review the missing details before handover.</span><button type="button" data-v11217-guided-review-care>Review missing details</button></div>
       <div class="v11217-field"><label for="v11217GuidedCheckoutNote">Handover note (for this checkout)</label><textarea id="v11217GuidedCheckoutNote" data-v11217-guided-note maxlength="1000" placeholder="Optional handover details…"></textarea></div>
       <div class="v11217-action-feedback" data-v11217-guided-feedback role="alert" aria-live="assertive" hidden></div></div>
       <footer class="v11217-modal-actions"><button type="button" class="v11217-cancel" data-v11217-guided-close>Cancel</button><button type="button" class="v11217-confirm" data-v11217-guided-confirm>Confirm checkout</button></footer>
       </section>`;
     document.body.appendChild(modal);
     modal.addEventListener('click', event => {
-      if (event.target.closest('[data-v11217-guided-review-care]')) { reviewGuidedCare(); return; }
+      if (event.target.closest('[data-v11217-guided-review-care]')) { void reviewGuidedCare(); return; }
       if (!guidedCheckoutBusy && (event.target === modal || event.target.closest('[data-v11217-guided-close]'))) closeGuidedCheckout();
       if (event.target.closest('[data-v11217-guided-confirm]')) runGuidedCheckout();
     });
@@ -731,6 +723,8 @@
     guidedCheckoutAttempt = attempt;
     guidedCheckoutCard = card;
     guidedCheckoutPayload = { ...payload };
+    guidedReviewSequence += 1;
+    guidedReviewPromise = null;
     modal.querySelector('[data-v11217-guided-dog]').textContent = payload.dogName || 'Guest';
     const dogNumber = card.dataset?.directoryDogNumber || card.querySelector('#dogNumber, [data-directory-dog-number], .directory-dog-number')?.textContent?.trim();
     modal.querySelector('[data-v11217-guided-dogid]').textContent = dogNumber ? `Dog ID: ${dogNumber}` : '';
@@ -745,48 +739,26 @@
           const list = node.querySelector('.belongings-summary-list');
           const listItems = list ? [...list.children].map(item => item.textContent.trim()).filter(Boolean) : [];
           const value = String(empty?.textContent || node.dataset?.value || (list ? '' : node.textContent) || '').trim();
-          if ((listItems.length || value) && !/loading|not loaded|pending/i.test([value, ...listItems].join(' '))) return { value, listItems };
+          if ((listItems.length || value) && !/loading|not loaded|pending|unavailable|needs identity review/i.test([value, ...listItems].join(' '))) return { value, listItems };
         }
       }
       return null;
     };
     const belongings = loadedValue(['[data-belongings-summary]']);
     const medication = loadedValue(['[data-care-brief-medication]']);
-    const renderEvidence = (target, evidence) => {
-      target.replaceChildren();
-      if (!evidence) return;
-      if (evidence.listItems.length) {
-        const list = document.createElement('ul');
-        evidence.listItems.forEach(item => { const li = document.createElement('li'); li.textContent = item; list.appendChild(li); });
-        target.appendChild(list);
-      } else target.textContent = evidence.value;
-    };
-    const setEvidence = (kind, evidence) => {
-      const details = modal.querySelector(`[data-v11217-guided-${kind}-details]`);
-      const content = modal.querySelector(`[data-v11217-guided-${kind}]`);
-      const unknown = modal.querySelector(`[data-v11217-guided-${kind}-unknown]`);
-      unknown.hidden = !!evidence;
-      if (details) {
-        const summary = modal.querySelector(`[data-v11217-guided-${kind}-summary]`);
-        details.open = false;
-        details.hidden = !evidence;
-        if (evidence) summary.textContent = evidence.listItems.length
-          ? `${evidence.listItems.length} listed · review`
-          : 'Recorded details · review';
-      }
-      renderEvidence(content, evidence);
-    };
+    const setEvidence = (kind, evidence) => renderGuidedEvidence(modal, kind, evidence);
     setEvidence('belongings', belongings);
     setEvidence('medication', medication);
     const exactStay = { stayId: payload.stayId, dogId: payload.dogId, stayKey: payload.stayKey };
-    const restoreDraft = sameGuidedStay(guidedReviewDraft, exactStay);
-    modal.querySelector('[data-v11217-guided-note]').value = restoreDraft ? guidedReviewDraft.note : '';
-    if (restoreDraft) guidedReviewDraft = null;
+    modal.querySelector('[data-v11217-guided-note]').value = '';
     const missingEvidence = !belongings || !medication;
     const reviewCare = modal.querySelector('[data-v11217-guided-review-care]');
     const hasStableIdentity = !!exactStay.stayId && !!exactStay.dogId && !!exactStay.stayKey;
     modal.querySelector('[data-v11217-guided-missing]').hidden = !missingEvidence;
-    reviewCare.hidden = !missingEvidence || !hasStableIdentity || !card.querySelector('.directory-guest-tile-open');
+    reviewCare.hidden = !missingEvidence || !hasStableIdentity;
+    reviewCare.disabled = false;
+    reviewCare.textContent = 'Review missing details';
+    modal.querySelector('[data-v11217-guided-missing-message]').textContent = 'Care details are unavailable in this summary. Review the missing details before handover.';
     modal.querySelector('[data-v11217-guided-feedback]').hidden = true;
     modal.querySelector('[data-v11217-guided-confirm]').disabled = false;
     modal.querySelector('[data-v11217-guided-confirm]').textContent = 'Confirm checkout';
@@ -794,38 +766,151 @@
     modal.hidden = false;
     modal.querySelector('#v11217GuidedCheckoutTitle').focus();
   }
-  function reviewGuidedCare() {
-    if (guidedCheckoutBusy || !guidedCheckoutCard || !guidedCheckoutPayload) return;
-    const expected = { stayId: guidedCheckoutPayload.stayId, dogId: guidedCheckoutPayload.dogId, stayKey: guidedCheckoutPayload.stayKey };
+  function renderGuidedEvidence(modal, kind, evidence, { unknown: remainUnknown = false } = {}) {
+    const details = modal.querySelector(`[data-v11217-guided-${kind}-details]`);
+    const content = modal.querySelector(`[data-v11217-guided-${kind}]`);
+    const unknown = modal.querySelector(`[data-v11217-guided-${kind}-unknown]`);
+    unknown.hidden = !!evidence && !remainUnknown;
+    if (details) {
+      const summary = modal.querySelector(`[data-v11217-guided-${kind}-summary]`);
+      details.open = false;
+      details.hidden = !evidence;
+      if (evidence) summary.textContent = evidence.listItems.length
+        ? `${evidence.listItems.length} listed · review`
+        : 'Recorded details · review';
+    }
+    content.replaceChildren();
+    if (!evidence) return;
+    if (evidence.listItems.length) {
+      const list = document.createElement('ul');
+      evidence.listItems.forEach(item => { const li = document.createElement('li'); li.textContent = item; list.appendChild(li); });
+      content.appendChild(list);
+    } else content.textContent = evidence.value;
+  }
+  function exactGuidedCard(expected) {
     const matchingCards = [...document.querySelectorAll('.directory-card')].filter(candidate => sameGuidedStay(expected, payloadForCard(candidate)));
-    const card = matchingCards.length === 1 ? matchingCards[0] : null;
-    if (!card || !card.querySelector('.directory-guest-tile-open')) {
-      const modal = ensureGuidedCheckout();
-      const feedback = modal.querySelector('[data-v11217-guided-feedback]');
-      feedback.textContent = 'This stay changed or is no longer uniquely identifiable. The note is still here; review the current stay identity in Care before continuing.';
+    return matchingCards.length === 1 && matchingCards[0] === guidedCheckoutCard && guidedCheckoutCard?.isConnected ? guidedCheckoutCard : null;
+  }
+  function guidedStayProofMatches(record, expected, profileApi = false, card = null) {
+    if (!record) return false;
+    if (profileApi && typeof window.WAFFLE_CARE_PROFILE_READS?.matches === 'function') return window.WAFFLE_CARE_PROFILE_READS.matches(card, record);
+    const proof = record.identity || record.identityResolution?.identity;
+    const state = record.resolution?.status || record.identityResolution?.status;
+    return !!proof && ['resolved', 'not_found'].includes(state) &&
+      String(proof.stayKey || '') === String(expected.stayKey) &&
+      String(proof.stayId || '').toLowerCase() === String(expected.stayId).toLowerCase() &&
+      String(proof.dogId || '').toLowerCase() === String(expected.dogId).toLowerCase();
+  }
+  function evidenceFromBelongings(record) {
+    const items = record?.items && typeof record.items === 'object' ? record.items : {};
+    const labels = { waterBowls: 'Water bowls', foodBowls: 'Food bowls', blankets: 'Blankets', beds: 'Beds', petCrates: 'Pet crates', toys: 'Toys', leadsHarnesses: 'Leads / harnesses', medication: 'Medication', other: 'Other' };
+    const listItems = Object.entries(items).map(([key, item]) => {
+      if (!item || typeof item !== 'object' || (!item.present && !String(item.description || '').trim())) return '';
+      const label = labels[key] || key.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^./, c => c.toUpperCase());
+      const state = item.present ? 'Present' : '';
+      const description = String(item.description || '').trim();
+      return [label, state, description].filter(Boolean).join(' · ');
+    }).filter(Boolean);
+    return { value: listItems.length ? '' : record?.identityResolution?.status === 'not_found' ? 'No belongings record found' : 'No belongings recorded', listItems };
+  }
+  async function reviewGuidedCare() {
+    if (guidedCheckoutBusy || !guidedCheckoutCard || !guidedCheckoutPayload || guidedReviewPromise) return guidedReviewPromise;
+    const expected = { stayId: guidedCheckoutPayload.stayId, dogId: guidedCheckoutPayload.dogId, stayKey: guidedCheckoutPayload.stayKey };
+    const card = exactGuidedCard(expected);
+    const modal = ensureGuidedCheckout();
+    const button = modal.querySelector('[data-v11217-guided-review-care]');
+    const confirm = modal.querySelector('[data-v11217-guided-confirm]');
+    const note = modal.querySelector('[data-v11217-guided-note]');
+    const feedback = modal.querySelector('[data-v11217-guided-feedback]');
+    if (!card || modal.hidden || !expected.stayId || !expected.dogId || !expected.stayKey) {
+      feedback.textContent = 'This selected stay changed or cannot be uniquely verified. Keep this sheet open and reload the current stay before checkout.';
       feedback.hidden = false;
       return;
     }
-    guidedReviewDraft = { ...expected, note: String(ensureGuidedCheckout().querySelector('[data-v11217-guided-note]').value || '').slice(0, 1000) };
-    const modal = ensureGuidedCheckout();
-    modal.hidden = true;
-    guidedCheckoutAttempt = null;
-    guidedTrigger = null;
-    guidedCheckoutCard = null;
-    guidedCheckoutPayload = null;
-    card.querySelector('.directory-guest-tile-open').click();
-      if (card.isConnected && card.classList.contains('is-profile-active')) {
-        const backControl = document.getElementById('directoryBackToGuestsBtn');
-        if (backControl?.isConnected && backControl.getClientRects().length && !backControl.closest('[hidden],[aria-hidden="true"]')) {
-          try { backControl.focus({ preventScroll: true }); }
-          catch (_) { backControl.focus(); }
-        }
+    const needsBelongings = modal.querySelector('[data-v11217-guided-belongings-unknown]').hidden === false;
+    const needsMedication = modal.querySelector('[data-v11217-guided-medication-unknown]').hidden === false;
+    if (!needsBelongings && !needsMedication) return;
+    const sequence = ++guidedReviewSequence;
+    const wasConfirmDisabled = confirm.disabled;
+    const reviewHadFocus = document.activeElement === button;
+    button.disabled = true;
+    button.textContent = 'Loading care details…';
+    confirm.disabled = true;
+    feedback.hidden = true;
+    const isCurrent = () => sequence === guidedReviewSequence && !modal.hidden && sameGuidedStay(expected, guidedCheckoutPayload) && exactGuidedCard(expected) === card;
+    const reportChangedStay = () => {
+      if (sequence !== guidedReviewSequence || modal.hidden) return;
+      feedback.textContent = 'The selected stay changed while details were loading. No new details were applied; reload the current stay before checkout.';
+      feedback.hidden = false;
+    };
+    const readOne = async (kind, api, matches) => {
+      if (typeof api?.read !== 'function') throw new Error(`${kind === 'belongings' ? 'Belongings' : 'Medication'} details cannot be loaded right now.`);
+      const result = await api.read(card, { force: true });
+      const record = result?.data?.record;
+      if ((result?.data?.result && result.data.result !== 'success') || result?.superseded || result?.identityMismatch || result?.offlineFallback || result?.refreshFailed || result?.cachedOnly || !matches(record)) throw new Error(`${kind === 'belongings' ? 'Belongings' : 'Medication'} details could not be verified for this stay.`);
+      return record;
+    };
+    const reads = [];
+    if (needsBelongings) reads.push(readOne('belongings', window.WAFFLE_CARE_BELONGINGS_READS, (record) => guidedStayProofMatches(record, expected)));
+    if (needsMedication) reads.push(readOne('medication', window.WAFFLE_CARE_PROFILE_READS, record => guidedStayProofMatches(record, expected, true, card)));
+    guidedReviewPromise = Promise.allSettled(reads);
+    try {
+      const settled = await guidedReviewPromise;
+      if (!isCurrent()) { reportChangedStay(); return; }
+      let readIndex = 0;
+      const failures = [];
+      if (needsBelongings) {
+        const result = settled[readIndex++];
+        if (result.status === 'fulfilled') renderGuidedEvidence(modal, 'belongings', evidenceFromBelongings(result.value), { unknown: result.value?.identityResolution?.status === 'not_found' });
+        else failures.push(result.reason?.message || 'Belongings details could not be loaded.');
       }
+      if (needsMedication) {
+        const result = settled[readIndex++];
+        if (result.status === 'fulfilled') {
+          const attributes = result.value?.intakeAttributes && typeof result.value.intakeAttributes === 'object' ? result.value.intakeAttributes : {};
+          const medication = String(attributes.medicationInstructions || '').trim();
+          const knownStatus = result.value?.resolution?.status;
+          renderGuidedEvidence(modal, 'medication', { value: medication || (knownStatus === 'not_found' ? 'No saved care record' : 'No medication instructions saved'), listItems: [] }, { unknown: knownStatus === 'not_found' });
+        } else failures.push(result.reason?.message || 'Medication details could not be loaded.');
+      }
+      const remainsUnknown = !modal.querySelector('[data-v11217-guided-belongings-unknown]').hidden || !modal.querySelector('[data-v11217-guided-medication-unknown]').hidden;
+      modal.querySelector('[data-v11217-guided-missing]').hidden = !remainsUnknown;
+      if (failures.length) {
+        modal.querySelector('[data-v11217-guided-missing-message]').textContent = `${failures.join(' ')} Other details shown are verified for this stay.`;
+        button.textContent = 'Retry missing details';
+        feedback.textContent = `${failures.join(' ')} You can retry here. The checkout note is still here.`;
+        feedback.hidden = false;
+      } else {
+        modal.querySelector('[data-v11217-guided-missing-message]').textContent = remainsUnknown ? 'Some care details remain unavailable or no saved record exists for this stay.' : 'Saved care details loaded for this stay.';
+        button.textContent = 'Review missing details';
+        button.hidden = !remainsUnknown;
+        if (!remainsUnknown) feedback.hidden = true;
+      }
+      confirm.disabled = wasConfirmDisabled;
+      if (button.hidden && reviewHadFocus && (document.activeElement === button || document.activeElement === document.body)) note.focus({ preventScroll: true });
+    } catch (error) {
+      if (!isCurrent()) { reportChangedStay(); return; }
+      button.disabled = false;
+      confirm.disabled = wasConfirmDisabled;
+      button.textContent = 'Retry missing details';
+      feedback.textContent = `${String(error?.message || error)} You can retry here. The checkout note is still here.`;
+      feedback.hidden = false;
+    } finally {
+      if (sequence === guidedReviewSequence) {
+        guidedReviewPromise = null;
+        button.disabled = false;
+        const identityStillCurrent = exactGuidedCard(expected) === card && sameGuidedStay(expected, guidedCheckoutPayload);
+        if (!identityStillCurrent) confirm.disabled = true;
+        else if (confirm.textContent === 'Confirm checkout') confirm.disabled = false;
+      }
+    }
   }
   function closeGuidedCheckout() {
     const modal = document.getElementById('v11217GuidedCheckout');
     if (!modal || modal.hidden) return;
     modal.hidden = true;
+    guidedReviewSequence += 1;
+    guidedReviewPromise = null;
     guidedCheckoutAttempt = null;
     guidedCheckoutCard = null;
     guidedCheckoutPayload = null;
@@ -848,7 +933,7 @@
   async function runGuidedCheckout() {
     const modal = ensureGuidedCheckout();
     const confirm = modal.querySelector('[data-v11217-guided-confirm]');
-    if (confirm.disabled || !guidedCheckoutAttempt) return;
+    if (guidedReviewPromise || confirm.disabled || !guidedCheckoutAttempt) return;
     const attempt = guidedCheckoutAttempt;
     confirm.disabled = true;
     confirm.textContent = 'Checking out…';

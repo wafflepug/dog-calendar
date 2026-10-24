@@ -3,6 +3,10 @@
 Reviewed 17 September 2026. Repository: `wafflepug/dog-calendar`; always start implementation from current `origin/main` in an isolated worktree. Stack: static HTML/CSS, browser JavaScript, FullCalendar, Apps Script backend, Python contracts, Playwright. Keep production smoke checks read-only. Preserve existing theme settings, offline work, and early checkout behavior. Use Luna for bounded implementation; lead agent reviews design and integration. Complete relevant CI before merging.
 
 
+## Current Care iteration - 25 October 2026
+
+Candidate 2026.10.25.01: [Fewer clicks in Care](care-fewer-clicks.md). Review missing checkout care inside its existing sheet, keep guarded check-in close to arrival review, copy identity-verified prepared owner links directly, and remove nested supporting-details disclosures. Preserve explicit operations, draft recovery, truthful unknown states and lazy shared readers. Next: measure the resulting sitter journeys on physical phones before adding more controls. Current-head CI and frontend publication attribution are required.
+
 ## Current Care iteration - 24 October 2026
 
 Candidate 2026.10.24.07: [Simpler daily Care](care-daily-simplicity.md). Keep the selected identity, stay actions, safety and medication visible; collapse supporting routine/contact/handover, clarify prepared owner sharing and offer scoped arrival care checks using loaded evidence. Verify the existing guided checkout and immediate Past transition. Preserve exact identities, drafts and lazy reads. Next: validate these shorter daily journeys with sitter tasks before adding more controls. Publication requires current-head CI and frontend attribution.

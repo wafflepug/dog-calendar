@@ -42,26 +42,16 @@ test('Care profile back bar, handover note and section tabs stay clear and reada
   const careReadsAfterOpen=fixture.reads.filter(action=>['get_guest_profile','get_dog_history','get_belongings','get_guest_belongings'].includes(action));
 
   const noteHost=card.locator('[data-care-brief-handover-note]');
-  const noteDisclosure=noteHost.locator('[data-care-brief-note-disclosure]');
   await expect(card.locator('[data-care-brief-safety]')).toBeVisible();
   await expect(card.locator('[data-care-brief-medication]')).toBeVisible();
-  await expect(noteDisclosure).not.toHaveAttribute('open','');
-  await expect(noteDisclosure.locator('[data-care-brief-note-full]')).toBeHidden();
-  await expect(noteHost.locator('[data-care-brief-note-preview]')).toContainText('evening medication');
   const supporting=card.locator('[data-care-brief-supporting-details]');
   await expect(supporting).not.toHaveAttribute('open','');
   await supporting.locator(':scope > summary').click();
-  await noteDisclosure.locator('summary').click();
-  await expect(noteDisclosure).toHaveAttribute('open','');
-  await expect(noteDisclosure.locator('[data-care-brief-note-preview]')).toBeHidden();
-  await expect(noteDisclosure.locator('[data-care-brief-note-full]')).toHaveText(longNote);
-  await expect(noteDisclosure.locator('[data-care-brief-note-full]')).toBeVisible();
-  await expect(noteDisclosure.locator('.directory-care-note-read-expanded')).toHaveText('Show less');
-  await noteDisclosure.locator('summary').focus();
-  const noteNode=await noteDisclosure.elementHandle();
+  await expect(noteHost.locator('[data-care-brief-note-disclosure]')).toHaveCount(0);
+  await expect(noteHost).toHaveText(longNote);
+  const noteNode=await noteHost.elementHandle();
   await page.evaluate(()=>renderDirectoryCareBrief(document.querySelector('.directory-card.is-profile-active')));
-  expect(await noteNode.evaluate(node=>node.isConnected&&node.open)).toBe(true);
-  await expect(noteDisclosure.locator('summary')).toBeFocused();
+  expect(await noteNode.evaluate(node=>node.isConnected&&node.textContent===node.dataset.careBriefHandoverNote)).toBe(true);
   expect(fixture.reads.filter(action=>['get_guest_profile','get_dog_history','get_belongings','get_guest_belongings'].includes(action))).toEqual(careReadsAfterOpen);
 
   for(const width of [320,390,1440]){
@@ -87,12 +77,8 @@ test('Care profile back bar, handover note and section tabs stay clear and reada
       if(process.env.WAFFLE_CAPTURE_UI_EVIDENCE==='1'&&info.project.name==='chromium'&&width!==390){
         const out=path.resolve(__dirname,'../output/releases/2026.10.23.03/evidence');fs.mkdirSync(out,{recursive:true});
         await page.screenshot({path:path.join(out,`care-profile-${width}-${theme}.png`)});
-        await noteDisclosure.locator('summary').click();
-        await expect(noteDisclosure.locator('[data-care-brief-note-full]')).toBeHidden();
         await card.locator('.directory-care-brief-note').screenshot({path:path.join(out,`care-note-${width}-${theme}.png`)});
         await card.locator('.v11160-desktop-tabs').screenshot({path:path.join(out,`care-tabs-${width}-${theme}.png`)});
-        await noteDisclosure.locator('summary').click();
-        await expect(noteDisclosure.locator('[data-care-brief-note-full]')).toBeVisible();
       }
     }
   }
@@ -131,8 +117,7 @@ test('Care profile back bar, handover note and section tabs stay clear and reada
   },{dogName:longName,startDate:'2026-10-18',endDate:'2026-10-20',note:editedNote});
   await page.locator('#saveGuestDetailEdit').click();
   await expect(page.locator('#guestDetailEditStatus')).toContainText('saved and synced');
-  await expect(noteDisclosure).not.toHaveAttribute('open','');
-  await expect(noteDisclosure.locator('[data-care-brief-note-full]')).toHaveText(editedNote);
+  await expect(noteHost).toHaveText(editedNote);
   await expect(card.locator('[data-directory-edit-field="notes"] .directory-field-value')).toHaveText(editedNote);
   expect(fixture.reads.filter(action=>['get_guest_profile','get_dog_history','get_belongings','get_guest_belongings'].includes(action))).toEqual(careReadsAfterOpen);
 

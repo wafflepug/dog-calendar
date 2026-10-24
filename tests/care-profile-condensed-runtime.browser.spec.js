@@ -7,9 +7,10 @@ const app = fs.readFileSync(path.join(__dirname, '..', 'waffle-app.js'), 'utf8')
 const booking = { timestamp: '2026-10-16', dogName: 'Milo', breed: 'Collie', startDate: '2026-10-17', endDate: '2026-10-20', ownerName: 'Casey', phone: '0400000000', notes: 'Call before pickup.', bookingType: 'Boarding', dogId: '11111111-1111-4111-8111-111111111111', stayId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', dogNumber: '#00017', stayKey: 'milo|2026-10-17|2026-10-20' };
 const record = { stayKey: booking.stayKey, identity: { stayKey: booking.stayKey, stayId: booking.stayId, dogId: booking.dogId }, resolution: { status: 'resolved', method: 'fixture' }, updatedAt: '2026-10-16T08:00:00Z', intakeAttributesSource: 'Saved profile', intakeAttributes: { feedingTimes: '8am and 6pm', foodAmount: '1 cup', foodBrandType: 'Sensitive formula', walksPerDay: '2 walks', walkDuration: '20 minutes', medicationInstructions: 'Give the saved medication with dinner. Call the owner if appetite changes.' }, riskFlags: { foodAllergy: true } };
 
-async function fixture(page, { reminders = [], profileRecord = record } = {}) {
+async function fixture(page, { reminders = [], profileRecord = record, checkinMode = 'blocked' } = {}) {
   const reads = [];
   reads.writes = [];
+  let checkinAttempts = 0;
   await page.addInitScript(() => {
     const NativeDate = Date, now = NativeDate.UTC(2026, 9, 17, 12);
     function FixedDate(...args) { if (!new.target) return new NativeDate(now).toString(); return Reflect.construct(NativeDate, args.length ? args : [now], new.target); }
@@ -23,10 +24,20 @@ async function fixture(page, { reminders = [], profileRecord = record } = {}) {
     if (url.includes('docs.google.com/spreadsheets') && url.includes('output=csv')) return route.fulfill({ status: 200, contentType: 'text/csv', body: 'Timestamp,Dog Name,Breed,Start Date,End Date,Owner,Phone,Likes,Dislikes,Notes,Edit Link,Booking Type,Source,Dog ID,Stay ID,Dog Number\n' + [booking.timestamp, booking.dogName, booking.breed, '17/10/2026', '20/10/2026', booking.ownerName, booking.phone, '', '', booking.notes, '', 'Boarding', 'Other', booking.dogId, booking.stayId, booking.dogNumber].join(',') });
     if (url.includes('script.google')) {
       const resolved = resolveLocalBackendAction({ method: request.method(), url });
-      if (!resolved.policy.allowed) return route.fulfill({ status: 403, body: 'Unapproved backend request' });
       const params = new URL(url).searchParams, callback = params.get('callback');
+      if (resolved.action === 'checkin_stay' && checkinMode !== 'blocked') {
+        checkinAttempts += 1;
+        reads.writes.push({ method: request.method(), url });
+        const failed = checkinMode === 'fail-first' && checkinAttempts === 1;
+        const outcome = failed
+          ? { result: 'error', error: 'HTTP 503 server error in check-in fixture' }
+          : { result: 'success', record: { stayId: booking.stayId, stayKey: booking.stayKey, status: 'checked_in', startDate: booking.startDate, endDate: booking.endDate, dogName: booking.dogName } };
+        return route.fulfill({ status: 200, contentType: 'application/javascript', body: `${callback}(${JSON.stringify(outcome)});` });
+      }
+      if (!resolved.policy.allowed) return route.fulfill({ status: 403, body: 'Unapproved backend request' });
       reads.push(resolved.action);
       let response = { result: 'success', records: [], bookings: [], summaries: [] };
+      if (resolved.action === 'get_data_versions') response = { result: 'success', versions: { stayOperationIdentityVersion: 1 } };
       if (resolved.action === 'get_guest_directory') response = { result: 'success', bookings: [booking], summaries: [{ stayKey: booking.stayKey, riskFlags: record.riskFlags }], digitalIntakes: [], legacyIntakes: [] };
       if (resolved.action === 'get_reminders_notes') response = { result:'success', records:reminders };
       if (resolved.action === 'get_guest_profile') response = { result: 'success', record: profileRecord };
@@ -152,7 +163,7 @@ for (const [task, expectedAction, destination] of [
   ['belongings', 'get_guest_belongings', 'belongings']
 ]) {
   test(`roster ${task} task opens the same selected Care profile and its read-only destination`, async ({ page, baseURL }) => {
-    const reads = await fixture(page);
+    const reads = await fixture(page, { checkinMode: task === 'medication' ? 'success' : 'blocked' });
     await page.setViewportSize({ width: 390, height: 900 });
     await page.goto(`${baseURL}/directory.html?arrivalTaskFixture=1`, { waitUntil: 'domcontentloaded' });
     await page.waitForFunction(() => document.documentElement.dataset.waffleUiReady === 'true');
@@ -173,8 +184,19 @@ for (const [task, expectedAction, destination] of [
       await expect(card.locator('[data-profile-subtab="healthHome"]')).toBeFocused();
       await expect(card.locator('[data-intake-read-attribute="medicationInstructions"]')).toContainText(record.intakeAttributes.medicationInstructions);
       await expect(card.locator('[data-intake-attribute="medicationInstructions"]')).toBeHidden();
+      const contextualCheckIn = card.locator('[data-care-category="healthHome"] [data-arrival-review-checkin]');
+      await expect(contextualCheckIn).toHaveCount(1);
+      await expect(contextualCheckIn).toBeVisible();
+      await expect(card.locator('[data-v110-operation-bar] [data-v110-checkin]')).toHaveCount(0);
+      await expect(card.locator('[data-v110-checkin]')).toHaveCount(1);
+      expect(reads.writes).toEqual([]);
       expect(reads.filter(action => action === 'get_guest_profile').length - profileReadsBefore).toBe(1);
       expect(reads).toContain(expectedAction);
+      await contextualCheckIn.click();
+      await expect.poll(() => reads.writes.length).toBe(1);
+      expect(reads.writes[0].url).toContain('checkin_stay');
+      await expect(card.locator('[data-arrival-review-checkin]')).toHaveCount(0);
+      await expect(card.locator('[data-v110-operation-bar] [data-v110-checkin]')).toHaveCount(0);
     } else {
       await expect(card.locator('[data-v11160-tab="belongings"]')).toHaveAttribute('aria-selected', 'true');
       await expect(card.locator('[data-v11160-tab="belongings"]')).toBeFocused();
@@ -182,10 +204,34 @@ for (const [task, expectedAction, destination] of [
       await expect(card.locator('[data-directory-detail="belongings"] [data-detail-loading]')).toHaveCount(0);
       await expect.poll(() => reads.filter(action => action === expectedAction).length).toBe(1);
       expect(reads.filter(action => action === 'get_guest_profile').length - profileReadsBefore).toBeLessThanOrEqual(1);
+      await expect(card.locator('[data-arrival-review-checkin]')).toBeVisible();
+      await page.locator('#directoryBackToGuestsBtn').click();
+      await expect(card.locator('[data-arrival-review-checkin]')).toHaveCount(0);
+      await expect(card.locator('[data-v110-operation-bar] [data-v110-checkin]')).toHaveCount(1);
     }
-    expect(reads.writes).toEqual([]);
+    expect(reads.writes).toHaveLength(task === 'medication' ? 1 : 0);
   });
 }
+
+test('arrival review Check In stays available after a failed save and is removed after the confirmed retry', async ({ page, baseURL }) => {
+  const reads = await fixture(page, { checkinMode: 'fail-first' });
+  await page.setViewportSize({ width: 390, height: 900 });
+  await page.goto(`${baseURL}/directory.html?arrivalTaskFixture=1`, { waitUntil: 'domcontentloaded' });
+  await page.waitForFunction(() => document.documentElement.dataset.waffleUiReady === 'true');
+  const card = page.locator(`.directory-card[data-directory-stay-id="${booking.stayId}"]`);
+  await card.locator('[data-arrival-task-list] > summary').click();
+  await card.locator('[data-arrival-task="medication"]').click();
+  const contextualCheckIn = card.locator('[data-arrival-review-checkin]');
+  await expect(contextualCheckIn).toBeVisible();
+  await contextualCheckIn.click();
+  await expect(card.locator('[data-v110-operation-bar] .v110-action-feedback')).toContainText('HTTP 503');
+  await expect(contextualCheckIn).toBeVisible();
+  await expect(contextualCheckIn).toBeEnabled();
+  await card.locator('[data-v110-operation-bar] .v110-action-feedback button').click();
+  await expect.poll(() => reads.writes.length).toBe(2);
+  await expect(card.locator('[data-arrival-review-checkin]')).toHaveCount(0);
+  await expect(card.locator('[data-v110-operation-bar] [data-v110-checkin]')).toHaveCount(0);
+});
 
 
 test('profile keeps due reminders and falls back to roster warnings while safety is unavailable', async ({page,baseURL}) => {

@@ -11,9 +11,11 @@ const digitalIntakes=[{stayKey:bookings[0].stayKey,status:'Complete',submittedAt
 function profile(booking) {
   return {stayKey:booking.stayKey,identity:{stayKey:booking.stayKey,stayId:booking.stayId,dogId:booking.dogId},resolution:{status:'resolved',method:'fixture'},updatedAt:'2026-10-18T00:00:00Z',riskFlags:{},intakeAttributesSource:'Saved profile',intakeAttributes:{feedingTimes:'8am and 6pm',foodAmount:'1 cup',foodBrandType:'Sensitive formula',notes:booking.notes}};
 }
-async function install(page,{bookingOverrides=[]}={}) {
+async function install(page,{bookingOverrides=[],holdProfileRead=false,fernMedication=''}={}) {
   const fixtureBookings=bookings.map(booking=>({...booking,...(bookingOverrides.find(override=>override.stayId===booking.stayId)||{})}));
   const reads=[];
+  let releaseProfileRead;
+  const profileReadBlocked=new Promise(resolve=>{releaseProfileRead=resolve;});
   await page.addInitScript(()=>{
     const NativeDate=Date, now=NativeDate.UTC(2026,9,18,2);
     function FixedDate(...args){if(!new.target)return new NativeDate(now).toString();return Reflect.construct(NativeDate,args.length?args:[now],new.target);}
@@ -40,11 +42,17 @@ async function install(page,{bookingOverrides=[]}={}) {
       if(resolved.action==='get_stay_operations')result={result:'success',records:[{...fixtureBookings[2],status:'checked_in',checkedInAt:'2026-10-17T02:00:00Z'}]};
       if(resolved.action==='get_data_versions')result={result:'success',versions:{stayOperationIdentityVersion:1,careRecordIdentityWritesEnabled:false}};
       if(resolved.action==='get_guest_profile'){
+        if(holdProfileRead)await profileReadBlocked;
         const booking=fixtureBookings.find(b=>b.stayId===payload.stayId)||fixtureBookings.find(b=>b.stayKey===payload.stayKey);
-        result={result:'success',record:booking?profile(booking):null};
+        const record=booking?profile(booking):null;
+        if(record&&booking.dogName==='Fern'&&fernMedication)record.intakeAttributes.medicationInstructions=fernMedication;
+        result={result:'success',record};
       }
       if(resolved.action==='get_belongings')result={result:'success',records:fixtureBookings.map(profile)};
-      if(resolved.action==='get_guest_belongings')result={result:'success',record:{stayKey:payload.stayKey,items:{},photos:[]}};
+      if(resolved.action==='get_guest_belongings'){
+        const booking=fixtureBookings.find(row=>row.stayKey===payload.stayKey);
+        result={result:'success',record:{stayKey:payload.stayKey,identityResolution:{status:booking?'resolved':'not_found',identity:booking?{stayKey:booking.stayKey,stayId:booking.stayId,dogId:booking.dogId}:null},items:booking?{leadsHarnesses:{present:true,description:'Blue lead and fitted harness'}}:{},photos:[]}};
+      }
       if(resolved.action==='maintenance_status')result={result:'success',enabled:false};
       return route.fulfill({status:200,contentType:callback?'application/javascript':'application/json',body:callback?`${callback}(${JSON.stringify(result)});`:JSON.stringify(result)});
     }
@@ -53,6 +61,6 @@ async function install(page,{bookingOverrides=[]}={}) {
     }
     return route.continue();
   });
-  return {reads,bookings:fixtureBookings};
+  return {reads,bookings:fixtureBookings,releaseProfileRead:()=>releaseProfileRead?.()};
 }
 module.exports={install,bookings};

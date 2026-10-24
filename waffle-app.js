@@ -5288,6 +5288,113 @@ registerWaffleServiceWorker();
         document.getElementById('auditCategoryFilter').addEventListener('change', renderAuditLog);
 
         const directoryGrid = document.getElementById('directory-grid');
+        const arrivalReviewCheckinOrigins = new WeakMap();
+        const arrivalReviewCheckinContexts = new WeakMap();
+        const arrivalReviewCheckinCards = new Set();
+        function arrivalReviewIdentity(card) {
+            return card && {
+                stayKey: String(card.dataset.directoryStayKey || card.dataset.stayKey || ''),
+                stayId: String(card.dataset.directoryStayId || ''),
+                dogId: String(card.dataset.directoryDogId || ''),
+                dogNumber: String(card.dataset.directoryDogNumber || ''),
+                dogName: String(card.dataset.directoryDogName || card.dataset.dogName || '').trim(),
+                startDate: String(card.dataset.directoryStartDate || card.dataset.startDate || ''),
+                endDate: String(card.dataset.directoryEndDate || card.dataset.endDate || '')
+            };
+        }
+        function arrivalReviewHostIsVisible(card) {
+            const actions = card?.querySelector('[data-arrival-review-checkin-actions]');
+            if (!actions || actions.closest('[hidden]')) return false;
+            const category = actions.closest('[data-care-category]');
+            const categoryTab = category?.querySelector('[data-profile-subtab]');
+            if (categoryTab && categoryTab.getAttribute('aria-expanded') !== 'true') return false;
+            let reviewDisclosure = actions.closest('details');
+            while (reviewDisclosure) {
+                if (!reviewDisclosure.open) return false;
+                reviewDisclosure = reviewDisclosure.parentElement?.closest('details') || null;
+            }
+            return true;
+        }
+        function restoreArrivalReviewCheckin(card) {
+            const button = card?.querySelector('[data-arrival-review-checkin]');
+            const origin = button && arrivalReviewCheckinOrigins.get(button);
+            const context = button && arrivalReviewCheckinContexts.get(button);
+            const bar = card?.querySelector('[data-v110-operation-bar]');
+            const current = arrivalReviewIdentity(card);
+            const canRestore = button && origin?.parent?.isConnected && context?.bar === bar
+                && bar?.dataset.v110RenderSignature === context.signature
+                && !bar?.querySelector('[data-v110-checkin]')
+                && current && Object.keys(context.identity).every(key => String(context.identity[key] || '') === String(current[key] || ''));
+            if (canRestore) {
+                origin.parent.insertBefore(button, origin.next?.parentNode === origin.parent ? origin.next : null);
+            } else button?.remove();
+            button?.removeAttribute('data-arrival-review-checkin');
+            card?.querySelector('[data-arrival-review-checkin-actions]')?.remove();
+            arrivalReviewCheckinCards.delete(card);
+        }
+        function activateArrivalReviewCheckin(card, snapshot, reviewedTarget, task) {
+            const exactMatches = Array.from(directoryGrid?.querySelectorAll('.directory-card') || []).filter(candidate =>
+                candidate.dataset.directoryStayKey === snapshot.stayKey
+                && candidate.dataset.directoryStayId === snapshot.stayId
+                && candidate.dataset.directoryDogId === snapshot.dogId);
+            const current = arrivalReviewIdentity(card);
+            if (!card?.isConnected || !card.classList.contains('is-profile-active') || exactMatches.length !== 1 || exactMatches[0] !== card
+                || !current || Object.keys(snapshot).some(key => String(current[key] || '') !== String(snapshot[key] || ''))) return false;
+            const today = getLocalTodayDateString();
+            if (!current.stayKey || !current.stayId || !current.dogId || !current.startDate || !current.endDate
+                || current.startDate > today || current.endDate < today) return false;
+            const operation = card.querySelector('[data-v110-operation-bar]');
+            const stateLabel = operation?.querySelector('.v110-operation-state strong')?.textContent || '';
+            if (/checkout paused|collision|conflict/i.test(stateLabel)) return false;
+            const button = card.querySelector('[data-v110-checkin]');
+            if (!button || button.disabled || !reviewedTarget?.isConnected) return false;
+            restoreArrivalReviewCheckin(card);
+            const operationBar = card.querySelector('[data-v110-operation-bar]');
+            const operationSignature = operationBar?.dataset.v110RenderSignature || '';
+            if (!operationBar || !operationSignature) return false;
+            const actions = document.createElement('div');
+            actions.className = 'directory-arrival-review-checkin-actions';
+            actions.dataset.arrivalReviewCheckinActions = '';
+            actions.setAttribute('aria-label', 'Arrival review action');
+            arrivalReviewCheckinOrigins.set(button, { parent: button.parentNode, next: button.nextSibling });
+            arrivalReviewCheckinContexts.set(button, { bar: operationBar, signature: operationSignature, identity: current });
+            button.dataset.arrivalReviewCheckin = '';
+            actions.appendChild(button);
+            const category = reviewedTarget.closest('[data-care-category]');
+            const mainPanel = reviewedTarget.closest('[data-directory-main-panel="belongings"]');
+            const records = reviewedTarget.closest('.directory-care-records-disclosure');
+            if (category) category.querySelector('.care-category-heading')?.after(actions);
+            else if (mainPanel) mainPanel.querySelector('.directory-profile-section-heading')?.after(actions);
+            else if (records) records.after(actions);
+            else reviewedTarget.after(actions);
+            arrivalReviewCheckinCards.add(card);
+            return true;
+        }
+        if (directoryGrid && typeof MutationObserver === 'function') {
+            const arrivalReviewObserver = new MutationObserver(() => {
+                arrivalReviewCheckinCards.forEach(card => {
+                    const button = card.querySelector('[data-arrival-review-checkin]');
+                    const context = button && arrivalReviewCheckinContexts.get(button);
+                    const bar = card.querySelector('[data-v110-operation-bar]');
+                    const current = arrivalReviewIdentity(card);
+                    const currentMatches = context && Object.keys(context.identity).every(key =>
+                        String(context.identity[key] || '') === String(current?.[key] || ''));
+                    const barMatches = context && context.bar === bar && bar?.dataset.v110RenderSignature === context.signature
+                        && !bar?.querySelector('[data-v110-checkin]');
+                    if (!card.isConnected || !card.classList.contains('is-profile-active') || !arrivalReviewHostIsVisible(card) || (context && (!currentMatches || !barMatches))) {
+                        restoreArrivalReviewCheckin(card);
+                        if (card.isConnected && context && !currentMatches && bar === context.bar) {
+                            delete bar.dataset.v110RenderSignature;
+                            window.v110EnsureCareOperationBar?.(card);
+                        }
+                    } else if (!button) {
+                        card.querySelector('[data-arrival-review-checkin-actions]')?.remove();
+                        arrivalReviewCheckinCards.delete(card);
+                    }
+                });
+            });
+            arrivalReviewObserver.observe(directoryGrid, { attributes: true, attributeFilter: ['class', 'data-v110-render-signature', 'data-directory-stay-key', 'data-directory-stay-id', 'data-directory-dog-id', 'data-directory-dog-number', 'data-directory-dog-name', 'data-directory-start-date', 'data-directory-end-date', 'hidden', 'aria-expanded', 'aria-selected', 'open'], childList: true, subtree: true });
+        }
         directoryGrid.addEventListener('input', handleDirectoryProfileEditInput);
         directoryGrid.addEventListener('change', handleDirectoryProfileEditInput);
         directoryGrid.addEventListener('input', handleBelongingsItemDraftInput);
@@ -5360,7 +5467,10 @@ registerWaffleServiceWorker();
                         stayKey: String(card?.dataset.directoryStayKey || ''),
                         stayId: String(card?.dataset.directoryStayId || ''),
                         dogId: String(card?.dataset.directoryDogId || ''),
-                        dogNumber: String(card?.dataset.directoryDogNumber || '')
+                        dogNumber: String(card?.dataset.directoryDogNumber || ''),
+                        dogName: String(card?.dataset.directoryDogName || card?.dataset.dogName || '').trim(),
+                        startDate: String(card?.dataset.directoryStartDate || card?.dataset.startDate || ''),
+                        endDate: String(card?.dataset.directoryEndDate || card?.dataset.endDate || '')
                     };
                     const task = readinessAction.dataset.arrivalTask;
                     await openDirectoryGuestProfile(card, { instant: true, awaitProfileRead: true });
@@ -5371,7 +5481,8 @@ registerWaffleServiceWorker();
                         identity.dogId !== String(card.dataset.directoryDogId || '') ||
                         identity.dogNumber !== String(card.dataset.directoryDogNumber || '') ||
                         !['fresh', 'saved', 'not-found', 'error', 'identity-conflict'].includes(profileDetails?.dataset.profileReadState)) return;
-                    openCareReadinessTarget(card, task === 'medication' ? 'arrival-medication' : task);
+                    const reviewedTarget = openCareReadinessTarget(card, task === 'medication' ? 'arrival-medication' : task);
+                    if (['intake', 'medication', 'safety', 'feeding', 'belongings'].includes(task)) activateArrivalReviewCheckin(card, identity, reviewedTarget, task);
                     return;
                 }
                 openCareReadinessTarget(card, readinessAction.dataset.careReadinessAction);
@@ -9068,32 +9179,9 @@ registerWaffleServiceWorker();
             const unchangedRenderedNote = handoverNoteHost.dataset.careBriefNoteRendered === 'true'
                 && handoverNoteHost.dataset.careBriefHandoverNote === note;
             if (!unchangedRenderedNote) {
-                const disclosureHadFocus = !!handoverNoteHost.querySelector('[data-care-brief-note-disclosure] summary')
-                    && handoverNoteHost.querySelector('[data-care-brief-note-disclosure] summary') === document.activeElement;
-                if (note.length > 180) {
-                    const preview = `${note.slice(0, 120).trimEnd()}…`;
-                    handoverNoteHost.innerHTML = `
-                        <details data-care-brief-note-disclosure>
-                            <summary aria-label="Read full handover note">
-                                <span data-care-brief-note-preview>${escapeDashboardHtml(preview)}</span>
-                                <span class="directory-care-note-read-label directory-care-note-read-collapsed">Read full note</span>
-                                <span class="directory-care-note-read-label directory-care-note-read-expanded">Show less</span>
-                            </summary>
-                            <div data-care-brief-note-full>${escapeDashboardHtml(note)}</div>
-                        </details>`;
-                } else {
-                    handoverNoteHost.textContent = note || 'No handover note recorded';
-                }
+                handoverNoteHost.textContent = note || 'No handover note recorded';
                 handoverNoteHost.dataset.careBriefHandoverNote = note;
                 handoverNoteHost.dataset.careBriefNoteRendered = 'true';
-                if (disclosureHadFocus) {
-                    const updatedSummary = handoverNoteHost.querySelector('[data-care-brief-note-disclosure] summary');
-                    if (updatedSummary) updatedSummary.focus();
-                    else {
-                        handoverNoteHost.tabIndex = -1;
-                        handoverNoteHost.focus();
-                    }
-                }
             }
         }
 
@@ -9136,41 +9224,12 @@ registerWaffleServiceWorker();
                 const safeLabel = escapeDashboardHtml(label);
                 return `<span class="directory-care-brief-row" data-care-brief-row="${escapeDashboardHtml(key)}"><strong>${safeLabel}: </strong><span>${safeValue}</span></span>`;
             }).join('');
-            const savedCount = rows.filter(({ value }) => String(value || '').trim() && value !== 'Not recorded').length;
-            const summaryKeys = routineLabel === 'Feeding' ? ['times', 'amount'] : ['walks', 'duration'];
-            const summaryLabels = { times: 'Times', amount: 'Amount', walks: 'Walks', duration: 'Duration' };
-            const summaryParts = rows
-                .filter(({ key, value }) => summaryKeys.includes(key) && String(value || '').trim() && value !== 'Not recorded')
-                .map(({ key, value }) => `${summaryLabels[key]} ${value}`);
-            const summaryText = summaryParts.length
-                ? `${routineLabel} · ${summaryParts.join(' · ')}`
-                : `${routineLabel} routine · ${savedCount} saved detail${savedCount === 1 ? '' : 's'}`;
-            const html = `<details class="directory-care-routine-details" data-care-routine-disclosure><summary>${escapeDashboardHtml(summaryText)}</summary><div class="directory-care-routine-values">${rowsHtml}</div></details>`;
+            const html = `<div class="directory-care-routine-values" data-care-routine-values>${rowsHtml}</div>`;
             const previous = directorySummaryHtmlState.get(host);
             if (previous?.key === generatedKey && previous.generated === html) {
-                const actual = host.innerHTML;
-                const withoutDisclosureState = markup => {
-                    const template = document.createElement('template');
-                    template.innerHTML = String(markup);
-                    template.content.querySelectorAll('[data-care-routine-disclosure]').forEach(details => { details.open = false; });
-                    return template.innerHTML;
-                };
-                if (withoutDisclosureState(actual) === withoutDisclosureState(html)) {
-                    // Native disclosure state belongs to the person using this
-                    // profile. Keep it open across an otherwise identical render.
-                    directorySummaryHtmlState.set(host, { ...previous, actual });
-                    return;
-                }
+                if (host.innerHTML === html) return;
             }
-            const preserveOpenRoutine = previous?.key === generatedKey
-                && !!host.querySelector('[data-care-routine-disclosure][open]');
             setDirectorySummaryHtml(host, html, generatedKey);
-            if (preserveOpenRoutine) {
-                const updatedRoutineDetails = host.querySelector('[data-care-routine-disclosure]');
-                if (updatedRoutineDetails) updatedRoutineDetails.open = true;
-                const updated = directorySummaryHtmlState.get(host);
-                if (updated) directorySummaryHtmlState.set(host, { ...updated, actual: host.innerHTML });
-            }
         };
         const feedingParts = attributes
             ? [
@@ -9339,7 +9398,7 @@ registerWaffleServiceWorker();
             target?.focus({ preventScroll: true });
             card?.querySelector('[data-directory-main-panel="belongings"]')
                 ?.scrollIntoView({ behavior: Number(window.innerWidth || 0) <= 768 ? 'auto' : 'smooth', block: 'start' });
-            return;
+            return target;
         } else if (action === 'arrival-medication') {
             const healthHome = card.querySelector('[data-profile-subtab="healthHome"]');
             if (healthHome?.getAttribute('aria-expanded') !== 'true') switchDirectoryProfileSubTab(card, 'healthHome', true);
@@ -9379,6 +9438,7 @@ registerWaffleServiceWorker();
             try { target.focus({ preventScroll: true }); }
             catch (_) { target.focus(); }
         }
+        return target;
     }
 
     function findDirectoryCareElement(stayKey) {
@@ -15930,6 +15990,28 @@ registerWaffleServiceWorker();
         );
     }
 
+    function getCurrentDirectoryOwnerCareLink(card) {
+        if (!card?.matches?.('.directory-card')) return null;
+        const stayKey = String(card.dataset.directoryStayKey || card.dataset.stayKey || '');
+        const stayId = String(card.dataset.directoryStayId || '');
+        const dogId = String(card.dataset.directoryDogId || '');
+        const dogName = String(card.dataset.directoryDogName || card.dataset.dogName || '').trim();
+        const startDate = String(card.dataset.directoryStartDate || card.dataset.startDate || '');
+        const endDate = String(card.dataset.directoryEndDate || card.dataset.endDate || '');
+        if (!stayKey || !stayId || !dogId || !dogName || !startDate || !endDate) return null;
+        const stayMatches = Array.from(document.querySelectorAll('.directory-card')).filter(candidate =>
+            String(candidate.dataset.directoryStayKey || candidate.dataset.stayKey || '') === stayKey);
+        if (stayMatches.length !== 1 || stayMatches[0] !== card) return null;
+        const record = directoryIntakeStatusCache[stayKey];
+        if (!record?.token || String(record.stayKey || '') !== stayKey
+            || (record.stayId && String(record.stayId) !== stayId)
+            || (record.dogId && String(record.dogId) !== dogId)) return null;
+        const link = buildExternalIntakeLink(record.token);
+        if (!link) return null;
+        return { link, stayKey, stayId, dogId, dogName, startDate, endDate };
+    }
+    window.WAFFLE_CARE_LINKS = Object.freeze({ getCurrent: getCurrentDirectoryOwnerCareLink });
+
     async function copyIntakeLinkToClipboard(link) {
         if (!link) return false;
 
@@ -16168,8 +16250,41 @@ registerWaffleServiceWorker();
     }
 
 
+    function notifyOwnerCareLinkAvailability(stayKey, record) {
+        const key = String(stayKey || '');
+        const matches = Array.from(document.querySelectorAll('.directory-card')).filter(card =>
+            String(card.dataset.directoryStayKey || card.dataset.stayKey || '') === key);
+        const unavailable = card => window.dispatchEvent(new CustomEvent('waffle:owner-care-link-unavailable', {
+            detail: { stayKey: key, stayId: String(card.dataset.directoryStayId || ''), dogId: String(card.dataset.directoryDogId || '') }
+        }));
+        const authoritative = !!record && String(record.stayKey || '') === key && !!record.token;
+        if (!authoritative || matches.length !== 1) {
+            matches.forEach(unavailable);
+            return;
+        }
+        const card = matches[0];
+        const dogId = String(card.dataset.directoryDogId || '');
+        const stayId = String(card.dataset.directoryStayId || '');
+        if (!dogId || !stayId || (record.dogId && String(record.dogId) !== dogId) || (record.stayId && String(record.stayId) !== stayId)) {
+            unavailable(card);
+            return;
+        }
+        const detail = {
+            stayKey: key,
+            stayId,
+            dogId,
+            dogName: String(card.dataset.directoryDogName || card.dataset.dogName || '').trim(),
+            startDate: String(card.dataset.directoryStartDate || card.dataset.startDate || ''),
+            endDate: String(card.dataset.directoryEndDate || card.dataset.endDate || '')
+        };
+        const link = buildExternalIntakeLink(record.token);
+        if (link) window.dispatchEvent(new CustomEvent('waffle:owner-care-link-ready', { detail: { ...detail, link } }));
+        else unavailable(card);
+    }
+
     function setDirectoryIntakeStatus(stayKey, record) {
         record = record || getStoredDigitalProfileIntakeStatus(stayKey);
+        notifyOwnerCareLinkAvailability(stayKey, record);
 
         const strip = Array.from(
             document.querySelectorAll('[data-directory-intake]')

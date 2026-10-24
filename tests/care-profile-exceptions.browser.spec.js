@@ -68,43 +68,37 @@ test('care essentials lead with exceptions, preserve full medication, and label 
   await expect(brief.locator('[data-care-brief-safety] .care-brief-alert')).toHaveCount(1);
   await expect(brief.locator('[data-care-brief-safety]')).toContainText('Food allergy');
   await expect(medication).toHaveText('Give one tablet with dinner. If appetite changes, do not repeat the dose; call the owner before the next meal. Keep the medicine in its labelled pouch.');
-  const feedingRoutine = brief.locator('[data-care-brief-feeding] [data-care-routine-disclosure]');
-  const walkingRoutine = brief.locator('[data-care-brief-walks] [data-care-routine-disclosure]');
-  await expect(feedingRoutine).not.toHaveAttribute('open', '');
-  await expect(walkingRoutine).not.toHaveAttribute('open', '');
-  await expect(feedingRoutine.locator('summary')).toHaveText('Feeding · Times 07:00 and 17:00 · Amount 1 measured cup');
-  await expect(walkingRoutine.locator('summary')).toHaveText('Walking · Walks 2 walks · Duration 30 minutes each');
+  const feedingRoutine = brief.locator('[data-care-brief-feeding] [data-care-routine-values]');
+  const walkingRoutine = brief.locator('[data-care-brief-walks] [data-care-routine-values]');
+  await expect(feedingRoutine.locator('details, summary')).toHaveCount(0);
+  await expect(walkingRoutine.locator('details, summary')).toHaveCount(0);
   await expect(brief.locator('[data-care-brief-feeding] [data-care-brief-row="times"]')).toContainText('Times: 07:00 and 17:00');
   await expect(brief.locator('[data-care-brief-feeding] [data-care-brief-row="amount"]')).toContainText('Amount: 1 measured cup');
-  const foodDisclosure = feedingRoutine;
-  await foodDisclosure.locator('summary').focus();
-  await page.keyboard.press('Enter');
-  await expect(foodDisclosure).toContainText('Sensitive formula with a gradual ten day transition from the previous food, mixed in measured portions at each meal');
-  const disclosureStability = await page.evaluate(() => {
+  await expect(feedingRoutine).toContainText('Sensitive formula with a gradual ten day transition from the previous food, mixed in measured portions at each meal');
+  const routineStability = await page.evaluate(() => {
     const card = document.querySelector('.directory-card');
     const host = card.querySelector('[data-care-brief-feeding]');
-    const details = host.querySelector('details');
-    const summary = details.querySelector('summary');
+    const routine = host.querySelector('[data-care-routine-values]');
     const observer = new MutationObserver(() => {});
     observer.observe(host, { subtree: true, childList: true, characterData: true, attributes: true });
     window.renderBrief(card);
     const mutations = observer.takeRecords().length;
     observer.disconnect();
-      return { sameNode: host.querySelector('[data-care-routine-disclosure]') === details, open: details.open, focused: document.activeElement === summary, mutations };
+      return { sameNode: host.querySelector('[data-care-routine-values]') === routine, mutations };
   });
-  expect(disclosureStability).toEqual({ sameNode: true, open: true, focused: true, mutations: 0 });
-  const foodDisclosureIdentity = await page.evaluate(() => {
+  expect(routineStability).toEqual({ sameNode: true, mutations: 0 });
+  const routineIdentity = await page.evaluate(() => {
     window.fixture.intakeAttributes.foodBrandType = 'Updated routine food transition with a complete gradual introduction over ten days in small, measured portions at each meal';
     const card = document.querySelector('.directory-card');
     window.renderBrief(card);
-    const afterSameIdentityUpdate = card.querySelector('[data-care-brief-feeding] [data-care-routine-disclosure]');
-    const sameIdentityStayedOpen = afterSameIdentityUpdate.open;
+    const updatedValue = card.querySelector('[data-care-brief-feeding] [data-care-brief-row="food"]')?.textContent;
     card.dataset.stayKey = 'milo|different-stay';
     card.dataset.directoryStayKey = 'milo|different-stay';
     window.renderBrief(card);
-    return { sameIdentityStayedOpen, newIdentityReset: !card.querySelector('[data-care-brief-feeding] [data-care-routine-disclosure]').open };
+    return { updatedValue, newIdentityValue: card.querySelector('[data-care-brief-feeding] [data-care-brief-row="food"]')?.textContent };
   });
-  expect(foodDisclosureIdentity).toEqual({ sameIdentityStayedOpen: true, newIdentityReset: true });
+  expect(routineIdentity.updatedValue).toContain('Updated routine food transition');
+  expect(routineIdentity.newIdentityValue).toContain('Updated routine food transition');
 
   await page.evaluate(() => {
     window.useStableIdentity = true;
