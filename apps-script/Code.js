@@ -14407,6 +14407,9 @@ function buildBelongingsPhotoUploaderHtml_(params) {
     requestToken: String(params.requestToken || ""),
     mode: String(params.mode || "camera"),
     photoType: String(params.photoType || "belongings"),
+    editProfilePhoto: String(params.editProfilePhoto || "").toLowerCase() === "true",
+    dogId: String(params.dogId || ""),
+    stayId: String(params.stayId || ""),
     parentOrigin: "https://wafflepug.github.io"
   };
 
@@ -14429,8 +14432,12 @@ function buildBelongingsPhotoUploaderHtml_(params) {
     ".pick{display:flex;align-items:center;justify-content:center;text-align:center;min-height:52px;border-radius:10px;font-weight:900;cursor:pointer;padding:8px;box-sizing:border-box;}",
     ".camera{background:#7e22ce;color:white;}",
     ".library{background:#334155;color:white;}",
-    ".pick input{display:none;}",
+    ".pick{position:relative;} .pick:focus-within{outline:2px solid #f8fafc;outline-offset:2px;}",
+    ".pick input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;}",
     "#cropWrap{display:none;margin:12px 0;}",
+    "#replacePhotoButton{display:none;width:100%;min-height:44px;border:1px solid #64748b;border-radius:10px;padding:11px;background:#1e293b;color:white;font-size:14px;font-weight:800;cursor:pointer;margin-top:9px;}",
+    "#retryPhotoButton{display:none;width:100%;min-height:44px;border:1px solid #64748b;border-radius:10px;padding:11px;background:#334155;color:white;font-size:14px;font-weight:800;cursor:pointer;margin-top:9px;}",
+    ".zoomRow input{min-height:44px;}",
     ".cropFrame{width:min(100%,360px);margin:0 auto;border:2px solid #64748b;border-radius:14px;overflow:hidden;background:#0f172a;touch-action:none;}",
     "#cropCanvas{display:block;width:100%;aspect-ratio:1/1;cursor:grab;touch-action:none;}",
     "#cropCanvas:active{cursor:grabbing;}",
@@ -14455,7 +14462,7 @@ function buildBelongingsPhotoUploaderHtml_(params) {
     "<h2 id=\"uploaderTitle\">📷 Photo Manager</h2>",
     "<div class=\"sub\" id=\"uploaderSub\"></div>",
     "<div class=\"dogLine\" id=\"dogLine\"></div>",
-    "<div class=\"choices\">",
+    "<div class=\"choices\" id=\"photoChoices\">",
     "<label class=\"pick camera\">📷 Take Photo<input id=\"cameraInput\" type=\"file\" accept=\"image/*\" capture=\"environment\"></label>",
     "<label class=\"pick library\">🖼️ Choose from Library<input id=\"libraryInput\" type=\"file\" accept=\"image/*\" multiple></label>",
     "</div>",
@@ -14464,12 +14471,14 @@ function buildBelongingsPhotoUploaderHtml_(params) {
     "<div class=\"cropHelp\">Drag to reposition the dog inside the square.</div>",
     "<div class=\"zoomRow\"><span>−</span><input id=\"zoomRange\" type=\"range\" min=\"1\" max=\"2.5\" value=\"1\" step=\"0.02\" aria-label=\"Photo zoom\"><span>＋</span></div>",
     "</div>",
+    "<button id=\"replacePhotoButton\" type=\"button\" aria-controls=\"photoChoices\" aria-expanded=\"false\">Choose a different photo</button>",
+    "<button id=\"retryPhotoButton\" type=\"button\">Retry loading saved photo</button>",
     "<div id=\"previewGrid\"></div>",
     "<div id=\"photoLabelWrap\">",
     "<label class=\"label\" for=\"photoLabel\">Photo note</label>",
     "<input id=\"photoLabel\" type=\"text\" placeholder=\"e.g. bowls, blanket and blue bed\">",
     "</div>",
-    "<div id=\"status\">Choose or take a photo.</div>",
+    "<div id=\"status\" role=\"status\" aria-live=\"polite\">Choose or take a photo.</div>",
     "<button id=\"uploadBtn\" type=\"button\">☁️ Upload</button>",
     "<div class=\"small\">Photos are resized before upload. Dog profile photos are saved as a positioned square crop.</div>",
     "</div>",
@@ -14489,10 +14498,20 @@ function buildBelongingsPhotoUploaderHtml_(params) {
     "const cropCanvas = document.getElementById(\"cropCanvas\");",
     "const cropCtx = cropCanvas.getContext(\"2d\", { alpha: false });",
     "const zoomRange = document.getElementById(\"zoomRange\");",
+    "const replacePhotoButton = document.getElementById(\"replacePhotoButton\");",
+    "const retryPhotoButton = document.getElementById(\"retryPhotoButton\");",
     "",
     "let selectedPhotos = [];",
     "let dogClientUploadId = '';",
     "let dogSourceImage = null;",
+    "let storedPhotoLoadGeneration = 0;",
+    "let storedPhotoId = \"\";",
+    "let editingStoredPhoto = false;",
+    "let sourceSnapshotNeeded = false;",
+    "let dogSourceIdentity = \"\";",
+    "let lastSavedCropSignature = \"\";",
+    "let pendingDogCropSignature = \"\";",
+    "let pendingDogPayload = null;",
     "",
     "const cropState = {",
     "  zoom: 1,",
@@ -14588,6 +14607,8 @@ function buildBelongingsPhotoUploaderHtml_(params) {
     "function clamp(value, min, max) {",
     "  return Math.min(max, Math.max(min, value));",
     "}",
+    "function currentDogCropSignature() { return JSON.stringify([dogSourceIdentity, cropState.zoom, cropState.panX, cropState.panY]); }",
+    "function setDogEditorLocked(locked) { zoomRange.disabled = locked; replacePhotoButton.disabled = locked; retryPhotoButton.disabled = locked; document.getElementById(\"cameraInput\").disabled = locked; document.getElementById(\"libraryInput\").disabled = locked; cropCanvas.style.pointerEvents = locked ? \"none\" : \"\"; }",
     "",
     "function getCropMetrics() {",
     "  if (!dogSourceImage) return null;",
@@ -14681,6 +14702,14 @@ function buildBelongingsPhotoUploaderHtml_(params) {
     "",
     "  return output.toDataURL(\"image/jpeg\", 0.78);",
     "}",
+    "function exportDogSource() {",
+    "  if (!dogSourceImage || (editingStoredPhoto && !sourceSnapshotNeeded)) return \"\";",
+    "  const width = dogSourceImage.naturalWidth || dogSourceImage.width, height = dogSourceImage.naturalHeight || dogSourceImage.height;",
+    "  const scale = Math.min(1, 1600 / Math.max(width, height));",
+    "  const output = document.createElement(\"canvas\"); output.width = Math.max(1, Math.round(width * scale)); output.height = Math.max(1, Math.round(height * scale));",
+    "  output.getContext(\"2d\", { alpha: false }).drawImage(dogSourceImage, 0, 0, output.width, output.height);",
+    "  return output.toDataURL(\"image/jpeg\", 0.82);",
+    "}",
     "",
     "async function compressBelongingsPhoto(file) {",
     "  const image = await loadImageFromFile(file);",
@@ -14728,6 +14757,7 @@ function buildBelongingsPhotoUploaderHtml_(params) {
     "}",
     "",
     "async function prepareDogPhoto(file) {",
+    "  const generation = ++storedPhotoLoadGeneration;",
     "  notifyParent(",
     "    \"waffleBelongingsPhotoProgress\",",
     "    {",
@@ -14740,8 +14770,15 @@ function buildBelongingsPhotoUploaderHtml_(params) {
     "",
     "  statusEl.textContent = \"⏳ Preparing dog photo…\";",
     "",
-    "  dogSourceImage = await loadImageFromFile(file);",
+    "  const loadedImage = await loadImageFromFile(file);",
+    "  if (generation !== storedPhotoLoadGeneration) return;",
+    "  dogSourceImage = loadedImage;",
+    "  editingStoredPhoto = false;",
+    "  if (CONFIG.editProfilePhoto) { document.querySelector('.choices').style.display = 'none'; replacePhotoButton.setAttribute('aria-expanded', 'false'); }",
+    "  sourceSnapshotNeeded = false;",
+    "  retryPhotoButton.style.display = \"none\";",
     "  dogClientUploadId = makeClientUploadId();",
+    "  dogSourceIdentity = makeClientUploadId(); pendingDogPayload = null; pendingDogCropSignature = \"\";",
     "",
     "  cropState.zoom = 1;",
     "  cropState.panX = 0;",
@@ -14757,6 +14794,33 @@ function buildBelongingsPhotoUploaderHtml_(params) {
     "  statusEl.textContent =",
     "    \"✅ Drag the photo to reposition it. Use Zoom if needed.\";",
     "}",
+    "",
+    "function loadStoredDogPhoto() { return new Promise((resolve, reject) => google.script.run.withSuccessHandler(resolve).withFailureHandler(reject).getStoredDogProfilePhotoForEdit({ stayKey: CONFIG.stayKey, dogName: CONFIG.dogName, startDate: CONFIG.startDate, endDate: CONFIG.endDate, dogId: CONFIG.dogId, stayId: CONFIG.stayId })); }",
+    "async function prepareStoredDogPhoto() {",
+    "  const generation = ++storedPhotoLoadGeneration;",
+    "  statusEl.textContent = \"Loading saved profile photo…\";",
+    "  try {",
+    "    const stored = await loadStoredDogPhoto();",
+    "    if (generation !== storedPhotoLoadGeneration) return;",
+    "    storedPhotoId = String(stored && stored.photoId || \"\");",
+    "    if (!stored || !stored.dataUrl) throw new Error(stored && stored.message ? stored.message : \"Saved photo unavailable. Choose a photo from your device to replace it.\");",
+    "    const image = new Image();",
+    "    await new Promise((resolve, reject) => { image.onload = resolve; image.onerror = () => reject(new Error(\"Saved photo could not be opened. Try again or choose a replacement.\")); image.src = stored.dataUrl; });",
+    "    if (generation !== storedPhotoLoadGeneration) return;",
+    "    dogSourceImage = image; dogClientUploadId = makeClientUploadId(); editingStoredPhoto = true;",
+    "    sourceSnapshotNeeded = !stored.sourceAvailable;",
+    "    dogSourceIdentity = storedPhotoId || makeClientUploadId(); pendingDogPayload = null; pendingDogCropSignature = \"\";",
+    "    const crop = stored.crop || {}; cropState.zoom = Number(crop.zoom) || 1; cropState.panX = Number(crop.panX) || 0; cropState.panY = Number(crop.panY) || 0; zoomRange.value = String(cropState.zoom);",
+    "    cropWrap.style.display = \"block\"; uploadBtn.style.display = \"block\"; replacePhotoButton.style.display = \"block\";",
+    "    drawDogCrop();",
+    "    lastSavedCropSignature = currentDogCropSignature();",
+    "    statusEl.textContent = stored.sourceAvailable ? \"Saved original loaded. Drag or zoom to reposition, then save.\" : \"Saved square photo loaded. It has no uncropped original, so repositioning is limited to this saved crop.\"; retryPhotoButton.style.display = \"none\";",
+    "  } catch (error) { if (generation !== storedPhotoLoadGeneration) return; statusEl.textContent = (error && error.message ? error.message : String(error)) + \" Retry loading or choose a replacement.\"; replacePhotoButton.style.display = \"block\"; replacePhotoButton.textContent = \"Choose a replacement photo\"; retryPhotoButton.style.display = \"block\"; }",
+    "}",
+    "",
+    "if (isDogProfile && CONFIG.editProfilePhoto) { document.querySelector('.choices').style.display = 'none'; replacePhotoButton.style.display = 'block'; prepareStoredDogPhoto(); }",
+    "replacePhotoButton.addEventListener(\"click\", () => { const choices = document.querySelector('.choices'); choices.style.display = choices.style.display === 'none' ? 'grid' : 'none'; replacePhotoButton.setAttribute('aria-expanded', choices.style.display !== 'none' ? 'true' : 'false'); });",
+    "retryPhotoButton.addEventListener(\"click\", prepareStoredDogPhoto);",
     "",
     "async function prepareBelongingsPhotos(files) {",
     "  const selected =",
@@ -14819,7 +14883,7 @@ function buildBelongingsPhotoUploaderHtml_(params) {
     "  try {",
     "    if (isDogProfile) {",
     "      const file = files && files[0];",
-    "      if (!file) return;",
+    "      if (!file) { if (!dogSourceImage && CONFIG.editProfilePhoto) await prepareStoredDogPhoto(); return; }",
     "      await prepareDogPhoto(file);",
     "      return;",
     "    }",
@@ -14919,9 +14983,19 @@ function buildBelongingsPhotoUploaderHtml_(params) {
     "  uploadBtn.disabled = true;",
     "  const batchSaved = [];",
     "  let uncertainClientUploadId = '';",
+    "  let dogUploadAttempted = false;",
     "",
     "  try {",
     "    if (isDogProfile) {",
+    "      const cropSignature = currentDogCropSignature();",
+    "      if (cropSignature === lastSavedCropSignature) { statusEl.textContent = \"No photo changes to save.\"; return; }",
+    "      if (!pendingDogPayload || pendingDogCropSignature !== cropSignature) {",
+    "        dogClientUploadId = makeClientUploadId(); pendingDogCropSignature = cropSignature;",
+    "        pendingDogPayload = { stayKey: CONFIG.stayKey, dogName: CONFIG.dogName, startDate: CONFIG.startDate, endDate: CONFIG.endDate, dogId: CONFIG.dogId, stayId: CONFIG.stayId, photoType: CONFIG.photoType, clientUploadId: dogClientUploadId, photoLabel: (CONFIG.dogName || \"Dog\") + \" profile photo\", photoData: exportDogCrop(), sourcePhotoData: exportDogSource(), reposition: editingStoredPhoto, expectedCurrentPhotoId: storedPhotoId, crop: { zoom: cropState.zoom, panX: cropState.panX, panY: cropState.panY } };",
+    "      }",
+    "      setDogEditorLocked(true);",
+    "      const prior = await lookupUploadReceipt({ clientUploadId: pendingDogPayload.clientUploadId, stayKey: CONFIG.stayKey, photoType: CONFIG.photoType });",
+    "      if (prior && prior.state === \"expired\") throw new Error(\"Photo save receipt expired. Check the saved profile before trying again.\");",
     "      statusEl.textContent =",
     "        \"☁️ Saving positioned dog photo…\";",
     "",
@@ -14935,19 +15009,9 @@ function buildBelongingsPhotoUploaderHtml_(params) {
     "        }",
     "      );",
     "",
-    "      const result =",
-    "        await uploadOne({",
-    "          stayKey: CONFIG.stayKey,",
-    "          dogName: CONFIG.dogName,",
-    "          startDate: CONFIG.startDate,",
-    "          endDate: CONFIG.endDate,",
-    "          photoType: CONFIG.photoType,",
-    "          clientUploadId: dogClientUploadId,",
-    "          photoLabel:",
-    "            (CONFIG.dogName || \"Dog\") +",
-    "            \" profile photo\",",
-    "          photoData: exportDogCrop()",
-    "        });",
+    "      let result = prior && prior.state === \"saved\" && prior.photo ? { photo: prior.photo } : null;",
+    "      if (!result) { uncertainClientUploadId = pendingDogPayload.clientUploadId; dogUploadAttempted = true; result = await uploadOne(pendingDogPayload); }",
+    "      if (!result || !result.photo) throw new Error(\"The photo save did not return a saved photo. Check its receipt before retrying.\");",
     "",
     "      statusEl.textContent =",
     "        \"✅ Dog photo positioned and saved.\";",
@@ -14962,6 +15026,8 @@ function buildBelongingsPhotoUploaderHtml_(params) {
     "              : null",
     "        }",
     "      );",
+    "",
+    "      storedPhotoId = String(result.photo.id || storedPhotoId); editingStoredPhoto = true; sourceSnapshotNeeded = false; lastSavedCropSignature = pendingDogCropSignature; pendingDogPayload = null; pendingDogCropSignature = \"\"; dogClientUploadId = makeClientUploadId(); setDogEditorLocked(false); uncertainClientUploadId = \"\";",
     "",
     "      return;",
     "    }",
@@ -15041,6 +15107,11 @@ function buildBelongingsPhotoUploaderHtml_(params) {
     "    if (uncertainClientUploadId) {",
     "      try { const receipt = await lookupUploadReceipt({ clientUploadId: uncertainClientUploadId, stayKey: CONFIG.stayKey, photoType: CONFIG.photoType }); if (receipt && receipt.state === 'saved' && receipt.photo) { batchSaved.push(receipt.photo); uncertainClientUploadId = ''; } } catch (_) {}",
     "    }",
+    "    if (isDogProfile && batchSaved.length && pendingDogPayload) {",
+    "      statusEl.textContent = \"✅ Dog photo positioned and saved.\"; notifyParent(\"waffleBelongingsPhotoSaved\", { count: 1, photo: batchSaved[0] });",
+    "      storedPhotoId = String(batchSaved[0].id || storedPhotoId); editingStoredPhoto = true; sourceSnapshotNeeded = false; lastSavedCropSignature = pendingDogCropSignature; pendingDogPayload = null; pendingDogCropSignature = \"\"; dogClientUploadId = makeClientUploadId(); setDogEditorLocked(false);",
+    "      return;",
+    "    }",
     "    const message =",
     "      error && error.message",
     "        ? error.message",
@@ -15048,6 +15119,7 @@ function buildBelongingsPhotoUploaderHtml_(params) {
     "",
     "    statusEl.textContent =",
     "      \"❌ \" + message;",
+    "    if (isDogProfile && dogUploadAttempted) { setDogEditorLocked(true); statusEl.textContent += \" Retry this save to check the same photo receipt. Editing is paused until it is confirmed.\"; } else if (isDogProfile) setDogEditorLocked(false);",
     "",
     "    notifyParent(",
     "      \"waffleBelongingsPhotoError\",",
@@ -15087,6 +15159,47 @@ function buildBelongingsPhotoUploaderHtml_(params) {
  * google.script.run. It adds a photo to an EXISTING Pet_Belongings record
  * without overwriting the checklist/descriptions already saved by the parent UI.
  */
+/** Read the selected Care row's own profile photo for the hosted crop editor. */
+function getStoredDogProfilePhotoForEdit(data) {
+  data = data && typeof data === "object" ? data : {};
+  var stayKey = String(data.stayKey || "").trim();
+  var dogName = String(data.dogName || "").trim();
+  if (!stayKey || !dogName) throw new Error("Stay and dog identity are required.");
+  var sheet = getBelongingsSheetReadOnly_();
+  if (!sheet) return { available: false, message: "No saved profile photo is available to reposition. Choose a photo from your device." };
+  var identityState = readCareRecordIdentityState_(sheet);
+  var proof = resolveCareBookingIdentity_(stayKey, String(data.stayId || ""), String(data.dogId || ""), getTargetSheet_().getDataRange().getValues());
+  if (!proof.ok) throw new Error("The selected stay identity could not be verified.");
+  var matchingRows = identityState.ok ? (identityState.byKey[stayKey] || []) : [];
+  if (!identityState.ok || matchingRows.length > 1) throw new Error("The saved profile photo could not be matched to one Care record.");
+  if (!matchingRows.length) return { available: false, message: "No saved profile photo is available to reposition. Choose a photo from your device." };
+  var careIdentity = matchingRows[0];
+  if (!careIdentity.valid || (careIdentity.stayId && careIdentity.stayId !== proof.identity.stayId) || (careIdentity.dogId && careIdentity.dogId !== proof.identity.dogId)) throw new Error("The selected Care record identity changed. Refresh and try again.");
+  var row = careIdentity.rowNumber;
+  var storedIdentity = sheet.getRange(row, 2, 1, 4).getValues()[0];
+  if (String(storedIdentity[1] || "").trim().toLowerCase() !== dogName.toLowerCase() ||
+      belongingsPhotoDateKey_(storedIdentity[2]) !== belongingsPhotoDateKey_(data.startDate) ||
+      belongingsPhotoDateKey_(storedIdentity[3]) !== belongingsPhotoDateKey_(data.endDate)) throw new Error("The selected stay identity changed. Refresh and try again.");
+  var profile = parseDogPhotoJson_(sheet.getRange(row, 30).getValue());
+  if (!profile || !profile.id) return { available: false, message: "No saved profile photo is available to reposition. Choose a photo from your device." };
+  var sourcePhoto = profile.sourcePhoto && profile.sourcePhoto.id ? profile.sourcePhoto : null;
+  function readPhoto(fileId) {
+    // File IDs come only from the exact, identity-verified Dog Photo JSON row.
+    var blob = DriveApp.getFileById(String(fileId)).getBlob();
+    var mime = String(blob.getContentType() || "image/jpeg");
+    if (!/^image\/[A-Za-z0-9.+-]+$/.test(mime)) throw new Error("Saved profile photo is not an image.");
+    return { available: true, photoId: String(profile.id), sourceAvailable: fileId !== String(profile.id), crop: fileId === String(profile.id) ? null : (profile.crop || null), dataUrl: "data:" + mime + ";base64," + Utilities.base64Encode(blob.getBytes()) };
+  }
+  try {
+    if (sourcePhoto) {
+      try { return readPhoto(sourcePhoto.id); } catch (_) { return readPhoto(profile.id); }
+    }
+    return readPhoto(profile.id);
+  } catch (error) {
+    return { available: false, photoId: String(profile.id), message: "The saved photo could not be loaded. Try again or choose a replacement." };
+  }
+}
+
 function uploadBelongingsPhotoFromHtml(data) {
   assertWaffleActionAllowedDuringMaintenance_("uploadBelongingsPhotoFromHtml");
 
@@ -15106,13 +15219,22 @@ function uploadBelongingsPhotoFromHtml(data) {
   lock.waitLock(10000);
 
   try {
+    var bookingProof = resolveCareBookingIdentity_(stayKey, String(data.stayId || ""), String(data.dogId || ""), getTargetSheet_().getDataRange().getValues());
+    if (!bookingProof.ok) throw new Error("The selected stay identity could not be verified. Refresh and try again.");
     var sheet = getBelongingsSheet_();
+    // Prove the booking IDs against the source booking before an explicit
+    // photo save can create a missing Pet_Belongings row.
+    resolveCareRecordIdentityForWrite_(sheet, data);
     var row = findBelongingsRow_(sheet, stayKey);
 
     if (row === -1) {
-      throw new Error(
-        "The belongings record was not found. Save the pet belongings details first, then try the photo again."
-      );
+      if (String(data.photoType || "").trim() === "dogProfile") {
+        // Creating a minimal Care row is deferred until the explicit photo
+        // save request; opening or cancelling the editor remains read-only.
+        ensureBelongingsRecordForPhoto_(data);
+        row = findBelongingsRow_(sheet, stayKey);
+      }
+      if (row === -1) throw new Error("The belongings record was not found. Save the pet belongings details first, then try the photo again.");
     }
     var identity = sheet.getRange(row, 2, 1, 4).getValues()[0];
     if (String(identity[1] || "").trim().toLowerCase() !== dogName.toLowerCase() ||
@@ -15133,6 +15255,10 @@ function uploadBelongingsPhotoFromHtml(data) {
       if (receipt.state === "expired") throw new Error("This photo upload receipt expired. Check the stay photos before creating a new upload.");
     }
     var previousDogPhoto = null;
+    if (isDogProfile) previousDogPhoto = parseDogPhotoJson_(sheet.getRange(row, 30).getValue());
+    if (isDogProfile && data.expectedCurrentPhotoId && String(data.expectedCurrentPhotoId) !== String(previousDogPhoto && previousDogPhoto.id || "")) {
+      throw new Error("The saved profile photo changed while this editor was open. Close it and reopen the photo controls before saving.");
+    }
 
     var uploadSuffix = clientUploadId ? "_upload_" + clientUploadId : "";
     if (clientUploadId && !receipt) {
@@ -15149,11 +15275,35 @@ function uploadBelongingsPhotoFromHtml(data) {
       uploadSuffix: uploadSuffix
     });
 
+    if (isDogProfile && String(data.sourcePhotoData || "")) {
+      photo.sourcePhoto = saveBelongingsPhoto_({
+        dogName: dogName,
+        photoLabel: dogName + " profile photo source",
+        photoData: String(data.sourcePhotoData),
+        uploadSuffix: clientUploadId ? "_source_upload_" + clientUploadId : "",
+        privateOnly: true
+      });
+      delete photo.sourcePhoto.driveUrl;
+      delete photo.sourcePhoto.previewUrl;
+      var crop = data.crop && typeof data.crop === "object" ? data.crop : {};
+      photo.crop = {
+        zoom: Math.max(1, Math.min(2.5, Number(crop.zoom) || 1)),
+        panX: Math.max(-5000, Math.min(5000, Number(crop.panX) || 0)),
+        panY: Math.max(-5000, Math.min(5000, Number(crop.panY) || 0))
+      };
+    } else if (isDogProfile && previousDogPhoto && previousDogPhoto.sourcePhoto) {
+      photo.sourcePhoto = previousDogPhoto.sourcePhoto;
+    }
     if (isDogProfile) {
-      previousDogPhoto = parseDogPhotoJson_(
-        sheet.getRange(row, 30).getValue()
-      );
+      var cropMetadata = data.crop && typeof data.crop === "object" ? data.crop : {};
+      photo.crop = {
+        zoom: Math.max(1, Math.min(2.5, Number(cropMetadata.zoom) || 1)),
+        panX: Math.max(-5000, Math.min(5000, Number(cropMetadata.panX) || 0)),
+        panY: Math.max(-5000, Math.min(5000, Number(cropMetadata.panY) || 0))
+      };
+    }
 
+    if (isDogProfile) {
       var dogPhotoGallery =
         normalizeV108DogPhotoGallery_(
           parseV108DogPhotoGalleryJson_(
@@ -15163,10 +15313,16 @@ function uploadBelongingsPhotoFromHtml(data) {
         );
 
       var dogPhotoAlreadyAttached = clientUploadId && dogPhotoGallery.some(function(item) { return String(item.id) === String(photo.id); });
-      if (!dogPhotoAlreadyAttached) dogPhotoGallery = dogPhotoGallery.filter(function(item) {
-        return String(item.id || "") !== String(photo.id || "");
-      });
-      if (!dogPhotoAlreadyAttached) dogPhotoGallery.push(photo);
+      if (data.reposition && previousDogPhoto && previousDogPhoto.id) {
+        var replacedCurrent = false;
+        dogPhotoGallery = dogPhotoGallery.reduce(function(next, item) {
+          var sameSource = previousDogPhoto.sourcePhoto && item.sourcePhoto && String(item.sourcePhoto.id) === String(previousDogPhoto.sourcePhoto.id);
+          if (String(item.id || "") !== String(previousDogPhoto.id) && !sameSource) { next.push(item); return next; }
+          if (!replacedCurrent) { next.push(photo); replacedCurrent = true; }
+          return next;
+        }, []);
+        if (!replacedCurrent) dogPhotoGallery.push(photo);
+      } else if (!dogPhotoAlreadyAttached) dogPhotoGallery.push(photo);
 
       sheet.getRange(row, 30).setValue(JSON.stringify(photo));
       sheet.getRange(row, 33).setValue(JSON.stringify(dogPhotoGallery));
@@ -15408,7 +15564,9 @@ function saveBelongingsPhoto_(data) {
   if (!file) file = folder.createFile(blob);
 
   try {
-    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    if (!data.privateOnly) {
+      file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    }
   } catch (sharingError) {
     try { file.setTrashed(true); } catch (_) {}
     throw new Error(

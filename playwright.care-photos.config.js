@@ -3,8 +3,11 @@ const base = require('./playwright.ui.config');
 
 module.exports = defineConfig({
   ...base,
-  testMatch: ['care-photos.browser.spec.js', 'care-fallback-media.browser.spec.js'],
+  testMatch: ['care-photos.browser.spec.js', 'care-fallback-media.browser.spec.js', 'profile-photo-edit.browser.spec.js'],
   workers: 1,
   reporter: 'line',
-  projects: [base.projects.find(project => project.name === 'desktop-chrome-1920x1080')]
+  projects: [
+    base.projects.find(project => project.name === 'desktop-chrome-1920x1080'),
+    base.projects.find(project => project.name === 'desktop-safari-1440x900')
+  ]
 });

@@ -5566,7 +5566,7 @@ registerWaffleServiceWorker();
                 if (card) {
                     await openHostedBelongingsPhotoUploader(
                         card,
-                        'upload',
+                        'reposition',
                         'dogProfile'
                     );
                 }
@@ -13717,7 +13717,11 @@ registerWaffleServiceWorker();
             // disabled historical controls could overwrite archived care flags
             // or belongings. The dedicated ensure action creates only a missing
             // Pet_Belongings row and otherwise leaves the snapshot untouched.
-            if (
+            if (mode === 'reposition') {
+                // Opening a reposition editor is read-only; Cancel must not
+                // save the card's checklist or create a missing Care row.
+                assertCurrentStay();
+            } else if (
                 card.dataset.v1082PastStay ===
                 'true'
             ) {
@@ -13750,7 +13754,7 @@ registerWaffleServiceWorker();
 
             assertCurrentStay();
 
-            if (itemDraft && card.dataset.v1082PastStay !== 'true') {
+            if (mode !== 'reposition' && itemDraft && card.dataset.v1082PastStay !== 'true') {
                 // The uploader saves the checklist before opening. Keep a
                 // reopened Belongings tab aligned with that confirmed save.
                 for (const cache of [belongingsRecordsCache, directoryBelongingsDetailCache]) {
@@ -13791,6 +13795,9 @@ registerWaffleServiceWorker();
                     ? `${payloadBase.dogName || 'Dog'} profile photo`
                     : (isStayPhoto ? (photoLabelInput?.value.trim() || 'Stay photo') : (photoLabelInput?.value.trim() || '')),
                 photoType,
+                editProfilePhoto: isDogProfile && mode === 'reposition',
+                dogId: card.dataset.directoryDogId || '',
+                stayId: card.dataset.directoryStayId || '',
                 requestToken,
                 _ts: String(Date.now())
             });

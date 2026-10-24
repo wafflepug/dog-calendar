@@ -58,10 +58,15 @@ test('Care quick actions stay compact, truthful and bound to the selected stay',
   const uploader=page.locator('#hostedBelongingsPhotoUploaderModal');
   await expect(uploader).toBeVisible();
   await expect(page.locator('#hostedBelongingsPhotoUploaderTitle')).toContainText('Position Dog Photo');
-  await expect.poll(()=>page.evaluate(()=>window.__quickPhotoWrites[0]?.stayKey)).toBe(bookings[0].stayKey);
+  expect(await page.evaluate(()=>window.__quickPhotoWrites)).toEqual([]);
   await expect.poll(async()=>new URL(await page.locator('#hostedBelongingsPhotoUploaderFrame').getAttribute('src')).searchParams.get('dogName')).toBe(bookings[0].dogName);
   await expect.poll(async()=>new URL(await page.locator('#hostedBelongingsPhotoUploaderFrame').getAttribute('src')).searchParams.get('photoType')).toBe('dogProfile');
+  const photoEditorUrl=new URL(await page.locator('#hostedBelongingsPhotoUploaderFrame').getAttribute('src'));
+  expect(photoEditorUrl.searchParams.get('editProfilePhoto')).toBe('true');
+  expect(photoEditorUrl.searchParams.get('dogId')).toBe(bookings[0].dogId);
+  expect(photoEditorUrl.searchParams.get('stayId')).toBe(bookings[0].stayId);
   await page.locator('#closeHostedBelongingsPhotoUploader').click();
+  expect(await page.evaluate(()=>window.__quickPhotoWrites)).toEqual([]);
   await expect(first.locator('[data-v1089-upload-loading]')).toBeHidden();
   const galleryReadsBefore=fixture.reads.filter(action=>action==='get_guest_profile').length;
   await photoTools.locator('[data-v108-gallery]').click();
