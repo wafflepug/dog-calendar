@@ -14,7 +14,7 @@ const config = {
     { name: 'chromium', use: { browserName: 'chromium', headless: true, serviceWorkers: 'block' } },
     { name: 'webkit', use: { browserName: 'webkit', headless: true, serviceWorkers: 'block' } }
   ],
-  use: { baseURL, serviceWorkers: 'block' }
+  use: { baseURL, serviceWorkers: 'block', trace: 'retain-on-failure' }
 };
 if (!process.env.WAFFLE_BASE_URL) {
   config.webServer = {
