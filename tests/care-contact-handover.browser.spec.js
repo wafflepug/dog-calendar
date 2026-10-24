@@ -152,7 +152,7 @@ test('stay contact and handover is readable, editable and tied to the selected d
         return { bounds: { left: Math.round(rect.left), right: Math.round(rect.right), width: Math.round(rect.width) }, clientWidth: element.clientWidth, scrollWidth: element.scrollWidth, descendants: descendants.filter(node => node.right > rect.right + 1 || node.left < rect.left - 1 || node.scrollWidth > node.clientWidth + 1) };
       });
       expect(headerLayout.scrollWidth <= headerLayout.clientWidth + 1, JSON.stringify({ width, theme, headerLayout })).toBe(true);
-      expect(await handover.evaluate(element => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
+      expect(await handoverHost.evaluate(element => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
       const layout = await contact.evaluate(root => ({ overflow: root.scrollWidth > root.clientWidth, buttons: [...root.querySelectorAll('button')].map(button => { const r = button.getBoundingClientRect(); return [r.width, r.height]; }) }));
       expect(layout.overflow).toBe(false);
       expect(layout.buttons.every(([w, h]) => Math.round(w * 100) / 100 >= 44 && Math.round(h * 100) / 100 >= 44)).toBe(true);
