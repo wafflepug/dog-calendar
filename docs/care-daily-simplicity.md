@@ -10,7 +10,7 @@ Today's existing intake indicator remains the single intake status/action. A col
 
 The guided checkout already brings exact dog/stay identity and dates, compact belongings, visible medication, the per-checkout handover note, and one explicit confirmation together. Its verified save remains the only path that moves a stay to Past. Cancel, failed/queued/uncertain results, replacement identities, and early checkout keep their existing safeguards; the flow receives regression coverage here rather than duplicate controls.
 
-No Apps Script, schema, deployment, or production guest data changes were made.
+No Apps Script, schema, deployment settings, or production guest data changes were made.
 
 ## Functional and failure matrix
 
@@ -22,6 +22,10 @@ No Apps Script, schema, deployment, or production guest data changes were made.
 | Checkout | One guided sheet combines identity, belongings, medication, handover note and confirmation | Cancel writes nothing; failed save retains the note for retry; queued/conflicting/uncertain results do not move to Past; successful exact-stay save moves immediately to Past |
 
 Browser fixtures block non-local writes and use synthetic dog/stay identities. They do not prove behavior on physical phones or assistive technology.
+
+## Executed verification
+
+Lead review retained visible safety and medication, corrected idempotent arrival anchoring with the real observer enabled, and verified exact-stay read-only task navigation. The committed runtime passed 380 Node tests and five Python contracts. All 180 arrival/intake/checkout cases passed locally in Chromium and WebKit at 320, 390 and 1440px. Three Chromium full-runtime profile cases passed, covering the first-view matrix and both roster destinations. Screenshots are synthetic; final current-head CI and deployment attribution remain release requirements.
 
 ## Next bounded task
 
