@@ -452,15 +452,19 @@ test('PDF uploader cancel return refreshes only its stay without claiming an upl
   const fixture = installFixture(page);
   await openDirectory(page, baseURL, fixture);
   const { card, records } = await openRecords(page);
+  // Preserve the fixture's fixed Date while advancing the real 700 ms close watcher deterministically.
+  const fixtureNow = await page.evaluate(() => Date.now());
+  await page.clock.install({ time: fixtureNow });
   await page.evaluate(() => { window.__pdfPopup = { closed: false }; window.__pdfPopupOpens = 0; window.open = () => { window.__pdfPopupOpens++; return window.__pdfPopup; }; });
   const readsBefore = fixture.calls.get('get_guest_directory');
   await records.locator('[data-care-record-upload]').focus();
   await page.keyboard.press('Enter');
   await expect.poll(() => page.evaluate(() => window.__pdfPopupOpens)).toBe(1);
+  const scopedReturnRead = page.waitForResponse(response => resolveLocalBackendAction({ method: response.request().method(), url: response.url() }).action === 'get_legacy_intake_statuses');
   await page.evaluate(() => { window.__pdfPopup.closed = true; });
-  // The real close watcher and shared reader can be delayed by a busy browser.
-  // Require the same single scoped read, within the suite's bounded read window.
-  await expect.poll(() => fixture.calls.get('get_legacy_intake_statuses') || 0, { timeout: 15000 }).toBe(1);
+  await page.clock.fastForward(700);
+  await scopedReturnRead;
+  expect(fixture.calls.get('get_legacy_intake_statuses') || 0).toBe(1);
   expect(fixture.requests.get('get_legacy_intake_statuses').at(-1).stayKeys).toEqual([await card.getAttribute('data-directory-stay-key')]);
   await expect(records.locator('[data-directory-legacy]')).toContainText('No legacy PDF on file');
   await expect(records.locator('[data-directory-legacy]')).not.toContainText(/uploaded|saved successfully/i);
@@ -474,12 +478,19 @@ test('PDF return failure retains the saved document and retries the same guest',
   const fixture = installFixture(page, { shouldFail: ({ action, payload }) => failReturn && action === 'get_legacy_intake_statuses' && payload.stayKeys?.length === 1 && payload.stayKeys[0] === key, legacyIntakes: [{ stayKey: key, count: 1, latest: { documentId: 'saved-milo', pdfUrl: 'https://example.test/milo.pdf', aiStatus: 'Complete' } }] });
   await openDirectory(page, baseURL, fixture);
   const { card, records } = await openRecords(page);
+  // Preserve the fixture's fixed Date while advancing the real 700 ms close watcher deterministically.
+  const fixtureNow = await page.evaluate(() => Date.now());
+  await page.clock.install({ time: fixtureNow });
   await page.evaluate(() => { window.__pdfPopup = { closed: false }; window.__pdfPopupOpens = 0; window.open = () => { window.__pdfPopupOpens++; return window.__pdfPopup; }; });
   await records.locator('[data-care-record-upload]').focus();
   await page.keyboard.press('Enter');
   await expect.poll(() => page.evaluate(() => window.__pdfPopupOpens)).toBe(1);
   failReturn = true;
+  const scopedReturnRead = page.waitForResponse(response => resolveLocalBackendAction({ method: response.request().method(), url: response.url() }).action === 'get_legacy_intake_statuses');
   await page.evaluate(() => { window.__pdfPopup.closed = true; });
+  await page.clock.fastForward(700);
+  await scopedReturnRead;
+  expect(fixture.calls.get('get_legacy_intake_statuses') || 0).toBe(1);
   const legacy = records.locator('[data-directory-legacy]');
   await expect(legacy.locator('[data-legacy-refresh-failure]')).toHaveText('Could not refresh. Showing previously available document.');
   await expect(legacy.locator('.directory-legacy-view')).toHaveAttribute('href', 'https://example.test/milo.pdf');
