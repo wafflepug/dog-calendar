@@ -9,7 +9,7 @@ const widths = [
 
 module.exports = defineConfig({
   testDir: './tests',
-  testMatch: ['owner-handoff.browser.spec.js', 'boarding-owner-handoff.browser.spec.js', 'owner-sharing-clarity.browser.spec.js', 'owner-form-guidance.browser.spec.js'],
+  testMatch: ['owner-handoff.browser.spec.js', 'boarding-owner-handoff.browser.spec.js', 'faster-onboarding-runtime.browser.spec.js', 'owner-sharing-clarity.browser.spec.js', 'owner-form-guidance.browser.spec.js'],
   timeout: 30000,
   workers: 2,
   reporter: 'list',
