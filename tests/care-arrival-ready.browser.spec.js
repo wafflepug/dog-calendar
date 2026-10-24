@@ -7,6 +7,7 @@ const runtimeCss = fs.readFileSync(path.join(__dirname, '..', 'waffle-runtime.cs
 const arrivalCss = runtimeCss.split(/\r?\n/).filter(line =>
   line.includes('[data-waffle-arrival-ready]') || line.includes('[data-arrival-copy]') ||
   line.includes('[data-arrival-detail]') || line.includes('[data-arrival-action]')
+  || line.includes('[data-arrival-task')
 ).join('\n');
 
 async function setup(page) {
@@ -187,6 +188,47 @@ test('arrival exceptions retain distinct truthful status and remove completed op
   await expect(page.locator('[data-waffle-arrival-ready]')).toHaveCount(2);
   await expect(page.locator('[data-directory-stay-id="link"] [data-waffle-arrival-ready]')).toBeAttached();
   await expect(page.locator('[data-directory-stay-id="unknown"] [data-waffle-arrival-ready]')).toBeAttached();
+});
+
+test('arrival checklist shows only unresolved intake and truthful unreviewed medication and belongings with direct Care actions', async ({ page }) => {
+  await setup(page);
+  await addCard(page, { stayId: 's1', dogId: 'd1', key: 'checklist', intake: 'not_prepared' });
+  await page.evaluate(() => window.WAFFLE_ARRIVAL_READY.refresh());
+  const list = page.locator('[data-arrival-task-list]');
+  await expect(list).toBeVisible();
+  await expect(list.locator('summary')).toHaveText('Care checks before check-in');
+  await expect(list).not.toHaveAttribute('open', '');
+  await expect(list.locator('[data-arrival-task]')).toHaveCount(2);
+  await expect(list.locator('[data-arrival-task]').first()).not.toBeVisible();
+  await list.locator('summary').click();
+  await expect(list.locator('[data-arrival-task]')).toHaveCount(2);
+  await expect(page.locator('[data-waffle-arrival-ready]')).toContainText('Not prepared');
+  await expect(list.locator('[data-arrival-task="medication"]')).toContainText('Medication · Not reviewed');
+  await expect(list.locator('[data-arrival-task="medication"]')).toContainText('Instructions are not verified');
+  await expect(list.locator('[data-arrival-task="belongings"]')).toContainText('Belongings · Review');
+  await expect(list.locator('[data-arrival-task="belongings"]')).toContainText('Items are not verified');
+  await expect(list.locator('[data-arrival-task="medication"]')).toHaveAttribute('data-care-readiness-action', 'medication');
+  await expect(list.locator('[data-arrival-task="belongings"]')).toHaveAttribute('data-care-readiness-action', 'belongings');
+  expect(await page.evaluate(() => window.reads)).toBe(0);
+
+  await page.locator('.directory-card').evaluate(card => {
+    card.dataset.intake = 'complete';
+    const profile = document.createElement('section');
+    profile.dataset.directoryDetail = 'profile';
+    profile.dataset.profileReadState = 'fresh';
+    card.appendChild(profile);
+    card.insertAdjacentHTML('beforeend', '<span data-care-brief-medication>Give with dinner.</span><section data-belongings-summary><ul class="belongings-summary-list"><li>Blue lead</li><li>Food tub</li></ul></section>');
+    window.WAFFLE_ARRIVAL_READY.refresh();
+  });
+  await expect(list.locator('[data-arrival-task="intake"]')).toHaveCount(0);
+  await expect(list.locator('[data-arrival-task="medication"]')).toContainText('Medication · Review');
+  await expect(list.locator('[data-arrival-task="medication"]')).toContainText('Read the saved instructions');
+  await expect(list.locator('[data-arrival-task="belongings"]')).toContainText('Belongings · 2 listed');
+  await expect(list.locator('[data-arrival-task]')).toHaveCount(2);
+  expect(await page.evaluate(() => window.reads)).toBe(0);
+  await addCard(page, { stayId: 's1', dogId: 'duplicate-dog', key: 'duplicate-checklist', intake: 'not_prepared' });
+  await page.evaluate(() => window.WAFFLE_ARRIVAL_READY.refresh());
+  await expect(page.locator('[data-arrival-task-list]')).toHaveCount(1);
 });
 
 test('arrival action fits narrow and wide rosters in both themes', async ({ page }) => {

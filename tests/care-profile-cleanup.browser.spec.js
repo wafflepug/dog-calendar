@@ -48,6 +48,9 @@ test('Care profile back bar, handover note and section tabs stay clear and reada
   await expect(noteDisclosure).not.toHaveAttribute('open','');
   await expect(noteDisclosure.locator('[data-care-brief-note-full]')).toBeHidden();
   await expect(noteHost.locator('[data-care-brief-note-preview]')).toContainText('evening medication');
+  const supporting=card.locator('[data-care-brief-supporting-details]');
+  await expect(supporting).not.toHaveAttribute('open','');
+  await supporting.locator(':scope > summary').click();
   await noteDisclosure.locator('summary').click();
   await expect(noteDisclosure).toHaveAttribute('open','');
   await expect(noteDisclosure.locator('[data-care-brief-note-preview]')).toBeHidden();

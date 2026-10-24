@@ -5355,6 +5355,25 @@ registerWaffleServiceWorker();
                 event.preventDefault();
                 event.stopPropagation();
                 const card = readinessAction.closest('.directory-card');
+                if (readinessAction.hasAttribute('data-arrival-task')) {
+                    const identity = {
+                        stayKey: String(card?.dataset.directoryStayKey || ''),
+                        stayId: String(card?.dataset.directoryStayId || ''),
+                        dogId: String(card?.dataset.directoryDogId || ''),
+                        dogNumber: String(card?.dataset.directoryDogNumber || '')
+                    };
+                    const task = readinessAction.dataset.arrivalTask;
+                    await openDirectoryGuestProfile(card, { instant: true, awaitProfileRead: true });
+                    const profileDetails = card?.querySelector('[data-directory-detail="profile"]');
+                    if (!card?.isConnected || !card.classList.contains('is-profile-active') ||
+                        identity.stayKey !== String(card.dataset.directoryStayKey || '') ||
+                        identity.stayId !== String(card.dataset.directoryStayId || '') ||
+                        identity.dogId !== String(card.dataset.directoryDogId || '') ||
+                        identity.dogNumber !== String(card.dataset.directoryDogNumber || '') ||
+                        !['fresh', 'saved', 'not-found', 'error', 'identity-conflict'].includes(profileDetails?.dataset.profileReadState)) return;
+                    openCareReadinessTarget(card, task === 'medication' ? 'arrival-medication' : task);
+                    return;
+                }
                 openCareReadinessTarget(card, readinessAction.dataset.careReadinessAction);
                 return;
             }
@@ -9312,6 +9331,19 @@ registerWaffleServiceWorker();
             if (disclosure) disclosure.open = true;
             target = disclosure?.querySelector('[data-directory-edit-field="notes"]');
             if (target) window.setTimeout(() => target.click(), 0);
+        } else if (action === 'belongings') {
+            const unifiedItemsTab = card?.querySelector('[data-v11160-tab="belongings"]');
+            if (unifiedItemsTab) unifiedItemsTab.click();
+            else switchDirectoryProfileMainTab(card, 'belongings');
+            target = unifiedItemsTab || card?.querySelector('[data-directory-main-tab="belongings"]');
+            target?.focus({ preventScroll: true });
+            card?.querySelector('[data-directory-main-panel="belongings"]')
+                ?.scrollIntoView({ behavior: Number(window.innerWidth || 0) <= 768 ? 'auto' : 'smooth', block: 'start' });
+            return;
+        } else if (action === 'arrival-medication') {
+            const healthHome = card.querySelector('[data-profile-subtab="healthHome"]');
+            if (healthHome?.getAttribute('aria-expanded') !== 'true') switchDirectoryProfileSubTab(card, 'healthHome', true);
+            target = card.querySelector('[data-profile-subtab="healthHome"]');
         } else if (action === 'intake') {
             const disclosure = card.querySelector('.directory-care-records-disclosure');
             const toolsDisclosure = disclosure?.closest('.directory-care-more-actions');
@@ -11777,8 +11809,9 @@ registerWaffleServiceWorker();
                 '[data-directory-detail="profile"]'
             );
 
+        let profileLoad = null;
         if (profileSection) {
-            loadDirectoryProfileDetail(
+            profileLoad = loadDirectoryProfileDetail(
                 card,
                 profileSection,
                 {
@@ -11789,6 +11822,8 @@ registerWaffleServiceWorker();
                 console.error(error)
             );
         }
+
+        if (options.awaitProfileRead && profileLoad) await profileLoad;
 
         if (preserved?.editor) restoreDirectoryGuestDetailDraft(preserved, card);
 
@@ -17544,6 +17579,9 @@ registerWaffleServiceWorker();
                                                         Loading with full profile…
                                                     </p>
                                                 </section>
+                                                <details class="directory-care-brief-supporting-details" data-care-brief-supporting-details>
+                                                <summary>Routine, owner &amp; handover</summary>
+                                                <div class="directory-care-brief-supporting-grid">
                                                 <section class="directory-care-brief-item directory-care-brief-feeding-walks">
                                                     <div class="directory-care-brief-note-heading"><h4>Feeding &amp; walks</h4></div>
                                                     <div class="directory-care-brief-subsection">
@@ -17572,6 +17610,8 @@ registerWaffleServiceWorker();
                                                     </div>
                                                     <div class="directory-care-brief-value" data-care-brief-handover-note>${escapeDashboardHtml(notes ? notes.trim() : 'No handover note recorded')}</div>
                                                 </section>
+                                                </div>
+                                                </details>
                                             </div>
 
 

@@ -94,6 +94,14 @@ for (const [width, colorScheme] of [[320, 'light'], [320, 'dark'], [390, 'light'
     await expect(brief.locator('[data-care-brief-medication]')).toContainText(longCareInstruction.slice(0, 28));
     await expect(brief.locator('.directory-care-readiness')).not.toHaveAttribute('open', '');
     await expect(brief.locator('.directory-care-more-actions')).not.toHaveAttribute('open', '');
+    const supporting = brief.locator('[data-care-brief-supporting-details]');
+    await expect(supporting).not.toHaveAttribute('open', '');
+    await expect(brief.locator('[data-care-brief-feeding]')).toBeHidden();
+    await expect(brief.locator('[data-care-brief-medication]')).toBeVisible();
+    const supportingSummary = supporting.locator(':scope > summary');
+    await supportingSummary.focus();
+    await supportingSummary.press('Enter');
+    await expect(brief.locator('[data-care-brief-feeding]')).toBeVisible();
     const geometry = await profile.evaluate(node => {
       const selectors = ['.directory-photo-shell', '.directory-dog-name-btn', '.directory-name-row .directory-dog-id', '.directory-name-row .directory-status-tag', '.directory-profile-stay-dates', '[data-v110-operation-bar]', '[data-care-brief-feeding]', '[data-care-brief-medication]'];
       return {
@@ -364,9 +372,20 @@ for (const [name, viewport, colorScheme] of [['320-light', { width: 320, height:
     await expect(readiness).not.toHaveAttribute('open', '');
     await expect(careBrief.locator('[data-care-readiness-summary]')).toHaveText(/Needs identity review|Add handover|Details/);
     await expect(careBrief.locator('[data-care-brief-safety]')).toBeVisible();
+    const supportingDetails = careBrief.locator('[data-care-brief-supporting-details]');
+    await expect(supportingDetails).not.toHaveAttribute('open', '');
+    await expect(careBrief.locator('[data-care-brief-safety]')).toBeVisible();
+    await expect(careBrief.locator('[data-care-brief-medication]')).toBeVisible();
+    await expect(careBrief.locator('[data-care-brief-feeding]')).toBeHidden();
+    const supportingSummary = supportingDetails.locator(':scope > summary');
+    const supportingToggleHeight = await supportingSummary.evaluate(node => node.getBoundingClientRect().height);
+    expect(supportingToggleHeight).toBeGreaterThanOrEqual(44);
+    await supportingSummary.click();
     await expect(careBrief.locator('[data-care-brief-feeding]')).toBeVisible();
     await expect(careBrief.locator('.directory-care-owner-label')).toBeVisible();
     await expect(careBrief.getByRole('heading', { name: 'Handover note', exact: true })).toBeVisible();
+    await supportingSummary.click();
+    await expect(supportingDetails).not.toHaveAttribute('open', '');
     await readiness.locator('summary').click();
     await expect(readiness).toHaveAttribute('open', '');
     await revealSecondaryTools(page);
@@ -379,7 +398,10 @@ for (const [name, viewport, colorScheme] of [['320-light', { width: 320, height:
     await expect(contactDisclosure.locator('[data-directory-edit-field="ownerName"]')).toBeVisible();
     await expect(contactDisclosure.locator('[data-directory-edit-field="phone"]')).toBeVisible();
     await contactDisclosure.locator('summary').click();
+    await expect(careBrief.getByRole('link', { name: 'Call owner' })).toBeHidden();
+    await supportingSummary.click();
     await expect(careBrief.getByRole('link', { name: 'Call owner' })).toHaveAttribute('href', 'tel:0400123456');
+    await supportingSummary.click();
     expect(await careBrief.locator('.directory-care-brief-action:visible').evaluateAll(buttons => buttons.every(button => button.getBoundingClientRect().height >= 44))).toBeTruthy();
     const moreActions = careBrief.locator('.directory-care-more-actions');
     await revealSecondaryTools(page);

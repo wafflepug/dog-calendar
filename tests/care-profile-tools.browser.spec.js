@@ -195,7 +195,7 @@ for (const [name, width, colorScheme] of [['320-light', 320, 'light'], ['320-dar
     const list = tools.locator(':scope > .directory-care-more-actions-list');
     const ownerLink = card.locator('.directory-care-brief-actions > [data-care-owner-link-group] > [data-p4-dir="owner"]');
     await expect(ownerLink).toBeVisible();
-    await expect(ownerLink).toHaveAccessibleName('Prepare owner form — Owner Care Link for Milo');
+    await expect(ownerLink).toHaveAccessibleName('Prepare owner form for Milo');
     await expect(card.locator('[data-p4-dir="owner"]')).toHaveCount(1);
     await expect(tools.locator('[data-p4-dir="owner"]')).toHaveCount(0);
     await expect(summary).toHaveText('More tools');
@@ -290,6 +290,9 @@ for (const [name, width, colorScheme] of [['320-light', 320, 'light'], ['320-dar
 
     await list.evaluate(node => { window.__toolsListNode = node; window.__toolsButtonNodes = [...node.querySelectorAll('button')]; });
     const actionIdentity = await list.locator('button').evaluateAll(nodes => nodes.map(node => ({ node, text: node.textContent.trim(), action: node.getAttribute('data-p4-dir') || node.getAttribute('data-care-brief-action') })));
+    const supportingDetails = card.locator('[data-care-brief-supporting-details]');
+    await expect(supportingDetails).not.toHaveAttribute('open', '');
+    await supportingDetails.locator(':scope > summary').click();
     const callOwner = card.locator('a[href^="tel:"]');
     await expect(callOwner).toHaveCount(1);
     await expect(callOwner).toBeVisible();

@@ -109,6 +109,9 @@ test('stay contact and handover is readable, editable and tied to the selected d
   const noteDisclosure = handoverHost.locator('[data-care-brief-note-disclosure]');
   await expect(noteDisclosure).not.toHaveAttribute('open', '');
   await expect(noteDisclosure.locator('[data-care-brief-note-full]')).toBeHidden();
+  const supporting = card.locator('[data-care-brief-supporting-details]');
+  await expect(supporting).not.toHaveAttribute('open', '');
+  await supporting.locator(':scope > summary').click();
   await noteDisclosure.locator('summary').click();
   const handover = noteDisclosure.locator('[data-care-brief-note-full]');
   await expect(handover).toBeVisible();

@@ -9,6 +9,7 @@ const record = { stayKey: booking.stayKey, identity: { stayKey: booking.stayKey,
 
 async function fixture(page, { reminders = [], profileRecord = record } = {}) {
   const reads = [];
+  reads.writes = [];
   await page.addInitScript(() => {
     const NativeDate = Date, now = NativeDate.UTC(2026, 9, 17, 12);
     function FixedDate(...args) { if (!new.target) return new NativeDate(now).toString(); return Reflect.construct(NativeDate, args.length ? args : [now], new.target); }
@@ -16,7 +17,7 @@ async function fixture(page, { reminders = [], profileRecord = record } = {}) {
   });
   await page.route('**/*', async route => {
     const request = route.request(), url = request.url();
-    if (!['GET', 'HEAD'].includes(request.method())) return route.fulfill({ status: 405, body: 'Synthetic fixture blocks all writes' });
+    if (!['GET', 'HEAD'].includes(request.method())) { reads.writes.push({ method: request.method(), url }); return route.fulfill({ status: 405, body: 'Synthetic fixture blocks all writes' }); }
     if (url.includes('/waffle-app.js')) return route.fulfill({ status: 200, contentType: 'application/javascript', body: app.replace('function renderDirectoryIntakeAttributes(', 'window.__renderCondensedIntake = renderDirectoryIntakeAttributes;\n    function renderDirectoryIntakeAttributes(').replace('function switchDirectoryProfileSubTab(', 'window.__switchSimpleSection = switchDirectoryProfileSubTab;\n    function switchDirectoryProfileSubTab(').replace('function updateDirectoryProfileEditFeedback(', 'window.__setCareEditTestState = changes => { const card=document.querySelector(".directory-card.is-profile-active"); Object.assign(directoryProfileEditDrafts.get(directoryProfileEditKey(card)),changes); updateDirectoryProfileEditFeedback(card); applyDirectoryProfileEditMode(card); };\nfunction updateDirectoryProfileEditFeedback(') });
     if (url.includes('cdn.jsdelivr.net') && url.includes('fullcalendar')) return route.fulfill({ status: 200, contentType: 'application/javascript', body: calendar });
     if (url.includes('docs.google.com/spreadsheets') && url.includes('output=csv')) return route.fulfill({ status: 200, contentType: 'text/csv', body: 'Timestamp,Dog Name,Breed,Start Date,End Date,Owner,Phone,Likes,Dislikes,Notes,Edit Link,Booking Type,Source,Dog ID,Stay ID,Dog Number\n' + [booking.timestamp, booking.dogName, booking.breed, '17/10/2026', '20/10/2026', booking.ownerName, booking.phone, '', '', booking.notes, '', 'Boarding', 'Other', booking.dogId, booking.stayId, booking.dogNumber].join(',') });
@@ -59,7 +60,16 @@ test('actual Care profile stays compact, keeps exceptions visible and preserves 
     await expect(card.locator('[data-care-brief-safety]')).toContainText('Food Allergy');
     await expect(card.locator('.directory-card-header')).toHaveCount(1);
     await expect(card.locator('.directory-card-header .directory-photo-shell')).toHaveCount(1);
+    await expect(card.locator('.directory-card-header .directory-dog-name-btn')).toBeVisible();
+    await expect(card.locator('.directory-card-header .directory-dog-id')).toContainText('Dog ID');
+    await expect(card.locator('.directory-profile-stay-dates')).toContainText('Check-in');
+    await expect(card.locator('.directory-profile-stay-dates')).toContainText('Check-out');
     await expect(card.locator('[data-v110-checkin]')).toBeVisible();
+    await expect(card.locator('[data-v110-operation-bar]')).toBeVisible();
+    await expect(card.locator('[data-v110-checkin]')).toHaveCount(1);
+    await expect(card.locator('[data-care-brief-supporting-details]')).not.toHaveAttribute('open', '');
+    await expect(card.locator('[data-care-brief-safety]')).toBeVisible();
+    await expect(card.locator('[data-care-brief-medication]')).toBeVisible();
     await expect(page.locator('#wh75SettingsPanel')).not.toHaveClass(/is-open/);
     const early = card.locator('[data-v110-operation-bar] [data-v11217-early-checkout]');
     await expect(early).toBeHidden();
@@ -75,11 +85,19 @@ test('actual Care profile stays compact, keeps exceptions visible and preserves 
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth);
     expect(overflow).toBe(false);
     const brief = card.locator('[data-directory-care-brief]');
+    const supportingDetails = brief.locator('[data-care-brief-supporting-details]');
     const tools = brief.locator('.directory-care-more-actions');
     await expect(brief.locator('[data-care-readiness-action="safety"], [data-care-readiness-action="feeding"], [data-care-readiness-action="medication"]')).toHaveCount(0);
-    await expect(brief.locator('[data-care-brief-call-owner] a')).toBeVisible();
     await expect(brief.locator('.directory-care-brief-actions > [data-care-owner-link-group] > [data-p4-dir="owner"]')).toBeVisible();
+    const supportingSummary = supportingDetails.locator(':scope > summary');
+    const collapsedHeight = await supportingSummary.evaluate(node => node.getBoundingClientRect().height);
+    expect(collapsedHeight).toBeGreaterThanOrEqual(44);
+    await expect(supportingSummary).toContainText('Routine, owner & handover');
+    await supportingSummary.click();
+    await expect(brief.locator('[data-care-brief-call-owner] a')).toBeVisible();
     await expect(brief.locator('.directory-care-brief-note')).toContainText(booking.notes);
+    await supportingSummary.click();
+    await expect(supportingDetails).not.toHaveAttribute('open', '');
     await expect(page.locator('#directoryProfileBackBar .directory-profile-tools')).toBeHidden();
     await expect(card.locator('[data-directory-profile-roster-badges] [data-v1118-care-signals]')).toBeHidden();
     await expect(tools).not.toHaveAttribute('open', '');
@@ -100,6 +118,9 @@ test('actual Care profile stays compact, keeps exceptions visible and preserves 
     await expect(page.locator('#wh75SettingsPanel')).not.toHaveClass(/is-open/);
     await card.locator('.directory-card-header').scrollIntoViewIfNeeded();
     await page.screenshot({ path: testInfo.outputPath(`care-opening-${width}-${theme}.png`) });
+    const evidencePath = path.join(__dirname, '..', 'output', 'care-daily-simplicity');
+    fs.mkdirSync(evidencePath, { recursive: true });
+    await page.screenshot({ path: path.join(evidencePath, `profile-${width}-${theme}.png`) });
 
     await card.locator('[data-care-brief-action="full-profile"]').click();
     const toggle = card.locator('[data-profile-subtab="foodWalks"]');
@@ -125,6 +146,46 @@ test('actual Care profile stays compact, keeps exceptions visible and preserves 
     await expect(opener.locator('[data-v1118-signal-label="Food allergy"]')).toBeVisible();
   }
 });
+
+for (const [task, expectedAction, destination] of [
+  ['medication', 'get_guest_profile', 'healthHome'],
+  ['belongings', 'get_guest_belongings', 'belongings']
+]) {
+  test(`roster ${task} task opens the same selected Care profile and its read-only destination`, async ({ page, baseURL }) => {
+    const reads = await fixture(page);
+    await page.setViewportSize({ width: 390, height: 900 });
+    await page.goto(`${baseURL}/directory.html?arrivalTaskFixture=1`, { waitUntil: 'domcontentloaded' });
+    await page.waitForFunction(() => document.documentElement.dataset.waffleUiReady === 'true');
+    const card = page.locator(`.directory-card[data-directory-stay-id="${booking.stayId}"]`);
+    const taskButton = card.locator(`[data-arrival-task="${task}"]`);
+    await card.locator('[data-arrival-task-list] > summary').click();
+    await expect(taskButton).toBeVisible();
+    const profileReadsBefore = reads.filter(action => action === 'get_guest_profile').length;
+    await taskButton.click();
+    await expect(card).toHaveClass(/is-profile-active/);
+    await expect(page.locator('.directory-card.is-profile-active')).toHaveCount(1);
+    expect(await card.getAttribute('data-directory-stay-id')).toBe(booking.stayId);
+    expect(await card.getAttribute('data-directory-dog-id')).toBe(booking.dogId);
+    expect(await card.getAttribute('data-directory-stay-key')).toBe(booking.stayKey);
+    await expect(card).not.toHaveClass(/is-profile-editing/);
+    if (destination === 'healthHome') {
+      await expect(card.locator('[data-profile-subtab="healthHome"]')).toHaveAttribute('aria-expanded', 'true');
+      await expect(card.locator('[data-profile-subtab="healthHome"]')).toBeFocused();
+      await expect(card.locator('[data-intake-read-attribute="medicationInstructions"]')).toContainText(record.intakeAttributes.medicationInstructions);
+      await expect(card.locator('[data-intake-attribute="medicationInstructions"]')).toBeHidden();
+      expect(reads.filter(action => action === 'get_guest_profile').length - profileReadsBefore).toBe(1);
+      expect(reads).toContain(expectedAction);
+    } else {
+      await expect(card.locator('[data-v11160-tab="belongings"]')).toHaveAttribute('aria-selected', 'true');
+      await expect(card.locator('[data-v11160-tab="belongings"]')).toBeFocused();
+      await expect(card.locator('[data-directory-main-panel="belongings"]')).toBeVisible();
+      await expect(card.locator('[data-directory-detail="belongings"] [data-detail-loading]')).toHaveCount(0);
+      await expect.poll(() => reads.filter(action => action === expectedAction).length).toBe(1);
+      expect(reads.filter(action => action === 'get_guest_profile').length - profileReadsBefore).toBeLessThanOrEqual(1);
+    }
+    expect(reads.writes).toEqual([]);
+  });
+}
 
 
 test('profile keeps due reminders and falls back to roster warnings while safety is unavailable', async ({page,baseURL}) => {

@@ -46,37 +46,37 @@
     const hasPreparedLink = !!prepared && prepared.identity === currentIdentity;
     if (strip?.getAttribute('aria-busy') === 'true') {
       return hasPreparedLink
-        ? { code: 'link_ready', label: 'Link ready', action: 'Open sharing options', detail: 'The link is ready. Choose when to copy it and send it to the owner.' }
+        ? { code: 'link_ready', label: 'Link ready', action: 'Share care link', detail: 'Preparing or copying a link does not send it to the owner. Choose Copy or Share.' }
         : { code: 'unknown', label: 'Loading', detail: 'Checking owner intake status.' };
     }
     const dot = strip?.querySelector('.directory-intake-dot');
     const text = String(strip?.textContent || '').replace(/\s+/g, ' ').trim();
     if (strip && dot?.classList.contains('is-complete') && /intake complete/i.test(text)) {
       if (strip.dataset.directoryIntake && strip.dataset.directoryIntake !== stayKey(card)) {
-        return { code: 'unknown', label: 'Status unknown', action: 'Check owner form options', detail: 'Status is not available. Check Records & forms for submitted answers.' };
+        return { code: 'unknown', label: 'Status unknown', action: 'Review owner form', detail: 'Status is not available. Check Records & forms for submitted answers.' };
       }
       const meta = strip.querySelector('.directory-record-meta');
       if ((meta?.dataset?.intakeReceivedAt || meta?.dataset?.intakeReceivedFor) && meta.dataset.intakeReceivedFor !== currentIdentity) {
-        return { code: 'unknown', label: 'Status unknown', action: 'Check owner form options', detail: 'Status is not available. Check Records & forms for submitted answers.' };
+        return { code: 'unknown', label: 'Status unknown', action: 'Review owner form', detail: 'Status is not available. Check Records & forms for submitted answers.' };
       }
       if (/stored profile/i.test(meta?.textContent || '')) {
-        if (hasPreparedLink) return { code: 'link_ready', label: 'Link ready', action: 'Open sharing options', detail: 'The link is ready. Choose when to copy it and send it to the owner.' };
-        return { code: 'unknown', label: card.dataset.intakeMethod === 'legacy' ? 'Care profile available' : 'Saved care available', action: 'Check owner form options', detail: 'Current form completion is not verified. Check Records & forms for submitted answers.' };
+        if (hasPreparedLink) return { code: 'link_ready', label: 'Link ready', action: 'Share care link', detail: 'Preparing or copying a link does not send it to the owner. Choose Copy or Share.' };
+        return { code: 'unknown', label: card.dataset.intakeMethod === 'legacy' ? 'Care profile available' : 'Saved care available', action: 'Review owner form', detail: 'Current form completion is not verified. Check Records & forms for submitted answers.' };
       }
       const receivedAt = trustedReceiptTimestamp(meta?.dataset?.intakeReceivedAt);
       const received = receivedAt ? `Owner form received ${formatReceiptTimestamp(receivedAt)}. ` : '';
-      return { code: 'complete', label: 'Form received', action: 'Owner form options', detail: `${received}Review the submitted answers in Records & forms.`, method: 'digital' };
+      return { code: 'complete', label: 'Form received', action: 'Review owner form', detail: `${received}Review the submitted answers in Records & forms.`, method: 'digital' };
     }
-    if (hasPreparedLink) return { code: 'link_ready', label: 'Link ready', action: 'Open sharing options', detail: 'The link is ready. Choose when to copy it and send it to the owner.' };
-    if (!strip) return { code: 'unknown', label: 'Status unknown', action: 'Check owner form options', detail: 'Status is not available. Check Records & forms for submitted answers.' };
-    if (card.dataset.intakeMethod === 'legacy') return { code: 'unknown', label: 'Care profile available', action: 'Check owner form options', detail: 'Current form completion is not verified. Check Records & forms for submitted answers.' };
-    if (dot?.classList.contains('is-awaiting')) return { code: 'link_ready', label: 'Awaiting owner', action: 'Follow up with owner', detail: 'This form has not been received yet. Follow up with the owner if they still need to complete it.' };
+    if (hasPreparedLink) return { code: 'link_ready', label: 'Link ready', action: 'Share care link', detail: 'Preparing or copying a link does not send it to the owner. Choose Copy or Share.' };
+    if (!strip) return { code: 'unknown', label: 'Status unknown', action: 'Review owner form', detail: 'Status is not available. Check Records & forms for submitted answers.' };
+    if (card.dataset.intakeMethod === 'legacy') return { code: 'unknown', label: 'Care profile available', action: 'Review owner form', detail: 'Current form completion is not verified. Check Records & forms for submitted answers.' };
+    if (dot?.classList.contains('is-awaiting')) return { code: 'link_ready', label: 'Awaiting owner', action: 'Share care link', detail: 'This form has not been received yet. Share or follow up using your usual chat.' };
     if (dot?.classList.contains('is-not-sent') && /no digital intake on file/i.test(text)) {
       const prepared = linked.get(card);
-      if (prepared && prepared.identity === currentIdentity) return { code: 'link_ready', label: 'Link ready', action: 'Open sharing options', detail: 'The link is ready. Choose when to copy it and send it to the owner.' };
+      if (prepared && prepared.identity === currentIdentity) return { code: 'link_ready', label: 'Link ready', action: 'Share care link', detail: 'Preparing or copying a link does not send it to the owner. Choose Copy or Share.' };
       return { code: 'not_prepared', label: 'Not prepared', action: 'Prepare owner form', detail: 'No digital intake link is recorded for this stay.' };
     }
-    return { code: 'unknown', label: 'Status unknown', action: 'Check owner form options', detail: 'Status is not available. Check Records & forms for submitted answers.' };
+    return { code: 'unknown', label: 'Status unknown', action: 'Review owner form', detail: 'Status is not available. Check Records & forms for submitted answers.' };
   }
   function selected(card, d) {
     if (!card?.matches?.('.is-profile-active') || !d || !d.dogName || !d.startDate || !d.endDate) return false;
@@ -137,7 +137,7 @@
     }
     const actionLabel = state.action || 'Owner Care Link';
     const dogName = String(card.dataset.directoryDogName || card.dataset.dogName || '').trim();
-    const accessibleName = `${actionLabel} — Owner Care Link${dogName ? ` for ${dogName}` : ''}`;
+    const accessibleName = `${actionLabel}${dogName ? ` for ${dogName}` : ''}`;
     const actionButtonLabel = owner.querySelector('span');
     const actionHint = owner.querySelector('small');
     if (actionButtonLabel && actionButtonLabel.textContent !== actionLabel) actionButtonLabel.textContent = actionLabel;
