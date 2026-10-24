@@ -37,6 +37,11 @@ async function installVisualRuntime(page, baseURL, card) {
     strip.dataset.directoryIntake = cardElement.dataset.directoryStayKey;
     strip.setAttribute('aria-busy', 'false');
     strip.innerHTML = '<div class="directory-intake-state"><span class="directory-intake-dot is-complete"></span><span class="directory-record-status">Intake complete</span></div>';
+    const receipt = document.createElement('span');
+    receipt.className = 'directory-record-meta';
+    receipt.dataset.intakeReceivedAt = '2026-10-22T14:30:00Z';
+    receipt.dataset.intakeReceivedFor = [cardElement.dataset.directoryStayKey || cardElement.dataset.stayKey || '', cardElement.dataset.directoryDogId || '', cardElement.dataset.directoryStayId || '', (cardElement.dataset.directoryDogName || cardElement.dataset.dogName || '').trim().toLocaleLowerCase(), cardElement.dataset.directoryStartDate || cardElement.dataset.startDate || '', cardElement.dataset.directoryEndDate || cardElement.dataset.endDate || ''].join('|');
+    strip.firstElementChild.append(receipt);
     cardElement.appendChild(strip);
     window.WAFFLE_INTAKE_STATUS.refresh(cardElement);
     window.WAFFLE_ARRIVAL_READY.refresh();
@@ -66,7 +71,10 @@ test('Care arrival and guided checkout remain reachable at the configured viewpo
   await expect(owner).toBeVisible();
   await expect(compactIntake).toHaveText('Form received');
   await expect(compactIntake).toHaveAttribute('data-state', 'complete');
+  await expect(compactIntake).toHaveAttribute('aria-description', /Owner form received .*2026/);
   await measureNoOverflow(page);
+  await owner.scrollIntoViewIfNeeded();
+  await page.screenshot({ path: testInfo.outputPath('care-receipt-context.png') });
 
   const next = page.locator('[data-waffle-arrival-next]');
   await expect(next).toBeVisible();

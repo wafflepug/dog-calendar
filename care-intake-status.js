@@ -22,6 +22,23 @@
       String(card?.dataset?.directoryEndDate || card?.dataset?.endDate || '')
     ].join('|');
   }
+  function trustedReceiptTimestamp(value) {
+    const raw = String(value || '');
+    const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(?:Z|([+-])(\d{2}):(\d{2}))$/.exec(raw);
+    if (!match) return '';
+    const [, yearText, monthText, dayText, hourText, minuteText, secondText, , offsetHourText, offsetMinuteText] = match;
+    const year = Number(yearText), month = Number(monthText), day = Number(dayText);
+    const hour = Number(hourText), minute = Number(minuteText), second = Number(secondText);
+    const leap = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+    const monthDays = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+    if (month < 1 || month > 12 || day < 1 || day > monthDays[month - 1] || hour > 23 || minute > 59 || second > 59) return '';
+    if (offsetHourText !== undefined && (Number(offsetHourText) > 23 || Number(offsetMinuteText) > 59)) return '';
+    return Number.isFinite(Date.parse(raw)) ? raw : '';
+  }
+  function formatReceiptTimestamp(value) {
+    const date = new Date(value);
+    return date.toLocaleString('en-AU', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  }
   function stateFor(card) {
     const strip = card?.querySelector?.('[data-directory-intake]');
     const currentIdentity = identity(card);
@@ -35,12 +52,20 @@
     const dot = strip?.querySelector('.directory-intake-dot');
     const text = String(strip?.textContent || '').replace(/\s+/g, ' ').trim();
     if (strip && dot?.classList.contains('is-complete') && /intake complete/i.test(text)) {
+      if (strip.dataset.directoryIntake && strip.dataset.directoryIntake !== stayKey(card)) {
+        return { code: 'unknown', label: 'Status unknown', action: 'Check owner form options', detail: 'Status is not available. Check Records & forms for submitted answers.' };
+      }
       const meta = strip.querySelector('.directory-record-meta');
+      if ((meta?.dataset?.intakeReceivedAt || meta?.dataset?.intakeReceivedFor) && meta.dataset.intakeReceivedFor !== currentIdentity) {
+        return { code: 'unknown', label: 'Status unknown', action: 'Check owner form options', detail: 'Status is not available. Check Records & forms for submitted answers.' };
+      }
       if (/stored profile/i.test(meta?.textContent || '')) {
         if (hasPreparedLink) return { code: 'link_ready', label: 'Link ready', action: 'Open sharing options', detail: 'The link is ready. Choose when to copy it and send it to the owner.' };
         return { code: 'unknown', label: card.dataset.intakeMethod === 'legacy' ? 'Care profile available' : 'Saved care available', action: 'Check owner form options', detail: 'Current form completion is not verified. Check Records & forms for submitted answers.' };
       }
-      return { code: 'complete', label: 'Form received', action: 'Owner form options', detail: 'Review the submitted answers in Records & forms.', method: 'digital' };
+      const receivedAt = trustedReceiptTimestamp(meta?.dataset?.intakeReceivedAt);
+      const received = receivedAt ? `Owner form received ${formatReceiptTimestamp(receivedAt)}. ` : '';
+      return { code: 'complete', label: 'Form received', action: 'Owner form options', detail: `${received}Review the submitted answers in Records & forms.`, method: 'digital' };
     }
     if (hasPreparedLink) return { code: 'link_ready', label: 'Link ready', action: 'Open sharing options', detail: 'The link is ready. Choose when to copy it and send it to the owner.' };
     if (!strip) return { code: 'unknown', label: 'Status unknown', action: 'Check owner form options', detail: 'Status is not available. Check Records & forms for submitted answers.' };
@@ -162,7 +187,17 @@
       rows.forEach(row => {
         if (row.target?.closest?.('[data-compact-intake-status]')) return;
         const card = row.target?.closest?.('.directory-card');
-        if (card) affected.add(card);
+        if (card) {
+          affected.add(card);
+          const isIdentityChange = row.type === 'attributes' && ['data-directory-stay-key', 'data-stay-key', 'data-directory-dog-id', 'data-directory-stay-id', 'data-directory-dog-name', 'data-directory-start-date', 'data-directory-end-date'].includes(row.attributeName);
+          const isLoading = row.type === 'attributes' && row.target.matches?.('[data-directory-intake]') && row.target.getAttribute('aria-busy') === 'true';
+          if (isIdentityChange || isLoading) {
+            const intakeStrip = isLoading ? row.target : card.querySelector('[data-directory-intake]');
+            intakeStrip?.querySelectorAll('[data-intake-received-at]').forEach(meta => {
+              if (isLoading || meta.dataset.intakeReceivedFor !== identity(card)) meta.removeAttribute('data-intake-received-at');
+            });
+          }
+        }
         row.addedNodes?.forEach(node => {
           if (node.nodeType !== 1 || node.matches?.('[data-compact-intake-status]')) return;
           if (node.matches?.('.directory-card')) affected.add(node);
@@ -171,7 +206,7 @@
       });
       affected.forEach(render);
     });
-    observer.observe(grid, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['aria-busy', 'class', 'data-intake-method', 'data-directory-stay-key', 'data-stay-key', 'data-directory-dog-id', 'data-directory-stay-id', 'data-directory-dog-name', 'data-directory-start-date', 'data-directory-end-date'] });
+    observer.observe(grid, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['aria-busy', 'class', 'data-intake-method', 'data-intake-received-at', 'data-intake-received-for', 'data-directory-stay-key', 'data-stay-key', 'data-directory-dog-id', 'data-directory-stay-id', 'data-directory-dog-name', 'data-directory-start-date', 'data-directory-end-date'] });
     observers.set(grid, observer);
   }
   function findGrids(root) {
