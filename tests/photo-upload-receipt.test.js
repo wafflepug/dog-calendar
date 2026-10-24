@@ -18,6 +18,14 @@ test('generated hosted uploader script parses after HTML string assembly', () =>
   const script = html.match(/<script>([\s\S]*?)<\/script>/);
   assert.ok(script, 'hosted script present');
   assert.doesNotThrow(() => new vm.Script(script[1]));
+  context.buildBelongingsPhotoUploaderHtml_({ stayKey: 'stay-a', dogName: 'Milo', photoType: 'dogProfile', editProfilePhoto: true });
+  const editScript = html.match(/<script>([\s\S]*?)<\/script>/);
+  assert.doesNotThrow(() => new vm.Script(editScript[1]));
+  assert.match(editScript[1], /getStoredDogProfilePhotoForEdit/);
+  assert.match(html, /Retry loading saved photo/);
+  assert.match(html, /Choose a different photo/);
+  assert.match(editScript[1], /no uncropped original/);
+  assert.match(editScript[1], /sourcePhotoData: exportDogSource\(\)/);
 });
 function extract(name) {
   const start = source.indexOf(`function ${name}(`);
@@ -98,7 +106,7 @@ function uploadHarness(failFirstSheetWrite = false) {
       const prior = Object.values(context.driveFiles).find(file => file.name === data.uploadSuffix);
       if (prior) return prior;
       created++;
-      const photo = { id: `drive-${created}`, name: data.uploadSuffix, label: data.photoLabel };
+      const photo = { id: `drive-${created}`, name: data.uploadSuffix, label: data.photoLabel, privateOnly: !!data.privateOnly };
       context.driveFiles.push(photo);
       return photo;
     },
@@ -112,6 +120,7 @@ function uploadHarness(failFirstSheetWrite = false) {
   vm.runInContext([
     identitySource,
     extract('getPhotoUploadReceiptKey_'), extract('getPhotoUploadReceiptRecord_'), extract('setPhotoUploadReceipt_'),
+    extract('parseDogPhotoJson_'), extract('parseV108DogPhotoGalleryJson_'), extract('normalizeV108DogPhotoGallery_'),
     extract('uploadBelongingsPhotoFromHtml')
   ].join('\n'), context);
   return { context, rows, stayKey, get created() { return created; }, get writes() { return writes; } };
@@ -172,4 +181,111 @@ test('uploader has stable per-photo IDs and uses the read-only status RPC before
   assert.match(source, /savedPhotoIds: batchSaved\.map/);
   assert.match(source, /uncertainClientUploadId: uncertainClientUploadId/);
   assert.match(source, /uploadSuffix\.replace\(\/\^_upload_\//);
+});
+
+test('stored photo edit reads only the photo attached to one exact identity-verified Care row', () => {
+  const key = 'milo|2026-09-01|2026-09-05';
+  let requestedFileId = '';
+  const photo = { id: 'crop-id', sourcePhoto: { id: 'private-source-id' }, crop: { zoom: 1.4, panX: 22, panY: -10 } };
+  const sheet = { getRange(row, col) {
+    return { getValues: () => [[key, 'Milo', '2026-09-01', '2026-09-05']], getValue: () => col === 30 ? JSON.stringify(photo) : '' };
+  } };
+  const context = vm.createContext({
+    String, JSON, Math, Error,
+    getBelongingsSheetReadOnly_: () => sheet,
+    readCareRecordIdentityState_: () => ({ ok: true, byKey: { [key]: [{ rowNumber: 2, valid: true, stayId: '', dogId: '' }] } }),
+    resolveCareBookingIdentity_: () => ({ ok: true, identity: { stayId: '', dogId: '' } }),
+    getTargetSheet_: () => ({ getDataRange: () => ({ getValues: () => [[]] }) }),
+    belongingsPhotoDateKey_: String,
+    parseDogPhotoJson_: value => JSON.parse(value),
+    DriveApp: { getFileById: id => { requestedFileId = id; return { getBlob: () => ({ getContentType: () => 'image/jpeg', getBytes: () => [1, 2, 3] }) }; } },
+    Utilities: { base64Encode: () => 'AQID' }
+  });
+  vm.runInContext(extract('getStoredDogProfilePhotoForEdit'), context);
+  const result = context.getStoredDogProfilePhotoForEdit({ stayKey: key, dogName: 'Milo', startDate: '2026-09-01', endDate: '2026-09-05' });
+  assert.equal(requestedFileId, 'private-source-id');
+  assert.equal(result.sourceAvailable, true);
+  assert.equal(result.dataUrl, 'data:image/jpeg;base64,AQID');
+  assert.deepEqual(JSON.parse(JSON.stringify(result.crop)), photo.crop);
+
+  const fallbackReads = [];
+  context.DriveApp.getFileById = id => {
+    fallbackReads.push(id);
+    if (id === 'private-source-id') throw new Error('Original unavailable');
+    return { getBlob: () => ({ getContentType: () => 'image/jpeg', getBytes: () => [1, 2, 3] }) };
+  };
+  const fallback = context.getStoredDogProfilePhotoForEdit({ stayKey: key, dogName: 'Milo', startDate: '2026-09-01', endDate: '2026-09-05', fileId: 'unrelated-file' });
+  assert.deepEqual(fallbackReads, ['private-source-id', 'crop-id']);
+  assert.equal(fallback.sourceAvailable, false);
+  assert.equal(fallback.crop, null, 'the current crop must not have the missing original crop geometry applied again');
+
+  context.readCareRecordIdentityState_ = () => ({ ok: true, byKey: { [key]: [{ rowNumber: 2 }, { rowNumber: 3 }] } });
+  assert.throws(() => context.getStoredDogProfilePhotoForEdit({ stayKey: key, dogName: 'Milo', startDate: '2026-09-01', endDate: '2026-09-05' }), /one Care record/);
+  assert.equal(requestedFileId, 'private-source-id', 'ambiguous identity must not request any Drive file');
+
+  context.readCareRecordIdentityState_ = () => ({ ok: true, byKey: {} });
+  const missing = context.getStoredDogProfilePhotoForEdit({ stayKey: key, dogName: 'Milo', startDate: '2026-09-01', endDate: '2026-09-05' });
+  assert.equal(missing.available, false, 'a new booking without a Care row can still proceed to explicit replacement');
+  assert.equal(requestedFileId, 'private-source-id', 'missing Care row must not read a Drive file');
+});
+
+test('legacy profile photo falls back to its exact saved crop and reports that the original is unavailable', () => {
+  const key = 'milo|2026-09-01|2026-09-05';
+  let requestedFileId = '';
+  const sheet = { getRange(_row, col) { return { getValues: () => [[key, 'Milo', '2026-09-01', '2026-09-05']], getValue: () => col === 30 ? JSON.stringify({ id: 'legacy-crop' }) : '' }; } };
+  const context = vm.createContext({ String, JSON, Error, getBelongingsSheetReadOnly_: () => sheet,
+    readCareRecordIdentityState_: () => ({ ok: true, byKey: { [key]: [{ rowNumber: 2, valid: true }] } }),
+    resolveCareBookingIdentity_: () => ({ ok: true, identity: { stayId: '', dogId: '' } }),
+    getTargetSheet_: () => ({ getDataRange: () => ({ getValues: () => [[]] }) }), belongingsPhotoDateKey_: String,
+    parseDogPhotoJson_: value => JSON.parse(value), DriveApp: { getFileById: id => { requestedFileId = id; return { getBlob: () => ({ getContentType: () => 'image/jpeg', getBytes: () => [] }) }; } }, Utilities: { base64Encode: () => '' } });
+  vm.runInContext(extract('getStoredDogProfilePhotoForEdit'), context);
+  const result = context.getStoredDogProfilePhotoForEdit({ stayKey: key, dogName: 'Milo', startDate: '2026-09-01', endDate: '2026-09-05' });
+  assert.equal(requestedFileId, 'legacy-crop');
+  assert.equal(result.sourceAvailable, false);
+});
+
+test('new profile photos retain one private original; reposition replaces the current gallery item and receipts stay idempotent', () => {
+  const h = uploadHarness();
+  const firstId = `${Date.now().toString(36)}_1234567890abcdef`;
+  const base = { stayKey: h.stayKey, dogName: 'Milo', startDate: '2026-09-01', endDate: '2026-09-05', photoType: 'dogProfile', clientUploadId: firstId, photoData: 'crop-image', sourcePhotoData: 'source-image', crop: { zoom: 1.4, panX: 22, panY: -10 } };
+  const first = h.context.uploadBelongingsPhotoFromHtml(base);
+  assert.equal(h.created, 2);
+  assert.equal(first.photo.sourcePhoto.privateOnly, true);
+  assert.equal(first.photo.sourcePhoto.id, 'drive-2');
+  assert.deepEqual(JSON.parse(JSON.stringify(first.photo.crop)), { zoom: 1.4, panX: 22, panY: -10 });
+  assert.equal(JSON.parse(h.rows[33]).length, 1);
+
+  const nextId = `${Date.now().toString(36)}_abcdef1234567890`;
+  const reposition = h.context.uploadBelongingsPhotoFromHtml({ ...base, clientUploadId: nextId, photoData: 'new-crop', sourcePhotoData: '', reposition: true, expectedCurrentPhotoId: first.photo.id, crop: { zoom: 1.7, panX: 28, panY: -14 } });
+  assert.equal(h.created, 3, 'reposition reuses the existing private original');
+  assert.equal(reposition.photo.sourcePhoto.id, 'drive-2');
+  assert.equal(JSON.parse(h.rows[33]).length, 1, 'reposition replaces the current gallery entry');
+  assert.equal(JSON.parse(h.rows[30]).id, reposition.photo.id);
+  assert.equal(JSON.parse(h.rows[30]).crop.zoom, 1.7);
+  const retry = h.context.uploadBelongingsPhotoFromHtml({ ...base, clientUploadId: nextId, photoData: 'new-crop', sourcePhotoData: '', reposition: true, expectedCurrentPhotoId: first.photo.id, crop: { zoom: 1.7, panX: 28, panY: -14 } });
+  assert.equal(retry.idempotent, true);
+  assert.equal(retry.photo.id, reposition.photo.id);
+  assert.equal(h.created, 3);
+});
+
+test('conflicting supplied dog identity fails before sheet preparation or file creation', () => {
+  const h = uploadHarness();
+  h.context.getBelongingsSheet_ = () => { throw new Error('Sheet preparation must not be reached'); };
+  assert.throws(() => h.context.uploadBelongingsPhotoFromHtml({
+    stayKey: h.stayKey, dogName: 'Milo', startDate: '2026-09-01', endDate: '2026-09-05',
+    dogId: '20000000-0000-4000-8000-000000000002', photoType: 'dogProfile', photoData: 'crop'
+  }), /identity/i);
+  assert.equal(h.created, 0);
+  assert.equal(h.writes, 0);
+});
+
+test('a stale crop editor cannot overwrite a newer profile photo', () => {
+  const h = uploadHarness();
+  const base = { stayKey: h.stayKey, dogName: 'Milo', startDate: '2026-09-01', endDate: '2026-09-05', photoType: 'dogProfile', photoData: 'crop' };
+  h.context.uploadBelongingsPhotoFromHtml({ ...base, clientUploadId: `${Date.now().toString(36)}_first1234567890abcdef` });
+  const writes = h.writes, created = h.created, current = h.rows[30];
+  assert.throws(() => h.context.uploadBelongingsPhotoFromHtml({ ...base, clientUploadId: `${Date.now().toString(36)}_second1234567890abc`, reposition: true, expectedCurrentPhotoId: 'older-photo' }), /photo changed/);
+  assert.equal(h.created, created);
+  assert.equal(h.writes, writes);
+  assert.equal(h.rows[30], current);
 });

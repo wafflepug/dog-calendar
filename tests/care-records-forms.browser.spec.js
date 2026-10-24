@@ -7,6 +7,26 @@ const { resolveLocalBackendAction } = require('../scripts/local-network-policy')
 // while the separate Care timing suite checks profile performance.
 test.setTimeout(90_000);
 
+test.beforeEach(async ({ page }, testInfo) => {
+  const events = [];
+  page.on('pageerror', error => events.push({ type: 'pageerror', message: error.message }));
+  page.on('console', message => { if (message.type() === 'error') events.push({ type: 'console', message: message.text() }); });
+  page.on('requestfailed', request => events.push({ type: 'requestfailed', url: request.url(), failure: request.failure() }));
+  testInfo._recordsBrowserEvents = events;
+});
+
+test.afterEach(async ({ page }, testInfo) => {
+  if (testInfo.status === testInfo.expectedStatus) return;
+  const state = await page.evaluate(() => ({
+    ready: document.documentElement.dataset.waffleUiReady,
+    visibility: document.visibilityState,
+    popupClosed: window.__pdfPopup?.closed,
+    contexts: typeof directoryLegacyIntakePopupContexts === 'undefined' ? [] : [...directoryLegacyIntakePopupContexts.values()].map(context => ({ stayKey: context.stayKey, updated: context.updated, returnChecked: context.returnChecked, wasAway: context.wasAway, pending: !!context.returnPromise })),
+    activeStay: document.querySelector('.directory-card.is-profile-active')?.dataset.directoryStayKey
+  })).catch(error => ({ error: error.message }));
+  await testInfo.attach('records-browser-diagnostics', { body: JSON.stringify({ events: testInfo._recordsBrowserEvents, state }, null, 2), contentType: 'application/json' });
+});
+
 const fullCalendar = fs.readFileSync(path.join(__dirname, 'fixtures', 'fullcalendar.global.min.js'), 'utf8');
 const bookings = [
   { timestamp: '2026-09-18', dogName: 'Milo', breed: 'Border Collie', startDate: '2026-09-17', endDate: '2026-09-22', ownerName: 'Alex Owner', phone: '0400000001', notes: 'Saved Milo care note', bookingType: 'Boarding' },
@@ -95,17 +115,19 @@ function installFixture(page, options = {}) {
 async function openDirectory(page, baseURL, fixture, width = 390, theme = 'light') {
   await page.setViewportSize({ width, height: 900 });
   await page.emulateMedia({ colorScheme: theme });
-  // Keep native pointer timestamps and timers; only the booking date is fixed.
+  // Offset the booking date while keeping elapsed wall time moving. A frozen
+  // Date.now prevents real cache/return deadlines from expiring in the fixture.
   await page.addInitScript(() => {
     const NativeDate = Date;
-    const fixedNow = NativeDate.UTC(2026, 8, 18, 12, 0, 0);
+    const offset = NativeDate.UTC(2026, 8, 18, 12, 0, 0) - NativeDate.now();
+    const now = () => NativeDate.now() + offset;
     function FixedDate(...args) {
-      if (!new.target) return new NativeDate(fixedNow).toString();
-      return Reflect.construct(NativeDate, args.length ? args : [fixedNow], new.target);
+      if (!new.target) return new NativeDate(now()).toString();
+      return Reflect.construct(NativeDate, args.length ? args : [now()], new.target);
     }
     FixedDate.prototype = NativeDate.prototype;
     Object.setPrototypeOf(FixedDate, NativeDate);
-    FixedDate.now = () => fixedNow;
+    FixedDate.now = now;
     globalThis.Date = FixedDate;
   });
   await page.addInitScript(mode => localStorage.setItem('theme', mode), theme);

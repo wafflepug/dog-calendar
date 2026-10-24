@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.10.24.05",
-  "releaseName": "Returning Booking Flow",
+  "assetRevision": "2026.10.24.06",
+  "releaseName": "Saved Profile Photo Editing",
   "careIteration": {
     "returningDogSuggestions": true,
     "reviewedCareInheritance": true,
