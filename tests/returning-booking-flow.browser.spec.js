@@ -167,4 +167,3 @@ test('identity choice focuses only a missing date while preserving date and phon
   await expect(page.locator('[data-p4-care-profile="feedingTimes"]')).toHaveValue('Milo meals');
   expect(await page.evaluate(() => window.fixtureReads.filter(x => x.action === 'get_dog_history').length)).toBe(count + 1);
 });
-
