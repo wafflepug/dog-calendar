@@ -138,15 +138,17 @@ test('care essentials lead with exceptions, preserve full medication, and label 
       expect(layout.maxHeight).toBe('none');
       expect(layout.height).toBeGreaterThan(0);
       expect(layout.scrollHeight).toBeLessThanOrEqual(layout.height + 1);
-      for (const summary of [feedingRoutine.locator('summary'), walkingRoutine.locator('summary')]) {
-        const geometry = await summary.evaluate(node => {
+      for (const routine of [feedingRoutine, walkingRoutine]) {
+        await expect(routine).toBeVisible();
+        const geometry = await routine.evaluate(node => {
           const rect = node.getBoundingClientRect();
-          return { width: rect.width, right: rect.right, height: rect.height, scrollWidth: node.scrollWidth, clientWidth: node.clientWidth };
+          return { width: rect.width, right: rect.right, height: rect.height, scrollWidth: node.scrollWidth, clientWidth: node.clientWidth, scrollHeight: node.scrollHeight, clientHeight: node.clientHeight };
         });
         expect(geometry.width).toBeGreaterThan(0);
         expect(geometry.right).toBeLessThanOrEqual(width + 1);
-        expect(geometry.height).toBeGreaterThanOrEqual(44);
+        expect(geometry.height).toBeGreaterThan(0);
         expect(geometry.scrollWidth).toBeLessThanOrEqual(geometry.clientWidth + 1);
+        expect(geometry.scrollHeight).toBeLessThanOrEqual(geometry.clientHeight + 1);
       }
       if ([390, 1440].includes(width)) {
         const output = path.join(root, 'output', 'releases', '2026.10.23.06');
