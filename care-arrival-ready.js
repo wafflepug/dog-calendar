@@ -66,6 +66,87 @@
     return JSON.stringify({ state: state || {}, displayIdentity: identity(card) });
   }
 
+  function arrivalTasks(card) {
+    const tasks = [];
+    const profile = card.querySelector('[data-directory-detail="profile"]');
+    const profileFresh = profile?.dataset.profileReadState === 'fresh';
+
+    const medication = card.querySelector('[data-care-brief-medication]');
+    const medicationText = String(medication?.textContent || '').replace(/\s+/g, ' ').trim();
+    const medicationKnown = profileFresh && !!medication && !medication.matches('[aria-busy="true"]') &&
+      !/^(loading|checking|not loaded|pending)/i.test(medicationText);
+    tasks.push({
+      key: 'medication',
+      title: medicationKnown && !/no medication instructions saved/i.test(medicationText) ? 'Medication · Review' : 'Medication · Not reviewed',
+      detail: medicationKnown && !/no medication instructions saved/i.test(medicationText)
+        ? 'Read the saved instructions before check-in.'
+        : 'Instructions are not verified in this summary.',
+      action: 'medication',
+      actionLabel: 'Review'
+    });
+
+    const belongings = card.querySelector('[data-belongings-summary]');
+    const itemCount = belongings?.querySelectorAll('.belongings-summary-list > li').length || 0;
+    const belongingsKnown = profileFresh && !!belongings && !/loading|not loaded|pending/i.test(belongings.textContent || '');
+    const hasKnownItems = belongingsKnown && itemCount > 0;
+    tasks.push({
+      key: 'belongings',
+      title: hasKnownItems ? `Belongings · ${itemCount} listed` : 'Belongings · Review',
+      detail: hasKnownItems ? 'Review the listed items before check-in.' : belongingsKnown
+        ? 'No items are recorded; check what is arriving with this guest.'
+        : 'Items are not verified in this summary.',
+      action: 'belongings',
+      actionLabel: 'Review'
+    });
+    return tasks;
+  }
+
+  function updateArrivalTasks(card, status) {
+    const tasks = arrivalTasks(card);
+    let list = card.querySelector('[data-arrival-task-list]');
+    if (!tasks.length) { list?.remove(); return; }
+    if (!list) {
+      list = document.createElement('details');
+      list.dataset.arrivalTaskList = '';
+      list.className = 'directory-arrival-checklist';
+      list.setAttribute('aria-label', 'Arrival checklist');
+      const summary = document.createElement('summary');
+      summary.dataset.arrivalTaskHeading = '';
+      list.appendChild(summary);
+      const items = document.createElement('div');
+      items.dataset.arrivalTaskItems = '';
+      list.appendChild(items);
+    }
+    const signature = JSON.stringify(tasks);
+    if (list.dataset.tasksSignature !== signature) {
+      list.dataset.tasksSignature = signature;
+      const summary = list.querySelector('[data-arrival-task-heading]');
+      const items = list.querySelector('[data-arrival-task-items]');
+      summary.textContent = 'Care checks before check-in';
+      items.replaceChildren();
+      tasks.forEach(task => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.dataset.arrivalTask = task.key;
+        button.dataset.careReadinessAction = task.action;
+        button.setAttribute('aria-label', `${task.title}. ${task.detail} ${task.actionLabel} in Care.`);
+        const title = document.createElement('strong');
+        title.textContent = task.title;
+        const detail = document.createElement('small');
+        detail.textContent = task.detail;
+        const action = document.createElement('span');
+        action.textContent = task.actionLabel;
+        button.append(title, detail, action);
+        items.appendChild(button);
+      });
+    }
+    const anchor = card.querySelector('[data-v11217-roster-actions]') ||
+      card.querySelector(OWN) || card.querySelector('.directory-guest-tile-open');
+    if (anchor) {
+      if (anchor.nextElementSibling !== list) anchor.insertAdjacentElement('afterend', list);
+    } else if (list.parentElement !== card) card.append(list);
+  }
+
   function updateIndicator(card, root, state) {
     const code = String(state?.code || 'unknown');
     const fallbackLabels = {
@@ -178,6 +259,17 @@
       else if (node.dataset.stateSignature !== sig) updateIndicator(card, node, status);
       if (!node.isConnected) (card.querySelector('.directory-guest-tile-open') || card).insertAdjacentElement('afterend', node);
       count++;
+    });
+    const taskSeen = new Set();
+    cards.forEach(card => {
+      const id = identity(card);
+      const status = intake(card);
+      const valid = evidence(card, status);
+      const duplicate = id.stayId && taskSeen.has(id.stayId);
+      if (id.stayId) taskSeen.add(id.stayId);
+      const visible = activeView === 'current' && card.style.display !== 'none' && getComputedStyle(card).display !== 'none' && !card.closest('[hidden]');
+      if (valid && !duplicate && visible) updateArrivalTasks(card, status);
+      else card.querySelector('[data-arrival-task-list]')?.remove();
     });
     ensureQuickFocus(grid, count);
     return { count };

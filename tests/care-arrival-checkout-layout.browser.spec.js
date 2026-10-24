@@ -16,7 +16,7 @@ const intakeStatus = read('care-intake-status.js');
 const arrivalReady = read('care-arrival-ready.js');
 const mobileCheckout = read('waffle-v11.2.19.js');
 const touchScroll = read('quick-add-touch-scroll.js');
-const evidenceDir = path.join(root, 'output', 'releases', '2026.10.23.05', 'evidence');
+const evidenceDir = path.join(root, 'output', 'care-daily-simplicity');
 
 async function installVisualRuntime(page, baseURL, card) {
   await page.evaluate(() => {
@@ -95,12 +95,18 @@ test('Care arrival and guided checkout remain reachable at the configured viewpo
   await expect(arrivalStatus).toBeVisible();
   await expect(arrivalStatus.locator('[data-arrival-label]')).toHaveText('Not prepared');
   await expect(arrivalStatus.locator('[data-arrival-detail]')).toHaveText('No digital intake link is recorded for this stay.');
+  const checklist = selected.locator('[data-arrival-task-list]');
+  await expect(checklist).toBeVisible();
+  await expect(checklist.locator('summary')).toHaveText('Care checks before check-in');
+  await checklist.locator('summary').click();
+  await expect(checklist.locator('[data-arrival-task]')).toHaveCount(2);
   const light = await arrivalStatus.evaluate(node => ({ height: node.getBoundingClientRect().height, background: getComputedStyle(node).backgroundColor }));
   expect(light.height).toBeGreaterThanOrEqual(44);
   await measureNoOverflow(page);
-  if (testInfo.project.name === 'chromium-390') {
-    fs.mkdirSync(evidenceDir, { recursive: true });
-    await page.screenshot({ path: path.join(evidenceDir, 'arrival-390-light.png') });
+  if (testInfo.project.name.startsWith('chromium-')) {
+    const deliveryDir = path.join(root, 'output', 'care-daily-simplicity');
+    fs.mkdirSync(deliveryDir, { recursive: true });
+    await page.screenshot({ path: path.join(deliveryDir, `arrival-${testInfo.project.use.viewport.width}-light.png`) });
   }
   await page.evaluate(() => document.body.classList.add('dark-theme'));
   const dark = await arrivalStatus.evaluate(node => ({ height: node.getBoundingClientRect().height, background: getComputedStyle(node).backgroundColor }));
@@ -108,7 +114,8 @@ test('Care arrival and guided checkout remain reachable at the configured viewpo
   expect(dark.background).not.toBe(light.background);
   await measureNoOverflow(page);
   if (testInfo.project.name === 'chromium-390') {
-    await page.screenshot({ path: path.join(evidenceDir, 'arrival-390-dark.png') });
+    const deliveryDir = path.join(root, 'output', 'care-daily-simplicity');
+    await page.screenshot({ path: path.join(deliveryDir, 'arrival-390-dark.png') });
   }
   await page.evaluate(() => document.body.classList.remove('dark-theme'));
   await next.click();
@@ -128,6 +135,11 @@ test('Care arrival and guided checkout remain reachable at the configured viewpo
   const cancel = dialog.locator('[data-v11217-guided-close].v11217-cancel');
   const confirm = dialog.locator('[data-v11217-guided-confirm]');
   const note = dialog.locator('[data-v11217-guided-note]');
+  if (testInfo.project.name.startsWith('chromium-')) {
+    const deliveryDir = path.join(root, 'output', 'care-daily-simplicity');
+    fs.mkdirSync(deliveryDir, { recursive: true });
+    await page.screenshot({ path: path.join(deliveryDir, `checkout-${testInfo.project.use.viewport.width}.png`) });
+  }
   await expect(cancel).toBeVisible();
   await expect(confirm).toBeVisible();
   await expect(dialog.locator('[data-v11217-guided-belongings-unknown]')).toBeVisible();

@@ -5,6 +5,8 @@ Reviewed 17 September 2026. Repository: `wafflepug/dog-calendar`; always start i
 
 ## Current Care iteration - 24 October 2026
 
+Candidate 2026.10.24.07: [Simpler daily Care](care-daily-simplicity.md). Keep the selected identity, stay actions, safety and medication visible; collapse supporting routine/contact/handover, clarify prepared owner sharing and offer scoped arrival care checks using loaded evidence. Verify the existing guided checkout and immediate Past transition. Preserve exact identities, drafts and lazy reads. Next: validate these shorter daily journeys with sitter tasks before adding more controls. Publication requires current-head CI and frontend attribution.
+
 Candidate 2026.10.24.06: [Saved profile photo editing](saved-profile-photo-editing.md). Open the stored photo in the crop editor without re-importing, retain an uncropped working copy for new uploads and keep replacement available. Preserve exact stay identity, read-only opening, upload receipts and scoped recovery. Requires both frontend and Apps Script publication attribution. Next: verify phone and keyboard crop interaction with representative sitter tasks.
 
 Candidate 2026.10.24.05: [Returning booking flow](returning-booking-flow.md). Exact Dog ID selection no longer automatically reads care history; one explicit review action loads and opens it. Preserve same-selection edits, approval, restored plan prompts, guarded date focus and all identity/save protection. Next: simplify optional enquiry import for returning bookings. Full current-head CI and publication attribution are required.
