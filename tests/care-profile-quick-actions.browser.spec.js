@@ -112,7 +112,7 @@ test('Care quick actions stay compact, truthful and bound to the selected stay',
   await second.locator('[data-open-directory-profile]').click();
   await expect(second.locator('[data-compact-intake-status]')).toHaveText('Not prepared');
   await expect(second.locator('[data-directory-detail="profile"]')).toHaveAttribute('data-profile-read-state','fresh');
-  await page.evaluate(({dogName,startDate,endDate,dogId,stayId})=>window.dispatchEvent(new CustomEvent('waffle:owner-care-link-ready',{detail:{dogName,startDate,endDate,dogId,stayId}})),{dogName:bookings[1].dogName,startDate:bookings[1].startDate,endDate:bookings[1].endDate,dogId:bookings[1].dogId,stayId:bookings[1].stayId});
+  await page.evaluate(({dogName,startDate,endDate,dogId,stayId})=>window.dispatchEvent(new CustomEvent('waffle:owner-care-link-ready',{detail:{dogName,startDate,endDate,dogId,stayId,link:'https://care.example.test/prepared-fixture'}})),{dogName:bookings[1].dogName,startDate:bookings[1].startDate,endDate:bookings[1].endDate,dogId:bookings[1].dogId,stayId:bookings[1].stayId});
   await expect(second.locator('[data-compact-intake-status]')).toHaveText('Link ready');
   await expect(first.locator('[data-compact-intake-status]')).toHaveText('Form received');
   await page.locator('#directoryBackToGuestsBtn').click();

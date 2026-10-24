@@ -18,6 +18,62 @@
     });
   }
 
+  const pendingLinkCopies = new WeakSet();
+  async function copyLink(value, options = {}) {
+    const link = validLink(value);
+    const button = options.button;
+    const status = options.status;
+    const host = options.host;
+    if (!link || !button || !status || !host || !host.isConnected || pendingLinkCopies.has(button)) return false;
+    const current = typeof options.isCurrent === 'function' ? options.isCurrent : () => true;
+    if (!current()) {
+      status.textContent = 'The selected stay changed. Review it before copying the care link.';
+      return false;
+    }
+    pendingLinkCopies.add(button);
+    button.disabled = true;
+    status.textContent = 'Copying care link…';
+    let fallback = host.querySelector('[data-owner-care-link-fallback]');
+    try {
+      if (!navigator.clipboard?.writeText) throw Error('Clipboard unavailable');
+      await navigator.clipboard.writeText(link);
+      if (!host.isConnected) return false;
+      if (!current()) {
+        status.textContent = 'The selected stay changed while copying. Review the current stay before copying again.';
+        return false;
+      }
+      if (fallback) fallback.remove();
+      status.textContent = 'Care link copied. Paste it into the owner’s usual chat and send.';
+      return true;
+    } catch (_) {
+      if (!host.isConnected) return false;
+      if (!current()) {
+        status.textContent = 'The selected stay changed while copying. Review the current stay before copying again.';
+        return false;
+      }
+      if (!fallback) {
+        fallback = document.createElement('textarea');
+        fallback.dataset.ownerCareLinkFallback = '';
+        fallback.setAttribute('aria-label', 'Owner care link for manual copying');
+        fallback.readOnly = true;
+        fallback.rows = 2;
+        fallback.style.minHeight = '3.5rem';
+        fallback.style.height = '3.5rem';
+        fallback.style.resize = 'vertical';
+        host.insertBefore(fallback, status);
+      }
+      fallback.value = link;
+      fallback.hidden = false;
+      fallback.focus();
+      fallback.select();
+      status.textContent = 'Copy was blocked. The care link is selected: press and hold to copy, then paste it into the owner’s chat.';
+      return false;
+    } finally {
+      pendingLinkCopies.delete(button);
+      if (host.isConnected) button.disabled = false;
+    }
+  }
+
   function renderCompact(host, details, link, dog, start, end, message) {
     const card = document.createElement('section');
     card.className = 'owner-handoff owner-handoff-compact';
@@ -250,5 +306,5 @@
     host.appendChild(card);
     return card;
   }
-  window.WAFFLE_OWNER_HANDOFF = Object.freeze({ render });
+  window.WAFFLE_OWNER_HANDOFF = Object.freeze({ render, copyLink });
 })();

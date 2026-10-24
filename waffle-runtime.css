@@ -2,8 +2,8 @@
    Build: 2026.08.27.04
    Historical base styles remain compatibility sources during Phase 3A, but pages no longer
    reference them individually. Preserve this import order until modules are folded in. */
-@import url("waffle-app.css?build=2026.08.27.04&rev=2026.10.24.07");
-@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.10.24.07");
+@import url("waffle-app.css?build=2026.08.27.04&rev=2026.10.25.01");
+@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.10.25.01");
 @import url("waffle-v10.8.2.css?build=2026.08.27.04");
 @import url("waffle-v10.8.3.css?build=2026.08.27.04");
 @import url("waffle-v10.8.5.css?build=2026.08.27.04");
@@ -11,12 +11,12 @@
 @import url("waffle-v10.8.7.css?build=2026.08.27.04");
 @import url("waffle-v10.8.8.css?build=2026.08.27.04");
 @import url("waffle-v10.8.9.css?build=2026.08.27.04");
-@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.10.24.07");
+@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.10.25.01");
 @import url("waffle-v11.0.3.css?build=2026.08.27.04");
 @import url("waffle-v11.0.5.css?build=2026.08.27.04");
-@import url("waffle-v11.1.94.css?build=2026.10.24.07");
-@import url("waffle-v11.1.95.css?build=2026.10.24.07");
-@import url("waffle-v11.1.96.css?build=2026.10.24.07&rev=2026.10.24.07");
+@import url("waffle-v11.1.94.css?build=2026.10.25.01");
+@import url("waffle-v11.1.95.css?build=2026.10.25.01");
+@import url("waffle-v11.1.96.css?build=2026.10.25.01&rev=2026.10.25.01");
 
 /* ============================================================
    MOBILE FIRST-PAINT STABILITY GATE
@@ -2716,7 +2716,7 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-
 }
 body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-actions > button[data-p4-dir="owner"] small { display: none; }
 body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-owner-care-action-group { display: flex; flex: 1 1 100%; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; }
-body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-owner-care-action-group > [data-p4-dir="owner"] { flex: 1 1 220px; min-width: min(100%, 160px); min-height: 44px; }
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-owner-care-action-group > [data-p4-dir="owner"] { flex: 1 1 220px; min-width: min(100%, 160px); min-height: 45px; }
 body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-owner-care-action-group > [data-compact-intake-status] { min-height: 36px; }
 body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-owner-care-action-group > [data-p4-dir="owner"] small { display: none; }
 body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-freshness { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem .6rem; max-width: 100%; font-size: 13px; }
@@ -3166,7 +3166,7 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-
   outline:3px solid var(--wh75-accent,#7c3aed);outline-offset:2px;
 }
 body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-routine-values { min-width:0;max-width:100%;overflow-wrap:anywhere; }
-body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-routine-details:not([open]) > .directory-care-routine-values { display:none!important; }
+body[data-waffle-page="directory"] .directory-card.is-profile-active details.directory-care-routine-details:not([open]) > .directory-care-routine-values { display:none!important; }
 body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-more-actions-list > [data-p4-dir="again"] {
   box-sizing:border-box;width:100%;max-width:100%;min-width:0;min-height:44px;white-space:normal;overflow-wrap:anywhere;
 }
@@ -3185,3 +3185,9 @@ body.dark-theme .directory-owner-contact-missing{color:#cbd5e1}
 [data-p4-panel="owner"] [aria-invalid="true"]{border-color:#b91c1c!important}
 body.dark-theme [data-p4-panel="owner"] .p4-owner-error{color:#fecaca}
 body.dark-theme [data-p4-panel="owner"] [aria-invalid="true"]{border-color:#fca5a5!important}
+/* Keep contextual Care shortcuts usable without another disclosure. */
+body[data-waffle-page="directory"] .directory-arrival-review-checkin-actions { display: flex; flex-wrap: wrap; gap: .5rem; width: 100%; min-width: 0; }
+body[data-waffle-page="directory"] .directory-arrival-review-checkin-actions > button,
+body[data-waffle-page="directory"] .directory-owner-care-sharing-options { min-height: 45px; max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+body[data-waffle-page="directory"] .directory-arrival-review-checkin-actions > button { flex: 1 1 180px; font-size: 14px; line-height: 1.4; padding: .65rem 1rem; }
+body[data-waffle-page="directory"] [data-owner-care-link-fallback] { display: block; width: 100%; max-width: 100%; box-sizing: border-box; font: inherit; }

@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.10.24.07",
-  "releaseName": "Simpler Daily Care",
+  "assetRevision": "2026.10.25.01",
+  "releaseName": "Fewer Clicks in Care",
   "careIteration": {
     "returningDogSuggestions": true,
     "reviewedCareInheritance": true,

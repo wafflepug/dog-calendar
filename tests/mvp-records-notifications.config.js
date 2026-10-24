@@ -1,7 +1,7 @@
 const { defineConfig } = require('@playwright/test');
 const path = require('node:path');
 const python = process.env.WAFFLE_PYTHON || (process.platform === 'win32' ? 'python' : 'python3');
-const port = 44972;
+const port = 14372;
 const baseURL = process.env.WAFFLE_BASE_URL || `http://127.0.0.1:${port}`;
 const config = {
   testDir: '..',

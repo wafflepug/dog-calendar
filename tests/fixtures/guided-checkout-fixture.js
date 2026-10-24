@@ -16,6 +16,7 @@ async function setup(page, options = {}) {
   await page.evaluate(() => {
     window.getLocalTodayDateString = () => '2026-10-18';
     window.writes = [];
+    window.detailReads = [];
     window.movedIds = [];
     window.pending = null;
     window.v110OperationDisplayState = card => ({ code: card.dataset.checked === 'true' ? 'checked_in' : 'date_active' });
@@ -34,6 +35,21 @@ async function setup(page, options = {}) {
       return { result: 'success', record: { stayId: payload.stayId, stayKey: payload.stayKey, dogName: payload.dogName, status, startDate: payload.startDate, endDate: payload.endDate } };
     };
     window.v1086MoveCheckedOutStayToPast = (card, payload) => { window.movedIds.push(payload.stayId); card.dataset.v1082PastStay = 'true'; card.remove(); };
+    window.WAFFLE_CARE_PROFILE_READS = {
+      matches: (card, record) => ['resolved', 'not_found'].includes(record?.resolution?.status) && record.identity?.stayId === card.dataset.directoryStayId && record.identity?.dogId === card.dataset.directoryDogId && record.identity?.stayKey === card.dataset.directoryStayKey,
+      read: async card => {
+        window.detailReads.push({ source: 'profile', stayId: card.dataset.directoryStayId });
+        if (window.profileReadFailure) throw new Error(window.profileReadFailure);
+        return { data: { record: { identity: { stayId: card.dataset.directoryStayId, dogId: card.dataset.directoryDogId, stayKey: card.dataset.directoryStayKey }, resolution: { status: window.profileNotFound ? 'not_found' : 'resolved' }, intakeAttributes: window.profileNotFound ? {} : { medicationInstructions: 'Give medicine with dinner' } } } };
+      }
+    };
+    window.WAFFLE_CARE_BELONGINGS_READS = {
+      read: async card => {
+        window.detailReads.push({ source: 'belongings', stayId: card.dataset.directoryStayId });
+        if (window.belongingsReadFailure) throw new Error(window.belongingsReadFailure);
+        return { data: { record: { stayKey: card.dataset.directoryStayKey, identityResolution: { status: 'resolved', identity: { stayId: card.dataset.directoryStayId, dogId: card.dataset.directoryDogId, stayKey: card.dataset.directoryStayKey } }, items: { lead: { present: true, description: 'Blue lead' }, food: { present: true, description: 'Food tub' } } } } };
+      }
+    };
   });
   await page.addScriptTag({ content: runtime });
   await page.evaluate(() => {

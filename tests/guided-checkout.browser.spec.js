@@ -89,7 +89,7 @@ test('queued offline result is not treated as saved and missing evidence shares 
   await expect(dialog.locator('[data-v11217-guided-missing]')).toContainText('Care details are unavailable in this summary');
   await expect(dialog.locator('[data-v11217-guided-belongings-unknown]')).toHaveText('Not available in this summary');
   await expect(dialog.locator('[data-v11217-guided-medication-unknown]')).toHaveText('Not available in this summary');
-  await expect(dialog.locator('[data-v11217-guided-missing]')).toContainText('Review Care · note kept');
+  await expect(dialog.locator('[data-v11217-guided-missing]')).toContainText('Review missing details');
   await expect(dialog.locator('[data-v11217-guided-missing]')).toHaveCount(1);
   await dialog.locator('[data-v11217-guided-note]').fill('Retain this note on failure');
   await dialog.locator('[data-v11217-guided-confirm]').click();
@@ -100,50 +100,44 @@ test('queued offline result is not treated as saved and missing evidence shares 
   expect(await page.evaluate(() => window.writes.length)).toBe(1);
 });
 
-test('explicit Care review preserves the note for the exact stay until checkout is reopened', async ({ page }) => {
+test('explicit detail review stays in the sheet, reads each missing source once, and preserves the note', async ({ page }) => {
   await setup(page, { loadedEvidence: false, secondCheckout: true });
   const first = page.getByTestId('selected-card');
-  await first.evaluate(card => {
-    const opener = card.querySelector('.directory-guest-tile-open');
-    opener.addEventListener('click', () => {
-      card.dataset.opened = 'true';
-      if (!card.querySelector('[data-fixture-profile-back]')) {
-        const back = document.createElement('button');
-        back.type = 'button'; back.dataset.fixtureProfileBack = '';
-        back.textContent = 'Back to Staying';
-        back.addEventListener('click', () => { card.dataset.opened = 'false'; });
-        card.appendChild(back);
-      }
-    });
-  });
   await openCheckout(first);
   const dialog = page.locator('#v11217GuidedCheckout');
   const review = dialog.locator('[data-v11217-guided-review-care]');
   await expect(review).toBeVisible();
-  await expect(review).toHaveText('Review Care · note kept');
+  await expect(review).toHaveText('Review missing details');
   await dialog.locator('[data-v11217-guided-note]').fill('Return the blue lead to Jamie');
   await review.click();
-  await expect(dialog).toBeHidden();
-  await expect(first).toHaveAttribute('data-opened', 'true');
-  await first.locator('[data-fixture-profile-back]').click();
+  await expect(dialog).toBeVisible();
+  await expect(dialog.locator('[data-v11217-guided-note]')).toHaveValue('Return the blue lead to Jamie');
+  await expect(dialog.locator('[data-v11217-guided-medication]')).toHaveText('Give medicine with dinner');
+  await expect(dialog.locator('[data-v11217-guided-belongings] li')).toHaveText(['Lead · Present · Blue lead', 'Food · Present · Food tub']);
+  await expect(dialog.locator('[data-v11217-guided-missing]')).toBeHidden();
+  expect(await page.evaluate(() => window.detailReads)).toEqual([
+    { source: 'belongings', stayId: 'stay-a' },
+    { source: 'profile', stayId: 'stay-a' }
+  ]);
   expect(await page.evaluate(() => window.writes.length)).toBe(0);
   expect(await page.evaluate(() => window.movedIds)).toEqual([]);
 
   const second = page.locator('[data-directory-stay-id="stay-c"]');
+  await page.getByRole('button', { name: 'Cancel', exact: true }).click();
   await openCheckout(second);
   await expect(dialog.locator('[data-v11217-guided-note]')).toHaveValue('');
-  await page.getByRole('button', { name: 'Cancel' }).click();
+  await page.getByRole('button', { name: 'Cancel', exact: true }).click();
   expect(await page.evaluate(() => window.writes.length)).toBe(0);
 
   await openCheckout(first);
-  await expect(dialog.locator('[data-v11217-guided-note]')).toHaveValue('Return the blue lead to Jamie');
+  await expect(dialog.locator('[data-v11217-guided-note]')).toHaveValue('');
   await dialog.locator('[data-v11217-guided-confirm]').click();
   await expect(dialog).toBeHidden();
-  expect(await page.evaluate(() => window.writes.map(write => [write.stayId, write.note]))).toEqual([['stay-a', 'Return the blue lead to Jamie']]);
+  expect(await page.evaluate(() => window.writes.map(write => [write.stayId, Object.hasOwn(write, 'note')]))).toEqual([['stay-a', false]]);
   expect(await page.evaluate(() => window.movedIds)).toEqual(['stay-a']);
 });
 
-test('Care review stays in the checkout sheet if its original identity was replaced', async ({ page }) => {
+test('detail review refuses a replaced stay identity and retains the note in the open sheet', async ({ page }) => {
   await setup(page, { loadedEvidence: false });
   const card = page.getByTestId('selected-card');
   await openCheckout(card);
@@ -153,9 +147,130 @@ test('Care review stays in the checkout sheet if its original identity was repla
   await card.evaluate(element => { element.dataset.directoryStayId = 'reused-card'; });
   await dialog.locator('[data-v11217-guided-review-care]').click();
   await expect(dialog).toBeVisible();
-  await expect(dialog).toContainText('changed or is no longer uniquely identifiable');
+  await expect(dialog).toContainText('changed or cannot be uniquely verified');
   await expect(note).toHaveValue('Keep for the selected stay');
-  await expect(card).not.toHaveAttribute('data-opened', 'true');
+  expect(await page.evaluate(() => window.detailReads.length)).toBe(0);
+  expect(await page.evaluate(() => window.writes.length)).toBe(0);
+});
+
+test('a failed detail read leaves evidence unknown and retries only that source', async ({ page }) => {
+  await setup(page, { loadedEvidence: false });
+  await page.evaluate(() => { window.profileReadFailure = 'Profile read timed out'; });
+  await openCheckout(page.getByTestId('selected-card'));
+  const dialog = page.locator('#v11217GuidedCheckout');
+  const note = dialog.locator('[data-v11217-guided-note]');
+  await note.fill('Keep the medicine handover note');
+  await dialog.locator('[data-v11217-guided-review-care]').click();
+  await expect(dialog).toContainText('Profile read timed out');
+  await expect(note).toHaveValue('Keep the medicine handover note');
+  await expect(dialog.locator('[data-v11217-guided-belongings] li')).toHaveCount(2);
+  await expect(dialog.locator('[data-v11217-guided-belongings-unknown]')).toBeHidden();
+  await expect(dialog.locator('[data-v11217-guided-medication-unknown]')).toBeVisible();
+  await expect(dialog.locator('[data-v11217-guided-confirm]')).toBeEnabled();
+  expect(await page.evaluate(() => window.detailReads)).toEqual([
+    { source: 'belongings', stayId: 'stay-a' },
+    { source: 'profile', stayId: 'stay-a' }
+  ]);
+
+  await page.evaluate(() => { window.profileReadFailure = ''; });
+  await dialog.locator('[data-v11217-guided-review-care]').click();
+  await expect(dialog.locator('[data-v11217-guided-medication]')).toHaveText('Give medicine with dinner');
+  await expect(dialog.locator('[data-v11217-guided-belongings] li')).toHaveCount(2);
+  expect(await page.evaluate(() => window.detailReads)).toEqual([
+    { source: 'belongings', stayId: 'stay-a' },
+    { source: 'profile', stayId: 'stay-a' },
+    { source: 'profile', stayId: 'stay-a' }
+  ]);
+  expect(await page.evaluate(() => window.writes.length)).toBe(0);
+});
+
+test('an exact not-found profile is distinct from a saved profile with no medication instructions', async ({ page }) => {
+  await setup(page, { loadedEvidence: false });
+  await page.evaluate(() => { window.profileNotFound = true; });
+  await openCheckout(page.getByTestId('selected-card'));
+  const dialog = page.locator('#v11217GuidedCheckout');
+  await dialog.locator('[data-v11217-guided-review-care]').click();
+  await expect(dialog.locator('[data-v11217-guided-medication]')).toHaveText('No saved care record');
+  await expect(dialog.locator('[data-v11217-guided-medication]')).not.toHaveText('No medication instructions saved');
+  await expect(dialog.locator('[data-v11217-guided-medication-unknown]')).toBeVisible();
+  await expect(dialog.locator('[data-v11217-guided-missing]')).toBeVisible();
+  expect(await page.evaluate(() => window.detailReads.filter(read => read.source === 'profile'))).toEqual([{ source: 'profile', stayId: 'stay-a' }]);
+  expect(await page.evaluate(() => window.writes.length)).toBe(0);
+});
+
+test('confirm is disabled while detail review is pending and cancel ignores its late response', async ({ page }) => {
+  await setup(page, { loadedEvidence: false });
+  await page.evaluate(() => {
+    window.pendingDetail = new Promise(resolve => { window.finishDetail = resolve; });
+    window.WAFFLE_CARE_PROFILE_READS.read = async card => {
+      window.detailReads.push({ source: 'profile', stayId: card.dataset.directoryStayId });
+      await window.pendingDetail;
+      return { data: { record: { identity: { stayId: card.dataset.directoryStayId, dogId: card.dataset.directoryDogId, stayKey: card.dataset.directoryStayKey }, resolution: { status: 'resolved' }, intakeAttributes: { medicationInstructions: 'Late stale instructions' } } } };
+    };
+  });
+  await openCheckout(page.getByTestId('selected-card'));
+  const dialog = page.locator('#v11217GuidedCheckout');
+  const note = dialog.locator('[data-v11217-guided-note]');
+  await note.fill('Only use this checkout note');
+  await dialog.locator('[data-v11217-guided-review-care]').click();
+  await dialog.locator('[data-v11217-guided-review-care]').evaluate(button => button.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+  await expect(dialog.locator('[data-v11217-guided-confirm]')).toBeDisabled();
+  await expect(dialog.locator('[data-v11217-guided-close].v11217-cancel')).toBeEnabled();
+  expect(await page.evaluate(() => window.detailReads)).toEqual([
+    { source: 'belongings', stayId: 'stay-a' },
+    { source: 'profile', stayId: 'stay-a' }
+  ]);
+  await dialog.locator('[data-v11217-guided-close].v11217-cancel').click();
+  await page.evaluate(() => window.finishDetail());
+  await expect(dialog).toBeHidden();
+  expect(await page.evaluate(() => window.writes.length)).toBe(0);
+  expect(await page.evaluate(() => window.movedIds)).toEqual([]);
+});
+
+test('editing the handover note while details load keeps the latest text and focus', async ({ page }) => {
+  await setup(page, { loadedEvidence: false });
+  await page.evaluate(() => {
+    window.pendingDetail = new Promise(resolve => { window.finishDetail = resolve; });
+    window.WAFFLE_CARE_PROFILE_READS.read = async card => {
+      await window.pendingDetail;
+      return { data: { record: { identity: { stayId: card.dataset.directoryStayId, dogId: card.dataset.directoryDogId, stayKey: card.dataset.directoryStayKey }, resolution: { status: 'resolved' }, intakeAttributes: { medicationInstructions: 'Latest saved instructions' } } } };
+    };
+  });
+  await openCheckout(page.getByTestId('selected-card'));
+  const dialog = page.locator('#v11217GuidedCheckout');
+  const note = dialog.locator('[data-v11217-guided-note]');
+  await note.fill('Initial note');
+  await dialog.locator('[data-v11217-guided-review-care]').click();
+  await note.fill('Updated while loading');
+  await page.evaluate(() => window.finishDetail());
+  await expect(dialog.locator('[data-v11217-guided-medication]')).toHaveText('Latest saved instructions');
+  await expect(note).toHaveValue('Updated while loading');
+  await expect(note).toBeFocused();
+  expect(await page.evaluate(() => window.writes.length)).toBe(0);
+});
+
+test('detail returned after the selected card changes cannot replace unknown evidence', async ({ page }) => {
+  await setup(page, { loadedEvidence: false });
+  await page.evaluate(() => {
+    window.pendingDetail = new Promise(resolve => { window.finishDetail = resolve; });
+    window.WAFFLE_CARE_PROFILE_READS.read = async card => {
+      window.detailReads.push({ source: 'profile', stayId: card.dataset.directoryStayId });
+      await window.pendingDetail;
+      return { data: { record: { identity: { stayId: 'stay-a', dogId: 'dog-a', stayKey: 'twin|2026-10-18|2026-10-18|a' }, resolution: { status: 'resolved' }, intakeAttributes: { medicationInstructions: 'Must not be shown' } } } };
+    };
+  });
+  const card = page.getByTestId('selected-card');
+  await openCheckout(card);
+  const dialog = page.locator('#v11217GuidedCheckout');
+  await dialog.locator('[data-v11217-guided-note]').fill('Keep this note');
+  await dialog.locator('[data-v11217-guided-review-care]').click();
+  await card.evaluate(element => { element.dataset.directoryDogId = 'different-dog'; });
+  await page.evaluate(() => window.finishDetail());
+  await expect(dialog.locator('[data-v11217-guided-medication-unknown]')).toBeVisible();
+  await expect(dialog).not.toContainText('Must not be shown');
+  await expect(dialog.locator('[data-v11217-guided-note]')).toHaveValue('Keep this note');
+  await expect(dialog.locator('[data-v11217-guided-confirm]')).toBeDisabled();
+  await expect(dialog).toContainText('selected stay changed while details were loading');
   expect(await page.evaluate(() => window.writes.length)).toBe(0);
 });
 

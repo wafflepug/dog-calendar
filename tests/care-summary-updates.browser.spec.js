@@ -6,7 +6,7 @@ const helperStart = source.indexOf('    const directorySummaryHtmlState =');
 const helperEnd = source.indexOf('    function renderDirectoryCareBrief(', helperStart);
 const receiptHelperStart = source.indexOf('    function getTrustedDirectoryIntakeReceiptTimestamp(');
 const receiptHelperEnd = source.indexOf('    function formatAuditTimestamp(', receiptHelperStart);
-const digitalStart = source.indexOf('    function setDirectoryIntakeStatus(');
+const digitalStart = source.indexOf('    function notifyOwnerCareLinkAvailability(');
 const digitalEnd = source.indexOf('    function renderDirectoryCareBriefForStay(', digitalStart);
 const legacyStart = source.indexOf('    function setDirectoryLegacyIntakeStatus(');
 const legacyEnd = source.indexOf('    async function hydrateDirectoryLegacyIntakes(', legacyStart);
