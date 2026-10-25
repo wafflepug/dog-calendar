@@ -7,7 +7,7 @@ test.setTimeout(90_000);
 
 const fullCalendar = fs.readFileSync(path.join(__dirname, 'fixtures', 'fullcalendar.global.min.js'), 'utf8');
 const bookings = [
-  { timestamp: '2026-10-05', dogName: 'Milo', breed: 'Border Collie', startDate: '2026-01-01', endDate: '2027-01-01', ownerName: 'Alex "A", Owner', phone: '0400000001', notes: `handover-${'verylongword'.repeat(12)}\nBring the "blue", blanket\nLeave at 7pm`, bookingType: 'Boarding', requestSource: 'MadPaws', dogId: '11111111-1111-4111-8111-111111111111', dogNumber: 17 },
+  { timestamp: '2026-10-05', dogName: 'Milo', breed: 'Border Collie', startDate: '2026-01-01', endDate: '2027-01-01', ownerName: 'Alex "A", Owner', phone: '0400000001', notes: `handover-${'verylongword'.repeat(12)}\nBring the "blue", blanket\nLeave at 7pm\nCall if pickup time changes`, bookingType: 'Boarding', requestSource: 'MadPaws', dogId: '11111111-1111-4111-8111-111111111111', dogNumber: 17 },
   { timestamp: '2026-10-05', dogName: 'Nala', breed: 'Labrador', startDate: '2026-01-01', endDate: '2027-01-01', ownerName: '   ', phone: '  ', notes: '  ', bookingType: 'Boarding' }
 ];
 const keyFor = b => `${b.dogName.toLowerCase()}|${b.startDate}|${b.endDate}`;

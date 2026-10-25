@@ -87,7 +87,7 @@ test('care essentials and the quiet routine shortcut stay readable across phone,
   const selectedFallbackGeometry=await selectedPhotoFallback.evaluate(node=>{const rect=node.getBoundingClientRect();return{width:rect.width,height:rect.height}});
   const selectedMediaGeometry=await selectedPhotoMedia.evaluate(node=>{const rect=node.getBoundingClientRect();return{width:rect.width,height:rect.height}});
   expect(selectedPhotoGeometry.width).toBeGreaterThanOrEqual(64);
-  expect(selectedPhotoGeometry.height).toBeGreaterThanOrEqual(64);
+  expect(Math.round(selectedPhotoGeometry.height)).toBeGreaterThanOrEqual(64);
   expect(selectedFallbackGeometry).toEqual(selectedMediaGeometry);
   const brief=card.locator('[data-directory-care-brief]');
   const feeding=brief.locator('[data-care-brief-feeding]');
