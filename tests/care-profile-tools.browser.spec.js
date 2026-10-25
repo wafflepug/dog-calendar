@@ -290,9 +290,10 @@ for (const [name, width, colorScheme] of [['320-light', 320, 'light'], ['320-dar
 
     await list.evaluate(node => { window.__toolsListNode = node; window.__toolsButtonNodes = [...node.querySelectorAll('button')]; });
     const actionIdentity = await list.locator('button').evaluateAll(nodes => nodes.map(node => ({ node, text: node.textContent.trim(), action: node.getAttribute('data-p4-dir') || node.getAttribute('data-care-brief-action') })));
-    const supportingDetails = card.locator('[data-care-brief-supporting-details]');
-    await expect(supportingDetails).not.toHaveAttribute('open', '');
-    await supportingDetails.locator(':scope > summary').click();
+    await expect(card.locator('[data-care-brief-feeding]')).toBeVisible();
+    await expect(card.locator('[data-care-brief-walks]')).toBeVisible();
+    await expect(card.locator('.directory-care-owner-line')).toBeVisible();
+    await expect(card.locator('[data-care-brief-handover-note]')).toBeVisible();
     const callOwner = card.locator('a[href^="tel:"]');
     await expect(callOwner).toHaveCount(1);
     await expect(callOwner).toBeVisible();

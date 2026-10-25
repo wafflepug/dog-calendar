@@ -5517,6 +5517,11 @@ registerWaffleServiceWorker();
                     return;
                 }
 
+                if (action === 'edit-routine') {
+                    openCareReadinessTarget(card, 'feeding');
+                    return;
+                }
+
                 if (action === 'handover') {
                     const unifiedOverviewTab = card?.querySelector('[data-v11160-tab="profile"]');
                     if (unifiedOverviewTab) unifiedOverviewTab.click();
@@ -9179,7 +9184,12 @@ registerWaffleServiceWorker();
             const unchangedRenderedNote = handoverNoteHost.dataset.careBriefNoteRendered === 'true'
                 && handoverNoteHost.dataset.careBriefHandoverNote === note;
             if (!unchangedRenderedNote) {
-                handoverNoteHost.textContent = note || 'No handover note recorded';
+                const displayNote = note || 'No handover note recorded';
+                const isLongNote = note.length > 240 || note.split(/\r\n|\r|\n/).length > 3;
+                const noteHtml = isLongNote
+                    ? `<span data-care-brief-handover-preview>${escapeDashboardHtml(`${note.slice(0, 180).trimEnd()}…`)}</span><details class="directory-care-brief-handover-details" data-care-brief-handover-details><summary>Read full handover summary</summary><div data-care-brief-handover-full>${escapeDashboardHtml(note)}</div></details>`
+                    : `<span data-care-brief-handover-preview>${escapeDashboardHtml(displayNote)}</span>`;
+                setDirectorySummaryHtml(handoverNoteHost, noteHtml, 'careBriefHandoverNote');
                 handoverNoteHost.dataset.careBriefHandoverNote = note;
                 handoverNoteHost.dataset.careBriefNoteRendered = 'true';
             }
@@ -9419,7 +9429,13 @@ registerWaffleServiceWorker();
         } else {
             const profileSection = card.querySelector('[data-directory-detail="profile"]');
             setDirectoryProfileEditMode(card, true);
-            switchDirectoryProfileSubTab(card, action === 'feeding' ? 'foodWalks' : 'healthHome');
+            const category = action === 'feeding' ? 'foodWalks' : 'healthHome';
+            const categoryToggle = profileSection?.querySelector(`[data-profile-subtab="${category}"]`);
+            if (action === 'feeding' && categoryToggle?.getAttribute('aria-expanded') !== 'true') {
+                switchDirectoryProfileSubTab(card, category, true);
+            } else {
+                switchDirectoryProfileSubTab(card, category);
+            }
             const selector = action === 'feeding'
                 ? '[data-intake-attribute="feedingTimes"], [data-intake-attribute="foodAmount"], [data-intake-attribute="foodBrandType"]'
                 : '[data-intake-attribute="medicationInstructions"]';
@@ -17694,11 +17710,12 @@ registerWaffleServiceWorker();
                                                         Loading with full profile…
                                                     </p>
                                                 </section>
-                                                <details class="directory-care-brief-supporting-details" data-care-brief-supporting-details>
-                                                <summary>Routine, owner &amp; handover</summary>
                                                 <div class="directory-care-brief-supporting-grid">
-                                                <section class="directory-care-brief-item directory-care-brief-feeding-walks">
-                                                    <div class="directory-care-brief-note-heading"><h4>Feeding &amp; walks</h4></div>
+                                                <section class="directory-care-brief-item directory-care-brief-feeding-walks" aria-label="Feeding and walks">
+                                                    <div class="directory-care-brief-note-heading">
+                                                        <h4>Feeding &amp; walks</h4>
+                                                        <button type="button" class="directory-care-brief-action directory-care-brief-edit-routine" data-care-brief-action="edit-routine">Edit routine</button>
+                                                    </div>
                                                     <div class="directory-care-brief-subsection">
                                                     <div class="directory-care-brief-value is-pending" data-care-brief-feeding>
                                                         Loading with full profile…
@@ -17719,14 +17736,13 @@ registerWaffleServiceWorker();
                                                         </span>
                                                     </div>
                                                 </div>
-                                                <section class="directory-care-brief-item directory-care-brief-note">
+                                                <section class="directory-care-brief-item directory-care-brief-note" aria-label="Handover note">
                                                     <div class="directory-care-brief-note-heading">
                                                         <h4>Handover note</h4>
                                                     </div>
                                                     <div class="directory-care-brief-value" data-care-brief-handover-note>${escapeDashboardHtml(notes ? notes.trim() : 'No handover note recorded')}</div>
                                                 </section>
                                                 </div>
-                                                </details>
                                             </div>
 
 

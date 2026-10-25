@@ -1,0 +1,549 @@
+/* Care-only clarity pass. Every rule is gated to the Directory page. */
+body[data-waffle-page="directory"] .directory-card.is-profile-active {
+  --care-card-space: var(--wh-surface, #fff);
+  --care-card-soft: var(--wh-surface-soft, #f7f9fc);
+  --care-card-line: var(--wh-border, #d5dee9);
+  --care-card-text: var(--wh-text, #17243b);
+  --care-card-muted: var(--wh-text-muted, #526174);
+  --care-card-accent: var(--wh-accent, #155e8a);
+  color: var(--care-card-text);
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+/* Identity stays together as the profile grows or narrows. */
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-card-header {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr);
+  align-items: start;
+  column-gap: 12px;
+  row-gap: 8px;
+  min-width: 0;
+  margin-bottom: 10px;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-photo-shell {
+  position: relative;
+  inset: auto;
+  width: 76px !important;
+  height: 76px !important;
+  min-width: 76px;
+  min-height: 76px;
+  flex: 0 0 76px;
+  grid-column: 1;
+  grid-row: 1;
+  overflow: hidden;
+  border-radius: 12px;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-photo-shell .directory-photo-media,
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-photo-shell img,
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-photo-placeholder {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  object-fit: cover;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-photo-placeholder {
+  display: grid;
+  place-items: center;
+  font-size: 28px;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-card-identity {
+  display: grid;
+  grid-column: 2;
+  grid-row: 1;
+  align-content: start;
+  gap: 4px;
+  min-width: 0;
+  text-align: left;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-name-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 4px 8px;
+  min-width: 0;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-dog-name-btn {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  margin: 0;
+  font-size: 20px !important;
+  line-height: 1.2;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-name-row .directory-dog-id,
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-name-row [class*="status"] {
+  position: static;
+  inset: auto;
+  flex: 0 1 auto;
+  max-width: 100%;
+  margin: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-primary-breed,
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-profile-stay-dates {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-primary-breed {
+  justify-self: start;
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.4;
+  text-align: left;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-profile-stay-dates {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  justify-items: start;
+  align-content: center;
+  gap: 2px 8px;
+  box-sizing: border-box;
+  position: relative;
+  min-height: 48px;
+  margin: 2px 0 0 !important;
+  padding: 4px 22px 4px 8px !important;
+  font-size: 14px;
+  line-height: 1.4;
+  text-align: left;
+  overflow: visible;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-profile-stay-dates.v11113-editable-stay-dates::after {
+  position: absolute;
+  top: 50%;
+  right: 5px;
+  margin: 0;
+  transform: translateY(-50%);
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-profile-stay-dates > span {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  text-align: left;
+}
+
+body[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused > .directory-guest-tile-open {
+  grid-template-columns: 64px minmax(0, 1fr);
+  column-gap: 12px;
+  row-gap: 6px;
+  min-width: 0;
+}
+/* Compact image and fallback use the same tile footprint in the roster. */
+body[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused > .directory-guest-tile-open .directory-guest-tile-photo,
+body[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused > .directory-guest-tile-open .directory-roster-avatar {
+  box-sizing: border-box;
+  width: 64px;
+  height: 64px;
+  min-width: 64px;
+  min-height: 64px;
+  flex: 0 0 64px;
+  overflow: hidden;
+  border-radius: 10px;
+}
+body[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused > .directory-guest-tile-open .directory-guest-tile-photo img,
+body[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused > .directory-guest-tile-open .directory-roster-avatar img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+body[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused > .directory-guest-tile-open .directory-roster-avatar {
+  display: grid;
+  place-items: center;
+  font-size: 18px;
+}
+body[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused.has-profile-photo > .directory-guest-tile-open .directory-roster-avatar {
+  display: none;
+}
+body[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused > .directory-guest-tile-open .directory-roster-copy,
+body[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused > .directory-guest-tile-open .directory-roster-status {
+  min-width: 0;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+body[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused > .directory-guest-tile-open .directory-roster-status,
+body[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused > .directory-guest-tile-open .v1118-care-status,
+body[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused > .directory-guest-tile-open .v1118-care-signals,
+body[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused > .directory-guest-tile-open .v1117-care-source-badge {
+  flex: 0 1 auto;
+  position: static;
+  inset: auto;
+  min-width: 0;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.35;
+}
+body[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused > .directory-guest-tile-open .v1118-care-signals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+body[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused > .directory-guest-tile-open .v1118-care-signal {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+/* Keep medication, safety and all source text complete and readable. */
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief,
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-grid,
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-item,
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-supporting-grid,
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-subsection {
+  min-width: 0;
+  max-width: 100%;
+  overflow: visible;
+  overflow-wrap: anywhere;
+  word-break: normal;
+  white-space: normal;
+  line-height: 1.5;
+  -webkit-line-clamp: unset;
+  line-clamp: unset;
+}
+/* These first-level care items now flow as a simple vertical stack. Reset
+   the legacy two-column routine grid so long walk text cannot share a row
+   with the owner line that follows it. */
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-supporting-grid {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  padding: 0;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-supporting-grid > .directory-care-brief-item,
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-supporting-grid > .directory-care-owner-line {
+  position: static;
+  flex: 0 0 auto;
+  width: 100%;
+  min-width: 0;
+  grid-column: auto;
+  grid-row: auto;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-feeding-walks {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  gap: 6px;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-feeding-walks > .directory-care-brief-note-heading,
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-feeding-walks > .directory-care-brief-subsection {
+  position: static;
+  grid-column: 1;
+  grid-row: auto;
+  min-width: 0;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-value,
+body[data-waffle-page="directory"] .directory-card.is-profile-active [data-care-brief-medication],
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-row > span,
+body[data-waffle-page="directory"] .directory-card.is-profile-active [data-care-brief-handover-full] {
+  white-space: pre-wrap;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active [data-care-brief-medication] {
+  font-size: 15px;
+  max-height: none;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-grid > .directory-care-brief-item,
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-grid > .directory-care-brief-safety,
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-grid > .directory-care-brief-note {
+  padding-block: 8px;
+  border-color: var(--care-card-line);
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-safety,
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-note {
+  border: 1px solid var(--care-card-line);
+  border-radius: 10px;
+  background: var(--care-card-soft);
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-item h4,
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-heading h3 {
+  font-size: 16px;
+  line-height: 1.35;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-heading h3 {
+  margin: 0;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-freshness,
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-freshness details,
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-freshness summary {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-freshness summary {
+  min-height: 44px;
+}
+
+/* Long handover text uses its native disclosure when present. */
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-row details > summary {
+  box-sizing: border-box;
+  min-height: 44px;
+  padding: 8px 10px;
+  color: var(--care-card-text);
+  font-size: 15px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-feeding-walks .directory-care-brief-subsection {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-feeding-walks .directory-care-brief-subsection + .directory-care-brief-subsection {
+  border-top: 1px solid var(--care-card-line);
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-owner-line {
+  align-items: flex-start;
+  padding-block: 8px;
+  border-color: var(--care-card-line);
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-owner-inline {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-handover-details {
+  min-width: 0;
+  margin-top: 5px;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-handover-details > summary {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  min-height: 44px;
+  padding: 7px 9px;
+  border: 1px solid var(--care-card-line);
+  border-radius: 8px;
+  color: var(--care-card-accent);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.4;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active [data-care-brief-handover-full] {
+  margin-top: 6px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.5;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-handover-details > summary:focus-visible {
+  outline: 3px solid var(--wh-focus, #2563eb);
+  outline-offset: 2px;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-edit-routine {
+  box-sizing: border-box;
+  min-width: 44px;
+  min-height: 44px;
+  max-width: 100%;
+  padding: 7px 10px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-feeding-walks .directory-care-brief-note-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  min-width: 0;
+}
+/* Important care and owner actions are separate, compact, wrap-safe touch targets. */
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  min-width: 0;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-actions > .directory-care-brief-action,
+body[data-waffle-page="directory"] .directory-card.is-profile-active [data-care-brief-call-owner] > .directory-care-brief-action {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: 44px;
+  max-width: 100%;
+  padding: 8px 10px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.35;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-actions > .directory-care-more-actions {
+  min-width: 0;
+  max-width: 100%;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-more-actions > summary {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  min-height: 44px;
+  padding: 8px 10px;
+  overflow-wrap: anywhere;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-owner-care-action-group,
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-owner-action-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-actions button:focus-visible,
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-actions summary:focus-visible {
+  outline: 3px solid var(--wh-focus, #2563eb);
+  outline-offset: 2px;
+}
+
+/* Five Care sections fit as three plus two on narrow screens and one row on desktop. */
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-main-profile-tabs,
+body[data-waffle-page="directory"] .directory-card.is-profile-active .v11160-desktop-tabs {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+  min-width: 0;
+  margin-block: 8px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-main-profile-tab,
+body[data-waffle-page="directory"] .directory-card.is-profile-active .v11160-desktop-tab {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: 44px;
+  padding: 6px 8px;
+  border: 1px solid var(--care-card-line);
+  border-radius: 9px;
+  background: var(--care-card-soft);
+  color: var(--care-card-text);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.25;
+  text-align: center;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  box-shadow: none;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-main-profile-tab.is-active,
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-main-profile-tab[aria-selected="true"],
+body[data-waffle-page="directory"] .directory-card.is-profile-active .v11160-desktop-tab.is-active,
+body[data-waffle-page="directory"] .directory-card.is-profile-active .v11160-desktop-tab[aria-selected="true"] {
+  border-color: var(--care-card-accent);
+  background: var(--care-card-accent);
+  color: #fff;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-main-profile-tab:focus-visible,
+body[data-waffle-page="directory"] .directory-card.is-profile-active .v11160-desktop-tab:focus-visible {
+  outline: 3px solid var(--wh-focus, #2563eb);
+  outline-offset: 2px;
+}
+
+/* Check-in/out and owner workflow controls retain their own touch area. */
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-arrival-review-checkin-actions,
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-actions,
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-more-actions-list,
+body[data-waffle-page="directory"] .directory-card.is-profile-active .p4-directory-action-list {
+  min-width: 0;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-arrival-review-checkin-actions > button,
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-arrival-review-checkin-actions > a,
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-more-actions-list > .directory-care-brief-action,
+body[data-waffle-page="directory"] .directory-card.is-profile-active .p4-directory-action-list > button {
+  box-sizing: border-box;
+  min-width: 44px;
+  min-height: 44px;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.35;
+}
+
+/* Care editors keep the mobile browser from shrinking readable text. */
+body[data-waffle-page="directory"] .directory-card.is-profile-active input:not([type="checkbox"]):not([type="radio"]),
+body[data-waffle-page="directory"] .directory-card.is-profile-active select,
+body[data-waffle-page="directory"] .directory-card.is-profile-active textarea {
+  font-size: 16px !important;
+  line-height: 1.45;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-profile-content :is(button, a, summary) {
+  overflow-wrap: anywhere;
+}
+
+/* Calm the nested visual treatment while keeping section boundaries legible. */
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-item:not(.directory-care-brief-safety):not(.directory-care-brief-note) {
+  box-shadow: none;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-supporting-grid > .directory-care-brief-item,
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-supporting-grid > .directory-care-owner-line {
+  background: transparent;
+  box-shadow: none;
+}
+body.dark-theme[data-waffle-page="directory"] .directory-card.is-profile-active {
+  --care-card-soft: var(--wh-surface-soft, #202d42);
+}
+body.dark-theme[data-waffle-page="directory"] .directory-card.is-profile-active .directory-main-profile-tab.is-active,
+body.dark-theme[data-waffle-page="directory"] .directory-card.is-profile-active .directory-main-profile-tab[aria-selected="true"],
+body.dark-theme[data-waffle-page="directory"] .directory-card.is-profile-active .v11160-desktop-tab.is-active,
+body.dark-theme[data-waffle-page="directory"] .directory-card.is-profile-active .v11160-desktop-tab[aria-selected="true"] {
+  background: var(--care-card-accent);
+  border-color: var(--care-card-accent);
+  color: #fff;
+}
+
+@media (max-width: 600px) {
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-card-header {
+    grid-template-columns: 64px minmax(0, 1fr) !important;
+    column-gap: 10px;
+    row-gap: 6px;
+  }
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-photo-shell {
+    width: 64px !important;
+    height: 64px !important;
+    min-width: 64px;
+    min-height: 64px;
+    flex-basis: 64px;
+  }
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-dog-name-btn {
+    font-size: 18px !important;
+  }
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-profile-stay-dates {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 2px 6px;
+    min-height: 48px;
+    margin-top: 2px !important;
+  }
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-main-profile-tabs,
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .v11160-desktop-tabs {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-main-profile-tab,
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .v11160-desktop-tab {
+    min-height: 44px;
+    padding: 6px 5px;
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 360px) {
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+

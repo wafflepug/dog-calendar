@@ -44,14 +44,20 @@ test('Care profile back bar, handover note and section tabs stay clear and reada
   const noteHost=card.locator('[data-care-brief-handover-note]');
   await expect(card.locator('[data-care-brief-safety]')).toBeVisible();
   await expect(card.locator('[data-care-brief-medication]')).toBeVisible();
-  const supporting=card.locator('[data-care-brief-supporting-details]');
-  await expect(supporting).not.toHaveAttribute('open','');
-  await supporting.locator(':scope > summary').click();
-  await expect(noteHost.locator('[data-care-brief-note-disclosure]')).toHaveCount(0);
-  await expect(noteHost).toHaveText(longNote);
+  await expect(card.locator('[data-care-brief-feeding]')).toBeVisible();
+  await expect(card.locator('[data-care-brief-walks]')).toBeVisible();
+  await expect(card.locator('.directory-care-owner-line')).toBeVisible();
+  const noteDetails=noteHost.locator('[data-care-brief-handover-details]');
+  await expect(noteDetails).toHaveCount(1);
+  await expect(noteDetails).not.toHaveAttribute('open','');
+  await expect(noteHost.locator('[data-care-brief-handover-full]')).toHaveText(longNote);
   const noteNode=await noteHost.elementHandle();
+  await noteDetails.locator(':scope > summary').click();
+  await expect(noteDetails).toHaveAttribute('open','');
   await page.evaluate(()=>renderDirectoryCareBrief(document.querySelector('.directory-card.is-profile-active')));
-  expect(await noteNode.evaluate(node=>node.isConnected&&node.textContent===node.dataset.careBriefHandoverNote)).toBe(true);
+  expect(await noteNode.evaluate(node=>node.isConnected)).toBe(true);
+  await expect(noteHost.locator('[data-care-brief-handover-details]')).toHaveAttribute('open','');
+  await expect(noteHost.locator('[data-care-brief-handover-full]')).toHaveText(longNote);
   expect(fixture.reads.filter(action=>['get_guest_profile','get_dog_history','get_belongings','get_guest_belongings'].includes(action))).toEqual(careReadsAfterOpen);
 
   for(const width of [320,390,1440]){
@@ -117,7 +123,8 @@ test('Care profile back bar, handover note and section tabs stay clear and reada
   },{dogName:longName,startDate:'2026-10-18',endDate:'2026-10-20',note:editedNote});
   await page.locator('#saveGuestDetailEdit').click();
   await expect(page.locator('#guestDetailEditStatus')).toContainText('saved and synced');
-  await expect(noteHost).toHaveText(editedNote);
+  await expect(noteHost.locator('[data-care-brief-handover-details]')).toHaveCount(1);
+  await expect(noteHost.locator('[data-care-brief-handover-full]')).toHaveText(editedNote);
   await expect(card.locator('[data-directory-edit-field="notes"] .directory-field-value')).toHaveText(editedNote);
   expect(fixture.reads.filter(action=>['get_guest_profile','get_dog_history','get_belongings','get_guest_belongings'].includes(action))).toEqual(careReadsAfterOpen);
 
