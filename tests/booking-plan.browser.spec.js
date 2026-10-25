@@ -501,7 +501,7 @@ test('resume retries only the failed visit with its original stable intent', asy
   await expect(page.locator('#p4PlanRows')).toBeVisible();
   await expect(page.locator('#p4PlanRows')).toContainText('saved');
   await expect(page.locator('#p4PlanRows')).toContainText('temporary outage');
-  await page.locator('#p4PlanDisclosure summary').click();
+  await page.locator('#p4PlanDisclosure > summary').click();
   await expect(page.locator('#p4PlanDisclosure')).not.toHaveAttribute('open', '');
   await expect(page.locator('#p4Dog')).toBeEnabled();
   await page.locator('#p4DogIdentity').selectOption('');
@@ -518,7 +518,7 @@ test('resume retries only the failed visit with its original stable intent', asy
   expect(singleWrite.action).toBe('create_boarding');
   expect(singleWrite.dogName).toBe('Scout');
   expect(singleWrite.startDate).toBe('2026-12-01');
-  await page.locator('#p4PlanDisclosure summary').click();
+  await page.locator('#p4PlanDisclosure > summary').click();
   await expect(page.locator('#p4PlanDisclosure')).toHaveAttribute('open', '');
   await openReview(page);
   await page.locator('#p4PlanSave').click();

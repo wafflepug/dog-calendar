@@ -4,6 +4,68 @@ const path = require('node:path');
 const { resolveLocalBackendAction } = require('../scripts/local-network-policy');
 const calendar = fs.readFileSync(path.join(__dirname, 'fixtures/fullcalendar.global.min.js'), 'utf8');
 
+test('shipped identity browser stays compact and searches every loaded dog locally', async ({ page, baseURL }, info) => {
+  const writes = [], errors = [];
+  await installReadOnlyRuntime(page, writes);
+  page.on('pageerror', error => errors.push(error.message));
+  await page.goto(`${baseURL}/directory.html?compactIdentityFixture=1`, { waitUntil: 'domcontentloaded' });
+  await page.waitForFunction(() => document.documentElement.dataset.waffleUiReady === 'true' && window.WAFFLE_PHASE4_BOOKING?.openReturningBooking);
+  await page.evaluate(() => {
+    const original = window.queryAppsScript;
+    window.identityRuntimeReads = [];
+    window.queryAppsScript = async (payload, options) => {
+      if (['list_dog_identities', 'get_dog_history'].includes(payload.action)) window.identityRuntimeReads.push(payload.action);
+      if (payload.action === 'list_dog_identities') return { result: 'success', identities: Array.from({ length: 40 }, (_, i) => ({
+        dogId: `aaaaaaaa-aaaa-4aaa-8aaa-${String(i + 1).padStart(12, '0')}`,
+        dogNumber: String(i + 1).padStart(5, '0'), dogName: i === 16 ? 'Fixture Luna' : `Guest ${i + 1}`,
+        breed: 'Pug', ownerName: `Synthetic owner ${i + 1}`
+      })) };
+      return original(payload, options);
+    };
+  });
+  await page.evaluate(() => window.WAFFLE_PHASE4_BOOKING.openReturningBooking({ dogId: 'aaaaaaaa-aaaa-4aaa-8aaa-000000000017', dogName: 'Fixture Luna', breed: 'Pug', ownerName: 'Synthetic owner 17' }));
+  const browser = page.locator('#p4IdentityBrowser');
+  await expect(page.locator('#p4DogIdentity')).toHaveValue('aaaaaaaa-aaaa-4aaa-8aaa-000000000017');
+  await expect(browser).not.toHaveAttribute('open', '');
+  await expect(page.locator('#p4BookingContext')).toContainText('Dog ID #00017');
+  await page.locator('#p4Start').fill('2026-12-15');
+  await page.locator('#p4End').fill('2026-12-20');
+  await expect(page.locator('#p4BookingContext [data-p4-context-new-dates]')).toBeHidden();
+  const before = await page.evaluate(() => window.identityRuntimeReads.slice());
+  for (const width of [320, 390, 1440]) for (const dark of [false, true]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.evaluate(dark => document.body.classList.toggle('dark-theme', dark), dark);
+    await expect(browser).not.toHaveAttribute('open', '');
+    await expect(page.locator('#p4Start')).toHaveValue('2026-12-15');
+    await expect(page.locator('#p4End')).toHaveValue('2026-12-20');
+    if (process.env.WAFFLE_CAPTURE_UI_EVIDENCE === '1' && info.project.name === 'chromium') {
+      const folder = path.resolve(__dirname, '../output/compact-dog-picker/screenshots');
+      fs.mkdirSync(folder, { recursive: true });
+      await page.locator('#p4BookingContext').scrollIntoViewIfNeeded();
+      await page.screenshot({ path: path.join(folder, `compact-identity-${width}-${dark ? 'dark' : 'light'}.png`) });
+    }
+    await browser.locator(':scope > summary').click();
+    await expect(page.locator('#p4IdentityCards [data-p4-identity]')).toHaveCount(12);
+    await expect(page.locator('#p4IdentityResultCount')).toContainText('40');
+    await page.locator('#p4IdentityShowMore').click();
+    await expect(page.locator('#p4IdentityCards [data-p4-identity]')).toHaveCount(24);
+    await page.locator('#p4IdentitySearch').fill('#00040');
+    await expect(page.locator('#p4IdentityCards [data-p4-identity]')).toHaveCount(1);
+    await expect(page.locator('#p4IdentityCards [data-p4-identity]')).toHaveAttribute('data-p4-identity', 'aaaaaaaa-aaaa-4aaa-8aaa-000000000040');
+    await page.locator('#p4IdentityClearSearch').click();
+    await expect(page.locator('#p4IdentitySearch')).toBeFocused();
+    await expect(page.locator('#p4IdentityCards [data-p4-identity]')).toHaveCount(12);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+    const targets = await page.locator('#p4IdentityBrowser > summary, #p4IdentityShowMore, #p4LoadDogIdentities').evaluateAll(elements => elements.filter(el => el.getClientRects().length).map(el => ({ height: el.getBoundingClientRect().height, overflow: el.scrollWidth > el.clientWidth + 1 })));
+    expect(targets.every(target => target.height >= 44 && !target.overflow)).toBe(true);
+    await browser.locator(':scope > summary').click();
+  }
+  expect(await page.evaluate(() => window.identityRuntimeReads)).toEqual(before);
+  expect(await page.locator('#p4DogIdentity').inputValue()).toBe('aaaaaaaa-aaaa-4aaa-8aaa-000000000017');
+  expect(writes).toEqual([]);
+  expect(errors).toEqual([]);
+});
+
 test('shipped rebooking keeps dates, optional tools and validation reachable without extra reads', async ({ page, baseURL }, info) => {
   const writes = [], errors = [];
   await installReadOnlyRuntime(page, writes);
