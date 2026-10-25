@@ -23,13 +23,13 @@ No backend migration, additional startup fetch, automatic care inheritance or au
 | Visit planner | Open and close the planner, select/add/edit dogs and resume a partial plan | Restore browser/field placement, preserve captured identities and care, retain save locks and frozen successful intents |
 | Responsive access | Check 320px, 390px and 1440px, light/dark, keyboard and enlarged text | Wrapping names/counts, at least 44px controls, no horizontal overflow or navigation covering dialog actions |
 
-Automated fixtures must block live mutations. Production smoke checks use public release assets and read-only system metadata. Physical-phone verification remains manual.
+Automated fixtures must block live mutations. Production smoke checks use public release assets and read-only system metadata. Physical-phone verification remains manual. Date edits must update their context immediately on input, and validation must focus the invalid date after Save in both browser engines. The Change dog disclosure must open with mouse, touch and native keyboard activation.
 
 ## Verification evidence
 
 Local checks passed 380 Node tests and five Python contracts. The focused browser checks cover local paging/search, zero identity-subtree mutations during an unchanged render, retained nodes/caret, delayed and failed lookups, stale generations, duplicate UUID rows, synchronous transport errors and safe focus when a result disappears. Returning-care inheritance and the booking-tool regression checks also passed.
 
-The full shipped modal is exercised with 40 synthetic identities at 320/390/1440px in both themes. Paging and clearing search must add zero reads/writes, retain the selected ID and dates, and leave the visible actions reachable. The broader booking/plan matrix and current-head CI remain release gates. These checks establish behavior and bounded initial rendering, not a measured production speedup.
+The full shipped modal is exercised with 40 synthetic identities at 320/390/1440px in both themes. Paging and clearing search must add zero reads/writes, retain the selected ID and dates, and leave the visible actions reachable. The broader local booking/plan run passed 126 of 128 cases; its two WebKit runtime failures were reproduced, corrected by explicit disclosure toggling and immediate date-input updates, and both then passed in a targeted rerun. Current-head CI remains the release gate. These checks establish behavior and bounded initial rendering, not a measured production speedup.
 
 ## Next backlog item
 
