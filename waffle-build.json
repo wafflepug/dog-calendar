@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.10.25.02",
-  "releaseName": "Simpler Rebooking",
+  "assetRevision": "2026.10.25.03",
+  "releaseName": "Compact Dog Picker",
   "careIteration": {
     "returningDogSuggestions": true,
     "reviewedCareInheritance": true,

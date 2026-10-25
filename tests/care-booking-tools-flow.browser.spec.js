@@ -81,7 +81,7 @@ test('Book Again opens a clean new stay immediately and confirms only the exact 
   await expect(page.locator('#p4PlanDisclosure')).toHaveAttribute('open', '');
   await expect(page.locator('#p4PlanStageHeading')).toBeFocused();
   await expect(page.locator('#p4PlanOwner')).toHaveValue('Alex');
-  await page.locator('#p4PlanDisclosure summary').click();
+  await page.locator('#p4PlanDisclosure > summary').click();
   await seedBooking(page);
   await page.locator('#p4SaveConfirmed').click();
   await expect.poll(() => page.evaluate(() => window.fixtureWrites.length)).toBe(1);
@@ -133,6 +133,7 @@ test('failed or missing source IDs require explicit New dog and rapid reopen ign
   await page.evaluate(dogA => window.WAFFLE_PHASE4_BOOKING.openReturningBooking({ dogName: 'Luna', dogId: dogA }), dogA);
   await page.locator('#p4DogIdentity').selectOption(dogB);
   await expect(page.locator('#p4DogIdentity')).toHaveValue(dogB);
+  if (!(await page.locator('#p4IdentityBrowser').evaluate(node => node.open))) await page.locator('#p4IdentityBrowser > summary').click();
   await page.locator('#p4LoadDogIdentities').click();
   await page.evaluate(rows => window.pendingReads[4].resolve({ identities: rows }), [{ dogId: dogA, dogNumber: 1, dogName: 'Luna', breed: 'Pug', ownerName: 'Alex' }, { dogId: dogB, dogNumber: 2, dogName: 'Luna', breed: 'Pug', ownerName: 'Blair' }]);
   await expect(page.locator('#p4DogIdentity')).toHaveValue(dogB);
@@ -239,7 +240,7 @@ test('post-save identity refresh failure blocks another confirmed save', async (
   await page.locator('#p4End').fill('2026-12-12');
   await page.locator('#p4SaveConfirmed').click();
   await expect.poll(() => page.evaluate(() => window.fixtureWrites.length)).toBe(1);
-  await expect(page.locator('#p4DogIdentityStatus')).toContainText('Dog ID refresh failed');
+  await expect(page.locator('#p4DogIdentityStatus')).toContainText(/could not be loaded|refresh failed/i);
   await expect(page.locator('#p4SaveConfirmed')).toBeDisabled();
   await page.evaluate(() => window.WAFFLE_PHASE4_BOOKING.save('confirmed'));
   expect(await page.evaluate(() => window.fixtureWrites.length)).toBe(1);

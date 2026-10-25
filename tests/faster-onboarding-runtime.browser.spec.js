@@ -16,7 +16,20 @@ async function openBoarding(page) {
   const width = page.viewportSize().width;
   const add = width < 768 ? page.locator('#wh75MobileBottomNav [data-wh78-quick-add]') : page.locator('#v10QuickAddButton');
   await add.click();
-  await page.locator('#v10QuickAddSheet [data-v10-quick-action="boarding"]').click();
+  const sheet = page.locator('#v10QuickAddSheet');
+  await expect(sheet.locator('[data-v10-quick-action="boarding"]')).toHaveAttribute('data-wh89-validated', 'true');
+  const redundantMutations = await page.evaluate(async () => {
+    const sheet = document.getElementById('v10QuickAddSheet');
+    const mutations = [];
+    const observer = new MutationObserver(records => { mutations.push(...records.map(record => ({ type: record.type, target: record.target.id || record.target.nodeName, attribute: record.attributeName, oldValue: record.oldValue }))); });
+    observer.observe(sheet.querySelector('.v10-quick-actions'), { subtree: true, childList: true });
+    window.dispatchEvent(new Event('resize'));
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    observer.disconnect();
+    return mutations;
+  });
+  expect(redundantMutations, 'quick-action reconciliation should not rebuild unchanged labels').toEqual([]);
+  await sheet.locator('[data-v10-quick-action="boarding"]').click();
   await expect(page.locator('#v108BoardingModal')).toBeVisible();
   return page.locator('#v108BoardingModal');
 }

@@ -5,7 +5,9 @@ Reviewed 17 September 2026. Repository: `wafflepug/dog-calendar`; always start i
 
 ## Current Care iteration - 25 October 2026
 
-Candidate 2026.10.25.02: [Simpler rebooking](simpler-rebooking.md). Three bounded refinements: dates-first returning bookings with optional enquiry tools, one editable supporting guest-details disclosure, and inline single-booking validation. Preserve exact Dog IDs, optional reviewed care inheritance, all draft/plan state and explicit saves. No new startup reads or backend changes. Current-head CI and frontend publication attribution are required.
+Candidate 2026.10.25.03: [Compact dog picker](compact-dog-picker.md). Six bounded identity-browser refinements: compact verified controls, remove repeated unreviewed identity context, bounded local results, stable focused cards, truthful lookup/retry controls and accessible search counts/reset. Preserve exact Dog IDs, care approval, draft/plan continuity and explicit saves. No new startup reads or backend changes. Current-head CI and frontend attribution are required.
+
+Published 2026.10.25.02 (PR #256): [Simpler rebooking](simpler-rebooking.md). Three bounded refinements: dates-first returning bookings with optional enquiry tools, one editable supporting guest-details disclosure, and inline single-booking validation. Preserve exact Dog IDs, optional reviewed care inheritance, all draft/plan state and explicit saves. No new startup reads or backend changes. Current-head CI and frontend publication attribution are required.
 
 Published 2026.10.25.01 (PR #255): [Fewer clicks in Care](care-fewer-clicks.md). Review missing checkout care inside its existing sheet, keep guarded check-in close to arrival review, copy identity-verified prepared owner links directly, and remove nested supporting-details disclosures. Preserve explicit operations, draft recovery, truthful unknown states and lazy shared readers. Next: measure the resulting sitter journeys on physical phones before adding more controls. Current-head CI and frontend publication attribution are required.
 
