@@ -127,7 +127,7 @@
       return;
     }
     var patch = document.createElement("script");
-    patch.src = "waffle-v11.1.8.js?v=11.1.8.2&rev=2026.10.25.01";
+    patch.src = "waffle-v11.1.8.js?v=11.1.8.2&rev=2026.10.25.02";
     patch.async = false;
     patch.setAttribute("data-waffle-v1118", "js");
     patch.addEventListener("load", loadV1119Script, { once: true });
