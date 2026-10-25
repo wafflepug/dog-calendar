@@ -114,6 +114,7 @@ test('care essentials and the quiet routine shortcut stay readable across phone,
   for(const [width,dark] of [[320,false],[320,true],[390,false],[390,true],[1440,false],[1440,true]]){
     await page.setViewportSize({width,height:width===1440?900:844});
     await page.locator('body').evaluate((body,isDark)=>body.classList.toggle('dark-theme',isDark),dark);
+    await card.locator('.directory-profile-stay-dates').scrollIntoViewIfNeeded();
     const geometry=await page.evaluate(()=>{
       const selectors=['[data-care-brief-safety]','[data-care-brief-feeding]','[data-care-brief-walks]','[data-care-brief-medication]','[data-care-brief-owner-name]','[data-care-brief-call-owner]','[data-care-brief-action="edit-routine"]'];
       const elements=selectors.map(selector=>document.querySelector(selector)).filter(element=>element?.getClientRects().length);
@@ -123,6 +124,13 @@ test('care essentials and the quiet routine shortcut stay readable across phone,
       const overlapPairs=[];
       for(let index=0;index<elements.length;index++)for(const other of elements.slice(index+1))if(intersects(rect(elements[index]),rect(other)))overlapPairs.push([label(elements[index]),label(other)]);
       const values=[...document.querySelectorAll('[data-care-brief-feeding] [data-care-brief-row] span:last-child,[data-care-brief-walks] [data-care-brief-row] span:last-child,[data-care-brief-medication]')].filter(element=>element.getClientRects().length);
+      const header=document.querySelector('.directory-card.is-profile-active .directory-card-header');
+      const photo=document.querySelector('.directory-card.is-profile-active .directory-photo-shell');
+      const identity=document.querySelector('.directory-card.is-profile-active .directory-card-identity');
+      const name=document.querySelector('.directory-card.is-profile-active .directory-dog-name-btn');
+      const dates=document.querySelector('.directory-card.is-profile-active .directory-profile-stay-dates');
+      const headerBox=rect(header),photoBox=rect(photo),identityBox=rect(identity),datesBox=rect(dates);
+      const headerHit=document.elementFromPoint(datesBox.left+datesBox.width/2,datesBox.top+datesBox.height/2);
       const describePath=selector=>{
         const start=document.querySelector(selector),path=[];
         for(let node=start;node&&path.length<8;node=node.parentElement){
@@ -136,12 +144,26 @@ test('care essentials and the quiet routine shortcut stay readable across phone,
         width:innerWidth,scrollWidth:document.documentElement.scrollWidth,
         essentials:elements.map(rect),overlapPairs,
         values:values.map(element=>({text:element.textContent,whiteSpace:getComputedStyle(element).whiteSpace,textOverflow:getComputedStyle(element).textOverflow,scrollHeight:element.scrollHeight,clientHeight:element.clientHeight})),
+        header:{header:headerBox,photo:photoBox,identity:identityBox,name:rect(name),dates:datesBox,photoIdentityOverlap:intersects(photoBox,identityBox),dateText:dates.textContent,datesGridColumns:getComputedStyle(dates).gridTemplateColumns,datesHit:headerHit===dates||dates.contains(headerHit),nameWhiteSpace:getComputedStyle(name).whiteSpace,nameTextOverflow:getComputedStyle(name).textOverflow,nameScrollHeight:name.scrollHeight,nameClientHeight:name.clientHeight},
         layout:{walks:describePath('[data-care-brief-walks]'),owner:describePath('[data-care-brief-owner-name]'),subsections:[...document.querySelectorAll('.directory-care-brief-subsection')].map(rect)}
       };
     });
     expect(geometry.scrollWidth).toBeLessThanOrEqual(width);
     expect(geometry.overlapPairs,JSON.stringify({width,dark,overlapPairs:geometry.overlapPairs,essentials:geometry.essentials,layout:geometry.layout})).toHaveLength(0);
     expect(geometry.essentials.every(box=>box.left>=-1&&box.right<=width+1&&box.height>0)).toBe(true);
+    expect(geometry.header.header.right).toBeLessThanOrEqual(width+1);
+    expect(geometry.header.photo.width).toBeGreaterThanOrEqual(64);
+    expect(geometry.header.photo.height).toBeGreaterThanOrEqual(64);
+    expect(geometry.header.photoIdentityOverlap).toBe(false);
+    expect(geometry.header.identity.left).toBeGreaterThanOrEqual(geometry.header.photo.right);
+    expect(geometry.header.dates.height).toBeGreaterThanOrEqual(48);
+    expect(geometry.header.dates.right).toBeLessThanOrEqual(geometry.header.identity.right+1);
+    expect(geometry.header.dateText).toMatch(/Check-in/);
+    expect(geometry.header.dateText).toMatch(/Check-out/);
+    expect(geometry.header.datesHit).toBe(true);
+    expect(['normal','pre-wrap'].includes(geometry.header.nameWhiteSpace)).toBe(true);
+    expect(geometry.header.nameTextOverflow).not.toBe('ellipsis');
+    expect(geometry.header.nameScrollHeight).toBeLessThanOrEqual(geometry.header.nameClientHeight+2);
     expect(geometry.values.every(value=>['normal','pre-wrap'].includes(value.whiteSpace)&&value.textOverflow!=='ellipsis'&&value.scrollHeight<=value.clientHeight+2),JSON.stringify({width,dark,values:geometry.values})).toBe(true);
     const controls=await card.locator('.v11160-desktop-tabs [role="tab"], [data-care-brief-action="edit-routine"], [data-care-brief-call-owner]').all();
     for(const control of controls){
@@ -169,14 +191,17 @@ test('care essentials and the quiet routine shortcut stay readable across phone,
   await page.setViewportSize({width:390,height:844});
   await page.evaluate(()=>{
     const card=document.querySelector('.directory-card.is-profile-active');
-    for(const element of card.querySelectorAll('[data-care-brief-safety],[data-care-brief-feeding],[data-care-brief-walks],[data-care-brief-medication],[data-care-brief-owner-name],[data-care-brief-call-owner],[data-care-brief-action="edit-routine"],.v11160-desktop-tabs [role="tab"]')){
+    for(const element of card.querySelectorAll('.directory-dog-name-btn,.directory-profile-stay-dates,[data-care-brief-safety],[data-care-brief-feeding],[data-care-brief-walks],[data-care-brief-medication],[data-care-brief-owner-name],[data-care-brief-call-owner],[data-care-brief-action="edit-routine"],.v11160-desktop-tabs [role="tab"]')){
       const size=parseFloat(getComputedStyle(element).fontSize);
       element.style.setProperty('font-size',`${size*2}px`,'important');
     }
   });
-  const enlarged=await page.evaluate(()=>({width:innerWidth,scrollWidth:document.documentElement.scrollWidth,items:[...document.querySelectorAll('.directory-card.is-profile-active [data-care-brief-safety],.directory-card.is-profile-active [data-care-brief-feeding],.directory-card.is-profile-active [data-care-brief-walks],.directory-card.is-profile-active [data-care-brief-medication],.directory-card.is-profile-active [data-care-brief-owner-name],.directory-card.is-profile-active [data-care-brief-call-owner],.directory-card.is-profile-active [data-care-brief-action="edit-routine"]')].filter(element=>element.getClientRects().length).map(element=>{const rect=element.getBoundingClientRect();return{left:rect.left,right:rect.right,height:rect.height}})}));
+  const enlarged=await page.evaluate(()=>({width:innerWidth,scrollWidth:document.documentElement.scrollWidth,items:[...document.querySelectorAll('.directory-card.is-profile-active .directory-profile-stay-dates,.directory-card.is-profile-active [data-care-brief-safety],.directory-card.is-profile-active [data-care-brief-feeding],.directory-card.is-profile-active [data-care-brief-walks],.directory-card.is-profile-active [data-care-brief-medication],.directory-card.is-profile-active [data-care-brief-owner-name],.directory-card.is-profile-active [data-care-brief-call-owner],.directory-card.is-profile-active [data-care-brief-action="edit-routine"]')].filter(element=>element.getClientRects().length).map(element=>{const rect=element.getBoundingClientRect();return{left:rect.left,right:rect.right,height:rect.height}}),name:(()=>{const element=document.querySelector('.directory-card.is-profile-active .directory-dog-name-btn'),rect=element.getBoundingClientRect();return{left:rect.left,right:rect.right,height:rect.height,scrollHeight:element.scrollHeight,clientHeight:element.clientHeight}})()}));
   expect(enlarged.scrollWidth).toBeLessThanOrEqual(390);
   expect(enlarged.items.every(item=>item.left>=-1&&item.right<=391&&item.height>0)).toBe(true);
+  expect(enlarged.name.left).toBeGreaterThanOrEqual(0);
+  expect(enlarged.name.right).toBeLessThanOrEqual(391);
+  expect(enlarged.name.scrollHeight).toBeLessThanOrEqual(enlarged.name.clientHeight+2);
   await routineEdit.click();
   await expect(card.locator('[data-profile-subtab="foodWalks"]')).toHaveAttribute('aria-expanded','true');
   await expect(card.locator('[data-intake-attribute="feedingTimes"]')).toBeVisible();
