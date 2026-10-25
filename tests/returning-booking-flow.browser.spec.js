@@ -60,6 +60,7 @@ test('identity selection stays fast and explicit care review coalesces, opens re
   await page.locator('[data-p4-load-saved-care]').evaluate(el => el.dispatchEvent(new MouseEvent('click', { bubbles: true })));
   await page.locator('#p4DogIdentity').selectOption(dogA);
   await expect(button).toBeDisabled();
+  await page.locator('#p4GuestDetails > summary').click();
   await page.locator('#p4Phone').fill('0412345678');
   await page.locator('#p4Phone').focus();
   expect(await page.evaluate(() => window.fixtureReads.filter(x => x.action === 'get_dog_history'))).toHaveLength(1);
@@ -138,6 +139,7 @@ test('identity choice focuses only a missing date while preserving date and phon
   await page.locator('#p4DogIdentity').focus();
   await page.locator('#p4DogIdentity').selectOption(dogB);
   expect(await page.evaluate(() => window.fixtureReads.filter(x => x.action === 'get_dog_history'))).toHaveLength(0);
+  await page.locator('#p4GuestDetails > summary').click();
   await page.locator('#p4Phone').fill('0400000000');
   await page.locator('#p4Phone').focus();
   await page.locator('#p4PlanDisclosure > summary').click();
@@ -166,4 +168,153 @@ test('identity choice focuses only a missing date while preserving date and phon
   await page.evaluate(() => window.resolveOldPlanHistory({ history: { previousStays: [], latestCompletedProfile: null } }));
   await expect(page.locator('[data-p4-care-profile="feedingTimes"]')).toHaveValue('Milo meals');
   expect(await page.evaluate(() => window.fixtureReads.filter(x => x.action === 'get_dog_history').length)).toBe(count + 1);
+});
+
+test('single booking save focuses inline field errors and writes only after correction', async ({ page }) => {
+  await setup(page);
+  await page.evaluate(() => window.WAFFLE_PHASE4_BOOKING.fill({ dogName: 'Milo' }));
+  await page.locator('#p4Start').fill('2026-11-12');
+  await page.locator('#p4End').fill('2026-11-12');
+  await page.locator('#p4GuestDetails > summary').click();
+  await page.locator('#p4SavePotential').click();
+  await expect(page.locator('#p4GuestDetails')).toHaveAttribute('open', '');
+  await expect(page.locator('#p4Owner')).toBeFocused();
+  await expect(page.locator('#p4Owner')).toHaveAttribute('aria-invalid', 'true');
+  await expect(page.locator('#p4OwnerError')).toHaveText('Owner name is required for a Potential Stay.');
+  expect(await page.evaluate(() => window.fixtureWrites)).toHaveLength(0);
+  await page.locator('#p4Owner').fill('Alex');
+  await page.locator('#p4SavePotential').click();
+  await expect(page.locator('#p4Phone')).toBeFocused();
+  await expect(page.locator('#p4PhoneError')).toHaveText('Contact number is required for a Potential Stay.');
+  expect(await page.evaluate(() => window.fixtureWrites)).toHaveLength(0);
+
+  await page.locator('#p4Phone').fill('0400000000');
+  await page.locator('#p4End').fill('2026-11-09');
+  await page.locator('#p4SaveConfirmed').click();
+  await expect(page.locator('#p4End')).toBeFocused();
+  await expect(page.locator('#p4EndError')).toHaveText('End date cannot be before start date.');
+  expect(await page.evaluate(() => window.fixtureWrites)).toHaveLength(0);
+  await page.locator('#p4End').fill('2026-11-13');
+  await page.locator('#p4SaveConfirmed').click();
+  await expect.poll(() => page.evaluate(() => window.fixtureWrites.length)).toBe(1);
+  await expect(page.locator('#p4End')).not.toHaveAttribute('aria-invalid', 'true');
+});
+
+
+test('returning booking keeps enquiry tools and screenshot attached while generic context restores its open layout', async ({ page }) => {
+  await setup(page);
+  await expect(page.locator('#p4EnquiryTools')).toHaveAttribute('open', '');
+  await expect(page.locator('#p4GuestDetails')).toHaveAttribute('open', '');
+  await expect(page.locator('#p4Paste')).toBeVisible();
+  await expect(page.locator('#p4Screenshot')).toBeVisible();
+  await page.locator('#p4Paste').fill('Luna booking enquiry text');
+  await page.locator('#p4Screenshot').setInputFiles({
+    name: 'booking.png',
+    mimeType: 'image/png',
+    buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jXioAAAAASUVORK5CYII=', 'base64')
+  });
+  await expect(page.locator('#p4ScreenshotPreview')).toBeVisible();
+  const previewUrl = await page.locator('#p4ScreenshotPreview').getAttribute('src');
+  expect(previewUrl).toMatch(/^blob:/);
+  const readsBefore = await page.evaluate(() => window.fixtureReads.length);
+  const writesBefore = await page.evaluate(() => window.fixtureWrites.length);
+
+  await page.evaluate(({ dogA }) => window.WAFFLE_PHASE4_BOOKING.openReturningBooking({
+    dogId: dogA, dogName: 'Luna', breed: 'Pug', ownerName: 'Alex', phone: '0400000000'
+  }), { dogA });
+  await expect(page.locator('#p4DogIdentity')).toHaveValue(dogA);
+  await expect(page.locator('#p4EnquiryTools')).not.toHaveAttribute('open', '');
+  await expect(page.locator('#p4GuestDetails')).not.toHaveAttribute('open', '');
+  const order = await page.evaluate(() => {
+    const dates = document.querySelector('#p4Start');
+    const tools = document.querySelector('#p4EnquiryTools').closest('.p4-section');
+    return !!(dates.compareDocumentPosition(tools) & Node.DOCUMENT_POSITION_FOLLOWING);
+  });
+  expect(order).toBe(true);
+
+  await page.locator('#p4EnquiryTools > summary').click();
+  await expect(page.locator('#p4Paste')).toHaveValue('Luna booking enquiry text');
+  await expect(page.locator('#p4ScreenshotPreview')).toBeVisible();
+  await expect(page.locator('#p4ScreenshotPreview')).toHaveAttribute('src', previewUrl);
+  expect(await page.locator('#p4Screenshot').evaluate(el => el.files?.[0]?.name)).toBe('booking.png');
+  await page.locator('#p4EnquiryTools > summary').click();
+  await page.locator('#p4GuestDetails > summary').click();
+  await expect(page.locator('#p4Phone')).toHaveValue('0400000000');
+  await page.locator('#p4GuestDetails > summary').click();
+  expect(await page.evaluate(() => window.fixtureReads.length)).toBe(readsBefore + 1);
+  expect(await page.evaluate(() => window.fixtureWrites.length)).toBe(writesBefore);
+
+  await page.evaluate(() => window.WAFFLE_PHASE4_BOOKING.fill({ dogName: 'Milo' }));
+  await expect(page.locator('#p4EnquiryTools')).toHaveAttribute('open', '');
+  await expect(page.locator('#p4GuestDetails')).toHaveAttribute('open', '');
+  const restoredOrder = await page.evaluate(() => {
+    const tools = document.querySelector('#p4EnquiryTools').closest('.p4-section');
+    const fields = document.querySelector('#p4Dog').closest('.p4-section');
+    return tools.compareDocumentPosition(fields) & Node.DOCUMENT_POSITION_FOLLOWING;
+  });
+  expect(restoredOrder).toBeTruthy();
+  await expect(page.locator('#p4Paste')).toHaveValue('Luna booking enquiry text');
+  await expect(page.locator('#p4ScreenshotPreview')).toHaveAttribute('src', previewUrl);
+  expect(await page.evaluate(() => window.fixtureReads.length)).toBe(readsBefore + 1);
+  expect(await page.evaluate(() => window.fixtureWrites.length)).toBe(writesBefore);
+});
+
+test('pending identity keeps edited guest details, date focus and potential validation visible after reply', async ({ page }) => {
+  await setup(page);
+  const releaseFirst = await page.evaluate(() => {
+    let resolve;
+    window.identityGate = new Promise(done => { resolve = done; });
+    window.releaseIdentity = () => resolve({ identities: window.identityRows });
+    const core = window.WAFFLE_PHASE4_CORE;
+    const originalRead = core.read.bind(core);
+    core.read = payload => {
+      if (payload.action === 'list_dog_identities') {
+        window.fixtureReads.push(payload);
+        return window.identityGate;
+      }
+      return originalRead(payload);
+    };
+    return true;
+  });
+  expect(releaseFirst).toBe(true);
+  await page.evaluate(({ dogA }) => window.WAFFLE_PHASE4_BOOKING.openReturningBooking({
+    dogId: dogA, dogName: 'Luna', breed: 'Pug', ownerName: 'Alex', phone: ''
+  }), { dogA });
+  await expect(page.locator('#p4GuestDetails')).toHaveAttribute('open', '');
+  await page.locator('#p4Phone').fill('0411222333');
+  await page.locator('#p4Notes').fill('Updated handover note');
+  await page.locator('#p4Start').focus();
+  await page.evaluate(() => window.releaseIdentity());
+  await expect(page.locator('#p4DogIdentity')).toHaveValue(dogA);
+  await expect(page.locator('#p4Phone')).toHaveValue('0411222333');
+  await expect(page.locator('#p4Notes')).toHaveValue('Updated handover note');
+  await expect(page.locator('#p4GuestDetails')).toHaveAttribute('open', '');
+  await expect(page.locator('#p4Start')).toBeFocused();
+
+  await page.evaluate(() => {
+    let resolve;
+    window.identityGate = new Promise(done => { resolve = done; });
+    window.releaseIdentity = () => resolve({ identities: window.identityRows });
+  });
+  await page.evaluate(({ dogA }) => window.WAFFLE_PHASE4_BOOKING.openReturningBooking({
+    dogId: dogA, dogName: 'Luna', breed: 'Pug', ownerName: '', phone: ''
+  }), { dogA });
+  await page.locator('#p4Start').fill('2026-11-10');
+  await page.locator('#p4End').fill('2026-11-12');
+  await page.locator('#p4SavePotential').click();
+  await expect(page.locator('#p4Owner')).toBeFocused();
+  await expect(page.locator('#p4OwnerError')).toHaveText('Owner name is required for a Potential Stay.');
+  await page.evaluate(() => window.releaseIdentity());
+  await expect(page.locator('#p4DogIdentity')).toHaveValue(dogA);
+  await expect(page.locator('#p4GuestDetails')).toHaveAttribute('open', '');
+  await expect(page.locator('#p4OwnerError')).toBeVisible();
+  await expect(page.locator('#p4PhoneError')).toBeVisible();
+  await expect(page.locator('#p4Owner')).toHaveAttribute('aria-invalid', 'true');
+  await expect(page.locator('#p4Owner')).toBeFocused();
+
+  await page.evaluate(() => window.WAFFLE_PHASE4_BOOKING.fill({ dogName: 'Milo' }));
+  await expect(page.locator('#p4OwnerError')).toBeHidden();
+  await expect(page.locator('#p4PhoneError')).toBeHidden();
+  await expect(page.locator('#p4Owner')).not.toHaveAttribute('aria-invalid', 'true');
+  await expect(page.locator('#p4GuestDetails')).toHaveAttribute('open', '');
 });

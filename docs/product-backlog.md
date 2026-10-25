@@ -5,7 +5,9 @@ Reviewed 17 September 2026. Repository: `wafflepug/dog-calendar`; always start i
 
 ## Current Care iteration - 25 October 2026
 
-Candidate 2026.10.25.01: [Fewer clicks in Care](care-fewer-clicks.md). Review missing checkout care inside its existing sheet, keep guarded check-in close to arrival review, copy identity-verified prepared owner links directly, and remove nested supporting-details disclosures. Preserve explicit operations, draft recovery, truthful unknown states and lazy shared readers. Next: measure the resulting sitter journeys on physical phones before adding more controls. Current-head CI and frontend publication attribution are required.
+Candidate 2026.10.25.02: [Simpler rebooking](simpler-rebooking.md). Three bounded refinements: dates-first returning bookings with optional enquiry tools, one editable supporting guest-details disclosure, and inline single-booking validation. Preserve exact Dog IDs, optional reviewed care inheritance, all draft/plan state and explicit saves. No new startup reads or backend changes. Current-head CI and frontend publication attribution are required.
+
+Published 2026.10.25.01 (PR #255): [Fewer clicks in Care](care-fewer-clicks.md). Review missing checkout care inside its existing sheet, keep guarded check-in close to arrival review, copy identity-verified prepared owner links directly, and remove nested supporting-details disclosures. Preserve explicit operations, draft recovery, truthful unknown states and lazy shared readers. Next: measure the resulting sitter journeys on physical phones before adding more controls. Current-head CI and frontend publication attribution are required.
 
 ## Current Care iteration - 24 October 2026
 

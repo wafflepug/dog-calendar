@@ -201,7 +201,7 @@ test('directory Book Again preserves a deliberate field focus through delayed ex
   });
   await page.locator('.directory-care-more-actions > summary').click();
   await page.locator('[data-p4-dir="again"]').click();
-  await expect(page.locator('#p4DogIdentity')).toBeFocused();
+  await expect(page.locator('#p4Start')).toBeFocused();
   await page.locator('#p4Owner').focus();
   await page.evaluate(rows => window.pendingDirectoryIdentity({ identities: rows }), [
     { dogId: dogA, dogNumber: '00001', dogName: 'Luna', breed: 'Pug', ownerName: 'Alex' },

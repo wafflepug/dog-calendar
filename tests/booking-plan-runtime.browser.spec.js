@@ -4,6 +4,73 @@ const path = require('node:path');
 const { resolveLocalBackendAction } = require('../scripts/local-network-policy');
 const calendar = fs.readFileSync(path.join(__dirname, 'fixtures/fullcalendar.global.min.js'), 'utf8');
 
+test('shipped rebooking keeps dates, optional tools and validation reachable without extra reads', async ({ page, baseURL }, info) => {
+  const writes = [], errors = [];
+  await installReadOnlyRuntime(page, writes);
+  page.on('pageerror', error => errors.push(error.message));
+  await page.goto(`${baseURL}/directory.html?simplerRebookingFixture=1`, { waitUntil: 'domcontentloaded' });
+  await page.waitForFunction(() => document.documentElement.dataset.waffleUiReady === 'true' && window.WAFFLE_PHASE4_BOOKING?.openReturningBooking);
+  await page.evaluate(() => {
+    const original = window.queryAppsScript;
+    window.rebookingReads = [];
+    window.queryAppsScript = async (payload, options) => {
+      if (['list_dog_identities', 'get_dog_history', 'get_guest_profile', 'get_guest_belongings'].includes(payload.action)) window.rebookingReads.push(payload.action);
+      if (payload.action === 'list_dog_identities') return { result: 'success', identities: [{ dogId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', dogNumber: '00017', dogName: 'Fixture Luna', breed: 'Pug', ownerName: 'Alex Example' }] };
+      return original(payload, options);
+    };
+  });
+  for (const width of [320, 390, 1440]) for (const dark of [false, true]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.evaluate(dark => document.body.classList.toggle('dark-theme', dark), dark);
+    await page.evaluate(() => window.WAFFLE_PHASE4_BOOKING.openReturningBooking({ dogName: 'Fixture Luna', dogId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', ownerName: 'Alex Example', phone: '0400000000' }));
+    await expect(page.locator('#p4DogIdentity')).toHaveValue('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');
+    await expect(page.locator('#p4BookingContext')).toContainText('Dog ID #00017');
+    const enquiry = page.locator('#p4EnquiryTools'), guest = page.locator('#p4GuestDetails');
+    await expect(enquiry).not.toHaveAttribute('open', '');
+    await expect(guest).not.toHaveAttribute('open', '');
+    await expect(page.locator('#p4Start')).toBeVisible();
+    await expect(page.locator('#p4End')).toBeVisible();
+    const before = await page.evaluate(() => window.rebookingReads.slice());
+    await enquiry.locator(':scope > summary').click();
+    await page.locator('#p4Paste').fill('Unsaved enquiry reference');
+    await enquiry.locator(':scope > summary').click();
+    await enquiry.locator(':scope > summary').click();
+    await expect(page.locator('#p4Paste')).toHaveValue('Unsaved enquiry reference');
+    await enquiry.locator(':scope > summary').click();
+    await guest.locator(':scope > summary').click();
+    await expect(page.locator('#p4Phone')).toHaveValue('0400000000');
+    await guest.locator(':scope > summary').click();
+    expect(await page.evaluate(() => window.rebookingReads)).toEqual(before);
+    await page.locator('#p4SaveConfirmed').click();
+    await expect(page.locator('#p4Start')).toHaveAttribute('aria-invalid', 'true');
+    await expect(page.locator('#p4Start')).toBeFocused();
+    await expect(page.locator('#p4StartError')).toBeVisible();
+    await page.locator('#p4Start').fill('2026-12-15');
+    await page.locator('#p4End').fill('2026-12-10');
+    await page.locator('#p4SaveConfirmed').click();
+    await expect(page.locator('#p4End')).toHaveAttribute('aria-invalid', 'true');
+    await expect(page.locator('#p4End')).toBeFocused();
+    await page.locator('#p4End').fill('2026-12-20');
+    await expect(page.locator('#p4End')).not.toHaveAttribute('aria-invalid', 'true');
+    const geometry = await page.locator('#p4Modal').evaluate(modal => ({
+      overflow: document.documentElement.scrollWidth > innerWidth + 1,
+      controls: [...modal.querySelectorAll('#p4EnquiryTools > summary, #p4GuestDetails > summary, #p4Start, #p4End')].map(el => ({ height: el.getBoundingClientRect().height, clientWidth: el.clientWidth, scrollWidth: el.scrollWidth }))
+    }));
+    expect(geometry.overflow).toBe(false);
+    expect(geometry.controls.every(item => item.height >= 44 && item.scrollWidth <= item.clientWidth + 1)).toBe(true);
+    if (process.env.WAFFLE_CAPTURE_UI_EVIDENCE === '1' && info.project.name === 'chromium') {
+      const folder = path.resolve(__dirname, '../output/simpler-rebooking/screenshots');
+      fs.mkdirSync(folder, { recursive: true });
+      await page.locator('#p4BookingContext').scrollIntoViewIfNeeded();
+      await page.screenshot({ path: path.join(folder, `rebooking-${width}-${dark ? 'dark' : 'light'}.png`) });
+    }
+    await page.locator('#p4Modal [data-p4-close]').click();
+  }
+  expect(await page.evaluate(() => window.rebookingReads.filter(action => action === 'get_dog_history'))).toEqual([]);
+  expect(writes).toEqual([]);
+  expect(errors).toEqual([]);
+});
+
 async function installReadOnlyRuntime(page, writes) {
   await page.route('**/*', async route => {
     const req = route.request(), url = req.url();
