@@ -1873,12 +1873,13 @@
     Object.entries(definitions).forEach(([kind, copy]) => {
       const button = sheet.querySelector(`[data-v10-quick-action="${kind}"]`);
       if (!button) return;
-      button.dataset.wh89Validated = 'true';
+      if (button.dataset.wh89Validated !== 'true') button.dataset.wh89Validated = 'true';
       const strong = button.querySelector('strong');
       const small = button.querySelector('small');
-      if (strong) strong.textContent = copy[0];
-      if (small) small.textContent = copy[1];
-      button.setAttribute('aria-label', `${copy[0]} — ${copy[1]}`);
+      if (strong && strong.textContent !== copy[0]) strong.textContent = copy[0];
+      if (small && small.textContent !== copy[1]) small.textContent = copy[1];
+      const label = `${copy[0]} — ${copy[1]}`;
+      if (button.getAttribute('aria-label') !== label) button.setAttribute('aria-label', label);
     });
   }
 

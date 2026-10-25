@@ -31,6 +31,10 @@ Local checks passed 380 Node tests and five Python contracts. The focused browse
 
 The full shipped modal is exercised with 40 synthetic identities at 320/390/1440px in both themes. Paging and clearing search must add zero reads/writes, retain the selected ID and dates, and leave the visible actions reachable. The broader local booking/plan run passed 126 of 128 cases; its two WebKit runtime failures were reproduced, corrected by explicit disclosure toggling and immediate date-input updates, and both then passed in a targeted rerun. Current-head CI remains the release gate. These checks establish behavior and bounded initial rendering, not a measured production speedup.
 
+## Quick Add regression correction
+
+Release checks also exposed an existing repeated Boarding reopen failure on narrow WebKit screens. Quick-action reconciliation rewrote unchanged labels, triggering its own subtree observer again. Changed-only text and attribute updates stop that feedback loop. The regression checks unchanged action-grid nodes after reconciliation and retains the existing open/edit/close/reopen draft assertions.
+
 ## Next backlog item
 
 Audit the final booking review and owner-link handoff with representative sitter tasks. Prioritize a demonstrated redundant step while preserving explicit save and send boundaries.
