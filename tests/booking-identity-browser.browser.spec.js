@@ -342,4 +342,3 @@ test('identity controls remain usable at phone, tablet and desktop widths in lig
     }
   }
 });
-
