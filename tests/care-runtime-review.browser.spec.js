@@ -100,12 +100,12 @@ for (const [name, viewport, colorScheme] of [['390-light', { width: 390, height:
     expect(evidence.pageWidth).toBeLessThanOrEqual(evidence.viewport);
     expect(evidence.heading.fontSize).toBe('16px');
     expect(evidence.value.fontSize).toBe('14px');
-    expect(evidence.name.fontSize).toBe(viewport.width <= 600 ? '16px' : '20px');
+    expect(evidence.name.fontSize).toBe(viewport.width <= 600 ? '18px' : '20px');
     expect(evidence.breed.fontSize).toBe('14px');
     expect(evidence.dates.fontSize).toBe('14px');
     await expect(page.locator('.directory-card.is-profile-active .directory-field-label').first()).toHaveCSS('font-size', '12px');
     await expect(page.locator('.directory-card.is-profile-active .intake-profile-field label').first()).toHaveCSS('font-size', '12px');
-    await expect(page.locator('.directory-card.is-profile-active .intake-profile-control').first()).toHaveCSS('font-size', '14px');
+    await expect(page.locator('.directory-card.is-profile-active .intake-profile-control').first()).toHaveCSS('font-size', '16px');
     for (const item of [evidence.name, evidence.breed, evidence.dates]) {
       expect(item.textOverflow).not.toBe('ellipsis');
       expect(item.whiteSpace).not.toBe('nowrap');
