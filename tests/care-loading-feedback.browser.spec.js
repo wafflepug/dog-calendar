@@ -283,9 +283,10 @@ test('Care Brief shows cached safety before the profile read and refreshes feedi
   const walkingRoutine = brief.locator('[data-care-brief-walks] [data-care-routine-values]');
   await expect(feedingRoutine.locator('details, summary')).toHaveCount(0);
   await expect(walkingRoutine.locator('details, summary')).toHaveCount(0);
-  const supporting = brief.locator('[data-care-brief-supporting-details]');
-  await expect(supporting).not.toHaveAttribute('open', '');
-  await supporting.locator(':scope > summary').click();
+  await expect(brief.locator('[data-care-brief-feeding]')).toBeVisible();
+  await expect(brief.locator('[data-care-brief-walks]')).toBeVisible();
+  await expect(brief.locator('.directory-care-owner-line')).toBeVisible();
+  await expect(brief.locator('[data-care-brief-handover-note]')).toBeVisible();
   await expect(brief.locator('[data-care-brief-feeding] [data-care-brief-row="food"]')).toBeVisible();
   await expect(feedingRoutine).toContainText('Sensitive formula with a gradual ten day transition from the previous food, mixed in measured portions at each meal');
   await expect(brief.locator('[data-care-brief-walks] [data-care-brief-row="walks"]')).toContainText('Walks: 2 walks');

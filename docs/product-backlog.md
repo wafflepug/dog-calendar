@@ -3,9 +3,15 @@
 Reviewed 17 September 2026. Repository: `wafflepug/dog-calendar`; always start implementation from current `origin/main` in an isolated worktree. Stack: static HTML/CSS, browser JavaScript, FullCalendar, Apps Script backend, Python contracts, Playwright. Keep production smoke checks read-only. Preserve existing theme settings, offline work, and early checkout behavior. Use Luna for bounded implementation; lead agent reviews design and integration. Complete relevant CI before merging.
 
 
+## Current Care iteration - 26 October 2026
+
+Candidate 2026.10.26.01: [Care at a glance](care-mobile-ten.md). Ten Care-only refinements improve mobile identity, photos, labels, actions, first-level routine/contact/handover, direct routine editing, medication readability and section navigation. Preserve exact identity, explicit saves, drafts and lazy reads. Calendar and Today layouts are unchanged. Publication requires current-head CI and frontend attribution.
+
+Next ready item: observe arrival, daily-care and checkout tasks on physical phones; prioritize measured friction rather than adding controls.
+
 ## Current Care iteration - 25 October 2026
 
-Candidate 2026.10.25.03: [Compact dog picker](compact-dog-picker.md). Six bounded identity-browser refinements: compact verified controls, remove repeated unreviewed identity context, bounded local results, stable focused cards, truthful lookup/retry controls and accessible search counts/reset. Preserve exact Dog IDs, care approval, draft/plan continuity and explicit saves. No new startup reads or backend changes. Current-head CI and frontend attribution are required.
+Published 2026.10.25.03 (PR #257): [Compact dog picker](compact-dog-picker.md). Six bounded identity-browser refinements: compact verified controls, remove repeated unreviewed identity context, bounded local results, stable focused cards, truthful lookup/retry controls and accessible search counts/reset. Preserve exact Dog IDs, care approval, draft/plan continuity and explicit saves. No new startup reads or backend changes. Current-head CI and frontend attribution are required.
 
 Published 2026.10.25.02 (PR #256): [Simpler rebooking](simpler-rebooking.md). Three bounded refinements: dates-first returning bookings with optional enquiry tools, one editable supporting guest-details disclosure, and inline single-booking validation. Preserve exact Dog IDs, optional reviewed care inheritance, all draft/plan state and explicit saves. No new startup reads or backend changes. Current-head CI and frontend publication attribution are required.
 

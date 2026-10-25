@@ -94,14 +94,11 @@ for (const [width, colorScheme] of [[320, 'light'], [320, 'dark'], [390, 'light'
     await expect(brief.locator('[data-care-brief-medication]')).toContainText(longCareInstruction.slice(0, 28));
     await expect(brief.locator('.directory-care-readiness')).not.toHaveAttribute('open', '');
     await expect(brief.locator('.directory-care-more-actions')).not.toHaveAttribute('open', '');
-    const supporting = brief.locator('[data-care-brief-supporting-details]');
-    await expect(supporting).not.toHaveAttribute('open', '');
-    await expect(brief.locator('[data-care-brief-feeding]')).toBeHidden();
-    await expect(brief.locator('[data-care-brief-medication]')).toBeVisible();
-    const supportingSummary = supporting.locator(':scope > summary');
-    await supportingSummary.focus();
-    await supportingSummary.press('Enter');
     await expect(brief.locator('[data-care-brief-feeding]')).toBeVisible();
+    await expect(brief.locator('[data-care-brief-walks]')).toBeVisible();
+    await expect(brief.locator('.directory-care-owner-line')).toBeVisible();
+    await expect(brief.locator('[data-care-brief-handover-note]')).toBeVisible();
+    await expect(brief.locator('[data-care-brief-medication]')).toBeVisible();
     const geometry = await profile.evaluate(node => {
       const selectors = ['.directory-photo-shell', '.directory-dog-name-btn', '.directory-name-row .directory-dog-id', '.directory-name-row .directory-status-tag', '.directory-profile-stay-dates', '[data-v110-operation-bar]', '[data-care-brief-feeding]', '[data-care-brief-medication]'];
       return {
@@ -121,6 +118,36 @@ for (const [width, colorScheme] of [[320, 'light'], [320, 'dark'], [390, 'light'
     if ((width === 320 && colorScheme === 'light') || (width === 390 && colorScheme === 'dark') || (width === 1440 && colorScheme === 'light')) {
       await page.screenshot({ fullPage: false, animations: 'disabled', path: path.join(clarityEvidenceDir, `selected-profile-${width}-${colorScheme}.png`) });
     }
+    const editRoutine = brief.getByRole('button', { name: 'Edit routine' });
+    const careReadActions = new Set(['get_guest_profile', 'get_guest_belongings', 'get_belongings', 'get_dog_history', 'get_dog_master_profile']);
+    const careReadsBeforeEditRoutine = actionReads.filter(action => careReadActions.has(action));
+    const writesDuringEditRoutine = [];
+    const trackEditRoutineWrite = request => {
+      if (!['GET', 'HEAD'].includes(request.method()) && request.url().includes('script.google')) writesDuringEditRoutine.push(request.method());
+    };
+    page.on('request', trackEditRoutineWrite);
+    await editRoutine.focus();
+    await expect(editRoutine).toBeFocused();
+    await editRoutine.press('Enter');
+    await expect(profile).toHaveClass(/is-profile-editing/);
+    await expect(profile.locator('[data-profile-subtab="foodWalks"]')).toHaveAttribute('aria-expanded', 'true');
+    expect(await profile.evaluate(node => {
+      const active = document.activeElement;
+      return active?.matches('[data-intake-attribute="feedingTimes"], [data-intake-attribute="foodAmount"], [data-intake-attribute="foodBrandType"]');
+    })).toBe(true);
+    await editRoutine.press('Enter');
+    await expect(profile.locator('[data-profile-subtab="foodWalks"]')).toHaveAttribute('aria-expanded', 'true');
+    expect(await profile.evaluate(node => {
+      const active = document.activeElement;
+      return active?.matches('[data-intake-attribute="feedingTimes"], [data-intake-attribute="foodAmount"], [data-intake-attribute="foodBrandType"]');
+    })).toBe(true);
+    expect(actionReads.filter(action => careReadActions.has(action))).toEqual(careReadsBeforeEditRoutine);
+    expect(writesDuringEditRoutine).toEqual([]);
+    page.off('request', trackEditRoutineWrite);
+    const discardProfileEdits = profile.locator('[data-cancel-profile-edit]');
+    await discardProfileEdits.focus();
+    await discardProfileEdits.press('Enter');
+    await expect(profile).not.toHaveClass(/is-profile-editing/);
     const tools = brief.locator('.directory-care-more-actions > summary');
     await tools.focus();
     await expect(tools).toHaveCSS('outline-style', 'solid');
@@ -372,20 +399,13 @@ for (const [name, viewport, colorScheme] of [['320-light', { width: 320, height:
     await expect(readiness).not.toHaveAttribute('open', '');
     await expect(careBrief.locator('[data-care-readiness-summary]')).toHaveText(/Needs identity review|Add handover|Details/);
     await expect(careBrief.locator('[data-care-brief-safety]')).toBeVisible();
-    const supportingDetails = careBrief.locator('[data-care-brief-supporting-details]');
-    await expect(supportingDetails).not.toHaveAttribute('open', '');
     await expect(careBrief.locator('[data-care-brief-safety]')).toBeVisible();
     await expect(careBrief.locator('[data-care-brief-medication]')).toBeVisible();
-    await expect(careBrief.locator('[data-care-brief-feeding]')).toBeHidden();
-    const supportingSummary = supportingDetails.locator(':scope > summary');
-    const supportingToggleHeight = await supportingSummary.evaluate(node => node.getBoundingClientRect().height);
-    expect(supportingToggleHeight).toBeGreaterThanOrEqual(44);
-    await supportingSummary.click();
     await expect(careBrief.locator('[data-care-brief-feeding]')).toBeVisible();
+    await expect(careBrief.locator('[data-care-brief-walks]')).toBeVisible();
     await expect(careBrief.locator('.directory-care-owner-label')).toBeVisible();
+    await expect(careBrief.locator('[data-care-brief-handover-note]')).toBeVisible();
     await expect(careBrief.getByRole('heading', { name: 'Handover note', exact: true })).toBeVisible();
-    await supportingSummary.click();
-    await expect(supportingDetails).not.toHaveAttribute('open', '');
     await readiness.locator('summary').click();
     await expect(readiness).toHaveAttribute('open', '');
     await revealSecondaryTools(page);
@@ -398,10 +418,7 @@ for (const [name, viewport, colorScheme] of [['320-light', { width: 320, height:
     await expect(contactDisclosure.locator('[data-directory-edit-field="ownerName"]')).toBeVisible();
     await expect(contactDisclosure.locator('[data-directory-edit-field="phone"]')).toBeVisible();
     await contactDisclosure.locator('summary').click();
-    await expect(careBrief.getByRole('link', { name: 'Call owner' })).toBeHidden();
-    await supportingSummary.click();
     await expect(careBrief.getByRole('link', { name: 'Call owner' })).toHaveAttribute('href', 'tel:0400123456');
-    await supportingSummary.click();
     expect(await careBrief.locator('.directory-care-brief-action:visible').evaluateAll(buttons => buttons.every(button => button.getBoundingClientRect().height >= 44))).toBeTruthy();
     const moreActions = careBrief.locator('.directory-care-more-actions');
     await revealSecondaryTools(page);

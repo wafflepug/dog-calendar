@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.10.25.03",
-  "releaseName": "Compact Dog Picker",
+  "assetRevision": "2026.10.26.01",
+  "releaseName": "Care at a Glance",
   "careIteration": {
     "returningDogSuggestions": true,
     "reviewedCareInheritance": true,

@@ -7,7 +7,7 @@ test.setTimeout(90_000);
 
 const fullCalendar = fs.readFileSync(path.join(__dirname, 'fixtures', 'fullcalendar.global.min.js'), 'utf8');
 const bookings = [
-  { timestamp: '2026-10-05', dogName: 'Milo', breed: 'Border Collie', startDate: '2026-01-01', endDate: '2027-01-01', ownerName: 'Alex "A", Owner', phone: '0400000001', notes: `handover-${'verylongword'.repeat(12)}\nBring the "blue", blanket\nLeave at 7pm`, bookingType: 'Boarding', requestSource: 'MadPaws', dogId: '11111111-1111-4111-8111-111111111111', dogNumber: 17 },
+  { timestamp: '2026-10-05', dogName: 'Milo', breed: 'Border Collie', startDate: '2026-01-01', endDate: '2027-01-01', ownerName: 'Alex "A", Owner', phone: '0400000001', notes: `handover-${'verylongword'.repeat(12)}\nBring the "blue", blanket\nLeave at 7pm\nCall if pickup time changes`, bookingType: 'Boarding', requestSource: 'MadPaws', dogId: '11111111-1111-4111-8111-111111111111', dogNumber: 17 },
   { timestamp: '2026-10-05', dogName: 'Nala', breed: 'Labrador', startDate: '2026-01-01', endDate: '2027-01-01', ownerName: '   ', phone: '  ', notes: '  ', bookingType: 'Boarding' }
 ];
 const keyFor = b => `${b.dogName.toLowerCase()}|${b.startDate}|${b.endDate}`;
@@ -106,13 +106,19 @@ test('stay contact and handover is readable, editable and tied to the selected d
   });
   await expect(profileHeader.locator('.directory-status-tag')).toHaveText('At Home');
   const handoverHost = card.locator('.directory-care-brief-note .directory-care-brief-value');
-  const supporting = card.locator('[data-care-brief-supporting-details]');
-  await expect(supporting).not.toHaveAttribute('open', '');
-  await supporting.locator(':scope > summary').click();
-  await expect(handoverHost.locator('[data-care-brief-note-disclosure]')).toHaveCount(0);
+  const handoverDetails = handoverHost.locator('[data-care-brief-handover-details]');
+  await expect(card.locator('[data-care-brief-feeding]')).toBeVisible();
+  await expect(card.locator('[data-care-brief-walks]')).toBeVisible();
+  await expect(card.locator('.directory-care-owner-line')).toBeVisible();
+  await expect(card.locator('[data-care-brief-call-owner] a')).toBeVisible();
   await expect(handoverHost).toBeVisible();
-  await expect(handoverHost).toHaveText(selectedNote);
-  expect(await handoverHost.textContent()).toBe(selectedNote);
+  await expect(handoverDetails).toHaveCount(1);
+  await expect(handoverDetails).not.toHaveAttribute('open', '');
+  await expect(handoverHost.locator('[data-care-brief-handover-full]')).toHaveText(selectedNote);
+  await handoverDetails.locator(':scope > summary').click();
+  await expect(handoverDetails).toHaveAttribute('open', '');
+  await expect(handoverHost.locator('[data-care-brief-handover-full]')).toBeVisible();
+  expect(await handoverHost.locator('[data-care-brief-handover-full]').textContent()).toBe(selectedNote);
   await expect(handoverHost).toHaveCSS('text-align', 'start');
   await card.locator('.directory-care-more-actions > summary').click();
   const contact = card.locator('[data-directory-stay-contact]');
