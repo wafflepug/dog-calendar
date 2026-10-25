@@ -210,6 +210,28 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-
   -webkit-line-clamp: unset;
   line-clamp: unset;
 }
+/* The legacy outer grid can under-size a row when long medication text wraps.
+   Keep its direct care sections in normal vertical flow; desktop sections may
+   still use their own two-column label/value grid. */
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-grid {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-grid > .directory-care-brief-item,
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-grid > .directory-care-brief-supporting-grid {
+  position: static;
+  flex: 0 0 auto;
+  width: 100%;
+  height: auto;
+  max-height: none;
+  min-width: 0;
+  overflow: visible;
+  grid-column: auto;
+  grid-row: auto;
+  margin: 0;
+}
 /* These first-level care items now flow as a simple vertical stack. Reset
    the legacy two-column routine grid so long walk text cannot share a row
    with the owner line that follows it. */
