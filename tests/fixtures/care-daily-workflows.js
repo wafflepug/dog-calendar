@@ -14,6 +14,9 @@ function profile(booking) {
 async function install(page,{bookingOverrides=[],holdProfileRead=false,fernMedication=''}={}) {
   const fixtureBookings=bookings.map(booking=>({...booking,...(bookingOverrides.find(override=>override.stayId===booking.stayId)||{})}));
   const reads=[];
+  // Reads must reflect acknowledged writes so a later refresh cannot resurrect the initial fixture state.
+  let operations=[{...fixtureBookings[2],status:"checked_in",checkedInAt:"2026-10-17T02:00:00Z"}];
+  const completed=[];
   let releaseProfileRead;
   const profileReadBlocked=new Promise(resolve=>{releaseProfileRead=resolve;});
   await page.addInitScript(()=>{
@@ -39,7 +42,8 @@ async function install(page,{bookingOverrides=[],holdProfileRead=false,fernMedic
       let result={result:'success',records:[],bookings:[],summaries:[]};
       if(resolved.action==='get_guest_directory')result={result:'success',bookings:fixtureBookings,summaries:fixtureBookings.map(b=>({stayKey:b.stayKey,riskFlags:{}})),digitalIntakes,legacyIntakes:[]};
       if(resolved.action==='get_intake_statuses')result={result:'success',records:digitalIntakes};
-      if(resolved.action==='get_stay_operations')result={result:'success',records:[{...fixtureBookings[2],status:'checked_in',checkedInAt:'2026-10-17T02:00:00Z'}]};
+      if(resolved.action==='get_stay_operations')result={result:'success',records:operations};
+      if(resolved.action==='get_past_guest_directory')result={result:'success',bookings:completed,totalPastStays:completed.length,returned:completed.length,summaries:[],digitalIntakes,legacyIntakes:[]};
       if(resolved.action==='get_data_versions')result={result:'success',versions:{stayOperationIdentityVersion:1,careRecordIdentityWritesEnabled:false}};
       if(resolved.action==='get_guest_profile'){
         if(holdProfileRead)await profileReadBlocked;
@@ -61,6 +65,14 @@ async function install(page,{bookingOverrides=[],holdProfileRead=false,fernMedic
     }
     return route.continue();
   });
-  return {reads,bookings:fixtureBookings,releaseProfileRead:()=>releaseProfileRead?.()};
+  function recordCheckout(payload){
+    const booking=fixtureBookings.find(row=>row.stayId===payload.stayId&&row.dogId===payload.dogId);
+    if(!booking)throw new Error('Synthetic checkout requires the exact fixture dog and stay');
+    const record={...booking,...payload,status:'checked_out',updatedAt:'2026-10-18T02:00:00Z',checkedOutAt:'2026-10-18T02:00:00Z'};
+    operations=operations.filter(row=>row.stayId!==record.stayId).concat(record);
+    completed.splice(0,completed.length,...completed.filter(row=>row.stayId!==record.stayId),record);
+    return {result:'success',record};
+  }
+  return {reads,bookings:fixtureBookings,recordCheckout,releaseProfileRead:()=>releaseProfileRead?.()};
 }
 module.exports={install,bookings};

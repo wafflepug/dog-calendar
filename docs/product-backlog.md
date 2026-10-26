@@ -3,9 +3,13 @@
 Reviewed 17 September 2026. Repository: `wafflepug/dog-calendar`; always start implementation from current `origin/main` in an isolated worktree. Stack: static HTML/CSS, browser JavaScript, FullCalendar, Apps Script backend, Python contracts, Playwright. Keep production smoke checks read-only. Preserve existing theme settings, offline work, and early checkout behavior. Use Luna for bounded implementation; lead agent reviews design and integration. Complete relevant CI before merging.
 
 
+## Current Care iteration - 27 October 2026
+
+Candidate 2026.10.27.01: [Care readable layout](care-readable-layout.md). Make the existing roster image/text columns effective, separate source and status badges and align routine editing with the other quiet heading actions. Keep touch targets, exact identities and lazy reads. Calendar and Today layouts remain unchanged.
+
 ## Current Care iteration - 26 October 2026
 
-Candidate 2026.10.26.03: [Care alignment and current-stay selection](care-alignment-current-stay.md). Correct stale startup profile navigation overriding an explicit roster choice, and align Care identity, dates, badges and actions across phone and desktop widths. Preserve explicit historical stays, exact identities, drafts and lazy reads. Require current-head CI and frontend publication attribution.
+Published 2026.10.26.03 (PR #260): [Care alignment and current-stay selection](care-alignment-current-stay.md). Correct stale startup profile navigation overriding an explicit roster choice, and align Care identity, dates, badges and actions across phone and desktop widths. Preserve explicit historical stays, exact identities, drafts and lazy reads. Require current-head CI and frontend publication attribution.
 
 Published 2026.10.26.02 (PR #259): [Solo sitter Care](solo-sitter-care.md). Six bounded refinements: compact roster return, quiet saved-record status, one confirmed-empty routine prompt, handover editing beside the note, Emergency details beside Safety, and an explicit saved-data sitter summary copy with manual recovery. Preserve exact identities, drafts, visible safety/medication and lazy reads. Calendar and Today layouts remain unchanged. Require current-head CI and frontend publication attribution.
 
