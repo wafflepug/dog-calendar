@@ -129,6 +129,15 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-
   overflow-wrap: anywhere;
   text-align: left;
 }
+@media (min-width: 601px) {
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-profile-stay-dates {
+    grid-template-columns: repeat(2, max-content);
+    justify-content: start;
+    width: fit-content;
+    max-width: 100%;
+    gap: 2px 16px;
+  }
+}
 
 body[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused > .directory-guest-tile-open {
   grid-template-columns: 64px minmax(0, 1fr);
@@ -401,6 +410,7 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active [data-care-
   line-height: 1.35;
 }
 body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-actions > .directory-care-more-actions {
+  grid-column: 1 / -1;
   min-width: 0;
   max-width: 100%;
 }
@@ -693,6 +703,7 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active [data-care-
   justify-content: center;
   min-width: 44px;
   min-height: 44px;
+  width: auto;
   max-width: 100%;
   margin: 0;
   padding: 5px 3px;
@@ -770,7 +781,7 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-
 /* On desktop, show the safety label, current flags, and Emergency details
    on one line. `display: contents` lets the existing heading children join
    the safety row without changing the source markup or action handler. */
-@media (min-width: 769px) {
+@media (min-width: 700px) {
   body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-grid > .directory-care-brief-safety {
     display: grid;
     grid-template-columns: 120px minmax(0, 1fr) max-content;
@@ -799,7 +810,7 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-
   }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 699px) {
   body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-safety > .directory-care-brief-note-heading {
     flex-wrap: nowrap;
     align-items: center;
@@ -812,6 +823,24 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-
     flex: 0 1 auto;
     margin-inline-start: auto;
     text-align: right;
+  }
+}
+
+/* Tablet check-in controls can share a row when the profile has enough width. */
+@media (min-width: 700px) and (max-width: 768px) {
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .v110-operation-actions {
+    display: flex !important;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    width: auto;
+  }
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .v110-operation-actions > [data-v110-checkin],
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .v110-operation-actions > .v11217-profile-more-actions {
+    flex: 0 1 auto;
+    width: auto !important;
   }
 }
 

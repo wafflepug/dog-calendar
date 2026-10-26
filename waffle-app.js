@@ -4130,6 +4130,23 @@ function initialiseWafflePushUi() {
 }
 
 
+window.WAFFLE_DIRECTORY_PROFILE_NAV = window.WAFFLE_DIRECTORY_PROFILE_NAV || { selectionVersion: 0 };
+window.WAFFLE_DIRECTORY_PROFILE_NAV.startupSelectionVersion = window.WAFFLE_DIRECTORY_PROFILE_NAV.startupSelectionVersion ?? window.WAFFLE_DIRECTORY_PROFILE_NAV.selectionVersion;
+const directoryProfileStartupSelectionVersion = window.WAFFLE_DIRECTORY_PROFILE_NAV.startupSelectionVersion;
+window.WAFFLE_DIRECTORY_PROFILE_NAV.invalidate = function() {
+    this.selectionVersion++;
+    return this.selectionVersion;
+};
+window.WAFFLE_DIRECTORY_PROFILE_NAV.isCurrent = function(version) {
+    return this.selectionVersion === version;
+};
+document.addEventListener('click', event => {
+    if (!event.isTrusted) return;
+    if (WAFFLE_PAGE === 'directory' && event.target?.closest?.('[data-open-directory-profile], [data-v1082-stay-tab], #directoryBackToGuestsBtn')) {
+        window.WAFFLE_DIRECTORY_PROFILE_NAV.invalidate();
+    }
+}, true);
+
 function maybeOpenDirectoryPushDeepLink() {
     if (WAFFLE_PAGE !== 'directory') return;
     const params = new URLSearchParams(window.location.search);
@@ -4137,6 +4154,7 @@ function maybeOpenDirectoryPushDeepLink() {
     const stayId = String(params.get('stayId') || '').trim();
     const dogId = String(params.get('dogId') || '').trim();
     if (!stayKey) return;
+    const selectionVersion = directoryProfileStartupSelectionVersion;
 
     const clearLinkMessage = () => document.querySelector('[data-directory-push-link-status]')?.remove();
     const showLinkMessage = () => {
@@ -4149,6 +4167,7 @@ function maybeOpenDirectoryPushDeepLink() {
         roster.appendChild(message);
     };
     const attemptOpen = () => {
+        if (!window.WAFFLE_DIRECTORY_PROFILE_NAV.isCurrent(selectionVersion)) return false;
         const card = getDirectoryProfileCard(stayKey, stayId, dogId, true);
         if (!card) return false;
         clearLinkMessage();
@@ -4159,6 +4178,10 @@ function maybeOpenDirectoryPushDeepLink() {
     if (attemptOpen()) return;
     let attempts = 0;
     const timer = setInterval(() => {
+        if (!window.WAFFLE_DIRECTORY_PROFILE_NAV.isCurrent(selectionVersion)) {
+            clearInterval(timer);
+            return;
+        }
         attempts++;
         if (attemptOpen()) {
             clearInterval(timer);
@@ -4170,7 +4193,6 @@ function maybeOpenDirectoryPushDeepLink() {
         }
     }, 500);
 }
-
 
 let waffleDeferredInstallPrompt = null;
 let waffleActiveNetworkRequests = 0;

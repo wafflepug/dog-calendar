@@ -68,6 +68,9 @@ on:
       - 'tests/care-mobile-clarity.browser.spec.js'
       - 'tests/care-sitter-summary.browser.spec.js'
       - 'tests/care-solo-sitter-layout.browser.spec.js'
+      - 'tests/care-alignment-current.browser.spec.js'
+      - 'tests/care-current-stay-selection.browser.spec.js'
+      - 'tests/directory-profile-selection.test.js'
       - 'care-mobile-clarity.css'
       - 'playwright.arrival-checkout.config.js'
       - 'tests/care-arrival-ready.browser.spec.js'
@@ -220,6 +223,9 @@ on:
       - 'tests/care-mobile-clarity.browser.spec.js'
       - 'tests/care-sitter-summary.browser.spec.js'
       - 'tests/care-solo-sitter-layout.browser.spec.js'
+      - 'tests/care-alignment-current.browser.spec.js'
+      - 'tests/care-current-stay-selection.browser.spec.js'
+      - 'tests/directory-profile-selection.test.js'
       - 'care-mobile-clarity.css'
       - 'playwright.arrival-checkout.config.js'
       - 'tests/care-arrival-ready.browser.spec.js'
@@ -319,7 +325,7 @@ concurrency:
 
 jobs:
   contracts:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # Playwright 1.55.1 does not support Ubuntu 26.04.
     timeout-minutes: 15
     steps:
       - name: Check out repository
@@ -356,7 +362,7 @@ jobs:
 
   fixtures:
     name: Fixture suite (${{ matrix.group }})
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # Playwright 1.55.1 does not support Ubuntu 26.04.
     timeout-minutes: 30
     strategy:
       fail-fast: false
@@ -477,7 +483,7 @@ jobs:
 
   placement:
     name: Placement shard ${{ matrix.shard }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # Playwright 1.55.1 does not support Ubuntu 26.04.
     timeout-minutes: 30
     strategy:
       fail-fast: false
@@ -550,7 +556,7 @@ jobs:
     name: ui-regression
     if: always()
     needs: [contracts, fixtures, placement]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # Playwright 1.55.1 does not support Ubuntu 26.04.
     steps:
       - name: Require all regression jobs to succeed
         env:
