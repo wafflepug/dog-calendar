@@ -725,7 +725,7 @@ function v1082SwitchStayView(view, options = {}) {
 
     filterGuestDirectoryCards();
 
-    if (view === 'past') {
+    if (view === 'past' && !(options.reuseLoaded === true && v1082PastLoaded)) {
         v1082LoadPastStays({
             force:
                 options.force === true
@@ -964,11 +964,8 @@ async function v1082TryPastDeepLink() {
         return;
     }
 
-    v1082SwitchStayView(
-        'past'
-    );
-    if (!selectionStillCurrent()) return;
-
+    // A slow current roster is not evidence of a historical stay. Load the
+    // fallback quietly, then switch views only for an exact historical card.
     try {
         await v1082LoadPastStays();
     } catch (_) {
@@ -983,6 +980,11 @@ async function v1082TryPastDeepLink() {
 
     if (!card) return;
 
+    if (!selectionStillCurrent()) return;
+    if (card.dataset.v1082PastStay === 'true') {
+        // Keep the matched card connected; the fallback read already finished.
+        v1082SwitchStayView('past', { reuseLoaded: true });
+    }
     if (!selectionStillCurrent()) return;
     await openDirectoryGuestProfile(
         card,

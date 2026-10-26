@@ -76,6 +76,7 @@ test('selected Care identity, safety and note actions stay aligned at narrow and
         const first=rect(a),second=rect(b);
         if(first.left<second.right-1&&first.right>second.left+1&&first.top<second.bottom-1&&first.bottom>second.top+1)overlapping.push(label);
       }
+      const noteLane=['h4','[data-care-brief-action="handover"]'].map(selector=>{const box=rect(note.querySelector(selector));return {left:box.left,right:box.right,center:(box.top+box.bottom)/2};});
       const safetyLane=['.directory-care-brief-note-heading h4','[data-care-brief-safety]','[data-care-brief-action="emergency-contact"]'].map(selector=>{
         const element=safety?.querySelector(selector);
         if(!element?.getClientRects().length)return null;
@@ -86,11 +87,13 @@ test('selected Care identity, safety and note actions stay aligned at narrow and
       const checkinActions=[...card.querySelectorAll('.v110-operation-actions > [data-v110-checkin],.v110-operation-actions > .v11217-profile-more-actions > summary')].filter(el=>el.getClientRects().length).map(el=>rect(el));
       const actionLayout=(()=>{const host=card.querySelector('.v110-operation-actions');return host?{host:rect(host),display:getComputedStyle(host).display,columns:getComputedStyle(host).gridTemplateColumns,items:[...host.children].map(el=>({className:el.className,box:rect(el),gridColumn:getComputedStyle(el).gridColumn,width:getComputedStyle(el).width}))}:null})();
       const longText=visible('[data-care-brief-medication],.directory-profile-stay-dates,.directory-name-row .directory-dog-id,.directory-name-row [class*="status"],.v1117-care-source-badge,.v1118-care-status,.v1118-care-signal').map(el=>({text:el.innerText.trim(),clientWidth:el.clientWidth,scrollWidth:el.scrollWidth,whiteSpace:getComputedStyle(el).whiteSpace,overflowWrap:getComputedStyle(el).overflowWrap}));
-      return{width:innerWidth,scrollWidth:document.documentElement.scrollWidth,elements,details,overlapping,longText,safetyLane,dateCells,checkinActions,actionLayout};
+      return{width:innerWidth,scrollWidth:document.documentElement.scrollWidth,elements,details,overlapping,longText,noteLane,safetyLane,dateCells,checkinActions,actionLayout};
     });
     expect(metrics.scrollWidth,JSON.stringify(metrics)).toBeLessThanOrEqual(width);
     expect(metrics.elements.every(item=>item.left>=-1&&item.right<=width+1&&item.height>0),JSON.stringify(metrics)).toBe(true);
     expect(metrics.overlapping,JSON.stringify(metrics)).toEqual([]);
+    expect(metrics.noteLane).toHaveLength(2);
+    expect(Math.abs(metrics.noteLane[0].center-metrics.noteLane[1].center),JSON.stringify(metrics.noteLane)).toBeLessThanOrEqual(4);
     expect(metrics.longText.every(item=>item.scrollWidth<=item.clientWidth+1),JSON.stringify(metrics.longText)).toBe(true);
     if(width>=700)expect(Math.max(...metrics.safetyLane.map(item=>item.center))-Math.min(...metrics.safetyLane.map(item=>item.center)),JSON.stringify(metrics.safetyLane)).toBeLessThanOrEqual(4);
     if(width>=601)expect(metrics.dateCells[1].left-metrics.dateCells[0].right,JSON.stringify(metrics.dateCells)).toBeLessThanOrEqual(18);

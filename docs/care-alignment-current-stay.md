@@ -2,7 +2,11 @@
 
 Release candidate: 2026.10.26.03.
 
+A missing current roster card is not evidence of a past stay. Historical fallback reads remain quiet until an exact historical card is found; a slow current link must remain in Staying.
+
 Daily priority: keep the stay selected by the sitter visible and make Care identity, dates and actions readable at phone and desktop widths. No additional profile/history reads, backend changes or new icons are required.
+
+The layout keeps stay dates and their edit control together, aligns Safety and handover actions with their labels, and lets More tools use the full profile width so Records & forms is not squeezed into an action-sized column. Critical care information stays visible and complete.
 
 ## Verification matrix
 

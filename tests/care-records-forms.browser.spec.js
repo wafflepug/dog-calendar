@@ -172,7 +172,7 @@ test('Records & forms stays readable and keeps real state/action targets at 320,
           const r = el.getBoundingClientRect(); return [r.width, r.height];
         }),
       }));
-      expect(geometry.overflow).toBe(false);
+      expect(geometry.overflow, JSON.stringify({theme,width,...geometry})).toBe(false);
       expect(geometry.buttons.every(([w, h]) => Math.round(w * 100) / 100 >= 44 && Math.round(h * 100) / 100 >= 44)).toBe(true);
     }
     await records.locator('summary').focus();

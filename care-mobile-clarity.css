@@ -410,6 +410,7 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active [data-care-
   line-height: 1.35;
 }
 body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-actions > .directory-care-more-actions {
+  grid-column: 1 / -1;
   min-width: 0;
   max-width: 100%;
 }
@@ -702,6 +703,7 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active [data-care-
   justify-content: center;
   min-width: 44px;
   min-height: 44px;
+  width: auto;
   max-width: 100%;
   margin: 0;
   padding: 5px 3px;
