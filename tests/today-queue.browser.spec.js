@@ -145,7 +145,7 @@ test('directory deep links require stable IDs to match and refuse ambiguous lega
   await page.route('https://today.test/**', route => route.fulfill({ body: '<body></body>' }));
   await page.goto('https://today.test/directory.html?stayKey=shared');
   const selector = app.slice(app.indexOf('function getDirectoryProfileCard(stayKey'), app.indexOf('function getDirectoryWindowScrollTop()'));
-  const deepLink = app.slice(app.indexOf('function maybeOpenDirectoryPushDeepLink()'), app.indexOf('let waffleDeferredInstallPrompt'));
+  const deepLink = app.slice(app.indexOf('window.WAFFLE_DIRECTORY_PROFILE_NAV ='), app.indexOf('let waffleDeferredInstallPrompt'));
   await page.addScriptTag({ content: `
     window.WAFFLE_PAGE = 'directory';
     ${selector}
