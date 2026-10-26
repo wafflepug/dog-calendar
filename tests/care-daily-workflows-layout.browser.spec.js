@@ -45,11 +45,12 @@ test('the complete Care runtime combines filters, truthful setup and optional ve
   const fern=grid.locator(`[data-directory-stay-id="${bookings[2].stayId}"]`);
   await expect(fern.locator('[data-v11217-roster-checkout]')).toBeVisible();
   const readsBefore=fixture.reads.filter(action=>action==='get_guest_profile').length;
+  await page.exposeFunction('__recordSyntheticCheckout',payload=>fixture.recordCheckout(payload));
   await page.evaluate(()=>{
     window.__syntheticWrites=[];
     window.sendPayloadToAppsScript=async payload=>{
       window.__syntheticWrites.push({...payload});
-      return {result:'success',record:{...payload,status:'checked_out',updatedAt:'2026-10-18T02:00:00Z',checkedOutAt:'2026-10-18T02:00:00Z'}};
+      return window.__recordSyntheticCheckout(payload);
     };
   });
   await fern.locator('[data-v11217-roster-checkout]').click();
