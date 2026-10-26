@@ -325,7 +325,7 @@ concurrency:
 
 jobs:
   contracts:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # Playwright 1.55.1 does not support Ubuntu 26.04.
     timeout-minutes: 15
     steps:
       - name: Check out repository
@@ -362,7 +362,7 @@ jobs:
 
   fixtures:
     name: Fixture suite (${{ matrix.group }})
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # Playwright 1.55.1 does not support Ubuntu 26.04.
     timeout-minutes: 30
     strategy:
       fail-fast: false
@@ -483,7 +483,7 @@ jobs:
 
   placement:
     name: Placement shard ${{ matrix.shard }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # Playwright 1.55.1 does not support Ubuntu 26.04.
     timeout-minutes: 30
     strategy:
       fail-fast: false
@@ -556,7 +556,7 @@ jobs:
     name: ui-regression
     if: always()
     needs: [contracts, fixtures, placement]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # Playwright 1.55.1 does not support Ubuntu 26.04.
     steps:
       - name: Require all regression jobs to succeed
         env:
