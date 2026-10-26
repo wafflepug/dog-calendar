@@ -53,6 +53,7 @@ test('selected guest controls stay compact, readable and usable at phone and des
     for(const control of [emergency,handover]){
       await expect(control).toBeVisible();
       expect(await control.evaluate(node=>node.getBoundingClientRect().height)).toBeGreaterThanOrEqual(43.99);
+      await expect.poll(async()=>{
       const colors=await control.evaluate(node=>{
         const layers=[];
         for(let parent=node;parent;parent=parent.parentElement){
@@ -70,7 +71,8 @@ test('selected guest controls stay compact, readable and usable at phone and des
         const background=`rgb(${composite.map(value=>Math.round(value)).join(', ')})`;
         return {foreground:getComputedStyle(node).color,background};
       });
-      expect(contrastRatio(colors.foreground,colors.background),`${dark?'dark':'light'} ${width}px ${await control.getAttribute('data-care-brief-action')} ${JSON.stringify(colors)}`).toBeGreaterThanOrEqual(4.5);
+      return contrastRatio(colors.foreground,colors.background);
+      },{message:`Stable ${dark?'dark':'light'} ${width}px action contrast`}).toBeGreaterThanOrEqual(4.5);
     }
     expect(await card.evaluate(node=>node.scrollWidth<=node.clientWidth+1)).toBe(true);
     const alignment=await card.evaluate(card=>{

@@ -815,3 +815,13 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-
   }
 }
 
+
+/* Quiet actions still need explicit boundaries in system high-contrast themes. */
+@media (forced-colors: active) {
+  body[data-waffle-page="directory"] .directory-card.is-profile-active [data-care-brief-action="emergency-contact"],
+  body[data-waffle-page="directory"] .directory-card.is-profile-active [data-care-brief-action="handover"] {
+    border: 1px solid ButtonText;
+    color: ButtonText;
+    background: ButtonFace;
+  }
+}
