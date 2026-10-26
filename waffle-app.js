@@ -2561,6 +2561,7 @@ function setDirectoryProfileEditMode(
         card
     );
     if (editing) updateDirectoryProfileEditFeedback(card);
+    window.WAFFLE_CARE_SITTER_SUMMARY?.syncCard?.(card);
 }
 
 
@@ -5532,7 +5533,7 @@ registerWaffleServiceWorker();
                     const notesControl = contactDisclosure?.querySelector('[data-directory-edit-field="notes"]');
                     contactDisclosure?.scrollIntoView({ behavior: actionScrollBehavior, block: 'start' });
                     if (notesControl) {
-                        window.setTimeout(() => notesControl.click(), 0);
+                        window.setTimeout(() => openGuestDetailEditor(notesControl, careBriefAction), 0);
                     }
                     return;
                 }
@@ -9129,6 +9130,9 @@ registerWaffleServiceWorker();
             profileRecord?.intakeAttributes && typeof profileRecord.intakeAttributes === 'object'
                 ? profileRecord.intakeAttributes
                 : null;
+        const profileReadState = card.querySelector('[data-directory-detail="profile"]')?.dataset.profileReadState || (attributes ? 'saved' : 'loading');
+        const missingProfile = (identityBlocked && card.dataset.profileIdentityBlockedReason === 'missing') || profileReadState === 'not-found';
+        const profileIdentityNeedsReview = identityAmbiguous || (identityBlocked && !missingProfile) || profileReadState === 'identity-conflict';
         const activeFlags = safetyRecord ? getActiveCareFlags(safetyRecord) : [];
 
         const intakeState = window.WAFFLE_INTAKE_STATUS?.getState(card)
@@ -9224,9 +9228,6 @@ registerWaffleServiceWorker();
             setDirectorySummaryAttribute(safetyHost.closest('.directory-care-brief-safety'), 'data-state', safetyHost.dataset.state);
         }
 
-        const profileReadState = card.querySelector('[data-directory-detail="profile"]')?.dataset.profileReadState || (attributes ? 'saved' : 'loading');
-        const missingProfile = (identityBlocked && card.dataset.profileIdentityBlockedReason === 'missing') || profileReadState === 'not-found';
-        const profileIdentityNeedsReview = identityAmbiguous || (identityBlocked && !missingProfile) || profileReadState === 'identity-conflict';
         const compactCareValue = value => String(value ?? '').trim();
         const renderCareRows = (host, rows, generatedKey, routineLabel) => {
             const rowsHtml = rows.map(({ key, label, value }) => {
@@ -9248,10 +9249,27 @@ registerWaffleServiceWorker();
                 ['food', 'Food', compactCareValue(attributes.foodBrandType)]
             ]
             : [];
+        const routineSection = brief.querySelector('.directory-care-brief-feeding-walks');
+        const walksSubsection = routineSection?.querySelector('[data-care-walks-subsection]');
+        const routineValuesConfirmedEmpty = !!validatedProfileRecord
+            && ['fresh', 'saved'].includes(profileReadState)
+            && !missingProfile
+            && !profileIdentityNeedsReview
+            && !!attributes
+            && ['feedingTimes', 'foodAmount', 'foodBrandType', 'walksPerDay', 'walkDuration']
+                .every(key => !compactCareValue(attributes[key]));
+        if (routineSection) {
+            setDirectorySummaryData(routineSection, 'routineState', routineValuesConfirmedEmpty ? 'confirmed-empty' : 'available');
+        }
+        if (walksSubsection && walksSubsection.hidden !== routineValuesConfirmedEmpty) {
+            walksSubsection.hidden = routineValuesConfirmedEmpty;
+        }
         if (feedingHost) {
             const hasCareAttributes = !!attributes;
             const savedFeedingValues = feedingParts.filter(([, , value]) => value);
-            const feedingState = profileIdentityNeedsReview
+            const feedingState = routineValuesConfirmedEmpty
+                ? 'No feeding or walking instructions saved'
+                : profileIdentityNeedsReview
                 ? 'Care record needs identity review'
                 : missingProfile
                     ? 'No saved feeding instructions'
@@ -9387,6 +9405,8 @@ registerWaffleServiceWorker();
                 ? `<a class="directory-care-brief-action" href="tel:${escapeDashboardHtml(phone)}" aria-label="Call owner">Call owner</a>`
                 : '<span class="directory-owner-contact-missing">Phone unavailable</span>', 'careBriefGeneratedHtml');
         }
+
+        window.WAFFLE_CARE_SITTER_SUMMARY?.syncCard?.(card);
     }
 
     function openCareReadinessTarget(card, action) {
@@ -11821,6 +11841,7 @@ registerWaffleServiceWorker();
                     otherCard.classList.remove(
                         'is-profile-active'
                     );
+                    window.WAFFLE_CARE_SITTER_SUMMARY?.syncCard?.(otherCard);
                 }
             });
 
@@ -11956,6 +11977,7 @@ registerWaffleServiceWorker();
                 card.classList.remove(
                     'is-profile-active'
                 );
+                window.WAFFLE_CARE_SITTER_SUMMARY?.syncCard?.(card);
             });
 
         if (backBar) {
@@ -15503,7 +15525,7 @@ registerWaffleServiceWorker();
             return;
         }
 
-        const returnFocusTarget = activeDirectoryEditContext?.trigger;
+        const returnFocusTarget = activeDirectoryEditContext?.returnFocusTarget || activeDirectoryEditContext?.trigger;
         modal.classList.remove('open');
         modal.setAttribute('aria-hidden', 'true');
         activeDirectoryEditContext = null;
@@ -15541,7 +15563,7 @@ registerWaffleServiceWorker();
         if (saveButton) saveButton.disabled = !dirty || !!context.unmatched;
     }
 
-    function openGuestDetailEditor(trigger) {
+    function openGuestDetailEditor(trigger, returnFocusTarget = trigger) {
         if (!trigger) return;
 
         const card = trigger.closest('.directory-card');
@@ -15572,6 +15594,7 @@ registerWaffleServiceWorker();
         activeDirectoryEditContext = {
             card,
             trigger,
+            returnFocusTarget,
             fieldKey,
             originalDogName: dogName,
             startDate,
@@ -17699,7 +17722,10 @@ registerWaffleServiceWorker();
 
                                             <div class="directory-care-brief-grid">
                                                 <section class="directory-care-brief-item directory-care-brief-safety">
-                                                    <div class="directory-care-brief-note-heading"><h4>Safety</h4></div>
+                                                    <div class="directory-care-brief-note-heading">
+                                                        <h4>Safety</h4>
+                                                        <button type="button" class="directory-care-brief-action" data-care-brief-action="emergency-contact">Emergency details</button>
+                                                    </div>
                                                     <div class="directory-care-brief-value" data-care-brief-safety aria-live="polite">
                                                         <span class="care-brief-state is-pending">Safety profile not yet available</span>
                                                     </div>
@@ -17721,7 +17747,7 @@ registerWaffleServiceWorker();
                                                         Loading with full profile…
                                                     </div>
                                                     </div>
-                                                    <div class="directory-care-brief-subsection">
+                                                    <div class="directory-care-brief-subsection" data-care-walks-subsection>
                                                     <div class="directory-care-brief-value is-pending" data-care-brief-walks>
                                                         Loading with full profile…
                                                     </div>
@@ -17739,6 +17765,7 @@ registerWaffleServiceWorker();
                                                 <section class="directory-care-brief-item directory-care-brief-note" aria-label="Handover note">
                                                     <div class="directory-care-brief-note-heading">
                                                         <h4>Handover note</h4>
+                                                        <button type="button" class="directory-care-brief-action" data-care-brief-action="handover">Update handover</button>
                                                     </div>
                                                     <div class="directory-care-brief-value" data-care-brief-handover-note>${escapeDashboardHtml(notes ? notes.trim() : 'No handover note recorded')}</div>
                                                 </section>
@@ -17765,8 +17792,11 @@ registerWaffleServiceWorker();
                                                     Edit care details
                                                 </button>
                                                 <button type="button" class="directory-care-brief-action" data-care-brief-action="refresh">Refresh records</button>
-                                                <button type="button" class="directory-care-brief-action" data-care-brief-action="handover" aria-label="Update handover">Update handover</button>
-                                                <button type="button" class="directory-care-brief-action" data-care-brief-action="emergency-contact">Emergency contact</button>
+                                                <button type="button" class="directory-care-brief-action" data-care-sitter-summary="copy">Copy sitter summary</button>
+                                                <div hidden data-care-sitter-summary-output>
+                                                    <p role="status" aria-live="polite" data-care-sitter-summary-status></p>
+                                                    <textarea hidden readonly aria-label="Sitter summary to copy" data-care-sitter-summary-manual></textarea>
+                                                </div>
                                         <details class="directory-care-contact-disclosure" data-directory-stay-contact>
                                             <summary>
                                                 <span>

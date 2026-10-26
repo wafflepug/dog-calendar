@@ -5,7 +5,11 @@ Reviewed 17 September 2026. Repository: `wafflepug/dog-calendar`; always start i
 
 ## Current Care iteration - 26 October 2026
 
-Candidate 2026.10.26.01: [Care at a glance](care-mobile-ten.md). Ten Care-only refinements improve mobile identity, photos, labels, actions, first-level routine/contact/handover, direct routine editing, medication readability and section navigation. Preserve exact identity, explicit saves, drafts and lazy reads. Calendar and Today layouts are unchanged. Publication requires current-head CI and frontend attribution.
+Candidate 2026.10.26.02: [Solo sitter Care](solo-sitter-care.md). Six bounded refinements: compact roster return, quiet saved-record status, one confirmed-empty routine prompt, handover editing beside the note, Emergency details beside Safety, and an explicit saved-data sitter summary copy with manual recovery. Preserve exact identities, drafts, visible safety/medication and lazy reads. Calendar and Today layouts remain unchanged. Require current-head CI and frontend publication attribution.
+
+Next ready item: validate the one-person arrival, care lookup and checkout journeys on physical phones before adding controls.
+
+Published 2026.10.26.01 (PR #258): [Care at a glance](care-mobile-ten.md). Ten Care-only refinements improve mobile identity, photos, labels, actions, first-level routine/contact/handover, direct routine editing, medication readability and section navigation. Preserve exact identity, explicit saves, drafts and lazy reads. Calendar and Today layouts are unchanged. Publication requires current-head CI and frontend attribution.
 
 Next ready item: observe arrival, daily-care and checkout tasks on physical phones; prioritize measured friction rather than adding controls.
 

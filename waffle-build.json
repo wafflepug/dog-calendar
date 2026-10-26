@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.10.26.01",
-  "releaseName": "Care at a Glance",
+  "assetRevision": "2026.10.26.02",
+  "releaseName": "Solo Sitter Care",
   "careIteration": {
     "returningDogSuggestions": true,
     "reviewedCareInheritance": true,

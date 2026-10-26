@@ -569,3 +569,249 @@ body.dark-theme[data-waffle-page="directory"] .directory-card.is-profile-active 
   }
 }
 
+/* Keep the selected-profile back bar compact without changing the app's
+   sticky header or mobile footer behavior. */
+body[data-waffle-page="directory"] #directoryProfileBackBar.directory-profile-back-bar {
+  box-sizing: border-box;
+  gap: 6px 10px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+body[data-waffle-page="directory"] #directoryProfileBackBar[hidden] {
+  display: none !important;
+}
+body[data-waffle-page="directory"] #directoryProfileBackBar .directory-profile-back-btn {
+  box-sizing: border-box;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 7px 10px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+body[data-waffle-page="directory"] #directoryProfileBackBar .directory-profile-tools {
+  min-width: 0;
+  gap: 6px;
+}
+body[data-waffle-page="directory"] #directoryProfileBackBar .directory-profile-tools > button {
+  box-sizing: border-box;
+  min-width: 44px;
+  min-height: 44px;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+/* A successful saved timestamp reads as quiet context beside the heading.
+   Warning and identity states keep their stronger runtime colors. */
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-heading {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 4px 12px;
+  min-width: 0;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-heading > div {
+  min-width: 0;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-heading .directory-care-brief-freshness[data-state="fresh"],
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-heading .directory-care-brief-freshness[data-state="saved"] {
+  box-sizing: border-box;
+  flex: 0 1 auto;
+  width: auto;
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--care-card-muted, #526174);
+  font-size: 13px;
+  font-weight: 500;
+  text-align: left;
+  box-shadow: none;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-freshness details {
+  min-width: 0;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-freshness summary {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-freshness summary:focus-visible {
+  outline: 3px solid var(--wh-focus, #2563eb);
+  outline-offset: 2px;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-freshness [data-care-brief-freshness-detail] {
+  display: block;
+  margin-top: 4px;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.45;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-freshness[data-state="offline"],
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-freshness[data-state="error"],
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-freshness[data-state="unresolved"],
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-freshness[data-state="identity-conflict"] {
+  padding: 6px 9px;
+  border: 1px solid currentColor;
+  border-radius: 8px;
+  font-weight: 700;
+}
+
+/* Keep the urgent edits in their section headings with quiet, wrap-safe
+   text actions and a full touch target. */
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-safety .directory-care-brief-note-heading,
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-note .directory-care-brief-note-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 8px;
+  min-width: 0;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active [data-care-brief-action="emergency-contact"],
+body[data-waffle-page="directory"] .directory-card.is-profile-active [data-care-brief-action="handover"] {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: 0 1 auto;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  max-width: 100%;
+  margin: 0;
+  padding: 5px 3px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--care-card-text, var(--wh-text, #17243b));
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.35;
+  text-align: left;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  box-shadow: none;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active [data-care-brief-action="emergency-contact"]:focus-visible,
+body[data-waffle-page="directory"] .directory-card.is-profile-active [data-care-brief-action="handover"]:focus-visible {
+  outline: 3px solid var(--wh-focus, #2563eb);
+  outline-offset: 2px;
+}
+
+/* Keep the manual sitter-summary fallback hidden until revealed, then make
+   its text easy to select and read on a phone. */
+body[data-waffle-page="directory"] .directory-card.is-profile-active [data-care-sitter-summary-output][hidden],
+body[data-waffle-page="directory"] .directory-card.is-profile-active [data-care-sitter-summary-manual][hidden] {
+  display: none !important;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active [data-care-sitter-summary-output] {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active [data-care-sitter-summary-status] {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active textarea[data-care-sitter-summary-manual]:not([hidden]) {
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 96px;
+  font-size: 16px !important;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: normal;
+  overflow: auto;
+  resize: vertical;
+  user-select: text;
+}
+
+/* Keep the overview title and saved state together at the left edge. The
+   legacy child width and centered text rules otherwise force separate rows. */
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-heading > div:first-child {
+  flex: 0 1 auto;
+  flex-basis: auto;
+  width: auto;
+  max-width: 100%;
+  text-align: left;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-heading > .directory-care-brief-freshness {
+  flex: 0 1 auto;
+  flex-basis: auto;
+  width: auto;
+  max-width: 100%;
+  margin: 0;
+  text-align: left;
+}
+
+/* On desktop, show the safety label, current flags, and Emergency details
+   on one line. `display: contents` lets the existing heading children join
+   the safety row without changing the source markup or action handler. */
+@media (min-width: 769px) {
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-grid > .directory-care-brief-safety {
+    display: grid;
+    grid-template-columns: 120px minmax(0, 1fr) max-content;
+    align-items: center;
+    gap: 4px 12px;
+  }
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-safety > .directory-care-brief-note-heading {
+    display: contents;
+  }
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-safety > .directory-care-brief-note-heading > h4 {
+    grid-column: 1;
+    grid-row: 1;
+    min-width: 0;
+    margin: 0;
+  }
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-safety [data-care-brief-action="emergency-contact"] {
+    grid-column: 3;
+    grid-row: 1;
+    justify-self: end;
+  }
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-safety > [data-care-brief-safety] {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: center;
+    margin: 0;
+  }
+}
+
+@media (max-width: 768px) {
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-safety > .directory-care-brief-note-heading {
+    flex-wrap: nowrap;
+    align-items: center;
+  }
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-safety > .directory-care-brief-note-heading > h4 {
+    flex: 0 0 auto;
+    margin: 0;
+  }
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-safety [data-care-brief-action="emergency-contact"] {
+    flex: 0 1 auto;
+    margin-inline-start: auto;
+    text-align: right;
+  }
+}
+
