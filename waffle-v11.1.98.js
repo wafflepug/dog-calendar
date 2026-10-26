@@ -11,6 +11,7 @@
   if (window.WAFFLE_V11198_CONFIRMED_STAY_ACTIONS) return;
 
   const VERSION = '11.1.98';
+  const startupSelectionVersion = window.WAFFLE_DIRECTORY_PROFILE_NAV?.startupSelectionVersion ?? 0;
   const WAIT_TIMEOUT_MS = 10000;
   const POLL_MS = 160;
   let enhanceScheduled = false;
@@ -201,15 +202,18 @@
   async function openRequestedProfile() {
     const identity = requestedIdentity();
     if (!identity || identity.stayView === 'past') return false;
+    if (!isStartupSelectionCurrent()) return false;
 
     activateStayView(identity.stayView);
     if (identity.stayView === 'future') promptFutureRange();
 
     const startedAt = Date.now();
-    while (Date.now() - startedAt < WAIT_TIMEOUT_MS) {
+    while (Date.now() - startedAt < WAIT_TIMEOUT_MS && isStartupSelectionCurrent()) {
       const card = findRequestedCard(identity);
       if (card) {
+        if (!isStartupSelectionCurrent()) return false;
         activateStayView(identity.stayView);
+        if (!isStartupSelectionCurrent()) return false;
         try {
           if (typeof window.openDirectoryGuestProfile === 'function') {
             await window.openDirectoryGuestProfile(card, { instant: true });
@@ -229,6 +233,12 @@
 
     console.warn('Confirmed stay profile was not available before deep-link timeout:', identity);
     return false;
+  }
+
+  function isStartupSelectionCurrent() {
+    return typeof window.WAFFLE_DIRECTORY_PROFILE_NAV?.isCurrent === 'function'
+      ? window.WAFFLE_DIRECTORY_PROFILE_NAV.isCurrent(startupSelectionVersion)
+      : true;
   }
 
   function ensureStyles() {

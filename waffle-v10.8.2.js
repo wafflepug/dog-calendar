@@ -947,10 +947,13 @@ async function v1082TryPastDeepLink() {
         ).trim();
 
     if (!stayKey) return;
+    const selectionVersion = window.WAFFLE_DIRECTORY_PROFILE_NAV?.startupSelectionVersion ?? 0;
+    const selectionStillCurrent = () => typeof window.WAFFLE_DIRECTORY_PROFILE_NAV?.isCurrent !== 'function' || window.WAFFLE_DIRECTORY_PROFILE_NAV.isCurrent(selectionVersion);
 
     await new Promise(resolve =>
         setTimeout(resolve, 1400)
     );
+    if (!selectionStillCurrent()) return;
 
     let card =
         getDirectoryProfileCard(
@@ -964,12 +967,14 @@ async function v1082TryPastDeepLink() {
     v1082SwitchStayView(
         'past'
     );
+    if (!selectionStillCurrent()) return;
 
     try {
         await v1082LoadPastStays();
     } catch (_) {
         return;
     }
+    if (!selectionStillCurrent()) return;
 
     card =
         getDirectoryProfileCard(
@@ -978,6 +983,7 @@ async function v1082TryPastDeepLink() {
 
     if (!card) return;
 
+    if (!selectionStillCurrent()) return;
     await openDirectoryGuestProfile(
         card,
         {

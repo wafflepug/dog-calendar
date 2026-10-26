@@ -5,7 +5,9 @@ Reviewed 17 September 2026. Repository: `wafflepug/dog-calendar`; always start i
 
 ## Current Care iteration - 26 October 2026
 
-Candidate 2026.10.26.02: [Solo sitter Care](solo-sitter-care.md). Six bounded refinements: compact roster return, quiet saved-record status, one confirmed-empty routine prompt, handover editing beside the note, Emergency details beside Safety, and an explicit saved-data sitter summary copy with manual recovery. Preserve exact identities, drafts, visible safety/medication and lazy reads. Calendar and Today layouts remain unchanged. Require current-head CI and frontend publication attribution.
+Candidate 2026.10.26.03: [Care alignment and current-stay selection](care-alignment-current-stay.md). Correct stale startup profile navigation overriding an explicit roster choice, and align Care identity, dates, badges and actions across phone and desktop widths. Preserve explicit historical stays, exact identities, drafts and lazy reads. Require current-head CI and frontend publication attribution.
+
+Published 2026.10.26.02 (PR #259): [Solo sitter Care](solo-sitter-care.md). Six bounded refinements: compact roster return, quiet saved-record status, one confirmed-empty routine prompt, handover editing beside the note, Emergency details beside Safety, and an explicit saved-data sitter summary copy with manual recovery. Preserve exact identities, drafts, visible safety/medication and lazy reads. Calendar and Today layouts remain unchanged. Require current-head CI and frontend publication attribution.
 
 Next ready item: validate the one-person arrival, care lookup and checkout journeys on physical phones before adding controls.
 

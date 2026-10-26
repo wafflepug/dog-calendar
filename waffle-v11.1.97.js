@@ -16,6 +16,7 @@
   const POLL_MS = 180;
   const inFlight = new Map();
   const completed = new Set();
+  const startupSelectionVersion = window.WAFFLE_DIRECTORY_PROFILE_NAV?.startupSelectionVersion ?? 0;
   const originalTryPastDeepLink =
     typeof window.v1082TryPastDeepLink === 'function'
       ? window.v1082TryPastDeepLink
@@ -79,14 +80,18 @@
   }
 
   async function openFutureDeepLink(stayKey) {
+    if (!startupSelectionIsCurrent()) return false;
     activateFutureView();
+    if (!startupSelectionIsCurrent()) return false;
     promptFutureReconcile();
 
     const startedAt = Date.now();
-    while (Date.now() - startedAt < WAIT_TIMEOUT_MS) {
+    while (Date.now() - startedAt < WAIT_TIMEOUT_MS && startupSelectionIsCurrent()) {
       const card = currentGridCard(stayKey);
       if (card) {
+        if (!startupSelectionIsCurrent()) return false;
         activateFutureView();
+        if (!startupSelectionIsCurrent()) return false;
         try {
           if (typeof window.openDirectoryGuestProfile === 'function') {
             await window.openDirectoryGuestProfile(card, { instant: true });
@@ -100,15 +105,24 @@
         return true;
       }
 
+      if (!startupSelectionIsCurrent()) return false;
       promptFutureReconcile();
       await delay(POLL_MS);
     }
+
+    if (!startupSelectionIsCurrent()) return false;
 
     /* A future booking must never be reclassified as Past merely because its
        long-range card has not hydrated yet. Leave the user in Future Stays. */
     activateFutureView();
     console.warn('Future Care profile was not available before deep-link timeout:', stayKey);
     return false;
+  }
+
+  function startupSelectionIsCurrent() {
+    return typeof window.WAFFLE_DIRECTORY_PROFILE_NAV?.isCurrent === 'function'
+      ? window.WAFFLE_DIRECTORY_PROFILE_NAV.isCurrent(startupSelectionVersion)
+      : true;
   }
 
   function routeFutureDeepLink(stayKey) {
