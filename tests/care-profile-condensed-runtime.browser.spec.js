@@ -112,9 +112,18 @@ test('actual Care profile stays compact, keeps exceptions visible and preserves 
       await expect(tools.locator(`${selector} > summary`)).toBeHidden();
     }
     const readsBeforeTools = reads.filter(x => x === 'get_guest_profile').length;
+    const handoverAction = brief.locator('.directory-care-brief-note [data-care-brief-action="handover"]');
+    const emergencyAction = brief.locator('.directory-care-brief-safety [data-care-brief-action="emergency-contact"]');
+    await expect(handoverAction).toHaveCount(1);
+    await expect(handoverAction).toBeVisible();
+    await expect(emergencyAction).toHaveCount(1);
+    await expect(emergencyAction).toHaveText('Emergency details');
+    await expect(emergencyAction).toBeVisible();
+    await expect(brief.locator('.directory-care-brief-actions [data-care-brief-action="handover"], .directory-care-brief-actions [data-care-brief-action="emergency-contact"]')).toHaveCount(0);
     const toolsToggle = tools.locator(':scope > summary');
     await toolsToggle.focus();await page.keyboard.press('Enter');
-    for (const action of ['handover','emergency-contact','refresh']) await expect(tools.locator(`[data-care-brief-action="${action}"]`)).toBeVisible();
+    await expect(tools.locator('[data-care-brief-action="refresh"]')).toBeVisible();
+    await expect(tools.locator('[data-care-brief-action="handover"], [data-care-brief-action="emergency-contact"]')).toHaveCount(0);
     await page.keyboard.press('Space');await expect(tools).not.toHaveAttribute('open', '');
     expect(reads.filter(x => x === 'get_guest_profile').length).toBe(readsBeforeTools);
     const aligned = await brief.locator('.directory-care-brief-grid').evaluate(grid => {const bounds=grid.getBoundingClientRect();return [...grid.children].every(row=>Math.abs(row.getBoundingClientRect().left-bounds.left)<2 && Math.abs(row.getBoundingClientRect().right-bounds.right)<2)});

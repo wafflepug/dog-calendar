@@ -23,7 +23,7 @@ const briefHtml = `
     <div class="directory-care-brief-grid">
       <section class="directory-care-brief-item directory-care-brief-safety"><div class="directory-care-brief-note-heading"><h4>Safety</h4></div><div data-care-brief-safety></div></section>
       <section class="directory-care-brief-item"><h4>Medication</h4><p data-care-brief-medication></p></section>
-      <section class="directory-care-brief-item directory-care-brief-feeding-walks"><h4>Feeding &amp; walks</h4><div class="directory-care-brief-subsection"><div data-care-brief-feeding></div></div><div class="directory-care-brief-subsection"><div data-care-brief-walks></div></div></section>
+      <section class="directory-care-brief-item directory-care-brief-feeding-walks"><h4>Feeding &amp; walks</h4><div class="directory-care-brief-subsection"><div data-care-brief-feeding></div></div><div class="directory-care-brief-subsection" data-care-walks-subsection><div data-care-brief-walks></div></div></section>
       <section class="directory-care-brief-item directory-care-owner-item"><h4>Owner</h4><div class="directory-care-owner-inline"><strong data-care-brief-owner-name></strong><span data-care-brief-call-owner></span></div></section>
     </div>
   </section>
@@ -172,8 +172,14 @@ test('care essentials lead with exceptions, preserve full medication, and label 
     window.fixture = { intakeAttributes: {} };
     window.renderBrief(document.querySelector('.directory-card'));
   });
-  await expect(brief.locator('[data-care-brief-feeding]')).toHaveText('No feeding instructions saved');
-  await expect(brief.locator('[data-care-brief-walks]')).toHaveText('No walking instructions saved');
+  await expect(brief.locator('[data-care-brief-feeding]')).toHaveText('No feeding or walking instructions saved');
+  await expect(brief.locator('[data-care-walks-subsection]')).toBeHidden();
+  await page.evaluate(() => {
+    window.fixture = { intakeAttributes: { walksPerDay: '2 walks' } };
+    window.renderBrief(document.querySelector('.directory-card'));
+  });
+  await expect(brief.locator('[data-care-walks-subsection]')).toBeVisible();
+  await expect(brief.locator('[data-care-brief-walks] [data-care-brief-row="walks"]')).toContainText('Walks: 2 walks');
   await page.evaluate(() => {
     const card = document.querySelector('.directory-card');
     card.dataset.profileIdentityBlocked = card.dataset.stayKey;

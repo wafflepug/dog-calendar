@@ -13,7 +13,7 @@
 
   const BUILD = '2026.08.28.01';
   // Increment with coordinated shell releases so entry pages and SW stay aligned.
-  const ASSET_REVISION = '2026.10.26.01';
+  const ASSET_REVISION = '2026.10.26.02';
   window.WAFFLE_ASSET_REVISION = ASSET_REVISION;
   const ENDPOINT = 'https://script.google.com/macros/s/AKfycbwn4HL49K9c3AZbXJRUjPw3UYWxJt8DmqXwMnTytyqdSstj3ZIJwWdDEC2IsBjetOf3pw/exec';
   const RUNTIME = [
@@ -61,6 +61,8 @@
       "desktop-home-sidebar.js",
       "quick-add-touch-scroll.js"
   ];
+  // This Care-only action does not add a script request to Today or Calendar.
+  if (document.body?.dataset?.wafflePage === 'directory') RUNTIME.push('care-sitter-summary.js');
   const maintenanceUrl = new URL('maintenance.html', window.location.href);
   let buildBanner = null;
   let firstPaintSettled = false;

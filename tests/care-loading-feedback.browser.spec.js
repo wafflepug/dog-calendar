@@ -320,6 +320,8 @@ test('Care overview labels saved values and keeps loading, empty, failed, and mi
           stayKey: key,
           intakeAttributes: miloStage === 'populated'
             ? { feedingTimes: '7 am', foodAmount: '1 cup', medicationInstructions: 'No medications recorded' }
+            : miloStage === 'partial'
+              ? { feedingTimes: '7 am' }
             : {},
           intakeAttributesSource: 'Synthetic saved profile'
         }
@@ -345,9 +347,24 @@ test('Care overview labels saved values and keeps loading, empty, failed, and mi
     const card = document.querySelector('.directory-card[data-directory-dog-name="Milo"]');
     await loadDirectoryProfileDetail(card, card.querySelector('[data-directory-detail="profile"]'), { force: true });
   });
-  await expect(miloBrief.locator('[data-care-brief-feeding]')).toHaveText('No feeding instructions saved');
-  await expect(miloBrief.locator('[data-care-brief-walks]')).toHaveText('No walking instructions saved');
+  await expect(miloBrief.locator('[data-care-brief-feeding]')).toHaveText('No feeding or walking instructions saved');
+  await expect(miloBrief.locator('[data-care-walks-subsection]')).toBeHidden();
   await expect(miloBrief.locator('[data-care-brief-medication]')).toHaveText('No medication instructions saved');
+
+  miloStage = 'partial';
+  await page.evaluate(async () => {
+    const card = document.querySelector('.directory-card[data-directory-dog-name="Milo"]');
+    await loadDirectoryProfileDetail(card, card.querySelector('[data-directory-detail="profile"]'), { force: true });
+  });
+  await expect(miloBrief.locator('[data-care-brief-feeding] [data-care-brief-row="times"]')).toContainText('Times: 7 am');
+  await expect(miloBrief.locator('[data-care-walks-subsection]')).toBeVisible();
+  await expect(miloBrief.locator('[data-care-brief-walks]')).toHaveText('No walking instructions saved');
+
+  miloStage = 'empty';
+  await page.evaluate(async () => {
+    const card = document.querySelector('.directory-card[data-directory-dog-name="Milo"]');
+    await loadDirectoryProfileDetail(card, card.querySelector('[data-directory-detail="profile"]'), { force: true });
+  });
 
   miloStage = 'error';
   await page.evaluate(async () => {
