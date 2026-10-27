@@ -54,3 +54,14 @@ jobs:
       - name: Run first-open browser tests
         timeout-minutes: 10
         run: node node_modules/@playwright/test/cli.js test --config=playwright.first-open.config.js
+      - name: Run desktop Home layout browser tests
+        timeout-minutes: 10
+        run: node node_modules/@playwright/test/cli.js test --config=playwright.desktop-home-layout.config.js
+      - name: Upload desktop Home layout evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-home-layout-${{ github.run_id }}
+          path: output/desktop-home-layout*.png
+          if-no-files-found: ignore
+          retention-days: 14

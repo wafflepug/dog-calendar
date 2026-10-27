@@ -1,0 +1,94 @@
+/* Home columns are active only while the canonical desktop layout wrapper exists. */
+@media (min-width: 821px) {
+  body.wh-desktop-home-layout-ready { padding-top:0 !important; }
+  body.wh-desktop-home-layout-ready > .container {
+    width: 100% !important;
+    max-width: none !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    box-sizing: border-box;
+  }
+
+  .wh-desktop-home-layout {
+    display: grid;
+    grid-template-columns: minmax(360px, 400px) minmax(0, 1fr);
+    align-items: start;
+    gap: 20px;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .wh-desktop-home-column,
+  .wh-desktop-calendar-column { min-width: 0; }
+  .wh-desktop-home-column { max-width: 400px; }
+
+  .wh-desktop-home-column > .v10-operations-home,
+  .wh-desktop-home-column > .summary-dashboard,
+  .wh-desktop-home-column > .meet-greet-dashboard,
+  .wh-desktop-home-column > .mobile-dashboard-toggle {
+    width: 100%;
+    box-sizing: border-box;
+    margin-bottom: 12px !important;
+  }
+
+  .wh-desktop-home-column .v10-ops-heading { min-height: 0; margin: 0 0 10px; padding: 0; }
+  .wh-desktop-home-column .v10-ops-heading h1 { font-size: 20px; line-height: 1.2; }
+  .wh-desktop-home-column .v10-ops-heading #v10TodayDateLabel,
+  .wh-desktop-home-column .v10-ops-heading .v10-eyebrow,
+  .wh-desktop-home-column .wh-home-guests .v10-card-kicker,
+  .wh-desktop-home-column .wh-home-guests #whHomeGuestsStatus,
+  .wh-desktop-home-column .wh-home-guests #whHomeArrivalsStatus,
+  .wh-desktop-home-column .wh-home-guests #whHomePotentialsStatus,
+  .wh-desktop-home-column .wh-home-guests #whHomeAddPotentialBtn,
+  .wh-desktop-home-column .wh-home-shortcuts,
+  .wh-desktop-home-column .v10-ops-card .v10-card-kicker { display: none !important; }
+
+  .wh-desktop-home-column .v10-operations-home {
+    display: block !important;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .wh-desktop-home-column .v10-ops-grid,
+  .wh-desktop-home-column .v108-outlook-wrap {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    width: 100% !important;
+    gap: 10px !important;
+    overflow: visible !important;
+  }
+  .wh-desktop-home-column .v10-ops-card,
+  .wh-desktop-home-column .wh-home-guests,
+  .wh-desktop-home-column .summary-card,
+  .wh-desktop-home-column .meet-greet-dashboard {
+    min-width: 0;
+    box-sizing: border-box;
+    padding: 18px 16px 12px !important;
+    border-radius: 20px !important;
+    box-shadow: none !important;
+  }
+  .wh-desktop-home-column .wh-home-section-heading { align-items: center; gap: 8px; margin-bottom: 8px; }
+  .wh-desktop-home-column .wh-home-section-heading h2,
+  .wh-desktop-home-column .v10-card-heading h2 { font-size: 18px !important; line-height: 1.25 !important; }
+  .wh-desktop-home-column .wh-home-guest-row { gap: 8px; }
+  .wh-desktop-home-column .wh-home-guest { min-width: 0; }
+  .wh-desktop-home-column .v10-stat-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+  .wh-desktop-home-column .v10-stat-card { min-width: 0; padding: 8px 4px; }
+  .wh-desktop-home-column .v10-stat-card span:last-child { font-size: 10px; }
+  .wh-desktop-home-column .summary-dashboard { grid-template-columns: 1fr; gap: 8px; }
+  .wh-desktop-home-column .summary-card { margin: 0; }
+
+  .wh-desktop-calendar-column > .search-container { margin: 0 0 12px !important; }
+  .wh-desktop-calendar-column > #calendarEventLegend { margin: 0 0 10px; }
+  .wh-desktop-calendar-column > #calendar,
+  .wh-desktop-calendar-column > #wh65Calendar { width: 100%; min-width: 0; box-sizing: border-box; }
+  .wh-desktop-calendar-column > .wh65-calendar { display: block !important; }
+}
+
+@media (min-width: 821px) and (max-width: 1319px) {
+  .wh-desktop-home-layout { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (min-width:821px) {
+  body.wh-desktop-home-layout-ready .wh-desktop-home-column #today-actions-title { font-size:18px !important; }
+}

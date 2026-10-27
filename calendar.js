@@ -1204,7 +1204,9 @@
 
   function isCurrentCalendarUi(node) {
     if (!(node instanceof Element)) return false;
-    return !!node.closest('#wh65Calendar, .wh69-toolbar, .wh69-view-switcher, .app-tabs');
+    // Layout containers own the canonical calendar and must not be retired as filter strips.
+    return node.matches('.wh-desktop-home-layout, .wh-desktop-home-column, .wh-desktop-calendar-column') ||
+      !!node.closest('#wh65Calendar, .wh69-toolbar, .wh69-view-switcher, .app-tabs');
   }
 
   function buttonLabels(node) {
