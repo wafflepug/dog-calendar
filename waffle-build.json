@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.10.28.03",
-  "releaseName": "Busy-day Home",
+  "assetRevision": "2026.10.28.04",
+  "releaseName": "Care Handover Clarity",
   "careIteration": {
     "returningDogSuggestions": true,
     "reviewedCareInheritance": true,

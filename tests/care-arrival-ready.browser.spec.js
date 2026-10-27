@@ -203,10 +203,10 @@ test('arrival checklist shows only unresolved intake and truthful unreviewed med
   await list.locator('summary').click();
   await expect(list.locator('[data-arrival-task]')).toHaveCount(2);
   await expect(page.locator('[data-waffle-arrival-ready]')).toContainText('Not prepared');
-  await expect(list.locator('[data-arrival-task="medication"]')).toContainText('Medication · Not reviewed');
-  await expect(list.locator('[data-arrival-task="medication"]')).toContainText('Instructions are not verified');
-  await expect(list.locator('[data-arrival-task="belongings"]')).toContainText('Belongings · Review');
-  await expect(list.locator('[data-arrival-task="belongings"]')).toContainText('Items are not verified');
+  await expect(list.locator('[data-arrival-task="medication"]')).toContainText('Medication');
+  await expect(list.locator('[data-arrival-task="medication"]')).toContainText('Medication instructions are unknown and not verified');
+  await expect(list.locator('[data-arrival-task="belongings"]')).toContainText('Belongings');
+  await expect(list.locator('[data-arrival-task="belongings"]')).toContainText('Item count is unknown and not verified');
   await expect(list.locator('[data-arrival-task="medication"]')).toHaveAttribute('data-care-readiness-action', 'medication');
   await expect(list.locator('[data-arrival-task="belongings"]')).toHaveAttribute('data-care-readiness-action', 'belongings');
   expect(await page.evaluate(() => window.reads)).toBe(0);
@@ -221,9 +221,9 @@ test('arrival checklist shows only unresolved intake and truthful unreviewed med
     window.WAFFLE_ARRIVAL_READY.refresh();
   });
   await expect(list.locator('[data-arrival-task="intake"]')).toHaveCount(0);
-  await expect(list.locator('[data-arrival-task="medication"]')).toContainText('Medication · Review');
-  await expect(list.locator('[data-arrival-task="medication"]')).toContainText('Read the saved instructions');
-  await expect(list.locator('[data-arrival-task="belongings"]')).toContainText('Belongings · 2 listed');
+  await expect(list.locator('[data-arrival-task="medication"]')).toContainText('Medication');
+  await expect(list.locator('[data-arrival-task="medication"]')).toContainText('Read saved instructions');
+  await expect(list.locator('[data-arrival-task="belongings"]')).toContainText('2 items listed');
   await expect(list.locator('[data-arrival-task]')).toHaveCount(2);
   expect(await page.evaluate(() => window.reads)).toBe(0);
   await addCard(page, { stayId: 's1', dogId: 'duplicate-dog', key: 'duplicate-checklist', intake: 'not_prepared' });
@@ -251,4 +251,19 @@ test('arrival action fits narrow and wide rosters in both themes', async ({ page
       expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth + 1);
     }
   }
+});
+
+test('arrival task labels remain concise while blank evidence stays unknown and identity changes update accessible context',async({page})=>{
+  await setup(page);await addCard(page,{stayId:'stay-a',dogId:'dog-a',key:'milo|today',intake:'complete'});
+  const card=page.locator('.directory-card');
+  await card.evaluate(node=>{node.insertAdjacentHTML('beforeend','<section data-directory-detail="profile" data-profile-read-state="fresh"></section><span data-care-brief-medication></span><section data-belongings-summary></section>');WAFFLE_ARRIVAL_READY.refresh();});
+  await card.locator('[data-arrival-task-heading]').click();
+  await expect(card.locator('[data-arrival-task="medication"] strong')).toHaveText('Medication');
+  await expect(card.locator('[data-arrival-task="belongings"] strong')).toHaveText('Belongings');
+  await expect(card.locator('[data-arrival-task="medication"] small')).toContainText('unknown');
+  await expect(card.locator('[data-arrival-task="belongings"] small')).toContainText('unknown');
+  await expect(card.locator('[data-arrival-task="medication"]')).toHaveAccessibleName(/for Milo/);
+  await card.evaluate(node=>{node.dataset.directoryDogName='Luna';});
+  await expect(card.locator('[data-arrival-task="medication"]')).toHaveAccessibleName(/for Luna/);
+  expect(await page.evaluate(()=>window.reads)).toBe(0);
 });

@@ -328,8 +328,14 @@ test('responsive brand uses shared Palz Stay artwork with desktop workspace cont
       await expect(section.locator('.v10-card-kicker')).toBeHidden();
       const row = section.locator('.wh-home-guest-row');
       await expect(row).toHaveAttribute('data-home-state', /^(populated|empty|loading|error)$/);
-      if (await row.getAttribute('data-home-state') === 'populated' && await row.getAttribute('data-home-photo-error') !== 'true') await expect(section.locator('.wh-home-muted')).toBeHidden();
-      else await expect(section.locator('.wh-home-muted')).toBeVisible();
+      // Read state and visibility together: a photo can settle between separate awaits.
+      await expect.poll(() => section.evaluate(node => {
+        const row = node.querySelector('.wh-home-guest-row'), status = node.querySelector('.wh-home-muted');
+        const shouldShow = row.dataset.homeState !== 'populated' || row.dataset.homePhotoError === 'true';
+        const style = getComputedStyle(status), rect = status.getBoundingClientRect();
+        const shown = style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0;
+        return shown === shouldShow;
+      })).toBe(true);
       await expect(section.locator('.wh-home-shortcuts')).toBeHidden();
       await expect(section.locator('h2')).toBeVisible();
       await expect(section.locator('.wh-home-guest-row')).not.toHaveCSS('display', 'none');

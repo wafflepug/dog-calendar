@@ -5,7 +5,10 @@ Reviewed 17 September 2026. Repository: `wafflepug/dog-calendar`; always start i
 
 ## Current desktop iteration - 28 October 2026
 
-Candidate 2026.10.28.03: [Busy-day Home](home-busy-day.md). Six refinements: known guest counts, local near-arrival labels, existing human-readable IDs for same-name guests, complete aligned names/dates, keyboard portrait navigation and truthful photo failures. Preserve exact stay links, canonical Calendar and lazy reads. Next: reduce repeated support text in the Care arrival-to-checkout journey using measured task evidence.
+Candidate 2026.10.28.04: [Care handover clarity](care-handover-clarity.md). Six bounded arrival-to-checkout refinements: concise arrival tasks, full-width owner-link feedback, direct single-item belongings, consolidated review guidance, growing optional departure note and readable verified departure context. Preserve unknown states, complete medication, explicit operations, drafts and existing reads. Next: validate the resulting arrival and departure journeys on physical phones before adding more controls.
+
+
+Published 2026.10.28.03 (PR #267): [Busy-day Home](home-busy-day.md). Six refinements: known guest counts, local near-arrival labels, existing human-readable IDs for same-name guests, complete aligned names/dates, keyboard portrait navigation and truthful photo failures. Preserve exact stay links, canonical Calendar and lazy reads. Next: reduce repeated support text in the Care arrival-to-checkout journey using measured task evidence.
 
 
 Published 2026.10.28.02 (PR #266): [Home clarity and continuity](home-clarity.md). Fit-aware pinned Calendar, concise acknowledged empty states and shared Palz Stay sidebar/Home styling. Preserve loading/error guidance, canonical calendar nodes, mobile routes, exact identities and no new backend reads. Validate dynamic height and viewport changes, current-head CI and live frontend attribution.

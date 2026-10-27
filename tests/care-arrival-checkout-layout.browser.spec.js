@@ -246,3 +246,23 @@ test('Care arrival and guided checkout remain reachable at the configured viewpo
   await expect(dialog).toBeHidden();
   await expect.poll(() => page.evaluate(() => window.writes.length)).toBe(0);
 });
+
+test('departure note expands as typed while confirmation stays reachable above the phone footer',async({page,baseURL},testInfo)=>{
+  const {selected}=await setup(page);
+  await installVisualRuntime(page,baseURL,await selected.elementHandle());
+  await selected.locator('.v11217-roster-more-actions summary').click();
+  await selected.locator('[data-v11217-roster-checkout]').click();
+  const dialog=page.locator('#v11217GuidedCheckout'),note=dialog.locator('[data-v11217-guided-note]');
+  await expect(note).toHaveAttribute('rows','2');
+  await expect(page.getByLabel('Departure note (optional)',{exact:true})).toHaveCount(1);
+  const initial=await note.evaluate(node=>node.getBoundingClientRect().height);
+  await note.fill(Array.from({length:15},(_,i)=>'Handover detail '+i).join('\n'));
+  const expanded=await note.evaluate(node=>node.getBoundingClientRect().height);
+  expect(expanded).toBeGreaterThan(initial);expect(expanded).toBeLessThanOrEqual(180);
+  const confirm=dialog.locator('[data-v11217-guided-confirm]');
+  const hit=await confirm.evaluate(node=>{const b=node.getBoundingClientRect(),top=document.elementFromPoint(b.left+b.width/2,b.top+b.height/2);return{bottom:b.bottom,height:innerHeight,clickable:top===node||node.contains(top)};});
+  expect(hit.bottom).toBeLessThanOrEqual(hit.height);expect(hit.clickable).toBeTruthy();
+  await note.fill('');await expect.poll(()=>note.evaluate(node=>node.getBoundingClientRect().height)).toBe(initial);
+  expect(await page.evaluate(()=>window.writes.length)).toBe(0);
+  await page.screenshot({path:`output/care-journey-six/note-${testInfo.project.name}.png`});
+});

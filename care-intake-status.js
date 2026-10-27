@@ -196,6 +196,7 @@
     }
     if (node.dataset.stateSignature !== signature) {
       node.dataset.stateSignature = signature;
+      delete node.dataset.ownerLinkFeedback;
       node.dataset.state = state.code;
       node.textContent = state.label;
       if (state.detail) {
@@ -338,6 +339,7 @@
       owner.parentElement?.appendChild(status);
     }
     const host = owner.parentElement || card;
+    status.dataset.ownerLinkFeedback = 'true';
     void api.copyLink(prepared.link, {
       button: owner,
       status,

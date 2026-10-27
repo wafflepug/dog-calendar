@@ -1017,3 +1017,11 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-
   min-width: 0;
   margin: 0;
 }
+
+/* Copy outcomes read as a full-width message, rather than an oversized status pill. */
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-owner-care-action-group > [data-owner-link-feedback="true"] {
+  display:block; flex:1 1 100%; width:100%; min-width:0; min-height:0; padding:4px 0; border:0; border-radius:0; background:transparent; color:var(--care-card-text,#17243b); font-weight:500; line-height:1.5; white-space:normal; overflow-wrap:anywhere;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-owner-care-action-group > [data-owner-care-link-fallback] {
+  flex:1 1 100%; min-width:0; width:100%; max-width:100%; font-size:16px; line-height:1.5;
+}

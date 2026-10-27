@@ -73,28 +73,29 @@
 
     const medication = card.querySelector('[data-care-brief-medication]');
     const medicationText = String(medication?.textContent || '').replace(/\s+/g, ' ').trim();
-    const medicationKnown = profileFresh && !!medication && !medication.matches('[aria-busy="true"]') &&
-      !/^(loading|checking|not loaded|pending)/i.test(medicationText);
+    const medicationKnown = profileFresh && !!medicationText && !!medication && !medication.matches('[aria-busy="true"]') &&
+      !/^(loading|checking|not loaded|pending|unavailable|not available|needs identity review)/i.test(medicationText);
+    const medicationSaved = medicationKnown && !/no medication instructions saved/i.test(medicationText);
     tasks.push({
       key: 'medication',
-      title: medicationKnown && !/no medication instructions saved/i.test(medicationText) ? 'Medication · Review' : 'Medication · Not reviewed',
-      detail: medicationKnown && !/no medication instructions saved/i.test(medicationText)
-        ? 'Read the saved instructions before check-in.'
-        : 'Instructions are not verified in this summary.',
+      title: 'Medication',
+      detail: medicationSaved ? 'Read saved instructions before check-in.' : medicationKnown
+        ? 'No saved medication instructions are recorded.'
+        : 'Medication instructions are unknown and not verified.',
       action: 'medication',
       actionLabel: 'Review'
     });
 
     const belongings = card.querySelector('[data-belongings-summary]');
     const itemCount = belongings?.querySelectorAll('.belongings-summary-list > li').length || 0;
-    const belongingsKnown = profileFresh && !!belongings && !/loading|not loaded|pending/i.test(belongings.textContent || '');
+    const belongingsKnown = profileFresh && !!belongings && (itemCount > 0 || !!belongings.querySelector('.belongings-summary-empty')) && !/loading|not loaded|pending|unavailable|not available|identity review/i.test(belongings.textContent || '');
     const hasKnownItems = belongingsKnown && itemCount > 0;
     tasks.push({
       key: 'belongings',
-      title: hasKnownItems ? `Belongings · ${itemCount} listed` : 'Belongings · Review',
-      detail: hasKnownItems ? 'Review the listed items before check-in.' : belongingsKnown
-        ? 'No items are recorded; check what is arriving with this guest.'
-        : 'Items are not verified in this summary.',
+      title: 'Belongings',
+      detail: hasKnownItems ? `${itemCount} ${itemCount === 1 ? 'item' : 'items'} listed; review what is arriving.` : belongingsKnown
+        ? '0 items recorded; check what is arriving with this guest.'
+        : 'Item count is unknown and not verified.',
       action: 'belongings',
       actionLabel: 'Review'
     });
@@ -117,7 +118,7 @@
       items.dataset.arrivalTaskItems = '';
       list.appendChild(items);
     }
-    const signature = JSON.stringify(tasks);
+    const signature = JSON.stringify({ tasks, identity: identity(card) });
     if (list.dataset.tasksSignature !== signature) {
       list.dataset.tasksSignature = signature;
       const summary = list.querySelector('[data-arrival-task-heading]');
@@ -129,7 +130,9 @@
         button.type = 'button';
         button.dataset.arrivalTask = task.key;
         button.dataset.careReadinessAction = task.action;
-        button.setAttribute('aria-label', `${task.title}. ${task.detail} ${task.actionLabel} in Care.`);
+        const d = identity(card);
+        const dogContext = [d.name, d.dogNumber ? `Dog Number ${d.dogNumber}` : '', d.start && d.end ? `stay ${d.start} to ${d.end}` : ''].filter(Boolean).join(', ');
+        button.setAttribute('aria-label', `${task.title} for ${dogContext || 'this dog'}. ${task.detail} ${task.actionLabel} in Care.`);
         const title = document.createElement('strong');
         title.textContent = task.title;
         const detail = document.createElement('small');
@@ -295,7 +298,7 @@
       if (meaningful) scheduleRefresh();
     });
     const scope = grid.closest('.directory-dashboard-fused') || document.querySelector('.v1082-stay-panels') || grid.parentElement;
-    observer.observe(scope, { subtree: true, childList: true, attributes: true, attributeFilter: ['data-directory-stay-id', 'data-directory-dog-id', 'data-directory-dog-number', 'data-directory-stay-key', 'data-directory-start-date', 'data-directory-end-date', 'data-directory-owner-name', 'data-v1088-owner-name', 'data-v1082-past-stay', 'style', 'class', 'hidden'] });
+    observer.observe(scope, { subtree: true, childList: true, attributes: true, attributeFilter: ['data-directory-stay-id', 'data-directory-dog-name', 'data-dog-name', 'data-directory-dog-id', 'data-directory-dog-number', 'data-directory-stay-key', 'data-directory-start-date', 'data-directory-end-date', 'data-directory-owner-name', 'data-v1088-owner-name', 'data-v1082-past-stay', 'style', 'class', 'hidden'] });
     document.querySelectorAll('[data-v1082-stay-tab]').forEach(tab => tab.addEventListener('click', () => setTimeout(scheduleRefresh, 0)));
     document.getElementById('guestDirectorySearch')?.addEventListener('input', scheduleRefresh);
   }

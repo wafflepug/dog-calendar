@@ -164,3 +164,25 @@ test('stored readable Dog IDs survive the real CSV-to-Home path on desktop and p
   await expect(arrivals.locator('.wh-home-guest').filter({hasText:'Dog ID #00017'})).toHaveAttribute('href',new RegExp('stayId='+fixture.bookings[0].stayId));
   expect(profileReads()).toBe(reads);
 });
+
+test('Home photo warnings override the real mobile quiet-status stylesheet',async({page})=>{
+  const fixture=await install(page);
+  await page.goto('/index.html?view=today',{waitUntil:'networkidle'});
+  await expect(page.locator('#whHomeGuests')).toHaveAttribute('data-home-state','populated');
+  for(const width of [390,320,1440]){
+    await page.setViewportSize({width,height:900});
+    for(const dark of [false,true]){
+      await page.evaluate(dark=>document.body.classList.toggle('dark-theme',dark),dark);
+      const states=await page.evaluate(()=>{
+        const row=document.querySelector('#whHomeGuests'),status=document.querySelector('#whHomeGuestsStatus'),before=row.getAttribute('data-home-photo-error');
+        delete row.dataset.homePhotoError;
+        const quiet=getComputedStyle(status).display;
+        row.dataset.homePhotoError='true';
+        const warning=getComputedStyle(status).display,visibility=getComputedStyle(status).visibility;
+        if(before===null)delete row.dataset.homePhotoError;else row.setAttribute('data-home-photo-error',before);
+        return{quiet,warning,visibility};
+      });
+      expect(states.quiet).toBe('none');expect(states.warning).toBe('block');expect(states.visibility).toBe('visible');
+    }
+  }
+});

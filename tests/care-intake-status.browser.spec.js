@@ -414,3 +414,31 @@ test.describe('compact care intake status', () => {
     expect(await page.evaluate(() => window.__intakeNetworkReads)).toBe(0);
   });
 });
+
+test('owner-link copying uses full-width feedback and manual fallback without clipping or reads',async({page})=>{
+  await page.setContent(markup()); await watchNetworkReads(page);
+  await page.evaluate(()=>{document.body.dataset.wafflePage='directory';});
+  await page.addStyleTag({content:fs.readFileSync(path.join(__dirname,'..','care-mobile-clarity.css'),'utf8')});
+  await page.addScriptTag({content:handoffSource}); await page.addScriptTag({content:source});
+  await page.evaluate(()=>{
+    Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async()=>{throw Error('blocked');}}});
+    window.dispatchEvent(new CustomEvent('waffle:owner-care-link-ready',{detail:{dogName:'Milo',startDate:'2026-10-20',endDate:'2026-10-22',link:'https://secret.invalid/very-long-fixture-token',dogId:'dog-1',stayId:'stay-1',stayKey:'milo|2026-10-20|2026-10-22'}}));
+  });
+  await page.locator('#firstlevelOwnerCareLink').click();
+  const feedback=page.locator('[data-compact-intake-status]'), fallback=page.locator('[data-owner-care-link-fallback]');
+  await expect(feedback).toHaveAttribute('data-owner-link-feedback','true');
+  await expect(feedback).toContainText('Copy was blocked');
+  for(const dark of [false,true]){
+    await page.evaluate(dark=>document.body.classList.toggle('dark-theme',dark),dark);
+    const g=await feedback.evaluate(node=>{const box=node.getBoundingClientRect(),parent=node.parentElement.getBoundingClientRect(),field=node.parentElement.querySelector('textarea').getBoundingClientRect(),s=getComputedStyle(node);return{width:innerWidth,page:document.documentElement.scrollWidth,boxWidth:box.width,parentWidth:parent.width,top:box.top,fieldBottom:field.bottom,border:s.borderTopWidth};});
+    expect(g.page).toBeLessThanOrEqual(g.width);
+    expect(Math.abs(g.boxWidth-g.parentWidth)).toBeLessThan(2);
+    expect(g.top).toBeGreaterThanOrEqual(g.fieldBottom);
+    expect(g.border).toBe('0px');
+  }
+  await expect(fallback).toBeFocused();
+  expect(await page.evaluate(()=>window.__intakeNetworkReads)).toBe(0);
+  await page.evaluate(()=>window.dispatchEvent(new CustomEvent('waffle:owner-care-link-unavailable',{detail:{stayId:'stay-1',dogId:'dog-1',stayKey:'milo|2026-10-20|2026-10-22'}})));
+  await expect(feedback).not.toHaveAttribute('data-owner-link-feedback','true');
+  await expect(fallback).toHaveCount(0);
+});
