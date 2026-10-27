@@ -118,8 +118,8 @@ test('Care roster search and supporting disclosures use the available header wid
     await expect(searchStatus).toBeVisible();
     const statusBox = await searchStatus.boundingBox();
     expect(statusBox.width).toBeGreaterThanOrEqual(before.toolbar.width - 2);
-    await expect(searchStatus.locator('[data-directory-search-clear]')).toBeVisible();
-    await searchStatus.locator('[data-directory-search-clear]').click();
+    await expect(toolbar.locator('[data-directory-search-clear]')).toBeVisible();
+    await toolbar.locator('[data-directory-search-clear]').click();
     await expect(searchStatus).toBeHidden();
   }
 

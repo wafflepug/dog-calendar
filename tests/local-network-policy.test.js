@@ -8,7 +8,7 @@ test('allows established read actions', () => {
   assert.equal(localBackendRequestPolicy({ method: 'GET', action: 'maintenance_status' }).allowed, true);
   assert.equal(localBackendRequestPolicy({ method: 'HEAD', action: 'maintenance_status' }).allowed, true);
   assert.equal(localBackendRequestPolicy({ method: 'GET', action: 'get_guest_directory' }).allowed, true);
-  for (const action of ['list_dog_identities', 'list_dog_stays_for_linking']) {
+  for (const action of ['list_dog_identities', 'list_dog_stays_for_linking', 'get_push_device']) {
     assert.equal(localBackendRequestPolicy({ method: 'GET', action }).allowed, true);
     assert.equal(localBackendRequestPolicy({ method: 'POST', action }).allowed, false);
   }

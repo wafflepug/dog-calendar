@@ -5,7 +5,9 @@ Reviewed 17 September 2026. Repository: `wafflepug/dog-calendar`; always start i
 
 ## Current Care iteration - 27 October 2026
 
-Candidate 2026.10.27.03: [Stay advance reminders](stay-advance-reminders.md). Arrival and departure system push at one and two calendar days before the stay date, using existing category preferences and scheduled handlers. Require timezone-safe planning, exact stay identity, per-device receipts, failure retry and live scheduler/capability verification.
+Candidate 2026.10.27.04: [Sitter UI efficiency](sitter-ui-efficiency.md). Six bounded improvements: adjacent search clearing, direct active-work-filter reset, keyboard stay tabs, truthful device readiness, guarded changed-only preferences and compact notification settings. Preserve exact identities, drafts, lazy reads and explicit delivery/permission actions. Require current-head CI and live frontend attribution.
+
+Published 2026.10.27.03 (PR #263): [Stay advance reminders](stay-advance-reminders.md). Arrival and departure system push at one and two calendar days before the stay date, using existing category preferences and scheduled handlers. Require timezone-safe planning, exact stay identity, per-device receipts, failure retry and live scheduler/capability verification.
 
 Published 2026.10.27.02 (PR #262): [Care compact toolbar](care-compact-toolbar.md). Give search its available width and consolidate existing supporting disclosures on phones, with readable full-width expansion and preserved search/filter/profile navigation. No new controls, reads or data writes.
 

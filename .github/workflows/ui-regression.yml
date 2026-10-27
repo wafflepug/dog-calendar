@@ -153,6 +153,9 @@ on:
       - 'tests/mvp-records-notifications.browser.spec.js'
       - 'tests/care-records-forms.browser.spec.js'
       - 'tests/mvp-records-notifications.config.js'
+      - 'tests/notification-device-settings.config.js'
+      - 'tests/notification-device-settings.browser.spec.js'
+      - 'tests/care-roster-efficiency.browser.spec.js'
       - 'tests/mobile-navigation-observer.spec.js'
       - 'tests/fixtures/mobile-navigation-observer-baseline.js'
       - 'playwright.mvp-observer.config.js'
@@ -311,6 +314,9 @@ on:
       - 'tests/mvp-records-notifications.browser.spec.js'
       - 'tests/care-records-forms.browser.spec.js'
       - 'tests/mvp-records-notifications.config.js'
+      - 'tests/notification-device-settings.config.js'
+      - 'tests/notification-device-settings.browser.spec.js'
+      - 'tests/care-roster-efficiency.browser.spec.js'
       - 'tests/mobile-navigation-observer.spec.js'
       - 'tests/fixtures/mobile-navigation-observer-baseline.js'
       - 'playwright.mvp-observer.config.js'
@@ -420,6 +426,8 @@ jobs:
             configs: playwright.care-ui-refinements.config.js playwright.care-profile.config.js playwright.care-ui-polish.config.js playwright.care-roster.config.js playwright.returning-dogs.config.js
           - group: navigation
             configs: playwright.care-scroll-access.config.js playwright.care-loading-feedback.config.js playwright.care-navigation-accessibility.config.js
+          - group: notification-device-settings
+            configs: tests/notification-device-settings.config.js
           - group: records
             configs: playwright.care-navigation-continuity.config.js tests/mvp-records-notifications.config.js playwright.mvp-observer.config.js playwright.runtime-review.config.js
     steps:

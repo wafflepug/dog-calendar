@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.10.27.03",
-  "releaseName": "Stay Advance Reminders",
+  "assetRevision": "2026.10.27.04",
+  "releaseName": "Sitter UI Efficiency",
   "careIteration": {
     "returningDogSuggestions": true,
     "reviewedCareInheritance": true,

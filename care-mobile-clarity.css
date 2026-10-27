@@ -8,13 +8,49 @@ body[data-waffle-page="directory"] #directoryTabPanel .directory-dashboard-fused
   gap: 8px;
   min-width: 0;
 }
-body[data-waffle-page="directory"] #directoryTabPanel .directory-dashboard-fused:not(.is-profile-mode) .guest-directory-toolbar > .guest-directory-search,
+body[data-waffle-page="directory"] #directoryTabPanel .directory-dashboard-fused:not(.is-profile-mode) .guest-directory-toolbar > .guest-directory-search-wrap,
 body[data-waffle-page="directory"] #directoryTabPanel .directory-dashboard-fused:not(.is-profile-mode) .guest-directory-toolbar > .directory-search-status {
   box-sizing: border-box;
   grid-column: 1 / -1;
   width: 100%;
   min-width: 0;
 }
+body[data-waffle-page="directory"] #directoryTabPanel .guest-directory-search-wrap {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  min-width: 0;
+}
+body[data-waffle-page="directory"] #directoryTabPanel .guest-directory-search-wrap > .guest-directory-search {
+  flex: 1 1 auto;
+  width: 0;
+  min-width: 0;
+}
+/* The explicit 44px Clear action replaces the smaller platform cancel decoration. */
+body[data-waffle-page="directory"] #guestDirectorySearch::-webkit-search-cancel-button { display: none; }
+body[data-waffle-page="directory"] #directoryTabPanel .guest-directory-search-wrap > [data-directory-search-clear],
+body[data-waffle-page="directory"] #directoryTabPanel .guest-directory-toolbar > .care-roster-focus-clear {
+  box-sizing: border-box;
+  flex: 0 0 auto;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 6px 10px;
+  border: 1px solid var(--wh75-accent, var(--wh-accent, #7562db));
+  border-radius: 8px;
+  background: var(--wh-surface, #fff);
+  color: var(--wh-text, #1f2937);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+body[data-waffle-page="directory"] #directoryTabPanel .directory-dashboard-fused:not(.is-profile-mode) .guest-directory-toolbar > .care-roster-focus-clear {
+  grid-column: 1 / -1;
+  justify-self: start;
+}
+body[data-waffle-page="directory"] #directoryTabPanel .guest-directory-search-wrap > [data-directory-search-clear][hidden],
+body[data-waffle-page="directory"] #directoryTabPanel .guest-directory-toolbar > .care-roster-focus-clear[hidden] { display: none; }
+body.dark-theme[data-waffle-page="directory"] #directoryTabPanel .guest-directory-search-wrap > [data-directory-search-clear],
+body.dark-theme[data-waffle-page="directory"] #directoryTabPanel .guest-directory-toolbar > .care-roster-focus-clear { background: var(--wh-surface, #1e293b); }
 body[data-waffle-page="directory"] #directoryTabPanel .directory-dashboard-fused:not(.is-profile-mode) .guest-directory-toolbar > .care-roster-focus,
 body[data-waffle-page="directory"] #directoryTabPanel .directory-dashboard-fused:not(.is-profile-mode) .guest-directory-toolbar > .care-record-maintenance {
   box-sizing: border-box;
@@ -35,7 +71,7 @@ body[data-waffle-page="directory"] #directoryTabPanel .directory-dashboard-fused
   grid-row: auto;
   width: 100%;
 }
-body[data-waffle-page="directory"] #directoryTabPanel .directory-dashboard-fused:not(.is-profile-mode) .guest-directory-toolbar > :not(.guest-directory-search):not(.care-roster-focus):not(.care-record-maintenance):not(.directory-search-status) { grid-column: 1 / -1; }
+body[data-waffle-page="directory"] #directoryTabPanel .directory-dashboard-fused:not(.is-profile-mode) .guest-directory-toolbar > :not(.guest-directory-search-wrap):not(.care-roster-focus):not(.care-record-maintenance):not(.directory-search-status) { grid-column: 1 / -1; }
 body[data-waffle-page="directory"] #directoryTabPanel .directory-dashboard-fused:not(.is-profile-mode) .guest-directory-toolbar > .care-roster-focus > summary,
 body[data-waffle-page="directory"] #directoryTabPanel .directory-dashboard-fused:not(.is-profile-mode) .guest-directory-toolbar > .care-record-maintenance > summary {
   box-sizing: border-box;

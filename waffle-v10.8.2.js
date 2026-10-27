@@ -660,6 +660,7 @@ function v1082SwitchStayView(view, options = {}) {
                     ? 'true'
                     : 'false'
             );
+            button.tabIndex = active ? 0 : -1;
         });
 
     document
@@ -1006,6 +1007,12 @@ function initialiseV1082CareStays() {
             '[data-v1082-stay-tab]'
         )
         .forEach(button => {
+            button.tabIndex = button.getAttribute('aria-selected') === 'true' ? 0 : -1;
+            button.addEventListener('click', () => window.setTimeout(() => {
+                document.querySelectorAll('[data-v1082-stay-tab]').forEach(tab => {
+                    tab.tabIndex = tab.getAttribute('aria-selected') === 'true' ? 0 : -1;
+                });
+            }, 0));
             button.addEventListener(
                 'click',
                 () =>
@@ -1015,6 +1022,31 @@ function initialiseV1082CareStays() {
                     )
             );
         });
+
+    const stayTabs = Array.from(document.querySelectorAll('[data-v1082-stay-tab]'));
+    stayTabs.forEach((button, index) => button.addEventListener('keydown', event => {
+        let nextIndex;
+        if (event.key === 'ArrowRight') nextIndex = (index + 1) % stayTabs.length;
+        else if (event.key === 'ArrowLeft') nextIndex = (index - 1 + stayTabs.length) % stayTabs.length;
+        else if (event.key === 'Home') nextIndex = 0;
+        else if (event.key === 'End') nextIndex = stayTabs.length - 1;
+        else return;
+        event.preventDefault();
+        // Programmatic click() is untrusted; retain the same startup-link guard as a real pointer selection.
+        if (event.isTrusted) window.WAFFLE_DIRECTORY_PROFILE_NAV?.invalidate?.();
+        stayTabs[nextIndex].focus();
+        if (stayTabs[nextIndex].getAttribute('aria-selected') !== 'true') stayTabs[nextIndex].click();
+    }));
+    const stayTabList = stayTabs[0]?.closest('[role="tablist"], .v1082-stay-tabs');
+    if (stayTabList && typeof MutationObserver === 'function') {
+        new MutationObserver(() => stayTabs.forEach(tab => {
+            tab.tabIndex = tab.getAttribute('aria-selected') === 'true' ? 0 : -1;
+        })).observe(stayTabList, {
+            subtree: true,
+            attributes: true,
+            attributeFilter: ['aria-selected']
+        });
+    }
 
     document.addEventListener(
         'click',

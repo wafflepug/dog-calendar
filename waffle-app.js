@@ -2644,6 +2644,13 @@ let waffleFirebaseApp =
 
 let wafflePushRegistrationPromise =
     null;
+let wafflePushSettingsEditGeneration = 0;
+let wafflePushSettingsHydrationGeneration = 0;
+let wafflePushSettingsSaving = false;
+let wafflePushSettingsSaveGeneration = 0;
+let wafflePushConfirmedSettings = null;
+let wafflePushSettingsHasLocalEdits = false;
+let wafflePushSettingsDraftSubscriptionId = null;
 
 
 function getWaffleFirebaseConfig() {
@@ -2707,6 +2714,15 @@ function setWafflePushSubscriptionId(
             value ||
             ''
         ).trim();
+
+    const previousId = getWafflePushSubscriptionId();
+    if (previousId !== value) {
+        wafflePushSettingsHydrationGeneration += 1;
+        wafflePushSettingsEditGeneration += 1;
+        wafflePushSettingsHasLocalEdits = false;
+        wafflePushConfirmedSettings = null;
+        wafflePushSettingsDraftSubscriptionId = value;
+    }
 
     if (value) {
         localStorage.setItem(
@@ -2852,6 +2868,9 @@ function refreshWaffleNotificationButton(
 
 
 function ensureWaffleNotificationModal() {
+    if (wafflePushSettingsDraftSubscriptionId === null) {
+        wafflePushSettingsDraftSubscriptionId = getWafflePushSubscriptionId();
+    }
     let modal =
         document.getElementById(
             'waffleNotificationModal'
@@ -2964,7 +2983,10 @@ function ensureWaffleNotificationModal() {
 
                 <div
                     class="waffle-notification-message"
-                    data-push-message></div>
+                    data-push-message
+                    role="status"
+                    aria-live="polite"></div>
+                <button type="button" data-push-state-retry hidden>Retry device status</button>
 
                 <div class="waffle-notification-device">
                     <label>
@@ -3031,15 +3053,15 @@ function ensureWaffleNotificationModal() {
                         type="button"
                         class="waffle-push-primary"
                         data-push-enable>
-                        🔔 Enable This Device
+                        Enable this device
                     </button>
 
                     <button type="button" data-push-save hidden>
-                        💾 Save Preferences
+                        Save preferences
                     </button>
 
                     <button type="button" data-push-test hidden>
-                        🧪 Send Test
+                        Send test notification
                     </button>
 
                     <button
@@ -3047,7 +3069,7 @@ function ensureWaffleNotificationModal() {
                         class="waffle-push-danger"
                         data-push-disable
                         hidden>
-                        Disable
+                        Disable this device
                     </button>
                 </div>
 
@@ -3063,6 +3085,12 @@ function ensureWaffleNotificationModal() {
     );
 
     modal.querySelector('.waffle-notification-close')?.addEventListener('click', closeWaffleNotificationCentre);
+    modal.querySelectorAll('[data-push-device-label], [data-push-pref]').forEach(input => {
+        const markEdited = () => { wafflePushSettingsEditGeneration += 1; wafflePushSettingsHasLocalEdits = true; updateWafflePushSaveButton(); };
+        input.addEventListener('input', markEdited);
+        input.addEventListener('change', markEdited);
+    });
+    modal.querySelector('[data-push-state-retry]')?.addEventListener('click', () => hydrateWaffleNotificationSettings({ retry: true }));
 
     modal.addEventListener('keydown', event => {
         const dialog = modal.querySelector('[role="dialog"]');
@@ -3270,6 +3298,20 @@ function applyPushPreferencesToModal(
 }
 
 
+function updateWafflePushSaveButton() {
+    const modal = document.getElementById('waffleNotificationModal');
+    const button = modal?.querySelector('[data-push-save]');
+    if (!button || wafflePushSettingsSaving) return;
+    const baseline = wafflePushConfirmedSettings;
+    const currentLabel = String(modal.querySelector('[data-push-device-label]')?.value || getDefaultPushDeviceLabel()).trim();
+    const preferences = getPushPreferencesFromModal();
+    const changed = !baseline || baseline.deviceLabel !== currentLabel ||
+        Object.keys(preferences).some(key => baseline.preferences?.[key] !== preferences[key]);
+    button.disabled = !changed;
+    button.textContent = changed ? 'Save changes' : 'No changes';
+}
+
+
 function getDefaultPushDeviceLabel() {
     if (
         isWaffleIosDevice()
@@ -3314,6 +3356,10 @@ async function loadWafflePushDeviceState() {
                 }
             );
 
+        if (!response || response.result !== 'success') {
+            throw new Error(response?.error || 'Device status was not confirmed by the server.');
+        }
+
         return (
             response.device ||
             {
@@ -3327,70 +3373,74 @@ async function loadWafflePushDeviceState() {
             error
         );
 
-        return {
-            registered: true,
-            enabled: true,
-            subscriptionId
-        };
+        return { loadFailed: true, subscriptionId };
     }
 }
 
 
-async function hydrateWaffleNotificationSettings() {
+function getWafflePushReadiness(state) {
+    const enrolled = !!(state?.registered && state?.enabled);
+    const supported = typeof window.Notification === 'function';
+    const permission = supported ? Notification.permission : 'unsupported';
+    const configReady = isWaffleFirebaseConfigReady();
+    const iosInstallReady = !isWaffleIosDevice() || isWaffleStandalone();
+    const canEnable = supported && permission !== 'denied' && configReady && iosInstallReady && (!enrolled || permission !== 'granted');
+    if (!supported) return { mode: 'unsupported', ready: false, canEnable: false, text: `Unsupported: this browser does not support notifications. ${enrolled ? 'Device registration is active.' : 'Device is not registered.'}` };
+    if (permission === 'denied') return { mode: 'permission-blocked', ready: false, canEnable: false, text: `Permission blocked: allow notifications in browser or device settings. ${enrolled ? 'Device registration is active.' : 'Device is not registered.'}` };
+    if (permission !== 'granted') return { mode: 'not-enabled', ready: false, canEnable, text: `${enrolled ? 'Not enabled: browser permission has not been granted. Device registration is active.' : 'Not enabled: device registration and browser permission are not active.'}${!configReady ? ' Notifications are not configured for this app yet.' : ''}${!iosInstallReady ? ' Install Waffle House to the iPhone/iPad Home Screen, then open the installed app.' : ''}` };
+    if (!enrolled) return { mode: 'not-enabled', ready: false, canEnable, text: `Not enabled: browser permission is granted, but device registration is not active.${!configReady ? ' Notifications are not configured for this app yet.' : ''}${!iosInstallReady ? ' Install Waffle House to the iPhone/iPad Home Screen, then open the installed app.' : ''}` };
+    if (!configReady) return { mode: 'not-enabled', ready: false, canEnable: false, text: 'Not enabled: notifications are not configured for this app yet.' };
+    if (!iosInstallReady) return { mode: 'not-enabled', ready: false, canEnable: false, text: 'Not enabled: install Waffle House to the iPhone/iPad Home Screen, then open the installed app.' };
+    return { mode: 'ready', ready: true, canEnable: false, text: 'Ready: Device registration is active and browser permission is granted. System display has not been verified.' };
+}
+
+
+async function hydrateWaffleNotificationSettings(options = {}) {
     const modal =
         ensureWaffleNotificationModal();
+    const hydrationGeneration = ++wafflePushSettingsHydrationGeneration;
+    const saveGenerationAtStart = wafflePushSettingsSaveGeneration;
+    const savingAtStart = wafflePushSettingsSaving;
+    const editGeneration = wafflePushSettingsEditGeneration;
+    const subscriptionIdAtStart = getWafflePushSubscriptionId();
+    if (wafflePushSettingsDraftSubscriptionId !== subscriptionIdAtStart) {
+        wafflePushSettingsDraftSubscriptionId = subscriptionIdAtStart;
+        wafflePushSettingsHasLocalEdits = false;
+    }
+    const preserveLocalEdits = wafflePushSettingsHasLocalEdits;
 
     const labelInput =
         modal.querySelector(
             '[data-push-device-label]'
         );
 
-    if (
-        labelInput &&
-        !labelInput.value
-    ) {
+    if (labelInput && !labelInput.value && !getWafflePushSubscriptionId()) {
         labelInput.value =
             getDefaultPushDeviceLabel();
     }
-
-    if (
-        !isWaffleFirebaseConfigReady()
-    ) {
-        setWafflePushMessage(
-            'Firebase public configuration has not been added to waffle-firebase-config.js yet.',
-            'warning'
-        );
-    } else if (
-        isWaffleIosDevice() &&
-        !isWaffleStandalone()
-    ) {
-        setWafflePushMessage(
-            'On iPhone/iPad, install Waffle House to the Home Screen first, then open the installed app to enable notifications.',
-            'warning'
-        );
-    } else if (
-        !('Notification' in window)
-    ) {
-        setWafflePushMessage(
-            'This browser does not support web notifications.',
-            'error'
-        );
-    } else {
-        setWafflePushMessage(
-            Notification.permission ===
-                'granted'
-                ? 'Notification permission is already granted on this device.'
-                : 'Enable notifications when you are ready.',
-            'info'
-        );
-    }
-
+    if (!wafflePushSettingsSaving) setWafflePushMessage('Checking this device…', 'info');
     const state =
         await loadWafflePushDeviceState();
 
-    const registered =
-        state.registered &&
-        state.enabled;
+    if (hydrationGeneration !== wafflePushSettingsHydrationGeneration || modal !== document.getElementById('waffleNotificationModal') || subscriptionIdAtStart !== getWafflePushSubscriptionId()) return;
+    if (savingAtStart || wafflePushSettingsSaving || saveGenerationAtStart !== wafflePushSettingsSaveGeneration) return;
+
+    const retryButton = modal.querySelector('[data-push-state-retry]');
+    if (state.loadFailed) {
+        if (retryButton) retryButton.hidden = false;
+        setWafflePushMessage('Couldn\'t check this device. Your choices are kept. Retry to check again.', 'unknown');
+        return;
+    }
+    const retryHadFocus = !modal.hidden &&
+        !modal.querySelector('[data-notification-centre-panel="settings"]')?.hidden &&
+        document.activeElement === retryButton;
+    if (retryButton) retryButton.hidden = true;
+
+    const enrolled = !!(state.registered && state.enabled);
+    const readiness = getWafflePushReadiness(state);
+    setWafflePushMessage(readiness.text, readiness.mode);
+
+    const registered = enrolled;
 
     const enrollmentWrap =
         modal.querySelector(
@@ -3419,22 +3469,24 @@ async function hydrateWaffleNotificationSettings() {
 
     if (enrollmentWrap) {
         enrollmentWrap.hidden =
-            registered;
+            !!state.registered;
     }
 
     if (enableButton) {
         enableButton.hidden =
-            registered;
+            !readiness.canEnable;
+        enableButton.classList.toggle('waffle-push-primary', readiness.canEnable);
     }
 
     if (saveButton) {
         saveButton.hidden =
             !registered;
+        saveButton.classList.toggle('waffle-push-primary', registered && readiness.ready);
     }
 
     if (testButton) {
         testButton.hidden =
-            !registered;
+            !readiness.ready;
     }
 
     if (disableButton) {
@@ -3442,22 +3494,30 @@ async function hydrateWaffleNotificationSettings() {
             !registered;
     }
 
-    if (
-        registered &&
-        labelInput &&
-        state.deviceLabel
-    ) {
+    if (retryHadFocus) {
+        const status = modal.querySelector('[data-push-message]');
+        status?.setAttribute('tabindex', '-1');
+        status?.focus();
+    }
+
+    const canHydrateControls = editGeneration === wafflePushSettingsEditGeneration && !preserveLocalEdits;
+    if (canHydrateControls && state.registered && labelInput && state.deviceLabel) {
         labelInput.value =
             state.deviceLabel;
     }
 
-    applyPushPreferencesToModal(
-        state.preferences
-    );
+    if (canHydrateControls) {
+        applyPushPreferencesToModal(state.preferences);
+    }
+    if (!wafflePushSettingsSaving) wafflePushConfirmedSettings = state.registered ? {
+        deviceLabel: String(state.deviceLabel || getDefaultPushDeviceLabel()).trim(),
+        preferences: { ...defaultWafflePushPreferences(), ...(state.preferences || {}) }
+    } : null;
 
     refreshWaffleNotificationButton(
         state
     );
+    updateWafflePushSaveButton();
 }
 
 
@@ -3850,7 +3910,7 @@ async function enableWafflePushNotifications() {
             true;
 
         button.textContent =
-            '⏳ Enabling…';
+            'Enabling…';
     }
 
     try {
@@ -3920,7 +3980,7 @@ async function enableWafflePushNotifications() {
                 false;
 
             button.textContent =
-                '🔔 Enable This Device';
+                'Enable this device';
         }
     }
 }
@@ -3941,23 +4001,33 @@ async function saveWafflePushPreferences() {
         return;
     }
 
+    const labelInput = modal.querySelector('[data-push-device-label]');
+    const payload = {
+        action: 'update_push_preferences',
+        subscriptionId,
+        deviceLabel: String(labelInput?.value || getDefaultPushDeviceLabel()).trim(),
+        preferences: getPushPreferencesFromModal()
+    };
+    const submittedSubscriptionId = subscriptionId;
+    const submittedModal = modal;
+    const baseline = wafflePushConfirmedSettings;
+    const changed = !baseline || baseline.deviceLabel !== payload.deviceLabel ||
+        Object.keys(payload.preferences).some(key => baseline.preferences?.[key] !== payload.preferences[key]);
+    if (!changed) {
+        setWafflePushMessage('No preference changes to save.', 'info');
+        return;
+    }
+    if (wafflePushSettingsSaving) return;
+    const saveButton = modal.querySelector('[data-push-save]');
+    const generation = wafflePushSettingsEditGeneration;
+    wafflePushSettingsSaveGeneration += 1;
+    wafflePushSettingsSaving = true;
+    if (saveButton) { saveButton.disabled = true; saveButton.setAttribute('aria-busy', 'true'); saveButton.textContent = 'Saving…'; }
+    setWafflePushMessage('Saving notification preferences…', 'info');
     try {
-        await queryAppsScript(
+        const response = await queryAppsScript(
             {
-                action:
-                    'update_push_preferences',
-                subscriptionId,
-                deviceLabel:
-                    String(
-                        modal
-                            .querySelector(
-                                '[data-push-device-label]'
-                            )
-                            ?.value ||
-                        getDefaultPushDeviceLabel()
-                    ).trim(),
-                preferences:
-                    getPushPreferencesFromModal()
+                ...payload
             },
             {
                 maxAttempts: 2,
@@ -3966,17 +4036,27 @@ async function saveWafflePushPreferences() {
             }
         );
 
-        setWafflePushMessage(
-            'Notification preferences saved.',
-            'success'
-        );
+        if (submittedModal !== document.getElementById('waffleNotificationModal') || submittedSubscriptionId !== getWafflePushSubscriptionId()) return;
+        if (response?.result !== 'success') throw new Error(response?.error || 'The server did not confirm the preference save.');
+        wafflePushConfirmedSettings = { deviceLabel: payload.deviceLabel, preferences: { ...payload.preferences } };
+
+        if (generation === wafflePushSettingsEditGeneration) {
+            wafflePushSettingsHasLocalEdits = false;
+            setWafflePushMessage('Notification preferences saved.', 'success');
+        }
+        else setWafflePushMessage('Saved the submitted preferences. Newer edits are still unsaved.', 'info');
 
     } catch (error) {
+        if (submittedModal !== document.getElementById('waffleNotificationModal') || submittedSubscriptionId !== getWafflePushSubscriptionId()) return;
         setWafflePushMessage(
             error.message ||
             String(error),
             'error'
         );
+    } finally {
+        wafflePushSettingsSaving = false;
+        if (saveButton) saveButton.removeAttribute('aria-busy');
+        updateWafflePushSaveButton();
     }
 }
 
@@ -4013,7 +4093,7 @@ async function sendWafflePushTest() {
         );
 
         setWafflePushMessage(
-            'Test sent. Background the app to confirm system notification delivery.',
+            'The server accepted the test notification. Check this device separately to confirm system display.',
             'success'
         );
 
@@ -4086,6 +4166,7 @@ function initialiseWafflePushUi() {
     if (
         getWafflePushSubscriptionId() &&
         isWaffleFirebaseConfigReady() &&
+        typeof window.Notification === 'function' &&
         Notification.permission ===
             'granted'
     ) {
@@ -12079,6 +12160,13 @@ registerWaffleServiceWorker();
         const input = document.getElementById('guestDirectorySearch');
         const toolbar = input?.closest('.guest-directory-toolbar');
         if (!input || !toolbar) return null;
+        let searchWrap = toolbar.querySelector('.guest-directory-search-wrap');
+        if (!searchWrap) {
+            searchWrap = document.createElement('div');
+            searchWrap.className = 'guest-directory-search-wrap';
+            input.parentNode.insertBefore(searchWrap, input);
+            searchWrap.appendChild(input);
+        }
         let status = document.getElementById('directory-search-status');
         if (!status) {
             status = document.createElement('div');
@@ -12091,9 +12179,11 @@ registerWaffleServiceWorker();
                 input.value = '';
                 input.dispatchEvent(new Event('input', { bubbles: true }));
                 filterGuestDirectoryCards();
-                input.focus();
+                window.requestAnimationFrame(() => input.focus());
             });
         }
+        const clear = status.querySelector('[data-directory-search-clear]');
+        if (clear && searchWrap && clear.parentElement !== searchWrap) searchWrap.appendChild(clear);
         return status;
     }
 
@@ -12274,7 +12364,7 @@ registerWaffleServiceWorker();
             const workflowState = workflowFilter?.getState?.() || { mode: 'all' };
             const hasWorkflowFilter = activeView === 'current' && workflowState.mode && workflowState.mode !== 'all';
             const hideStatus = (!search && !hasWorkflowFilter) || profileMode;
-            const clearSearch = status.querySelector('[data-directory-search-clear]');
+            const clearSearch = status.closest('.guest-directory-toolbar')?.querySelector('[data-directory-search-clear]');
             if (clearSearch && clearSearch.hidden !== !search) clearSearch.hidden = !search;
             if (status.hidden !== hideStatus) status.hidden = hideStatus;
             status.closest('.guest-directory-toolbar')?.classList.toggle('has-search-status', (Boolean(search) || Boolean(hasWorkflowFilter)) && !profileMode);
