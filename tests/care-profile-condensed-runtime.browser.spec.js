@@ -217,7 +217,7 @@ for (const [task, expectedAction, destination] of [
   });
 }
 
-test('arrival review Check In stays available after a failed save and is removed after the confirmed retry', async ({ page, baseURL }) => {
+test('arrival review keyboard Check In stays available after a failed save and is removed after the confirmed retry', async ({ page, baseURL }) => {
   const reads = await fixture(page, { checkinMode: 'fail-first' });
   await page.setViewportSize({ width: 390, height: 900 });
   await page.goto(`${baseURL}/directory.html?arrivalTaskFixture=1`, { waitUntil: 'domcontentloaded' });
@@ -227,7 +227,10 @@ test('arrival review Check In stays available after a failed save and is removed
   await card.locator('[data-arrival-task="medication"]').click();
   const contextualCheckIn = card.locator('[data-arrival-review-checkin]');
   await expect(contextualCheckIn).toBeVisible();
-  await contextualCheckIn.click();
+  // Exercise keyboard activation here; pointer placement has its own layout checks.
+  // WebKit can otherwise complete a coordinate click while this destination is moving.
+  await contextualCheckIn.focus();
+  await contextualCheckIn.press('Enter');
   await expect(card.locator('[data-v110-operation-bar] .v110-action-feedback')).toContainText('HTTP 503');
   await expect(contextualCheckIn).toBeVisible();
   await expect(contextualCheckIn).toBeEnabled();
