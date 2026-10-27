@@ -5,7 +5,9 @@ Reviewed 17 September 2026. Repository: `wafflepug/dog-calendar`; always start i
 
 ## Current desktop iteration - 28 October 2026
 
-Candidate 2026.10.28.01: [Compact desktop Home](desktop-home-layout.md). Keep the mobile card hierarchy in a compact left column beside the existing full calendar on wide desktop workspaces, with a readable stacked fallback and unchanged mobile routes. Preserve canonical DOM nodes, exact links, existing event handlers and lazy data reads. Require cross-breakpoint checks, current-head CI and live frontend attribution.
+Candidate 2026.10.28.02: [Home clarity and continuity](home-clarity.md). Fit-aware pinned Calendar, concise acknowledged empty states and shared Palz Stay sidebar/Home styling. Preserve loading/error guidance, canonical calendar nodes, mobile routes, exact identities and no new backend reads. Validate dynamic height and viewport changes, current-head CI and live frontend attribution.
+
+Published 2026.10.28.01 (PR #265): [Compact desktop Home](desktop-home-layout.md). Keep the mobile card hierarchy in a compact left column beside the existing full calendar on wide desktop workspaces, with a readable stacked fallback and unchanged mobile routes. Preserve canonical DOM nodes, exact links, existing event handlers and lazy data reads. Require cross-breakpoint checks, current-head CI and live frontend attribution.
 
 ## Current Care iteration - 27 October 2026
 

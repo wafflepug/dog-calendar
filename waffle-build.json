@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.10.28.01",
-  "releaseName": "Compact Desktop Home",
+  "assetRevision": "2026.10.28.02",
+  "releaseName": "Home Clarity",
   "careIteration": {
     "returningDogSuggestions": true,
     "reviewedCareInheritance": true,

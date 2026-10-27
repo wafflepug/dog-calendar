@@ -187,7 +187,7 @@ test('empty, pending data, photo error and refreshed checkout remain truthful', 
   await setup(page, { events: [], loaded: false });
   await expect(page.getByRole('status')).toContainText('Waiting for guest data');
   await page.evaluate(() => { localStorage.setItem('boardingDataCache', 'fixture'); WAFFLE_HOME_GUESTS.refresh(); });
-  await expect(page.getByRole('status')).toContainText('No guests are staying');
+  await expect(page.getByRole('status')).toContainText('No guests staying right now.');
   await page.evaluate(events => { fixtureEvents = events; fixtureFailure = true; WAFFLE_HOME_GUESTS.refresh(); }, guests);
   await expect(page.locator('[data-home-stay]')).toHaveCount(4);
   await expect(page.getByRole('status')).toContainText('Profile photos could not load');
@@ -275,7 +275,7 @@ test('upcoming loading, empty and photo failure states remain usable', async ({ 
   await expect(page.locator('#whHomeArrivalsStatus')).toContainText('Waiting for guest data');
   await expect(page.locator('#whHomeArrivals')).toHaveAttribute('aria-busy','true');
   await page.evaluate(()=>{localStorage.setItem('boardingDataCache','fixture');WAFFLE_HOME_GUESTS.refresh();});
-  await expect(page.locator('#whHomeArrivalsStatus')).toHaveText('No boarding arrivals in the next 30 days.');
+  await expect(page.locator('#whHomeArrivalsStatus')).toHaveText('No arrivals in the next 30 days.');
   await page.evaluate(events=>{fixtureEvents=events;fixtureFailure=true;WAFFLE_HOME_GUESTS.refresh();},[event('Expected','2026-09-10','2026-09-12')]);
   await expect(page.locator('#whHomeArrivalsStatus')).toContainText('Profile photos could not load');
   await expect(page.locator('#whHomeArrivals [data-home-stay]')).toHaveCount(1);

@@ -15,6 +15,7 @@
   const photos = new Map();
   const photoRequests = new Map();
   let pending = false;
+  let scheduleHasData = false;
 
   function safePhoto(value) {
     try {
@@ -156,6 +157,7 @@
       if (!host || !status) return;
       const token = ++generation;
       if (!hasData && !events.length) {
+        host.dataset.homeState = 'loading';
         status.textContent = navigator.onLine ? 'Waiting for guest data. Use Sync or open Care if this continues.' : 'You’re offline. Connect to load your guests.';
         host.setAttribute('aria-busy', 'true');
         return;
@@ -193,11 +195,12 @@
         applyPhoto(link, photos.get(key) || '');
         if (host.children[index] !== link) host.insertBefore(link, host.children[index] || null);
       });
+      host.dataset.homeState = events.length ? 'populated' : 'empty';
       if (focused && host.contains(focused) && document.activeElement !== focused) focused.focus({ preventScroll: true });
       host.setAttribute('aria-busy', 'false');
       status.textContent = upcoming
-        ? events.length ? `${events.length} upcoming ${events.length === 1 ? 'stay' : 'stays'} · Today through ${new Date(windowEnd(today) + 'T12:00:00').toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })}` : 'No boarding arrivals in the next 30 days.'
-        : events.length ? `${events.length} current ${events.length === 1 ? 'stay' : 'stays'} · Your home, at a glance` : 'No guests are staying with you right now. Upcoming arrivals are below.';
+        ? events.length ? `${events.length} upcoming ${events.length === 1 ? 'stay' : 'stays'} · Today through ${new Date(windowEnd(today) + 'T12:00:00').toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })}` : 'No arrivals in the next 30 days.'
+        : events.length ? `${events.length} current ${events.length === 1 ? 'stay' : 'stays'} · Your home, at a glance` : 'No guests staying right now.';
       let photoError = false;
       try {
         await loadPhotos(events, (key, url) => {
@@ -222,19 +225,41 @@
       const current = v111CurrentDogEvents().filter(event => isBoarding(event) && !arrivingKeys.has(v110StayKeyForEvent(event)));
       let hasData = current.length + arrivals.length > 0;
       try { hasData ||= localStorage.getItem('boardingDataCache') !== null; } catch (_) {}
+      scheduleHasData = hasData;
       currentRow(current, today, hasData);
       arrivalsRow(arrivals, today, hasData);
     } catch (_) {
+      scheduleHasData = false;
       ['whHomeGuests', 'whHomeArrivals'].forEach(id => {
+        const host = document.getElementById(id);
+        if (host) { host.dataset.homeState = 'error'; host.setAttribute('aria-busy', 'false'); }
         const status = document.getElementById(id + 'Status');
         if (status) status.textContent = 'Guest data could not load. Open Care or try Sync again.';
       });
     }
   }
+  function syncPotentialEmptyState() {
+    const host = document.getElementById('whHomePotentials');
+    const status = document.getElementById('whHomePotentialsStatus');
+    if (!host || !status) return;
+    if (host.getAttribute('aria-busy') !== 'false') {
+      host.dataset.homeState = 'loading';
+      status.textContent = 'Loading requests…';
+      return;
+    }
+    const empty = !!host.querySelector('.v10-all-clear');
+    if (empty && !scheduleHasData) {
+      host.dataset.homeState = 'loading';
+      status.textContent = navigator.onLine ? 'Waiting for requests. Use Sync if this continues.' : 'You’re offline. Connect to update requests.';
+      return;
+    }
+    host.dataset.homeState = empty ? 'empty' : 'populated';
+    if (empty) status.textContent = 'No requests to review.';
+  }
   function schedule() {
     if (pending) return;
     pending = true;
-    queueMicrotask(() => { pending = false; render(); });
+    queueMicrotask(() => { pending = false; render(); syncPotentialEmptyState(); });
   }
   window.addEventListener('waffle:operations-rendered', schedule);
   window.addEventListener('online', schedule);
