@@ -287,7 +287,7 @@ body[data-waffle-page="calendar"] .v10-card-heading h2 { letter-spacing: -.35px;
 .wh-home-guest-identity { max-width:100%; color:var(--wh75-muted,#526174); font-size:12px; line-height:1.4; overflow-wrap:anywhere; }
 .wh-home-guest-label { width:100%; margin-top:auto; padding-top:2px; font-size:12px; overflow-wrap:anywhere; }
 .wh-home-guest:focus-visible { outline-offset:-2px; }
-body[data-waffle-page="calendar"] .wh-home-guests:has(> [data-home-photo-error="true"]) :is(#whHomeGuestsStatus,#whHomeArrivalsStatus) { display:block !important; visibility:visible !important; }
+body[data-waffle-page="calendar"] .wh-home-guests:has(> .wh-home-guest-row[data-home-photo-error="true"]) :is(#whHomeGuestsStatus,#whHomeArrivalsStatus) { display:block !important; visibility:visible !important; }
 
 /* Capacity outlook uses a high-contrast semantic palette in both themes. */
 body[data-waffle-page="calendar"] .v10-capacity-day.is-green {

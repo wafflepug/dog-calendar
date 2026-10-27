@@ -28,7 +28,15 @@ async function installFixture(page) {
   await page.route('**/*', async route => {
     const req=route.request(), url=req.url();
     if (!['GET','HEAD'].includes(req.method())) return route.fulfill({status:405,body:'Read-only fixture blocked mutation'});
-    if (new URL(url).hostname === '127.0.0.1') return route.continue();
+    if (new URL(url).hostname === '127.0.0.1') {
+      if (new URL(url).pathname.endsWith('/waffle-v10.8.2.js')) {
+        // Observe the real delayed startup lookup; do not create or skip a read.
+        const runtime = fs.readFileSync(path.join(root, 'waffle-v10.8.2.js'), 'utf8');
+        const completion = `;(function(){const startup=window.v1082TryPastDeepLink;window.__carePastStartupSettled=false;window.v1082TryPastDeepLink=async function(...args){try{return await startup.apply(this,args);}finally{window.__carePastStartupSettled=true;}};})();`;
+        return route.fulfill({status:200,contentType:'application/javascript',body:runtime+completion});
+      }
+      return route.continue();
+    }
     if (url.includes('docs.google.com/spreadsheets') && url.includes('output=csv')) return route.fulfill({status:200,contentType:'text/csv',body:csv()});
     if (url.includes('cdn.jsdelivr.net') && url.includes('fullcalendar')) return route.fulfill({status:200,contentType:'application/javascript',body:fullCalendar});
     if (url.includes('script.google.com')) {
@@ -174,7 +182,9 @@ for (const [width, theme] of [[320, 'light'], [1440, 'dark']]) test(`Care sectio
   const overview = card.locator('[data-v11160-tab="profile"]');
   const items = card.locator('[data-v11160-tab="belongings"]');
   const panel = card.locator('[data-directory-main-panel="profile"]');
-  // The initial operations read is background startup work, not tab-focus work.
+  // Wait for the real delayed history fallback as well as operations startup.
+  // Keep every request in the strict focus-only comparison below.
+  await page.waitForFunction(() => window.__carePastStartupSettled === true);
   await expect.poll(() => calls.get('get_stay_operations') || 0).toBeGreaterThan(0);
   const before = Object.fromEntries(calls);
   await overview.focus();
