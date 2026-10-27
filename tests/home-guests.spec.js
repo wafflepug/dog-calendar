@@ -239,7 +239,7 @@ test('30-day arrivals are ordered, stay-specific and exclude non-arrivals', asyn
   ], operations:{'checked in|2026-09-08|2026-09-12':{status:'checked_in'},'checked out|2026-09-11|2026-09-12':{status:'checked_out'}} });
   const arrivals=page.locator('#whHomeArrivals');
   await expect(arrivals.locator('.wh-home-guest-name')).toHaveText(['Today Expected','Repeat','Repeat','Last Day']);
-  await expect(arrivals.locator('.wh-home-guest-label').first()).toHaveText('Arriving today');
+  await expect(arrivals.locator('.wh-home-guest-label').first()).toHaveText('Today');
   await expect(page.locator('#whHomeArrivalsStatus')).toContainText('Today through 7 Oct');
   await expect(page.locator('#whHomeGuests .wh-home-guest-name')).toHaveText(['Checked In','Repeat']);
   const repeat=arrivals.locator('[data-home-stay="repeat|2026-09-10|2026-09-13"]');
@@ -395,4 +395,90 @@ test('Home shows one guest for a saved date edit throughout spreadsheet refresh'
     await expect(guests.locator('.wh-home-guest-label')).toHaveText('Leaves 13 Oct');
     await expect(guests).toHaveAttribute('href', new RegExp('stayId=' + stayId));
   }
+});
+
+test('busy-day counts distinguish unknown, empty, populated and selector failure', async ({ page }) => {
+  await setup(page, { includeArrivals:true, loaded:false, events:[] });
+  const counts = page.locator('.wh-home-count');
+  await expect(counts).toHaveCount(2);
+  await expect(counts.first()).toBeHidden();
+  await page.evaluate(() => { localStorage.setItem('boardingDataCache','fixture'); WAFFLE_HOME_GUESTS.refresh(); });
+  await expect(counts.first()).toBeVisible();
+  await expect(counts.first()).toHaveAccessibleName('0 current stays');
+  await page.evaluate(events => { fixtureEvents = events; WAFFLE_HOME_GUESTS.refresh(); }, [event('Current'), event('Future','2026-09-10','2026-09-12')]);
+  await expect(counts.first()).toHaveAccessibleName('1 current stay');
+  await expect(counts.nth(1)).toHaveAccessibleName('1 upcoming stay');
+  await expect(page.getByRole('heading',{ name:'Staying with you', exact:true })).toBeVisible();
+  await page.evaluate(() => { v111CurrentDogEvents = () => { throw Error('fixture'); }; WAFFLE_HOME_GUESTS.refresh(); });
+  await expect(counts.first()).toBeHidden();
+  await expect(page.locator('#whHomeGuests')).toHaveAttribute('data-home-state','error');
+});
+
+test('near arrivals use local Today and Tomorrow across DST and year rollover', async ({ page }) => {
+  for (const [date, tomorrow, later] of [['2026-10-03','2026-10-04','2026-10-05'],['2026-12-31','2027-01-01','2027-01-02']]) {
+    await setup(page, { includeArrivals:true, today:date, events:[event('Today dog',date,later),event('Tomorrow dog',tomorrow,later),event('Later dog',later,later)] });
+    await expect(page.locator('#whHomeArrivals .wh-home-guest-label')).toHaveText(['Today','Tomorrow', /\w{3}, \d{1,2} \w{3}/]);
+  }
+});
+
+test('same-name portraits show only existing readable Dog IDs and retain distinct exact links', async ({ page }) => {
+  const entries = [event('Coco','2026-09-10','2026-09-12',{dogNumber:'#00012',stayId:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'}),event('Coco','2026-09-14','2026-09-16',{dogNumber:'52',stayId:'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'}), event('Other','2026-09-17','2026-09-19',{dogNumber:'Other'}),event('Other','2026-09-20','2026-09-22',{dogId:'cccccccc-cccc-4ccc-8ccc-cccccccccccc'})];
+  await setup(page, { includeArrivals:true, events:entries });
+  const links = page.locator('#whHomeArrivals .wh-home-guest');
+  await expect(links).toHaveCount(4);
+  await expect(links.nth(0).locator('.wh-home-guest-identity')).toHaveText('Dog ID #00012');
+  await expect(links.nth(1).locator('.wh-home-guest-identity')).toHaveText('Dog ID #00052');
+  await expect(links.nth(2).locator('.wh-home-guest-identity')).toBeHidden();
+  await expect(links.nth(3).locator('.wh-home-guest-identity')).toBeHidden();
+  await expect(links.nth(0)).toHaveAttribute('href',/stayId=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/);
+  await expect(links.nth(1)).toHaveAccessibleName(/Dog ID #00052/);
+  await page.evaluate(() => { fixtureEvents = fixtureEvents.slice(0,1); WAFFLE_HOME_GUESTS.refresh(); });
+  await expect(links.first().locator('.wh-home-guest-identity')).toBeHidden();
+});
+
+test('busy-day full names and date labels align with contained scrolling and enlarged text', async ({ page }, testInfo) => {
+  await setup(page, { includeArrivals:true, events:Array.from({length:12},(_,i) => event(i === 0 ? 'A very long complete guest name with multiple words' : 'Guest '+i,'2026-09-10','2026-09-12')) });
+  for (const size of ['100%', '150%']) {
+    await page.evaluate(size => { document.documentElement.style.fontSize=size; document.querySelectorAll('.wh-home-guest-name,.wh-home-guest-label,.wh-home-guest-identity').forEach(node => node.style.fontSize=size === '150%' ? '21px' : ''); },size);
+    const g = await page.locator('#whHomeArrivals').evaluate(row => ({width:document.documentElement.scrollWidth, viewport:innerWidth,cards:[...row.children].map(card => { const label=card.querySelector('.wh-home-guest-label'), name=card.querySelector('.wh-home-guest-name');return {nameTop:name.getBoundingClientRect().top,nameFits:name.scrollHeight<=name.clientHeight,dateTop:label.getBoundingClientRect().top,dateFits:label.scrollHeight<=label.clientHeight};})}));
+    expect(g.width).toBeLessThanOrEqual(g.viewport);
+    expect(g.cards.every(card=>card.nameFits && card.dateFits && Math.abs(card.nameTop-g.cards[0].nameTop)<1 && Math.abs(card.dateTop-g.cards[0].dateTop)<1)).toBeTruthy();
+  }
+  await page.screenshot({path:`output/home-busy-day-${testInfo.project.name}.png`,fullPage:true});
+});
+
+test('portrait keyboard navigation scrolls to exact guests and preserves focus through refresh without reads', async ({ page }) => {
+  await setup(page, { includeArrivals:true, fallback:true, events:Array.from({length:12},(_,i)=>event('Guest '+String(i).padStart(2,'0'),'2026-09-10','2026-09-12')) });
+  const links=page.locator('#whHomeArrivals .wh-home-guest');
+  await expect(links).toHaveCount(12);
+  await expect.poll(()=>page.evaluate(()=>fixtureCalls.length)).toBe(25);
+  // All cached fallbacks must settle before measuring keyboard activity.
+  await expect(page.locator('#whHomeArrivals')).toHaveAttribute('aria-busy','false');
+  const reads=await page.evaluate(()=>fixtureCalls.length);
+  await links.first().focus(); await page.keyboard.press('End'); await expect(links.last()).toBeFocused();
+  const visible=await links.last().evaluate(node=>{const a=node.getBoundingClientRect(),r=node.parentElement.getBoundingClientRect();return a.left>=r.left && a.right<=r.right+1;});
+  expect(visible).toBeTruthy();
+  await page.keyboard.press('ArrowLeft'); await expect(links.nth(10)).toBeFocused();
+  await page.evaluate(()=>WAFFLE_HOME_GUESTS.refresh()); await expect(links.nth(10)).toBeFocused();
+  await page.keyboard.press('Home'); await expect(links.first()).toBeFocused();
+  await page.keyboard.press('Shift+ArrowRight'); await expect(links.first()).toBeFocused();
+  await page.keyboard.press('ArrowRight'); await expect(links.nth(1)).toBeFocused();
+  expect(await page.evaluate(()=>fixtureCalls.length)).toBe(reads);
+  await page.keyboard.press('Enter'); await expect(page).toHaveURL(/directory.html\?stayKey=guest%2001/);
+});
+
+test('broken photos keep visible guidance after other photos succeed without endless failed requests', async ({ page }) => {
+  const requests=[]; page.on('request',request=>{if(request.url().endsWith('/broken.jpg')) requests.push(request.url());});
+  await setup(page,{includeArrivals:true,fallback:true,events:['Broken','Gallery','Master'].map(name=>event(name,'2026-09-10','2026-09-12'))});
+  await page.evaluate(()=>document.body.dataset.wafflePage='calendar');
+  const row=page.locator('#whHomeArrivals'), status=page.locator('#whHomeArrivalsStatus');
+  await expect(row).toHaveAttribute('data-home-photo-error','true');
+  await expect(status).toBeVisible(); await expect(status).toContainText('Profile photos could not load');
+  await expect(row.locator('img')).toHaveCount(2);
+  for(let i=0;i<3;i++)await page.evaluate(()=>WAFFLE_HOME_GUESTS.refresh());
+  await expect(row).toHaveAttribute('data-home-photo-error','true');
+  expect(requests).toHaveLength(1);
+  await page.evaluate(()=>{fixtureEvents=fixtureEvents.filter(e=>e.title!=='Broken');WAFFLE_HOME_GUESTS.refresh();});
+  await expect(row).not.toHaveAttribute('data-home-photo-error','true');
+  await expect(status).not.toContainText('Profile photos could not load');
 });

@@ -2,8 +2,8 @@
    Build: 2026.08.27.04
    Historical base styles remain compatibility sources during Phase 3A, but pages no longer
    reference them individually. Preserve this import order until modules are folded in. */
-@import url("waffle-app.css?build=2026.08.27.04&rev=2026.10.28.02");
-@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.10.28.02");
+@import url("waffle-app.css?build=2026.08.27.04&rev=2026.10.28.03");
+@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.10.28.03");
 @import url("waffle-v10.8.2.css?build=2026.08.27.04");
 @import url("waffle-v10.8.3.css?build=2026.08.27.04");
 @import url("waffle-v10.8.5.css?build=2026.08.27.04");
@@ -11,12 +11,12 @@
 @import url("waffle-v10.8.7.css?build=2026.08.27.04");
 @import url("waffle-v10.8.8.css?build=2026.08.27.04");
 @import url("waffle-v10.8.9.css?build=2026.08.27.04");
-@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.10.28.02");
+@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.10.28.03");
 @import url("waffle-v11.0.3.css?build=2026.08.27.04");
 @import url("waffle-v11.0.5.css?build=2026.08.27.04");
-@import url("waffle-v11.1.94.css?build=2026.10.28.02");
-@import url("waffle-v11.1.95.css?build=2026.10.28.02");
-@import url("waffle-v11.1.96.css?build=2026.10.28.02&rev=2026.10.28.02");
+@import url("waffle-v11.1.94.css?build=2026.10.28.03");
+@import url("waffle-v11.1.95.css?build=2026.10.28.03");
+@import url("waffle-v11.1.96.css?build=2026.10.28.03&rev=2026.10.28.03");
 
 /* ============================================================
    MOBILE FIRST-PAINT STABILITY GATE
@@ -274,6 +274,20 @@ body[data-waffle-page="calendar"] .v10-potential-card { display: none !important
 .wh-home-guests:has(#whHomePotentials[data-home-state="empty"]) #whHomePotentials { min-height: 0; padding: 0; }
 .wh-home-guests:has(#whHomePotentials[data-home-state="empty"]) #whHomeAddPotentialBtn { min-height: 44px; padding: 6px 10px; border: 1px solid var(--wh75-line,#dce3eb); border-radius: 12px; background: var(--wh75-shell-2,#f8fafc); color: var(--wh75-text,#172033); }
 body[data-waffle-page="calendar"] .v10-card-heading h2 { letter-spacing: -.35px; }
+
+/* Busy-day portraits keep complete names and dates aligned without wider pages. */
+.wh-home-section-heading > div { min-width:0; }
+.wh-home-section-heading h2 { display:inline; overflow-wrap:anywhere; }
+.wh-home-count { display:inline-block; margin-left:8px; padding:2px 7px; border:1px solid var(--wh75-line,#dce3eb); border-radius:999px; color:var(--wh75-text,#172033); background:var(--wh75-shell-2,#f8fafc); font-size:12px; line-height:1.4; font-weight:750; letter-spacing:0; vertical-align:middle; white-space:nowrap; }
+.wh-home-count[hidden], .wh-home-guest-identity[hidden] { display:none; }
+.wh-home-guest-row:not(.wh-home-potential-row) { align-items:stretch; padding-top:10px; scroll-padding-inline:8px; }
+.wh-home-guest { box-sizing:border-box; min-width:0; }
+.wh-home-guest .wh-home-portrait { flex-shrink:0; }
+.wh-home-guest-name { flex-shrink:0; }
+.wh-home-guest-identity { max-width:100%; color:var(--wh75-muted,#526174); font-size:12px; line-height:1.4; overflow-wrap:anywhere; }
+.wh-home-guest-label { width:100%; margin-top:auto; padding-top:2px; font-size:12px; overflow-wrap:anywhere; }
+.wh-home-guest:focus-visible { outline-offset:-2px; }
+body[data-waffle-page="calendar"] .wh-home-guests:has(> [data-home-photo-error="true"]) :is(#whHomeGuestsStatus,#whHomeArrivalsStatus) { display:block !important; visibility:visible !important; }
 
 /* Capacity outlook uses a high-contrast semantic palette in both themes. */
 body[data-waffle-page="calendar"] .v10-capacity-day.is-green {

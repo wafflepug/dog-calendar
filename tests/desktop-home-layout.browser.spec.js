@@ -145,3 +145,22 @@ test('confirmed empty Home tiles are compact while waiting and failed reads stay
   await page.evaluate(() => { globalCalendar.getEvents = window.__savedHomeEvents; v111CurrentDogEvents = window.__savedHomeSelector; WAFFLE_HOME_GUESTS.refresh(); });
   await expect(page.locator('#whHomeGuests')).toHaveAttribute('data-home-state','populated');
 });
+
+test('stored readable Dog IDs survive the real CSV-to-Home path on desktop and phones', async ({page}) => {
+  const fixture=await install(page);
+  await page.goto('/index.html?view=today',{waitUntil:'networkidle'});
+  const arrivals=page.locator('#whHomeArrivals');
+  await expect(arrivals.locator('.wh-home-guest-name')).toHaveText(['Milo','Milo']);
+  await expect(arrivals.locator('.wh-home-guest-identity')).toHaveText(['Dog ID #00018','Dog ID #00017']);
+  await expect.poll(()=>fixture.reads.filter(action=>action==='get_dog_master_profile').length).toBe(3);
+  const profileReads=()=>fixture.reads.filter(action=>['get_guest_profile','get_dog_master_profile'].includes(action)).length;
+  const reads=profileReads();
+  for(const width of [1440,390,320]){
+    await page.setViewportSize({width,height:900});
+    await expect(arrivals.locator('.wh-home-guest-identity').first()).toBeVisible();
+    expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+    await page.screenshot({path:`output/home-busy-day-runtime-${width}.png`,fullPage:true,animations:'disabled'});
+  }
+  await expect(arrivals.locator('.wh-home-guest').filter({hasText:'Dog ID #00017'})).toHaveAttribute('href',new RegExp('stayId='+fixture.bookings[0].stayId));
+  expect(profileReads()).toBe(reads);
+});

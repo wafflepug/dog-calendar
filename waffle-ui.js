@@ -14,6 +14,7 @@
   if (window.WAFFLE_HOME_GUESTS) return;
   const photos = new Map();
   const photoRequests = new Map();
+  const failedPhotoUrls = new Set();
   let pending = false;
   let scheduleHasData = false;
 
@@ -53,15 +54,24 @@
     const previous = shell.querySelector('img');
     if (previous?.src === thumbnail) return;
     previous?.remove();
-    if (!thumbnail) return;
+    if (!thumbnail || failedPhotoUrls.has(thumbnail)) return;
     const image = document.createElement('img');
     image.alt = '';
     image.decoding = 'async';
     image.loading = 'lazy';
     image.addEventListener('error', () => {
+      if (shell.querySelector('img') !== image) return;
+      failedPhotoUrls.add(thumbnail);
       image.remove();
       shell.title = 'Profile photo unavailable';
+      const host = link.parentElement;
+      if (host && link.isConnected) {
+        host.dataset.homePhotoError = 'true';
+        const status = document.getElementById(host.id + 'Status');
+        if (status && !status.textContent.includes('Profile photos could not load')) status.textContent += ' Profile photos could not load. You can still open every guest’s care details.';
+      }
     }, { once: true });
+    image.addEventListener('load', () => { if (shell.querySelector('img') === image) shell.title = ''; }, { once: true });
     image.src = thumbnail;
     shell.appendChild(image);
   }
@@ -135,7 +145,11 @@
   }
   function arrivalLabel(event, today) {
     const start = v10EventRawDates(event).start;
-    return start === today ? 'Arriving today' : new Date(start + 'T12:00:00').toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short' });
+    if (start === today) return 'Today';
+    const tomorrow = new Date(today + 'T12:00:00');
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    if (start === `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`) return 'Tomorrow';
+    return new Date(start + 'T12:00:00').toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short' });
   }
   function departureWindowEnd(today) {
     const date = new Date(today + 'T12:00:00');
@@ -156,6 +170,15 @@
       const status = document.getElementById(hostId + 'Status');
       if (!host || !status) return;
       const token = ++generation;
+      const heading = status.previousElementSibling?.querySelector('h2');
+      if (heading) {
+        let count = heading.parentElement.querySelector('.wh-home-count');
+        if (!count) { count = document.createElement('span'); count.className = 'wh-home-count'; heading.after(count); }
+        count.textContent = String(events.length);
+        count.setAttribute('role', 'img');
+        count.setAttribute('aria-label', `${events.length} ${upcoming ? 'upcoming' : 'current'} ${events.length === 1 ? 'stay' : 'stays'}`);
+        count.hidden = !hasData;
+      }
       if (!hasData && !events.length) {
         host.dataset.homeState = 'loading';
         status.textContent = navigator.onLine ? 'Waiting for guest data. Use Sync or open Care if this continues.' : 'You’re offline. Connect to load your guests.';
@@ -165,6 +188,8 @@
       const focused = host.contains(document.activeElement) ? document.activeElement : null;
       const identityFor = event => typeof v110EventUniqueKey === 'function' ? v110EventUniqueKey(event, v110StayKeyForEvent(event)) : v110StayKeyForEvent(event);
       const retained = new Set(events.map(identityFor));
+      const dogNameCounts = new Map();
+      events.forEach(event => { const dogName = String(event.extendedProps?.dogName || event.title || 'Guest').trim().replace(/\s+/g, ' ').toLocaleLowerCase(); dogNameCounts.set(dogName, (dogNameCounts.get(dogName) || 0) + 1); });
       Array.from(host.children).forEach(link => { if (!retained.has(link.dataset.homeIdentity || link.dataset.homeStay)) link.remove(); });
       events.forEach((event, index) => {
         const key = v110StayKeyForEvent(event);
@@ -177,16 +202,22 @@
           link.className = 'wh-home-guest';
           link.dataset.homeStay = key;
           link.dataset.homeIdentity = identity;
-          link.innerHTML = '<span class="wh-home-portrait" aria-hidden="true"><span class="wh-home-initials"></span></span><span class="wh-home-departure-flag" aria-hidden="true"><span>🧳</span></span><strong class="wh-home-guest-name"></strong><span class="wh-home-guest-label"></span>';
+          link.innerHTML = '<span class="wh-home-portrait" aria-hidden="true"><span class="wh-home-initials"></span></span><span class="wh-home-departure-flag" aria-hidden="true"><span>🧳</span></span><strong class="wh-home-guest-name"></strong><span class="wh-home-guest-identity"></span><span class="wh-home-guest-label"></span>';
         }
         link.dataset.homeStayId = stayId;
         link.href = 'directory.html?stayKey=' + encodeURIComponent(key) + (typeof v110ValidStayId === 'function' && v110ValidStayId(stayId) ? '&stayId=' + encodeURIComponent(stayId) : '');
         const departure = !upcoming && departureMeta(event, today);
         const label = upcoming ? arrivalLabel(event, today) : departure?.label || 'At home';
-        link.setAttribute('aria-label', `Open ${name} stay and care details, ${label.toLowerCase()}`);
+        const dogNumber = String(event.extendedProps?.dogNumber || '').trim();
+        const validDogId = /^#?\d{1,5}$/.test(dogNumber) && Number(dogNumber.replace('#', '')) > 0 ? '#' + dogNumber.replace('#', '').padStart(5, '0') : '';
+        const showDogId = validDogId && dogNameCounts.get(name.replace(/\s+/g, ' ').toLocaleLowerCase()) > 1;
+        link.setAttribute('aria-label', `Open ${name} stay and care details${showDogId ? `, Dog ID ${validDogId}` : ''}, ${label.toLowerCase()}`);
         link.querySelector('.wh-home-initials').textContent = name.split(/\s+/).map(part => Array.from(part).find(char => /[\p{L}\p{N}]/u.test(char))).filter(Boolean).slice(0, 2).join('').toUpperCase() || '?';
         link.querySelector('.wh-home-guest-name').textContent = name;
         link.querySelector('.wh-home-guest-label').textContent = label;
+        const identityLabel = link.querySelector('.wh-home-guest-identity');
+        identityLabel.textContent = showDogId ? `Dog ID ${validDogId}` : '';
+        identityLabel.hidden = !showDogId;
         const flag = link.querySelector('.wh-home-departure-flag');
         flag.hidden = !departure;
         flag.dataset.tone = departure?.tone || '';
@@ -211,11 +242,28 @@
       } catch (_) { photoError = true; }
       if (token !== generation) return;
       host.querySelectorAll('[data-home-stay]').forEach(link => applyPhoto(link, photos.get(link.dataset.homeStay) || ''));
-      if (photoError) status.textContent += ' Profile photos could not load. You can still open every guest’s care details.';
+      const failedInRow = events.some(event => failedPhotoUrls.has(homeThumbnailUrl(photos.get(v110StayKeyForEvent(event)) || '')));
+      if (photoError || failedInRow) {
+        host.dataset.homePhotoError = 'true';
+        if (!status.textContent.includes('Profile photos could not load')) status.textContent += ' Profile photos could not load. You can still open every guest’s care details.';
+      } else {
+        delete host.dataset.homePhotoError;
+      }
     };
   }
   const currentRow = row('whHomeGuests', false);
   const arrivalsRow = row('whHomeArrivals', true);
+  ['whHomeGuests', 'whHomeArrivals'].forEach(id => document.getElementById(id)?.addEventListener('keydown', event => {
+    if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+    const links = Array.from(event.currentTarget.querySelectorAll('.wh-home-guest'));
+    const index = links.indexOf(document.activeElement);
+    if (index < 0 || !links.length) return;
+    const target = event.key === 'Home' ? 0 : event.key === 'End' ? links.length - 1 : Math.max(0, Math.min(links.length - 1, index + (event.key === 'ArrowRight' ? 1 : -1)));
+    event.preventDefault();
+    if (target === index) return;
+    links[target].focus({ preventScroll: true });
+    links[target].scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }));
   function render() {
     if (typeof v111CurrentDogEvents !== 'function') return;
     try {
@@ -230,6 +278,7 @@
       arrivalsRow(arrivals, today, hasData);
     } catch (_) {
       scheduleHasData = false;
+      document.querySelectorAll('.wh-home-count').forEach(count => { count.hidden = true; });
       ['whHomeGuests', 'whHomeArrivals'].forEach(id => {
         const host = document.getElementById(id);
         if (host) { host.dataset.homeState = 'error'; host.setAttribute('aria-busy', 'false'); }
@@ -269,7 +318,7 @@
   }, true);
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', schedule, { once: true });
   else schedule();
-  window.WAFFLE_HOME_GUESTS = Object.freeze({ version: '1.2.0', refresh: schedule });
+  window.WAFFLE_HOME_GUESTS = Object.freeze({ version: '1.3.0', refresh: schedule });
 })();
 
 /* ---- source: waffle-v11.1.75.js ---- */
