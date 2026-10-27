@@ -10,6 +10,7 @@ const css = fs.readFileSync(path.join(root, 'waffle-app.css'), 'utf8');
 const sourceBadgeCss = fs.readFileSync(path.join(root, 'waffle-v11.1.7.css'), 'utf8');
 const carePolishCss = fs.readFileSync(path.join(root, 'waffle-v11.1.8.css'), 'utf8');
 const carePolishJs = fs.readFileSync(path.join(root, 'waffle-v11.1.8.js'), 'utf8');
+const mobileClarityCss = fs.readFileSync(path.join(root, 'care-mobile-clarity.css'), 'utf8');
 const runtimeCss = fs.readFileSync(path.join(root, 'waffle-runtime.css'), 'utf8');
 const careRuntimeStart = runtimeCss.indexOf('/* Care roster refinement:');
 const careRuntimeEnd = runtimeCss.indexOf('/* Keep mobile scrolling', careRuntimeStart);
@@ -38,7 +39,7 @@ if (cssStart < 0) throw new Error('Could not locate the Care roster styles.');
 const rosterStyles = css.slice(cssStart);
 
 test('Care roster filters keep staying, arriving, past, search, and profile mode aligned', async ({ page }) => {
-  await page.setContent(`<!doctype html><html><head><style>body{margin:0}\n${rosterStyles}</style></head><body>
+  await page.setContent(`<!doctype html><html><head><style>body{margin:0}\n${rosterStyles}\n${mobileClarityCss}</style></head><body data-waffle-page="directory"><main id="directoryTabPanel">
     <div class="directory-dashboard-fused">
       <button data-v1082-stay-tab="current" class="is-active">Staying <strong id="v1082CurrentStayCount">1</strong></button>
       <button data-v1082-stay-tab="future">Arriving <strong id="v1082FutureStayCount">1</strong></button>
@@ -54,7 +55,7 @@ test('Care roster filters keep staying, arriving, past, search, and profile mode
         <div class="directory-card" data-v1082-past-stay="true" data-directory-start-date="2026-08-10"><button>Juniper</button></div>
       </div>
     </div>
-  </body></html>`);
+  </main></body></html>`);
   await page.evaluate(rosterFilters => {
     window.getLocalTodayDateString = () => '2026-09-23';
     window.eval(rosterFilters);

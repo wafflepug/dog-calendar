@@ -391,6 +391,12 @@ test('notification dialog ignores nested Escape and restores focus when its open
 
 test('notification Settings action remains reachable above mobile navigation in short landscape', async ({ page, baseURL }) => {
   await openReadOnlyRuntime(page, baseURL);
+  // Exercise the actionable setup state explicitly; headless permission defaults vary by browser.
+  await page.addInitScript(() => {
+    function FixtureNotification() {}
+    FixtureNotification.permission = 'default';
+    window.Notification = FixtureNotification;
+  });
   await page.setViewportSize({ width: 844, height: 390 });
   await page.goto(baseURL + '/directory.html', { waitUntil: 'domcontentloaded' });
   await page.waitForFunction(() => document.documentElement.dataset.waffleUiReady === 'true' && typeof openWaffleNotificationCentre === 'function');

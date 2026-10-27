@@ -2,8 +2,8 @@
    Build: 2026.08.27.04
    Historical base styles remain compatibility sources during Phase 3A, but pages no longer
    reference them individually. Preserve this import order until modules are folded in. */
-@import url("waffle-app.css?build=2026.08.27.04&rev=2026.10.27.03");
-@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.10.27.03");
+@import url("waffle-app.css?build=2026.08.27.04&rev=2026.10.27.04");
+@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.10.27.04");
 @import url("waffle-v10.8.2.css?build=2026.08.27.04");
 @import url("waffle-v10.8.3.css?build=2026.08.27.04");
 @import url("waffle-v10.8.5.css?build=2026.08.27.04");
@@ -11,12 +11,12 @@
 @import url("waffle-v10.8.7.css?build=2026.08.27.04");
 @import url("waffle-v10.8.8.css?build=2026.08.27.04");
 @import url("waffle-v10.8.9.css?build=2026.08.27.04");
-@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.10.27.03");
+@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.10.27.04");
 @import url("waffle-v11.0.3.css?build=2026.08.27.04");
 @import url("waffle-v11.0.5.css?build=2026.08.27.04");
-@import url("waffle-v11.1.94.css?build=2026.10.27.03");
-@import url("waffle-v11.1.95.css?build=2026.10.27.03");
-@import url("waffle-v11.1.96.css?build=2026.10.27.03&rev=2026.10.27.03");
+@import url("waffle-v11.1.94.css?build=2026.10.27.04");
+@import url("waffle-v11.1.95.css?build=2026.10.27.04");
+@import url("waffle-v11.1.96.css?build=2026.10.27.04&rev=2026.10.27.04");
 
 /* ============================================================
    MOBILE FIRST-PAINT STABILITY GATE
@@ -1492,6 +1492,72 @@ body .v101-notification-tab span {
 body .v101-notification-tab.is-active {
   color: var(--v10-text, #172033);
 }
+
+/* Notification settings: group the device setup and keep every action usable
+   in narrow dialogs and at large text sizes. */
+body #waffleNotificationSettingsPanel .waffle-notification-device {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  margin-block: 12px;
+}
+body #waffleNotificationSettingsPanel [data-push-enrollment-wrap][hidden] {
+  display: none !important;
+}
+body #waffleNotificationSettingsPanel .waffle-notification-options {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+}
+body #waffleNotificationSettingsPanel .waffle-notification-options label {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 62px;
+  padding: 10px 12px;
+  align-items: start;
+}
+body #waffleNotificationSettingsPanel .waffle-notification-options input {
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  margin: 2px 10px 0 0;
+}
+body #waffleNotificationSettingsPanel .waffle-notification-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+  margin-top: 14px;
+}
+body #waffleNotificationSettingsPanel .waffle-notification-actions button,
+body #waffleNotificationSettingsPanel [data-push-state-retry] {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 14px;
+  font-size: 15px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+body #waffleNotificationSettingsPanel [data-push-message] {
+  margin-block: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  overflow-wrap: anywhere;
+}
+body #waffleNotificationSettingsPanel [data-push-message][data-mode="ready"],
+body #waffleNotificationSettingsPanel [data-push-message][data-mode="success"] { color: #14532d; background: #dcfce7; }
+body #waffleNotificationSettingsPanel [data-push-message][data-mode="permission-blocked"],
+body #waffleNotificationSettingsPanel [data-push-message][data-mode="unknown"],
+body #waffleNotificationSettingsPanel [data-push-message][data-mode="warning"] { color: #713f12; background: #fef3c7; }
+body #waffleNotificationSettingsPanel [data-push-message][data-mode="unsupported"],
+body #waffleNotificationSettingsPanel [data-push-message][data-mode="error"] { color: #7f1d1d; background: #fee2e2; }
+body.dark-theme #waffleNotificationSettingsPanel [data-push-message][data-mode="ready"],
+body.dark-theme #waffleNotificationSettingsPanel [data-push-message][data-mode="success"] { color: #bbf7d0; background: #14532d; }
+body.dark-theme #waffleNotificationSettingsPanel [data-push-message][data-mode="permission-blocked"],
+body.dark-theme #waffleNotificationSettingsPanel [data-push-message][data-mode="unknown"],
+body.dark-theme #waffleNotificationSettingsPanel [data-push-message][data-mode="warning"] { color: #fde68a; background: #713f12; }
+body.dark-theme #waffleNotificationSettingsPanel [data-push-message][data-mode="unsupported"],
+body.dark-theme #waffleNotificationSettingsPanel [data-push-message][data-mode="error"] { color: #fecaca; background: #7f1d1d; }
 body .v101-notification-panel-actions {
   flex-wrap: wrap;
   color: var(--v10-muted, #475569);

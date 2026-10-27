@@ -1,0 +1,62 @@
+const { test, expect } = require('@playwright/test');
+const { install } = require('./fixtures/care-daily-workflows');
+
+test('roster search clear, Today filter reset and stay tabs stay efficient and keyboard operable', async ({ page, baseURL }) => {
+  const fixture = await install(page);
+  await page.goto(`${baseURL}/directory.html?dailyCareFixture=1`, { waitUntil: 'domcontentloaded' });
+  await page.waitForFunction(() => document.documentElement.dataset.waffleUiReady === 'true' && window.WAFFLE_CARE_ROSTER_FOCUS);
+
+  const toolbar = page.locator('.guest-directory-toolbar');
+  const search = toolbar.locator('#guestDirectorySearch');
+  const clearSearch = toolbar.locator('[data-directory-search-clear]');
+  const status = toolbar.locator('#directory-search-status');
+  await expect(clearSearch).toBeHidden();
+  await search.fill('Milo');
+  await expect(clearSearch).toBeVisible();
+  await expect(status.locator('[data-directory-search-message]')).toContainText('match');
+  await clearSearch.click();
+  await expect(search).toHaveValue('');
+  await expect(search).toBeFocused();
+  await expect(status).toBeHidden();
+
+  const disclosure = toolbar.locator('[data-care-roster-focus]');
+  await disclosure.locator('summary').click();
+  await disclosure.locator('[data-focus-mode="arriving"]').click();
+  await disclosure.locator('summary').click();
+  const reset = toolbar.locator('[data-focus-clear]');
+  await expect(reset).toBeVisible();
+  await expect(disclosure).not.toHaveAttribute('open', '');
+  await expect(disclosure.locator('[data-focus-summary]')).toContainText('Arriving today');
+  await expect(status.locator('[data-directory-search-message]')).toContainText('Arriving today');
+  await reset.click();
+  await expect(disclosure.locator('summary')).toBeFocused();
+  await expect(reset).toBeHidden();
+  await expect(disclosure.locator('[data-focus-summary]')).toHaveText("Today's work");
+
+  const tabs = page.locator('[data-v1082-stay-tab]');
+  await expect(page.locator('[data-v1082-stay-tab][aria-selected="true"]')).toHaveCount(1);
+  await expect(page.locator('[data-v1082-stay-tab][aria-selected="true"]')).toHaveAttribute('tabindex', '0');
+  await expect(page.locator('[data-v1082-stay-tab][aria-selected="false"][tabindex="0"]')).toHaveCount(0);
+  await page.locator('[data-v1082-stay-tab="current"]').focus();
+  const pastReadsBeforeFuture = fixture.reads.filter(action => action === 'get_past_guest_directory').length;
+  const selectionBeforeKey = await page.evaluate(() => window.WAFFLE_DIRECTORY_PROFILE_NAV.selectionVersion);
+  await page.keyboard.press('ArrowRight');
+  expect(await page.evaluate(() => window.WAFFLE_DIRECTORY_PROFILE_NAV.selectionVersion)).toBe(selectionBeforeKey + 1);
+  await expect(page.locator('[data-v1082-stay-tab="future"]')).toBeFocused();
+  await expect(page.locator('[data-v1082-stay-tab="future"]')).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('[data-v1082-stay-tab="future"]')).toHaveAttribute('tabindex', '0');
+  expect(fixture.reads.filter(action => action === 'get_past_guest_directory')).toHaveLength(pastReadsBeforeFuture);
+  await page.keyboard.press('End');
+  await expect(page.locator('[data-v1082-stay-tab="past"]')).toBeFocused();
+  await expect(page.locator('[data-v1082-stay-tab="past"]')).toHaveAttribute('aria-selected', 'true');
+  const pastReads = fixture.reads.filter(action => action === 'get_past_guest_directory').length;
+  expect(pastReads).toBeGreaterThan(0);
+  await page.keyboard.press('End');
+  expect(fixture.reads.filter(action => action === 'get_past_guest_directory')).toHaveLength(pastReads);
+  await page.keyboard.press('Home');
+  await expect(page.locator('[data-v1082-stay-tab="current"]')).toHaveAttribute('aria-selected', 'true');
+  await page.locator(`#directory-grid [data-directory-stay-id="${fixture.bookings[0].stayId}"] [data-open-directory-profile]`).click();
+  await expect(page.locator('.directory-dashboard-fused')).toHaveClass(/is-profile-mode/);
+  await expect(disclosure).toBeHidden();
+  await expect(reset).toBeHidden();
+});

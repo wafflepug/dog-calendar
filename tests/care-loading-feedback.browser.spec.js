@@ -32,7 +32,7 @@ function installReadOnlyRuntimeFixture(page, options = {}) {
     const request = route.request();
     const url = request.url();
     if (!['GET', 'HEAD'].includes(request.method())) return route.fulfill({ status: 405, body: 'Read-only fixture blocked mutation' });
-    if (url.startsWith('http://127.0.0.1:44972/')) return route.continue();
+    if (url.startsWith('http://127.0.0.1:14474/')) return route.continue();
     if (url.includes('docs.google.com/spreadsheets') && url.includes('output=csv')) return route.fulfill({ status: 200, contentType: 'text/csv', body: csv() });
     if (url.includes('cdn.jsdelivr.net') && url.includes('fullcalendar')) return route.fulfill({ status: 200, contentType: 'application/javascript', body: fullCalendar });
     if (url.includes('script.google.com')) {

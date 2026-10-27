@@ -102,6 +102,7 @@
     details.querySelectorAll('button').forEach(button => {
       button.style.minHeight = '44px';
       button.addEventListener('click', () => {
+        if (!button.dataset.focusMode) return;
         mode = button.dataset.focusMode || 'all';
         renderControls();
         applyCanonicalFilter();
@@ -111,8 +112,12 @@
       mode = 'all';
       renderControls();
       applyCanonicalFilter();
+      summary.focus();
     });
     toolbar.appendChild(details);
+    const clear = toolbar.querySelector('[data-focus-clear]');
+    toolbar.insertBefore(clear, details.nextSibling);
+    clear.classList.add('care-roster-focus-clear');
     return details;
   }
 
@@ -128,8 +133,15 @@
       const selected = button.dataset.focusMode === mode;
       if (button.getAttribute('aria-pressed') !== String(selected)) button.setAttribute('aria-pressed', String(selected));
     });
-    const clear = details.querySelector('[data-focus-clear]');
-    if (clear.disabled !== (mode === 'all')) clear.disabled = mode === 'all';
+    const clear = details.closest('.guest-directory-toolbar')?.querySelector('[data-focus-clear]');
+    if (!clear) return;
+    const clearUnavailable = context
+      ? context.profileMode || context.activeView !== 'current'
+      : document.querySelector('.directory-dashboard-fused')?.classList.contains('is-profile-mode') ||
+        document.querySelector('[data-v1082-stay-tab].is-active')?.dataset.v1082StayTab !== 'current';
+    const hideClear = mode === 'all' || clearUnavailable;
+    if (clear.hidden !== hideClear) clear.hidden = hideClear;
+    if (clear.disabled) clear.disabled = false;
     const summary = details.querySelector('[data-focus-summary]');
     const nextSummary = mode === 'all' ? "Today's work" : `Today's work · ${MODES[mode]}`;
     if (summary.textContent !== nextSummary) summary.textContent = nextSummary;

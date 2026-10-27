@@ -22,7 +22,7 @@ const expectedConfigs = [
   'playwright.care-roster.config.js', 'playwright.care-ui-refinements.config.js',
   'playwright.care-navigation-accessibility.config.js', 'playwright.care-scroll-access.config.js',
   'playwright.care-loading-feedback.config.js', 'playwright.care-navigation-continuity.config.js', 'playwright.owner-workflows.config.js',
-  'tests/mvp-records-notifications.config.js', 'playwright.mvp-observer.config.js',
+  'tests/mvp-records-notifications.config.js', 'tests/notification-device-settings.config.js', 'playwright.mvp-observer.config.js',
   'playwright.care-overview.config.js', 'playwright.returning-dogs.config.js',
   'playwright.runtime-review.config.js', 'playwright.care-cleaner-ui.config.js',
   'playwright.care-detailed-care-runtime.config.js', 'playwright.care-mobile-hierarchy.config.js',
@@ -34,7 +34,7 @@ test('parallel fixture matrix retains every existing configuration exactly once'
   const configs = [...jobs.fixtures.matchAll(/^\s+configs: (.+)$/gm)].flatMap(([, line]) => line.trim().split(/\s+/));
   assert.equal(new Set(configs).size, configs.length, 'fixture configs must not be duplicated');
   for (const config of expectedConfigs) assert.equal(configs.filter(value => value === config).length, 1, `${config} must remain in exactly one fixture group`);
-  for (const changedPath of ['playwright.booking-owner-share.config.js', 'tests/booking-owner-share.browser.spec.js']) {
+  for (const changedPath of ['playwright.booking-owner-share.config.js', 'tests/booking-owner-share.browser.spec.js', 'tests/notification-device-settings.config.js', 'tests/notification-device-settings.browser.spec.js', 'tests/care-roster-efficiency.browser.spec.js']) {
     assert.equal(workflow.split('\n').filter(line => line.trim() === `- '${changedPath}'`).length, 2, `${changedPath} must trigger both PR and push workflows`);
   }
   for (const name of ['contracts', 'fixtures', 'placement']) assert.doesNotMatch(jobs[name], /\bneeds:/);
