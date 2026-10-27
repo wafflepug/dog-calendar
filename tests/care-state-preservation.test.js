@@ -156,7 +156,7 @@ function editorHarness() {
     setTimeout: () => 1
   };
   vm.runInNewContext(`${source.slice(identityStart, identityEnd)}\n${source.slice(closeEditorStart, editorStart)}\n${source.slice(editorStart, editorEnd)}\nthis.openEditor = openGuestDetailEditor; this.closeEditor = closeGuestDetailEditor;`, sandbox);
-  return { sandbox, trigger, save: elements.saveGuestDetailEdit, status: elements.guestDetailEditStatus, input: elements.guestDetailEditInput, modal };
+  return { sandbox, trigger, elements, save: elements.saveGuestDetailEdit, status: elements.guestDetailEditStatus, input: elements.guestDetailEditInput, modal };
 }
 
 test('captures exact selected stay and all Care tab/edit state', () => {
@@ -432,4 +432,29 @@ test('successful save uses the existing mutation once and keeps the draft on fai
   assert.equal(failed.input.value, 'Draft owner');
   assert.match(failed.status.textContent, /Save failed.*fixture save failed/);
   assert.equal(failed.saveButton.disabled, false);
+});
+
+
+test('field editor shows only valid positive human dog numbers', () => {
+  for(const [value,expected] of [['1','#00001'],['#00017','#00017'],['100000','#100000'],['0',''],['#00000',''],['Other',''],['dog-uuid-17',''],['9007199254740992','']]){
+    const h=editorHarness();
+    h.trigger.closest().dataset.directoryDogNumber=value;
+    h.sandbox.openEditor(h.trigger);
+    const context=h.elements.guestDetailEditDog.textContent;
+    if(expected)assert.match(context,new RegExp(expected));
+    else assert.doesNotMatch(context,/#|Other|uuid|9007199254740992/);
+  }
+});
+
+test('superseded editor focus callbacks cannot focus the replacement field', () => {
+  const h=editorHarness(), jobs=[];
+  h.sandbox.setTimeout=callback=>jobs.push(callback);
+  let focused=0;
+  h.input.focus=()=>focused++;
+  h.sandbox.openEditor(h.trigger);
+  h.sandbox.openEditor(h.trigger);
+  jobs[0]();
+  assert.equal(focused,0);
+  jobs[1]();
+  assert.equal(focused,1);
 });

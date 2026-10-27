@@ -195,3 +195,103 @@ test('Emergency details opens health read-only and handover opens the matching n
   await expect(editor).not.toHaveClass(/open/);
   await expect(handover).toBeFocused();
 });
+
+
+test('Care note editor identifies the dog, focuses its label and grows without hiding phone actions',async({page,baseURL})=>{
+  const card=await openMilo(page,baseURL);
+  await card.locator('[data-care-brief-action="handover"]').click();
+  const note=page.locator('#guestDetailEditTextarea');
+  await expect(page.locator('#guestDetailEditDog')).toContainText('#00017');
+  await expect(page.locator('#guestDetailEditLabel')).toHaveAttribute('for','guestDetailEditTextarea');
+  await expect(note).toBeFocused();
+  await expect(note).toHaveAttribute('maxlength','2000');
+  await page.locator('#guestDetailEditLabel').click();
+  await expect(note).toBeFocused();
+  const initial=await note.evaluate(node=>node.getBoundingClientRect().height);
+  const draft=Array.from({length:30},(_,i)=>`Line ${i}: Keep all of this handover detail.`).join('\n');
+  await note.fill(draft);
+  await expect(note).toHaveValue(draft);
+  expect(await note.evaluate(node=>node.getBoundingClientRect().height)).toBeGreaterThan(initial);
+  expect(await note.evaluate(node=>node.getBoundingClientRect().height)).toBeLessThanOrEqual(260);
+  for(const width of [320,390,1440]){
+    await page.setViewportSize({width,height:568});
+    const save=page.locator('#saveGuestDetailEdit');
+    await save.scrollIntoViewIfNeeded();
+    await expect(save).toBeInViewport();
+    expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+  }
+  await note.fill('Short note');
+  expect(await note.evaluate(node=>node.getBoundingClientRect().height)).toBeLessThan(initial+10);
+});
+
+test('Care editor shortcuts respect IME, repeat, dirty state and actual Save failure',async({page,baseURL})=>{
+  const card=await openMilo(page,baseURL);
+  let writes=0;
+  await page.route('**/*',async route=>{
+    const url=new URL(route.request().url());
+    let payload={};try{payload=JSON.parse(url.searchParams.get('payload')||'{}');}catch(_){}
+    if(payload.action!=='update_guest_detail')return route.fallback();
+    writes++;
+    await route.fulfill({status:200,contentType:'application/javascript',body:`${url.searchParams.get('callback')}(${JSON.stringify({result:'error',error:'Fixture unavailable; draft remains safe.'})});`});
+  });
+  await card.locator('[data-care-brief-action="handover"]').click();
+  const note=page.locator('#guestDetailEditTextarea');
+  await note.press('Control+Enter');
+  expect(writes).toBe(0);
+  await note.fill('Draft retained after unavailable service.');
+  for(const options of [{ctrlKey:true,isComposing:true},{ctrlKey:true,repeat:true},{ctrlKey:true,altKey:true},{ctrlKey:false}]){
+    await note.dispatchEvent('keydown',{key:'Enter',bubbles:true,...options});
+  }
+  expect(writes).toBe(0);
+  await page.locator('#cancelGuestDetailEdit').focus();
+  await page.locator('#cancelGuestDetailEdit').press('Control+Enter');
+  expect(writes).toBe(0);
+  await note.focus();
+  await note.press('Meta+Enter');
+  await expect.poll(()=>writes).toBe(1);
+  await expect(page.locator('#guestDetailEditStatus')).toContainText('Fixture unavailable');
+  await expect(note).toHaveValue('Draft retained after unavailable service.');
+  await expect(page.locator('#saveGuestDetailEdit')).toBeEnabled();
+  page.once('dialog',dialog=>dialog.accept());
+  await page.locator('#cancelGuestDetailEdit').click();
+  await card.locator('[data-directory-edit-field="phone"]').evaluate(node=>node.click());
+  const phone=page.locator('#guestDetailEditInput');
+  await phone.fill('+61 400 000 123');
+  await phone.press('Enter');
+  await expect.poll(()=>writes).toBe(2);
+  await expect(page.locator('#guestDetailEditStatus')).toContainText('Fixture unavailable');
+  await expect(phone).toHaveValue('+61 400 000 123');
+});
+
+
+test('Care editor resets field input hints and cancelled focus never returns to a hidden field',async({page,baseURL})=>{
+  const card=await openMilo(page,baseURL);
+  await page.evaluate(()=>{
+    const original=window.setTimeout;
+    window.__editorFocusJobs=[];
+    window.setTimeout=function(callback,delay,...args){
+      if(delay===30){window.__editorFocusJobs.push(()=>callback(...args));return -1;}
+      return original(callback,delay,...args);
+    };
+  });
+  await card.locator('[data-care-brief-action="handover"]').click();
+  await page.locator('#cancelGuestDetailEdit').click();
+  await page.evaluate(()=>window.__editorFocusJobs.splice(0).forEach(job=>job()));
+  await expect(card.locator('[data-care-brief-action="handover"]')).toBeFocused();
+  // Programmatic button activation also covers editing from the profile action surface.
+  await card.locator('[data-directory-edit-field="phone"]').evaluate(node=>node.click());
+  const input=page.locator('#guestDetailEditInput');
+  await expect(input).toHaveAttribute('type','tel');
+  await expect(input).toHaveAttribute('inputmode','tel');
+  await expect(input).toHaveAttribute('autocomplete','off');
+  await page.locator('#cancelGuestDetailEdit').focus();
+  await page.evaluate(()=>window.__editorFocusJobs.splice(0).forEach(job=>job()));
+  await expect(page.locator('#cancelGuestDetailEdit')).toBeFocused();
+  await page.locator('#cancelGuestDetailEdit').click();
+  await card.locator('[data-directory-edit-field="ownerName"]').evaluate(node=>node.click());
+  await expect(input).toHaveAttribute('type','text');
+  await expect(input).toHaveAttribute('inputmode','text');
+  await expect(page.locator('#guestDetailEditLabel')).toHaveAttribute('for','guestDetailEditInput');
+  await page.locator('#guestDetailEditLabel').click();
+  await expect(input).toBeFocused();
+});
