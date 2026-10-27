@@ -3,6 +3,7 @@ var STAY_ADVANCE_PUSH_VERSION_ = 1;
 var STAY_ADVANCE_PUSH_RECEIPT_PREFIX_V1_ = 'stay_advance_push_receipt_v1_';
 var STAY_ADVANCE_PUSH_RECEIPT_TTL_DAYS_V1_ = 7;
 var STAY_ADVANCE_PUSH_MAX_RECEIPTS_V1_ = 1500;
+var STAY_ADVANCE_PUSH_LEASE_PROPERTY_V1_ = 'stay_advance_push_lease_v1';
 
 function stayAdvanceHeaderNameV1_(value) {
   return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -120,8 +121,20 @@ function stayAdvanceRowsV1_(rows, timezone) {
 }
 
 function sendStayAdvancePushNotifications_(now) {
+  // Claim only under the shared mutation lock. Never hold it during network sends:
+  // check-in, checkout and booking saves must remain available while push is delivered.
   var lock = LockService.getScriptLock();
   if (!lock.tryLock(1000)) return { skipped: true, reason: 'locked', sent: 0 };
+  var leaseProps, leaseId;
+  try {
+    leaseProps = PropertiesService.getScriptProperties();
+    leaseId = Utilities.getUuid();
+    var lease = null;
+    try { lease = JSON.parse(leaseProps.getProperty(STAY_ADVANCE_PUSH_LEASE_PROPERTY_V1_) || 'null'); } catch (ignoreLease) {}
+    if (lease && Number(lease.expiresAt) > Date.now()) return { skipped: true, reason: 'leased', sent: 0 };
+    // Longer than Apps Script's six-minute execution ceiling; a terminated run recovers automatically.
+    leaseProps.setProperty(STAY_ADVANCE_PUSH_LEASE_PROPERTY_V1_, JSON.stringify({ id: leaseId, expiresAt: Date.now() + 8 * 60 * 1000 }));
+  } finally { lock.releaseLock(); }
   try {
     var current = now instanceof Date ? now : new Date(), sheet = getTargetSheet_();
     var tz = sheet.getParent().getSpreadsheetTimeZone() || Session.getScriptTimeZone();
@@ -188,7 +201,16 @@ function sendStayAdvancePushNotifications_(now) {
       });
     });
     return { planned: plan.length, sent: sent, receiptCapacityAvailable: activeReceipts < STAY_ADVANCE_PUSH_MAX_RECEIPTS_V1_ };
-  } finally { lock.releaseLock(); }
+  } finally {
+    var cleanupLock = LockService.getScriptLock();
+    if (cleanupLock.tryLock(1000)) {
+      try {
+        var currentLease = null;
+        try { currentLease = JSON.parse(leaseProps.getProperty(STAY_ADVANCE_PUSH_LEASE_PROPERTY_V1_) || 'null'); } catch (ignoreCleanupLease) {}
+        if (currentLease && currentLease.id === leaseId) leaseProps.deleteProperty(STAY_ADVANCE_PUSH_LEASE_PROPERTY_V1_);
+      } finally { cleanupLock.releaseLock(); }
+    }
+  }
 }
 
 function getStayAdvancePushStatus_() {

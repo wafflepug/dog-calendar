@@ -13,7 +13,7 @@ function format(date, zone, pattern) {
 }
 function makeContext(extra = {}) {
   const ctx = { Date, JSON, Math, String, Number, Object, Array, isNaN,
-    Utilities: { DigestAlgorithm: { SHA_256: 'sha256' }, Charset: { UTF_8: 'utf8' },
+    Utilities: { getUuid: () => crypto.randomUUID(), DigestAlgorithm: { SHA_256: 'sha256' }, Charset: { UTF_8: 'utf8' },
       computeDigest: (_algorithm, text) => [...crypto.createHash('sha256').update(text).digest()].map(n => n > 127 ? n - 256 : n),
       formatDate: format },
     Session: { getScriptTimeZone: () => 'Australia/Sydney' }, ...extra };
@@ -180,4 +180,20 @@ test('runtime suppresses checked-out and conflicted operations and retains only 
   h.runtime.readStayOperations_ = () => [{ status: 'checked_in', stayId: '11111111-1111-4111-8111-111111111111' }];
   assert.equal(h.runtime.sendStayAdvancePushNotifications_(new Date('2026-10-26T20:00:00Z')).planned, 1);
   assert.ok(h.attempts.every(item => item.notification.category === 'departures'));
+});
+
+test('network delivery holds a notification lease but leaves the shared booking mutation lock available', () => {
+  const h = runtimeHarness();
+  const originalSend = h.runtime.sendFirebaseMessageToFid_;
+  h.runtime.sendFirebaseMessageToFid_ = (record, notification) => {
+    const mutationLock = h.runtime.LockService.getScriptLock();
+    assert.equal(mutationLock.tryLock(1000), true, 'a sitter can still save/check out during push network delivery');
+    mutationLock.releaseLock();
+    assert.equal(h.runtime.sendStayAdvancePushNotifications_(new Date('2026-10-26T20:00:00Z')).reason, 'leased');
+    return originalSend(record, notification);
+  };
+  assert.equal(h.runtime.sendStayAdvancePushNotifications_(new Date('2026-10-26T20:00:00Z')).sent, 3);
+  assert.equal(h.stored.stay_advance_push_lease_v1, undefined, 'normal completion releases the lease');
+  h.stored.stay_advance_push_lease_v1 = JSON.stringify({ id: 'terminated-run', expiresAt: Date.now() - 1000 });
+  assert.equal(h.runtime.sendStayAdvancePushNotifications_(new Date('2026-10-26T20:05:00Z')).sent, 1, 'expired lease recovers without resetting receipts');
 });
