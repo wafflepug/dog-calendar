@@ -328,7 +328,7 @@ test('responsive brand uses shared Palz Stay artwork with desktop workspace cont
       await expect(section.locator('.v10-card-kicker')).toBeHidden();
       const row = section.locator('.wh-home-guest-row');
       await expect(row).toHaveAttribute('data-home-state', /^(populated|empty|loading|error)$/);
-      if (await row.getAttribute('data-home-state') === 'populated') await expect(section.locator('.wh-home-muted')).toBeHidden();
+      if (await row.getAttribute('data-home-state') === 'populated' && await row.getAttribute('data-home-photo-error') !== 'true') await expect(section.locator('.wh-home-muted')).toBeHidden();
       else await expect(section.locator('.wh-home-muted')).toBeVisible();
       await expect(section.locator('.wh-home-shortcuts')).toBeHidden();
       await expect(section.locator('h2')).toBeVisible();
