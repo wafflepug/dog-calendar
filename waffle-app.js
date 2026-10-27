@@ -5621,6 +5621,12 @@ registerWaffleServiceWorker();
                     return;
                 }
 
+                if (action === 'edit-phone') {
+                    const phoneTrigger = card?.querySelector('[data-directory-edit-field="phone"]');
+                    if (phoneTrigger) openGuestDetailEditor(phoneTrigger, careBriefAction);
+                    return;
+                }
+
                 if (action === 'edit-routine') {
                     openCareReadinessTarget(card, 'feeding');
                     return;
@@ -9510,9 +9516,13 @@ registerWaffleServiceWorker();
             const phone = normalizeDirectoryPhoneForTel(
                 phoneField ? phoneField.dataset.directoryCurrentValue : card.dataset.v1088Phone
             );
+            const readablePhone = String(phoneField ? phoneField.dataset.directoryCurrentValue : card.dataset.v1088Phone || '').trim();
+            const addNumber = !phone && phoneField
+                ? '<button type="button" class="directory-care-brief-action directory-care-owner-add-number" data-care-brief-action="edit-phone">Add number</button>'
+                : '';
             setDirectorySummaryHtml(callActionHost, phone
-                ? `<a class="directory-care-brief-action" href="tel:${escapeDashboardHtml(phone)}" aria-label="Call owner">Call owner</a>`
-                : '<span class="directory-owner-contact-missing">Phone unavailable</span>', 'careBriefGeneratedHtml');
+                ? `<a class="directory-care-brief-action" href="tel:${escapeDashboardHtml(phone)}" aria-label="Call owner">Call owner</a><span class="directory-care-owner-phone">${escapeDashboardHtml(readablePhone)}</span>`
+                : `<span class="directory-owner-contact-missing">Phone unavailable</span>${addNumber}`, 'careBriefGeneratedHtml');
         }
 
         window.WAFFLE_CARE_SITTER_SUMMARY?.syncCard?.(card);
@@ -9553,8 +9563,12 @@ registerWaffleServiceWorker();
             switchDirectoryProfileSubTab(card, 'safety');
             target = card.querySelector('[data-directory-detail="profile"] [data-care-risk-flag]');
         } else if (action === 'emergency-contact') {
-            target = card.querySelector('[data-profile-subtab="healthHome"]');
-            if (target?.getAttribute('aria-expanded') !== 'true') target?.click();
+            const healthHomeToggle = card.querySelector('[data-profile-subtab="healthHome"]');
+            if (healthHomeToggle?.getAttribute('aria-expanded') !== 'true') healthHomeToggle?.click();
+            const healthHomePanel = card.querySelector('[data-profile-subpanel="healthHome"]');
+            target = (!card.classList.contains('is-profile-editing') && healthHomePanel?.querySelector('[data-intake-read-attribute="emergencyContact"], [data-intake-read-attribute="emergencyPhone"]'))
+                || healthHomeToggle;
+            if (target && target !== healthHomeToggle) target.tabIndex = -1;
         } else {
             const profileSection = card.querySelector('[data-directory-detail="profile"]');
             setDirectoryProfileEditMode(card, true);
@@ -9578,7 +9592,8 @@ registerWaffleServiceWorker();
             Number(window.innerWidth || 0) <= 768 || prefersReducedMotion
                 ? 'auto'
                 : 'smooth';
-        target?.closest('section, details, [data-directory-detail]')?.scrollIntoView({ behavior: actionScrollBehavior, block: 'start' });
+        if (action === 'emergency-contact') target?.scrollIntoView({ behavior: actionScrollBehavior, block: 'center' });
+        else target?.closest('section, details, [data-directory-detail]')?.scrollIntoView({ behavior: actionScrollBehavior, block: 'start' });
         if (target && action !== 'handover') {
             try { target.focus({ preventScroll: true }); }
             catch (_) { target.focus(); }
@@ -12506,7 +12521,14 @@ registerWaffleServiceWorker();
     function intakeAttributeReadViewHtml(fields, attributes, profileState, tabKey) {
         const safe = value => escapeDashboardHtml(value);
         const populated = fields.filter(field => String(attributes?.[field.key] ?? '').trim());
-        const rows = populated.map(field => `<div class="intake-profile-read-field" data-intake-read-attribute="${safe(field.key)}"><span class="intake-profile-read-label">${safe(field.label)}</span><span class="intake-profile-read-value">${safe(String(attributes[field.key]))}</span></div>`).join('');
+        const rows = populated.map(field => {
+            const originalValue = String(attributes[field.key]);
+            const tel = ['emergencyPhone', 'vetPhone'].includes(field.key) ? normalizeDirectoryPhoneForTel(originalValue) : '';
+            const valueHtml = tel
+                ? `<a href="tel:${safe(tel)}" aria-label="Call ${safe(field.label)}: ${safe(originalValue)}">${safe(originalValue)}</a>`
+                : safe(originalValue);
+            return `<div class="intake-profile-read-field" data-intake-read-attribute="${safe(field.key)}"><span class="intake-profile-read-label">${safe(field.label)}</span><span class="intake-profile-read-value">${valueHtml}</span></div>`;
+        }).join('');
         if (profileState === 'identity-conflict') {
             return '<p class="intake-profile-read-status">Care details are not verified for this stay.</p>' +
                 (tabKey === 'healthHome' ? '<p class="intake-profile-medication-status">Medication instructions are not verified.</p>' : '');

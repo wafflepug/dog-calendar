@@ -18,7 +18,8 @@ const optionalEditorFields = app.slice(app.indexOf('const DIRECTORY_PROFILE_OPTI
 const intakeControl = app.slice(app.indexOf('function intakeAttributeControlHtml'), app.indexOf('function renderDirectoryIntakeAttributes'));
 const intakeRenderer = app.slice(app.indexOf('function renderDirectoryIntakeAttributes'), app.indexOf('function renderDirectoryCareProfile'));
 const sectionRuntime = app.slice(app.indexOf('const directoryCareSectionChoices = new Map();'), app.indexOf('async function openDirectoryGuestProfile'));
-const productionRenderer = `${sliceConst('CARE_SAFETY_FLAGS')}\n${sliceConst('INTAKE_ATTRIBUTE_UI_GROUPS')}\n${sliceConst('DIRECTORY_PROFILE_SECONDARY_TABS')}\n${optionalEditorFields}
+const phoneNormalizer = app.slice(app.indexOf('function normalizeDirectoryPhoneForTel('), app.indexOf('function getDirectoryCareBriefFreshness('));
+const productionRenderer = `${phoneNormalizer}\n${sliceConst('CARE_SAFETY_FLAGS')}\n${sliceConst('INTAKE_ATTRIBUTE_UI_GROUPS')}\n${sliceConst('DIRECTORY_PROFILE_SECONDARY_TABS')}\n${optionalEditorFields}
 const careRiskRecordsCache = {}, directorySummaryRecordsCache = {}, belongingsRecordsCache = {};
 const directorySafetyReadFailures = new Set();
 function directoryProfileIdentityCacheKey(){return '';}
