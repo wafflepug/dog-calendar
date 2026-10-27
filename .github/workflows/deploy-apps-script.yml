@@ -46,6 +46,8 @@ jobs:
         run: |
           set -euo pipefail
           node --check apps-script/Code.js
+          node --check apps-script/StayAdvancePush.js
+          node --test tests/stay-advance-push.test.js tests/stay-advance-push-integration.test.js
           node --test tests/care-past-cache-contract.test.js tests/care-past-classification.test.js
           node --test tests/deployment-attribution.test.js
           node --check apps-script/StableStayIdentity.js
@@ -102,7 +104,7 @@ jobs:
               sys.exit(1)
           versions = payload.get('versions') or {}
           deployment = payload.get('deployment') or {}
-          if payload.get('result') != 'success' or versions.get('stableStayIdentityVersion') != 1 or versions.get('stayOperationIdentityVersion') != 1 or versions.get('careRecordIdentityVersion') != 1 or versions.get('careRecordIdentityWritesEnabled') is not False:
+          if payload.get('result') != 'success' or versions.get('stayAdvancePushVersion') != 1 or versions.get('stableStayIdentityVersion') != 1 or versions.get('stayOperationIdentityVersion') != 1 or versions.get('careRecordIdentityVersion') != 1 or versions.get('careRecordIdentityWritesEnabled') is not False:
               sys.exit(1)
           if deployment.get('commitSha') != os.environ.get('GITHUB_SHA') or str(deployment.get('workflowRunId')) != os.environ.get('GITHUB_RUN_ID'):
               sys.exit(1)
@@ -117,6 +119,25 @@ jobs:
           done
           echo "Stay and operation identity capability verification failed."
           exit 1
+
+      - name: Verify live advance reminder scheduler without sending notifications
+        env:
+          APPS_SCRIPT_WEBAPP_URL: https://script.google.com/macros/s/AKfycbwn4HL49K9c3AZbXJRUjPw3UYWxJt8DmqXwMnTytyqdSstj3ZIJwWdDEC2IsBjetOf3pw/exec
+        run: |
+          set -euo pipefail
+          response="$(curl -fsSLG --max-time 45 "$APPS_SCRIPT_WEBAPP_URL" \
+            --data-urlencode 'payload={"action":"get_stay_advance_push_status"}')"
+          RESPONSE="$response" python3 - <<'PY'
+          import json
+          import os
+          status = json.loads(os.environ['RESPONSE'])
+          assert status.get('schemaVersion') == 1, 'Advance reminder capability unavailable'
+          assert status.get('credentialsConfigured') is True, 'Push server credentials are not configured'
+          assert status.get('checkerTriggerPresent') is True, 'Push checker trigger is missing for deployment owner'
+          assert status.get('morningTriggerPresent') is True, 'Morning push trigger is missing for deployment owner'
+          assert status.get('morningHour') == 7, 'Unexpected reminder threshold'
+          print('Advance reminder scheduler, credential configuration and 7 am threshold verified. No test messages sent.')
+          PY
 
       - name: Verify live Waffle maintenance safety state
         env:

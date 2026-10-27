@@ -426,3 +426,29 @@ test('notification Settings action remains reachable above mobile navigation in 
     expect(geometry.modalAboveNav, JSON.stringify(geometry)).toBe(true);
   }
 });
+
+test('advance reminder schedule stays readable in device settings on phones and desktop', async ({ page, baseURL }) => {
+  await openReadOnlyRuntime(page, baseURL);
+  await page.goto(`${baseURL}/directory.html`, { waitUntil: 'domcontentloaded' });
+  await page.waitForFunction(() => document.documentElement.dataset.waffleUiReady === 'true' && typeof ensureWaffleNotificationModal === 'function');
+  await buildNotificationFixture(page);
+  await page.locator('[data-notification-centre-tab="settings"]').click();
+  for (const theme of ['light', 'dark']) {
+    await page.evaluate(mode => document.body.classList.toggle('dark-theme', mode === 'dark'), theme);
+    for (const width of [320, 390, 1440]) {
+      await page.setViewportSize({ width, height: 844 });
+      for (const category of ['arrivals', 'departures']) {
+        const label = page.locator(`.waffle-notification-options label:has([data-push-pref="${category}"])`);
+        await expect(label.locator('small')).toContainText('today, 1 and 2 days');
+        const metrics = await label.evaluate(node => {
+          const text = node.querySelector('small');
+          const box = text.getBoundingClientRect();
+          return { left: box.left, right: box.right, viewport: innerWidth, client: text.clientWidth, scroll: text.scrollWidth };
+        });
+        expect(metrics.left).toBeGreaterThanOrEqual(0);
+        expect(metrics.right).toBeLessThanOrEqual(metrics.viewport);
+        expect(metrics.scroll).toBeLessThanOrEqual(metrics.client + 1);
+      }
+    }
+  }
+});
