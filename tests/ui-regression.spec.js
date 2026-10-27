@@ -306,7 +306,7 @@ test('desktop shell keeps header actions in the sidebar and appearance in Settin
   await expect(page.locator('#wh75SettingsPanel .wh75-mode-btn')).toHaveCount(2);
 });
 
-test('responsive brand uses Palz Stay on mobile Today and concise Waffle House branding on desktop', async ({ page }, testInfo) => {
+test('responsive brand uses shared Palz Stay artwork with desktop workspace context', async ({ page }, testInfo) => {
   await gotoCanonical(page, 'index.html?view=today', 'calendar');
   const mobileShell = testInfo.project.metadata.mobileShell === true;
   const palzStay = page.locator('#whPalzStayMobileBrand');
@@ -326,7 +326,10 @@ test('responsive brand uses Palz Stay on mobile Today and concise Waffle House b
     for (const sectionTitle of ['whHomeGuestsTitle', 'whHomeArrivalsTitle']) {
       const section = page.locator(`section[aria-labelledby="${sectionTitle}"]`);
       await expect(section.locator('.v10-card-kicker')).toBeHidden();
-      await expect(section.locator('.wh-home-muted')).toBeHidden();
+      const row = section.locator('.wh-home-guest-row');
+      await expect(row).toHaveAttribute('data-home-state', /^(populated|empty|loading|error)$/);
+      if (await row.getAttribute('data-home-state') === 'populated') await expect(section.locator('.wh-home-muted')).toBeHidden();
+      else await expect(section.locator('.wh-home-muted')).toBeVisible();
       await expect(section.locator('.wh-home-shortcuts')).toBeHidden();
       await expect(section.locator('h2')).toBeVisible();
       await expect(section.locator('.wh-home-guest-row')).not.toHaveCSS('display', 'none');
@@ -334,7 +337,10 @@ test('responsive brand uses Palz Stay on mobile Today and concise Waffle House b
     const potentials = page.locator('section[aria-labelledby="whHomePotentialsTitle"]');
     await expect(potentials.locator('.v10-card-kicker')).toBeHidden();
     await expect(potentials.locator('#whHomeAddPotentialBtn')).toBeHidden();
-    await expect(potentials.locator('#whHomePotentialsStatus')).toBeHidden();
+    const potentialRow = potentials.locator('#whHomePotentials');
+    await expect(potentialRow).toHaveAttribute('data-home-state', /^(populated|empty|loading|error)$/);
+    if (await potentialRow.getAttribute('data-home-state') === 'populated') await expect(potentials.locator('#whHomePotentialsStatus')).toBeHidden();
+    else await expect(potentials.locator('#whHomePotentialsStatus')).toBeVisible();
     await expect(potentials.locator('.wh-home-shortcuts')).toBeHidden();
     await expect(page.locator('.v10-capacity-card h2')).toHaveText('Capacity Tracker');
     await expect(page.locator('.v108-meet-card h2')).toHaveText('Meet & Greet Tracker');
@@ -366,7 +372,12 @@ test('responsive brand uses Palz Stay on mobile Today and concise Waffle House b
     }
   } else {
     await expect(palzStay).toBeHidden();
-    await expect(desktopBrand).toHaveText('Waffle House');
+    await expect(desktopBrand.locator('small')).toHaveText('Waffle House workspace');
+    const desktopLogo = desktopBrand.getByRole('img', { name:'Palz Stay' });
+    await expect(desktopLogo).toBeVisible();
+    const brandBox = await box(desktopLogo);
+    const sidebarBox = await box(page.locator('#whSitterDesktopSidebar'));
+    expect(brandBox && sidebarBox && brandBox.x >= sidebarBox.x && brandBox.x + brandBox.width <= sidebarBox.x + sidebarBox.width).toBeTruthy();
   }
 });
 
