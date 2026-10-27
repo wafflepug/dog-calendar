@@ -686,8 +686,8 @@
       <header class="v11217-modal-head"><div><small>DEPARTURE</small><h3 id="v11217GuidedCheckoutTitle" tabindex="-1">Check out</h3><p>Review this stay before confirming departure.</p></div><button type="button" class="v11217-modal-close" data-v11217-guided-close aria-label="Close checkout">×</button></header>
       <div class="v11217-modal-body"><div class="v11217-modal-dog"><strong data-v11217-guided-dog></strong><span data-v11217-guided-dogid></span><div class="v11217-guided-dates"><span><small>Booked stay</small><span data-v11217-guided-dates></span></span><span><small data-v11217-guided-checkout-caption>Checkout today</small><span data-v11217-guided-checkout-today></span></span></div></div>
       <div class="v11217-guided-checklist"><section class="v11217-guided-evidence" data-v11217-guided-belongings-section><strong>Belongings</strong><details data-v11217-guided-belongings-details><summary data-v11217-guided-belongings-summary></summary><div data-v11217-guided-belongings></div></details><div class="v11217-guided-unknown" data-v11217-guided-belongings-unknown hidden>Not available in this summary</div></section><section class="v11217-guided-evidence" data-v11217-guided-medication-section><strong>Medication</strong><div data-v11217-guided-medication></div><div class="v11217-guided-unknown" data-v11217-guided-medication-unknown hidden>Not available in this summary</div></section></div>
-      <div class="v11217-guided-missing" data-v11217-guided-missing hidden><span data-v11217-guided-missing-message>Care details are unavailable in this summary. Review the missing details before handover.</span><button type="button" data-v11217-guided-review-care>Review missing details</button></div>
-      <div class="v11217-field"><label for="v11217GuidedCheckoutNote">Handover note (for this checkout)</label><textarea id="v11217GuidedCheckoutNote" data-v11217-guided-note maxlength="1000" placeholder="Optional handover details…"></textarea></div>
+      <div class="v11217-guided-missing" data-v11217-guided-missing hidden><span data-v11217-guided-missing-message>Review saved care before handover.</span><button type="button" data-v11217-guided-review-care>Review missing details</button></div>
+      <div class="v11217-field"><label for="v11217GuidedCheckoutNote">Departure note (optional)</label><textarea id="v11217GuidedCheckoutNote" data-v11217-guided-note rows="2" maxlength="1000" placeholder="Optional handover details…"></textarea></div>
       <div class="v11217-action-feedback" data-v11217-guided-feedback role="alert" aria-live="assertive" hidden></div></div>
       <footer class="v11217-modal-actions"><button type="button" class="v11217-cancel" data-v11217-guided-close>Cancel</button><button type="button" class="v11217-confirm" data-v11217-guided-confirm>Confirm checkout</button></footer>
       </section>`;
@@ -696,6 +696,9 @@
       if (event.target.closest('[data-v11217-guided-review-care]')) { void reviewGuidedCare(); return; }
       if (!guidedCheckoutBusy && (event.target === modal || event.target.closest('[data-v11217-guided-close]'))) closeGuidedCheckout();
       if (event.target.closest('[data-v11217-guided-confirm]')) runGuidedCheckout();
+    });
+    modal.addEventListener('input', event => {
+      if (event.target.matches('[data-v11217-guided-note]')) sizeGuidedNote(modal);
     });
     modal.addEventListener('keydown', event => {
       if (event.key === 'Escape') { event.preventDefault(); if (!guidedCheckoutBusy) closeGuidedCheckout(); }
@@ -714,6 +717,13 @@
       }
     });
     return modal;
+  }
+  function sizeGuidedNote(modal) {
+    const note = modal.querySelector('[data-v11217-guided-note]');
+    if (!note || modal.hidden) return;
+    const border = note.offsetHeight - note.clientHeight;
+    note.style.height = 'auto';
+    note.style.height = `${Math.min(180, Math.max(76, note.scrollHeight + border))}px`;
   }
   let guidedTrigger = null;
   function openGuidedCheckout(card, trigger, attempt, payload) {
@@ -758,12 +768,13 @@
     reviewCare.hidden = !missingEvidence || !hasStableIdentity;
     reviewCare.disabled = false;
     reviewCare.textContent = 'Review missing details';
-    modal.querySelector('[data-v11217-guided-missing-message]').textContent = 'Care details are unavailable in this summary. Review the missing details before handover.';
+    modal.querySelector('[data-v11217-guided-missing-message]').textContent = 'Review saved care before handover.';
     modal.querySelector('[data-v11217-guided-feedback]').hidden = true;
     modal.querySelector('[data-v11217-guided-confirm]').disabled = false;
     modal.querySelector('[data-v11217-guided-confirm]').textContent = 'Confirm checkout';
     modal.querySelectorAll('[data-v11217-guided-close]').forEach(button => { button.disabled = false; });
     modal.hidden = false;
+    sizeGuidedNote(modal);
     modal.querySelector('#v11217GuidedCheckoutTitle').focus();
   }
   function renderGuidedEvidence(modal, kind, evidence, { unknown: remainUnknown = false } = {}) {
@@ -773,7 +784,9 @@
     unknown.hidden = !!evidence && !remainUnknown;
     if (details) {
       const summary = modal.querySelector(`[data-v11217-guided-${kind}-summary]`);
-      details.open = false;
+      const direct = !!evidence && evidence.listItems.length <= 1 && !remainUnknown;
+      details.open = direct;
+      summary.hidden = direct;
       details.hidden = !evidence;
       if (evidence) summary.textContent = evidence.listItems.length
         ? `${evidence.listItems.length} listed · review`
@@ -876,7 +889,7 @@
       const remainsUnknown = !modal.querySelector('[data-v11217-guided-belongings-unknown]').hidden || !modal.querySelector('[data-v11217-guided-medication-unknown]').hidden;
       modal.querySelector('[data-v11217-guided-missing]').hidden = !remainsUnknown;
       if (failures.length) {
-        modal.querySelector('[data-v11217-guided-missing-message]').textContent = `${failures.join(' ')} Other details shown are verified for this stay.`;
+        modal.querySelector('[data-v11217-guided-missing-message]').textContent = 'Review is incomplete. Retry the missing details.';
         button.textContent = 'Retry missing details';
         feedback.textContent = `${failures.join(' ')} You can retry here. The checkout note is still here.`;
         feedback.hidden = false;

@@ -86,7 +86,7 @@ test('queued offline result is not treated as saved and missing evidence shares 
   const card = page.getByTestId('selected-card');
   await openCheckout(card);
   const dialog = page.locator('#v11217GuidedCheckout');
-  await expect(dialog.locator('[data-v11217-guided-missing]')).toContainText('Care details are unavailable in this summary');
+  await expect(dialog.locator('[data-v11217-guided-missing]')).toContainText('Review saved care before handover');
   await expect(dialog.locator('[data-v11217-guided-belongings-unknown]')).toHaveText('Not available in this summary');
   await expect(dialog.locator('[data-v11217-guided-medication-unknown]')).toHaveText('Not available in this summary');
   await expect(dialog.locator('[data-v11217-guided-missing]')).toContainText('Review missing details');
@@ -420,4 +420,38 @@ test('a legacy stay upgraded by the canonical save retains its returned identity
   await expect(page.locator('#v11217GuidedCheckout')).toBeHidden();
   expect(await page.evaluate(() => window.movedIds)).toEqual(['upgraded-stay-a']);
   expect(await page.evaluate(() => window.writes[0].note)).toBe('Owner collected lead');
+});
+
+test('one recorded belonging is visible immediately and a larger list keeps the existing disclosure',async({page})=>{
+  await setup(page);
+  const card=page.getByTestId('selected-card');
+  await card.locator('[data-belongings-summary]').evaluate(node=>{node.innerHTML='<ul class="belongings-summary-list"><li>Blue lead</li></ul>';});
+  await openCheckout(card);
+  const dialog=page.locator('#v11217GuidedCheckout');
+  await expect(dialog.locator('[data-v11217-guided-belongings] li')).toBeVisible();
+  await expect(dialog.locator('[data-v11217-guided-belongings] li')).toHaveText('Blue lead');
+  await expect(dialog.locator('[data-v11217-guided-belongings-summary]')).toBeHidden();
+  await dialog.getByRole('button',{name:'Cancel',exact:true}).click();
+  await card.locator('[data-belongings-summary]').evaluate(node=>{node.innerHTML='<ul class="belongings-summary-list"><li>Blue lead</li><li>Food tub</li></ul>';});
+  await openCheckout(card);
+  await expect(dialog.locator('[data-v11217-guided-belongings-summary]')).toBeVisible();
+  await expect(dialog.locator('[data-v11217-guided-belongings-details]')).toHaveJSProperty('open',false);
+  expect(await page.evaluate(()=>window.writes.length)).toBe(0);
+  expect(await page.evaluate(()=>window.detailReads.length)).toBe(0);
+});
+
+test('failed detail review has one full error message and keeps source-specific unknown warnings',async({page})=>{
+  await setup(page,{loadedEvidence:false});
+  await page.evaluate(()=>{window.profileReadFailure='Profile read timed out';});
+  await openCheckout(page.getByTestId('selected-card'));
+  const dialog=page.locator('#v11217GuidedCheckout');
+  await dialog.locator('[data-v11217-guided-note]').fill('Return the lead');
+  await dialog.locator('[data-v11217-guided-review-care]').click();
+  await expect(dialog.locator('[data-v11217-guided-missing-message]')).toHaveText('Review is incomplete. Retry the missing details.');
+  await expect(dialog.locator('[data-v11217-guided-feedback]')).toContainText('Profile read timed out');
+  await expect(dialog.locator('[data-v11217-guided-missing-message]')).not.toContainText('Profile read timed out');
+  await expect(dialog.locator('[data-v11217-guided-medication-unknown]')).toBeVisible();
+  await expect(dialog.locator('[data-v11217-guided-belongings-unknown]')).toBeHidden();
+  await expect(dialog.locator('[data-v11217-guided-note]')).toHaveValue('Return the lead');
+  expect(await page.evaluate(()=>window.writes.length)).toBe(0);
 });

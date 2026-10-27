@@ -49,7 +49,7 @@ test('verified same-day checkout publishes one collapsed message for the selecte
   await publishSelected(page);
   const banner = page.locator('#v11217DepartureMessageBanner');
   await expect(banner).toBeVisible();
-  await expect(banner).toContainText('Departure message · Twin · #0017');
+  await expect(banner).toContainText('Departure message · Twin · #00017 · Checked out 18 Oct 2026');
   await expect(banner).toBeAttached();
   await expect(page.locator('#v11217GuidedCheckout')).toBeHidden();
   const disclosure = banner.locator('[data-v11217-departure-disclosure]');
@@ -231,6 +231,20 @@ test('banner hides outside the current roster and a later verified checkout repl
     window.WAFFLE_DEPARTURE_MESSAGE.publishVerified(payload, { result: 'success', record: { ...payload, status: 'checked_out', checkedOutAt: '2026-10-18T03:00:00.000Z' } }, card);
   });
   await expect(page.locator('#v11217DepartureMessageBanner')).toHaveCount(1);
-  await expect(banner).toContainText('Departure message · Solo · dog-c');
+  await expect(banner).toContainText('Departure message · Solo · Checked out 18 Oct 2026');
   await expect(banner).not.toContainText('Departure message · Twin');
+});
+
+test('departure summary omits unassigned or internal identifiers and normalizes existing numbers',async({page})=>{
+  await setupEvidence(page); await loadDepartureModule(page);
+  const card=page.getByTestId('selected-card');
+  for(const raw of ['Other','0','#00000','123456','11111111-1111-4111-8111-111111111111','']){
+    await card.evaluate((node,value)=>{node.dataset.directoryDogNumber=value;},raw);
+    await publishSelected(page);
+    await expect(page.locator('#v11217DepartureMessageBanner summary')).toHaveText('Departure message · Twin · Checked out 18 Oct 2026');
+  }
+  await card.evaluate(node=>{node.dataset.directoryDogNumber='17';});
+  await publishSelected(page);
+  await expect(page.locator('#v11217DepartureMessageBanner summary')).toHaveText('Departure message · Twin · #00017 · Checked out 18 Oct 2026');
+  expect(await page.evaluate(()=>window.writeCalls.length)).toBe(0);
 });

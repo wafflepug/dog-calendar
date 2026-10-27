@@ -72,9 +72,13 @@
       ? validDate(window.getLocalTodayDateString())
       : localDateFromTimestamp(new Date().toISOString());
     if (!today || actualDate > today) return null;
+    const rawDogNumber = String(card.dataset.directoryDogNumber || '').trim().replace(/^#/, '');
+    const dogNumber = /^[0-9]{1,5}$/.test(rawDogNumber) && Number(rawDogNumber) > 0
+      ? `#${String(Number(rawDogNumber)).padStart(5, '0')}`
+      : '';
     return Object.freeze({
       stayId, dogId, stayKey, dogName, startDate, endDate, actualDate,
-      dogLabel: String(card.dataset.directoryDogNumber || '').trim() || dogId
+      dogNumber
     });
   }
 
@@ -93,7 +97,7 @@
     const disclosure = document.createElement('details');
     disclosure.dataset.v11217DepartureDisclosure = '';
     const summary = document.createElement('summary');
-    summary.textContent = `Departure message · ${context.dogName} · ${context.dogLabel}`;
+    summary.textContent = `Departure message · ${context.dogName}${context.dogNumber ? ` · ${context.dogNumber}` : ''} · Checked out ${formatDate(context.actualDate)}`;
     const label = document.createElement('label');
     label.htmlFor = 'v11217DepartureMessageText';
     label.textContent = 'Message to owner';

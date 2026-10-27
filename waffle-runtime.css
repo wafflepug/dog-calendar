@@ -2,8 +2,8 @@
    Build: 2026.08.27.04
    Historical base styles remain compatibility sources during Phase 3A, but pages no longer
    reference them individually. Preserve this import order until modules are folded in. */
-@import url("waffle-app.css?build=2026.08.27.04&rev=2026.10.28.03");
-@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.10.28.03");
+@import url("waffle-app.css?build=2026.08.27.04&rev=2026.10.28.04");
+@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.10.28.04");
 @import url("waffle-v10.8.2.css?build=2026.08.27.04");
 @import url("waffle-v10.8.3.css?build=2026.08.27.04");
 @import url("waffle-v10.8.5.css?build=2026.08.27.04");
@@ -11,12 +11,12 @@
 @import url("waffle-v10.8.7.css?build=2026.08.27.04");
 @import url("waffle-v10.8.8.css?build=2026.08.27.04");
 @import url("waffle-v10.8.9.css?build=2026.08.27.04");
-@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.10.28.03");
+@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.10.28.04");
 @import url("waffle-v11.0.3.css?build=2026.08.27.04");
 @import url("waffle-v11.0.5.css?build=2026.08.27.04");
-@import url("waffle-v11.1.94.css?build=2026.10.28.03");
-@import url("waffle-v11.1.95.css?build=2026.10.28.03");
-@import url("waffle-v11.1.96.css?build=2026.10.28.03&rev=2026.10.28.03");
+@import url("waffle-v11.1.94.css?build=2026.10.28.04");
+@import url("waffle-v11.1.95.css?build=2026.10.28.04");
+@import url("waffle-v11.1.96.css?build=2026.10.28.04&rev=2026.10.28.04");
 
 /* ============================================================
    MOBILE FIRST-PAINT STABILITY GATE
@@ -3290,3 +3290,6 @@ body[data-waffle-page="calendar"] .wh-home-guests:has(> .wh-home-guest-row:is([d
   visibility:visible !important;
 }
 body[data-waffle-page="calendar"] #whHomePotentials[data-home-state="loading"] .v10-all-clear { display:none !important; }
+
+/* The optional departure note starts compact and grows within the scrollable sheet. */
+#v11217GuidedCheckout [data-v11217-guided-note] { min-height:76px; max-height:180px; overflow-y:auto; }
