@@ -2992,13 +2992,13 @@ function ensureWaffleNotificationModal() {
                     <label>
                         <input type="checkbox" data-push-pref="arrivals" checked>
                         <span>🏡 Arrivals</span>
-                        <small>Morning boarding arrivals</small>
+                        <small>At 7 am: today, 1 and 2 days before arrival</small>
                     </label>
 
                     <label>
                         <input type="checkbox" data-push-pref="departures" checked>
                         <span>👋 Departures</span>
-                        <small>Morning departures / offboarding</small>
+                        <small>At 7 am: today, 1 and 2 days before departure</small>
                     </label>
 
                     <label>

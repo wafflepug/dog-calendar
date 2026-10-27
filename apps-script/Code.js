@@ -3062,6 +3062,7 @@ var READ_ONLY_SHEET_ACTIONS_ = {
   waffle_ai_health: true,
   ask_waffle_ai: true,
   get_data_versions: true,
+  get_stay_advance_push_status: true,
   get_push_device: true,
   get_notification_centre: true,
   get_audit_log: true,
@@ -3354,12 +3355,17 @@ function processReadOnlySheetAction_(data) {
     };
   }
 
+  if (action === "get_stay_advance_push_status") {
+    return getStayAdvancePushStatus_();
+  }
+
   if (action === "get_data_versions") {
     return {
       result: "success",
       action: action,
       deployment: typeof getWaffleDeploymentIdentity_ === "function" ? getWaffleDeploymentIdentity_() : null,
       versions: Object.assign({}, getWaffleDataVersions_(), {
+        stayAdvancePushVersion: typeof STAY_ADVANCE_PUSH_VERSION_ === "number" ? STAY_ADVANCE_PUSH_VERSION_ : 0,
         stableStayIdentityVersion: STABLE_STAY_IDENTITY_VERSION_V11225_,
         stayOperationIdentityVersion: STAY_OPERATION_IDENTITY_VERSION_V11226_,
         careRecordIdentityVersion: typeof CARE_RECORD_IDENTITY_VERSION_ === "number" ? CARE_RECORD_IDENTITY_VERSION_ : 0,
@@ -18544,6 +18550,13 @@ function readFutureCapacityAlerts_(
 
 
 function checkWaffleHousePushNotifications() {
+  // Separate receipts let the checker retry advance reminders independently of today's digest.
+  try {
+    sendStayAdvancePushNotifications_();
+  } catch (advanceError) {
+    console.error("Advance stay reminders failed; the next scheduled check will retry.");
+  }
+
   var sheet =
     getTargetSheet_();
 
@@ -18917,6 +18930,13 @@ function checkWaffleHousePushNotifications() {
 
 
 function sendMorningWafflePushNotifications() {
+  // Separate receipts let the checker retry advance reminders independently of today's digest.
+  try {
+    sendStayAdvancePushNotifications_();
+  } catch (advanceError) {
+    console.error("Advance stay reminders failed; the next scheduled check will retry.");
+  }
+
   var sheet =
     getTargetSheet_();
 
