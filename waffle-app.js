@@ -6037,27 +6037,33 @@ registerWaffleServiceWorker();
 
         document.addEventListener('keydown', function(event) {
             const modal = document.getElementById('guestDetailEditModal');
-
-            if (
-                event.key === 'Escape' &&
-                modal &&
-                modal.classList.contains('open')
-            ) {
+            if (!modal?.classList.contains('open')) return;
+            if (event.key === 'Escape') {
                 closeGuestDetailEditor();
+                return;
             }
+            if (event.key !== 'Enter') return;
+
+            const context = activeDirectoryEditContext;
+            const activeControl = document.activeElement;
+            const input = document.getElementById('guestDetailEditInput');
+            const textarea = document.getElementById('guestDetailEditTextarea');
+            const saveButton = document.getElementById('saveGuestDetailEdit');
+            const isEditorControl = activeControl === input || activeControl === textarea;
+            const isModifiedEnter = event.key === 'Enter' && (event.ctrlKey || event.metaKey);
+            const isPlainSingleLineEnter = event.key === 'Enter' &&
+                !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey &&
+                activeControl === input;
 
             if (
-                event.key === 'Enter' &&
-                modal &&
-                modal.classList.contains('open') &&
-                activeDirectoryEditContext &&
-                !DIRECTORY_EDIT_FIELD_CONFIG[
-                    activeDirectoryEditContext.fieldKey
-                ]?.multiline
+                !event.defaultPrevented && !event.repeat && !event.isComposing && !event.altKey &&
+                event.key === 'Enter' && isEditorControl && event.target === activeControl && modal &&
+                modal.classList.contains('open') && context &&
+                (isModifiedEnter || isPlainSingleLineEnter) &&
+                saveButton && !saveButton.disabled
             ) {
                 event.preventDefault();
-                saveGuestDetailFromEditor()
-                    .catch(error => console.error(error));
+                saveButton.click();
             }
         });
 
@@ -15729,13 +15735,33 @@ registerWaffleServiceWorker();
         const textarea = document.getElementById('guestDetailEditTextarea');
         const status = document.getElementById('guestDetailEditStatus');
 
-        title.textContent = `✏️ Edit ${config.label}`;
-        dogLine.textContent =
-            `${dogName} · ${formatStayDateShort(startDate)} – ${formatStayDateShort(endDate)}`;
+        const rawDogNumber = String(card.dataset.directoryDogNumber || '').trim();
+        const dogNumberDigits = rawDogNumber.replace(/^#/, '');
+        const dogNumber = /^\d+$/.test(dogNumberDigits) && Number.isSafeInteger(Number(dogNumberDigits)) && Number(dogNumberDigits) > 0
+            ? `#${dogNumberDigits.padStart(5, '0')}`
+            : '';
+        dogLine.textContent = [dogNumber, dogName,
+            `${formatStayDateShort(startDate)} – ${formatStayDateShort(endDate)}`]
+            .filter(Boolean).join(' · ');
+        title.textContent = `Edit ${config.label}`;
         label.textContent = config.label;
 
         input.style.display = config.multiline ? 'none' : 'block';
         textarea.style.display = config.multiline ? 'block' : 'none';
+        label.htmlFor = config.multiline ? textarea.id : input.id;
+
+        input.autocomplete = 'off';
+        input.inputMode = fieldKey === 'phone' ? 'tel' : 'text';
+        input.spellcheck = fieldKey === 'breed';
+        input.autocapitalize = ['dogName', 'ownerName', 'breed'].includes(fieldKey) ? 'words' : 'off';
+        textarea.autocomplete = 'off';
+        textarea.spellcheck = true;
+        textarea.autocapitalize = 'sentences';
+        textarea.rows = 3;
+        textarea.maxLength = 2000;
+        textarea.style.height = '';
+        textarea.style.maxHeight = '240px';
+        textarea.style.overflowY = 'auto';
 
         if (config.multiline) {
             textarea.value = currentValue;
@@ -15749,11 +15775,20 @@ registerWaffleServiceWorker();
         status.textContent = 'No unsaved changes.';
         status.className = 'guest-detail-edit-status is-clean';
 
+        const resizeNotesEditor = () => {
+            textarea.style.height = 'auto';
+            const maxHeight = 240;
+            const contentHeight = Number(textarea.scrollHeight) || 56;
+            const nextHeight = Math.min(Math.max(contentHeight, 56), maxHeight);
+            textarea.style.height = `${nextHeight}px`;
+            textarea.style.overflowY = 'auto';
+        };
         const handleDraftInput = () => {
             if (activeDirectoryEditContext) {
                 activeDirectoryEditContext.failed = false;
                 activeDirectoryEditContext.saved = false;
             }
+            if (config.multiline) resizeNotesEditor();
             updateGuestDetailEditorDraftStatus();
         };
         input.oninput = handleDraftInput;
@@ -15768,9 +15803,22 @@ registerWaffleServiceWorker();
 
         modal.classList.add('open');
         modal.setAttribute('aria-hidden', 'false');
+        if (config.multiline) resizeNotesEditor();
 
+        const openingContext = activeDirectoryEditContext;
+        const openingFocus = document.activeElement;
         setTimeout(() => {
             const control = config.multiline ? textarea : input;
+            const hasLayoutInfo = 'offsetWidth' in control || 'offsetHeight' in control ||
+                typeof control.getClientRects === 'function';
+            const controlVisible = control.isConnected !== false && control.style.display !== 'none' &&
+                (!hasLayoutInfo || !!(control.offsetWidth || control.offsetHeight ||
+                    (typeof control.getClientRects === 'function' && control.getClientRects().length)));
+            if (
+                activeDirectoryEditContext !== openingContext ||
+                !modal.classList.contains('open') || !controlVisible ||
+                document.activeElement !== openingFocus
+            ) return;
             control.focus();
             if (!config.multiline) control.select();
         }, 30);
