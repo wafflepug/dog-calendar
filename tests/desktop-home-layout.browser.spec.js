@@ -22,9 +22,31 @@ for (const theme of ['light', 'dark']) {
       expect(g.left.width).toBeLessThanOrEqual(400);
       expect(g.right.x).toBeGreaterThanOrEqual(g.left.right);
       expect(Math.abs(g.left.y - g.host.y)).toBeLessThan(2);
+      const headingTop = await page.locator('.v10-ops-heading h1').evaluate(node => node.getBoundingClientRect().top);
+      expect(headingTop - g.left.y).toBeLessThan(32);
       expect(g.width).toBeLessThanOrEqual(width);
       await page.screenshot({ path:`output/desktop-home-layout-${width}-${theme}.png`, fullPage:true, animations:'disabled' });
     }
+    const column = page.locator('.wh-desktop-calendar-column');
+    await page.locator('.wh-desktop-home-column').evaluate(node => { node.style.minHeight = '1800px'; });
+    await expect(column).toHaveClass(/is-calendar-pinned/);
+    await page.evaluate(() => window.scrollTo(0,200));
+    await expect.poll(() => column.evaluate(node => Math.round(node.getBoundingClientRect().top))).toBe(16);
+    await page.locator('#wh65Calendar').evaluate(node => { node.style.minHeight = '1200px'; });
+    await expect(column).not.toHaveClass(/is-calendar-pinned/);
+    await page.locator('#wh65Calendar').evaluate(node => { node.style.minHeight = ''; });
+    await page.setViewportSize({width:1440,height:520});
+    await expect(column).not.toHaveClass(/is-calendar-pinned/);
+    await page.setViewportSize({width:1920,height:1000});
+    await expect(column).toHaveClass(/is-calendar-pinned/);
+    await page.locator('.wh-desktop-home-column').evaluate(node => { node.style.minHeight = ''; });
+    await page.evaluate(() => window.scrollTo(0,0));
+    const brand = page.locator('#whSitterDesktopSidebar .wh-palz-stay-brand');
+    await expect(brand).toBeVisible();
+    await expect(brand).toHaveAccessibleName('Palz Stay');
+    const masks = await brand.locator('span').evaluateAll(nodes => nodes.map(node => getComputedStyle(node).maskImage || getComputedStyle(node).webkitMaskImage));
+    expect(masks[0]).toContain('assets/palz-word-mask.png');
+    expect(masks[1]).toContain('assets/stay-word-mask.png');
     const title = page.locator('#wh65Calendar .wh65-title');
     const originalTitle = await title.textContent();
     await page.locator('[data-wh69-next]').click();
@@ -72,3 +94,54 @@ for (const theme of ['light', 'dark']) {
     expect(errors).toEqual([]);
   });
 }
+
+
+test('confirmed empty Home tiles are compact while waiting and failed reads stay explicit', async ({ page }) => {
+  await install(page);
+  await page.goto('/index.html?view=today',{waitUntil:'networkidle'});
+  const potential = page.locator('#whHomePotentials');
+  const section = potential.locator('..');
+  const status = page.locator('#whHomePotentialsStatus');
+  for (const width of [1440,390]) {
+    await page.setViewportSize({width,height:900});
+    await expect(potential).toHaveAttribute('data-home-state','empty');
+    await expect(status).toBeVisible();
+    await expect(status).toHaveText('No requests to review.');
+    expect((await section.boundingBox()).height).toBeLessThan(125);
+  }
+  await page.evaluate(() => {
+    document.querySelector('#whHomePotentials').setAttribute('aria-busy','true');
+    WAFFLE_HOME_GUESTS.refresh();
+  });
+  await expect(potential).toHaveAttribute('data-home-state','loading');
+  await expect(status).toHaveText('Loading requests…');
+  await expect(potential.locator('.v10-all-clear')).toBeHidden();
+  await page.evaluate(() => {
+    document.querySelector('#whHomePotentials').setAttribute('aria-busy','false');
+    localStorage.removeItem('boardingDataCache');
+    window.__savedHomeSelector = v111CurrentDogEvents;
+    window.__savedHomeEvents = globalCalendar.getEvents;
+    globalCalendar.getEvents = () => [];
+    v111CurrentDogEvents = () => [];
+    WAFFLE_HOME_GUESTS.refresh();
+  });
+  await expect(potential).toHaveAttribute('data-home-state','loading');
+  await expect(status).toContainText('Waiting for requests');
+  await page.evaluate(() => {
+    localStorage.setItem('boardingDataCache','fixture');
+    v111CurrentDogEvents = () => [];
+    WAFFLE_HOME_GUESTS.refresh();
+  });
+  await expect(page.locator('#whHomeGuests')).toHaveAttribute('data-home-state','empty');
+  await expect(page.locator('#whHomeGuestsStatus')).toBeVisible();
+  await expect(page.locator('#whHomeGuestsStatus')).toHaveText('No guests staying right now.');
+  await page.evaluate(() => {
+    v111CurrentDogEvents = () => { throw new Error('Synthetic Home read failure'); };
+    WAFFLE_HOME_GUESTS.refresh();
+  });
+  await expect(page.locator('#whHomeGuests')).toHaveAttribute('data-home-state','error');
+  await expect(page.locator('#whHomeGuestsStatus')).toContainText('Guest data could not load');
+  await expect(page.locator('#whHomeGuestsStatus')).toBeVisible();
+  await page.evaluate(() => { globalCalendar.getEvents = window.__savedHomeEvents; v111CurrentDogEvents = window.__savedHomeSelector; WAFFLE_HOME_GUESTS.refresh(); });
+  await expect(page.locator('#whHomeGuests')).toHaveAttribute('data-home-state','populated');
+});

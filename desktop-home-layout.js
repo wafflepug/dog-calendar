@@ -8,6 +8,26 @@
   let left = null;
   let right = null;
   let entries = [];
+  let pinObserver = null;
+  let pinFrame = 0;
+
+  function updateCalendarPin() {
+    pinFrame = 0;
+    if (!right) return;
+    const host = right.querySelector('#wh65Calendar');
+    const height = right.getBoundingClientRect().height;
+    const available = Math.min(window.innerHeight, window.visualViewport?.height || window.innerHeight) - 32;
+    // Pin only when the whole calendar fits; tall months and short windows keep natural page scrolling.
+    const fits = !!pinObserver && window.matchMedia('(min-width: 1320px)').matches &&
+      !!host && height > 0 && height <= available;
+    if (right.classList.contains('is-calendar-pinned') !== fits) right.classList.toggle('is-calendar-pinned', fits);
+  }
+
+  function scheduleCalendarPin() {
+    if (!right || pinFrame) return;
+    pinFrame = requestAnimationFrame(updateCalendarPin);
+  }
+
 
   function targets(panel) {
     return [
@@ -48,10 +68,19 @@
       return { node, marker };
     });
     document.body.classList.add('wh-desktop-home-layout-ready');
+    if (typeof ResizeObserver === 'function') {
+      pinObserver = new ResizeObserver(scheduleCalendarPin);
+      pinObserver.observe(right);
+    }
+    scheduleCalendarPin();
   }
 
   function deactivate() {
     if (!shell) return;
+    pinObserver?.disconnect();
+    pinObserver = null;
+    if (pinFrame) cancelAnimationFrame(pinFrame);
+    pinFrame = 0;
     const lateHost = right?.querySelector('#wh65Calendar');
     entries.forEach(({ node, marker }) => {
       // A canonical module may retire a legacy panel or control after activation.
@@ -72,5 +101,7 @@
   else sync();
   query.addEventListener?.('change', sync);
   window.addEventListener('pageshow', sync);
+  window.addEventListener('resize', scheduleCalendarPin, { passive:true });
+  window.visualViewport?.addEventListener('resize', scheduleCalendarPin, { passive:true });
   window.WAFFLE_DESKTOP_HOME_LAYOUT = Object.freeze({ sync });
 })();

@@ -58,6 +58,11 @@
       .wh-sitter-settings-action-icon{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;background:var(--wh75-accent-soft,#f3e8ff);color:var(--wh75-accent-ink,#4c1d95);font-size:18px}
       .wh-sitter-settings-action strong{display:block;font-size:12px;font-weight:900}.wh-sitter-settings-action small{display:block;margin-top:2px;color:var(--wh75-muted,#64748b);font-size:9px;font-weight:700;line-height:1.35}.wh-sitter-settings-chevron{color:var(--wh75-muted,#64748b);font-size:18px;font-weight:900}
       #wh75MobileTopbar{display:none}
+        .wh-palz-stay-brand .wh-palz-word,.wh-palz-stay-brand .wh-stay-word{display:block;height:48px;flex:1 1 50%;background:var(--wh75-accent,#7c3aed);-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:center;mask-position:center;-webkit-mask-size:contain;mask-size:contain}
+        .wh-palz-stay-brand .wh-palz-word{-webkit-mask-position:right center;mask-position:right center;-webkit-mask-image:url('assets/palz-word-mask.png');mask-image:url('assets/palz-word-mask.png')}
+        .wh-palz-stay-brand .wh-stay-word{margin-left:-5px;background:#111638;-webkit-mask-position:left center;mask-position:left center;-webkit-mask-image:url('assets/stay-word-mask.png');mask-image:url('assets/stay-word-mask.png')}
+        body.dark-theme .wh-palz-stay-brand .wh-stay-word{background:#fff}
+        .wh-palz-stay-brand{display:none}
       @media(max-width:820px){
         html,body{scroll-padding-top:calc(64px + env(safe-area-inset-top,0px))}
         #wh75MobileTopbar{position:sticky;top:0;z-index:2147481800;display:block;width:100%;height:calc(64px + env(safe-area-inset-top,0px));box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);background:var(--wh75-shell,#fff);border-bottom:1px solid var(--wh75-line,#e2e8f0);isolation:isolate}
@@ -71,7 +76,6 @@
         body #wh80MobileHeaderRail{display:none!important;visibility:hidden!important;pointer-events:none!important}
         #wh75MobileDrawer .wh-sitter-mobile-tool-icon{overflow:hidden!important;padding:0!important}
         #wh75MobileDrawer .wh-sitter-mobile-tool-icon img{display:block;width:100%;height:100%;max-width:none;object-fit:cover;border-radius:inherit}
-        .wh-palz-stay-brand{display:none}
         body[data-waffle-page="calendar"][data-wh75-mobile-view="today"] #v10TodayDateLabel{display:none!important}
         body[data-waffle-page="calendar"][data-wh75-mobile-view="today"] .v10-ops-heading::before,
         body[data-waffle-page="calendar"][data-wh75-mobile-view="today"] .v10-ops-heading::after,
@@ -102,10 +106,6 @@
         body[data-waffle-page="directory"] .calendar-header-branding{position:relative!important;min-height:76px!important}
         #whPalzStayMobileBrand,.calendar-header-branding #whPalzStayMobileShellBrand{align-items:center;justify-content:center;width:min(226px,calc(100vw - 164px));height:52px;margin:0 auto;overflow:visible}
         .calendar-header-branding #whPalzStayMobileShellBrand{position:absolute;top:8px;left:50%;z-index:2;transform:translateX(-50%)}
-        .wh-palz-stay-brand .wh-palz-word,.wh-palz-stay-brand .wh-stay-word{display:block;height:48px;flex:1 1 50%;background:var(--wh75-accent,#7c3aed);-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:center;mask-position:center;-webkit-mask-size:contain;mask-size:contain}
-        .wh-palz-stay-brand .wh-palz-word{-webkit-mask-position:right center;mask-position:right center;-webkit-mask-image:url('assets/palz-word-mask.png');mask-image:url('assets/palz-word-mask.png')}
-        .wh-palz-stay-brand .wh-stay-word{margin-left:-5px;background:#111638;-webkit-mask-position:left center;mask-position:left center;-webkit-mask-image:url('assets/stay-word-mask.png');mask-image:url('assets/stay-word-mask.png')}
-        body.dark-theme .wh-palz-stay-brand .wh-stay-word{background:#fff}
       }
       @media(min-width:821px){
         body.wh-sitter-desktop-sidebar-ready{box-sizing:border-box;padding-left:244px!important}
@@ -113,8 +113,10 @@
         body.wh-sitter-desktop-sidebar-ready .app-tabs{display:none!important}
         #whSitterDesktopSidebar{position:fixed;display:flex;left:0;top:0;bottom:0;z-index:2147481500;width:224px;box-sizing:border-box;flex-direction:column;gap:16px;padding:20px 14px;background:var(--wh75-shell,#fff);color:var(--wh75-text,#172033);border-right:1px solid var(--wh75-line,#e2e8f0);box-shadow:8px 0 28px rgba(15,23,42,.07);overflow-y:auto}
         body.wh-sitter-desktop-sidebar-ready .calendar-header-branding{display:none!important;visibility:hidden!important;pointer-events:none!important}
-        .wh-sitter-sidebar-brand{display:block;padding:4px 9px 17px;border-bottom:1px solid var(--wh75-line,#e2e8f0)}
-        .wh-sitter-sidebar-brand strong{display:block;font-size:15px;font-weight:950;letter-spacing:-.02em}.wh-sitter-sidebar-brand small{display:block;margin-top:2px;color:var(--wh75-muted,#64748b);font-size:9px;font-weight:700}
+        .wh-sitter-sidebar-brand{display:block;padding:4px 9px 14px;border-bottom:1px solid var(--wh75-line,#e2e8f0)}
+        .wh-sitter-sidebar-brand .wh-palz-stay-brand{display:flex;width:164px;height:36px;margin:0 0 4px;gap:0}
+        .wh-sitter-sidebar-brand .wh-palz-stay-brand .wh-palz-word,.wh-sitter-sidebar-brand .wh-palz-stay-brand .wh-stay-word{height:34px}
+        .wh-sitter-sidebar-brand small{display:block;color:var(--wh75-muted,#64748b);font-size:12px;font-weight:750;letter-spacing:.02em}
         .wh-sitter-sidebar-heading{padding:0 9px 5px;color:var(--wh75-muted,#64748b);font-size:9px;font-weight:950;letter-spacing:.11em;text-transform:uppercase}.wh-sitter-sidebar-nav{display:grid;gap:4px}
         .wh-sitter-sidebar-item{min-height:46px;display:grid;grid-template-columns:32px minmax(0,1fr);gap:9px;align-items:center;padding:7px 9px;border:0;border-radius:12px;background:transparent;color:var(--wh75-text,#172033);text-decoration:none;text-align:left;font:inherit;font-size:12px;font-weight:850;cursor:pointer}.wh-sitter-sidebar-item:hover{background:var(--wh75-shell-2,#f8fafc)}.wh-sitter-sidebar-item.is-active{background:var(--wh75-accent-soft,#f3e8ff);color:var(--wh75-accent-ink,#4c1d95);box-shadow:inset 3px 0 0 var(--wh75-accent,#7c3aed)}.wh-sitter-sidebar-item:focus-visible{outline:3px solid var(--wh75-ring,rgba(124,58,237,.22));outline-offset:2px}
         [data-wh-sitter-sync-review][hidden],#whSitterDesktopTools>button[data-wh-sitter-sync-review][hidden]{display:none!important}
@@ -171,7 +173,7 @@
       sidebar = document.createElement('aside');
       sidebar.id = 'whSitterDesktopSidebar';
       sidebar.setAttribute('aria-label', 'Waffle House navigation');
-      sidebar.innerHTML = `<div class="wh-sitter-sidebar-brand"><strong>Waffle House</strong></div><div><div class="wh-sitter-sidebar-heading">Workspace</div><nav class="wh-sitter-sidebar-nav" aria-label="Primary">${sidebarItem('index.html?view=today','⌂','Today','today')}${sidebarItem('index.html?view=calendar','▦','Calendar','calendar')}${sidebarItem('directory.html','🐾','Care','directory')}${sidebarItem('reminders.html','✓','Organiser','reminders')}${sidebarItem('audit.html','≡','Logs','audit')}</nav></div><div><div class="wh-sitter-sidebar-heading">Tools</div><div id="whSitterDesktopTools" aria-label="Tools"></div></div><div class="wh-sitter-sidebar-account"><div class="wh-sitter-sidebar-heading">Account</div><button type="button" class="wh-sitter-sidebar-item" data-wh-sitter-settings><span class="wh-sitter-sidebar-icon" aria-hidden="true">⚙</span><span>Settings</span></button></div>`;
+      sidebar.innerHTML = `<div class="wh-sitter-sidebar-brand"><div class="wh-palz-stay-brand" role="img" aria-label="Palz Stay"><span class="wh-palz-word" aria-hidden="true"></span><span class="wh-stay-word" aria-hidden="true"></span></div><small>Waffle House workspace</small></div><div><div class="wh-sitter-sidebar-heading">Workspace</div><nav class="wh-sitter-sidebar-nav" aria-label="Primary">${sidebarItem('index.html?view=today','⌂','Today','today')}${sidebarItem('index.html?view=calendar','▦','Calendar','calendar')}${sidebarItem('directory.html','🐾','Care','directory')}${sidebarItem('reminders.html','✓','Organiser','reminders')}${sidebarItem('audit.html','≡','Logs','audit')}</nav></div><div><div class="wh-sitter-sidebar-heading">Tools</div><div id="whSitterDesktopTools" aria-label="Tools"></div></div><div class="wh-sitter-sidebar-account"><div class="wh-sitter-sidebar-heading">Account</div><button type="button" class="wh-sitter-sidebar-item" data-wh-sitter-settings><span class="wh-sitter-sidebar-icon" aria-hidden="true">⚙</span><span>Settings</span></button></div>`;
       document.body.appendChild(sidebar);
       sidebar.querySelector('[data-wh-sitter-settings]')?.addEventListener('click', openSettings);
     }

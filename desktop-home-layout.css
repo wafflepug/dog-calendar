@@ -92,3 +92,11 @@
 @media (min-width:821px) {
   body.wh-desktop-home-layout-ready .wh-desktop-home-column #today-actions-title { font-size:18px !important; }
 }
+
+@media (min-width:1320px) {
+  .wh-desktop-calendar-column.is-calendar-pinned {
+    position:sticky;
+    top:16px;
+    align-self:start;
+  }
+}
