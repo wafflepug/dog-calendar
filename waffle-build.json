@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.10.27.01",
-  "releaseName": "Care Readable Layout",
+  "assetRevision": "2026.10.27.02",
+  "releaseName": "Care Compact Toolbar",
   "careIteration": {
     "returningDogSuggestions": true,
     "reviewedCareInheritance": true,

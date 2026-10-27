@@ -5,7 +5,9 @@ Reviewed 17 September 2026. Repository: `wafflepug/dog-calendar`; always start i
 
 ## Current Care iteration - 27 October 2026
 
-Candidate 2026.10.27.01: [Care readable layout](care-readable-layout.md). Make the existing roster image/text columns effective, separate source and status badges and align routine editing with the other quiet heading actions. Keep touch targets, exact identities and lazy reads. Calendar and Today layouts remain unchanged.
+Candidate 2026.10.27.02: [Care compact toolbar](care-compact-toolbar.md). Give search its available width and consolidate existing supporting disclosures on phones, with readable full-width expansion and preserved search/filter/profile navigation. No new controls, reads or data writes.
+
+Published 2026.10.27.01 (PR #261): [Care readable layout](care-readable-layout.md). Make the existing roster image/text columns effective, separate source and status badges and align routine editing with the other quiet heading actions. Keep touch targets, exact identities and lazy reads. Calendar and Today layouts remain unchanged.
 
 ## Current Care iteration - 26 October 2026
 

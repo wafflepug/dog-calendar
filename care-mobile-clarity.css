@@ -1,4 +1,92 @@
 /* Care-only clarity pass. Every rule is gated to the Directory page. */
+/* The existing search spans the toolbar; its two supporting disclosures share a compact row. */
+body[data-waffle-page="directory"] #directoryTabPanel .directory-roster-heading > .guest-directory-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: start;
+  grid-auto-flow: row;
+  gap: 8px;
+  min-width: 0;
+}
+body[data-waffle-page="directory"] #directoryTabPanel .guest-directory-toolbar > .guest-directory-search,
+body[data-waffle-page="directory"] #directoryTabPanel .guest-directory-toolbar > .directory-search-status {
+  box-sizing: border-box;
+  grid-column: 1 / -1;
+  width: 100%;
+  min-width: 0;
+}
+body[data-waffle-page="directory"] #directoryTabPanel .guest-directory-toolbar > .care-roster-focus,
+body[data-waffle-page="directory"] #directoryTabPanel .guest-directory-toolbar > .care-record-maintenance {
+  box-sizing: border-box;
+  border: 1px solid var(--wh-border, #dbe3ea);
+  border-radius: 10px;
+  background: var(--wh-surface, #fff);
+  min-width: 0;
+  width: 100%;
+  margin: 0;
+}
+body[data-waffle-page="directory"] #directoryTabPanel .guest-directory-toolbar > .care-roster-focus { grid-column: 1; }
+body[data-waffle-page="directory"] #directoryTabPanel .guest-directory-toolbar > .care-record-maintenance { grid-column: 2; }
+body[data-waffle-page="directory"] #directoryTabPanel .guest-directory-toolbar:has(> .care-roster-focus[open]) > .care-roster-focus,
+body[data-waffle-page="directory"] #directoryTabPanel .guest-directory-toolbar:has(> .care-roster-focus[open]) > .care-record-maintenance,
+body[data-waffle-page="directory"] #directoryTabPanel .guest-directory-toolbar:has(> .care-record-maintenance[open]) > .care-roster-focus,
+body[data-waffle-page="directory"] #directoryTabPanel .guest-directory-toolbar:has(> .care-record-maintenance[open]) > .care-record-maintenance {
+  grid-column: 1 / -1;
+  grid-row: auto;
+  width: 100%;
+}
+body[data-waffle-page="directory"] #directoryTabPanel .guest-directory-toolbar > :not(.guest-directory-search):not(.care-roster-focus):not(.care-record-maintenance):not(.directory-search-status) { grid-column: 1 / -1; }
+body[data-waffle-page="directory"] #directoryTabPanel .guest-directory-toolbar > .care-roster-focus > summary,
+body[data-waffle-page="directory"] #directoryTabPanel .guest-directory-toolbar > .care-record-maintenance > summary {
+  box-sizing: border-box;
+  display: list-item;
+  list-style-position: inside;
+  min-width: 0;
+  min-height: 44px;
+  padding: 8px;
+  border: 0;
+  border-radius: inherit;
+  color: var(--wh-text, #172033);
+  background: var(--wh-surface, #fff);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+body[data-waffle-page="directory"] #directoryTabPanel .guest-directory-toolbar > .care-roster-focus > summary:focus-visible,
+body[data-waffle-page="directory"] #directoryTabPanel .guest-directory-toolbar > .care-record-maintenance > summary:focus-visible {
+  outline: 3px solid var(--wh75-accent, var(--wh-accent, #7562db));
+  outline-offset: 2px;
+}
+body[data-waffle-page="directory"] #directoryTabPanel .guest-directory-toolbar > .care-roster-focus > [data-focus-options],
+body[data-waffle-page="directory"] #directoryTabPanel .guest-directory-toolbar > .care-record-maintenance > .care-record-maintenance-content,
+body[data-waffle-page="directory"] #directoryTabPanel .guest-directory-toolbar > .care-roster-focus [data-focus-status] {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+body[data-waffle-page="directory"] #directoryTabPanel .guest-directory-toolbar > .care-record-maintenance > .care-record-maintenance-content {
+  padding: 4px 8px 8px;
+}
+body[data-waffle-page="directory"] #directoryTabPanel .guest-directory-toolbar > .care-record-maintenance .p4-backfill,
+body[data-waffle-page="directory"] #directoryTabPanel .guest-directory-toolbar > .care-record-maintenance .care-stay-link-trigger {
+  max-width: 100%;
+  min-height: 44px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 820px) {
+  body[data-waffle-page="directory"] #directoryTabPanel .directory-roster-heading {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 13px;
+  }
+  body[data-waffle-page="directory"] #directoryTabPanel .directory-roster-heading > .guest-directory-toolbar {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+}
 body[data-waffle-page="directory"] .directory-card.is-profile-active {
   --care-card-space: var(--wh-surface, #fff);
   --care-card-soft: var(--wh-surface-soft, #f7f9fc);
