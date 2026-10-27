@@ -3,9 +3,13 @@
 Reviewed 17 September 2026. Repository: `wafflepug/dog-calendar`; always start implementation from current `origin/main` in an isolated worktree. Stack: static HTML/CSS, browser JavaScript, FullCalendar, Apps Script backend, Python contracts, Playwright. Keep production smoke checks read-only. Preserve existing theme settings, offline work, and early checkout behavior. Use Luna for bounded implementation; lead agent reviews design and integration. Complete relevant CI before merging.
 
 
+## Current desktop iteration - 28 October 2026
+
+Candidate 2026.10.28.01: [Compact desktop Home](desktop-home-layout.md). Keep the mobile card hierarchy in a compact left column beside the existing full calendar on wide desktop workspaces, with a readable stacked fallback and unchanged mobile routes. Preserve canonical DOM nodes, exact links, existing event handlers and lazy data reads. Require cross-breakpoint checks, current-head CI and live frontend attribution.
+
 ## Current Care iteration - 27 October 2026
 
-Candidate 2026.10.27.04: [Sitter UI efficiency](sitter-ui-efficiency.md). Six bounded improvements: adjacent search clearing, direct active-work-filter reset, keyboard stay tabs, truthful device readiness, guarded changed-only preferences and compact notification settings. Preserve exact identities, drafts, lazy reads and explicit delivery/permission actions. Require current-head CI and live frontend attribution.
+Published 2026.10.27.04 (PR #264): [Sitter UI efficiency](sitter-ui-efficiency.md). Six bounded improvements: adjacent search clearing, direct active-work-filter reset, keyboard stay tabs, truthful device readiness, guarded changed-only preferences and compact notification settings. Preserve exact identities, drafts, lazy reads and explicit delivery/permission actions. Require current-head CI and live frontend attribution.
 
 Published 2026.10.27.03 (PR #263): [Stay advance reminders](stay-advance-reminders.md). Arrival and departure system push at one and two calendar days before the stay date, using existing category preferences and scheduled handlers. Require timezone-safe planning, exact stay identity, per-device receipts, failure retry and live scheduler/capability verification.
 
