@@ -248,3 +248,47 @@ test('departure summary omits unassigned or internal identifiers and normalizes 
   await expect(page.locator('#v11217DepartureMessageBanner summary')).toHaveText('Departure message · Twin · #00017 · Checked out 18 Oct 2026');
   expect(await page.evaluate(()=>window.writeCalls.length)).toBe(0);
 });
+
+
+test('departure copying locks repeated actions and never updates a replacement banner',async({page})=>{
+ await setupEvidence(page);await loadDepartureModule(page);
+ await page.evaluate(()=>{
+  window.pendingCopies=[];
+  Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:text=>new Promise(resolve=>window.pendingCopies.push({text,resolve}))}});
+  Object.defineProperty(navigator,'share',{configurable:true,value:async()=>{window.shareAttempts=(window.shareAttempts||0)+1;}});
+ });
+ await publishSelected(page);
+ const banner=page.locator('#v11217DepartureMessageBanner');
+ await banner.locator('summary').click();
+ const copy=banner.locator('[data-v11217-departure-copy]'),share=banner.locator('[data-v11217-departure-share]');
+ await copy.click();
+ await expect(copy).toBeDisabled();await expect(share).toBeDisabled();
+ await expect(banner.locator('[data-v11217-departure-status]')).toContainText('Nothing has been sent');
+ await copy.evaluate(node=>node.click());await share.evaluate(node=>node.click());
+ expect(await page.evaluate(()=>window.pendingCopies.length)).toBe(1);
+ expect(await page.evaluate(()=>window.shareAttempts||0)).toBe(0);
+ await publishSelected(page);
+ await page.evaluate(()=>window.pendingCopies[0].resolve());
+ await expect(banner.locator('[data-v11217-departure-copy]')).toBeEnabled();
+ await expect(banner.locator('[data-v11217-departure-status]')).toContainText('No message has been sent');
+});
+
+test('blocked copying retains manual recovery without stealing focus after the message closes',async({page})=>{
+ await setupEvidence(page);await loadDepartureModule(page);
+ await page.evaluate(()=>Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:()=>new Promise((resolve,reject)=>{window.rejectDepartureCopy=reject;})}}));
+ await publishSelected(page);
+ const banner=page.locator('#v11217DepartureMessageBanner');
+ await banner.locator('summary').click();
+ await banner.locator('[data-v11217-departure-copy]').click();
+ await banner.locator('summary').click();
+ await page.locator('#directory-grid .directory-guest-tile-open').first().focus();
+ await page.evaluate(()=>window.rejectDepartureCopy(new Error('Clipboard blocked')));
+ await expect(banner.locator('[data-v11217-departure-status]')).toHaveText('Copy was blocked. Open the message to copy it manually.');
+ await expect(page.locator('#directory-grid .directory-guest-tile-open').first()).toBeFocused();
+ await expect(banner.locator('[data-v11217-departure-copy]')).toBeEnabled();
+ await banner.locator('summary').click();
+ await page.evaluate(()=>Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async()=>{throw new Error('Blocked');}}}));
+ await banner.locator('[data-v11217-departure-copy]').click();
+ await expect(banner.locator('[data-v11217-departure-text]')).toBeFocused();
+ await expect(banner.locator('[data-v11217-departure-status]')).toContainText('message is selected');
+});

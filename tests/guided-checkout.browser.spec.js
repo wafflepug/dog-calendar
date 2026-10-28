@@ -123,6 +123,7 @@ test('explicit detail review stays in the sheet, reads each missing source once,
   expect(await page.evaluate(() => window.movedIds)).toEqual([]);
 
   const second = page.locator('[data-directory-stay-id="stay-c"]');
+  page.once('dialog',dialog=>dialog.accept());
   await page.getByRole('button', { name: 'Cancel', exact: true }).click();
   await openCheckout(second);
   await expect(dialog.locator('[data-v11217-guided-note]')).toHaveValue('');
@@ -220,6 +221,7 @@ test('confirm is disabled while detail review is pending and cancel ignores its 
     { source: 'belongings', stayId: 'stay-a' },
     { source: 'profile', stayId: 'stay-a' }
   ]);
+  page.once('dialog',dialog=>dialog.accept());
   await dialog.locator('[data-v11217-guided-close].v11217-cancel').click();
   await page.evaluate(() => window.finishDetail());
   await expect(dialog).toBeHidden();
@@ -454,4 +456,42 @@ test('failed detail review has one full error message and keeps source-specific 
   await expect(dialog.locator('[data-v11217-guided-belongings-unknown]')).toBeHidden();
   await expect(dialog.locator('[data-v11217-guided-note]')).toHaveValue('Return the lead');
   expect(await page.evaluate(()=>window.writes.length)).toBe(0);
+});
+
+
+test('checkout shows only the selected saved owner and handover without loading or copying them into the departure note',async({page})=>{
+ await setup(page,{secondCheckout:true});
+ await page.evaluate(()=>{
+  const selected=document.querySelector('[data-testid="selected-card"]');
+  selected.dataset.fixtureOwner='Alex & Pat';selected.dataset.fixturePhone='+61 (400) 123-456';
+  const trigger=document.createElement('button');trigger.dataset.directoryEditField='notes';trigger.dataset.directoryCurrentValue='<b>Return the blue lead</b>\nCall before pickup.';selected.appendChild(trigger);
+  window.v110OperationalPayloadFromCard=card=>({stayId:card.dataset.directoryStayId,stayKey:card.dataset.directoryStayKey,dogId:card.dataset.directoryDogId,dogName:card.dataset.directoryDogName,startDate:card.dataset.directoryStartDate,endDate:card.dataset.directoryEndDate,ownerName:card.dataset.fixtureOwner||'',phone:card.dataset.fixturePhone||''});
+ });
+ const selected=page.getByTestId('selected-card');await openCheckout(selected);
+ const dialog=page.locator('#v11217GuidedCheckout');
+ await expect(dialog.locator('[data-v11217-guided-owner-name]')).toHaveText('Owner: Alex & Pat');
+ await expect(dialog.locator('[data-v11217-guided-owner-call]')).toHaveAttribute('href','tel:+61400123456');
+ await dialog.locator('[data-v11217-guided-handover] summary').click();
+ await expect(dialog.locator('[data-v11217-guided-handover-note]')).toHaveText('<b>Return the blue lead</b>\nCall before pickup.');
+ await expect(dialog.locator('[data-v11217-guided-handover-note] b')).toHaveCount(0);
+ await expect(dialog.locator('[data-v11217-guided-note]')).toHaveValue('');
+ expect(await page.evaluate(()=>window.detailReads)).toEqual([]);expect(await page.evaluate(()=>window.writes)).toEqual([]);
+ await dialog.getByRole('button',{name:'Cancel',exact:true}).click();
+ await openCheckout(page.locator('[data-directory-stay-id="stay-c"]'));
+ await expect(dialog.locator('[data-v11217-guided-owner]')).toBeHidden();
+ await expect(dialog.locator('[data-v11217-guided-owner-call]')).not.toHaveAttribute('href',/tel:/);
+ await expect(dialog.locator('[data-v11217-guided-handover]')).toBeHidden();
+ await expect(dialog.locator('[data-v11217-guided-handover-note]')).toHaveText('');
+});
+
+test('dirty departure note requires explicit discard and rejection keeps the draft and focus',async({page})=>{
+ await setup(page);await openCheckout(page.getByTestId('selected-card'));
+ const dialog=page.locator('#v11217GuidedCheckout'),note=dialog.locator('[data-v11217-guided-note]');
+ await note.fill('Give the owner the blue bag.');
+ page.once('dialog',async prompt=>{expect(prompt.message()).toBe('Discard this unsaved departure note?');await prompt.dismiss();});
+ await page.keyboard.press('Escape');
+ await expect(dialog).toBeVisible();await expect(note).toHaveValue('Give the owner the blue bag.');await expect(note).toBeFocused();
+ page.once('dialog',prompt=>prompt.accept());await dialog.getByRole('button',{name:'Cancel',exact:true}).click();
+ await expect(dialog).toBeHidden();await openCheckout(page.getByTestId('selected-card'));await expect(note).toHaveValue('');
+ expect(await page.evaluate(()=>window.writes)).toEqual([]);
 });

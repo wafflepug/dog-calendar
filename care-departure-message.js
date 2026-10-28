@@ -125,28 +125,56 @@
     disclosure.append(summary, label, message, actions, status);
     banner.append(disclosure, dismiss);
 
+    let copying = false;
+    let sharing = false;
+    const isCurrent = () => banner.isConnected && currentContext === context;
+    const setPending = pending => {
+      copy.disabled = pending;
+      share.disabled = pending;
+      if (pending) actions.setAttribute('aria-busy', 'true');
+      else actions.removeAttribute('aria-busy');
+    };
     copy.addEventListener('click', async () => {
+      if (copying || sharing || !isCurrent()) return;
+      copying = true;
+      setPending(true);
+      copy.textContent = 'Copying message...';
+      status.textContent = 'Copying message. Nothing has been sent.';
       try {
         if (!navigator.clipboard?.writeText) throw new Error('Clipboard unavailable');
         await navigator.clipboard.writeText(message.value);
-        status.textContent = 'Message copied. Paste it into your usual chat and send it when ready.';
+        if (isCurrent()) status.textContent = 'Message copied. Paste it into your usual chat and send it when ready.';
       } catch (_) {
-        message.focus();
-        message.select();
-        status.textContent = 'Copy was blocked. The message is selected; copy it and paste it into your usual chat.';
+        if (isCurrent()) {
+          const visible = !banner.hidden && disclosure.open && message.getClientRects().length;
+          if (visible) {
+            message.focus();
+            message.select();
+          }
+          status.textContent = visible
+            ? 'Copy was blocked. The message is selected; copy it and paste it into your usual chat.'
+            : 'Copy was blocked. Open the message to copy it manually.';
+        }
+      } finally {
+        copying = false;
+        if (isCurrent()) { copy.textContent = 'Copy message'; setPending(false); }
       }
     });
     share.addEventListener('click', async () => {
-      if (typeof navigator.share !== 'function') return;
-      share.disabled = true;
+      if (copying || sharing || !isCurrent() || typeof navigator.share !== 'function') return;
+      sharing = true;
+      setPending(true);
       try {
         await navigator.share({ title: 'Departure update', text: message.value });
-        status.textContent = 'Share sheet closed. Confirm the message in your chosen app.';
+        if (isCurrent()) status.textContent = 'Share sheet closed. Confirm the message in your chosen app.';
       } catch (error) {
-        status.textContent = error?.name === 'AbortError'
+        if (isCurrent()) status.textContent = error?.name === 'AbortError'
           ? 'Sharing cancelled. The message remains ready to copy.'
           : 'Sharing is unavailable. Copy the message into your usual chat instead.';
-      } finally { share.disabled = false; }
+      } finally {
+        sharing = false;
+        if (isCurrent()) setPending(false);
+      }
     });
     dismiss.addEventListener('click', () => {
       banner.remove();

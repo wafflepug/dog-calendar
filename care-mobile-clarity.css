@@ -1060,3 +1060,22 @@ body[data-waffle-page="directory"] .intake-profile-read-value a[href^="tel:"]:fo
   outline-offset:3px;
   border-radius:4px;
 }
+
+/* Checkout uses the saved contact and handover without leaving the review. */
+body[data-waffle-page="directory"] #v11217GuidedCheckout .v11217-guided-owner {
+  display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between;
+  min-width:0; gap:6px 12px; padding:8px 0;
+  border-bottom:1px solid var(--wh-border,#d9e2ec);
+  font-size:14px; line-height:1.5; overflow-wrap:anywhere;
+}
+body[data-waffle-page="directory"] #v11217GuidedCheckout .v11217-guided-owner[hidden],
+body[data-waffle-page="directory"] #v11217GuidedCheckout [data-v11217-guided-owner-call][hidden],
+body[data-waffle-page="directory"] #v11217GuidedCheckout .v11217-guided-handover[hidden] {display:none!important}
+body[data-waffle-page="directory"] #v11217GuidedCheckout [data-v11217-guided-owner-call] {
+  display:inline-flex; align-items:center; min-height:44px;
+  color:inherit; text-decoration:underline; text-underline-offset:3px;
+}
+body[data-waffle-page="directory"] #v11217GuidedCheckout .v11217-guided-handover {min-width:0;font-size:14px;line-height:1.5}
+body[data-waffle-page="directory"] #v11217GuidedCheckout .v11217-guided-handover>summary {min-height:44px;align-content:center;cursor:pointer}
+body[data-waffle-page="directory"] #v11217GuidedCheckout [data-v11217-guided-handover-note] {white-space:pre-wrap;overflow-wrap:anywhere;padding-block:6px}
+body[data-waffle-page="directory"] #v11217GuidedCheckout :is([data-v11217-guided-owner-call],.v11217-guided-handover>summary):focus-visible {outline:3px solid var(--wh-focus,#7562db);outline-offset:2px;border-radius:4px}

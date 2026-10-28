@@ -28,6 +28,7 @@ async function installVisualRuntime(page, baseURL, card) {
     document.body.appendChild(nav);
   });
   await page.addStyleTag({ url: `${baseURL}/waffle-runtime.css` });
+  await page.addStyleTag({ url: `${baseURL}/care-mobile-clarity.css` });
   await page.addScriptTag({ content: intakeStatus });
   await page.addScriptTag({ content: arrivalReady });
   await page.addScriptTag({ content: mobileCheckout });
@@ -265,4 +266,31 @@ test('departure note expands as typed while confirmation stays reachable above t
   await note.fill('');await expect.poll(()=>note.evaluate(node=>node.getBoundingClientRect().height)).toBe(initial);
   expect(await page.evaluate(()=>window.writes.length)).toBe(0);
   await page.screenshot({path:`output/care-journey-six/note-${testInfo.project.name}.png`});
+});
+
+
+test('pickup contact and complete saved handover fit the checkout sheet above the footer',async({page,baseURL},testInfo)=>{
+ const {selected}=await setup(page);await installVisualRuntime(page,baseURL,await selected.elementHandle());
+ const savedNote='Give the blue bag to Alexandra.\n'+'Keep the saved instructions complete. '.repeat(16);
+ await selected.evaluate((card,note)=>{
+  card.dataset.fixtureOwner='Alexandra Peterson-Smith and family';card.dataset.fixturePhone='+61 (400) 123-456';
+  const field=document.createElement('button');field.dataset.directoryEditField='notes';field.dataset.directoryCurrentValue=note;card.appendChild(field);
+  window.v110OperationalPayloadFromCard=card=>({stayId:card.dataset.directoryStayId,stayKey:card.dataset.directoryStayKey,dogId:card.dataset.directoryDogId,dogName:card.dataset.directoryDogName,startDate:card.dataset.directoryStartDate,endDate:card.dataset.directoryEndDate,ownerName:card.dataset.fixtureOwner||'',phone:card.dataset.fixturePhone||''});
+ },savedNote);
+ await selected.locator('.v11217-roster-more-actions summary').click();await selected.locator('[data-v11217-roster-checkout]').click();
+ const dialog=page.locator('#v11217GuidedCheckout'),call=dialog.locator('[data-v11217-guided-owner-call]');
+ await expect(call).toHaveAttribute('href','tel:+61400123456');await expect(call).toContainText('+61 (400) 123-456');
+ for(const dark of [false,true]){
+  await page.evaluate(dark=>document.body.classList.toggle('dark-theme',dark),dark);
+  await expect(dialog.locator('[data-v11217-guided-owner-name]')).toContainText('Alexandra Peterson-Smith');
+  expect(await call.evaluate(node=>node.getBoundingClientRect().height)).toBeGreaterThanOrEqual(44);
+  expect(await dialog.evaluate(node=>node.scrollWidth<=innerWidth+1)).toBe(true);
+ }
+ await dialog.locator('[data-v11217-guided-handover] summary').click();
+ await expect(dialog.locator('[data-v11217-guided-handover-note]')).toHaveText(savedNote);
+ await expect(dialog.locator('[data-v11217-guided-medication]')).toHaveText('Return blue inhaler');
+ const confirm=dialog.locator('[data-v11217-guided-confirm]');
+ const hit=await confirm.evaluate(node=>{const b=node.getBoundingClientRect(),top=document.elementFromPoint(b.x+b.width/2,b.y+b.height/2);return {inside:b.bottom<=innerHeight,reachable:top===node||node.contains(top)};});
+ expect(hit).toEqual({inside:true,reachable:true});expect(await page.evaluate(()=>window.writes.length)).toBe(0);
+ if(['chromium-390','chromium-1440','webkit-320'].includes(testInfo.project.name))await page.screenshot({path:testInfo.outputPath('pickup-handover.png')});
 });
