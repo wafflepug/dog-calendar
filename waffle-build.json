@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.10.29.02",
-  "releaseName": "Care Reading Layout",
+  "assetRevision": "2026.10.29.03",
+  "releaseName": "Care Journey Shortcuts",
   "careIteration": {
     "returningDogSuggestions": true,
     "reviewedCareInheritance": true,

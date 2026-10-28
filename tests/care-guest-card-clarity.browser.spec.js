@@ -108,9 +108,9 @@ test('Care guest cards show identity, dates, status and urgent flags without ove
   const sameDay = page.locator('#directory-grid > .directory-card[data-directory-dog-id="' + sameDayDogId + '"]');
   await expect(sameDay.locator(':scope > .directory-guest-tile-open .directory-roster-context')).toHaveText('Same-day care · 17 Oct');
   await expect(sameDay.locator(':scope > .directory-guest-tile-open .directory-roster-owner')).toHaveText('Owner: Sam Owner');
-  await expect(sameDay.locator('[data-v11217-roster-actions] > button')).toHaveCount(1);
+  await expect(sameDay.locator('[data-v11217-roster-actions] > button')).toHaveCount(2);
   await expect(sameDay.locator('[data-v11217-roster-checkin]')).toBeVisible();
-  await sameDay.locator('.v11217-roster-more-actions > summary').click();
+  await expect(sameDay.locator('.v11217-roster-more-actions')).toHaveCount(0);
   await expect(sameDay.locator('[data-v11217-roster-checkout]')).toBeVisible();
   expect(reads.filter(payload => payload.action === 'get_guest_profile')).toHaveLength(profileReadsBeforeActions);
 });

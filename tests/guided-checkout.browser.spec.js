@@ -3,8 +3,10 @@ const { setup } = require('./fixtures/guided-checkout-fixture');
 
 async function openCheckout(card) {
   const details = card.locator('.v11217-roster-more-actions');
-  if (await details.getAttribute('open') === null) await details.locator('summary').click();
   const checkout = card.locator('[data-v11217-roster-checkout]');
+  if (!(await checkout.isVisible())) {
+    if (await details.getAttribute('open') === null) await details.locator('summary').click();
+  }
   await expect(checkout).toBeVisible();
   await checkout.click();
 }
@@ -415,7 +417,7 @@ test('a legacy stay upgraded by the canonical save retains its returned identity
       return {result:'success',record:{...payload,status}};
     };
   });
-  await expect(card.locator('.v11217-roster-more-actions summary')).toBeVisible();
+  await expect(card.locator('[data-v11217-roster-checkout]')).toBeVisible();
   await openCheckout(card);
   await page.locator('[data-v11217-guided-note]').fill('Owner collected lead');
   await page.locator('[data-v11217-guided-confirm]').click();
@@ -471,7 +473,7 @@ test('checkout shows only the selected saved owner and handover without loading 
  const dialog=page.locator('#v11217GuidedCheckout');
  await expect(dialog.locator('[data-v11217-guided-owner-name]')).toHaveText('Owner: Alex & Pat');
  await expect(dialog.locator('[data-v11217-guided-owner-call]')).toHaveAttribute('href','tel:+61400123456');
- await dialog.locator('[data-v11217-guided-handover] summary').click();
+ await expect(dialog.locator('[data-v11217-guided-handover]')).toHaveJSProperty('open',true);
  await expect(dialog.locator('[data-v11217-guided-handover-note]')).toHaveText('<b>Return the blue lead</b>\nCall before pickup.');
  await expect(dialog.locator('[data-v11217-guided-handover-note] b')).toHaveCount(0);
  await expect(dialog.locator('[data-v11217-guided-note]')).toHaveValue('');
@@ -482,6 +484,49 @@ test('checkout shows only the selected saved owner and handover without loading 
  await expect(dialog.locator('[data-v11217-guided-owner-call]')).not.toHaveAttribute('href',/tel:/);
  await expect(dialog.locator('[data-v11217-guided-handover]')).toBeHidden();
  await expect(dialog.locator('[data-v11217-guided-handover-note]')).toHaveText('');
+});
+
+test('saved handover disclosure opens only for concise notes and resets for each selected stay',async({page})=>{
+ await setup(page,{secondCheckout:true});
+ const first=page.getByTestId('selected-card'),dialog=page.locator('#v11217GuidedCheckout');
+ const putNote=async value=>first.evaluate((card,text)=>{
+  let trigger=card.querySelector('[data-directory-edit-field="notes"]');
+  if(!trigger){trigger=document.createElement('button');trigger.dataset.directoryEditField='notes';card.appendChild(trigger);}
+  trigger.dataset.directoryCurrentValue=text;
+ },value);
+ const handover=dialog.locator('[data-v11217-guided-handover]');
+ const handoverText=dialog.locator('[data-v11217-guided-handover-note]');
+ const openAndCheck=async(value,{visible=true,open=false,rendered=value}={})=>{
+  await putNote(value);await openCheckout(first);
+  if(visible){await expect(handover).toBeVisible();await expect(handover).toHaveJSProperty('open',open);await expect(handoverText).toHaveText(rendered);}
+  else {await expect(handover).toBeHidden();await expect(handoverText).toHaveText('');}
+  await expect(dialog.locator('[data-v11217-guided-note]')).toHaveValue('');
+  await dialog.getByRole('button',{name:'Cancel',exact:true}).click();
+ };
+ await openAndCheck('🧇'.repeat(120),{open:true});
+ await openAndCheck(`  ${'x'.repeat(120)}  `,{open:false});
+ await openAndCheck('\n'.repeat(20)+'short note',{open:false});
+ await openAndCheck(' '.repeat(121)+'short note',{open:false});
+ await openAndCheck('x'.repeat(121),{open:false});
+ await openAndCheck('first\nsecond\nthird',{open:false});
+ await openAndCheck('first\n\nsecond',{open:false});
+ await openAndCheck('first\nsecond',{open:true});
+ await openAndCheck('  No handover note saved.  ',{visible:false});
+ await openAndCheck('   ',{visible:false});
+ await openAndCheck('<img src=x onerror=alert(1)>',{open:true});
+ await expect(handoverText.locator('img')).toHaveCount(0);
+
+ await putNote('short saved note');await openCheckout(first);
+ await expect(handover).toHaveJSProperty('open',true);
+ await dialog.getByRole('button',{name:'Cancel',exact:true}).click();
+ const second=page.locator('[data-directory-stay-id="stay-c"]');
+ await openCheckout(second);
+ await expect(handover).toBeHidden();await expect(handover).toHaveJSProperty('open',false);
+ await expect(handoverText).toHaveText('');
+ await dialog.getByRole('button',{name:'Cancel',exact:true}).click();
+ await openCheckout(first);
+ await expect(handover).toHaveJSProperty('open',true);
+ await expect(handoverText).toHaveText('short saved note');
 });
 
 test('dirty departure note requires explicit discard and rejection keeps the draft and focus',async({page})=>{

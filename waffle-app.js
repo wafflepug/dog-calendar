@@ -12179,6 +12179,38 @@ registerWaffleServiceWorker();
 
     function ensureDirectorySearchStatus() {
         const input = document.getElementById('guestDirectorySearch');
+        if (input && input.dataset.directoryResultOpenBound !== 'true') {
+            input.dataset.directoryResultOpenBound = 'true';
+            input.addEventListener('keydown', event => {
+                if (event.key !== 'Enter' || event.defaultPrevented || event.repeat || event.isComposing || event.keyCode === 229 ||
+                    event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || !input.value.trim() ||
+                    document.body.dataset.wafflePage !== 'directory' || input.disabled || input.readOnly || !input.getClientRects().length) return;
+                const dashboard = input.closest('.directory-dashboard-fused');
+                if (!dashboard || dashboard.classList.contains('is-profile-mode')) return;
+                const visible = node => {
+                    if (!node?.isConnected || node.disabled || node.getAttribute('aria-disabled') === 'true' ||
+                        !node.getClientRects().length || node.closest('[hidden],[aria-hidden="true"],[inert]')) return false;
+                    for (let parent = node; parent; parent = parent.parentElement) {
+                        const style = getComputedStyle(parent);
+                        if (style.display === 'none' || style.visibility === 'hidden' || style.visibility === 'collapse' || style.opacity === '0') return false;
+                        if (parent.tagName === 'DETAILS' && !parent.open && !parent.querySelector(':scope > summary')?.contains(node)) return false;
+                    }
+                    return true;
+                };
+                const activeDialog = node => {
+                    if (!visible(node)) return false;
+                    const rect = node.getBoundingClientRect();
+                    return rect.bottom > 0 && rect.top < innerHeight && rect.right > 0 && rect.left < innerWidth;
+                };
+                if ([...document.querySelectorAll('[role="dialog"][aria-modal="true"]')].some(activeDialog)) return;
+                // Reuse the canonical filter and the selected row's existing profile handler.
+                filterGuestDirectoryCards();
+                const results = [...dashboard.querySelectorAll('.directory-card > .directory-guest-tile-open[data-open-directory-profile]')].filter(visible);
+                if (results.length !== 1) return;
+                event.preventDefault();
+                results[0].click();
+            });
+        }
         if (input && input.dataset.directoryEscapeClearBound !== 'true') {
             input.dataset.directoryEscapeClearBound = 'true';
             input.addEventListener('keydown', event => {

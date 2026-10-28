@@ -102,7 +102,7 @@
     style.textContent = `
       .v11217-early-checkout-button{min-height:38px;padding:8px 12px;border:1px solid #f59e0b;border-radius:9px;background:#fffbeb;color:#92400e;font:inherit;font-size:10px;font-weight:900;cursor:pointer}
       .v11217-early-checkout-button:hover{background:#fef3c7}.v11217-early-checkout-button:focus-visible{outline:3px solid rgba(245,158,11,.32);outline-offset:2px}
-      .v11217-roster-actions{display:flex;gap:8px;max-width:360px;margin-left:auto;padding:0 12px 12px}.v11217-roster-actions button{flex:1;min-width:0;min-height:44px;padding:9px 12px;border:1px solid var(--v10-border,#cbd5e1);border-radius:10px;background:var(--v10-card-soft,#f8fafc);color:var(--v10-text,#172033);font:inherit;font-size:12px;font-weight:850;cursor:pointer}.v11217-roster-actions [data-v11217-roster-checkin]{border-color:#86efac;background:#f0fdf4;color:#166534}.v11217-roster-actions [data-v11217-roster-checkout]{border-color:#fda4af;background:#fff1f2;color:#9f1239}.v11217-roster-actions button:focus-visible{outline:3px solid rgba(37,99,235,.28);outline-offset:2px}.v11217-roster-actions button:disabled{opacity:.62;cursor:wait}
+      .v11217-roster-actions{display:flex;flex-wrap:wrap;gap:8px;max-width:360px;margin-left:auto;padding:0 12px 12px}.v11217-roster-actions button{flex:1;min-width:0;min-height:44px;padding:9px 12px;border:1px solid var(--v10-border,#cbd5e1);border-radius:10px;background:var(--v10-card-soft,#f8fafc);color:var(--v10-text,#172033);font:inherit;font-size:12px;font-weight:850;cursor:pointer}.v11217-roster-actions [data-v11217-roster-checkin]{border-color:#86efac;background:#f0fdf4;color:#166534}.v11217-roster-actions [data-v11217-roster-checkout]{border-color:#fda4af;background:#fff1f2;color:#9f1239}.v11217-roster-actions button:focus-visible{outline:3px solid rgba(37,99,235,.28);outline-offset:2px}.v11217-roster-actions button:disabled{opacity:.62;cursor:wait}
       @media(max-width:600px){.v11217-roster-actions{max-width:none;margin-left:0}}
       body.dark-theme .v11217-roster-actions [data-v11217-roster-checkin]{border-color:#4ade80;background:#14532d;color:#dcfce7}body.dark-theme .v11217-roster-actions [data-v11217-roster-checkout]{border-color:#fb7185;background:#4c0519;color:#ffe4e6}
       body.dark-theme .v11217-early-checkout-button{border-color:#d97706;background:#451a03;color:#fde68a}
@@ -305,11 +305,11 @@
     const checkOutMarkup = canCheckout ? `<button type="button" class="v110-checkout-button" data-v11217-roster-checkout aria-label="Check out ${esc(p.dogName || 'guest')}">👋 Check Out</button>` : '';
     const earlyButtonMarkup = early ? '<button type="button" class="v11217-early-checkout-button" data-v11217-early-checkout>⏱️ Early Checkout</button>' : '';
     const hasPrimaryStayAction = canCheckIn || canCheckout;
-    const secondaryActions = `${canCheckIn && canCheckout ? checkOutMarkup : ''}${early && hasPrimaryStayAction ? earlyButtonMarkup : ''}`;
+    const secondaryActions = `${early && hasPrimaryStayAction ? earlyButtonMarkup : ''}`;
     const moreActions = secondaryActions
       ? `<details class="v11217-roster-more-actions"><summary>More actions</summary>${secondaryActions}</details>`
       : '';
-    const primaryAction = `${checkInMarkup}${canCheckIn ? '' : checkOutMarkup}${early && !hasPrimaryStayAction ? earlyButtonMarkup : ''}`;
+    const primaryAction = `${checkInMarkup}${canCheckout ? checkOutMarkup : ''}${early && !hasPrimaryStayAction ? earlyButtonMarkup : ''}`;
     actions.innerHTML = `${primaryAction}${moreActions}`;
     if (!actions.dataset.summaryPropagationGuard) {
       actions.dataset.summaryPropagationGuard = 'true';
@@ -794,9 +794,12 @@
     const savedNote = card.querySelector('[data-directory-edit-field="notes"]')?.dataset?.directoryCurrentValue;
     const handover = modal.querySelector('[data-v11217-guided-handover]');
     const handoverText = String(savedNote || '');
-    const meaningfulHandover = handoverText.trim() && !/^(?:not set|no notes?(?: saved| recorded)?|no handover note(?: recorded| saved)?|not provided|none|n\/a|loading(?:\.\.\.)?|not loaded|not available|unavailable|unable to load|error loading)(?:\s*\.)?$/i.test(handoverText.trim());
+    const trimmedHandover = handoverText.trim();
+    const handoverLineCount = handoverText ? handoverText.split(/\r\n|[\n\r\u2028\u2029]/).length : 0;
+    const meaningfulHandover = !!trimmedHandover && !/^(?:not set|no notes?(?: saved| recorded)?|no handover note(?: recorded| saved)?|not provided|none|n\/a|loading(?:\.\.\.)?|not loaded|not available|unavailable|unable to load|error loading)(?:\s*\.)?$/i.test(trimmedHandover);
+    const openHandover = meaningfulHandover && Array.from(handoverText).length <= 120 && handoverLineCount <= 2;
     handover.hidden = !meaningfulHandover;
-    handover.open = false;
+    handover.open = !!openHandover;
     modal.querySelector('[data-v11217-guided-handover-note]').textContent = meaningfulHandover ? handoverText : '';
     const dogNumber = card.dataset?.directoryDogNumber || card.querySelector('#dogNumber, [data-directory-dog-number], .directory-dog-number')?.textContent?.trim();
     modal.querySelector('[data-v11217-guided-dogid]').textContent = dogNumber ? `Dog ID: ${dogNumber}` : '';

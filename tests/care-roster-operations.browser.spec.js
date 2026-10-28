@@ -93,7 +93,7 @@ test('offline and failed writes show inline feedback, offer no unsafe retry, and
   await expect(page.locator('#past-directory-grid .directory-card')).toHaveCount(0);
   await page.context().setOffline(false);
   await page.evaluate(() => window.fail = true);
-  await card.locator('.v11217-roster-more-actions > summary').click();
+  await expect(card.locator('[data-v11217-roster-checkout]')).toBeVisible();
   await card.locator('[data-v11217-roster-checkout]').click();
   await page.locator('[data-v11217-guided-confirm]').click();
   const failed = page.locator('#v11217GuidedCheckout [data-v11217-guided-feedback]');

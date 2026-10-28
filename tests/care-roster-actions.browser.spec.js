@@ -67,12 +67,15 @@ test('roster actions are separate from profile open, isolate same-name dogs, ret
   const staying = page.locator('[data-directory-stay-id="stay-a"]');
   const checkin = staying.locator('[data-v11217-roster-checkin]');
   await expect(checkin).toHaveAccessibleName('Check in Twin Pup');
-  const moreActions = staying.locator('.v11217-roster-more-actions');
-  await expect(moreActions.locator('summary')).toHaveText('More actions');
-  await moreActions.locator('summary').click();
-  await expect(moreActions.locator('[data-v11217-roster-checkout]')).toHaveAccessibleName('Check out Twin Pup');
-  await expect(staying.locator('[data-v11217-roster-actions] > button')).toHaveCount(1);
+  const checkout = staying.locator('[data-v11217-roster-checkout]');
+  await expect(checkout).toHaveAccessibleName('Check out Twin Pup');
+  await expect(staying.locator('[data-v11217-roster-actions] > button')).toHaveCount(2);
   expect(await checkin.evaluate(button => button.closest('.directory-guest-tile-open'))).toBeNull();
+
+  await page.setViewportSize({ width: 360, height: 780 });
+  const bounds = await page.evaluate(() => ({ width: document.documentElement.scrollWidth, viewport: innerWidth }));
+  expect(bounds.width).toBeLessThanOrEqual(bounds.viewport);
+  await page.setViewportSize({ width: 1280, height: 800 });
 
   await page.evaluate(() => { window.failNextSave = true; });
   await checkin.click();
@@ -87,7 +90,7 @@ test('roster actions are separate from profile open, isolate same-name dogs, ret
     ['stay-a', '11111111-1111-4111-8111-111111111111', 'checked_in'],
     ['stay-a', '11111111-1111-4111-8111-111111111111', 'checked_in']
   ]);
-  await staying.locator('[data-v11217-roster-checkout]').click();
+  await checkout.click();
   await expect(page.locator('#v11217GuidedCheckout')).toBeVisible();
   await page.locator('[data-v11217-guided-confirm]').click();
   await expect(staying).toHaveAttribute('data-moved-to-past', 'true');
@@ -126,6 +129,17 @@ test('a checked-in guest keeps Early Checkout as the sole direct action when no 
   await expect(early.locator('[data-v11217-roster-checkout]')).toHaveCount(0);
   await expect(early.locator('[data-v11217-early-checkout]')).toBeVisible();
   await expect(early.locator('.v11217-roster-more-actions')).toHaveCount(0);
+});
+
+test('Early Checkout stays under More actions while Check In is the primary action', async ({ page }) => {
+  await setup(page);
+  const staying = page.locator('[data-directory-stay-id="stay-b"]');
+  const more = staying.locator('.v11217-roster-more-actions');
+  await expect(staying.locator('[data-v11217-roster-checkin]')).toBeVisible();
+  await expect(staying.locator('[data-v11217-roster-checkout]')).toHaveCount(0);
+  await expect(staying.locator('[data-v11217-early-checkout]')).toBeHidden();
+  await more.locator('summary').click();
+  await expect(more.locator('[data-v11217-early-checkout]')).toHaveAccessibleName('Record early checkout for Twin Pup');
 });
 
 test('a late save response cannot apply to a card reused for a different same-name stay', async ({ page }) => {

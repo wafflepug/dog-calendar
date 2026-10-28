@@ -5,7 +5,9 @@ Reviewed 17 September 2026. Repository: `wafflepug/dog-calendar`; always start i
 
 ## Current Care iteration - 29 October 2026
 
-Candidate 2026.10.29.02: [Care reading layout](care-reading-layout.md). Three refinements: readable identity/status and care text, bounded desktop reading width and aligned heading/search. Preserve existing actions, full instructions and lazy reads. Next: review the arrival-to-profile-to-checkout journey with a sitter before adding controls.
+Candidate 2026.10.29.03: [Care journey shortcuts](care-journey-shortcuts.md). Direct due-today checkout, Enter to open one visible search result and immediate short saved handover notes. Preserve confirmation, exact identities, drafts, lazy reads and full text. Next: review phone arrival and pickup action placement with representative long-name and missing-data cases.
+
+Published 2026.10.29.02 (PR #276): [Care reading layout](care-reading-layout.md). Three refinements: readable identity/status and care text, bounded desktop reading width and aligned heading/search. Preserve existing actions, full instructions and lazy reads. Next: review the arrival-to-profile-to-checkout journey with a sitter before adding controls.
 
 ## Current desktop iteration - 28 October 2026
 

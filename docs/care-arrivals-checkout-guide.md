@@ -7,10 +7,15 @@
 
 Counts use loaded, identifiable stays. Unknown or conflicting operational records are excluded; the filter does not download profiles. A completed check-in leaves the pending arrivals filter; a verified checkout leaves the departures filter immediately.
 
+## Open a searched guest
+1. Search by dog name, owner or Dog ID in Care.
+2. When exactly one loaded visible profile remains, press **Enter** to open it. With multiple matches, select the correct guest instead. Active tab and work filters still apply.
+3. **Back to Guests** retains the query. Searching alone does not fetch profiles or automatically load Past.
+
 ## Arrivals
 1. Open **Care → Staying**. Today’s pending arrivals keep their existing **Check In** button.
-2. Use **Next arrival** to move to the next visible pending arrival. Search and filters still apply.
-3. Read the intake status and explanation. Tap the same status control to open that guest's Care profile in one step. **Intake complete** means the current owner form is recorded as complete; it does not mean all safety or care checks are finished.
+2. When several pending arrivals are visible, use **Next arrival** to move to the next one. With one arrival, use its existing Check In button. Search and filters still apply.
+3. If an intake-status control is shown, read its explanation and tap it to open that guest's Care profile in one step. **Intake complete** means the current owner form is recorded as complete; it does not mean all safety or care checks are finished.
 4. Check in the selected dog. The button uses the same verified booking save as before; opening a profile is unnecessary.
 
 The shortcut uses information already loaded on the page. It does not download every future profile. Checked-in, checked-out, ambiguous, and future-day bookings are excluded.
@@ -27,18 +32,18 @@ The shortcut uses information already loaded on the page. It does not download e
 4. Refresh Care after the owner submits. Existing **Records & forms**, PDF uploads, and Booking setup review controls remain available.
 
 ## Checkout due today
-1. In **Care → Staying**, choose **Check Out** for the correct dog. If Check In is still the primary action, expand **More actions**.
+1. In **Care → Staying**, choose **Check Out** directly for the correct dog leaving today. It stays beside **Check In** when both are available. **Early Checkout** keeps its separate review flow.
 2. Check the dog identity, **Booked stay** dates and **Checkout today** date in the departure sheet. Same-name dogs remain separate bookings.
-3. Review the complete medication instructions shown in the sheet. If belongings are loaded, open **Belongings** to check each listed item; the collapsed label shows only how many are listed and does not say they were returned. **Not available in this summary** stays visible when evidence is missing; it does not mean none or already returned. One shared message directs you to review Care. Choose **Review Care · note kept** to inspect the same guest's Care profile. To continue checkout, either use that profile's existing **Check Out** action or choose **Back to Staying** and reopen **Check Out**; both restore the note for that exact stay. The sheet does not fetch a profile in the background.
+3. Review the complete medication instructions and listed belongings. Unknown details stay labelled **Not available in this summary**. Choose **Review missing details** to load and verify only those missing details in this sheet; the departure note remains here. Review errors keep unknown states and offer an explicit retry. Read the **Saved handover note** when present: short notes open immediately; longer notes remain expandable. Listed items do not mean returned items, and missing records do not prove no care is needed.
 4. Optionally add a handover note. It belongs to this checkout, not to the dog’s permanent care instructions.
 5. Choose **Confirm checkout**. Wait for a verified save; only then does the stay move to **Past**.
 
-Cancel or close before confirming makes no change; a normal cancel discards the note. The explicit Care review action keeps it in memory for the exact Stay ID, Dog ID and stay key until checkout is reopened through either Check Out action. During a save the sheet blocks duplicate confirmation and dismissal. A connection failure retains the note and offers a deliberate retry when safe. Identity conflicts, offline queue results, and uncertain saves never move the stay to Past; read the message and refresh/review the booking. Early Checkout retains its existing separate review flow.
+Cancel or close before confirming makes no change; a normal cancel discards the note. Review missing details keeps the departure note in this sheet for the selected stay. During a save the sheet blocks duplicate confirmation and dismissal. A connection failure retains the note and offers a deliberate retry when safe. Identity conflicts, offline queue results, and uncertain saves never move the stay to Past; read the message and refresh/review the booking. Early Checkout retains its existing separate review flow.
 
 The sheet scrolls on short phone screens while its action buttons remain accessible above navigation. No messages are automatically sent to owners.
 
 ## Optional departure message
-1. After a verified checkout, return to the Staying roster. Expand **Departure message** above the guests.
+1. After a verified checkout, return to the Staying roster. **Copy message** and **Share** are directly available in **Departure message** above the guests; expand it only to read the full message.
 2. Check the dog name, Dog ID and actual checkout date, then choose **Copy message** or **Share**.
 3. Paste into the correct owner's usual chat and send it yourself. The default message excludes private care notes and intake links.
 4. **Dismiss** removes the prompt. The next verified checkout replaces it; messages are not kept as a history.
