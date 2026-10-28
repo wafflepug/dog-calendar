@@ -19,6 +19,19 @@ test('the complete Care runtime combines filters, truthful setup and optional ve
   await page.locator('#guestDirectorySearch').fill('#00017');
   await expect(grid.locator('.directory-card:visible')).toHaveCount(1);
   const first=grid.locator(`[data-directory-stay-id="${bookings[0].stayId}"]`);
+  const arrivalSummary=first.locator('[data-arrival-task-heading]');
+  await expect(arrivalSummary).toContainText('Care checks');
+  for(const dark of [false,true]){
+    await page.locator('body').evaluate((node,on)=>node.classList.toggle('dark-theme',on),dark);
+    await arrivalSummary.evaluate(node=>node.scrollIntoView({block:'center'}));
+    const geometry=await arrivalSummary.evaluate(node=>{const r=node.getBoundingClientRect();return{height:r.height,left:r.left,right:r.right,width:innerWidth,overflow:node.scrollWidth>node.clientWidth+1};});
+    expect(geometry.height).toBeGreaterThanOrEqual(44);expect(geometry.left).toBeGreaterThanOrEqual(0);expect(geometry.right).toBeLessThanOrEqual(geometry.width+1);expect(geometry.overflow).toBe(false);
+    if(['chromium-390','chromium-1440'].includes(testInfo.project.name)){
+      const dir=path.join(__dirname,'..','output','care-arrival-rebooking');fs.mkdirSync(dir,{recursive:true});
+      await page.screenshot({path:path.join(dir,`arrival-${testInfo.project.name}-${dark?'dark':'light'}.png`)});
+    }
+  }
+  await page.locator('body').evaluate(node=>node.classList.remove('dark-theme'));
   await first.locator('[data-open-directory-profile]').click();
   await expect(first).toHaveClass(/is-profile-active/);
   await expect(focus).toBeHidden();

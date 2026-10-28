@@ -30,7 +30,8 @@ test('shipped identity browser stays compact and searches every loaded dog local
   await expect(page.locator('#p4BookingContext')).toContainText('Dog ID #00017');
   await page.locator('#p4Start').fill('2026-12-15');
   await page.locator('#p4End').fill('2026-12-20');
-  await expect(page.locator('#p4BookingContext [data-p4-context-new-dates]')).toBeHidden();
+  await expect(page.locator('#p4BookingContext [data-p4-context-new-dates]')).toBeVisible();
+  await expect(page.locator('#p4BookingContext [data-p4-context-new-dates]')).toContainText('New stay 15 Dec 2026–20 Dec 2026');
   const before = await page.evaluate(() => window.identityRuntimeReads.slice());
   for (const width of [320, 390, 1440]) for (const dark of [false, true]) {
     await page.setViewportSize({ width, height: 900 });
@@ -329,4 +330,74 @@ test('the shipped booking modal keeps returning Care compact, editable and reach
     await expect(modal).toBeHidden();
   }
   expect(writes).toEqual([]);
+});
+
+
+test('returning booking context, date affordances and Enter handoff stay accurate during identity lookup', async ({ page, baseURL }) => {
+  const writes = [];
+  await installReadOnlyRuntime(page, writes);
+  await page.goto(`${baseURL}/directory.html?rebookingRefinements=1`, { waitUntil: 'domcontentloaded' });
+  await page.waitForFunction(() => document.documentElement.dataset.waffleUiReady === 'true' && window.WAFFLE_PHASE4_BOOKING?.openReturningBooking);
+  await page.evaluate(() => {
+    window.identityLookupResolve = null;
+    window.queryAppsScript = (payload) => payload.action === 'list_dog_identities' ? new Promise(resolve => { window.identityLookupResolve = resolve; }) : Promise.resolve({ result: 'success' });
+    window.WAFFLE_PHASE4_BOOKING.openReturningBooking({ dogId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', dogName: 'Luna', ownerName: 'Alex <Owner>', dogNumber: 41 });
+  });
+  const context = page.locator('#p4BookingContext');
+  await expect(context).toContainText('Alex <Owner>');
+  await expect(context).toContainText('Dog ID #00041');
+  await expect(context).not.toContainText('aaaaaaaa-aaaa');
+  await expect(page.locator('#p4Start').locator('xpath=..')).toContainText('New check-in');
+  await page.locator('#p4Start').fill('2026-12-15');
+  await page.locator('#p4End').fill('2026-12-12');
+  await expect(page.locator('#p4End')).toHaveAttribute('min', '2026-12-15');
+  await expect(page.locator('#p4End')).toHaveValue('2026-12-12');
+  await page.locator('#p4Start').fill('');
+  await expect(page.locator('#p4End')).not.toHaveAttribute('min');
+  await expect(page.locator('#p4PlanStart')).not.toHaveAttribute('min');
+  const invalidEnter = await page.locator('#p4Start').evaluate(el => { el.focus(); const e = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }); el.dispatchEvent(e); return { prevented: e.defaultPrevented, active: document.activeElement.id }; });
+  expect(invalidEnter).toEqual({ prevented: false, active: 'p4Start' });
+  await page.locator('#p4Start').fill('2026-12-15');
+  await expect(context.locator('[data-p4-context-new-dates]')).toContainText('Review new dates');
+  await page.locator('#p4Start').focus();
+  const enterResult = await page.locator('#p4Start').evaluate(el => { const e = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }); el.dispatchEvent(e); return { prevented: e.defaultPrevented, active: document.activeElement.id }; });
+  expect(enterResult).toEqual({ prevented: true, active: 'p4End' });
+  await page.evaluate(() => {
+    const start = document.querySelector('#p4Start'); start.focus();
+    start.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, isComposing: true }));
+    window.imeKeptStart = document.activeElement === start;
+    start.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, ctrlKey: true }));
+    window.modifierKeptStart = document.activeElement === start;
+  });
+  expect(await page.evaluate(() => [window.imeKeptStart, window.modifierKeptStart])).toEqual([true, true]);
+  await page.evaluate(() => {
+    document.querySelector('#p4Owner').value = 'Edited owner';
+    document.querySelector('#p4Owner').dispatchEvent(new Event('input', { bubbles: true }));
+    document.querySelector('#p4Start').value = '2026-12-15';
+    document.querySelector('#p4End').value = '2026-12-15';
+    document.querySelector('#p4End').dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  await expect(context.locator('[data-p4-context-new-dates]')).toContainText('New stay 15 Dec 2026 (Same-day stay)');
+  await page.evaluate(() => window.identityLookupResolve({ result: 'success', identities: [{ dogId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', dogNumber: '00041', dogName: 'Luna', ownerName: 'Alex <Owner>' }] }));
+  await expect(page.locator('#p4DogIdentity')).toHaveValue('__review__');
+  await expect(context).toContainText('Alex <Owner>');
+  await expect(context.locator('[data-p4-context-new-dates]')).toContainText('New stay 15 Dec 2026 (Same-day stay)');
+  expect(writes).toEqual([]);
+  await page.evaluate(() => window.WAFFLE_PHASE4_BOOKING.fill({ dogName: 'Fresh dog' }));
+  await expect(page.locator('#p4BookingContext')).toBeHidden();
+  await expect(page.locator('#p4Start').locator('xpath=..')).toContainText('Check-in');
+  await page.evaluate(() => window.WAFFLE_PHASE4_BOOKING.fill({ dogName: 'Fresh dog', startDate: '2026-12-15', endDate: '2026-12-20' }));
+  await expect(page.locator('#p4End')).toHaveAttribute('min', '2026-12-15');
+  await expect(page.locator('#p4End')).toHaveValue('2026-12-20');
+  await page.evaluate(() => window.WAFFLE_PHASE4_BOOKING.openReturningBooking({ dogId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', dogName: 'Luna', ownerName: 'Alex <Owner>', dogNumber: 41 }));
+  await page.waitForFunction(() => typeof window.identityLookupResolve === 'function');
+  await page.evaluate(() => window.identityLookupResolve({ result: 'success', identities: [
+    { dogId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', dogNumber: '00041', dogName: 'Luna', ownerName: 'Alex <Owner>' },
+    { dogId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', dogNumber: '00042', dogName: 'Luna', ownerName: 'Different owner' }
+  ] }));
+  await expect(page.locator('#p4DogIdentity')).toHaveValue('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');
+  await expect(context).toContainText('Alex <Owner>');
+  await expect(context).toContainText('Dog ID #00041');
+  await expect(context.locator('owner')).toHaveCount(0);
+  await expect(context).not.toContainText('aaaaaaaa-aaaa');
 });

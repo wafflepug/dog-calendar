@@ -98,7 +98,7 @@ test('Care arrival and guided checkout remain reachable at the configured viewpo
   await expect(arrivalStatus.locator('[data-arrival-detail]')).toHaveText('No digital intake link is recorded for this stay.');
   const checklist = selected.locator('[data-arrival-task-list]');
   await expect(checklist).toBeVisible();
-  await expect(checklist.locator('summary')).toHaveText('Care checks before check-in');
+  await expect(checklist.locator('summary')).toHaveText('Care checks · Medication unknown · details unavailable');
   await checklist.locator('summary').click();
   await expect(checklist.locator('[data-arrival-task]')).toHaveCount(2);
   const light = await arrivalStatus.evaluate(node => ({ height: node.getBoundingClientRect().height, background: getComputedStyle(node).backgroundColor }));

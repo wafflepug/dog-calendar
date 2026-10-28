@@ -11,6 +11,9 @@
   let focusAnchorCard = null;
   let focusNextStayId = '';
   let focusNextIdentity = '';
+  let pass = null;
+
+  function beginPass() { pass = { cards: new WeakMap(), today: null }; }
 
   function today() {
     if (typeof window.getLocalTodayDateString === 'function') {
@@ -47,20 +50,35 @@
     return { code: 'unknown' };
   }
 
-  function evidence(card, status) {
+  function snapshot(card) {
+    if (!pass) beginPass();
+    let value = pass.cards.get(card);
+    if (value) return value;
     const d = identity(card);
+    let status;
+    try { status = window.WAFFLE_INTAKE_STATUS && typeof window.WAFFLE_INTAKE_STATUS.getState === 'function' ? (window.WAFFLE_INTAKE_STATUS.getState(card) || { code: 'unknown' }) : intake(card); }
+    catch (_) { status = { code: 'unknown' }; }
     const op = typeof window.v110OperationForStay === 'function'
       ? window.v110OperationForStay({ stayId: d.stayId, dogId: d.dogId, stayKey: d.stayKey, dogName: d.name, startDate: d.start, endDate: d.end })
       : null;
     const display = typeof window.v110OperationDisplayState === 'function' ? window.v110OperationDisplayState(card) : null;
+    value = { d, status, op, display, found: null };
+    pass.cards.set(card, value);
+    return value;
+  }
+
+  function evidence(card, supplied) {
+    const snap = supplied || snapshot(card);
+    const { d, op, display, status } = snap;
     if (card.dataset.v1082PastStay === 'true' || card.closest('#past-directory-grid') || op?.status === 'checked_out' || op?.status === 'checked_in') return null;
     if (!d.stayId || !d.dogId || !d.stayKey || !d.name || !/^\d{4}-\d{2}-\d{2}$/.test(d.start) || !/^\d{4}-\d{2}-\d{2}$/.test(d.end)) return null;
-    if (d.start !== today() || d.end < today()) return null;
+    const currentDay = pass.today || (pass.today = today());
+    if (d.start !== currentDay || d.end < currentDay) return null;
     const displayCode = String(display?.code || '').toLowerCase();
     if (['collision', 'checked_out', 'checked_in'].includes(displayCode) || /identity|mismatch|ambiguous/.test(displayCode)) return null;
     if (op?.identityConflict || op?.collision || op?.mismatchedIdentity || op?.status === 'identity_conflict') return null;
     if (status?.identityConflict || status?.collision || status?.mismatchedIdentity) return null;
-    return { d, op };
+    return snap.found = { d, op };
   }
 
   function signature(card, state) {
@@ -77,6 +95,7 @@
     const medicationKnown = profileFresh && !!medicationText && !!medication && !medication.matches('[aria-busy="true"]') &&
       !/^(loading|checking|not loaded|pending|unavailable|not available|needs identity review)/i.test(medicationText);
     const medicationSaved = medicationKnown && !/no medication instructions saved/i.test(medicationText);
+    const medicationSummary = medicationKnown ? (medicationSaved ? 'Medication saved' : 'No medication saved') : 'Medication unknown';
     tasks.push({
       key: 'medication',
       title: 'Medication',
@@ -91,6 +110,7 @@
     const itemCount = belongings?.querySelectorAll('.belongings-summary-list > li').length || 0;
     const belongingsKnown = profileFresh && !!belongings && (itemCount > 0 || !!belongings.querySelector('.belongings-summary-empty')) && !/loading|not loaded|pending|unavailable|not available|identity review/i.test(belongings.textContent || '');
     const hasKnownItems = belongingsKnown && itemCount > 0;
+    const belongingsSummary = belongingsKnown ? `${itemCount} ${itemCount === 1 ? 'item' : 'items'}` : 'details unavailable';
     tasks.push({
       key: 'belongings',
       title: 'Belongings',
@@ -100,6 +120,7 @@
       action: 'belongings',
       actionLabel: 'Review'
     });
+    tasks.summary = `Care checks · ${medicationSummary} · ${belongingsSummary}`;
     return tasks;
   }
 
@@ -124,25 +145,46 @@
       list.dataset.tasksSignature = signature;
       const summary = list.querySelector('[data-arrival-task-heading]');
       const items = list.querySelector('[data-arrival-task-items]');
-      summary.textContent = 'Care checks before check-in';
-      items.replaceChildren();
+      summary.textContent = tasks.summary;
+      const previous = new Map(Array.from(items.querySelectorAll('[data-arrival-task]')).map(button => [button.dataset.arrivalTask, button]));
+      const oldIdentity = list.dataset.identitySignature || '';
+      const identitySignature = JSON.stringify(identity(card));
+      if (oldIdentity && oldIdentity !== identitySignature) {
+        if (items.contains(document.activeElement)) document.activeElement.blur();
+        items.replaceChildren(); previous.clear();
+      }
+      list.dataset.identitySignature = identitySignature;
       tasks.forEach(task => {
-        const button = document.createElement('button');
+        const button = previous.get(task.key) || document.createElement('button');
+        previous.delete(task.key);
         button.type = 'button';
         button.dataset.arrivalTask = task.key;
         button.dataset.careReadinessAction = task.action;
         const d = identity(card);
+        const capturedIdentity = JSON.stringify(d);
+        if (!button.dataset.identityGuard) {
+          button.dataset.identityGuard = 'true';
+          button.addEventListener('click', event => {
+            if (button.dataset.identityAtRender !== JSON.stringify(identity(card))) { event.preventDefault(); event.stopImmediatePropagation(); }
+          }, true);
+        }
+        button.dataset.identityAtRender = capturedIdentity;
         const dogContext = [d.name, d.dogNumber ? `Dog Number ${d.dogNumber}` : '', d.start && d.end ? `stay ${d.start} to ${d.end}` : ''].filter(Boolean).join(', ');
         button.setAttribute('aria-label', `${task.title} for ${dogContext || 'this dog'}. ${task.detail} ${task.actionLabel} in Care.`);
-        const title = document.createElement('strong');
+        const title = button.querySelector('strong') || document.createElement('strong');
         title.textContent = task.title;
-        const detail = document.createElement('small');
+        const detail = button.querySelector('small') || document.createElement('small');
         detail.textContent = task.detail;
-        const action = document.createElement('span');
+        const action = button.querySelector('span') || document.createElement('span');
         action.textContent = task.actionLabel;
-        button.append(title, detail, action);
-        items.appendChild(button);
+        if (title.parentElement !== button) button.appendChild(title);
+        if (detail.parentElement !== button) button.appendChild(detail);
+        if (action.parentElement !== button) button.appendChild(action);
+        if (!items.contains(button)) items.appendChild(button);
       });
+      previous.forEach(button => button.remove());
+      const desired = tasks.map(task => items.querySelector(`[data-arrival-task="${task.key}"]`));
+      if (desired.some((button, index) => items.children[index] !== button)) items.append(...desired);
     }
     const anchor = card.querySelector('[data-v11217-roster-actions]') ||
       card.querySelector(OWN) || card.querySelector('.directory-guest-tile-open');
@@ -199,6 +241,7 @@
       button.type = 'button';
       button.dataset.waffleArrivalNext = '';
       button.addEventListener('click', () => {
+        beginPass();
         const target = nextTarget(grid);
         if (!target) return;
         if (!eligibleTarget(target.card) || JSON.stringify(identity(target.card)) !== target.signature) return;
@@ -233,8 +276,8 @@
     if (!grid || grid.closest('[hidden]') || grid.closest('.directory-dashboard-fused')?.classList.contains('is-profile-mode')) return [];
     const seen = new Set();
     return Array.from(grid.querySelectorAll('.directory-card')).flatMap(card => {
-      const status = intake(card);
-      const found = evidence(card, status);
+      const snap = snapshot(card);
+      const found = evidence(card, snap);
       if (!found || seen.has(found.d.stayId)) return [];
       seen.add(found.d.stayId);
       const control = card.querySelector('[data-v11217-roster-checkin]');
@@ -252,7 +295,7 @@
   }
 
   function eligibleTarget(card) {
-    if (!card?.isConnected || !evidence(card, intake(card))) return false;
+    if (!card?.isConnected || !evidence(card, snapshot(card))) return false;
     return eligibleControl(card, card.querySelector('[data-v11217-roster-checkin]'));
   }
 
@@ -286,6 +329,7 @@
   }
 
   function refresh() {
+    beginPass();
     const grid = document.getElementById('directory-grid');
     if (!grid) return { count: 0 };
     const activeView = document.querySelector('[data-v1082-stay-tab].is-active')?.dataset.v1082StayTab || 'current';
@@ -293,9 +337,8 @@
     const seen = new Set();
     let count = 0;
     cards.forEach(card => {
-      const id = identity(card);
-      const status = intake(card);
-      const valid = evidence(card, status);
+      const snap = snapshot(card), id = snap.d, status = snap.status;
+      const valid = evidence(card, snap);
       const dup = id.stayId && seen.has(id.stayId);
       if (id.stayId) seen.add(id.stayId);
       let node = card.querySelector(OWN);
@@ -310,9 +353,8 @@
     });
     const taskSeen = new Set();
     cards.forEach(card => {
-      const id = identity(card);
-      const status = intake(card);
-      const valid = evidence(card, status);
+      const snap = snapshot(card), id = snap.d, status = snap.status;
+      const valid = evidence(card, snap);
       const duplicate = id.stayId && taskSeen.has(id.stayId);
       if (id.stayId) taskSeen.add(id.stayId);
       const visible = activeView === 'current' && card.style.display !== 'none' && getComputedStyle(card).display !== 'none' && !card.closest('[hidden]');
@@ -332,18 +374,35 @@
   function observe() {
     const grid = document.getElementById('directory-grid');
     if (!grid || observer) return;
+    function meaningfulAttributeTarget(target, card, scope) {
+      if (target === scope || target?.contains?.(grid)) return true;
+      const checkin = card?.querySelector('[data-v11217-roster-checkin]');
+      return !!card && (target === card || !!target?.closest?.('[data-v11217-roster-checkin]') || !!target?.closest?.('[data-directory-intake]') || !!target?.closest?.('[data-belongings-summary]') || !!checkin && !!target?.contains?.(checkin));
+    }
+    function relevantAddedNode(node) {
+      return node?.nodeType === 1 && (node.matches?.(`${CARD},${OWN},[data-waffle-arrival-next],[data-directory-detail="profile"],[data-care-brief-medication],[data-belongings-summary],[data-v11217-roster-checkin],[data-directory-intake],[data-v1082-stay-tab]`) || node.querySelector?.(`${CARD},[data-directory-detail="profile"],[data-care-brief-medication],[data-belongings-summary],[data-v11217-roster-checkin],[data-directory-intake]`));
+    }
     observer = new MutationObserver(records => {
       const meaningful = records.some(record => {
         if (record.type === 'childList') {
           const changed = [...record.addedNodes, ...record.removedNodes];
-          return changed.some(node => !(node.nodeType === 1 && (node.matches?.(OWN) || node.matches?.('[data-waffle-arrival-next]'))));
+          const target = record.target.nodeType === 1 ? record.target : record.target.parentElement;
+          const card = target?.closest?.(CARD);
+          return changed.some(node => relevantAddedNode(node) && !(node.nodeType === 1 && (node.matches?.(OWN) || node.matches?.('[data-waffle-arrival-next]')))) || !!target?.closest?.('[data-directory-intake]') || !!card && (card.contains(target) && (!!target.closest?.('[data-belongings-summary]') || !!target.closest?.('[data-care-brief-medication]')));
         }
-        return true;
+        const target = record.target.nodeType === 1 ? record.target : record.target.parentElement;
+        const card = target?.closest?.(CARD);
+        if (record.type === 'characterData') return !!target?.closest?.('[data-care-brief-medication],[data-belongings-summary],[data-directory-intake]');
+        const name = record.attributeName;
+        if (['data-directory-stay-id','data-directory-dog-name','data-dog-name','data-directory-dog-id','data-directory-dog-number','data-directory-stay-key','data-directory-start-date','data-directory-end-date','data-directory-owner-name','data-v1088-owner-name','data-v1082-past-stay'].includes(name)) return !!card;
+        if (name === 'data-profile-read-state' || name === 'aria-busy') return !!target?.closest?.('[data-directory-detail="profile"],[data-care-brief-medication],[data-belongings-summary]');
+        if (['disabled','aria-disabled','aria-hidden','inert','hidden','open','style','class'].includes(name)) return meaningfulAttributeTarget(target, card, scope);
+        return false;
       });
       if (meaningful) scheduleRefresh();
     });
     const scope = grid.closest('.directory-dashboard-fused') || document.querySelector('.v1082-stay-panels') || grid.parentElement;
-    observer.observe(scope, { subtree: true, childList: true, attributes: true, attributeFilter: ['data-directory-stay-id', 'data-directory-dog-name', 'data-dog-name', 'data-directory-dog-id', 'data-directory-dog-number', 'data-directory-stay-key', 'data-directory-start-date', 'data-directory-end-date', 'data-directory-owner-name', 'data-v1088-owner-name', 'data-v1082-past-stay', 'style', 'class', 'hidden', 'open', 'disabled', 'aria-disabled', 'aria-hidden', 'inert'] });
+    observer.observe(scope, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['data-directory-stay-id', 'data-directory-dog-name', 'data-dog-name', 'data-directory-dog-id', 'data-directory-dog-number', 'data-directory-stay-key', 'data-directory-start-date', 'data-directory-end-date', 'data-directory-owner-name', 'data-v1088-owner-name', 'data-v1082-past-stay', 'data-profile-read-state', 'aria-busy', 'style', 'class', 'hidden', 'open', 'disabled', 'aria-disabled', 'aria-hidden', 'inert'] });
     document.querySelectorAll('[data-v1082-stay-tab]').forEach(tab => tab.addEventListener('click', () => setTimeout(scheduleRefresh, 0)));
     document.getElementById('guestDirectorySearch')?.addEventListener('input', scheduleRefresh);
   }
@@ -351,6 +410,7 @@
   const api = { refresh, getState: () => ({ count: document.querySelectorAll(`#directory-grid ${OWN}`).length }) };
   window.WAFFLE_ARRIVAL_READY = api;
   window.addEventListener('waffle:intake-status-updated', scheduleRefresh);
+  window.addEventListener('waffle:stay-operation-updated', scheduleRefresh);
   window.addEventListener('waffle:first-paint-ready', scheduleRefresh);
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => { observe(); refresh(); }, { once: true });
   else { observe(); refresh(); }

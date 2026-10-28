@@ -132,6 +132,19 @@ test('authoritative operation collision excludes a card; quick-focus control hid
   await expect(page.locator('[data-waffle-arrival-next]')).toBeHidden();
 });
 
+test('operation update event refreshes conflict evidence and wrapper visibility stays live', async ({page})=>{
+  await setup(page); await page.evaluate(()=>{window.conflicted=false;window.v110OperationDisplayState=()=>window.conflicted?{code:'identity_conflict'}:{code:'date_active'};});
+  await addCard(page,{stayId:'event',dogId:'dog',key:'event'});
+  const next=page.locator('[data-waffle-arrival-next]'); await expect(next).toHaveText('Next: Milo · 1 remaining');
+  await page.evaluate(()=>{window.conflicted=true;window.dispatchEvent(new CustomEvent('waffle:stay-operation-updated'));});
+  await expect(next).toBeHidden();
+  await page.evaluate(()=>{window.conflicted=false;window.dispatchEvent(new CustomEvent('waffle:stay-operation-updated'));});
+  await expect(next).toHaveText('Next: Milo · 1 remaining');
+  await page.locator('[data-v11217-roster-checkin]').evaluate(control=>{const wrapper=document.createElement('div');wrapper.dataset.checkinWrapper='';control.before(wrapper);wrapper.append(control);});
+  await page.locator('[data-checkin-wrapper]').evaluate(node=>{node.hidden=true;}); await expect(next).toBeHidden();
+  await page.locator('[data-checkin-wrapper]').evaluate(node=>{node.hidden=false;}); await expect(next).toHaveText('Next: Milo · 1 remaining');
+});
+
 test('same-name household arrivals keep separate review targets and never imply care is verified', async ({ page }) => {
   await setup(page);
   await addCard(page, { stayId: 's1', dogId: 'd1', key: 'milo-a', intake: 'complete' });
@@ -197,7 +210,7 @@ test('arrival checklist shows only unresolved intake and truthful unreviewed med
   await page.evaluate(() => window.WAFFLE_ARRIVAL_READY.refresh());
   const list = page.locator('[data-arrival-task-list]');
   await expect(list).toBeVisible();
-  await expect(list.locator('summary')).toHaveText('Care checks before check-in');
+  await expect(list.locator('summary')).toHaveText('Care checks · Medication unknown · details unavailable');
   await expect(list).not.toHaveAttribute('open', '');
   await expect(list.locator('[data-arrival-task]')).toHaveCount(2);
   await expect(list.locator('[data-arrival-task]').first()).not.toBeVisible();
@@ -208,6 +221,7 @@ test('arrival checklist shows only unresolved intake and truthful unreviewed med
   await expect(list.locator('[data-arrival-task="medication"]')).toContainText('Medication instructions are unknown and not verified');
   await expect(list.locator('[data-arrival-task="belongings"]')).toContainText('Belongings');
   await expect(list.locator('[data-arrival-task="belongings"]')).toContainText('Item count is unknown and not verified');
+  await expect(list.locator('summary')).toHaveText('Care checks · Medication unknown · details unavailable');
   await expect(list.locator('[data-arrival-task="medication"]')).toHaveAttribute('data-care-readiness-action', 'medication');
   await expect(list.locator('[data-arrival-task="belongings"]')).toHaveAttribute('data-care-readiness-action', 'belongings');
   expect(await page.evaluate(() => window.reads)).toBe(0);
@@ -225,6 +239,10 @@ test('arrival checklist shows only unresolved intake and truthful unreviewed med
   await expect(list.locator('[data-arrival-task="medication"]')).toContainText('Medication');
   await expect(list.locator('[data-arrival-task="medication"]')).toContainText('Read saved instructions');
   await expect(list.locator('[data-arrival-task="belongings"]')).toContainText('2 items listed');
+  await expect(list.locator('summary')).toHaveText('Care checks · Medication saved · 2 items');
+  await page.locator('[data-care-brief-medication]').evaluate(node => { node.textContent = 'No medication instructions saved.'; });
+  await page.locator('[data-belongings-summary]').evaluate(node => { node.innerHTML = '<p class="belongings-summary-empty">No items recorded</p>'; });
+  await expect(list.locator('summary')).toHaveText('Care checks · No medication saved · 0 items');
   await expect(list.locator('[data-arrival-task]')).toHaveCount(2);
   expect(await page.evaluate(() => window.reads)).toBe(0);
   await addCard(page, { stayId: 's1', dogId: 'duplicate-dog', key: 'duplicate-checklist', intake: 'not_prepared' });
@@ -267,6 +285,48 @@ test('arrival task labels remain concise while blank evidence stays unknown and 
   await card.evaluate(node=>{node.dataset.directoryDogName='Luna';});
   await expect(card.locator('[data-arrival-task="medication"]')).toHaveAccessibleName(/for Luna/);
   expect(await page.evaluate(()=>window.reads)).toBe(0);
+});
+
+test('arrival checklist retains keyed button nodes and open state for same identity, discards focus on identity change', async ({page})=>{
+  await setup(page); await addCard(page,{stayId:'same',dogId:'dog',key:'stay',intake:'not_prepared'});
+  const list=page.locator('[data-arrival-task-list]');
+  await list.locator('summary').click();
+  const medication=list.locator('[data-arrival-task="medication"]');
+  await medication.focus();
+  await page.evaluate(()=>{
+    const card=document.querySelector('.directory-card');window.savedTaskButton=card.querySelector('[data-arrival-task="medication"]');
+    const profile=document.createElement('section');profile.dataset.directoryDetail='profile';profile.dataset.profileReadState='fresh';card.append(profile);
+    card.insertAdjacentHTML('beforeend','<span data-care-brief-medication>Give with dinner.</span><section data-belongings-summary><ul class="belongings-summary-list"><li>Blue lead</li><li>Food tub</li></ul></section>');
+    WAFFLE_ARRIVAL_READY.refresh();
+  });
+  await expect(list).toHaveAttribute('open',''); await expect(medication).toBeFocused();
+  expect(await medication.evaluate(node=>node===document.querySelector('[data-arrival-task="medication"]'))).toBe(true);
+  await expect(list.locator('summary')).toHaveText('Care checks · Medication saved · 2 items');
+  await expect(medication.locator('small')).toContainText('Read saved instructions');
+  expect(await medication.evaluate(node=>({same:node===window.savedTaskButton,strong:node.querySelectorAll('strong').length,small:node.querySelectorAll('small').length,span:node.querySelectorAll('span').length}))).toEqual({same:true,strong:1,small:1,span:1});
+  await page.evaluate(()=>{window.staleButtonBubbles=0;document.addEventListener('click',event=>{if(event.target===window.savedTaskButton)window.staleButtonBubbles++;});document.querySelector('.directory-card').dataset.directoryDogName='Luna';WAFFLE_ARRIVAL_READY.refresh();});
+  await expect(medication).not.toBeFocused();
+  await expect(list.locator('[data-arrival-task="medication"]')).toHaveAccessibleName(/for Luna/);
+  const staleClick=await page.evaluate(()=>{const event=new MouseEvent('click',{bubbles:true,cancelable:true});window.savedTaskButton.dispatchEvent(event);return {defaultPrevented:event.defaultPrevented,bubbles:window.staleButtonBubbles};});
+  expect(staleClick).toEqual({defaultPrevented:true,bubbles:0});
+});
+
+test('arrival refresh snapshots reduce canonical reads and unrelated profile notes do not trigger recompute', async ({page})=>{
+  await setup(page); await page.evaluate(()=>{window.operationCalls=0;window.stateCalls=0;window.v110OperationForStay=()=>{window.operationCalls++;return null;};window.WAFFLE_INTAKE_STATUS.getState=card=>{window.stateCalls++;return {code:card.dataset.intake||'unknown'};};});
+  await addCard(page,{stayId:'stable',dogId:'dog',key:'stable',intake:'not_prepared'});
+  await page.evaluate(()=>{window.operationCalls=0;window.stateCalls=0;WAFFLE_ARRIVAL_READY.refresh();});
+  const baseline=await page.evaluate(()=>({operationCalls:window.operationCalls,stateCalls:window.stateCalls}));
+  expect(baseline).toEqual({operationCalls:1,stateCalls:1});
+  await page.evaluate(()=>{const card=document.querySelector('.directory-card');const note=document.createElement('p');note.dataset.profileNote='';note.textContent='Unrelated note';card.appendChild(note);});
+  await page.locator('[data-profile-note]').evaluate(node=>{node.textContent='Edited unrelated note';});
+  await page.evaluate(()=>new Promise(resolve=>setTimeout(resolve,0)));
+  const afterNote=await page.evaluate(()=>({operationCalls:window.operationCalls,stateCalls:window.stateCalls}));
+  expect(afterNote).toEqual(baseline);
+  await page.evaluate(()=>{const card=document.querySelector('.directory-card');const profile=document.createElement('section');profile.dataset.directoryDetail='profile';profile.dataset.profileReadState='fresh';card.append(profile);card.insertAdjacentHTML('beforeend','<span data-care-brief-medication>Medication saved</span><section data-belongings-summary><ul class="belongings-summary-list"><li>Lead</li></ul></section>');});
+  await expect(page.locator('[data-arrival-task-list] summary')).toHaveText('Care checks · Medication saved · 1 item');
+  const afterRelevant=await page.evaluate(()=>({operationCalls:window.operationCalls,stateCalls:window.stateCalls}));
+  expect(afterRelevant.operationCalls).toBeGreaterThan(afterNote.operationCalls);
+  expect(afterRelevant.stateCalls).toBeGreaterThan(afterNote.stateCalls);
 });
 
 test('next arrival target stays aligned with live order, filtering, removal, and same-name identities', async ({ page }) => {
