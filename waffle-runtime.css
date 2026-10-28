@@ -2,8 +2,8 @@
    Build: 2026.08.27.04
    Historical base styles remain compatibility sources during Phase 3A, but pages no longer
    reference them individually. Preserve this import order until modules are folded in. */
-@import url("waffle-app.css?build=2026.08.27.04&rev=2026.10.28.09");
-@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.10.28.09");
+@import url("waffle-app.css?build=2026.08.27.04&rev=2026.10.28.10");
+@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.10.28.10");
 @import url("waffle-v10.8.2.css?build=2026.08.27.04");
 @import url("waffle-v10.8.3.css?build=2026.08.27.04");
 @import url("waffle-v10.8.5.css?build=2026.08.27.04");
@@ -11,12 +11,12 @@
 @import url("waffle-v10.8.7.css?build=2026.08.27.04");
 @import url("waffle-v10.8.8.css?build=2026.08.27.04");
 @import url("waffle-v10.8.9.css?build=2026.08.27.04");
-@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.10.28.09");
+@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.10.28.10");
 @import url("waffle-v11.0.3.css?build=2026.08.27.04");
 @import url("waffle-v11.0.5.css?build=2026.08.27.04");
-@import url("waffle-v11.1.94.css?build=2026.10.28.09");
-@import url("waffle-v11.1.95.css?build=2026.10.28.09");
-@import url("waffle-v11.1.96.css?build=2026.10.28.09&rev=2026.10.28.09");
+@import url("waffle-v11.1.94.css?build=2026.10.28.10");
+@import url("waffle-v11.1.95.css?build=2026.10.28.10");
+@import url("waffle-v11.1.96.css?build=2026.10.28.10&rev=2026.10.28.10");
 
 /* ============================================================
    MOBILE FIRST-PAINT STABILITY GATE
@@ -3304,3 +3304,7 @@ body[data-waffle-page="calendar"] #whHomePotentials[data-home-state="loading"] .
 [data-waffle-arrival-next]{box-sizing:border-box;text-align:left;overflow-wrap:anywhere;scroll-margin-block:90px 110px}
 .owner-handoff-actions[aria-busy="true"] button{cursor:progress}
 .owner-handoff-status{overflow-wrap:anywhere}
+
+/* Arrival checks and returning-stay context stay readable on narrow phones. */
+.directory-arrival-checklist>summary{white-space:normal;overflow-wrap:anywhere;line-height:1.45;min-height:44px}
+.p4-booking-context [data-p4-context-owner],.p4-booking-context [data-p4-context-new-dates]{max-width:100%;overflow-wrap:anywhere}
