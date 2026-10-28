@@ -52,16 +52,7 @@ async function setup(page, options = {}) {
     };
   });
   await page.addScriptTag({ content: runtime });
-  await page.evaluate(() => {
-    document.querySelectorAll('.directory-card').forEach(card => {
-      if (card.dataset.directoryEndDate > '2026-10-18' || card.querySelector('[data-v11217-roster-actions]')) return;
-      const actions = document.createElement('div');
-      actions.dataset.v11217RosterActions = '';
-      actions.dataset.renderSignature = JSON.stringify([card.dataset.directoryStayId, card.dataset.directoryStayKey, card.dataset.directoryDogId, true, true, false, 'date_active']);
-      actions.innerHTML = '<button type="button" data-v11217-roster-checkin>Check In</button><details class="v11217-roster-more-actions"><summary>More actions</summary><button type="button" data-v11217-roster-checkout>Check Out</button></details>';
-      card.appendChild(actions);
-    });
-  });
+  await expect(page.getByTestId('selected-card').locator('[data-v11217-roster-checkout]')).toBeVisible();
   await expect(page.locator('#directory-grid')).toBeVisible();
   return { grid: page.locator('#directory-grid'), selected: page.getByTestId('selected-card'), other: page.locator('[data-directory-stay-id="stay-b"]') };
 }

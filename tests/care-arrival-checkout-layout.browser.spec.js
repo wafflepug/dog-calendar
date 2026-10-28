@@ -129,7 +129,7 @@ test('Care arrival and guided checkout remain reachable at the configured viewpo
 
   const card = page.getByTestId('selected-card');
   await card.locator('[data-belongings-summary]').evaluate(node => node.setAttribute('aria-busy', 'true'));
-  await card.locator('.v11217-roster-more-actions summary').click();
+  await expect(card.locator('[data-v11217-roster-checkout]')).toBeVisible();
   await card.locator('[data-v11217-roster-checkout]').click();
   const dialog = page.locator('#v11217GuidedCheckout');
   await expect(dialog).toBeVisible();
@@ -251,7 +251,7 @@ test('Care arrival and guided checkout remain reachable at the configured viewpo
 test('departure note expands as typed while confirmation stays reachable above the phone footer',async({page,baseURL},testInfo)=>{
   const {selected}=await setup(page);
   await installVisualRuntime(page,baseURL,await selected.elementHandle());
-  await selected.locator('.v11217-roster-more-actions summary').click();
+  await expect(selected.locator('[data-v11217-roster-checkout]')).toBeVisible();
   await selected.locator('[data-v11217-roster-checkout]').click();
   const dialog=page.locator('#v11217GuidedCheckout'),note=dialog.locator('[data-v11217-guided-note]');
   await expect(note).toHaveAttribute('rows','2');
@@ -277,7 +277,7 @@ test('pickup contact and complete saved handover fit the checkout sheet above th
   const field=document.createElement('button');field.dataset.directoryEditField='notes';field.dataset.directoryCurrentValue=note;card.appendChild(field);
   window.v110OperationalPayloadFromCard=card=>({stayId:card.dataset.directoryStayId,stayKey:card.dataset.directoryStayKey,dogId:card.dataset.directoryDogId,dogName:card.dataset.directoryDogName,startDate:card.dataset.directoryStartDate,endDate:card.dataset.directoryEndDate,ownerName:card.dataset.fixtureOwner||'',phone:card.dataset.fixturePhone||''});
  },savedNote);
- await selected.locator('.v11217-roster-more-actions summary').click();await selected.locator('[data-v11217-roster-checkout]').click();
+ await expect(selected.locator('[data-v11217-roster-checkout]')).toBeVisible();await selected.locator('[data-v11217-roster-checkout]').click();
  const dialog=page.locator('#v11217GuidedCheckout'),call=dialog.locator('[data-v11217-guided-owner-call]');
  await expect(call).toHaveAttribute('href','tel:+61400123456');await expect(call).toContainText('+61 (400) 123-456');
  for(const dark of [false,true]){
