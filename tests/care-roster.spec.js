@@ -117,6 +117,83 @@ test('Care roster filters keep staying, arriving, past, search, and profile mode
   await expect.poll(visibleNames).toEqual(['Maple']);
 });
 
+test('Care roster filtered empty states stay truthful and offer scoped recovery actions', async ({ page }) => {
+  await page.setContent(`<!doctype html><body><main><div class="directory-dashboard-fused" data-directory-roster-load-state="success">
+    <button data-v1082-stay-tab="current" class="is-active"><strong id="v1082CurrentStayCount">1</strong></button>
+    <button data-v1082-stay-tab="future"><strong id="v1082FutureStayCount">1</strong></button>
+    <button data-v1082-stay-tab="past"><strong id="v1082PastStayCount">0</strong></button>
+    <div class="guest-directory-toolbar"><input id="guestDirectorySearch"></div>
+    <h3 id="lazy-arrival-heading">November arrivals</h3>
+    <div id="directory-grid"><article class="directory-card" data-directory-dog-name="Maple"><button>Maple</button></article></div>
+    <div id="past-directory-grid"></div>
+    <section id="directory-empty-state" hidden><h2 data-directory-empty-title></h2><p data-directory-empty-copy></p><button data-directory-empty-action="add"></button></section>
+  </div></main>`);
+  await page.evaluate(filters => {
+    window.getLocalTodayDateString = () => '2026-09-23';
+    window.directoryInputEvents = 0;
+    window.reads = 0;
+    window.queryAppsScript = async () => { window.reads++; return { result: 'success', bookings: [] }; };
+    document.getElementById('guestDirectorySearch').addEventListener('input', event => {
+      window.directoryInputEvents++;
+      document.getElementById('lazy-arrival-heading').hidden = Boolean(event.currentTarget.value);
+    });
+    let mode = 'arriving';
+    let clears = 0;
+    window.WAFFLE_CARE_ROSTER_FOCUS = {
+      beginFilterPass() {}, matches() { return mode === 'all'; },
+      getState() { return { mode, label: mode === 'all' ? 'All stays' : 'Arriving today' }; },
+      labelForMode(name) { return name === 'arriving' ? 'Arriving today' : ''; },
+      clear() { clears++; mode = 'all'; filterGuestDirectoryCards(); },
+      setMode(value) { mode = value; },
+      get clears() { return clears; }
+    };
+    window.eval(filters);
+    document.querySelector('.directory-dashboard-fused').dataset.directoryRosterLoadState = 'unknown';
+    filterGuestDirectoryCards();
+  }, rosterFilters);
+  const empty = page.locator('#directory-empty-state');
+  await expect(empty).toBeHidden();
+  await page.locator('.directory-dashboard-fused').evaluate(node => { node.dataset.directoryRosterLoadState = 'success'; filterGuestDirectoryCards(); });
+  await expect(empty).toBeVisible();
+  await expect(page.locator('#directory-search-status')).toBeHidden();
+  await expect(empty.locator('button')).toHaveText('Clear filter');
+  await empty.locator('button').click();
+  await expect.poll(() => page.evaluate(() => window.directoryInputEvents)).toBe(0);
+  await expect(page.locator('#guestDirectorySearch')).toHaveValue('');
+  await expect(page.locator('.directory-card:visible')).toHaveCount(1);
+  await expect(page.locator('[data-v1082-stay-tab="current"]')).toHaveClass(/is-active/);
+
+  await page.locator('#guestDirectorySearch').fill('nope');
+  await page.evaluate(() => filterGuestDirectoryCards());
+  await expect(empty.locator('button')).toHaveText('Clear search');
+  await expect(empty.locator('[data-directory-empty-copy]')).not.toContainText('Later arrivals');
+  await empty.locator('button').click();
+  await expect.poll(() => page.evaluate(() => window.directoryInputEvents)).toBe(2);
+  await expect(page.locator('#lazy-arrival-heading')).toBeVisible();
+  await expect(page.locator('#guestDirectorySearch')).toHaveValue('');
+
+  await page.locator('#guestDirectorySearch').fill('nope');
+  await page.evaluate(() => filterGuestDirectoryCards());
+  await page.evaluate(() => { window.WAFFLE_CARE_ROSTER_FOCUS.setMode('arriving'); filterGuestDirectoryCards(); });
+  await expect(empty.locator('button')).toHaveText('Clear search and filter');
+  await empty.locator('button').click();
+  await expect.poll(() => page.evaluate(() => window.directoryInputEvents)).toBe(4);
+  await expect(page.locator('#guestDirectorySearch')).toBeFocused();
+  await expect(page.locator('#guestDirectorySearch')).toHaveValue('');
+  await page.locator('#guestDirectorySearch').fill('Ada');
+  await page.locator('#guestDirectorySearch').press('Escape');
+  await expect.poll(() => page.evaluate(() => window.directoryInputEvents)).toBe(6);
+  await expect(page.locator('#lazy-arrival-heading')).toBeVisible();
+  await expect(page.locator('#guestDirectorySearch')).toHaveValue('');
+  await expect(page.locator('#guestDirectorySearch')).toBeFocused();
+  await page.locator('#guestDirectorySearch').fill('Ada');
+  await page.locator('#guestDirectorySearch').evaluate(input => input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', ctrlKey: true, bubbles: true })));
+  await expect(page.locator('#guestDirectorySearch')).toHaveValue('Ada');
+  await page.locator('#guestDirectorySearch').evaluate(input => input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', isComposing: true, bubbles: true })));
+  await expect(page.locator('#guestDirectorySearch')).toHaveValue('Ada');
+  expect(await page.evaluate(() => window.reads)).toBe(0);
+});
+
 test('Care roster stays compact and fits a narrow mobile viewport', async ({ page }) => {
   await page.setContent(`<!doctype html><html><head><style>${rosterStyles}\n${sourceBadgeCss}\n${carePolishCss}\n${careRuntimeStyles}</style></head>
     <body data-waffle-page="directory">

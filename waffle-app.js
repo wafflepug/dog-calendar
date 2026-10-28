@@ -12179,6 +12179,17 @@ registerWaffleServiceWorker();
 
     function ensureDirectorySearchStatus() {
         const input = document.getElementById('guestDirectorySearch');
+        if (input && input.dataset.directoryEscapeClearBound !== 'true') {
+            input.dataset.directoryEscapeClearBound = 'true';
+            input.addEventListener('keydown', event => {
+                if (event.key !== 'Escape' || event.defaultPrevented || event.isComposing || event.keyCode === 229 || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || !input.value) return;
+                event.preventDefault();
+                input.value = '';
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+                filterGuestDirectoryCards();
+                input.focus();
+            });
+        }
         const toolbar = input?.closest('.guest-directory-toolbar');
         if (!input || !toolbar) return null;
         let searchWrap = toolbar.querySelector('.guest-directory-search-wrap');
@@ -12236,9 +12247,31 @@ registerWaffleServiceWorker();
             empty.addEventListener('click', event => {
                 const action = event.target.closest('[data-directory-empty-action]');
                 if (!action) return;
+                const focusIfStillOnAction = target => window.requestAnimationFrame(() => {
+                    if (!target || !target.isConnected || !(document.activeElement === action || document.activeElement === document.body)) return;
+                    if (target === document.getElementById('guestDirectorySearch') && target.value) return;
+                    if (!target.hidden) target.focus();
+                });
                 const destination = action.dataset.directoryEmptyAction;
                 if (destination === 'search') {
-                    document.getElementById('guestDirectorySearch')?.focus();
+                    const input = document.getElementById('guestDirectorySearch');
+                    if (input) {
+                        input.value = '';
+                        input.dispatchEvent(new Event('input', { bubbles: true }));
+                        filterGuestDirectoryCards();
+                        focusIfStillOnAction(input);
+                    }
+                    return;
+                }
+                if (destination === 'filter' || destination === 'search-and-filter') {
+                    const searchInput = document.getElementById('guestDirectorySearch');
+                    if (destination === 'search-and-filter' && searchInput) {
+                        searchInput.value = '';
+                        searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+                    }
+                    window.WAFFLE_CARE_ROSTER_FOCUS?.clear?.();
+                    if (destination === 'search-and-filter' && searchInput) focusIfStillOnAction(searchInput);
+                    else focusIfStillOnAction(document.querySelector('[data-care-roster-focus] [data-focus-summary]'));
                     return;
                 }
                 if (destination === 'refresh') {
@@ -12273,11 +12306,37 @@ registerWaffleServiceWorker();
             if (empty.hidden === visible) empty.hidden = !visible;
             if (dashboard && dashboard.dataset.contextualEmptyVisible !== String(visible)) dashboard.dataset.contextualEmptyVisible = String(visible);
         };
-        if (!title || !copy || !action || profileMode || search || cards.length || !['success', 'cached-failure', 'cached-offline'].includes(viewState)) {
+        const workflowFilter = window.WAFFLE_CARE_ROSTER_FOCUS;
+        const workflowState = workflowFilter?.getState?.() || { mode: 'all' };
+        const hasWorkflowFilter = activeView === 'current' && workflowState.mode && workflowState.mode !== 'all';
+        const hasSearch = Boolean(search);
+        if (!title || !copy || !action || profileMode || cards.length || !['success', 'cached-failure', 'cached-offline'].includes(viewState)) {
             setVisible(false);
             return;
         }
         let titleText, copyText, actionText, actionTarget;
+
+        if (hasSearch || hasWorkflowFilter) {
+            const label = activeView === 'future' ? 'Arriving' : activeView === 'past' ? 'Past' : 'Staying';
+            const queryLabel = hasWorkflowFilter ? (workflowFilter?.labelForMode?.(workflowState.mode) || 'today’s work') : '';
+            const range = window.WAFFLE_V11196_FUTURE_RANGE;
+            const deferredArrivals = activeView === 'future' && (typeof range?.isExpanded === 'function' && typeof range?.deferredCount === 'function'
+                ? Number(range.deferredCount()) > 0 && !range.isExpanded()
+                : document.querySelector('[data-v11196-expand-later]:not([hidden])')?.dataset?.v11196Action === 'expand');
+            titleText = `No loaded matches in ${label}`;
+            copyText = isCachedFailure ? savedCopy : hasSearch && hasWorkflowFilter
+                ? `No loaded guest matches “${search}” for ${queryLabel}.${deferredArrivals ? ' Later arrivals remain outside the loaded range until opened.' : ''}`
+                : hasSearch
+                    ? `No loaded guest matches “${search}”.${deferredArrivals ? ' Later arrivals remain outside the loaded range until opened.' : ''}`
+                    : `No loaded guest matches ${queryLabel}. Unknown or conflicting stay status is excluded.`;
+            if (isCachedFailure) copyText += ` No loaded guest matches ${hasSearch ? `“${search}”` : queryLabel}.`;
+            actionText = hasSearch && hasWorkflowFilter ? 'Clear search and filter' : hasSearch ? 'Clear search' : 'Clear filter';
+            actionTarget = hasSearch && hasWorkflowFilter ? 'search-and-filter' : hasSearch ? 'search' : 'filter';
+            for (const [host, value] of [[title, titleText], [copy, copyText], [action, actionText]]) if (host.textContent !== value) host.textContent = value;
+            if (action.dataset.directoryEmptyAction !== actionTarget) action.dataset.directoryEmptyAction = actionTarget;
+            setVisible(true);
+            return;
+        }
 
         const labels = { current: 'Staying', future: 'Arriving', past: 'Past' };
         const others = activeView === 'current' ? ['future', 'past'] : activeView === 'future' ? ['current', 'past'] : ['current', 'future'];
@@ -12388,6 +12447,7 @@ registerWaffleServiceWorker();
             const clearSearch = status.closest('.guest-directory-toolbar')?.querySelector('[data-directory-search-clear]');
             if (clearSearch && clearSearch.hidden !== !search) clearSearch.hidden = !search;
             if (status.hidden !== hideStatus) status.hidden = hideStatus;
+            status.dataset.baseHidden = String(hideStatus);
             status.closest('.guest-directory-toolbar')?.classList.toggle('has-search-status', (Boolean(search) || Boolean(hasWorkflowFilter)) && !profileMode);
             const label = activeView === 'future' ? 'Arriving' : activeView === 'past' ? 'Past' : 'Staying';
             const message = status.querySelector('[data-directory-search-message]');
@@ -12413,10 +12473,9 @@ registerWaffleServiceWorker();
             status.classList.toggle('is-empty', (Boolean(search) || Boolean(hasWorkflowFilter)) && visibleMatches === 0);
         }
         workflowFilter?.afterCanonicalFilter?.({ activeView, search, profileMode, visibleMatches });
-        if (workflowFilter && activeView === 'current' && workflowFilter.getState?.()?.mode !== 'all' && !profileMode) {
-            const empty = document.getElementById('directory-empty-state');
-            if (empty && !empty.hidden) empty.hidden = true;
-        } else updateDirectoryEmptyState();
+        updateDirectoryEmptyState();
+        const contextualEmpty = document.getElementById('directory-empty-state');
+        if (status) status.hidden = status.dataset.baseHidden === 'true' || Boolean(contextualEmpty && !contextualEmpty.hidden);
     }
 
     window.WAFFLE_REFRESH_CARE_SETUP = card => {

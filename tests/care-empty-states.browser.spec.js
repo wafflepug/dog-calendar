@@ -129,7 +129,9 @@ test('search clear retains the active category, restores focus, and deferred arr
   });
   await page.locator('#guestDirectorySearch').fill('no such dog');
   await expect(page.locator('#directory-search-status')).toContainText('Later arrivals are not included until opened.');
-  await expect(page.locator('#directory-empty-state')).toBeHidden();
+  await expect(page.locator('#directory-empty-state')).toBeVisible();
+  await expect(page.locator('#directory-empty-state [data-directory-empty-action]')).toHaveText('Clear search');
+  await expect(page.locator('#directory-search-status')).toBeHidden();
   await page.locator('[data-directory-search-clear]').click();
   await expect(page.locator('#guestDirectorySearch')).toBeFocused();
   await expect(page.locator('[data-v1082-stay-tab="future"]')).toHaveAttribute('aria-selected', 'true');

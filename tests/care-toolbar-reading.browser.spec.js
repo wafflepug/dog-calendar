@@ -114,10 +114,19 @@ test('Care roster search and supporting disclosures use the available header wid
     await manage.locator('summary').click();
 
     const searchStatus = toolbar.locator('#directory-search-status');
-    await search.fill('nothing-matches-this-fixture');
+    await search.fill(bookings[0].dogName);
     await expect(searchStatus).toBeVisible();
     const statusBox = await searchStatus.boundingBox();
     expect(statusBox.width).toBeGreaterThanOrEqual(before.toolbar.width - 2);
+    await search.fill('nothing-matches-this-fixture');
+    await expect(searchStatus).toBeHidden();
+    const recovery = page.locator('#directory-empty-state');
+    await expect(recovery).toBeVisible();
+    await expect(recovery.locator('[data-directory-empty-action]')).toHaveText('Clear search');
+    const recoveryBox = await recovery.boundingBox();
+    expect(recoveryBox.width).toBeGreaterThanOrEqual(before.toolbar.width - 2);
+    expect(recoveryBox.x).toBeGreaterThanOrEqual(0);
+    expect(recoveryBox.x + recoveryBox.width).toBeLessThanOrEqual(width + 1);
     await expect(toolbar.locator('[data-directory-search-clear]')).toBeVisible();
     await toolbar.locator('[data-directory-search-clear]').click();
     await expect(searchStatus).toBeHidden();
