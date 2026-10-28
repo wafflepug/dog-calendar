@@ -1,8 +1,17 @@
 const { test, expect } = require('@playwright/test');
 const { install } = require('./fixtures/care-daily-workflows');
+const fs = require('node:fs');
+const path = require('node:path');
 
 test('roster search clear, Today filter reset and stay tabs stay efficient and keyboard operable', async ({ page, baseURL }) => {
   const fixture = await install(page);
+  // Hold only the scheduled count task while proving that cold Arriving
+  // navigation does not fetch Past. Release the real task after loading Past.
+  await page.route('**/waffle-v10.8.6.js*', async route => {
+    const runtime = fs.readFileSync(path.join(__dirname, '..', 'waffle-v10.8.6.js'), 'utf8');
+    const gate = `;(function(){const background=window.v1086BackgroundLoadPastStays,schedule=window.setTimeout;let released=false,pending=null;window.__rosterPastCountRan=false;window.setTimeout=function(callback,delay,...args){if(callback===background&&delay===1600)return schedule.call(window,()=>{const task=()=>{callback(...args);window.__rosterPastCountRan=true;};if(released)task();else pending=task;},delay);return schedule.call(window,callback,delay,...args);};window.__releaseRosterPastCount=()=>{released=true;if(pending){const task=pending;pending=null;task();}};})();`;
+    await route.fulfill({status:200,contentType:'application/javascript',body:runtime+gate});
+  });
   await page.goto(`${baseURL}/directory.html?dailyCareFixture=1`, { waitUntil: 'domcontentloaded' });
   await page.waitForFunction(() => document.documentElement.dataset.waffleUiReady === 'true' && window.WAFFLE_CARE_ROSTER_FOCUS);
 
@@ -39,6 +48,7 @@ test('roster search clear, Today filter reset and stay tabs stay efficient and k
   await expect(page.locator('[data-v1082-stay-tab][aria-selected="false"][tabindex="0"]')).toHaveCount(0);
   await page.locator('[data-v1082-stay-tab="current"]').focus();
   const pastReadsBeforeFuture = fixture.reads.filter(action => action === 'get_past_guest_directory').length;
+  expect(pastReadsBeforeFuture).toBe(0);
   const selectionBeforeKey = await page.evaluate(() => window.WAFFLE_DIRECTORY_PROFILE_NAV.selectionVersion);
   await page.keyboard.press('ArrowRight');
   expect(await page.evaluate(() => window.WAFFLE_DIRECTORY_PROFILE_NAV.selectionVersion)).toBe(selectionBeforeKey + 1);
@@ -49,6 +59,8 @@ test('roster search clear, Today filter reset and stay tabs stay efficient and k
   await page.keyboard.press('End');
   await expect(page.locator('[data-v1082-stay-tab="past"]')).toBeFocused();
   await expect(page.locator('[data-v1082-stay-tab="past"]')).toHaveAttribute('aria-selected', 'true');
+  await page.waitForFunction(() => typeof v1082PastLoaded !== 'undefined' && v1082PastLoaded === true);
+  await page.evaluate(() => window.__releaseRosterPastCount());
   const pastReads = fixture.reads.filter(action => action === 'get_past_guest_directory').length;
   expect(pastReads).toBeGreaterThan(0);
   await page.keyboard.press('End');
@@ -59,4 +71,6 @@ test('roster search clear, Today filter reset and stay tabs stay efficient and k
   await expect(page.locator('.directory-dashboard-fused')).toHaveClass(/is-profile-mode/);
   await expect(disclosure).toBeHidden();
   await expect(reset).toBeHidden();
+  await page.waitForFunction(() => window.__rosterPastCountRan === true);
+  expect(fixture.reads.filter(action => action === 'get_past_guest_directory')).toHaveLength(pastReads);
 });
