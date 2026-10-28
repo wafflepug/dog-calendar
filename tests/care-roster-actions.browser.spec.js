@@ -221,3 +221,28 @@ test('early checkout note grows and refuses accidental discard without changing 
  await page.evaluate(()=>window.releaseSave());await expect(dialog).toBeHidden();
  expect(await page.evaluate(()=>window.savedPayloads.length)).toBe(1);
 });
+
+
+test('verified early checkout focuses its matching real completion after the modal closes', async ({page}) => {
+  await setup(page);
+  await page.evaluate(() => {
+    document.querySelector('.directory-grid').id='directory-grid';
+    window.v110ValidStayId = value => !!value;
+    const save=window.v110SaveOperationalStatus;
+    window.v110SaveOperationalStatus=async(...args)=>{
+      const result=await save(...args);
+      if(result.record) result.record.actualCheckoutDate='2026-10-11';
+      return result;
+    };
+  });
+  await page.addScriptTag({content:fs.readFileSync(path.join(__dirname,'..','care-departure-message.js'),'utf8')});
+  const card=page.locator('[data-directory-stay-id="stay-b"]');
+  await card.locator('.v11217-roster-more-actions summary').click();
+  await card.locator('[data-v11217-early-checkout]').click();
+  const dialog=page.getByRole('dialog',{name:'Early Checkout'});
+  await dialog.locator('[data-v11217-confirm]').click();
+  await expect(dialog).toBeHidden();
+  await expect(page.locator('[data-v11217-departure-copy]')).toBeFocused();
+  await expect(page.locator('#v11217DepartureMessageBanner')).toContainText('Twin Pup');
+  expect(await page.evaluate(()=>window.savedPayloads.length)).toBe(1);
+});
