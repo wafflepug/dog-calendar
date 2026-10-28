@@ -234,7 +234,9 @@ for (const [name, viewport, colorScheme] of [['320-light', { width: 320, height:
     await expect(selectedProfile.locator('[data-care-brief-freshness]')).toHaveAttribute('data-state', 'fresh');
     await expect(selectedProfile.locator('[data-care-brief-freshness]')).toContainText('Saved record · updated');
     await expect(selectedProfile.locator('[data-care-brief-freshness]')).toHaveAttribute('aria-description', /shared saved record.*does not confirm care instructions were reviewed/);
-    await expect(selectedProfile.locator('.directory-care-brief-grid')).not.toContainText('0400123456');
+    await expect(selectedProfile.locator('.directory-care-owner-phone')).toHaveCount(1);
+    await expect(selectedProfile.locator('.directory-care-owner-phone')).toBeVisible();
+    await expect(selectedProfile.locator('.directory-care-owner-phone')).toHaveText('0400123456');
     await expect(selectedProfile.locator('[data-care-brief-owner-name]')).toHaveText('Alexandria Peterson-Smith');
     await expect(selectedProfile.locator('[data-care-brief-call-owner] a')).toHaveAttribute('href', 'tel:0400123456');
     await expect(selectedProfile.locator('.directory-guest-tile-photo')).toBeHidden();
