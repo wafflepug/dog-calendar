@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.10.29.01",
-  "releaseName": "Care Visual Cleanup",
+  "assetRevision": "2026.10.29.02",
+  "releaseName": "Care Reading Layout",
   "careIteration": {
     "returningDogSuggestions": true,
     "reviewedCareInheritance": true,

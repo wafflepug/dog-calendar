@@ -1,4 +1,31 @@
 /* Care-only clarity pass. Every rule is gated to the Directory page. */
+/* The shared desktop sidebar reserves 244px before the content container.
+   Center Care within that remaining content area and keep long profiles at a
+   comfortable reading width. */
+@media (min-width: 821px) {
+  body[data-waffle-page="directory"] #directoryTabPanel {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 1040px;
+    margin-inline: auto;
+  }
+  body[data-waffle-page="directory"] #directoryTabPanel .directory-dashboard-fused:not(.is-profile-mode) .directory-roster-heading {
+    display: grid;
+    grid-template-columns: minmax(180px, 1fr) minmax(0, 530px);
+    align-items: start;
+    gap: 16px;
+  }
+  body[data-waffle-page="directory"] #directoryTabPanel .directory-dashboard-fused:not(.is-profile-mode) .directory-roster-heading > div:first-child {
+    align-self: start;
+    min-width: 0;
+  }
+  body[data-waffle-page="directory"] #directoryTabPanel .directory-dashboard-fused:not(.is-profile-mode) .directory-roster-heading > .guest-directory-toolbar {
+    align-self: start;
+    min-width: 0;
+    width: 100%;
+    margin: 0;
+  }
+}
 /* The existing search spans the toolbar; its two supporting disclosures share a compact row. */
 body[data-waffle-page="directory"] #directoryTabPanel .directory-dashboard-fused:not(.is-profile-mode) .directory-roster-heading > .guest-directory-toolbar {
   display: grid;
@@ -265,6 +292,7 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-
 
 body[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused > .directory-guest-tile-open {
   display: grid;
+  font-family: inherit;
   grid-template-columns: 64px minmax(0, 1fr);
   grid-auto-rows: min-content;
   align-items: start;
@@ -323,6 +351,7 @@ body[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused > .d
   max-width: 100%;
   white-space: normal;
   overflow-wrap: anywhere;
+  font-size: 12px;
   line-height: 1.35;
 }
 body[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused > .directory-guest-tile-open .directory-roster-status,
@@ -350,7 +379,18 @@ body[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused > .d
   white-space: normal;
   overflow-wrap: anywhere;
 }
-
+body[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused > .directory-guest-tile-open .directory-roster-context {
+  font-size: 14px;
+  line-height: 1.4;
+}
+body[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused > .directory-guest-tile-open .directory-roster-owner {
+  font-size: 14px;
+  line-height: 1.4;
+}
+body[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused > .directory-guest-tile-open .directory-dog-id {
+  font-size: 12px;
+  line-height: 1.35;
+}
 /* Keep medication, safety and all source text complete and readable. */
 body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief,
 body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-grid,
@@ -425,6 +465,7 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-
 body[data-waffle-page="directory"] .directory-card.is-profile-active [data-care-brief-medication],
 body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-row > span,
 body[data-waffle-page="directory"] .directory-card.is-profile-active [data-care-brief-handover-full] {
+  font-size: 15px;
   white-space: pre-wrap;
 }
 body[data-waffle-page="directory"] .directory-card.is-profile-active [data-care-brief-medication] {
