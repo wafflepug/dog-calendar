@@ -125,12 +125,13 @@ test('invalid and non-HTTP links produce no actionable card', async ({ page, bas
   }
 });
 
-test('compact boarding mode leads with one copy action and keeps secondary sharing closed', async ({ page, baseURL, browserName }, testInfo) => {
+test('compact boarding mode leads with copy and native share while keeping message actions closed', async ({ page, baseURL, browserName }, testInfo) => {
   await setup(page, baseURL, { share: true });
   await page.evaluate(data => window.WAFFLE_OWNER_HANDOFF.render(document.querySelector('#handoff'), data, { compact: true }), valid);
   const card = page.locator('.owner-handoff-compact');
   await expect(card.getByRole('button', { name: 'Copy owner care link', exact: true })).toBeVisible();
-  await expect(card.locator('button:visible')).toHaveCount(1);
+  await expect(card.locator('button:visible')).toHaveCount(2);
+  await expect(card.getByRole('button', { name: 'Share', exact: true })).toBeVisible();
   await expect(card.getByLabel('Owner care link')).toBeHidden();
   await expect(card.locator('[data-secondary-options]')).not.toHaveAttribute('open', '');
   await expect(card).toContainText('Milo');
@@ -363,4 +364,106 @@ test('copy actions use the complete message or just the link as labelled', async
   await page.getByRole('button', { name: 'Copy message', exact: true }).click();
   await page.getByRole('button', { name: 'Copy link', exact: true }).click();
   expect(await page.evaluate(() => window.__clipboardWrites)).toEqual([message, valid.link]);
+});
+
+
+test('compact share remains first level and does not steal focus after the user moves', async ({ page, baseURL }) => {
+  await setup(page, baseURL, { share: true });
+  await page.evaluate(data => {
+    window.WAFFLE_OWNER_HANDOFF.render(document.querySelector('#handoff'), data, { compact: true });
+    document.body.insertAdjacentHTML('beforeend', '<button id="outside-focus">Outside</button>');
+    navigator.share = payload => { window.__shareCalls.push(payload); return new Promise(resolve => { window.resolveShare = resolve; }); };
+  }, valid);
+  const share = page.getByRole('button', { name: 'Share', exact: true });
+  await expect(share).toBeVisible();
+  await share.click();
+  await expect.poll(() => page.evaluate(() => window.__shareCalls.length)).toBe(1);
+  await page.locator('#outside-focus').focus();
+  await page.evaluate(() => window.resolveShare());
+  await expect(share).toBeEnabled();
+  await expect(page.locator('[data-secondary-options]')).not.toHaveAttribute('open', '');
+  await expect(page.locator('#outside-focus')).toBeFocused();
+});
+
+test('full handoff locks every action during a pending copy and releases controls after completion', async ({ page, baseURL }) => {
+  await setup(page, baseURL);
+  await page.evaluate(data => {
+    window.WAFFLE_OWNER_HANDOFF.render(document.querySelector('#handoff'), data);
+    window.__clipboardFails = false;
+    window.resolveCopy = null;
+    navigator.clipboard.writeText = value => { window.__clipboardWrites.push(value); return new Promise(resolve => { window.resolveCopy = resolve; }); };
+  }, valid);
+  const message = page.getByRole('button', { name: 'Copy message', exact: true });
+  const link = page.getByRole('button', { name: 'Copy link', exact: true });
+  await message.click();
+  await expect(message).toBeDisabled();
+  await expect(link).toBeDisabled();
+  await page.evaluate(() => window.resolveCopy());
+  await expect(message).toBeEnabled();
+  await expect(link).toBeEnabled();
+});
+
+
+test('shared care-link copy keeps manual fallback unselected after user interaction and clears stale links', async ({ page, baseURL }) => {
+  await setup(page, baseURL, { clipboardFails: true });
+  await page.evaluate(() => {
+    const host = document.querySelector('#handoff');
+    host.insertAdjacentHTML('beforeend', '<button id="shared-copy">Copy</button><p id="shared-status"></p><button id="outside-focus">Outside</button>');
+    window.sharedCurrent = true;
+    document.querySelector('#shared-copy').addEventListener('click', () => window.sharedCopyPromise = window.WAFFLE_OWNER_HANDOFF.copyLink(window.validLink, {
+      button: document.querySelector('#shared-copy'), status: document.querySelector('#shared-status'), host,
+      isCurrent: () => window.sharedCurrent
+    }));
+    window.validLink = 'https://care.example.test/stay/AbC123';
+  });
+  await page.evaluate(() => { navigator.clipboard.writeText = () => new Promise((resolve, reject) => { window.rejectSharedCopy = reject; }); });
+  await page.locator('#shared-copy').click();
+  await page.locator('#outside-focus').focus();
+  await page.evaluate(() => window.rejectSharedCopy(new Error('blocked')));
+  await expect(page.locator('[data-owner-care-link-fallback]')).toBeVisible();
+  await expect(page.locator('#outside-focus')).toBeFocused();
+  await expect(page.locator('#shared-status')).toContainText('available in the field');
+  await page.evaluate(() => { window.sharedCurrent = false; });
+  await page.locator('#shared-copy').click();
+  await expect(page.locator('[data-owner-care-link-fallback]')).toHaveCount(0);
+  await expect(page.locator('#shared-status')).toContainText('selected stay changed');
+});
+
+
+test('share cancellation restores focus in both layouts and hidden hosts do not regain focus', async ({ page, baseURL }) => {
+  for (const compact of [false, true]) {
+    await setup(page, baseURL, { share: true });
+    await page.evaluate(({ data, compact }) => {
+      window.WAFFLE_OWNER_HANDOFF.render(document.querySelector('#handoff'), data, { compact });
+      navigator.share = async payload => { window.__shareCalls.push(payload); const error = new Error('cancelled'); error.name = 'AbortError'; throw error; };
+    }, { data: valid, compact });
+    const share = page.getByRole('button', { name: 'Share', exact: true });
+    await share.click();
+    await expect(page.getByRole('status')).toContainText('Sharing cancelled');
+    await expect(share).toBeFocused();
+    await page.evaluate(() => {
+      window.shareFinished = null;
+      navigator.share = () => new Promise(resolve => { window.shareFinished = resolve; });
+    });
+    await share.click();
+    await expect.poll(() => page.evaluate(() => typeof window.shareFinished)).toBe('function');
+    await page.evaluate(() => { document.querySelector('#handoff').hidden = true; window.shareFinished(); });
+    await expect(page.locator('#handoff')).toBeHidden();
+    expect(await page.evaluate(() => !document.querySelector('#handoff').contains(document.activeElement))).toBeTruthy();
+  }
+});
+
+
+test('share cancellation restores focus when a WebKit click keeps a prior field focused', async ({ page, baseURL }) => {
+  await setup(page, baseURL, { share: true });
+  await page.evaluate(data => {
+    window.WAFFLE_OWNER_HANDOFF.render(document.querySelector('#handoff'), data);
+    navigator.share = async () => { const error = new Error('cancelled'); error.name = 'AbortError'; throw error; };
+  }, valid);
+  const previousField = page.getByLabel('Message to owner');
+  const share = page.getByRole('button', { name: 'Share', exact: true });
+  await previousField.focus();
+  await share.evaluate(button => button.click());
+  await expect(page.getByRole('status')).toContainText('Sharing cancelled');
+  await expect(share).toBeFocused();
 });

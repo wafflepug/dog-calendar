@@ -79,7 +79,7 @@ test('Care arrival and guided checkout remain reachable at the configured viewpo
 
   const next = page.locator('[data-waffle-arrival-next]');
   await expect(next).toBeVisible();
-  await expect(next).toHaveText('Next arrival · 2');
+  await expect(next).toHaveText(/Next: .+ · 2 remaining/);
   await expect(selected.locator('[data-waffle-arrival-ready]')).toHaveCount(0);
   await next.click();
   await expect(selected.locator('[data-v11217-roster-checkin]')).toBeFocused();

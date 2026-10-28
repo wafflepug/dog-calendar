@@ -128,7 +128,7 @@ test('a verified check-in drops out of Next arrival without skipping the next pe
   await addStay(page, { stay: 'stay-b', dog: 'dog-b', name: 'B' });
   await addStay(page, { stay: 'stay-c', dog: 'dog-c', name: 'C' });
   const next = page.locator('[data-waffle-arrival-next]');
-  await expect(next).toHaveText('Next arrival · 3');
+  await expect(next).toHaveText(/Next: .+ · 3 remaining/);
   await next.click();
   await expect(page.locator('.directory-card').nth(0).locator('[data-v11217-roster-checkin]')).toBeFocused();
   await page.locator('.directory-card').nth(0).evaluate(card => {
@@ -136,7 +136,7 @@ test('a verified check-in drops out of Next arrival without skipping the next pe
     card.querySelector('[data-v11217-roster-checkin]').remove();
   });
   await page.evaluate(() => window.WAFFLE_ARRIVAL_READY.refresh());
-  await expect(next).toHaveText('Next arrival · 2');
+  await expect(next).toHaveText(/Next: .+ · 2 remaining/);
   await next.click();
   await expect(page.locator('.directory-card').nth(1).locator('[data-v11217-roster-checkin]')).toBeFocused();
 });

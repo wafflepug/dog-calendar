@@ -219,3 +219,45 @@ test('confirmed discard clears the checkout note without writes or a second prom
   expect(writeRequests).toEqual([]);
   expect(runtimeErrors).toEqual([]);
 });
+
+
+test('Care recovery clears only explicit filters and named arrival navigation does not open profiles or write',async({page,baseURL},testInfo)=>{
+  const attemptedWrites=[];
+  page.on('request',request=>{if(request.url().includes('script.google')&&!['GET','HEAD'].includes(request.method()))attemptedWrites.push(request.method());});
+  const fixture=await install(page);
+  await page.goto(`${baseURL}/directory.html?careEfficiencyTen=1`,{waitUntil:'domcontentloaded'});
+  await page.waitForFunction(()=>document.documentElement.dataset.waffleUiReady==='true'&&window.WAFFLE_CARE_ROSTER_FOCUS&&window.WAFFLE_ARRIVAL_READY);
+  const grid=page.locator('#directory-grid');await expect(grid.locator('.directory-card')).toHaveCount(3);
+  const next=page.locator('[data-waffle-arrival-next]');
+  await expect(next).toContainText('Milo');await expect(next).toContainText('#00017');
+  const initialReads=fixture.reads.filter(action=>['get_guest_profile','get_guest_belongings','list_dog_identities'].includes(action)).length;
+  await next.click();
+  await expect(grid.locator(`[data-directory-stay-id="${bookings[0].stayId}"] [data-v11217-roster-checkin]`)).toBeFocused();
+  await expect(next).toContainText('#00018');
+  const search=page.locator('#guestDirectorySearch'),empty=page.locator('#directory-empty-state');
+  await search.fill('No such guest');await expect(empty).toBeVisible();
+  await expect(empty.locator('[data-directory-empty-action]')).toHaveText('Clear search');
+  await search.press('Escape');await expect(search).toHaveValue('');
+  await expect(grid.locator('.directory-card:visible')).toHaveCount(3);
+  const work=page.locator('[data-care-roster-focus]');
+  if(!await work.evaluate(node=>node.open))await work.locator('summary').click();
+  await work.locator('[data-focus-mode="leaving"]').click();await search.fill('No such guest');
+  await expect(empty).toBeVisible();await expect(empty.locator('[data-directory-empty-action]')).toHaveText('Clear search and filter');
+  for(const dark of [false,true]){
+    await page.locator('body').evaluate((node,on)=>node.classList.toggle('dark-theme',on),dark);
+    const action=empty.locator('[data-directory-empty-action]');await action.scrollIntoViewIfNeeded();
+    const geometry=await action.evaluate(node=>{const r=node.getBoundingClientRect();return{overflow:document.documentElement.scrollWidth>innerWidth,height:r.height,right:r.right,hit:node.contains(document.elementFromPoint(r.left+r.width/2,r.top+r.height/2))};});
+    expect(geometry.overflow).toBe(false);expect(geometry.height).toBeGreaterThanOrEqual(44);expect(geometry.right).toBeLessThanOrEqual(await page.evaluate(()=>innerWidth));expect(geometry.hit).toBe(true);
+    if(['chromium-390','chromium-1440'].includes(testInfo.project.name)){
+      const dir=path.join(__dirname,'..','output','care-daily-efficiency');fs.mkdirSync(dir,{recursive:true});
+      await page.screenshot({path:path.join(dir,`recovery-${testInfo.project.name}-${dark?'dark':'light'}.png`)});
+    }
+  }
+  await empty.locator('[data-directory-empty-action]').click();
+  await expect(search).toHaveValue('');await expect(search).toBeFocused();
+  await expect(work.locator('[data-focus-mode="all"]')).toHaveAttribute('aria-pressed','true');
+  await expect(grid.locator('.directory-card:visible')).toHaveCount(3);
+  await expect(page.locator('.directory-card.is-profile-active')).toHaveCount(0);
+  expect(fixture.reads.filter(action=>['get_guest_profile','get_guest_belongings','list_dog_identities'].includes(action)).length).toBe(initialReads);
+  expect(attemptedWrites).toEqual([]);
+});

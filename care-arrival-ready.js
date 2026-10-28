@@ -10,6 +10,7 @@
   let refreshQueued = false;
   let focusAnchorCard = null;
   let focusNextStayId = '';
+  let focusNextIdentity = '';
 
   function today() {
     if (typeof window.getLocalTodayDateString === 'function') {
@@ -198,46 +199,90 @@
       button.type = 'button';
       button.dataset.waffleArrivalNext = '';
       button.addEventListener('click', () => {
-        const cards = visibleCheckins(grid);
-        if (!cards.length) return;
-        let next = focusNextStayId ? cards.find(item => identity(item.closest(CARD)).stayId === focusNextStayId) : null;
-        if (!next && focusAnchorCard?.isConnected) {
-          const ordered = Array.from(grid.querySelectorAll(CARD));
-          const anchorIndex = ordered.indexOf(focusAnchorCard);
-          next = cards.find(item => ordered.indexOf(item.closest(CARD)) > anchorIndex);
-        }
-        next ||= cards[0];
-        const card = next.closest(CARD);
-        card?.querySelector('[data-v11217-roster-checkin]')?.focus({ preventScroll: false });
-        focusAnchorCard = card || null;
-        const currentIndex = cards.indexOf(next);
-        const following = cards[(currentIndex + 1) % cards.length];
-        focusNextStayId = following ? identity(following.closest(CARD)).stayId : '';
+        const target = nextTarget(grid);
+        if (!target) return;
+        if (!eligibleTarget(target.card) || JSON.stringify(identity(target.card)) !== target.signature) return;
+        target.control.scrollIntoView({ block: 'center', inline: 'nearest' });
+        target.control.focus({ preventScroll: true });
+        focusAnchorCard = target.card;
+        const candidates = eligibleTargets(grid);
+        const index = candidates.findIndex(item => item.card === target.card);
+        const following = candidates.length ? candidates[(index + 1) % candidates.length] : null;
+        focusNextStayId = following?.stayId || '';
+        focusNextIdentity = following?.signature || '';
+        refresh();
       });
       host.parentNode?.insertBefore(button, host);
     }
     const currentView = document.querySelector('[data-v1082-stay-tab].is-active')?.dataset.v1082StayTab || 'current';
     const profileMode = !!grid.closest('.directory-dashboard-fused')?.classList.contains('is-profile-mode') || !!grid.querySelector('.directory-card.is-profile-active');
     const hiddenPanel = grid.closest('[hidden]') || document.querySelector('#v1082CurrentStayPanel[hidden]');
-    const shownCount = currentView === 'current' && !profileMode && !hiddenPanel ? visibleCheckins(grid).length : 0;
-    const nextText = `Next arrival · ${shownCount}`;
+    const candidates = currentView === 'current' && !profileMode && !hiddenPanel ? eligibleTargets(grid) : [];
+    const target = chooseTarget(candidates);
+    const shownCount = candidates.length;
+    const nextText = target ? `${targetLabel(target.card)} · ${shownCount} remaining` : '';
     if (button.textContent !== nextText) button.textContent = nextText;
+    const accessibleLabel = target ? `${targetLabel(target.card)}. ${targetContext(target.card)}. ${shownCount} eligible arrivals remaining.` : '';
+    if (accessibleLabel && button.getAttribute('aria-label') !== accessibleLabel) button.setAttribute('aria-label', accessibleLabel);
+    else if (!accessibleLabel && button.hasAttribute('aria-label')) button.removeAttribute('aria-label');
     const shouldHide = shownCount === 0;
     if (button.hidden !== shouldHide) button.hidden = shouldHide;
   }
 
-  function visibleCheckins(grid) {
+  function eligibleTargets(grid) {
     if (!grid || grid.closest('[hidden]') || grid.closest('.directory-dashboard-fused')?.classList.contains('is-profile-mode')) return [];
     const seen = new Set();
-    return Array.from(grid.querySelectorAll('.directory-card')).filter(card => {
-      if (card.hidden || card.style.display === 'none' || getComputedStyle(card).display === 'none' || card.closest('[hidden]')) return false;
+    return Array.from(grid.querySelectorAll('.directory-card')).flatMap(card => {
       const status = intake(card);
       const found = evidence(card, status);
-      if (!found || seen.has(found.d.stayId)) return false;
+      if (!found || seen.has(found.d.stayId)) return [];
       seen.add(found.d.stayId);
       const control = card.querySelector('[data-v11217-roster-checkin]');
-      return !!control && !control.disabled;
-    }).map(card => card.querySelector('[data-v11217-roster-checkin]'));
+      return eligibleControl(card, control) ? [{ card, control, stayId: found.d.stayId, signature: JSON.stringify(found.d) }] : [];
+    });
+  }
+
+  function eligibleControl(card, control) {
+    if (!control || control.disabled || control.matches('[aria-disabled="true"], [aria-hidden="true"], [inert], :disabled') || control.closest('[hidden], [inert], [aria-hidden="true"], details:not([open])')) return false;
+    for (let node = control; node && node !== document.documentElement; node = node.parentElement) {
+      const style = getComputedStyle(node);
+      if (style.display === 'none' || style.visibility === 'hidden' || style.visibility === 'collapse') return false;
+    }
+    return !!card.isConnected && control.getClientRects().length > 0;
+  }
+
+  function eligibleTarget(card) {
+    if (!card?.isConnected || !evidence(card, intake(card))) return false;
+    return eligibleControl(card, card.querySelector('[data-v11217-roster-checkin]'));
+  }
+
+  function chooseTarget(candidates) {
+    if (!candidates.length) return null;
+    let target = focusNextStayId ? candidates.find(item => item.stayId === focusNextStayId && item.signature === focusNextIdentity) : null;
+    if (!target && focusAnchorCard?.isConnected) {
+      const ordered = Array.from(focusAnchorCard.closest('#directory-grid')?.querySelectorAll(CARD) || []);
+      const anchorIndex = ordered.indexOf(focusAnchorCard);
+      target = candidates.find(item => ordered.indexOf(item.card) > anchorIndex);
+    }
+    return target || candidates[0];
+  }
+
+  function nextTarget(grid) { return chooseTarget(eligibleTargets(grid)); }
+
+  function targetLabel(card) {
+    const d = identity(card);
+    const raw = d.dogNumber.trim();
+    const parsed = /^#?\d{1,5}$/.test(raw) ? Number(raw.replace(/^#/, '')) : 0;
+    const humanNumber = Number.isSafeInteger(parsed) && parsed > 0 ? ` #${String(parsed).padStart(5, '0')}` : '';
+    return `Next: ${d.name}${humanNumber}`;
+  }
+
+  function targetContext(card) {
+    const d = identity(card);
+    const raw = d.dogNumber.trim();
+    const parsed = /^#?\d{1,5}$/.test(raw) ? Number(raw.replace(/^#/, '')) : 0;
+    const dogId = Number.isSafeInteger(parsed) && parsed > 0 ? `Dog Number ${String(parsed).padStart(5, '0')}` : '';
+    return [dogId, d.owner ? `owner ${d.owner}` : '', d.start && d.end ? `Stay ${d.start} to ${d.end}` : ''].filter(Boolean).join(', ');
   }
 
   function refresh() {
@@ -298,7 +343,7 @@
       if (meaningful) scheduleRefresh();
     });
     const scope = grid.closest('.directory-dashboard-fused') || document.querySelector('.v1082-stay-panels') || grid.parentElement;
-    observer.observe(scope, { subtree: true, childList: true, attributes: true, attributeFilter: ['data-directory-stay-id', 'data-directory-dog-name', 'data-dog-name', 'data-directory-dog-id', 'data-directory-dog-number', 'data-directory-stay-key', 'data-directory-start-date', 'data-directory-end-date', 'data-directory-owner-name', 'data-v1088-owner-name', 'data-v1082-past-stay', 'style', 'class', 'hidden'] });
+    observer.observe(scope, { subtree: true, childList: true, attributes: true, attributeFilter: ['data-directory-stay-id', 'data-directory-dog-name', 'data-dog-name', 'data-directory-dog-id', 'data-directory-dog-number', 'data-directory-stay-key', 'data-directory-start-date', 'data-directory-end-date', 'data-directory-owner-name', 'data-v1088-owner-name', 'data-v1082-past-stay', 'style', 'class', 'hidden', 'open', 'disabled', 'aria-disabled', 'aria-hidden', 'inert'] });
     document.querySelectorAll('[data-v1082-stay-tab]').forEach(tab => tab.addEventListener('click', () => setTimeout(scheduleRefresh, 0)));
     document.getElementById('guestDirectorySearch')?.addEventListener('input', scheduleRefresh);
   }
@@ -306,6 +351,7 @@
   const api = { refresh, getState: () => ({ count: document.querySelectorAll(`#directory-grid ${OWN}`).length }) };
   window.WAFFLE_ARRIVAL_READY = api;
   window.addEventListener('waffle:intake-status-updated', scheduleRefresh);
+  window.addEventListener('waffle:first-paint-ready', scheduleRefresh);
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => { observe(); refresh(); }, { once: true });
   else { observe(); refresh(); }
 })();

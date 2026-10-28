@@ -18,6 +18,16 @@
     });
   }
 
+  function isVisible(node) {
+    if (!node || !node.isConnected || !node.getClientRects().length) return false;
+    for (let parent = node; parent; parent = parent.parentElement) {
+      if (parent.hidden || parent.inert || parent.getAttribute('aria-hidden') === 'true' || (parent.tagName === 'DETAILS' && !parent.open && parent !== node)) return false;
+      const style = getComputedStyle(parent);
+      if (style.display === 'none' || style.visibility === 'hidden' || style.visibility === 'collapse') return false;
+    }
+    return true;
+  }
+
   const pendingLinkCopies = new WeakSet();
   async function copyLink(value, options = {}) {
     const link = validLink(value);
@@ -26,19 +36,28 @@
     const host = options.host;
     if (!link || !button || !status || !host || !host.isConnected || pendingLinkCopies.has(button)) return false;
     const current = typeof options.isCurrent === 'function' ? options.isCurrent : () => true;
+    let fallback = host.querySelector('[data-owner-care-link-fallback]');
     if (!current()) {
+      if (fallback) fallback.remove();
       status.textContent = 'The selected stay changed. Review it before copying the care link.';
       return false;
     }
+    const startingFocus = document.activeElement;
+    let focusMoved = false;
+    const trackFocus = event => { if (event.target !== startingFocus && event.target !== document.body && event.target !== document.documentElement) focusMoved = true; };
+    const trackInput = () => { focusMoved = true; };
+    document.addEventListener('focusin', trackFocus, true);
+    document.addEventListener('pointerdown', trackInput, true);
+    document.addEventListener('keydown', trackInput, true);
     pendingLinkCopies.add(button);
     button.disabled = true;
     status.textContent = 'Copying care link…';
-    let fallback = host.querySelector('[data-owner-care-link-fallback]');
     try {
       if (!navigator.clipboard?.writeText) throw Error('Clipboard unavailable');
       await navigator.clipboard.writeText(link);
       if (!host.isConnected) return false;
       if (!current()) {
+        if (fallback) fallback.remove();
         status.textContent = 'The selected stay changed while copying. Review the current stay before copying again.';
         return false;
       }
@@ -48,6 +67,7 @@
     } catch (_) {
       if (!host.isConnected) return false;
       if (!current()) {
+        if (fallback) fallback.remove();
         status.textContent = 'The selected stay changed while copying. Review the current stay before copying again.';
         return false;
       }
@@ -64,12 +84,18 @@
       }
       fallback.value = link;
       fallback.hidden = false;
-      fallback.focus();
-      fallback.select();
-      status.textContent = 'Copy was blocked. The care link is selected: press and hold to copy, then paste it into the owner’s chat.';
+      const canSelect = isVisible(host) && !focusMoved && (document.activeElement === startingFocus || document.activeElement === document.body || document.activeElement === document.documentElement);
+      if (canSelect) {
+        fallback.focus();
+        fallback.select();
+        status.textContent = 'Copy was blocked. The care link is selected: press and hold to copy, then paste it into the owner’s chat.';
+      } else status.textContent = 'Copy was blocked. The care link is available in the field above for manual copying.';
       return false;
     } finally {
       pendingLinkCopies.delete(button);
+      document.removeEventListener('focusin', trackFocus, true);
+      document.removeEventListener('pointerdown', trackInput, true);
+      document.removeEventListener('keydown', trackInput, true);
       if (host.isConnected) button.disabled = false;
     }
   }
@@ -112,15 +138,29 @@
     status.textContent = 'Ready to copy.';
     let actionPending = false;
     const actionButtons = [copyButton];
+    let focusOrigin = null;
+    let focusMoved = false;
+    function trackActionFocus(event) { if (event.target !== focusOrigin && event.target !== document.body && event.target !== document.documentElement) focusMoved = true; }
+    function trackActionInput() { focusMoved = true; }
     function beginAction(message) {
       if (actionPending || !card.isConnected) return false;
       actionPending = true;
+      actions.setAttribute('aria-busy', 'true');
+      focusOrigin = document.activeElement;
+      focusMoved = false;
+      document.addEventListener('focusin', trackActionFocus, true);
+      document.addEventListener('pointerdown', trackActionInput, true);
+      document.addEventListener('keydown', trackActionInput, true);
       actionButtons.forEach(button => { button.disabled = true; });
       status.textContent = message;
       return true;
     }
     function endAction() {
       actionPending = false;
+      actions.removeAttribute('aria-busy');
+      document.removeEventListener('focusin', trackActionFocus, true);
+      document.removeEventListener('pointerdown', trackActionInput, true);
+      document.removeEventListener('keydown', trackActionInput, true);
       if (card.isConnected) actionButtons.forEach(button => { button.disabled = false; });
     }
     copyButton.addEventListener('click', async () => {
@@ -143,7 +183,7 @@
         if (linkLabel.parentNode !== card) card.insertBefore(linkLabel, actions);
         linkLabel.hidden = false;
         const active = document.activeElement;
-        const canSelectFallback = focusWasOnControls && (active === linkField || active === copyButton || active === document.body || active === document.documentElement);
+        const canSelectFallback = !focusMoved && isVisible(card) && isVisible(linkField) && focusWasOnControls && (active === linkField || active === copyButton || active === document.body || active === document.documentElement);
         if (canSelectFallback) {
           linkField.focus();
           linkField.select();
@@ -153,10 +193,33 @@
         }
       } finally {
         endAction();
-        if (card.isConnected && restoreFocus) copyButton.focus();
+        if (card.isConnected && restoreFocus && !focusMoved && (document.activeElement === copyButton || document.activeElement === document.body || document.activeElement === document.documentElement)) copyButton.focus();
       }
     });
     actions.appendChild(copyButton);
+    if (typeof navigator.share === 'function') {
+      const shareButton = document.createElement('button');
+      shareButton.type = 'button';
+      shareButton.textContent = 'Share';
+      shareButton.addEventListener('click', async () => {
+        if (!beginAction('Opening share sheet…')) return;
+        try {
+          await navigator.share({ title: `${dog} — owner care form`, text: message });
+          if (!card.isConnected) return;
+          status.textContent = 'Share sheet closed. Check your chosen app to confirm the message was sent.';
+        } catch (error) {
+          if (!card.isConnected) return;
+          if (error?.name === 'AbortError') status.textContent = 'Sharing cancelled. Your message is still ready to copy or share.';
+          else status.textContent = 'Sharing is unavailable. Choose Copy message and paste it into the owner’s chat.';
+        } finally {
+          const restore = card.isConnected && shareButton.isConnected && !focusMoved && (document.activeElement === shareButton || document.activeElement === focusOrigin || document.activeElement === document.body || document.activeElement === document.documentElement) && isVisible(shareButton);
+          endAction();
+          if (restore) shareButton.focus();
+        }
+      });
+      actions.appendChild(shareButton);
+      actionButtons.push(shareButton);
+    }
 
     const other = document.createElement('details');
     other.className = 'owner-handoff-options';
@@ -191,7 +254,7 @@
       } catch (_) {
         if (!card.isConnected) return;
         const active = document.activeElement;
-        if (active === startingFocus || active === document.body || active === document.documentElement) {
+        if (!focusMoved && isVisible(card) && isVisible(other) && other.open && (active === startingFocus || active === document.body || active === document.documentElement)) {
           fallbackField.focus();
           fallbackField.select();
           status.textContent = 'Copy was blocked. The text is selected: press and hold to copy, then paste it into the owner’s chat.';
@@ -208,20 +271,6 @@
       return button;
     }
     secondaryButton('Copy message', () => copy(message, 'Message copied. Paste it into the owner’s chat and send.', messageField)).className = 'primary';
-    if (typeof navigator.share === 'function') {
-      secondaryButton('Share', async event => {
-        if (!beginAction('Opening share sheet…')) return;
-        try {
-          await navigator.share({ title: `${dog} — owner care form`, text: message });
-          if (!card.isConnected) return;
-          status.textContent = 'Share sheet closed. Check your chosen app to confirm the message was sent.';
-        } catch (error) {
-          if (!card.isConnected) return;
-          if (error?.name === 'AbortError') status.textContent = 'Sharing cancelled. Your message is still ready to copy or share.';
-          else status.textContent = 'Sharing is unavailable. Choose Copy message and paste it into the owner’s chat.';
-        } finally { endAction(); }
-      });
-    }
     secondary.append(context, messageLabel, secondaryActions);
     other.append(summary, secondary);
     card.append(heading, hint, linkLabel, actions, other, status);
@@ -267,39 +316,57 @@
     status.setAttribute('aria-live', 'polite');
     status.textContent = 'The owner can use this link on their phone. Send it through your usual chat.';
 
+    let actionPending = false;
+    const actionButtons = [];
+    let focusOrigin = null, focusMoved = false;
+    function trackFocus(event) { if (event.target !== focusOrigin && event.target !== document.body && event.target !== document.documentElement) focusMoved = true; }
+    function trackInput() { focusMoved = true; }
+    function beginAction(message) { if (actionPending || !card.isConnected) return false; actionPending = true; actions.setAttribute('aria-busy', 'true'); focusOrigin = document.activeElement; focusMoved = false; document.addEventListener('focusin', trackFocus, true); document.addEventListener('pointerdown', trackInput, true); document.addEventListener('keydown', trackInput, true); actionButtons.forEach(control => control.disabled = true); status.textContent = message; return true; }
+    function endAction() { actionPending = false; actions.removeAttribute('aria-busy'); document.removeEventListener('focusin', trackFocus, true); document.removeEventListener('pointerdown', trackInput, true); document.removeEventListener('keydown', trackInput, true); if (card.isConnected) actionButtons.forEach(control => control.disabled = false); }
     function button(text, handler) {
       const control = document.createElement('button');
       control.type = 'button';
       control.textContent = text;
       control.addEventListener('click', handler);
       actions.appendChild(control);
+      actionButtons.push(control);
       return control;
     }
     async function copy(value, success) {
+      if (!beginAction('Copying…')) return;
       try {
         if (!navigator.clipboard?.writeText) throw Error('Clipboard unavailable');
         await navigator.clipboard.writeText(value);
+        if (!card.isConnected) return;
         status.textContent = success;
       } catch (_) {
+        if (!card.isConnected) return;
         field.value = value;
-        field.focus();
-        field.select();
-        status.textContent = 'Copy was blocked. The text is selected: press and hold to copy, then paste it into the owner’s chat.';
-      }
+        if (!focusMoved && (document.activeElement === focusOrigin || document.activeElement === document.body || document.activeElement === document.documentElement)) {
+          field.focus(); field.select();
+          status.textContent = 'Copy was blocked. The text is selected: press and hold to copy, then paste it into the owner’s chat.';
+        } else status.textContent = 'Copy was blocked. The text is available above for manual copying.';
+      } finally { endAction(); }
     }
     button('Copy message', () => { field.value = message; return copy(message, 'Message copied. Paste it into the owner’s chat and send.'); }).className = 'primary';
     button('Copy link', () => copy(link, 'Link copied. Paste it into the owner’s chat and send.'));
     if (typeof navigator.share === 'function') {
       button('Share', async event => {
         const control = event.currentTarget;
-        control.disabled = true;
+        if (!beginAction('Opening share sheet…')) return;
         try {
           await navigator.share({ title: `${dog} — owner care form`, text: message });
+          if (!card.isConnected) return;
           status.textContent = 'Share sheet closed. Check your chosen app to confirm the message was sent.';
         } catch (error) {
+          if (!card.isConnected) return;
           if (error?.name === 'AbortError') status.textContent = 'Sharing cancelled. Your message is still ready to copy or share.';
           else status.textContent = 'Sharing is unavailable. Choose Copy message and paste it into the owner’s chat.';
-        } finally { control.disabled = false; }
+        } finally {
+          const restore = card.isConnected && control.isConnected && !focusMoved && isVisible(card) && (document.activeElement === control || document.activeElement === focusOrigin || document.activeElement === document.body || document.activeElement === document.documentElement);
+          endAction();
+          if (restore) control.focus();
+        }
       });
     }
     card.append(heading, hint, label, actions, status);

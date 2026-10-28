@@ -2,8 +2,8 @@
    Build: 2026.08.27.04
    Historical base styles remain compatibility sources during Phase 3A, but pages no longer
    reference them individually. Preserve this import order until modules are folded in. */
-@import url("waffle-app.css?build=2026.08.27.04&rev=2026.10.28.08");
-@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.10.28.08");
+@import url("waffle-app.css?build=2026.08.27.04&rev=2026.10.28.09");
+@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.10.28.09");
 @import url("waffle-v10.8.2.css?build=2026.08.27.04");
 @import url("waffle-v10.8.3.css?build=2026.08.27.04");
 @import url("waffle-v10.8.5.css?build=2026.08.27.04");
@@ -11,12 +11,12 @@
 @import url("waffle-v10.8.7.css?build=2026.08.27.04");
 @import url("waffle-v10.8.8.css?build=2026.08.27.04");
 @import url("waffle-v10.8.9.css?build=2026.08.27.04");
-@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.10.28.08");
+@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.10.28.09");
 @import url("waffle-v11.0.3.css?build=2026.08.27.04");
 @import url("waffle-v11.0.5.css?build=2026.08.27.04");
-@import url("waffle-v11.1.94.css?build=2026.10.28.08");
-@import url("waffle-v11.1.95.css?build=2026.10.28.08");
-@import url("waffle-v11.1.96.css?build=2026.10.28.08&rev=2026.10.28.08");
+@import url("waffle-v11.1.94.css?build=2026.10.28.09");
+@import url("waffle-v11.1.95.css?build=2026.10.28.09");
+@import url("waffle-v11.1.96.css?build=2026.10.28.09&rev=2026.10.28.09");
 
 /* ============================================================
    MOBILE FIRST-PAINT STABILITY GATE
@@ -3299,3 +3299,8 @@ body[data-waffle-page="calendar"] #whHomePotentials[data-home-state="loading"] .
 .v11217-departure-banner>.v11217-departure-actions{grid-column:1;grid-row:2;margin-top:0;min-width:0}
 .v11217-departure-banner>[data-v11217-departure-dismiss]{grid-column:2;grid-row:2}
 .v11217-departure-banner>[data-v11217-departure-status]{grid-column:1/-1;grid-row:3;margin-top:0}
+
+/* Named next-arrival destinations wrap without crowding phone controls. */
+[data-waffle-arrival-next]{box-sizing:border-box;text-align:left;overflow-wrap:anywhere;scroll-margin-block:90px 110px}
+.owner-handoff-actions[aria-busy="true"] button{cursor:progress}
+.owner-handoff-status{overflow-wrap:anywhere}
