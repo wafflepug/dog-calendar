@@ -72,7 +72,8 @@ test('returned booking link is the single primary copy action and does not trigg
   await saveConfirmed(page);
   const host = page.locator('#p4BookingLinkResult');
   await expect(host.getByRole('button', { name: 'Copy owner care link', exact: true })).toBeVisible();
-  await expect(host.locator('button:visible')).toHaveCount(1);
+  await expect(host.locator('button:visible')).toHaveCount(2);
+  await expect(host.getByRole('button', { name: 'Share', exact: true })).toBeVisible();
   const secondary = host.locator('details');
   await expect(secondary).toHaveCount(1);
   await expect(secondary).not.toHaveAttribute('open', '');
