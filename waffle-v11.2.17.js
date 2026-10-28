@@ -19,6 +19,7 @@
   const baseEnhanceCareCard = window.v110EnhanceCareCard;
   let activeCard = null;
   let previousFocus = null;
+  let earlyCheckoutBusy = false;
   let enhanceQueued = false;
   const activeStatusSaves = new Set();
 
@@ -425,12 +426,21 @@
       </div>
     `;
     document.body.appendChild(modal);
+    const note = modal.querySelector('[data-v11217-note]');
+    note.style.maxHeight = '180px';
+    note.style.overflowY = 'auto';
+    modal.addEventListener('input', event => { if (event.target.matches('[data-v11217-note]')) sizeEarlyNote(modal); });
     return modal;
   }
 
-  function closeModal() {
+  function closeModal(savedSuccess = false) {
+    savedSuccess = savedSuccess === true;
     const modal = document.getElementById('v11217EarlyCheckoutModal');
-    if (!modal || modal.hidden) return;
+    if (!modal || modal.hidden || (earlyCheckoutBusy && !savedSuccess)) return;
+    if (!savedSuccess && String(modal.querySelector('[data-v11217-note]')?.value || '').trim() && !window.confirm('Discard this unsaved checkout note?')) {
+      modal.querySelector('[data-v11217-note]')?.focus({ preventScroll: true });
+      return;
+    }
     modal.hidden = true;
     activeCard = null;
     const focus = previousFocus;
@@ -481,10 +491,12 @@
     modal.querySelector('[data-v11217-note]').value = '';
     modal.querySelector('[data-v11217-feedback]').hidden = true;
     modal.hidden = false;
+    sizeEarlyNote(modal);
     window.setTimeout(() => modal.querySelector('[data-v11217-note]')?.focus(), 0);
   }
 
   async function confirmEarlyCheckout(button) {
+    if (earlyCheckoutBusy) return;
     const card = activeCard;
     if (!card || !earlyCheckoutEligible(card)) {
       closeModal();
@@ -514,6 +526,10 @@
     button.disabled = true;
     if (retryButton) retryButton.disabled = true;
     button.textContent = '⏳ Recording early checkout…';
+    earlyCheckoutBusy = true;
+    modal.querySelector('[data-v11217-note]').readOnly = true;
+    modal.querySelectorAll('[data-v11217-close]').forEach(control => { control.disabled = true; });
+    modal.setAttribute('aria-busy', 'true');
     try {
       if (typeof window.v110SaveOperationalStatus !== 'function') {
         throw new Error('Stay operations service is unavailable.');
@@ -561,7 +577,7 @@
         }));
       } catch (_) {}
       if (typeof window.v110ClearActionFeedback === 'function') window.v110ClearActionFeedback(card, `${p.dogName} checked out early successfully.`);
-      closeModal();
+      closeModal(true);
       scheduleEnhance();
     } catch (error) {
       const message = String(error?.message || error || 'Unknown error');
@@ -570,6 +586,10 @@
       const retry = actionCanRetry(error) && identityMatchesCard(card, payload, originalStayId);
       setEarlyFeedback(`Early checkout could not be saved. ${message}${guidance}`, retry ? () => confirmEarlyCheckout(button) : null);
     } finally {
+      earlyCheckoutBusy = false;
+      modal.querySelector('[data-v11217-note]').readOnly = false;
+      modal.querySelectorAll('[data-v11217-close]').forEach(control => { control.disabled = false; });
+      modal.removeAttribute('aria-busy');
       button.disabled = false;
       button.textContent = originalText;
       if (retryButton) retryButton.disabled = false;
@@ -685,6 +705,7 @@
     modal.innerHTML = `<section class="v11217-modal-card">
       <header class="v11217-modal-head"><div><small>DEPARTURE</small><h3 id="v11217GuidedCheckoutTitle" tabindex="-1">Check out</h3><p>Review this stay before confirming departure.</p></div><button type="button" class="v11217-modal-close" data-v11217-guided-close aria-label="Close checkout">×</button></header>
       <div class="v11217-modal-body"><div class="v11217-modal-dog"><strong data-v11217-guided-dog></strong><span data-v11217-guided-dogid></span><div class="v11217-guided-dates"><span><small>Booked stay</small><span data-v11217-guided-dates></span></span><span><small data-v11217-guided-checkout-caption>Checkout today</small><span data-v11217-guided-checkout-today></span></span></div></div>
+      <div class="v11217-guided-owner" data-v11217-guided-owner hidden><span data-v11217-guided-owner-name></span><a data-v11217-guided-owner-call hidden>Call owner</a></div><details class="v11217-guided-handover" data-v11217-guided-handover hidden><summary>Saved handover note</summary><div data-v11217-guided-handover-note></div></details>
       <div class="v11217-guided-checklist"><section class="v11217-guided-evidence" data-v11217-guided-belongings-section><strong>Belongings</strong><details data-v11217-guided-belongings-details><summary data-v11217-guided-belongings-summary></summary><div data-v11217-guided-belongings></div></details><div class="v11217-guided-unknown" data-v11217-guided-belongings-unknown hidden>Not available in this summary</div></section><section class="v11217-guided-evidence" data-v11217-guided-medication-section><strong>Medication</strong><div data-v11217-guided-medication></div><div class="v11217-guided-unknown" data-v11217-guided-medication-unknown hidden>Not available in this summary</div></section></div>
       <div class="v11217-guided-missing" data-v11217-guided-missing hidden><span data-v11217-guided-missing-message>Review saved care before handover.</span><button type="button" data-v11217-guided-review-care>Review missing details</button></div>
       <div class="v11217-field"><label for="v11217GuidedCheckoutNote">Departure note (optional)</label><textarea id="v11217GuidedCheckoutNote" data-v11217-guided-note rows="2" maxlength="1000" placeholder="Optional handover details…"></textarea></div>
@@ -692,16 +713,19 @@
       <footer class="v11217-modal-actions"><button type="button" class="v11217-cancel" data-v11217-guided-close>Cancel</button><button type="button" class="v11217-confirm" data-v11217-guided-confirm>Confirm checkout</button></footer>
       </section>`;
     document.body.appendChild(modal);
+    const note = modal.querySelector('[data-v11217-guided-note]');
+    note.style.maxHeight = '180px';
+    note.style.overflowY = 'auto';
     modal.addEventListener('click', event => {
       if (event.target.closest('[data-v11217-guided-review-care]')) { void reviewGuidedCare(); return; }
-      if (!guidedCheckoutBusy && (event.target === modal || event.target.closest('[data-v11217-guided-close]'))) closeGuidedCheckout();
+      if (!guidedCheckoutBusy && (event.target === modal || event.target.closest('[data-v11217-guided-close]'))) closeGuidedCheckout(false);
       if (event.target.closest('[data-v11217-guided-confirm]')) runGuidedCheckout();
     });
     modal.addEventListener('input', event => {
       if (event.target.matches('[data-v11217-guided-note]')) sizeGuidedNote(modal);
     });
     modal.addEventListener('keydown', event => {
-      if (event.key === 'Escape') { event.preventDefault(); if (!guidedCheckoutBusy) closeGuidedCheckout(); }
+      if (event.key === 'Escape') { event.preventDefault(); if (!guidedCheckoutBusy) closeGuidedCheckout(false); }
       if (event.key === 'Tab') {
         const visible = node => {
           if (!node.isConnected || node.disabled || node.closest('[hidden],[aria-hidden="true"],[inert]') || !node.getClientRects().length) return false;
@@ -725,6 +749,25 @@
     note.style.height = 'auto';
     note.style.height = `${Math.min(180, Math.max(76, note.scrollHeight + border))}px`;
   }
+  function sizeEarlyNote(modal) {
+    const note = modal?.querySelector('[data-v11217-note]');
+    if (!note) return;
+    const border = note.offsetHeight - note.clientHeight;
+    note.style.height = 'auto';
+    note.style.overflowY = 'auto';
+    note.style.height = `${Math.min(180, Math.max(82, note.scrollHeight + border))}px`;
+  }
+  function safeOwnerTel(value) {
+    const raw = String(value || '').trim();
+    let normalized = '';
+    try {
+      normalized = typeof window.normalizeDirectoryPhoneForTel === 'function'
+        ? String(window.normalizeDirectoryPhoneForTel(raw) || '')
+        : (/^[+\d\s().-]+$/.test(raw) && (!raw.includes('+') || /^\s*\+/.test(raw)) && (raw.match(/\+/g) || []).length <= 1 ? `${raw.startsWith('+') ? '+' : ''}${raw.replace(/\D/g, '')}` : '');
+    } catch (_) { return ''; }
+    const digits = normalized.replace(/\D/g, '');
+    return digits.length >= 7 && digits.length <= 15 && /^\+?\d+$/.test(normalized) ? normalized : '';
+  }
   let guidedTrigger = null;
   function openGuidedCheckout(card, trigger, attempt, payload) {
     if (guidedCheckoutBusy) return;
@@ -736,6 +779,22 @@
     guidedReviewSequence += 1;
     guidedReviewPromise = null;
     modal.querySelector('[data-v11217-guided-dog]').textContent = payload.dogName || 'Guest';
+    const owner = modal.querySelector('[data-v11217-guided-owner]');
+    const ownerName = String(payload.ownerName || '').trim();
+    const ownerTel = safeOwnerTel(payload.phone);
+    owner.hidden = !ownerName && !ownerTel;
+    modal.querySelector('[data-v11217-guided-owner-name]').textContent = ownerName ? `Owner: ${ownerName}` : (ownerTel ? 'Owner contact' : '');
+    const callOwner = modal.querySelector('[data-v11217-guided-owner-call]');
+    callOwner.hidden = !ownerTel;
+    callOwner.textContent = ownerTel ? `Call owner · ${String(payload.phone || '').trim()}` : 'Call owner';
+    if (ownerTel) callOwner.href = `tel:${ownerTel}`; else callOwner.removeAttribute('href');
+    const savedNote = card.querySelector('[data-directory-edit-field="notes"]')?.dataset?.directoryCurrentValue;
+    const handover = modal.querySelector('[data-v11217-guided-handover]');
+    const handoverText = String(savedNote || '');
+    const meaningfulHandover = handoverText.trim() && !/^(?:not set|no notes?(?: saved| recorded)?|no handover note(?: recorded| saved)?|not provided|none|n\/a|loading(?:\.\.\.)?|not loaded|not available|unavailable|unable to load|error loading)(?:\s*\.)?$/i.test(handoverText.trim());
+    handover.hidden = !meaningfulHandover;
+    handover.open = false;
+    modal.querySelector('[data-v11217-guided-handover-note]').textContent = meaningfulHandover ? handoverText : '';
     const dogNumber = card.dataset?.directoryDogNumber || card.querySelector('#dogNumber, [data-directory-dog-number], .directory-dog-number')?.textContent?.trim();
     modal.querySelector('[data-v11217-guided-dogid]').textContent = dogNumber ? `Dog ID: ${dogNumber}` : '';
     modal.querySelector('[data-v11217-guided-dates]').textContent = `${formatDate(payload.startDate)} → ${formatDate(payload.endDate)}`;
@@ -918,9 +977,15 @@
       }
     }
   }
-  function closeGuidedCheckout() {
+  function closeGuidedCheckout(savedSuccess = false) {
+    savedSuccess = savedSuccess === true;
+    if (guidedCheckoutBusy && !savedSuccess) return;
     const modal = document.getElementById('v11217GuidedCheckout');
     if (!modal || modal.hidden) return;
+    if (!savedSuccess && String(modal.querySelector('[data-v11217-guided-note]')?.value || '').trim() && !window.confirm('Discard this unsaved departure note?')) {
+      modal.querySelector('[data-v11217-guided-note]')?.focus({ preventScroll: true });
+      return;
+    }
     modal.hidden = true;
     guidedReviewSequence += 1;
     guidedReviewPromise = null;
@@ -957,7 +1022,7 @@
       const note = String(modal.querySelector('[data-v11217-guided-note]').value || '').trim();
       const saved = await attempt(note);
       if (saved?.ok === true || saved === true) {
-        closeGuidedCheckout();
+        closeGuidedCheckout(true);
       }
       else {
         const feedback = modal.querySelector('[data-v11217-guided-feedback]');

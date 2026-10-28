@@ -192,3 +192,32 @@ test('early checkout uses its review modal and controls fit on a narrow mobile v
   expect(await page.locator('[data-directory-stay-id="stay-past"] [data-v11217-roster-actions]').count()).toBe(0);
   expect(await page.evaluate(() => window.profileOpenCount)).toBe(0);
 });
+
+
+test('early checkout note grows and refuses accidental discard without changing the stay',async({page})=>{
+ await page.evaluate(()=>{window.__pickupNativeConfirm=window.confirm;});
+ await setup(page);await page.evaluate(()=>{window.confirm=window.__pickupNativeConfirm;});await page.setViewportSize({width:390,height:844});
+ const card=page.locator('[data-directory-stay-id="stay-b"]');
+ await card.locator('.v11217-roster-more-actions summary').click();await card.locator('[data-v11217-early-checkout]').click();
+ const dialog=page.locator('#v11217EarlyCheckoutModal'),note=dialog.locator('[data-v11217-note]');
+ await expect(note).toHaveAttribute('maxlength','1000');
+ const initial=await note.evaluate(node=>node.getBoundingClientRect().height);
+ const text=Array.from({length:16},(_,i)=>`Pickup detail ${i}`).join('\n');await note.fill(text);
+ expect(await note.evaluate(node=>node.getBoundingClientRect().height)).toBeGreaterThan(initial);
+ expect(await note.evaluate(node=>node.getBoundingClientRect().height)).toBeLessThanOrEqual(180);
+ page.once('dialog',prompt=>prompt.dismiss());await page.keyboard.press('Escape');
+ await expect(dialog).toBeVisible();await expect(note).toHaveValue(text);await expect(note).toBeFocused();
+ await note.fill('');expect(await note.evaluate(node=>node.getBoundingClientRect().height)).toBe(initial);
+ await note.fill('Keep this pickup note');page.once('dialog',prompt=>prompt.accept());await page.keyboard.press('Escape');
+ await expect(dialog).toBeHidden();expect(await page.evaluate(()=>window.savedPayloads)).toEqual([]);
+ await card.locator('[data-v11217-early-checkout]').click();await expect(note).toHaveValue('');
+ await note.fill('Owner collected the blue bag.');
+ await page.evaluate(()=>{window.confirm=()=>{throw new Error('Confirmed checkout must not ask to discard its saved note');};});
+ await page.evaluate(()=>{window.saveGate=new Promise(resolve=>{window.releaseSave=resolve;});});
+ await dialog.locator('[data-v11217-confirm]').click();
+ await expect(note).toHaveJSProperty('readOnly',true);
+ for(const close of await dialog.locator('[data-v11217-close]').all())await expect(close).toBeDisabled();
+ await page.keyboard.press('Escape');await expect(dialog).toBeVisible();
+ await page.evaluate(()=>window.releaseSave());await expect(dialog).toBeHidden();
+ expect(await page.evaluate(()=>window.savedPayloads.length)).toBe(1);
+});

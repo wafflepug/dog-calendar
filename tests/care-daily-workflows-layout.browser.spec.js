@@ -140,6 +140,7 @@ test('checkout reviews exact Fern care in place and clears the note on explicit 
     await page.screenshot({path:path.join(reviewedShots,`${label}.png`),fullPage:false});
   }
 
+  page.once('dialog',dialog=>dialog.accept());
   await modal.locator('[data-v11217-guided-close]').last().click();
   await expect(modal).toBeHidden();
   await checkout.click();
@@ -153,7 +154,7 @@ test('checkout reviews exact Fern care in place and clears the note on explicit 
   expect(runtimeErrors).toEqual([]);
 });
 
-test('canceling and reopening checkout clears its note without writes or legacy confirmation',async({page,baseURL})=>{
+test('confirmed discard clears the checkout note without writes or a second prompt',async({page,baseURL})=>{
   await page.setViewportSize({width:390,height:844});
   const runtimeErrors=[];
   const writeRequests=[];
@@ -164,7 +165,8 @@ test('canceling and reopening checkout clears its note without writes or legacy 
   });
   page.on('dialog',async dialog=>{
     legacyDialogs.push({type:dialog.type(),message:dialog.message()});
-    await dialog.dismiss();
+    if(dialog.type()==='confirm'&&dialog.message()==='Discard this unsaved departure note?')await dialog.accept();
+    else await dialog.dismiss();
   });
   const fixture=await install(page);
   await page.goto(`${baseURL}/directory.html?checkoutCareBridgeFixture=1`,{waitUntil:'domcontentloaded'});
@@ -187,12 +189,12 @@ test('canceling and reopening checkout clears its note without writes or legacy 
   await fern.locator('[data-v11217-roster-checkout]').click();
   await expect(modal).toBeVisible();
   await expect(note).toHaveValue('');
-  expect(legacyDialogs).toEqual([]);
+  expect(legacyDialogs).toEqual([{type:'confirm',message:'Discard this unsaved departure note?'}]);
   expect(writeRequests).toEqual([]);
 
   await modal.locator('[data-v11217-guided-close]').last().click();
   await expect(modal).toBeHidden();
-  expect(legacyDialogs).toEqual([]);
+  expect(legacyDialogs).toEqual([{type:'confirm',message:'Discard this unsaved departure note?'}]);
   expect(writeRequests).toEqual([]);
   expect(runtimeErrors).toEqual([]);
 });
