@@ -5,7 +5,9 @@ Reviewed 17 September 2026. Repository: `wafflepug/dog-calendar`; always start i
 
 ## Current desktop iteration - 28 October 2026
 
-Candidate 2026.10.28.10: [Care arrival and rebooking](care-arrival-rebooking.md). Ten bounded refinements to returning-dog context, date entry, arrival summaries, checklist continuity and scoped arrival work. Preserve exact identity gates, explicit writes and lazy reads. Next: audit planned-visit review and incomplete-intake recovery with representative sitter tasks.
+Candidate 2026.10.29.01: [Care visual cleanup](care-visual-cleanup.md). Five recommended presentation refinements: one clear status, compact selected work filters, quiet roster surfaces, consistent primary actions and no single-arrival shortcut. Preserve warnings, dates, identity and existing requests. Next: review typography and desktop reading width using the cleaned baseline.
+
+Published 2026.10.28.10 (PR #274): [Care arrival and rebooking](care-arrival-rebooking.md). Ten bounded refinements to returning-dog context, date entry, arrival summaries, checklist continuity and scoped arrival work. Preserve exact identity gates, explicit writes and lazy reads. Next: audit planned-visit review and incomplete-intake recovery with representative sitter tasks.
 
 Published 2026.10.28.09 (PR #273): [Care daily efficiency](care-daily-efficiency.md). Ten scoped improvements to filtered-empty recovery, keyboard search, explicit owner sharing and named arrival shortcuts. Preserve loaded-data-only filtering, exact identities, drafts and existing writes. Next: review arrival handover and rebooking with representative solo-sitter tasks before adding controls.
 

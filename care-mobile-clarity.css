@@ -1079,3 +1079,40 @@ body[data-waffle-page="directory"] #v11217GuidedCheckout .v11217-guided-handover
 body[data-waffle-page="directory"] #v11217GuidedCheckout .v11217-guided-handover>summary {min-height:44px;align-content:center;cursor:pointer}
 body[data-waffle-page="directory"] #v11217GuidedCheckout [data-v11217-guided-handover-note] {white-space:pre-wrap;overflow-wrap:anywhere;padding-block:6px}
 body[data-waffle-page="directory"] #v11217GuidedCheckout :is([data-v11217-guided-owner-call],.v11217-guided-handover>summary):focus-visible {outline:3px solid var(--wh-focus,#7562db);outline-offset:2px;border-radius:4px}
+
+/* Quiet roster surfaces retain a clear boundary per guest and visible keyboard focus. */
+body[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused:not(.is-profile-active)>.directory-guest-tile-open{
+ border:0!important;border-radius:0;box-shadow:none!important;background:transparent!important;
+}
+body[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused:not(.is-profile-active){
+ box-shadow:none!important;background:var(--wh-surface,#fff)!important;
+}
+body[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused>.directory-guest-tile-open:focus-visible{
+ outline:3px solid var(--wh75-accent-strong,#6d28d9);outline-offset:-3px;
+}
+/* Primary Care actions share the configured brand; warning/destructive actions keep their meaning. */
+body[data-waffle-page="directory"]{--care-primary-fill:var(--wh75-accent-strong,#6d28d9);--care-primary-ink:#fff;--care-primary-hover:var(--wh75-accent-ink,#4c1d95)}
+body[data-waffle-page="directory"].dark-theme{--care-primary-fill:var(--wh75-accent,#c084fc);--care-primary-ink:#0f172a;--care-primary-hover:var(--wh75-accent-strong,#a855f7)}
+body[data-waffle-page="directory"] #directoryTabPanel .directory-card .v110-operation-actions [data-v110-checkin],
+body[data-waffle-page="directory"] #directoryTabPanel .directory-card .v110-operation-actions [data-v110-checkout]:not([data-v11217-early-checkout]),
+body[data-waffle-page="directory"] #directoryTabPanel .directory-card .v11217-roster-actions>[data-v11217-roster-checkin],
+body[data-waffle-page="directory"] #directoryTabPanel .directory-card .v11217-roster-actions>[data-v11217-roster-checkout],
+body[data-waffle-page="directory"] #directoryTabPanel .directory-card .directory-care-brief-action.is-primary{
+ border-color:var(--care-primary-fill)!important;background:var(--care-primary-fill)!important;color:var(--care-primary-ink)!important;box-shadow:none;
+}
+body[data-waffle-page="directory"] #directoryTabPanel .directory-card .v110-operation-actions [data-v110-checkin]:hover,
+body[data-waffle-page="directory"] #directoryTabPanel .directory-card .v110-operation-actions [data-v110-checkout]:not([data-v11217-early-checkout]):hover,
+body[data-waffle-page="directory"] #directoryTabPanel .directory-card .v11217-roster-actions>[data-v11217-roster-checkin]:hover,
+body[data-waffle-page="directory"] #directoryTabPanel .directory-card .v11217-roster-actions>[data-v11217-roster-checkout]:hover,
+body[data-waffle-page="directory"] #directoryTabPanel .directory-card .directory-care-brief-action.is-primary:hover{
+ border-color:var(--care-primary-hover)!important;background:var(--care-primary-hover)!important;color:var(--care-primary-ink)!important;
+}
+body[data-waffle-page="directory"] #directoryTabPanel .directory-card .v11217-roster-more-actions>summary,
+body[data-waffle-page="directory"] #directoryTabPanel .directory-card .v11217-profile-more-actions>summary{
+ border-color:var(--wh-border,#dbe3ea);background:var(--wh-surface-muted,#f1f5f9);color:var(--wh-text,#172033);box-shadow:none;
+}
+body[data-waffle-page="directory"] #directoryTabPanel .directory-dashboard-fused:not(.is-profile-mode) .guest-directory-toolbar>.care-roster-focus-clear{
+ grid-column:auto!important;justify-self:start;border-radius:999px;
+}
+body[data-waffle-page="directory"] #directoryTabPanel .directory-dashboard-fused:not(.is-profile-mode) .guest-directory-toolbar>.care-roster-focus[open]{grid-column:1/-1}
+body[data-waffle-page="directory"] #directoryTabPanel .guest-directory-toolbar:has(>.care-roster-focus-clear:not([hidden]))>.care-record-maintenance{grid-column:1/-1}

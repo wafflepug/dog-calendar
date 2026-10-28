@@ -268,8 +268,14 @@
     const accessibleLabel = target ? `${targetLabel(target.card)}. ${targetContext(target.card)}. ${shownCount} eligible arrivals remaining.` : '';
     if (accessibleLabel && button.getAttribute('aria-label') !== accessibleLabel) button.setAttribute('aria-label', accessibleLabel);
     else if (!accessibleLabel && button.hasAttribute('aria-label')) button.removeAttribute('aria-label');
-    const shouldHide = shownCount === 0;
+    const shouldHide = shownCount < 2;
+    const shortcutHadFocus = document.activeElement === button;
     if (button.hidden !== shouldHide) button.hidden = shouldHide;
+    if (shouldHide && shownCount === 1 && shortcutHadFocus) {
+      const remaining = candidates[0];
+      remaining.control.scrollIntoView({ block: 'center', inline: 'nearest' });
+      remaining.control.focus({ preventScroll: true });
+    }
   }
 
   function eligibleTargets(grid) {

@@ -24,6 +24,8 @@ async function setup(page) {
   </main></body></html>`);
   await page.evaluate(({ rosterRuntime, workflow, arrival }) => {
     window.getLocalTodayDateString = () => '2026-10-18';
+    window.careRosterReads = 0;
+    window.queryAppsScript = async () => { window.careRosterReads++; return { result: 'success', bookings: [] }; };
     window.v110OperationDisplayState = card => ({ code: card.dataset.operationState || 'unknown' });
     window.eval(rosterRuntime);
     document.querySelectorAll('[data-v1082-stay-tab]').forEach(tab => tab.addEventListener('click', () => {
@@ -72,6 +74,10 @@ test('operational filters combine with canonical search and stay tabs; unknown a
   await expect(filters).toContainText("2 loaded stays have unknown or conflicting operational status and are omitted from today's counts");
   await filters.locator('summary').click();
   await filters.locator('[data-focus-mode="arriving"]').click();
+  await expect(filters).not.toHaveAttribute('open', '');
+  await expect(filters.locator('summary')).toHaveText('Arriving today · 4');
+  await expect(filters.locator('summary')).toBeFocused();
+  await expect(page.locator('[data-focus-clear]')).toHaveAttribute('aria-label', 'Clear Arriving today filter');
   await expect(page.locator('#directory-grid .directory-card:visible')).toHaveCount(4);
   await page.locator('#guestDirectorySearch').fill('milo');
   await expect(page.locator('#directory-grid .directory-card:visible')).toHaveCount(3);
@@ -79,10 +85,18 @@ test('operational filters combine with canonical search and stay tabs; unknown a
   await expect(page.locator('#directory-search-status')).toContainText('Arriving today');
   await expect(page.locator('#directory-search-status')).toContainText('No loaded guests match');
   await page.locator('[data-focus-clear]').click();
+  await expect(filters.locator('summary')).toBeFocused();
+  await expect(filters.locator('summary')).toHaveText("Today's work");
+  await expect(page.locator('[data-focus-clear]')).toBeHidden();
   await expect(page.locator('#guestDirectorySearch')).toHaveValue('nobody');
   await expect(page.locator('[data-focus-mode="all"]')).toHaveAttribute('aria-pressed', 'true');
   await page.locator('#guestDirectorySearch').fill('');
+  await filters.locator('summary').click();
+  await expect(filters).toContainText("2 loaded stays have unknown or conflicting operational status and are omitted from today's counts");
   await filters.locator('[data-focus-mode="leaving"]').click();
+  await expect(filters).not.toHaveAttribute('open', '');
+  await expect(filters.locator('summary')).toHaveText('Leaving today · 2');
+  await expect(filters.locator('summary')).toBeFocused();
   await expect(page.locator('#directory-grid .directory-card:visible')).toHaveCount(2);
   await page.locator('[data-v1082-stay-tab="future"]').click();
   await expect(page.locator('[data-v1082-stay-panel="future"] .directory-card:visible')).toHaveCount(1);
@@ -114,9 +128,10 @@ test('operational filters combine with canonical search and stay tabs; unknown a
     window.testRefreshMutations = observer.takeRecords().map(record => ({ type: record.type, target: record.target.outerHTML?.slice(0, 160) || record.target.textContent?.slice(0, 80), attribute: record.attributeName }));
     observer.disconnect();
   });
-  await expect(filters).not.toHaveAttribute('open', '');
+  await expect(filters).toHaveAttribute('open', '');
   expect(await page.evaluate(() => window.testRefreshMutations)).toEqual([]);
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
+  expect(await page.evaluate(() => window.careRosterReads)).toBe(0);
   for (const button of await page.locator('[data-focus-mode], [data-focus-clear]').all()) {
     expect(await button.evaluate(node => node.getBoundingClientRect().height)).toBeGreaterThanOrEqual(44);
   }
@@ -153,5 +168,7 @@ test('arrival dates follow the local stay-day boundary and include same-day dayc
   await expect(filters.locator('[data-focus-count="arriving"]')).toHaveText('1');
   await filters.locator('summary').click();
   await filters.locator('[data-focus-mode="arriving"]').click();
+  await expect(filters).not.toHaveAttribute('open', '');
+  await expect(filters.locator('summary')).toBeFocused();
   await expect(page.locator('#directory-grid .directory-card:visible')).toHaveCount(1);
 });

@@ -274,3 +274,43 @@ test('Care recovery clears only explicit filters and named arrival navigation do
   expect(fixture.reads.filter(action=>['get_guest_profile','get_guest_belongings','list_dog_identities'].includes(action)).length).toBe(initialReads);
   expect(attemptedWrites).toEqual([]);
 });
+
+
+test('Care visual cleanup keeps one status, compact filters and themed readable primary actions',async({page,baseURL},info)=>{
+  const fixture=await install(page,{bookingOverrides:[{stayId:bookings[0].stayId,riskFlags:{medicated:true}}]});
+  await page.goto(`${baseURL}/directory.html?visualCleanup=1`,{waitUntil:'domcontentloaded'});
+  await page.waitForFunction(()=>document.documentElement.dataset.waffleUiReady==='true'&&window.WAFFLE_CARE_ROSTER_FOCUS);
+  const grid=page.locator('#directory-grid');await expect(grid.locator('.directory-card')).toHaveCount(3);
+  const first=grid.locator(`[data-directory-stay-id="${bookings[0].stayId}"]`),last=grid.locator(`[data-directory-stay-id="${bookings[2].stayId}"]`);
+  const row=first.locator('[data-open-directory-profile]'),checkin=first.locator('[data-v11217-roster-checkin]'),checkout=last.locator('[data-v11217-roster-checkout]');
+  await expect(row.locator('.v1118-care-status')).toHaveText('ARRIVING TODAY');
+  await expect(row.locator('.v1118-care-signal',{hasText:'Arrival today'})).toHaveCount(0);
+  await expect(row.locator('.v1118-care-signal',{hasText:'Medication'})).toBeVisible();
+  await expect(last.locator('.v1118-care-signal',{hasText:'Checkout today'})).toHaveCount(0);
+  const next=page.locator('[data-waffle-arrival-next]');await expect(next).toBeVisible();
+  const readsBefore=fixture.reads.filter(x=>x==='get_guest_profile').length;
+  for(const dark of [false,true])for(const accent of ['waffle-purple','coastal-blue','eucalyptus','sunset-coral','warm-honey']){
+    await page.evaluate(({dark,accent})=>{document.body.classList.toggle('dark-theme',dark);document.documentElement.dataset.waffleColourStyle=accent;},{dark,accent});
+    const appearance=await checkin.evaluate(button=>{
+      const s=getComputedStyle(button),row=button.closest('.directory-card').querySelector('[data-open-directory-profile]'),r=getComputedStyle(row),card=getComputedStyle(button.closest('.directory-card'));
+      const light=colour=>{const a=colour.match(/[\d.]+/g).slice(0,3).map(Number).map(v=>{v/=255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4;});return .2126*a[0]+.7152*a[1]+.0722*a[2];};
+      const token=document.createElement('span');token.style.color=getComputedStyle(document.body).getPropertyValue('--care-primary-fill').trim();const a=light(s.color),b=light(s.backgroundColor);return{background:s.backgroundColor,expected:token.style.color,contrast:(Math.max(a,b)+.05)/(Math.min(a,b)+.05),height:button.getBoundingClientRect().height,rowBorder:r.borderTopWidth,rowShadow:r.boxShadow,cardBorder:parseFloat(card.borderTopWidth),width:innerWidth,scroll:document.documentElement.scrollWidth};
+    });
+    expect(appearance.background).toBe(appearance.expected);expect(appearance.contrast).toBeGreaterThanOrEqual(4.5);expect(appearance.height).toBeGreaterThanOrEqual(44);
+    expect(appearance.rowBorder).toBe('0px');expect(appearance.rowShadow).toBe('none');expect(appearance.cardBorder).toBeGreaterThan(0);expect(appearance.scroll).toBeLessThanOrEqual(appearance.width);
+    expect(await checkout.evaluate(node=>getComputedStyle(node).backgroundColor)).toBe(appearance.background);
+  }
+  const work=page.locator('[data-care-roster-focus]');await work.locator('summary').click();await work.locator('[data-focus-mode="arriving"]').click();
+  await expect(work).not.toHaveAttribute('open','');await expect(work.locator('summary')).toBeFocused();await expect(work.locator('summary')).toHaveText('Arriving today · 2');
+  await expect(page.locator('[data-focus-clear]')).toHaveAccessibleName('Clear Arriving today filter');
+  const filterLayout=await work.evaluate(node=>{const a=node.getBoundingClientRect(),b=document.querySelector('[data-focus-clear]').getBoundingClientRect();return{overlap:Math.min(a.bottom,b.bottom)-Math.max(a.top,b.top),separate:a.right<=b.left+1};});
+  expect(filterLayout.overlap).toBeGreaterThanOrEqual(40);expect(filterLayout.separate).toBe(true);
+  const search=page.locator('#guestDirectorySearch');await search.fill('#00017');await expect(next).toBeHidden();
+  await expect(checkin).toBeVisible();await expect(row.locator('.v1118-care-signal',{hasText:'Medication'})).toBeVisible();
+  const dir=path.join(__dirname,'..','output','care-visual-cleanup');fs.mkdirSync(dir,{recursive:true});
+  for(const dark of [false,true]){
+    await page.evaluate(dark=>{document.body.classList.toggle('dark-theme',dark);document.documentElement.dataset.waffleColourStyle='waffle-purple';},dark);
+    await page.screenshot({path:path.join(dir,`care-clean-${info.project.name}-${dark?'dark':'light'}.png`),animations:'disabled'});
+  }
+  expect(fixture.reads.filter(x=>x==='get_guest_profile').length).toBe(readsBefore);
+});

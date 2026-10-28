@@ -40,7 +40,7 @@ async function install(page,{bookingOverrides=[],holdProfileRead=false,fernMedic
       const params=new URL(url).searchParams,callback=params.get('callback');let payload={};try{payload=JSON.parse(params.get('payload')||'{}');}catch(_){}
       reads.push(resolved.action);
       let result={result:'success',records:[],bookings:[],summaries:[]};
-      if(resolved.action==='get_guest_directory')result={result:'success',bookings:fixtureBookings,summaries:fixtureBookings.map(b=>({stayKey:b.stayKey,riskFlags:{}})),digitalIntakes,legacyIntakes:[]};
+      if(resolved.action==='get_guest_directory')result={result:'success',bookings:fixtureBookings,summaries:fixtureBookings.map(b=>({stayKey:b.stayKey,riskFlags:b.riskFlags||{}})),digitalIntakes,legacyIntakes:[]};
       if(resolved.action==='get_intake_statuses')result={result:'success',records:digitalIntakes};
       if(resolved.action==='get_stay_operations')result={result:'success',records:operations};
       if(resolved.action==='get_past_guest_directory')result={result:'success',bookings:completed,totalPastStays:completed.length,returned:completed.length,summaries:[],digitalIntakes,legacyIntakes:[]};
