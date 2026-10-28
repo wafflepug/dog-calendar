@@ -106,6 +106,8 @@
         mode = button.dataset.focusMode || 'all';
         renderControls();
         applyCanonicalFilter();
+        details.open = false;
+        summary.focus({ preventScroll: true });
       });
     });
     details.querySelector('[data-focus-clear]').addEventListener('click', () => {
@@ -143,8 +145,12 @@
     if (clear.hidden !== hideClear) clear.hidden = hideClear;
     if (clear.disabled) clear.disabled = false;
     const summary = details.querySelector('[data-focus-summary]');
-    const nextSummary = mode === 'all' ? "Today's work" : `Today's work · ${MODES[mode]}`;
+    const nextSummary = mode === 'all' ? "Today's work" : `${MODES[mode]} · ${data[mode]}`;
     if (summary.textContent !== nextSummary) summary.textContent = nextSummary;
+    const summaryLabel = mode === 'all' ? "Today's work filters" : `${MODES[mode]} filter · ${data[mode]} loaded stays`;
+    if (summary.getAttribute('aria-label') !== summaryLabel) summary.setAttribute('aria-label', summaryLabel);
+    const clearLabel = mode === 'all' ? 'Clear filter' : `Clear ${MODES[mode]} filter`;
+    if (clear.getAttribute('aria-label') !== clearLabel) clear.setAttribute('aria-label', clearLabel);
     const status = details.querySelector('[data-focus-status]');
     const unknownText = data.unknown ? ` ${data.unknown} loaded stay${data.unknown === 1 ? '' : 's'} have unknown or conflicting operational status and are omitted from today's counts${mode === 'all' ? '' : ' and this filter'}.` : '';
     const nextStatus = mode === 'all'

@@ -286,26 +286,8 @@
     }
   }
 
-  function shortenArrivingBadges(root = document) {
-    if (pageName() !== 'directory') return;
-    root.querySelectorAll?.('.directory-card').forEach(card => {
-      const walker = document.createTreeWalker(card, NodeFilter.SHOW_TEXT);
-      const changes = [];
-      while (walker.nextNode()) {
-        const node = walker.currentNode;
-        if (/\bArriving Today\b/i.test(String(node.nodeValue || ''))) changes.push(node);
-      }
-      changes.forEach(node => {
-        node.nodeValue = String(node.nodeValue || '').replace(/Arriving Today/gi, 'Arriving');
-      });
-      card.querySelectorAll('[title],[aria-label]').forEach(el => {
-        if (el.title) el.title = el.title.replace(/Arriving Today/gi, 'Arriving');
-        if (el.hasAttribute('aria-label')) {
-          el.setAttribute('aria-label', String(el.getAttribute('aria-label') || '').replace(/Arriving Today/gi, 'Arriving'));
-        }
-      });
-    });
-  }
+  // Compatibility hook: date-specific Care status labels now wrap without shortening.
+  function shortenArrivingBadges() {}
 
   function wrapDirectoryRender() {
     const base = window.applyGuestDirectoryResponse;

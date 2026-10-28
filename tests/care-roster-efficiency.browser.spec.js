@@ -31,7 +31,6 @@ test('roster search clear, Today filter reset and stay tabs stay efficient and k
   const disclosure = toolbar.locator('[data-care-roster-focus]');
   await disclosure.locator('summary').click();
   await disclosure.locator('[data-focus-mode="arriving"]').click();
-  await disclosure.locator('summary').click();
   const reset = toolbar.locator('[data-focus-clear]');
   await expect(reset).toBeVisible();
   await expect(disclosure).not.toHaveAttribute('open', '');

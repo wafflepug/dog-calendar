@@ -401,7 +401,6 @@
     const dogName = String(card?.dataset?.directoryDogName || card?.dataset?.dogName || '');
     const summary = (typeof directorySummaryRecordsCache !== 'undefined' ? directorySummaryRecordsCache?.[stayKey] : null) || {};
     const risk = (typeof careRiskRecordsCache !== 'undefined' ? careRiskRecordsCache?.[stayKey]?.riskFlags : null) || summary.riskFlags || {};
-    const status = careCardStatus(card);
     const phone = String(card?.dataset?.v1088Phone || card?.dataset?.phone || '').trim();
     const signals = [];
     if (risk.medicated === true) signals.push({ icon: '💊', label: 'Medication', weight: 90 });
@@ -409,8 +408,6 @@
     if (risk.escapeRisk === true) signals.push({ icon: '🚪', label: 'Escape risk', weight: 92 });
     if (risk.separationAnxiety === true) signals.push({ icon: '😟', label: 'Separation anxiety', weight: 88 });
     if (risk.weightManagement === true) signals.push({ icon: '⚖️', label: 'Weight management', weight: 60 });
-    if (status === 'LEAVING TODAY') signals.push({ icon: '👋', label: 'Checkout today', weight: 100 });
-    if (status === 'ARRIVING TODAY') signals.push({ icon: '🛬', label: 'Arrival today', weight: 75 });
     if (reminderMatchesDog(dogName)) signals.push({ icon: '📌', label: 'Reminder due', weight: 98 });
     let intakeState = null;
     if (typeof window.WAFFLE_INTAKE_STATUS?.getState === 'function') {

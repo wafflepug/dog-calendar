@@ -3,15 +3,16 @@ const {install,bookings}=require('./fixtures/care-daily-workflows');
 
 test('the 320px roster keeps long identity and care badges readable with enlarged text',async({page,baseURL})=>{
   const longName='Alexandria Peterson-Smith-Wellington and Family';
-  await install(page,{bookingOverrides:[{stayId:bookings[0].stayId,dogName:longName,stayKey:`${longName.toLowerCase()}|2026-10-18|2026-10-20`}]});
+  await install(page,{bookingOverrides:[{stayId:bookings[0].stayId,dogName:longName,riskFlags:{medicated:true},stayKey:`${longName.toLowerCase()}|2026-10-18|2026-10-20`}]});
   await page.setViewportSize({width:320,height:800});
   await page.goto(`${baseURL}/directory.html?dailyCareFixture=1`,{waitUntil:'domcontentloaded'});
   await page.waitForFunction(()=>document.documentElement.dataset.waffleUiReady==='true');
   const row=page.locator(`#directory-grid [data-directory-stay-id="${bookings[0].stayId}"] .directory-guest-tile-open`);
   await expect(row).toBeVisible();
   await expect(row.locator('.directory-guest-tile-name')).toHaveText(longName);
-  await expect(row.locator('.v1118-care-status')).toHaveText('Arriving');
-  await expect(row.locator('.v1118-care-signal',{hasText:'Arrival today'})).toBeVisible();
+  await expect(row.locator('.v1118-care-status')).toHaveText('ARRIVING TODAY');
+  await expect(row.locator('.v1118-care-signal',{hasText:'Arrival today'})).toHaveCount(0);
+  await expect(row.locator('.v1118-care-signal',{hasText:'Medication'})).toBeVisible();
   await row.evaluate(button=>{
     for(const element of button.querySelectorAll('.directory-guest-tile-name,.directory-roster-context,.v1118-care-status,.v1118-care-signal')){
       element.style.setProperty('font-size',`${parseFloat(getComputedStyle(element).fontSize)*2}px`,'important');

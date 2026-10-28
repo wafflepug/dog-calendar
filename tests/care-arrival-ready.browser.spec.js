@@ -135,14 +135,15 @@ test('authoritative operation collision excludes a card; quick-focus control hid
 test('operation update event refreshes conflict evidence and wrapper visibility stays live', async ({page})=>{
   await setup(page); await page.evaluate(()=>{window.conflicted=false;window.v110OperationDisplayState=()=>window.conflicted?{code:'identity_conflict'}:{code:'date_active'};});
   await addCard(page,{stayId:'event',dogId:'dog',key:'event'});
-  const next=page.locator('[data-waffle-arrival-next]'); await expect(next).toHaveText('Next: Milo · 1 remaining');
+  await addCard(page,{stayId:'event-2',dogId:'dog-2',key:'event-2'});
+  const next=page.locator('[data-waffle-arrival-next]'); await expect(next).toHaveText('Next: Milo · 2 remaining');
   await page.evaluate(()=>{window.conflicted=true;window.dispatchEvent(new CustomEvent('waffle:stay-operation-updated'));});
   await expect(next).toBeHidden();
   await page.evaluate(()=>{window.conflicted=false;window.dispatchEvent(new CustomEvent('waffle:stay-operation-updated'));});
-  await expect(next).toHaveText('Next: Milo · 1 remaining');
-  await page.locator('[data-v11217-roster-checkin]').evaluate(control=>{const wrapper=document.createElement('div');wrapper.dataset.checkinWrapper='';control.before(wrapper);wrapper.append(control);});
+  await expect(next).toHaveText('Next: Milo · 2 remaining');
+  await page.locator('[data-directory-stay-id="event"] [data-v11217-roster-checkin]').evaluate(control=>{const wrapper=document.createElement('div');wrapper.dataset.checkinWrapper='';control.before(wrapper);wrapper.append(control);});
   await page.locator('[data-checkin-wrapper]').evaluate(node=>{node.hidden=true;}); await expect(next).toBeHidden();
-  await page.locator('[data-checkin-wrapper]').evaluate(node=>{node.hidden=false;}); await expect(next).toHaveText('Next: Milo · 1 remaining');
+  await page.locator('[data-checkin-wrapper]').evaluate(node=>{node.hidden=false;}); await expect(next).toHaveText('Next: Milo · 2 remaining');
 });
 
 test('same-name household arrivals keep separate review targets and never imply care is verified', async ({ page }) => {
@@ -172,7 +173,7 @@ test('same-name household arrivals keep separate review targets and never imply 
     window.WAFFLE_ARRIVAL_READY.refresh();
   });
   await expect(reviews).toHaveCount(0);
-  await expect(page.locator('[data-waffle-arrival-next]')).toHaveText('Next: Milo #00017 · 1 remaining');
+  await expect(page.locator('[data-waffle-arrival-next]')).toBeHidden();
   expect(await page.evaluate(() => window.reads)).toBe(0);
 });
 
@@ -345,35 +346,56 @@ test('next arrival target stays aligned with live order, filtering, removal, and
   await expect(page.locator('[data-directory-stay-id="stay-a"] [data-v11217-roster-checkin]')).toBeFocused();
   await expect(shortcut).toHaveText('Next: Pip #00012 · 2 remaining');
   await page.locator('[data-directory-stay-id="stay-a"]').evaluate(card => card.remove());
-  await expect(shortcut).toHaveText('Next: Pip #00012 · 1 remaining');
-  await expect(shortcut).toHaveAccessibleName(/Dog Number 00012.*Stay 2026-10-18 to 2026-10-20/);
-  await shortcut.click();
-  await expect(page.locator('[data-directory-stay-id="stay-b"] [data-v11217-roster-checkin]')).toBeFocused();
+  await expect(shortcut).toBeHidden();
+  await expect(shortcut).toHaveAttribute('aria-label',/Dog Number 00012.*Stay 2026-10-18 to 2026-10-20/);
   expect(await page.evaluate(() => window.reads)).toBe(0);
 });
 
-test('disabled, aria-hidden, CSS-hidden, and closed-disclosure check-ins are excluded and recover live', async ({ page }) => {
+test('Next arrival stays hidden below two eligible check-ins and recovers live', async ({ page }) => {
   await setup(page);
   await addCard(page, { stayId: 'pending', dogId: 'd1', key: 'pending' });
+  await addCard(page, { stayId: 'pending-2', dogId: 'd2', key: 'pending-2' });
   const next = page.locator('[data-waffle-arrival-next]');
-  const control = page.locator('[data-v11217-roster-checkin]');
+  const control = page.locator('[data-directory-stay-id="pending"] [data-v11217-roster-checkin]');
   await control.evaluate(node => { node.disabled = true; });
   await expect(next).toBeHidden();
   await control.evaluate(node => { node.disabled = false; });
-  await expect(next).toHaveText('Next: Milo · 1 remaining');
+  await expect(next).toHaveText('Next: Milo · 2 remaining');
   await control.evaluate(node => node.setAttribute('aria-hidden', 'true'));
   await expect(next).toBeHidden();
   await control.evaluate(node => node.removeAttribute('aria-hidden'));
   await expect(next).toBeVisible();
-  await page.locator('.directory-card').evaluate(card => { card.style.visibility = 'hidden'; });
+  await page.locator('[data-directory-stay-id="pending"]').evaluate(card => { card.style.visibility = 'hidden'; });
   await expect(next).toBeHidden();
-  await page.locator('.directory-card').evaluate(card => { card.style.visibility = ''; card.innerHTML = '<details><summary>Closed</summary><button data-v11217-roster-checkin>Check In</button></details>'; });
+  await page.locator('[data-directory-stay-id="pending"]').evaluate(card => { card.style.visibility = ''; card.innerHTML = '<details><summary>Closed</summary><button data-v11217-roster-checkin>Check In</button></details>'; });
   await expect(next).toBeHidden();
-  await page.locator('.directory-card > details:not([data-arrival-task-list])').evaluate(node => { node.open = true; });
-  await expect(next).toHaveText('Next: Milo · 1 remaining');
-  await page.locator('[data-v11217-roster-checkin]').click();
-  await expect(page.locator('.directory-card')).not.toHaveAttribute('data-opened', 'true');
+  await page.locator('[data-directory-stay-id="pending"] > details:not([data-arrival-task-list])').evaluate(node => { node.open = true; });
+  await expect(next).toHaveText('Next: Milo · 2 remaining');
+  await control.click();
+  await expect(page.locator('[data-directory-stay-id="pending"]')).not.toHaveAttribute('data-opened', 'true');
   expect(await page.evaluate(() => window.reads)).toBe(0);
+});
+
+test('shortcut transfers focus only from itself when two arrivals drop to one', async ({page})=>{
+  await setup(page);
+  await addCard(page,{stayId:'one',dogId:'d1',key:'one'});
+  await addCard(page,{stayId:'two',dogId:'d2',key:'two'});
+  const shortcut=page.locator('[data-waffle-arrival-next]');
+  const first=page.locator('[data-directory-stay-id="one"] [data-v11217-roster-checkin]');
+  const second=page.locator('[data-directory-stay-id="two"] [data-v11217-roster-checkin]');
+  await expect(shortcut).toHaveText('Next: Milo · 2 remaining');
+  await shortcut.focus();
+  await page.locator('[data-directory-stay-id="two"]').evaluate(card=>card.remove());
+  await expect(shortcut).toBeHidden();
+  await expect(first).toBeFocused();
+  await expect(first).toBeInViewport();
+  await addCard(page,{stayId:'two-again',dogId:'d2',key:'two-again'});
+  await expect(shortcut).toHaveText('Next: Milo · 2 remaining');
+  await first.focus();
+  await page.locator('[data-directory-stay-id="two-again"]').evaluate(card=>card.remove());
+  await expect(shortcut).toBeHidden();
+  await expect(first).toBeFocused();
+  expect(await page.evaluate(()=>window.reads)).toBe(0);
 });
 
 test('first-paint-ready refreshes visible arrival eligibility without a grid mutation', async ({ page }) => {
@@ -385,6 +407,7 @@ test('first-paint-ready refreshes visible arrival eligibility without a grid mut
     window.WAFFLE_INTAKE_STATUS = { getState: () => ({ code: 'unknown' }) };
   });
   await addCard(page, { stayId: 'first-paint', dogId: 'd1', key: 'first-paint' });
+  await addCard(page, { stayId: 'first-paint-2', dogId: 'd2', key: 'first-paint-2' });
   await page.addScriptTag({ content: addon });
   const next = page.locator('[data-waffle-arrival-next]');
   await expect(next).toBeHidden();
@@ -392,7 +415,7 @@ test('first-paint-ready refreshes visible arrival eligibility without a grid mut
     document.documentElement.dataset.waffleUiReady = 'true';
     window.dispatchEvent(new CustomEvent('waffle:first-paint-ready', { detail: { reason: 'fixture' } }));
   });
-  await expect(next).toHaveText('Next: Milo · 1 remaining');
-  await page.locator('[data-waffle-arrival-next]').click();
-  await expect(page.locator('[data-v11217-roster-checkin]')).toBeFocused();
+  await expect(next).toHaveText('Next: Milo · 2 remaining');
+  await next.click();
+  await expect(page.locator('[data-directory-stay-id="first-paint"] [data-v11217-roster-checkin]')).toBeFocused();
 });
