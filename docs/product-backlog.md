@@ -5,7 +5,9 @@ Reviewed 17 September 2026. Repository: `wafflepug/dog-calendar`; always start i
 
 ## Current desktop iteration - 28 October 2026
 
-Candidate 2026.10.28.07: [Care pickup and handover](care-pickup-handover.md). Five refinements: owner contact and saved handover in checkout review, explicit discard protection for unsaved notes, expanding early-checkout notes and safe pending copy/share feedback. Preserve exact stay verification, explicit saves, complete medication and existing reads. Next: assess the verified checkout completion and return-to-roster experience before adding more controls.
+Candidate 2026.10.28.08: [Care checkout completion](care-checkout-completion.md). Direct copy/share, identity-verified completion focus and position-preserving dismissal to the current roster. Preserve explicit checkout, drafts, exact identities and existing reads. Next: inspect empty-roster recovery and returning from owner sharing with a sitter.
+
+Published 2026.10.28.07 (PR #271): [Care pickup and handover](care-pickup-handover.md). Five refinements: owner contact and saved handover in checkout review, explicit discard protection for unsaved notes, expanding early-checkout notes and safe pending copy/share feedback. Preserve exact stay verification, explicit saves, complete medication and existing reads. Next: assess the verified checkout completion and return-to-roster experience before adding more controls.
 
 Published 2026.10.28.06 (PR #270): [Care contact access](care-contact-access.md). Readable owner phone numbers, direct missing-number editing, callable saved emergency/vet numbers and focused emergency lookup. Keep existing identities, drafts, lazy reads and plain missing states. Next: review practical pickup/handover tasks before adding any more profile controls.
 

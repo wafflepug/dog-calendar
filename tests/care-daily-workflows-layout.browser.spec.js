@@ -24,7 +24,7 @@ test('the complete Care runtime combines filters, truthful setup and optional ve
   await expect(focus).toBeHidden();
   await expect(first.locator('[data-directory-detail="profile"]')).toHaveAttribute('data-profile-read-state','fresh');
   await expect(first.locator('[data-compact-intake-status]')).toHaveText('Form received');
-  await expect(first.locator('[data-v1118-care-signals]')).not.toContainText('Intake missing');
+  await expect(first.locator('[data-v1118-care-signals]').filter({hasText:'Intake missing'})).toHaveCount(0);
   const setup=first.locator('.directory-care-readiness');
   await expect(setup.locator('[data-care-readiness-summary]')).toHaveText('Details');
   await expect(setup.locator('[data-care-readiness-summary]')).toHaveAttribute('data-state','neutral');
@@ -63,6 +63,27 @@ test('the complete Care runtime combines filters, truthful setup and optional ve
   await expect(banner).toBeVisible();
   const disclosure=banner.locator('[data-v11217-departure-disclosure]');
   await expect(disclosure).not.toHaveAttribute('open','');
+  const directCopy=banner.locator('[data-v11217-departure-copy]');
+  await expect(directCopy).toBeVisible();
+  await expect(directCopy).toBeFocused();
+  for(const dark of [false,true]){
+    await page.locator('body').evaluate((node,on)=>node.classList.toggle('dark-theme',on),dark);
+    await directCopy.scrollIntoViewIfNeeded();
+    const geometry=await banner.evaluate(node=>{
+      const controls=[...node.querySelectorAll('button')].filter(el=>el.getClientRects().length);
+      const rects=controls.map(el=>el.getBoundingClientRect());
+      return {overflow:document.documentElement.scrollWidth>innerWidth,
+        sizes:rects.every(r=>r.height>=44&&r.width>=44&&r.left>=0&&r.right<=innerWidth),
+        overlap:rects.some((a,i)=>rects.some((b,j)=>i<j&&a.left<b.right&&a.right>b.left&&a.top<b.bottom&&a.bottom>b.top)),
+        hit:controls.every(el=>{const r=el.getBoundingClientRect();return el.contains(document.elementFromPoint(r.left+r.width/2,r.top+r.height/2));})};
+    });
+    expect(geometry).toEqual({overflow:false,sizes:true,overlap:false,hit:true});
+    if(['chromium-390','chromium-1440'].includes(testInfo.project.name)){
+      const dir=path.join(__dirname,'..','output','care-checkout-completion');fs.mkdirSync(dir,{recursive:true});
+      await page.screenshot({path:path.join(dir,`completion-${testInfo.project.name}-${dark?'dark':'light'}.png`)});
+    }
+  }
+  await page.locator('body').evaluate(node=>node.classList.remove('dark-theme'));
   await disclosure.locator('summary').click();
   await expect(banner.locator('textarea')).toHaveValue(/Fern checked out on 18 Oct 2026/);
   await banner.locator('[data-v11217-departure-copy]').click();

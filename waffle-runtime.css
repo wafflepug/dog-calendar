@@ -2,8 +2,8 @@
    Build: 2026.08.27.04
    Historical base styles remain compatibility sources during Phase 3A, but pages no longer
    reference them individually. Preserve this import order until modules are folded in. */
-@import url("waffle-app.css?build=2026.08.27.04&rev=2026.10.28.07");
-@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.10.28.07");
+@import url("waffle-app.css?build=2026.08.27.04&rev=2026.10.28.08");
+@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.10.28.08");
 @import url("waffle-v10.8.2.css?build=2026.08.27.04");
 @import url("waffle-v10.8.3.css?build=2026.08.27.04");
 @import url("waffle-v10.8.5.css?build=2026.08.27.04");
@@ -11,12 +11,12 @@
 @import url("waffle-v10.8.7.css?build=2026.08.27.04");
 @import url("waffle-v10.8.8.css?build=2026.08.27.04");
 @import url("waffle-v10.8.9.css?build=2026.08.27.04");
-@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.10.28.07");
+@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.10.28.08");
 @import url("waffle-v11.0.3.css?build=2026.08.27.04");
 @import url("waffle-v11.0.5.css?build=2026.08.27.04");
-@import url("waffle-v11.1.94.css?build=2026.10.28.07");
-@import url("waffle-v11.1.95.css?build=2026.10.28.07");
-@import url("waffle-v11.1.96.css?build=2026.10.28.07&rev=2026.10.28.07");
+@import url("waffle-v11.1.94.css?build=2026.10.28.08");
+@import url("waffle-v11.1.95.css?build=2026.10.28.08");
+@import url("waffle-v11.1.96.css?build=2026.10.28.08&rev=2026.10.28.08");
 
 /* ============================================================
    MOBILE FIRST-PAINT STABILITY GATE
@@ -2940,7 +2940,7 @@ body[data-waffle-page="directory"] .care-roster-focus{flex:1 1 100%;min-width:0;
 .care-roster-focus button:disabled{opacity:.6;cursor:default}
 .care-roster-focus [data-focus-count]{display:inline-block;min-width:1.2em;margin-left:4px;font-weight:800}
 .care-roster-focus [data-focus-status]{margin:0;padding:0 12px 12px;overflow-wrap:anywhere}
-.v11217-departure-banner{display:flex;gap:8px;align-items:flex-start;max-width:100%;box-sizing:border-box;margin:0 0 12px;padding:8px 10px;border:1px solid var(--wh-border,#c6d0e4);border-radius:12px;background:var(--wh-surface,#fff);color:var(--wh-text,#17243b);font:500 14px/1.5 system-ui,sans-serif}
+.v11217-departure-banner{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:start;max-width:100%;box-sizing:border-box;margin:0 0 12px;padding:8px 10px;border:1px solid var(--wh-border,#c6d0e4);border-radius:12px;background:var(--wh-surface,#fff);color:var(--wh-text,#17243b);font:500 14px/1.5 system-ui,sans-serif}
 .v11217-departure-banner details{flex:1;min-width:0}.v11217-departure-banner summary{min-height:44px;align-content:center;cursor:pointer;font-weight:700;overflow-wrap:anywhere}
 .v11217-departure-banner label{display:block;margin-top:8px;font-weight:650}
 .v11217-departure-banner textarea{box-sizing:border-box;width:100%;min-height:100px;padding:10px;border:1px solid var(--wh-border,#c6d0e4);border-radius:10px;background:var(--wh-surface,#fff);color:inherit;font:400 16px/1.5 system-ui,sans-serif;resize:vertical}
@@ -3293,3 +3293,9 @@ body[data-waffle-page="calendar"] #whHomePotentials[data-home-state="loading"] .
 
 /* The optional departure note starts compact and grows within the scrollable sheet. */
 #v11217GuidedCheckout [data-v11217-guided-note] { min-height:76px; max-height:180px; overflow-y:auto; }
+
+/* Checkout completion keeps message actions visible without expanding its text. */
+.v11217-departure-banner>details{grid-column:1/-1}
+.v11217-departure-banner>.v11217-departure-actions{grid-column:1;grid-row:2;margin-top:0;min-width:0}
+.v11217-departure-banner>[data-v11217-departure-dismiss]{grid-column:2;grid-row:2}
+.v11217-departure-banner>[data-v11217-departure-status]{grid-column:1/-1;grid-row:3;margin-top:0}

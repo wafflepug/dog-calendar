@@ -495,3 +495,30 @@ test('dirty departure note requires explicit discard and rejection keeps the dra
  await expect(dialog).toBeHidden();await openCheckout(page.getByTestId('selected-card'));await expect(note).toHaveValue('');
  expect(await page.evaluate(()=>window.writes)).toEqual([]);
 });
+
+
+test('verified normal checkout focuses its real completion while failure and cancel stay in the sheet', async ({page}) => {
+  await setup(page);
+  await page.evaluate(() => {
+    window.v110ValidStayId = value => !!value;
+    const save = window.v110SaveOperationalStatus;
+    window.v110SaveOperationalStatus = async (...args) => {
+      const result = await save(...args);
+      if (result.record) Object.assign(result.record, {dogId: args[0].dogId, actualCheckoutDate:'2026-10-18'});
+      return result;
+    };
+  });
+  await page.addScriptTag({content: require('node:fs').readFileSync(require('node:path').join(__dirname,'..','care-departure-message.js'),'utf8')});
+  const card = page.getByTestId('selected-card');
+  await openCheckout(card);
+  await page.evaluate(() => {window.failNext=true;});
+  const dialog=page.locator('#v11217GuidedCheckout');
+  await dialog.locator('[data-v11217-guided-confirm]').click();
+  await expect(dialog).toBeVisible();
+  await expect(page.locator('#v11217DepartureMessageBanner')).toHaveCount(0);
+  await dialog.locator('[data-v11217-guided-confirm]').click();
+  await expect(dialog).toBeHidden();
+  await expect(page.locator('[data-v11217-departure-copy]')).toBeFocused();
+  await expect(page.locator('[data-v11217-departure-disclosure]')).toHaveJSProperty('open',false);
+  expect(await page.evaluate(()=>window.writes.length)).toBe(2);
+});

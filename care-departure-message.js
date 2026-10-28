@@ -5,6 +5,18 @@
 
   const DATE_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
   let currentContext = null;
+  const pendingCopyActions = new Set();
+  function trackPendingCopyInteraction(event) {
+    for (const action of pendingCopyActions) {
+      const target = event.target;
+      if (event.type === 'focusin') {
+        if (target !== action.control && ![document.body, document.documentElement].includes(target)) action.userMoved = true;
+      } else if (!target?.closest?.('[data-v11217-departure-copy],[data-v11217-departure-share]')) action.userMoved = true;
+    }
+  }
+  document.addEventListener('pointerdown', trackPendingCopyInteraction, true);
+  document.addEventListener('keydown', trackPendingCopyInteraction, true);
+  document.addEventListener('focusin', trackPendingCopyInteraction, true);
 
   function validDate(value) {
     const match = DATE_RE.exec(String(value || '').trim());
@@ -122,12 +134,18 @@
     const dismiss = document.createElement('button');
     dismiss.type = 'button'; dismiss.textContent = 'Dismiss'; dismiss.dataset.v11217DepartureDismiss = '';
     actions.append(copy, share);
-    disclosure.append(summary, label, message, actions, status);
-    banner.append(disclosure, dismiss);
+    disclosure.append(summary, label, message);
+    banner.append(disclosure, actions, status, dismiss);
 
     let copying = false;
     let sharing = false;
+    let actionSequence = 0;
+    let disclosureChangedDuringAction = false;
+    let actionStartedCollapsed = false;
+    summary.addEventListener('click', () => { if (copying) disclosureChangedDuringAction = true; });
+    disclosure.addEventListener('toggle', () => { if (copying) disclosureChangedDuringAction = true; });
     const isCurrent = () => banner.isConnected && currentContext === context;
+    const actionIsCurrent = sequence => isCurrent() && sequence === actionSequence;
     const setPending = pending => {
       copy.disabled = pending;
       share.disabled = pending;
@@ -137,51 +155,80 @@
     copy.addEventListener('click', async () => {
       if (copying || sharing || !isCurrent()) return;
       copying = true;
+      const sequence = ++actionSequence;
+      actionStartedCollapsed = !disclosure.open;
+      disclosureChangedDuringAction = false;
+      const recoveryAction = { control: copy, userMoved: false };
+      pendingCopyActions.add(recoveryAction);
       setPending(true);
       copy.textContent = 'Copying message...';
       status.textContent = 'Copying message. Nothing has been sent.';
       try {
         if (!navigator.clipboard?.writeText) throw new Error('Clipboard unavailable');
         await navigator.clipboard.writeText(message.value);
-        if (isCurrent()) status.textContent = 'Message copied. Paste it into your usual chat and send it when ready.';
+        if (actionIsCurrent(sequence)) status.textContent = 'Message copied. Paste it into your usual chat and send it when ready.';
       } catch (_) {
-        if (isCurrent()) {
+        if (actionIsCurrent(sequence)) {
+          const ownsRecovery = !disclosureChangedDuringAction && !recoveryAction.userMoved && !banner.hidden;
+          const canReveal = actionStartedCollapsed && ownsRecovery;
           const visible = !banner.hidden && disclosure.open && message.getClientRects().length;
-          if (visible) {
-            message.focus();
-            message.select();
-          }
-          status.textContent = visible
+          if (canReveal) disclosure.open = true;
+          const selectMessage = ownsRecovery && (canReveal || visible);
+          if (selectMessage) { message.focus(); message.select(); }
+          status.textContent = selectMessage
             ? 'Copy was blocked. The message is selected; copy it and paste it into your usual chat.'
             : 'Copy was blocked. Open the message to copy it manually.';
         }
       } finally {
         copying = false;
-        if (isCurrent()) { copy.textContent = 'Copy message'; setPending(false); }
+        pendingCopyActions.delete(recoveryAction);
+        if (actionIsCurrent(sequence)) { copy.textContent = 'Copy message'; setPending(false); }
       }
     });
     share.addEventListener('click', async () => {
       if (copying || sharing || !isCurrent() || typeof navigator.share !== 'function') return;
       sharing = true;
+      const sequence = ++actionSequence;
+      disclosureChangedDuringAction = false;
       setPending(true);
       try {
         await navigator.share({ title: 'Departure update', text: message.value });
-        if (isCurrent()) status.textContent = 'Share sheet closed. Confirm the message in your chosen app.';
+        if (actionIsCurrent(sequence)) status.textContent = 'Share sheet closed. Confirm the message in your chosen app.';
       } catch (error) {
-        if (isCurrent()) status.textContent = error?.name === 'AbortError'
+        if (actionIsCurrent(sequence)) status.textContent = error?.name === 'AbortError'
           ? 'Sharing cancelled. The message remains ready to copy.'
           : 'Sharing is unavailable. Copy the message into your usual chat instead.';
       } finally {
         sharing = false;
-        if (isCurrent()) setPending(false);
+        if (actionIsCurrent(sequence)) setPending(false);
       }
     });
     dismiss.addEventListener('click', () => {
+      const scrollX = window.scrollX;
+      const scrollY = window.scrollY;
       banner.remove();
       currentContext = null;
-      const target = [...document.querySelectorAll('#guestDirectorySearch,[data-care-roster-focus] summary,[data-directory-search],#directory-search,[data-directory-filter],.directory-guest-tile-open')]
-        .find(node => node.getClientRects().length && !node.closest('[hidden],[aria-hidden="true"]'));
-      if (target) target.focus();
+      const grid = document.getElementById('directory-grid');
+      const dashboard = document.querySelector('.directory-dashboard-fused');
+      const rosterViewActive = (document.querySelector('[data-v1082-stay-tab].is-active')?.dataset.v1082StayTab || 'current') === 'current' &&
+        !dashboard?.classList.contains('is-profile-mode') && !dashboard?.querySelector('.directory-card.is-profile-active');
+      const visible = node => {
+        if (!node?.isConnected || !node.getClientRects().length || node.closest('[hidden],[aria-hidden="true"],[inert],details:not([open])')) return false;
+        for (let parent = node; parent; parent = parent.parentElement) {
+          const style = getComputedStyle(parent);
+          if (style.visibility === 'hidden' || style.display === 'none') return false;
+        }
+        const rect = node.getBoundingClientRect();
+        return rect.right > 0 && rect.left < innerWidth;
+      };
+      const candidates = grid && rosterViewActive ? [...grid.querySelectorAll('.directory-card')].filter(card => visible(card) && card.dataset.v1082PastStay !== 'true').flatMap(card =>
+        [...card.querySelectorAll('.directory-guest-tile-open')].filter(visible)) : [];
+      const viewport = candidates.filter(node => { const r = node.getBoundingClientRect(); return r.bottom > 0 && r.top < innerHeight && r.right > 0 && r.left < innerWidth; });
+      const target = (viewport.length ? viewport : candidates)[0] ||
+        [...document.querySelectorAll('#guestDirectorySearch,[data-directory-search],#directory-search')].find(visible) ||
+        (visible(grid) ? grid : null);
+      if (target) { if (!target.matches('button,a[href],input,select,textarea,[tabindex]')) target.tabIndex = -1; target.focus({ preventScroll: true }); }
+      window.scrollTo(scrollX, scrollY);
     });
     return banner;
   }
@@ -214,6 +261,25 @@
     return true;
   }
 
+  function focusCompletion(expected) {
+    refreshVisibility();
+    const context = currentContext;
+    const banner = document.getElementById('v11217DepartureMessageBanner');
+    const same = !!context && !!expected &&
+      String(context.stayId) === String(expected.stayId || '') &&
+      String(context.dogId) === String(expected.dogId || '') &&
+      String(context.stayKey) === String(expected.stayKey || '') &&
+      String(context.dogName) === String(expected.dogName || '') &&
+      context.startDate === validDate(expected.startDate) && context.endDate === validDate(expected.endDate);
+    if (!same || !banner?.isConnected || banner.hidden || !banner.getClientRects().length || !viewAllowsBanner()) return false;
+    const target = banner.querySelector('[data-v11217-departure-copy]') || banner.querySelector('summary');
+    if (!target?.isConnected || !target.getClientRects().length || target.disabled) return false;
+    const rect = banner.getBoundingClientRect();
+    if (rect.top < 0 || rect.bottom > innerHeight) banner.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    target.focus({ preventScroll: true });
+    return document.activeElement === target;
+  }
+
   document.addEventListener('click', event => {
     if (event.target.closest('[data-v1082-stay-tab]') || event.target.closest('.directory-guest-tile-open')) {
       window.setTimeout(refreshVisibility, 0);
@@ -224,5 +290,5 @@
     new MutationObserver(refreshVisibility).observe(dashboard, { attributes: true, attributeFilter: ['class'], subtree: true });
   }
   window.addEventListener('waffle:directory-updated', refreshVisibility);
-  window.WAFFLE_DEPARTURE_MESSAGE = Object.freeze({ publishVerified, verify, refreshVisibility });
+  window.WAFFLE_DEPARTURE_MESSAGE = Object.freeze({ publishVerified, verify, refreshVisibility, focusCompletion });
 })();

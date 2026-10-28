@@ -292,3 +292,78 @@ test('blocked copying retains manual recovery without stealing focus after the m
  await expect(banner.locator('[data-v11217-departure-text]')).toBeFocused();
  await expect(banner.locator('[data-v11217-departure-status]')).toContainText('message is selected');
 });
+
+test('copy and status stay available while details are collapsed; blocked first-level copy reveals selected text', async ({ page }) => {
+  await setupEvidence(page); await loadDepartureModule(page);
+  await page.evaluate(() => Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async () => { throw new Error('denied'); } } }));
+  await publishSelected(page);
+  const banner = page.locator('#v11217DepartureMessageBanner');
+  const disclosure = banner.locator('[data-v11217-departure-disclosure]');
+  await expect(disclosure).toHaveJSProperty('open', false);
+  await expect(banner.locator('[data-v11217-departure-copy]')).toBeVisible();
+  await expect(banner.locator('[data-v11217-departure-status]')).toBeVisible();
+  await banner.locator('[data-v11217-departure-copy]').click();
+  await expect(disclosure).toHaveJSProperty('open', true);
+  await expect(banner.locator('[data-v11217-departure-text]')).toBeFocused();
+  await expect(banner.locator('[data-v11217-departure-status]')).toContainText('message is selected');
+});
+
+test('blocked copy does not steal focus after the user moves away while details remain open', async ({ page }) => {
+  await setupEvidence(page); await loadDepartureModule(page);
+  await page.evaluate(() => Object.defineProperty(navigator, 'clipboard', { configurable:true, value:{ writeText:() => new Promise((resolve,reject) => { window.rejectDepartureCopy = reject; }) } }));
+  await publishSelected(page);
+  const banner = page.locator('#v11217DepartureMessageBanner');
+  await banner.locator('summary').click();
+  await banner.locator('[data-v11217-departure-copy]').click();
+  const guest = page.locator('#directory-grid .directory-guest-tile-open').first();
+  await guest.focus();
+  await page.evaluate(() => window.rejectDepartureCopy(new Error('blocked')));
+  await expect(banner.locator('[data-v11217-departure-disclosure]')).toHaveJSProperty('open', true);
+  await expect(banner.locator('[data-v11217-departure-text]')).not.toBeFocused();
+  await expect(guest).toBeFocused();
+  await expect(banner.locator('[data-v11217-departure-status]')).toHaveText('Copy was blocked. Open the message to copy it manually.');
+});
+
+test('focusCompletion requires the exact verified stay and a visible current roster banner', async ({ page }) => {
+  await setupEvidence(page); await loadDepartureModule(page); await publishSelected(page);
+  const result = await page.evaluate(() => {
+    const expected = { stayId:'stay-a', dogId:'dog-a', stayKey:'twin|2026-10-18|2026-10-18|a', dogName:'Twin', startDate:'2026-10-18', endDate:'2026-10-18' };
+    const api = window.WAFFLE_DEPARTURE_MESSAGE;
+    const exact = api.focusCompletion(expected);
+    const focusedCopy = document.activeElement.matches('[data-v11217-departure-copy]');
+    const mismatches = ['stayId','dogId','stayKey','dogName','startDate','endDate'].map(key => api.focusCompletion({ ...expected, [key]: key.includes('Date') ? '2026-10-19' : `other-${key}` }));
+    document.querySelector('.directory-dashboard-fused').insertAdjacentHTML('afterbegin', '<nav><button data-v1082-stay-tab="current" class="is-active">Current</button><button data-v1082-stay-tab="past">Past</button></nav>');
+    document.querySelector('[data-v1082-stay-tab="current"]').classList.remove('is-active');
+    document.querySelector('[data-v1082-stay-tab="past"]')?.classList.add('is-active');
+    const hidden = api.focusCompletion(expected);
+    return { exact, focusedCopy, mismatches, hidden };
+  });
+  expect(result).toEqual({ exact:true, focusedCopy:true, mismatches:[false,false,false,false,false,false], hidden:false });
+});
+
+test('Dismiss returns focus to a visible roster guest without changing search, filters, or scroll; empty roster falls back to search', async ({ page }) => {
+  await setupEvidence(page); await loadDepartureModule(page); await publishSelected(page);
+  const result = await page.evaluate(() => {
+    const grid = document.querySelector('#directory-grid');
+    const search = document.createElement('input'); search.id = 'guestDirectorySearch'; search.value = 'Twin'; document.body.prepend(search);
+    const filter = document.createElement('select'); filter.dataset.directoryFilter = ''; filter.innerHTML = '<option selected>Current</option>'; document.body.prepend(filter);
+    const first = grid.querySelector('.directory-card');
+    const second = grid.querySelectorAll('.directory-card')[1];
+    second.style.display = 'none';
+    document.documentElement.style.minHeight = '3000px'; document.body.style.minHeight = '3000px';
+    window.scrollTo(0, 180);
+    const before = { scrollY: window.scrollY, search: search.value, filter: filter.value };
+    document.querySelector('[data-v11217-departure-dismiss]').click();
+    const focusedGuest = document.activeElement === first.querySelector('.directory-guest-tile-open');
+    const after = { scrollY: window.scrollY, search: search.value, filter: filter.value };
+    first.hidden = true;
+    const card = first;
+    const payload = { stayId:card.dataset.directoryStayId, stayKey:card.dataset.directoryStayKey, dogId:card.dataset.directoryDogId, dogName:card.dataset.directoryDogName, startDate:card.dataset.directoryStartDate, endDate:card.dataset.directoryEndDate };
+    window.WAFFLE_DEPARTURE_MESSAGE.publishVerified(payload, { result:'success', record:{ ...payload, status:'checked_out', checkedOutAt:'2026-10-18T03:00:00.000Z' } }, card);
+    document.querySelector('[data-v11217-departure-dismiss]').click();
+    return { before, after, focusedGuest, searchFallback:document.activeElement === search };
+  });
+  expect(result.before).toEqual(result.after);
+  expect(result.focusedGuest).toBe(true);
+  expect(result.searchFallback).toBe(true);
+});

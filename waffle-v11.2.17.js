@@ -441,10 +441,13 @@
       modal.querySelector('[data-v11217-note]')?.focus({ preventScroll: true });
       return;
     }
+    const completionPayload = savedSuccess && activeCard ? { ...payloadForCard(activeCard) } : null;
     modal.hidden = true;
     activeCard = null;
     const focus = previousFocus;
     previousFocus = null;
+    if (completionPayload && typeof window.WAFFLE_DEPARTURE_MESSAGE?.focusCompletion === 'function' &&
+        window.WAFFLE_DEPARTURE_MESSAGE.focusCompletion(completionPayload)) return;
     try { focus?.focus?.(); } catch (_) {}
   }
 
@@ -986,6 +989,7 @@
       modal.querySelector('[data-v11217-guided-note]')?.focus({ preventScroll: true });
       return;
     }
+    const completionPayload = savedSuccess && guidedCheckoutCard ? { ...payloadForCard(guidedCheckoutCard) } : null;
     modal.hidden = true;
     guidedReviewSequence += 1;
     guidedReviewPromise = null;
@@ -994,6 +998,8 @@
     guidedCheckoutPayload = null;
     const trigger = guidedTrigger;
     guidedTrigger = null;
+    if (completionPayload && typeof window.WAFFLE_DEPARTURE_MESSAGE?.focusCompletion === 'function' &&
+        window.WAFFLE_DEPARTURE_MESSAGE.focusCompletion(completionPayload)) return;
     const visible = node => {
       if (!node?.isConnected || !node.getClientRects().length || node.closest('[hidden],[aria-hidden="true"]')) return false;
       for (let parent = node.parentElement; parent; parent = parent.parentElement) {
