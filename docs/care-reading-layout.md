@@ -6,7 +6,7 @@ Release 2026.10.29.02. Builds on PR #275 with three Care-only presentation impro
 
 1. Bound wide desktop Care content to a comfortable 1040px reading width inside the existing navigation shell. Mobile continues using available width.
 2. Align the desktop page heading with the top of search and supporting controls, preserving the stacked phone layout and existing disclosures.
-3. Establish readable Care typography for guest names, stay context, owner, Dog ID/status and profile care text. Preserve the existing font family, configured themes, complete safety/medication and wrapping.
+3. Establish readable Care typography for guest names, stay context, owner, Dog ID/status and profile care text. Guest rows and search inherit the existing Care font, including WebKit. Preserve configured themes, complete safety/medication and wrapping.
 
 No new actions, data requests, backend changes or libraries. Today and Calendar remain outside the stylesheet scope.
 
@@ -23,7 +23,7 @@ No new actions, data requests, backend changes or libraries. Today and Calendar 
 | Performance | Resize and change themes without opening another guest | No profile reads caused by presentation changes |
 | Scope | Inspect Today/Calendar and deployment metadata | No Care styling outside Directory; backend unchanged |
 
-Validation: all 412 Node and five Python MVP checks passed. Twelve established readability/toolbar cases passed, followed by six final reading-layout cases across Chromium/WebKit at 320/390/1440px projects; each new case also exercises 820/1024/1920px, both themes and complete profile medication text.
+Validation: all 412 Node and five Python MVP checks passed. Twelve established readability/toolbar cases passed, followed by six final reading-layout cases across Chromium/WebKit at 320/390/1440px projects; each new case also exercises 820/1024/1920px, both themes and complete profile medication text. Four final search/font and toolbar cases then passed in Chromium/WebKit after extending font inheritance to search.
 
 Automated checks use synthetic records. Physical phones and assistive technology remain manual checks.
 

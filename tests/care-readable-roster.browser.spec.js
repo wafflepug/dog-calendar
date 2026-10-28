@@ -61,10 +61,11 @@ test('Care reading layout keeps identity text readable and bounds wide desktop c
       const heading=root.querySelector('.directory-roster-heading');
       const row=root.querySelector('#directory-grid .directory-guest-tile-open');
       const selectors=['.directory-guest-tile-name','.directory-roster-context','.directory-roster-owner','.directory-dog-id','.directory-roster-status,.v1118-care-status'];
-      return{viewport:innerWidth,pageWidth:document.documentElement.scrollWidth,dashboard:rect(root),headingRow:rect(heading),headingContentWidth:heading.clientWidth-parseFloat(getComputedStyle(heading).paddingLeft)-parseFloat(getComputedStyle(heading).paddingRight),heading:rect(heading.firstElementChild),toolbar:rect(heading.querySelector('.guest-directory-toolbar')),rowFont:getComputedStyle(row).fontFamily,cardFont:getComputedStyle(row.parentElement).fontFamily,text:selectors.map(selector=>{const el=[...row.querySelectorAll(selector)].find(node=>node.getClientRects().length&&getComputedStyle(node).display!=='none');return{selector,exists:!!el,size:el?parseFloat(getComputedStyle(el).fontSize):0,box:el?rect(el):null};})};
+      return{viewport:innerWidth,pageWidth:document.documentElement.scrollWidth,dashboard:rect(root),headingRow:rect(heading),headingContentWidth:heading.clientWidth-parseFloat(getComputedStyle(heading).paddingLeft)-parseFloat(getComputedStyle(heading).paddingRight),heading:rect(heading.firstElementChild),toolbar:rect(heading.querySelector('.guest-directory-toolbar')),searchFont:getComputedStyle(heading.querySelector('#guestDirectorySearch')).fontFamily,toolbarFont:getComputedStyle(heading.querySelector('.guest-directory-toolbar')).fontFamily,rowFont:getComputedStyle(row).fontFamily,cardFont:getComputedStyle(row.parentElement).fontFamily,text:selectors.map(selector=>{const el=[...row.querySelectorAll(selector)].find(node=>node.getClientRects().length&&getComputedStyle(node).display!=='none');return{selector,exists:!!el,size:el?parseFloat(getComputedStyle(el).fontSize):0,box:el?rect(el):null};})};
     });
     expect(geometry.pageWidth,JSON.stringify(geometry)).toBeLessThanOrEqual(width);
     expect(geometry.rowFont).toBe(geometry.cardFont);
+    expect(geometry.searchFont).toBe(geometry.toolbarFont);
     expect(geometry.dashboard.x).toBeGreaterThanOrEqual(0);
     expect(geometry.dashboard.right).toBeLessThanOrEqual(width+1);
     if(width>=1024){

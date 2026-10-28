@@ -52,6 +52,7 @@ body[data-waffle-page="directory"] #directoryTabPanel .guest-directory-search-wr
   flex: 1 1 auto;
   width: 0;
   min-width: 0;
+  font-family: inherit;
 }
 /* The explicit 44px Clear action replaces the smaller platform cancel decoration. */
 body[data-waffle-page="directory"] #guestDirectorySearch::-webkit-search-cancel-button { display: none; }
