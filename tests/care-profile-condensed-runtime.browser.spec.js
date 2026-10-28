@@ -464,3 +464,72 @@ test('Care changed values remain complete and readable at enlarged phone and des
     await review.scrollIntoViewIfNeeded();await page.screenshot({path:testInfo.outputPath(`care-review-${width}-${dark?'dark':'light'}.png`)});
   }
 });
+
+
+test('saved Care contact actions are readable and Emergency details focuses the contact without extra profile reads',async({page,baseURL},testInfo)=>{
+ const saved={...record,intakeAttributes:{...record.intakeAttributes,emergencyContact:'Sam & Jo',emergencyPhone:'+61 (400) 123-456',regularVetClinic:'Local veterinary clinic',vetPhone:'02 9000 1234'}};
+ const reads=await fixture(page,{profileRecord:saved});
+ await page.setViewportSize({width:390,height:844});
+ await page.goto(`${baseURL}/directory.html?contactAccessFixture=1`,{waitUntil:'domcontentloaded'});
+ await page.waitForFunction(()=>document.documentElement.dataset.waffleUiReady==='true');
+ await page.locator('#directory-grid [data-open-directory-profile]').click();
+ const card=page.locator('.directory-card.is-profile-active');
+ await expect(card.locator('[data-care-brief-freshness]')).toHaveAttribute('data-state','fresh');
+ const before=reads.filter(action=>action==='get_guest_profile').length;
+ const owner=card.locator('[data-care-brief-call-owner]');
+ await expect(owner.locator('.directory-care-owner-phone')).toHaveText(booking.phone);
+ await expect(owner.getByRole('link',{name:'Call owner',exact:true})).toHaveAttribute('href',`tel:${booking.phone}`);
+ await card.locator('[data-care-brief-action="emergency-contact"]').click();
+ const contact=card.locator('[data-intake-read-attribute="emergencyContact"]');
+ await expect(contact).toBeFocused();
+ await expect(card).not.toHaveClass(/is-profile-editing/);
+ await expect(card.locator('[data-intake-read-attribute="emergencyPhone"] a')).toHaveAttribute('href','tel:+61400123456');
+ await expect(card.locator('[data-intake-read-attribute="vetPhone"] a')).toHaveAttribute('href','tel:0290001234');
+ for(const width of [320,390,1440])for(const dark of [false,true]){
+  await page.setViewportSize({width,height:844});
+  await page.evaluate(dark=>document.body.classList.toggle('dark-theme',dark),dark);
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+  for(const target of [owner,card.locator('[data-intake-read-attribute="emergencyPhone"]'),card.locator('[data-intake-read-attribute="vetPhone"]')]){
+   expect(await target.evaluate(node=>node.scrollWidth<=node.clientWidth+1)).toBe(true);
+   expect(await target.locator('a').evaluate(node=>node.getBoundingClientRect().height)).toBeGreaterThanOrEqual(44);
+  }
+ }
+ await page.setViewportSize({width:390,height:844});
+ await card.locator('.directory-care-owner-line').screenshot({path:testInfo.outputPath('owner-contact-phone.png')});
+ await card.locator('[data-care-brief-action="edit-routine"]').click();
+ const draft=card.locator('[data-intake-attribute="foodAmount"]');
+ await draft.fill('Draft kept during emergency lookup');
+ await card.locator('[data-care-brief-action="emergency-contact"]').click();
+ await expect(card.locator('[data-profile-subtab="healthHome"]')).toBeFocused();
+ await expect(draft).toHaveValue('Draft kept during emergency lookup');
+ expect(reads.filter(action=>action==='get_guest_profile').length).toBe(before);
+ expect(reads.writes).toHaveLength(0);
+});
+
+test('missing owner number opens only the selected phone editor and preserves cancellation',async({page,baseURL})=>{
+ const reads=await fixture(page);
+ await page.goto(`${baseURL}/directory.html?missingContactFixture=1`,{waitUntil:'domcontentloaded'});
+ await page.waitForFunction(()=>document.documentElement.dataset.waffleUiReady==='true');
+ await page.locator('#directory-grid [data-open-directory-profile]').click();
+ const card=page.locator('.directory-card.is-profile-active');
+ await expect(card.locator('[data-care-brief-freshness]')).toHaveAttribute('data-state','fresh');
+ const before=reads.filter(action=>action==='get_guest_profile').length;
+ await card.evaluate(card=>{card.querySelector('[data-directory-edit-field="phone"]').dataset.directoryCurrentValue='';card.dataset.v1088Phone='';window.WAFFLE_REFRESH_CARE_SETUP(card);});
+ const add=card.getByRole('button',{name:'Add number',exact:true});
+ await expect(card.locator('[data-care-brief-call-owner]')).toContainText('Phone unavailable');
+ await expect(card.locator('[data-care-brief-call-owner] a')).toHaveCount(0);
+ await add.click();
+ await expect(page.locator('#guestDetailEditTitle')).toHaveText('Edit Contact Number');
+ await expect(page.locator('#guestDetailEditDog')).toContainText('#00017');
+ const input=page.locator('#guestDetailEditInput');
+ await expect(input).toHaveAttribute('type','tel');
+ await input.fill('+61 400 000 999');
+ page.once('dialog',dialog=>dialog.dismiss());
+ await page.locator('#cancelGuestDetailEdit').click();
+ await expect(input).toHaveValue('+61 400 000 999');
+ page.once('dialog',dialog=>dialog.accept());
+ await page.locator('#cancelGuestDetailEdit').click();
+ await expect(add).toBeFocused();
+ expect(reads.filter(action=>action==='get_guest_profile').length).toBe(before);
+ expect(reads.writes).toHaveLength(0);
+});

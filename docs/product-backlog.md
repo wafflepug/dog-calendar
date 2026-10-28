@@ -5,7 +5,9 @@ Reviewed 17 September 2026. Repository: `wafflepug/dog-calendar`; always start i
 
 ## Current desktop iteration - 28 October 2026
 
-Candidate 2026.10.28.05: [Care detail editing](care-detail-editing.md). Six bounded improvements to existing field editing: readable Dog ID context, correct label focus, field-specific input hints, growing persistent handover notes, guarded keyboard saving and safe delayed focus. Preserve exact stay identity, drafts, explicit writes and existing reads. Next: assess owner contact and emergency lookup with representative solo-sitter tasks.
+Candidate 2026.10.28.06: [Care contact access](care-contact-access.md). Readable owner phone numbers, direct missing-number editing, callable saved emergency/vet numbers and focused emergency lookup. Keep existing identities, drafts, lazy reads and plain missing states. Next: review practical pickup/handover tasks before adding any more profile controls.
+
+Published 2026.10.28.05 (PR #269): [Care detail editing](care-detail-editing.md). Six bounded improvements to existing field editing: readable Dog ID context, correct label focus, field-specific input hints, growing persistent handover notes, guarded keyboard saving and safe delayed focus. Preserve exact stay identity, drafts, explicit writes and existing reads. Next: assess owner contact and emergency lookup with representative solo-sitter tasks.
 
 
 Published 2026.10.28.04 (PR #268): [Care handover clarity](care-handover-clarity.md). Six bounded arrival-to-checkout refinements: concise arrival tasks, full-width owner-link feedback, direct single-item belongings, consolidated review guidance, growing optional departure note and readable verified departure context. Preserve unknown states, complete medication, explicit operations, drafts and existing reads. Next: validate the resulting arrival and departure journeys on physical phones before adding more controls.

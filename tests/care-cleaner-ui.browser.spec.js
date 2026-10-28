@@ -185,6 +185,10 @@ for (const [width, theme] of [[320, 'light'], [1440, 'dark']]) test(`Care sectio
   // Wait for the real delayed history fallback as well as operations startup.
   // Keep every request in the strict focus-only comparison below.
   await page.waitForFunction(() => window.__carePastStartupSettled === true);
+  // The separate 1.6s background Past-count task also belongs to startup.
+  // Await its real result before measuring focus-only traffic; do not trigger it.
+  await expect.poll(() => calls.get('get_past_guest_directory') || 0).toBeGreaterThan(0);
+  await page.waitForFunction(() => typeof v1082PastLoaded !== 'undefined' && v1082PastLoaded === true);
   await expect.poll(() => calls.get('get_stay_operations') || 0).toBeGreaterThan(0);
   const before = Object.fromEntries(calls);
   await overview.focus();

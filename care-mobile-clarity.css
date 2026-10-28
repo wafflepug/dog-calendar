@@ -1025,3 +1025,38 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-
 body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-owner-care-action-group > [data-owner-care-link-fallback] {
   flex:1 1 100%; min-width:0; width:100%; max-width:100%; font-size:16px; line-height:1.5;
 }
+
+/* Contact access: keep the saved number readable beside the existing action. */
+body[data-waffle-page="directory"] .directory-card.is-profile-active [data-care-brief-call-owner] {
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:6px 10px;
+  min-width:0;
+  max-width:100%;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-owner-phone {
+  min-width:0;
+  font-size:14px;
+  line-height:1.5;
+  font-variant-numeric:tabular-nums;
+  overflow-wrap:anywhere;
+}
+body[data-waffle-page="directory"] .intake-profile-read-value a[href^="tel:"] {
+  display:inline-flex;
+  align-items:center;
+  min-height:44px;
+  max-width:100%;
+  color:inherit;
+  font-size:14px;
+  line-height:1.5;
+  text-decoration:underline;
+  text-underline-offset:3px;
+  overflow-wrap:anywhere;
+}
+body[data-waffle-page="directory"] .intake-profile-read-field[tabindex="-1"]:focus,
+body[data-waffle-page="directory"] .intake-profile-read-value a[href^="tel:"]:focus-visible {
+  outline:3px solid var(--wh-focus,#7562db);
+  outline-offset:3px;
+  border-radius:4px;
+}
