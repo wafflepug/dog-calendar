@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.10.29.04",
-  "releaseName": "Care Owner Flow",
+  "assetRevision": "2026.10.29.05",
+  "releaseName": "Care Arrival and Handoff",
   "careIteration": {
     "returningDogSuggestions": true,
     "reviewedCareInheritance": true,

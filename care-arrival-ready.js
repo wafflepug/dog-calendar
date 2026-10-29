@@ -110,7 +110,7 @@
     const itemCount = belongings?.querySelectorAll('.belongings-summary-list > li').length || 0;
     const belongingsKnown = profileFresh && !!belongings && (itemCount > 0 || !!belongings.querySelector('.belongings-summary-empty')) && !/loading|not loaded|pending|unavailable|not available|identity review/i.test(belongings.textContent || '');
     const hasKnownItems = belongingsKnown && itemCount > 0;
-    const belongingsSummary = belongingsKnown ? `${itemCount} ${itemCount === 1 ? 'item' : 'items'}` : 'details unavailable';
+    const belongingsSummary = belongingsKnown ? `${itemCount} ${itemCount === 1 ? 'item' : 'items'}` : 'unknown';
     tasks.push({
       key: 'belongings',
       title: 'Belongings',
@@ -120,7 +120,7 @@
       action: 'belongings',
       actionLabel: 'Review'
     });
-    tasks.summary = `Care checks · ${medicationSummary} · ${belongingsSummary}`;
+    tasks.summary = `Care checks · ${medicationSummary} · Belongings: ${belongingsSummary}`;
     return tasks;
   }
 
@@ -169,7 +169,9 @@
           }, true);
         }
         button.dataset.identityAtRender = capturedIdentity;
-        const dogContext = [d.name, d.dogNumber ? `Dog Number ${d.dogNumber}` : '', d.start && d.end ? `stay ${d.start} to ${d.end}` : ''].filter(Boolean).join(', ');
+        const number = /^#?\d{1,5}$/.test(d.dogNumber.trim()) ? Number(d.dogNumber.trim().replace(/^#/, '')) : 0;
+        const humanNumber = number > 0 ? `Dog Number #${String(number).padStart(5, '0')}` : '';
+        const dogContext = [d.name, humanNumber, d.owner ? `owner ${d.owner}` : '', d.start && d.end ? `stay ${d.start} to ${d.end}` : ''].filter(Boolean).join(', ');
         button.setAttribute('aria-label', `${task.title} for ${dogContext || 'this dog'}. ${task.detail} ${task.actionLabel} in Care.`);
         const title = button.querySelector('strong') || document.createElement('strong');
         title.textContent = task.title;

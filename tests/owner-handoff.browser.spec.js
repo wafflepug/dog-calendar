@@ -467,3 +467,126 @@ test('share cancellation restores focus when a WebKit click keeps a prior field 
   await expect(page.getByRole('status')).toContainText('Sharing cancelled');
   await expect(share).toBeFocused();
 });
+const copyVariants = [
+  { name: 'compact link', compact: true, button: 'Copy owner care link' },
+  { name: 'compact message', compact: true, button: 'Copy message', secondary: true },
+  { name: 'full message', compact: false, button: 'Copy message' },
+  { name: 'full link', compact: false, button: 'Copy link' }
+];
+for (const variant of copyVariants) {
+  for (const blocked of [false, true]) {
+    test(`${variant.name} ${blocked ? 'blocked' : 'successful'} copy respects later intent and hidden controls`, async ({ page, baseURL }) => {
+      test.setTimeout(60000);
+      for (const change of ['none', 'focus', 'key', 'pointer', 'hidden', 'inert', 'opacity', 'closed', 'removed']) {
+        await setup(page, baseURL);
+        await page.evaluate(({ data, variant }) => {
+          const host = document.querySelector('#handoff');
+          host.outerHTML = '<details id="copy-wrapper" open><summary>Owner handoff</summary><div id="handoff"></div></details><button id="outside-copy">Outside</button>';
+          window.WAFFLE_OWNER_HANDOFF.render(document.querySelector('#handoff'), data, { compact: variant.compact });
+          if (variant.secondary) document.querySelector('[data-secondary-options]').open = true;
+          navigator.clipboard.writeText = value => {
+            window.__clipboardWrites.push(value);
+            return new Promise((resolve, reject) => { window.finishCopy = () => window.copyBlocked ? reject(new Error('blocked')) : resolve(); });
+          };
+          window.focusCalls = [];
+          const originalFocus = HTMLElement.prototype.focus;
+          HTMLElement.prototype.focus = function(options) {
+            window.focusCalls.push({ tag: this.tagName, text: this.textContent, preventScroll: options?.preventScroll === true });
+            return originalFocus.call(this, options);
+          };
+        }, { data: valid, variant });
+        await page.evaluate(value => { window.copyBlocked = value; }, blocked);
+        const button = page.getByRole('button', { name: variant.button, exact: true });
+        const rounds = change === 'none' ? 2 : 1;
+        for (let round = 0; round < rounds; round++) {
+          await button.focus();
+          await button.click();
+          await expect(button).toBeDisabled();
+          await page.evaluate(change => {
+            const host = document.querySelector('#handoff');
+            if (change === 'focus') document.querySelector('#outside-copy').focus();
+            if (change === 'key') document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Shift', bubbles: true }));
+            if (change === 'pointer') document.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+            if (change === 'hidden') host.hidden = true;
+            if (change === 'inert') host.inert = true;
+            if (change === 'opacity') host.style.opacity = '0';
+            if (change === 'closed') document.querySelector('#copy-wrapper').open = false;
+            if (change === 'removed') host.remove();
+            window.focusCalls = [];
+            window.finishCopy();
+          }, change);
+          await expect.poll(() => page.evaluate(() => document.querySelector('.owner-handoff-actions')?.hasAttribute('aria-busy') || false)).toBe(false);
+          const calls = await page.evaluate(() => window.focusCalls);
+          if (change === 'none') {
+            if (blocked) {
+              expect(calls).toHaveLength(1);
+              expect(calls[0].tag).toBe('TEXTAREA');
+              expect(await page.evaluate(() => { const field = document.activeElement; return field.tagName === 'TEXTAREA' && field.selectionStart === 0 && field.selectionEnd === field.value.length; })).toBe(true);
+            } else {
+              await expect(button).toBeFocused();
+              expect(calls).toEqual([{ tag: 'BUTTON', text: variant.button, preventScroll: true }]);
+            }
+            await expect(button).toBeEnabled();
+          } else {
+            expect(calls).toEqual([]);
+            if (change === 'focus') await expect(page.locator('#outside-copy')).toBeFocused();
+          }
+          expect(await page.evaluate(() => window.__clipboardWrites.length)).toBe(round + 1);
+        }
+      }
+    });
+  }
+}
+
+test('compact share failure names the visible link action without copying or opening options', async ({ page, baseURL }) => {
+  await setup(page, baseURL, { share: true });
+  await page.evaluate(data => {
+    window.WAFFLE_OWNER_HANDOFF.render(document.querySelector('#handoff'), data, { compact: true });
+    navigator.share = async () => { throw new Error('unavailable'); };
+  }, valid);
+  await page.getByRole('button', { name: 'Share', exact: true }).click();
+  await expect(page.getByRole('status')).toContainText('Choose Copy owner care link');
+  await expect(page.getByRole('button', { name: 'Copy owner care link', exact: true })).toBeVisible();
+  await expect(page.locator('[data-secondary-options]')).not.toHaveAttribute('open', '');
+  expect(await page.evaluate(() => window.__clipboardWrites)).toEqual([]);
+});
+
+test('programmatic copy activation preserves an unrelated preexisting focus in every layout', async ({ page, baseURL }) => {
+  for (const variant of copyVariants) {
+    await setup(page, baseURL);
+    await page.evaluate(({ data, variant }) => {
+      window.WAFFLE_OWNER_HANDOFF.render(document.querySelector('#handoff'), data, { compact: variant.compact });
+      if (variant.secondary) document.querySelector('[data-secondary-options]').open = true;
+      document.body.insertAdjacentHTML('beforeend', '<input id="outside-copy-input" aria-label="Other task">');
+      navigator.clipboard.writeText = () => new Promise(resolve => { window.finishCopy = resolve; });
+    }, { data: valid, variant });
+    const outside = page.locator('#outside-copy-input');
+    await outside.focus();
+    const button = page.getByRole('button', { name: variant.button, exact: true });
+    await button.evaluate(control => control.click());
+    await expect(button).toBeDisabled();
+    await page.evaluate(() => window.finishCopy());
+    await expect(button).toBeEnabled();
+    await expect(outside).toBeFocused();
+  }
+});
+
+test('successful retry returns to its copy action from the selected fallback field', async ({ page, baseURL }) => {
+  for (const variant of copyVariants) {
+    await setup(page, baseURL, { clipboardFails: true });
+    await page.evaluate(({ data, variant }) => {
+      window.WAFFLE_OWNER_HANDOFF.render(document.querySelector('#handoff'), data, { compact: variant.compact });
+      if (variant.secondary) document.querySelector('[data-secondary-options]').open = true;
+    }, { data: valid, variant });
+    const button = page.getByRole('button', { name: variant.button, exact: true });
+    await button.focus();
+    await button.click();
+    await expect(button).toBeEnabled();
+    expect(await page.evaluate(() => document.activeElement.tagName)).toBe('TEXTAREA');
+    await page.evaluate(() => { window.__clipboardFails = false; });
+    // WebKit activation can leave the selected fallback field focused.
+    await button.evaluate(control => control.click());
+    await expect(button).toBeFocused();
+    expect(await page.evaluate(() => window.__clipboardWrites.length)).toBe(2);
+  }
+});
