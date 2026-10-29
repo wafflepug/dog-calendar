@@ -143,6 +143,7 @@ test('Care arrival and guided checkout remain reachable at the configured viewpo
   }
   await expect(cancel).toBeVisible();
   await expect(confirm).toBeVisible();
+  await expect(dialog.locator('[data-v11217-discard-prompt]')).toBeHidden();
   await expect(dialog.locator('[data-v11217-guided-belongings-unknown]')).toBeVisible();
   await expect(dialog.locator('[data-v11217-guided-missing]')).toBeVisible();
   const layout = await page.evaluate(() => {
@@ -151,7 +152,7 @@ test('Care arrival and guided checkout remain reachable at the configured viewpo
     const card = modal.querySelector('.v11217-modal-card');
     const body = modal.querySelector('.v11217-modal-body');
     const actions = modal.querySelector('.v11217-modal-actions');
-    const buttons = [...actions.querySelectorAll('button')];
+    const buttons = [...actions.querySelectorAll('button')].filter(button => button.getClientRects().length > 0);
     return {
       height: innerHeight,
       navHeight: nav.getBoundingClientRect().height,
@@ -173,6 +174,7 @@ test('Care arrival and guided checkout remain reachable at the configured viewpo
   });
   expect(layout.navHeight).toBe(80);
   expect(layout.modalZ).toBeGreaterThan(layout.navZ);
+  expect(layout.actionButtons).toHaveLength(2);
   expect(layout.actionButtons.every(button => button.height >= 44 && button.bottom <= layout.height && button.hit), JSON.stringify(layout)).toBe(true);
   expect(layout.noteFontSize).toBeGreaterThanOrEqual(16);
   expect(layout.modalScrollWidth).toBeLessThanOrEqual(testInfo.project.use.viewport.width);
@@ -182,7 +184,7 @@ test('Care arrival and guided checkout remain reachable at the configured viewpo
   const darkCheckout = await page.evaluate(() => {
     const modal = document.querySelector('#v11217GuidedCheckout');
     const unknown = getComputedStyle(modal.querySelector('[data-v11217-guided-belongings-unknown]')).backgroundColor;
-    const actions = [...modal.querySelectorAll('.v11217-modal-actions button')].map(button => {
+    const actions = [...modal.querySelectorAll('.v11217-modal-actions button')].filter(button => button.getClientRects().length > 0).map(button => {
       const rect = button.getBoundingClientRect();
       const hit = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
       return { height: rect.height, bottom: rect.bottom, hit: hit === button || button.contains(hit) };
@@ -190,6 +192,7 @@ test('Care arrival and guided checkout remain reachable at the configured viewpo
     return { unknown, actions, height: innerHeight };
   });
   expect(darkCheckout.unknown).not.toBe(lightUnknown);
+  expect(darkCheckout.actions).toHaveLength(2);
   expect(darkCheckout.actions.every(button => button.height >= 44 && button.bottom <= darkCheckout.height && button.hit), JSON.stringify(darkCheckout)).toBe(true);
   await page.evaluate(() => document.body.classList.remove('dark-theme'));
   if (testInfo.project.name === 'chromium-390' || testInfo.project.name === 'chromium-1440') {
@@ -211,7 +214,7 @@ test('Care arrival and guided checkout remain reachable at the configured viewpo
       bodyScroll: body.scrollHeight,
       bodyClient: body.clientHeight,
       noteReachable: note.bottom > bodyRect.top && note.top < bodyRect.bottom,
-      buttons: [...actions.querySelectorAll('button')].map(button => {
+      buttons: [...actions.querySelectorAll('button')].filter(button => button.getClientRects().length > 0).map(button => {
         const r = button.getBoundingClientRect();
         const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
         return { height: r.height, bottom: r.bottom, hit: hit === button || button.contains(hit) };
@@ -220,6 +223,7 @@ test('Care arrival and guided checkout remain reachable at the configured viewpo
     };
   });
   expect(enlarged.noteReachable, JSON.stringify(enlarged)).toBe(true);
+  expect(enlarged.buttons).toHaveLength(2);
   expect(enlarged.buttons.every(button => button.height >= 44 && button.bottom <= enlarged.height && button.hit), JSON.stringify(enlarged)).toBe(true);
   await page.evaluate(() => document.querySelector('#v11217GuidedCheckout').querySelectorAll('*').forEach(node => node.style.removeProperty('font-size')));
   await expect.poll(() => page.evaluate(() => window.writes.length)).toBe(0);
@@ -234,13 +238,14 @@ test('Care arrival and guided checkout remain reachable at the configured viewpo
       return {
         height: innerHeight,
         navTop: nav.getBoundingClientRect().top,
-        buttons: [...modal.querySelectorAll('.v11217-modal-actions button')].map(button => {
+        buttons: [...modal.querySelectorAll('.v11217-modal-actions button')].filter(button => button.getClientRects().length > 0).map(button => {
           const r = button.getBoundingClientRect();
           const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
           return { height: r.height, bottom: r.bottom, hit: hit === button || button.contains(hit) };
         })
       };
     });
+    expect(reduced.buttons).toHaveLength(2);
     expect(reduced.buttons.every(button => button.height >= 44 && button.bottom <= reduced.height && button.hit), JSON.stringify(reduced)).toBe(true);
   }
   await cancel.click();
