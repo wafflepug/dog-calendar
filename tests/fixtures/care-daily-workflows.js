@@ -73,6 +73,13 @@ async function install(page,{bookingOverrides=[],holdProfileRead=false,fernMedic
     completed.splice(0,completed.length,...completed.filter(row=>row.stayId!==record.stayId),record);
     return {result:'success',record};
   }
-  return {reads,bookings:fixtureBookings,recordCheckout,releaseProfileRead:()=>releaseProfileRead?.()};
+  function recordCheckIn(payload){
+    const booking=fixtureBookings.find(row=>row.stayId===payload.stayId&&row.dogId===payload.dogId);
+    if(!booking)throw new Error('Synthetic check-in requires the exact fixture dog and stay');
+    const record={...booking,...payload,status:'checked_in',updatedAt:'2026-10-18T02:00:00Z',checkedInAt:'2026-10-18T02:00:00Z'};
+    operations=operations.filter(row=>row.stayId!==record.stayId).concat(record);
+    return {result:'success',record};
+  }
+  return {reads,bookings:fixtureBookings,recordCheckout,recordCheckIn,releaseProfileRead:()=>releaseProfileRead?.()};
 }
 module.exports={install,bookings};

@@ -18,12 +18,20 @@ async function setup(page) {
     window.savedPayloads = [];
     window.profileOpenCount = 0;
     window.profileReadCount = 0;
+    window.operationLookupCount = 0;
+    window.operationLookupIds = [];
     window.alertMessages = [];
     window.failNextSave = false;
     window.failMessage = 'Synthetic network failure';
     window.saveGate = null;
     window.releaseSave = null;
-    window.v110OperationForStay = payload => window.operations.get(payload.stayId) || null;
+    window.v110OperationForStay = payload => { window.operationLookupCount++; window.operationLookupIds.push(payload.stayId); return window.operations.get(payload.stayId) || null; };
+    window.v110OperationalPayloadFromCard = card => ({
+      stayId: String(card.dataset.directoryStayId || ''), stayKey: String(card.dataset.directoryStayKey || ''),
+      dogId: String(card.dataset.directoryDogId || ''), dogName: String(card.dataset.directoryDogName || ''),
+      ownerName: String(card.dataset.v1088OwnerName || ''), phone: String(card.dataset.ownerPhone || ''),
+      startDate: String(card.dataset.directoryStartDate || ''), endDate: String(card.dataset.directoryEndDate || ''), breed: ''
+    });
     window.v110OperationDisplayState = card => {
       if (card.dataset.identityCollision === 'true') return { code: 'collision' };
       const operation = window.operations.get(card.dataset.directoryStayId);
@@ -98,6 +106,41 @@ test('roster actions are separate from profile open, isolate same-name dogs, ret
   expect(await page.evaluate(() => window.profileOpenCount)).toBe(0);
   expect(await page.evaluate(() => window.profileReadCount)).toBe(0);
   await expect.poll(() => page.evaluate(() => window.alertMessages.length)).toBe(0);
+});
+
+test('owner call stays in More actions for current, future, and Past cards and rejects invalid or stale targets', async ({page})=>{
+ await setup(page);
+ await page.evaluate(()=>{
+  for(const key of ['future','past']) document.querySelector(`[data-directory-stay-id="stay-${key}"]`).dataset.ownerPhone='+61 (4) 12-345-678';
+  document.querySelector('[data-directory-stay-id="stay-a"]').dataset.ownerPhone='123';
+  window.WAFFLE_EARLY_CHECKOUT_V11217.refresh();
+ });
+ const future=page.locator('[data-directory-stay-id="stay-future"]'),past=page.locator('[data-directory-stay-id="stay-past"]');
+ for(const card of [future,past]){
+  const more=card.locator('.v11217-roster-more-actions'),link=card.locator('[data-v11217-roster-owner-call]');
+  await expect(more).toHaveJSProperty('open',false);await expect(link).toHaveAttribute('href','tel:+61412345678');await more.locator('summary').click();
+  await expect(link).toHaveAccessibleName(/Call Owner (future|past) about Twin Pup · \+61 \(4\) 12-345-678/);
+ }
+ const withContact=await page.evaluate(()=>window.operationLookupCount);
+ await page.evaluate(async()=>{window.WAFFLE_EARLY_CHECKOUT_V11217.refresh();await new Promise(resolve=>setTimeout(resolve,30));});
+ const repeatLookupCount=await page.evaluate(()=>window.operationLookupCount);
+ await page.evaluate(async()=>{window.WAFFLE_EARLY_CHECKOUT_V11217.refresh();await new Promise(resolve=>setTimeout(resolve,30));});
+ const secondRepeatLookupCount=await page.evaluate(()=>window.operationLookupCount);
+ expect(repeatLookupCount-withContact).toBe(secondRepeatLookupCount-repeatLookupCount);
+ await expect(page.locator('[data-directory-stay-id="stay-a"] [data-v11217-roster-owner-call]')).toHaveCount(0);
+ const reused=await future.locator('[data-v11217-roster-owner-call]').evaluate(anchor=>{
+  const card=anchor.closest('.directory-card');card.dataset.directoryDogId='different-dog';
+  const event=new MouseEvent('click',{bubbles:true,cancelable:true});anchor.dispatchEvent(event);return event.defaultPrevented;
+ });
+ expect(reused).toBe(true);
+ await page.evaluate(()=>{
+  const card=document.querySelector('[data-directory-stay-id="stay-past"]');card.dataset.ownerPhone='javascript:alert(1)';
+  const invalid=document.querySelector('[data-directory-stay-id="stay-a"]');invalid.dataset.ownerPhone='123';
+  window.WAFFLE_EARLY_CHECKOUT_V11217.refresh();
+ });
+ await expect(past.locator('[data-v11217-roster-owner-call]')).toHaveCount(0);
+ await expect(past.locator('.v11217-roster-more-actions')).toHaveCount(0);
+ expect(await page.evaluate(()=>window.profileOpenCount)).toBe(0);
 });
 
 test('identity ambiguity and offline failures offer review guidance without a retry', async ({ page }) => {
@@ -202,15 +245,13 @@ test('early checkout uses its review modal and controls fit on a narrow mobile v
   expect(await page.evaluate(() => window.savedPayloads.at(-1))).toMatchObject({
     stayId: 'stay-b', dogId: '22222222-2222-4222-8222-222222222222', status: 'checked_out'
   });
-  expect(await page.locator('[data-directory-stay-id="stay-future"] [data-v11217-roster-actions]').count()).toBe(0);
-  expect(await page.locator('[data-directory-stay-id="stay-past"] [data-v11217-roster-actions]').count()).toBe(0);
+  expect(await page.locator('[data-directory-stay-id="stay-future"] [data-v11217-roster-checkin],[data-directory-stay-id="stay-future"] [data-v11217-roster-checkout],[data-directory-stay-id="stay-past"] [data-v11217-roster-checkin],[data-directory-stay-id="stay-past"] [data-v11217-roster-checkout]').count()).toBe(0);
   expect(await page.evaluate(() => window.profileOpenCount)).toBe(0);
 });
 
 
-test('early checkout note grows and refuses accidental discard without changing the stay',async({page})=>{
- await page.evaluate(()=>{window.__pickupNativeConfirm=window.confirm;});
- await setup(page);await page.evaluate(()=>{window.confirm=window.__pickupNativeConfirm;});await page.setViewportSize({width:390,height:844});
+test('early checkout note grows and uses inline discard confirmation without changing the stay',async({page})=>{
+ await setup(page);await page.setViewportSize({width:390,height:844});
  const card=page.locator('[data-directory-stay-id="stay-b"]');
  await card.locator('.v11217-roster-more-actions summary').click();await card.locator('[data-v11217-early-checkout]').click();
  const dialog=page.locator('#v11217EarlyCheckoutModal'),note=dialog.locator('[data-v11217-note]');
@@ -219,10 +260,11 @@ test('early checkout note grows and refuses accidental discard without changing 
  const text=Array.from({length:16},(_,i)=>`Pickup detail ${i}`).join('\n');await note.fill(text);
  expect(await note.evaluate(node=>node.getBoundingClientRect().height)).toBeGreaterThan(initial);
  expect(await note.evaluate(node=>node.getBoundingClientRect().height)).toBeLessThanOrEqual(180);
- page.once('dialog',prompt=>prompt.dismiss());await page.keyboard.press('Escape');
- await expect(dialog).toBeVisible();await expect(note).toHaveValue(text);await expect(note).toBeFocused();
+ await page.keyboard.press('Escape');
+ const prompt=dialog.locator('[data-v11217-discard-prompt]');await expect(prompt).toBeVisible();await expect(prompt.locator('[data-v11217-discard-keep]')).toBeFocused();
+ await page.keyboard.press('Escape');await expect(prompt).toBeHidden();await expect(dialog).toBeVisible();await expect(note).toHaveValue(text);await expect(note).toBeFocused();
  await note.fill('');expect(await note.evaluate(node=>node.getBoundingClientRect().height)).toBe(initial);
- await note.fill('Keep this pickup note');page.once('dialog',prompt=>prompt.accept());await page.keyboard.press('Escape');
+ await note.fill('Keep this pickup note');await page.keyboard.press('Escape');await expect(prompt).toBeVisible();await prompt.locator('[data-v11217-discard-confirm]').click();
  await expect(dialog).toBeHidden();expect(await page.evaluate(()=>window.savedPayloads)).toEqual([]);
  await card.locator('[data-v11217-early-checkout]').click();await expect(note).toHaveValue('');
  await note.fill('Owner collected the blue bag.');

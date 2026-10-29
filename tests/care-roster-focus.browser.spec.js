@@ -81,7 +81,11 @@ test('operational filters combine with canonical search and stay tabs; unknown a
   await expect(page.locator('#directory-grid .directory-card:visible')).toHaveCount(4);
   await page.locator('#guestDirectorySearch').fill('milo');
   await expect(page.locator('#directory-grid .directory-card:visible')).toHaveCount(3);
+  await expect(filters.locator('summary')).toHaveText('Arriving today · 3 of 4');
+  await expect(filters.locator('summary')).toHaveAttribute('aria-label', 'Arriving today filter · 3 visible of 4 loaded stays');
   await page.locator('#guestDirectorySearch').fill('nobody');
+  await expect(filters.locator('summary')).toHaveText('Arriving today · 0 of 4');
+  await expect(filters.locator('summary')).toHaveAttribute('aria-label', 'Arriving today filter · 0 visible of 4 loaded stays');
   await expect(page.locator('#directory-search-status')).toContainText('Arriving today');
   await expect(page.locator('#directory-search-status')).toContainText('No loaded guests match');
   await page.locator('[data-focus-clear]').click();
@@ -171,4 +175,100 @@ test('arrival dates follow the local stay-day boundary and include same-day dayc
   await expect(filters).not.toHaveAttribute('open', '');
   await expect(filters.locator('summary')).toBeFocused();
   await expect(page.locator('#directory-grid .directory-card:visible')).toHaveCount(1);
+});
+
+test('roster summary uses visible matches while choice totals remain loaded totals', async ({ page }) => {
+  await setup(page);
+  await addStay(page, { stay: 'a', dog: 'dog-a', name: 'Milo' });
+  await addStay(page, { stay: 'b', dog: 'dog-b', name: 'Milo' });
+  await addStay(page, { stay: 'c', dog: 'dog-c', name: 'Pip' });
+  await addStay(page, { stay: 'u', dog: 'dog-u', name: 'Milo Unknown', op: 'collision' });
+  const filters = page.locator('[data-care-roster-focus]');
+  await filters.locator('summary').click();
+  await filters.locator('[data-focus-mode="arriving"]').click();
+  await expect(filters.locator('summary')).toHaveText('Arriving today · 3');
+  await expect(filters.locator('summary')).toHaveAttribute('aria-label', 'Arriving today filter · 3 loaded stays');
+  await expect(filters.locator('[data-focus-count="arriving"]')).toHaveText('3');
+  await page.locator('#guestDirectorySearch').fill('milo');
+  await expect(filters.locator('summary')).toHaveText('Arriving today · 2 of 3');
+  await expect(filters.locator('[data-focus-count="arriving"]')).toHaveText('3');
+  await expect(filters.locator('[data-focus-status]')).toContainText('1 loaded stay has unknown or conflicting');
+  await page.locator('#guestDirectorySearch').fill('pip');
+  await expect(filters.locator('summary')).toHaveText('Arriving today · 1 of 3');
+  await expect(filters.locator('summary')).toHaveAttribute('aria-label', 'Arriving today filter · 1 visible of 3 loaded stays');
+  await page.locator('#guestDirectorySearch').fill('');
+  await expect(filters.locator('summary')).toHaveText('Arriving today · 3');
+  await page.locator('[data-v1082-stay-tab="future"]').click();
+  await expect(filters).toBeHidden();
+  await expect(filters.locator('summary')).toHaveText('Arriving today · 3');
+});
+
+test('verified focused check-in hides its row and restores focus to the next pending check-in', async ({ page }) => {
+  await setup(page);
+  await addStay(page, { stay: 'a', dog: 'dog-a', name: 'A' });
+  await addStay(page, { stay: 'b', dog: 'dog-b', name: 'B' });
+  await addStay(page, { stay: 'c', dog: 'dog-c', name: 'C' });
+  const filters = page.locator('[data-care-roster-focus]');
+  await filters.locator('summary').click();
+  await filters.locator('[data-focus-mode="arriving"]').click();
+  const card = page.locator('#directory-grid .directory-card').nth(1);
+  const button = card.locator('[data-v11217-roster-checkin]');
+  await button.focus();
+  const token = await card.evaluate(node => {
+    const t = window.WAFFLE_CARE_ROSTER_FOCUS.captureCheckIn(node, node.querySelector('[data-v11217-roster-checkin]'));
+    window.testCheckinToken = t;
+    return !!t;
+  });
+  expect(token).toBe(true);
+  await card.evaluate(node => { node.dataset.operationState = 'checked_in'; });
+  const completed = await card.evaluate(node => window.WAFFLE_CARE_ROSTER_FOCUS.completeCheckIn(window.testCheckinToken, node, { verified: true }));
+  expect(completed).toBe(true);
+  await expect(card).toBeHidden();
+  await expect(page.locator('#directory-grid .directory-card').nth(2).locator('[data-v11217-roster-checkin]')).toBeFocused();
+});
+
+test('check-in completion does not restore focus after identity, search, focus, or scroll changes', async ({ page }) => {
+  await setup(page);
+  await page.evaluate(() => { document.body.style.minHeight = '1200px'; window.scrollTo(0, 0); });
+  await addStay(page, { stay: 'a', dog: 'dog-a', name: 'A' });
+  await addStay(page, { stay: 'b', dog: 'dog-b', name: 'B' });
+  const filters = page.locator('[data-care-roster-focus]');
+  await filters.locator('summary').click();
+  await filters.locator('[data-focus-mode="arriving"]').click();
+  const capture = async () => page.evaluate(() => {
+    const card = document.querySelector('#directory-grid .directory-card');
+    const button = card.querySelector('[data-v11217-roster-checkin]');
+    button.focus();
+    window.testCheckinToken = window.WAFFLE_CARE_ROSTER_FOCUS.captureCheckIn(card, button);
+    return !!window.testCheckinToken;
+  });
+  const setCheckedIn = async () => page.evaluate(() => { document.querySelector('#directory-grid .directory-card').dataset.operationState = 'checked_in'; });
+  const complete = async () => page.evaluate(() => {
+    const card = document.querySelector('#directory-grid .directory-card');
+    return window.WAFFLE_CARE_ROSTER_FOCUS.completeCheckIn(window.testCheckinToken, card, { verified: true });
+  });
+
+  expect(await capture()).toBe(true);
+  await page.evaluate(() => { document.querySelector('#directory-grid .directory-card').dataset.directoryStayId = 'reused-card'; });
+  await setCheckedIn();
+  expect(await complete()).toBe(false);
+  await page.evaluate(() => { const card = document.querySelector('#directory-grid .directory-card'); card.dataset.directoryStayId = 'a'; card.dataset.operationState = 'date_active'; window.WAFFLE_REAPPLY_DIRECTORY_FILTER(); });
+
+  expect(await capture()).toBe(true);
+  await page.locator('#guestDirectorySearch').fill('b');
+  await setCheckedIn();
+  expect(await complete()).toBe(false);
+  await page.locator('#guestDirectorySearch').fill('');
+  await page.evaluate(() => { document.querySelector('#directory-grid .directory-card').dataset.operationState = 'date_active'; window.WAFFLE_REAPPLY_DIRECTORY_FILTER(); });
+
+  expect(await capture()).toBe(true);
+  await page.locator('#guestDirectorySearch').focus();
+  await setCheckedIn();
+  expect(await complete()).toBe(false);
+  await page.evaluate(() => { document.querySelector('#directory-grid .directory-card').dataset.operationState = 'date_active'; window.WAFFLE_REAPPLY_DIRECTORY_FILTER(); });
+
+  expect(await capture()).toBe(true);
+  await page.evaluate(() => { window.scrollTo(0, 24); });
+  await setCheckedIn();
+  expect(await complete()).toBe(false);
 });

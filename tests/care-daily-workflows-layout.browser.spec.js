@@ -3,6 +3,110 @@ const path=require('node:path');
 const fs=require('node:fs');
 const {install,bookings}=require('./fixtures/care-daily-workflows');
 
+test('Care owner contact, filtered counts and verified check-in preserve the next arrival without profile reads',async({page,baseURL})=>{
+  const fixture=await install(page,{bookingOverrides:[{stayId:bookings[0].stayId,phone:'+61 (400) 123-456'}]});
+  await page.goto(`${baseURL}/directory.html?ownerFlowFixture=1`,{waitUntil:'domcontentloaded'});
+  await page.waitForFunction(()=>document.documentElement.dataset.waffleUiReady==='true'&&window.WAFFLE_CARE_ROSTER_FOCUS);
+  const first=page.locator(`#directory-grid [data-directory-stay-id="${bookings[0].stayId}"]`);
+  const second=page.locator(`#directory-grid [data-directory-stay-id="${bookings[1].stayId}"]`);
+  const more=first.locator('.v11217-roster-more-actions');
+  await more.locator('summary').click();
+  const call=more.locator('[data-v11217-roster-owner-call]');
+  await expect(call).toHaveAttribute('href','tel:+61400123456');
+  await expect(call).toContainText('Call owner');
+  await expect(call).toHaveAccessibleName(/#00017/);
+  expect(await call.evaluate(node=>node.getBoundingClientRect().height)).toBeGreaterThanOrEqual(44);
+  await more.locator('summary').click();
+  const focus=page.locator('[data-care-roster-focus]');
+  await focus.locator('summary').click();
+  await focus.locator('[data-focus-mode="arriving"]').click();
+  const search=page.locator('#guestDirectorySearch');
+  await search.fill('#00017');
+  await expect(focus.locator('summary')).toHaveText('Arriving today · 1 of 2');
+  await expect(focus.locator('[data-focus-count="arriving"]')).toHaveText('2');
+  await search.fill('not-a-match');
+  await expect(focus.locator('summary')).toHaveText('Arriving today · 0 of 2');
+  await search.fill('');
+  await expect(focus.locator('summary')).toHaveText('Arriving today · 2');
+  await page.exposeFunction('__recordCareCheckIn',payload=>fixture.recordCheckIn(payload));
+  await page.evaluate(()=>{
+    window.__careOwnerWrites=[];
+    window.sendPayloadToAppsScript=async payload=>{window.__careOwnerWrites.push({...payload});return window.__recordCareCheckIn(payload);};
+    document.body.style.minHeight='2400px';
+  });
+  const checkIn=first.locator('[data-v11217-roster-checkin]');
+  await checkIn.evaluate(node=>node.focus({preventScroll:true}));
+  await page.evaluate(()=>window.scrollTo(0,120));
+  const beforeScroll=await page.evaluate(()=>window.scrollY);
+  await page.keyboard.press('Enter');
+  await expect(first).toBeHidden();
+  await expect(second.locator('[data-v11217-roster-checkin]')).toBeFocused();
+  expect(await page.evaluate(()=>window.scrollY)).toBe(beforeScroll);
+  await expect(focus.locator('summary')).toHaveText('Arriving today · 1');
+  const writes=await page.evaluate(()=>window.__careOwnerWrites);
+  expect(writes).toHaveLength(1);expect(writes[0].action).toBe('checkin_stay');expect(writes[0].stayId).toBe(bookings[0].stayId);
+  expect(fixture.reads.filter(action=>action==='get_guest_profile')).toHaveLength(0);
+});
+
+test('Care long handover previews and inline discard choices remain readable above the phone footer',async({page,baseURL},testInfo)=>{
+  const longNote='<b>Private saved handover</b>\n'+('Call Casey before pickup and return the labelled bag. '.repeat(8).trimEnd());
+  const fixture=await install(page,{bookingOverrides:[{stayId:bookings[2].stayId,notes:longNote}]});
+  const nativeDialogs=[];
+  page.on('dialog',async dialog=>{nativeDialogs.push(dialog.message());await dialog.dismiss();});
+  await page.goto(`${baseURL}/directory.html?ownerFlowFixture=1`,{waitUntil:'domcontentloaded'});
+  await page.waitForFunction(()=>document.documentElement.dataset.waffleUiReady==='true');
+  const fern=page.locator(`#directory-grid [data-directory-stay-id="${bookings[2].stayId}"]`);
+  await fern.locator('[data-v11217-roster-checkout]').click();
+  const modal=page.locator('#v11217GuidedCheckout');
+  const saved=modal.locator('[data-v11217-guided-handover]');
+  const preview=saved.locator('[data-v11217-guided-handover-preview]');
+  await expect(saved).not.toHaveAttribute('open','');await expect(preview).toBeVisible();
+  await expect(preview).toContainText('Private saved handover');await expect(preview.locator('b')).toHaveCount(0);
+  expect(await preview.evaluate(node=>getComputedStyle(node).whiteSpace)).toBe('nowrap');
+  await saved.locator('summary').click();
+  expect(await saved.locator('[data-v11217-guided-handover-note]').textContent()).toBe(longNote);
+  await saved.locator('summary').click();
+  const note=modal.locator('[data-v11217-guided-note]');
+  for(const dark of [false,true]){
+    await page.locator('body').evaluate((body,on)=>body.classList.toggle('dark-theme',on),dark);
+    await note.fill('A departure draft to retain without a browser prompt.');
+    await modal.locator('[data-v11217-guided-close]').last().click();
+    const prompt=modal.locator('[data-v11217-discard-prompt]');
+    await expect(prompt).toBeVisible();await expect(prompt.locator('[data-v11217-discard-keep]')).toBeFocused();
+    for(const button of await prompt.locator('button').all()){
+      const hit=await button.evaluate(node=>{const r=node.getBoundingClientRect(),top=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);return{height:r.height,bottom:r.bottom,right:r.right,width:innerWidth,viewport:innerHeight,hit:top===node||node.contains(top)};});
+      expect(hit.height).toBeGreaterThanOrEqual(44);expect(hit.bottom).toBeLessThanOrEqual(hit.viewport);expect(hit.right).toBeLessThanOrEqual(hit.width);expect(hit.hit).toBe(true);
+    }
+    if(testInfo.project.name==='chromium-320'&&!dark){
+      await prompt.evaluate(node=>node.style.fontSize='28px');
+      for(const button of await prompt.locator('button').all()){
+        const geometry=await button.evaluate(node=>{const r=node.getBoundingClientRect();return{right:r.right,bottom:r.bottom,pageWidth:document.documentElement.scrollWidth,viewport:innerWidth,height:innerHeight};});
+        expect(geometry.right).toBeLessThanOrEqual(geometry.viewport);expect(geometry.bottom).toBeLessThanOrEqual(geometry.height);expect(geometry.pageWidth).toBeLessThanOrEqual(geometry.viewport);
+      }
+      await prompt.evaluate(node=>node.style.removeProperty('font-size'));
+    }
+    if(testInfo.project.name==='chromium-390')await page.screenshot({path:testInfo.outputPath(`inline-discard-${dark?'dark':'light'}.png`),animations:'disabled'});
+    await modal.locator('[data-v11217-guided-confirm]').evaluate(node=>node.dispatchEvent(new MouseEvent('click',{bubbles:true})));
+    await expect(modal).toBeVisible();
+    await prompt.locator('[data-v11217-discard-keep]').click();await expect(note).toHaveValue('A departure draft to retain without a browser prompt.');
+    await expect(modal.locator('[data-v11217-guided-confirm]')).toBeEnabled();
+    if(['chromium-390','chromium-1440'].includes(testInfo.project.name))await page.screenshot({path:testInfo.outputPath(`owner-flow-${dark?'dark':'light'}.png`),animations:'disabled'});
+  }
+  await modal.locator('[data-v11217-guided-close]').last().click();await modal.locator('[data-v11217-discard-confirm]').click();
+  await expect(modal).toBeHidden();
+  const sameDay=page.locator(`#directory-grid [data-directory-stay-id="${bookings[1].stayId}"]`);
+  await sameDay.locator('[data-v11217-roster-checkout]').click();await expect(saved).toBeHidden();await expect(note).toHaveValue('');
+  await modal.locator('[data-v11217-guided-close]').last().click();
+  const ongoing=page.locator(`#directory-grid [data-directory-stay-id="${bookings[0].stayId}"]`);
+  await ongoing.locator('.v11217-roster-more-actions summary').click();await ongoing.locator('.v11217-roster-more-actions [data-v11217-early-checkout]').click();
+  const early=page.locator('#v11217EarlyCheckoutModal');await early.locator('[data-v11217-note]').fill('Keep this early pickup draft.');
+  await early.locator('[data-v11217-close]').last().click();
+  const earlyKeep=early.locator('[data-v11217-discard-keep]');await expect(earlyKeep).toBeVisible();
+  expect(await earlyKeep.evaluate(node=>{const r=node.getBoundingClientRect();return r.bottom<=innerHeight&&r.height>=44;})).toBe(true);
+  await early.locator('[data-v11217-discard-confirm]').click();await expect(early).toBeHidden();
+  expect(nativeDialogs).toEqual([]);expect(fixture.reads.filter(action=>action==='get_guest_profile')).toHaveLength(0);
+});
+
 test('the complete Care runtime combines filters, truthful setup and optional verified departure sharing',async({page,baseURL},testInfo)=>{
   const runtimeErrors=[];
   page.on('pageerror',error=>runtimeErrors.push(error.message));
@@ -174,8 +278,9 @@ test('checkout reviews exact Fern care in place and clears the note on explicit 
     await page.screenshot({path:path.join(reviewedShots,`${label}.png`),fullPage:false});
   }
 
-  page.once('dialog',dialog=>dialog.accept());
   await modal.locator('[data-v11217-guided-close]').last().click();
+  await expect(modal.locator('[data-v11217-discard-prompt]')).toBeVisible();
+  await modal.locator('[data-v11217-discard-confirm]').click();
   await expect(modal).toBeHidden();
   await checkout.click();
   await expect(modal).toBeVisible();
@@ -199,8 +304,7 @@ test('confirmed discard clears the checkout note without writes or a second prom
   });
   page.on('dialog',async dialog=>{
     legacyDialogs.push({type:dialog.type(),message:dialog.message()});
-    if(dialog.type()==='confirm'&&dialog.message()==='Discard this unsaved departure note?')await dialog.accept();
-    else await dialog.dismiss();
+    await dialog.dismiss();
   });
   const fixture=await install(page);
   await page.goto(`${baseURL}/directory.html?checkoutCareBridgeFixture=1`,{waitUntil:'domcontentloaded'});
@@ -218,17 +322,29 @@ test('confirmed discard clears the checkout note without writes or a second prom
   await expect(modal.locator('[data-v11217-guided-review-care]')).toBeVisible();
   const handoverNote='Fern’s evening dose is in the blue pouch; Casey will collect at 5pm.';
   await note.fill(handoverNote);
+  await note.evaluate(node=>node.setSelectionRange(5,12));
   await modal.locator('[data-v11217-guided-close]').last().click();
+  const discard=modal.locator('[data-v11217-discard-prompt]');
+  await expect(discard).toBeVisible();
+  await expect(discard.locator('[data-v11217-discard-keep]')).toBeFocused();
+  await modal.locator('[data-v11217-guided-close].v11217-modal-close').click();
+  await discard.locator('[data-v11217-discard-keep]').click();
+  await expect(note).toHaveValue(handoverNote);
+  await expect(note).toBeFocused();
+  expect(await note.evaluate(node=>[node.selectionStart,node.selectionEnd])).toEqual([5,12]);
+  await expect(modal.locator('[data-v11217-guided-confirm]')).toBeEnabled();
+  await modal.locator('[data-v11217-guided-close]').last().click();
+  await discard.locator('[data-v11217-discard-confirm]').click();
   await expect(modal).toBeHidden();
   await fern.locator('[data-v11217-roster-checkout]').click();
   await expect(modal).toBeVisible();
   await expect(note).toHaveValue('');
-  expect(legacyDialogs).toEqual([{type:'confirm',message:'Discard this unsaved departure note?'}]);
+  expect(legacyDialogs).toEqual([]);
   expect(writeRequests).toEqual([]);
 
   await modal.locator('[data-v11217-guided-close]').last().click();
   await expect(modal).toBeHidden();
-  expect(legacyDialogs).toEqual([{type:'confirm',message:'Discard this unsaved departure note?'}]);
+  expect(legacyDialogs).toEqual([]);
   expect(writeRequests).toEqual([]);
   expect(runtimeErrors).toEqual([]);
 });
