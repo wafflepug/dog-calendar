@@ -18,7 +18,7 @@ Counts use loaded, identifiable stays. When search narrows an active work filter
 3. If an intake-status control is shown, read its explanation and tap it to open that guest's Care profile in one step. **Intake complete** means the current owner form is recorded as complete; it does not mean all safety or care checks are finished.
 4. Check in the selected dog. The button uses the same verified booking save as before; opening a profile is unnecessary.
 
-The shortcut uses information already loaded on the page. It does not download every future profile. Checked-in, checked-out, ambiguous, and future-day bookings are excluded.
+The collapsed **Care checks** summary names medication and belongings separately; unknown details remain unverified. Arrival review labels include the loaded owner and public Dog Number when available to help distinguish same-name guests. The shortcut uses information already loaded on the page. It does not download every future profile. Checked-in, checked-out, ambiguous, and future-day bookings are excluded.
 
 ## Call an owner from the guest list
 1. On the correct guest row, open **More actions**.
@@ -27,7 +27,7 @@ The shortcut uses information already loaded on the page. It does not download e
 
 ## Owner Care Link and intake
 1. Open the selected dog’s Care profile and choose **Owner Care Link** near the top.
-2. Prepare the message, then **Copy message** or **Share** using your preferred app. Send it yourself.
+2. Prepare the link, then **Copy owner care link** or **Share** using your preferred app. Open **More options** for **Copy message** when you want the full message. If sharing is unavailable, use the visible copy-link action. Send it yourself.
 3. Read the compact status beside the button:
    - **Not prepared:** no digital intake link is recorded.
    - **Link ready:** a link exists or was prepared. This is not proof that it was sent or submitted.

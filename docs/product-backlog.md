@@ -1,11 +1,13 @@
 # Product improvement backlog
 
-Reviewed 17 September 2026. Repository: `wafflepug/dog-calendar`; always start implementation from current `origin/main` in an isolated worktree. Stack: static HTML/CSS, browser JavaScript, FullCalendar, Apps Script backend, Python contracts, Playwright. Keep production smoke checks read-only. Preserve existing theme settings, offline work, and early checkout behavior. Use Luna for bounded implementation; lead agent reviews design and integration. Complete relevant CI before merging.
+Reviewed 17 September 2026. Repository: `wafflepug/dog-calendar`; always start implementation from current `origin/main` in an isolated worktree. Stack: static HTML/CSS, browser JavaScript, FullCalendar, Apps Script backend, Python contracts, Playwright. Keep production smoke checks read-only. Preserve existing theme settings, offline work, and early checkout behavior. Use Astra for bounded implementation; lead agent reviews design and integration. Complete relevant CI before merging.
 
 
 ## Current Care iteration - 29 October 2026
 
-Candidate 2026.10.29.04: [Care owner flow](care-owner-flow.md). Five improvements: secondary roster owner calls, visible/loaded filter counts, verified check-in focus continuity, inline checkout discard choices and long saved handover previews. Preserve exact identity, explicit writes, complete care and lazy reads. Next: review owner handoff and arrival preparation on physical phones before adding controls.
+Candidate 2026.10.29.05: [Care arrival and handoff](care-arrival-handoff.md). Five bounded refinements: visible share-error recovery, compact care-link and full-message copy focus continuity, labeled belongings summaries and owner-aware arrival-review labels. Preserve complete care, exact identity, explicit sharing and lazy reads. Next: review future-arrival date context and deferred-arrival recovery using existing loaded data.
+
+Published 2026.10.29.04 (PR #278): [Care owner flow](care-owner-flow.md). Five improvements: secondary roster owner calls, visible/loaded filter counts, verified check-in focus continuity, inline checkout discard choices and long saved handover previews. Preserve exact identity, explicit writes, complete care and lazy reads. Next: review owner handoff and arrival preparation on physical phones before adding controls.
 
 Published 2026.10.29.03 (PR #277): [Care journey shortcuts](care-journey-shortcuts.md). Direct due-today checkout, Enter to open one visible search result and immediate short saved handover notes. Preserve confirmation, exact identities, drafts, lazy reads and full text. Next: review phone arrival and pickup action placement with representative long-name and missing-data cases.
 

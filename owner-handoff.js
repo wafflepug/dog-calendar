@@ -23,9 +23,15 @@
     for (let parent = node; parent; parent = parent.parentElement) {
       if (parent.hidden || parent.inert || parent.getAttribute('aria-hidden') === 'true' || (parent.tagName === 'DETAILS' && !parent.open && parent !== node)) return false;
       const style = getComputedStyle(parent);
-      if (style.display === 'none' || style.visibility === 'hidden' || style.visibility === 'collapse') return false;
+      if (style.display === 'none' || style.visibility === 'hidden' || style.visibility === 'collapse' || Number(style.opacity) === 0) return false;
     }
     return true;
+  }
+
+  function canRestoreCopyFocus(control, origin, moved, fallbackField) {
+    const active = document.activeElement;
+    const ownedFocus = origin === control || origin === fallbackField || origin === document.body || origin === document.documentElement;
+    return ownedFocus && !moved && isVisible(control) && (active === control || active === fallbackField || active === document.body || active === document.documentElement);
   }
 
   const pendingLinkCopies = new WeakSet();
@@ -167,17 +173,14 @@
       if (actionPending || !card.isConnected) return;
       const focusWasOnControls = document.activeElement === copyButton || document.activeElement === linkField || document.activeElement === document.body || document.activeElement === document.documentElement;
       if (!beginAction('Copying link…')) return;
-      let restoreFocus = false;
+      let copied = false;
       try {
         if (!navigator.clipboard?.writeText) throw Error('Clipboard unavailable');
         await navigator.clipboard.writeText(link);
         if (!card.isConnected) return;
         status.textContent = 'Owner care link copied. Paste it into the owner’s usual chat and send.';
-        const active = document.activeElement;
-        if (!linkLabel.hidden) {
-          linkLabel.hidden = true;
-          restoreFocus = focusWasOnControls && (active === linkField || active === copyButton || active === document.body);
-        }
+        copied = true;
+        linkLabel.hidden = true;
       } catch (_) {
         if (!card.isConnected) return;
         if (linkLabel.parentNode !== card) card.insertBefore(linkLabel, actions);
@@ -192,8 +195,9 @@
           status.textContent = 'Copy was blocked. The link is available in the field above for manual copying.';
         }
       } finally {
+        const restore = copied && canRestoreCopyFocus(copyButton, focusOrigin, focusMoved, linkField);
         endAction();
-        if (card.isConnected && restoreFocus && !focusMoved && (document.activeElement === copyButton || document.activeElement === document.body || document.activeElement === document.documentElement)) copyButton.focus();
+        if (restore) copyButton.focus({ preventScroll: true });
       }
     });
     actions.appendChild(copyButton);
@@ -210,7 +214,7 @@
         } catch (error) {
           if (!card.isConnected) return;
           if (error?.name === 'AbortError') status.textContent = 'Sharing cancelled. Your message is still ready to copy or share.';
-          else status.textContent = 'Sharing is unavailable. Choose Copy message and paste it into the owner’s chat.';
+          else status.textContent = 'Sharing is unavailable. Choose Copy owner care link and paste it into the owner’s chat.';
         } finally {
           const restore = card.isConnected && shareButton.isConnected && !focusMoved && (document.activeElement === shareButton || document.activeElement === focusOrigin || document.activeElement === document.body || document.activeElement === document.documentElement) && isVisible(shareButton);
           endAction();
@@ -243,23 +247,29 @@
     messageLabel.append(messageCaption, messageField);
     const secondaryActions = document.createElement('div');
     secondaryActions.className = 'owner-handoff-actions';
-    async function copy(value, success, fallbackField) {
+    async function copy(value, success, fallbackField, control) {
       const startingFocus = document.activeElement;
       if (!beginAction('Copying message…')) return;
+      let copied = false;
       try {
         if (!navigator.clipboard?.writeText) throw Error('Clipboard unavailable');
         await navigator.clipboard.writeText(value);
         if (!card.isConnected) return;
         status.textContent = success;
+        copied = true;
       } catch (_) {
         if (!card.isConnected) return;
         const active = document.activeElement;
-        if (!focusMoved && isVisible(card) && isVisible(other) && other.open && (active === startingFocus || active === document.body || active === document.documentElement)) {
+        if (!focusMoved && isVisible(card) && isVisible(other) && isVisible(fallbackField) && other.open && (active === startingFocus || active === document.body || active === document.documentElement)) {
           fallbackField.focus();
           fallbackField.select();
           status.textContent = 'Copy was blocked. The text is selected: press and hold to copy, then paste it into the owner’s chat.';
         } else status.textContent = 'Copy was blocked. The message is available above for manual copying.';
-      } finally { endAction(); }
+      } finally {
+        const restore = copied && canRestoreCopyFocus(control, focusOrigin, focusMoved, fallbackField);
+        endAction();
+        if (restore) control.focus({ preventScroll: true });
+      }
     }
     function secondaryButton(text, handler) {
       const button = document.createElement('button');
@@ -270,7 +280,7 @@
       actionButtons.push(button);
       return button;
     }
-    secondaryButton('Copy message', () => copy(message, 'Message copied. Paste it into the owner’s chat and send.', messageField)).className = 'primary';
+    secondaryButton('Copy message', event => copy(message, 'Message copied. Paste it into the owner’s chat and send.', messageField, event.currentTarget)).className = 'primary';
     secondary.append(context, messageLabel, secondaryActions);
     other.append(summary, secondary);
     card.append(heading, hint, linkLabel, actions, other, status);
@@ -332,24 +342,30 @@
       actionButtons.push(control);
       return control;
     }
-    async function copy(value, success) {
+    async function copy(value, success, control) {
       if (!beginAction('Copying…')) return;
+      let copied = false;
       try {
         if (!navigator.clipboard?.writeText) throw Error('Clipboard unavailable');
         await navigator.clipboard.writeText(value);
         if (!card.isConnected) return;
         status.textContent = success;
+        copied = true;
       } catch (_) {
         if (!card.isConnected) return;
         field.value = value;
-        if (!focusMoved && (document.activeElement === focusOrigin || document.activeElement === document.body || document.activeElement === document.documentElement)) {
+        if (!focusMoved && isVisible(field) && (document.activeElement === focusOrigin || document.activeElement === document.body || document.activeElement === document.documentElement)) {
           field.focus(); field.select();
           status.textContent = 'Copy was blocked. The text is selected: press and hold to copy, then paste it into the owner’s chat.';
         } else status.textContent = 'Copy was blocked. The text is available above for manual copying.';
-      } finally { endAction(); }
+      } finally {
+        const restore = copied && canRestoreCopyFocus(control, focusOrigin, focusMoved, field);
+        endAction();
+        if (restore) control.focus({ preventScroll: true });
+      }
     }
-    button('Copy message', () => { field.value = message; return copy(message, 'Message copied. Paste it into the owner’s chat and send.'); }).className = 'primary';
-    button('Copy link', () => copy(link, 'Link copied. Paste it into the owner’s chat and send.'));
+    button('Copy message', event => { field.value = message; return copy(message, 'Message copied. Paste it into the owner’s chat and send.', event.currentTarget); }).className = 'primary';
+    button('Copy link', event => copy(link, 'Link copied. Paste it into the owner’s chat and send.', event.currentTarget));
     if (typeof navigator.share === 'function') {
       button('Share', async event => {
         const control = event.currentTarget;
