@@ -13,6 +13,7 @@ No controls, icons, runtime handlers, backend behavior or Today/Calendar layouts
 - Full-runtime synthetic fixture: Chromium and WebKit at 320, 390 and 1440 pixels, light/dark and 1×/2× text. Verify contact geometry, primary action top alignment, receipt placement, themed supporting buttons, hit targets, overflow, exact identity and unchanged Care read counts. Missing/invalid numbers retain Phone unavailable and Add number without a dial link, and hidden contact groups stay hidden.
 - Existing Care mobile clarity, routine heading and solo-sitter checks: long names and complete instructions, touch targets, forced colors, emergency lookup, retained handover editing, editor focus and draft failure recovery.
 - UI stability contract and release/deployment attribution contracts.
+- CI exposed a WebKit focus-timing race in the existing owner-share test: the hidden host and completed action were recorded before native focus cleared. The test now waits for action completion and polls the same focus-outside-host assertion; no delay, weakened assertion or runtime change.
 - Publication gate: all workflows on the final PR head and every UI regression job must pass before merge; Pages must finish before exact published asset and read-only deployment metadata verification.
 - Live checks request static assets and capability/maintenance metadata only. No guest record reads, guest writes or sample notifications.
 
