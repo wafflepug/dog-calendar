@@ -7,6 +7,7 @@
   let mode = 'all';
   let stateCache = new WeakMap();
   let rootObserver = null;
+  const checkInCaptures = new WeakMap();
 
   function today() {
     if (typeof window.getLocalTodayDateString === 'function') return String(window.getLocalTodayDateString() || '').slice(0, 10);
@@ -145,14 +146,19 @@
     if (clear.hidden !== hideClear) clear.hidden = hideClear;
     if (clear.disabled) clear.disabled = false;
     const summary = details.querySelector('[data-focus-summary]');
-    const nextSummary = mode === 'all' ? "Today's work" : `${MODES[mode]} · ${data[mode]}`;
+    const visible = context && context.activeView === 'current' && !context.profileMode && Number.isFinite(Number(context.visibleMatches))
+      ? Math.max(0, Number(context.visibleMatches)) : data[mode];
+    const narrowed = mode !== 'all' && context?.activeView === 'current' && !context.profileMode && !!context.search && visible < data[mode];
+    const nextSummary = mode === 'all' ? "Today's work" : `${MODES[mode]} · ${narrowed ? `${visible} of ${data[mode]}` : data[mode]}`;
     if (summary.textContent !== nextSummary) summary.textContent = nextSummary;
-    const summaryLabel = mode === 'all' ? "Today's work filters" : `${MODES[mode]} filter · ${data[mode]} loaded stays`;
+    const summaryLabel = mode === 'all' ? "Today's work filters" : narrowed
+      ? `${MODES[mode]} filter · ${visible} visible of ${data[mode]} loaded stays`
+      : `${MODES[mode]} filter · ${data[mode]} loaded stays`;
     if (summary.getAttribute('aria-label') !== summaryLabel) summary.setAttribute('aria-label', summaryLabel);
     const clearLabel = mode === 'all' ? 'Clear filter' : `Clear ${MODES[mode]} filter`;
     if (clear.getAttribute('aria-label') !== clearLabel) clear.setAttribute('aria-label', clearLabel);
     const status = details.querySelector('[data-focus-status]');
-    const unknownText = data.unknown ? ` ${data.unknown} loaded stay${data.unknown === 1 ? '' : 's'} have unknown or conflicting operational status and are omitted from today's counts${mode === 'all' ? '' : ' and this filter'}.` : '';
+    const unknownText = data.unknown ? ` ${data.unknown} loaded stay${data.unknown === 1 ? '' : 's'} ${data.unknown === 1 ? 'has' : 'have'} unknown or conflicting operational status and ${data.unknown === 1 ? 'is' : 'are'} omitted from today's counts${mode === 'all' ? '' : ' and this filter'}.` : '';
     const nextStatus = mode === 'all'
       ? `${data.arriving} pending arrival${data.arriving === 1 ? '' : 's'} · ${data.leaving} departure${data.leaving === 1 ? '' : 's'} today in the loaded roster.${unknownText}`
       : `${MODES[mode]} · ${context?.activeView ? `combined with ${context.activeView === 'current' ? 'Staying' : context.activeView === 'future' ? 'Arriving' : 'Past'}` : 'combined with the selected stay tab'} and search.${unknownText}`;
@@ -164,6 +170,122 @@
   }
 
   function afterCanonicalFilter(context) { renderControls(context); }
+
+  function cardIdentity(card) {
+    const d = card?.dataset || {};
+    const identity = { stayId: String(d.directoryStayId || ''), dogId: String(d.directoryDogId || ''), stayKey: String(d.directoryStayKey || d.stayKey || '') };
+    return identity.stayId && identity.dogId && identity.stayKey ? identity : null;
+  }
+
+  function sameIdentity(a, b) {
+    return !!a && !!b && a.stayId === b.stayId && a.dogId === b.dogId && a.stayKey === b.stayKey;
+  }
+
+  function visibleControl(node) {
+    if (!node?.isConnected || !node.getClientRects().length || node.closest('[hidden],[aria-hidden="true"],[inert]')) return false;
+    for (let parent = node; parent; parent = parent.parentElement) {
+      const style = getComputedStyle(parent);
+      if (style.display === 'none' || style.visibility === 'hidden' || style.visibility === 'collapse' || style.opacity === '0') return false;
+      if (parent.tagName === 'DETAILS' && !parent.open && !parent.querySelector(':scope > summary')?.contains(node)) return false;
+    }
+    return true;
+  }
+
+  function pendingCheckIn(card) {
+    const identity = cardIdentity(card);
+    const button = card?.querySelector('[data-v11217-roster-checkin]');
+    return identity && card.isConnected && card.closest('#directory-grid') && card.style.display !== 'none' &&
+      matchesMode(card, 'arriving') && stayState(card).code === 'date_active' && button && !button.disabled && button.getAttribute('aria-disabled') !== 'true' && visibleControl(button)
+      ? { card, button, identity } : null;
+  }
+
+  function arrivalCandidates() {
+    return Array.from(document.querySelectorAll('#directory-grid .directory-card'))
+      .map(pendingCheckIn).filter(Boolean);
+  }
+
+  function currentContext() {
+    const query = String(document.getElementById('guestDirectorySearch')?.value || '');
+    const activeTab = document.querySelector('[data-v1082-stay-tab].is-active')?.dataset.v1082StayTab || 'current';
+    return { mode, query, activeTab, profileMode: !!document.querySelector('.directory-dashboard-fused.is-profile-mode') };
+  }
+
+  function captureCheckIn(card, button) {
+    const current = currentContext();
+    const eligible = pendingCheckIn(card);
+    if (mode !== 'arriving' || current.activeTab !== 'current' || current.profileMode || !eligible || eligible.button !== button || document.activeElement !== button) return null;
+    const candidates = arrivalCandidates();
+    const index = candidates.findIndex(item => item.card === card && sameIdentity(item.identity, eligible.identity));
+    if (index < 0) return null;
+    const token = Object.freeze({});
+    const capture = {
+      identity: eligible.identity,
+      card,
+      button,
+      previous: index > 0 ? candidates[index - 1].identity : null,
+      next: index + 1 < candidates.length ? candidates[index + 1].identity : null,
+      query: current.query,
+      mode: current.mode,
+      activeTab: current.activeTab,
+      profileMode: current.profileMode,
+      scrollX: window.scrollX,
+      scrollY: window.scrollY,
+      focusMoved: false,
+      focusListener: null
+    };
+    capture.focusListener = event => { if (![button, document.body, document.documentElement].includes(event.target)) capture.focusMoved = true; };
+    document.addEventListener('focusin', capture.focusListener, true);
+    checkInCaptures.set(token, capture);
+    return token;
+  }
+
+  function takeCheckIn(token) {
+    const capture = token && checkInCaptures.get(token);
+    if (!capture) return null;
+    checkInCaptures.delete(token);
+    document.removeEventListener('focusin', capture.focusListener, true);
+    return capture;
+  }
+
+  function cancelCheckIn(token) { return !!takeCheckIn(token); }
+
+  function completeCheckIn(token, card, payload) {
+    const capture = takeCheckIn(token);
+    if (!capture) return false;
+    const success = payload === true || payload?.verified === true || payload?.success === true || payload?.status === 'success' || payload?.status === 'verified';
+    stateCache.delete(card);
+    if (!success || card !== capture.card || !sameIdentity(capture.identity, cardIdentity(card)) || stayState(card).code !== 'checked_in') return false;
+    const context = currentContext();
+    if (context.mode !== capture.mode || context.query !== capture.query || context.activeTab !== capture.activeTab || context.profileMode !== capture.profileMode || window.scrollX !== capture.scrollX || window.scrollY !== capture.scrollY) return false;
+    const focusStillOwned = !capture.focusMoved && (document.activeElement === capture.button || document.activeElement === document.body);
+    if (!focusStillOwned) return false;
+
+    applyCanonicalFilter();
+    window.scrollTo(capture.scrollX, capture.scrollY);
+    const originalFocus = capture.button;
+    const expectedContext = { ...context };
+    const expectedScrollX = window.scrollX, expectedScrollY = window.scrollY;
+    window.requestAnimationFrame(() => {
+      const now = currentContext();
+      if (now.mode !== expectedContext.mode || now.query !== expectedContext.query || now.activeTab !== expectedContext.activeTab || now.profileMode !== expectedContext.profileMode || window.scrollX !== expectedScrollX || window.scrollY !== expectedScrollY) return;
+      stateCache.delete(card);
+      if (!card.isConnected || !sameIdentity(capture.identity, cardIdentity(card)) || stayState(card).code !== 'checked_in') return;
+      if (document.activeElement !== originalFocus && document.activeElement !== document.body && document.activeElement !== document.documentElement) return;
+      const candidates = arrivalCandidates();
+      const targetIdentity = capture.next || capture.previous;
+      let target = candidates.find(item => sameIdentity(item.identity, targetIdentity));
+      if (capture.next && !target) target = candidates.find(item => sameIdentity(item.identity, capture.previous));
+      if (target) {
+        target.button.focus({ preventScroll: true });
+      } else {
+        const summary = document.querySelector('[data-care-roster-focus] [data-focus-summary]');
+        const search = document.getElementById('guestDirectorySearch');
+        (visibleControl(summary) ? summary : visibleControl(search) ? search : null)?.focus?.({ preventScroll: true });
+      }
+      window.scrollTo(expectedScrollX, expectedScrollY);
+    });
+    return true;
+  }
 
   function refresh() {
     stateCache = new WeakMap();
@@ -195,6 +317,9 @@
     getState,
     labelForMode(modeName) { return MODES[modeName] || ''; },
     afterCanonicalFilter,
+    captureCheckIn,
+    completeCheckIn,
+    cancelCheckIn,
     refresh,
     clear() { mode = 'all'; refresh(); }
   });

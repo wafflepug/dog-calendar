@@ -5,7 +5,7 @@
 2. Choose **Arriving today** for pending check-ins or **Leaving today** for scheduled departures. Search still applies.
 3. Choose **All stays** or **Clear filter** to restore the full loaded Staying roster. The filter does not change the Arriving or Past tabs.
 
-Counts use loaded, identifiable stays. Unknown or conflicting operational records are excluded; the filter does not download profiles. A completed check-in leaves the pending arrivals filter; a verified checkout leaves the departures filter immediately.
+Counts use loaded, identifiable stays. When search narrows an active work filter, its summary shows visible matches out of the loaded total, for example **Arriving today · 1 of 2**. Expanded filter choices retain loaded totals. Unknown or conflicting operational records are excluded; the filter does not download profiles. A completed check-in leaves the pending arrivals filter; a verified checkout leaves the departures filter immediately. After a successful keyboard-focused check-in, focus can move to the next pending arrival while preserving your place. It never checks in another dog automatically and does not claim focus after you change task or scroll.
 
 ## Open a searched guest
 1. Search by dog name, owner or Dog ID in Care.
@@ -19,6 +19,11 @@ Counts use loaded, identifiable stays. Unknown or conflicting operational record
 4. Check in the selected dog. The button uses the same verified booking save as before; opening a profile is unnecessary.
 
 The shortcut uses information already loaded on the page. It does not download every future profile. Checked-in, checked-out, ambiguous, and future-day bookings are excluded.
+
+## Call an owner from the guest list
+1. On the correct guest row, open **More actions**.
+2. Choose **Call owner** beside the saved number when available. No profile load is needed. Missing or invalid numbers have no call action.
+3. The device opens its supported calling app. Confirm the owner and number before calling.
 
 ## Owner Care Link and intake
 1. Open the selected dog’s Care profile and choose **Owner Care Link** near the top.
@@ -34,11 +39,11 @@ The shortcut uses information already loaded on the page. It does not download e
 ## Checkout due today
 1. In **Care → Staying**, choose **Check Out** directly for the correct dog leaving today. It stays beside **Check In** when both are available. **Early Checkout** keeps its separate review flow.
 2. Check the dog identity, **Booked stay** dates and **Checkout today** date in the departure sheet. Same-name dogs remain separate bookings.
-3. Review the complete medication instructions and listed belongings. Unknown details stay labelled **Not available in this summary**. Choose **Review missing details** to load and verify only those missing details in this sheet; the departure note remains here. Review errors keep unknown states and offer an explicit retry. Read the **Saved handover note** when present: short notes open immediately; longer notes remain expandable. Listed items do not mean returned items, and missing records do not prove no care is needed.
+3. Review the complete medication instructions and listed belongings. Unknown details stay labelled **Not available in this summary**. Choose **Review missing details** to load and verify only those missing details in this sheet; the departure note remains here. Review errors keep unknown states and offer an explicit retry. Read the **Saved handover note** when present: short notes open immediately; longer notes show a brief preview and remain expandable with the full text. Listed items do not mean returned items, and missing records do not prove no care is needed.
 4. Optionally add a handover note. It belongs to this checkout, not to the dog’s permanent care instructions.
 5. Choose **Confirm checkout**. Wait for a verified save; only then does the stay move to **Past**.
 
-Cancel or close before confirming makes no change; a normal cancel discards the note. Review missing details keeps the departure note in this sheet for the selected stay. During a save the sheet blocks duplicate confirmation and dismissal. A connection failure retains the note and offers a deliberate retry when safe. Identity conflicts, offline queue results, and uncertain saves never move the stay to Past; read the message and refresh/review the booking. Early Checkout retains its existing separate review flow.
+Closing before confirming makes no booking change. With a draft note, the sheet offers **Keep editing** or **Discard note** inline. Keep editing retains the note and caret; Discard note closes the sheet and clears that draft without saving checkout. Review missing details keeps the departure note in this sheet for the selected stay. During a save the sheet blocks duplicate confirmation and dismissal. A connection failure retains the note and offers a deliberate retry when safe. Identity conflicts, offline queue results, and uncertain saves never move the stay to Past; read the message and refresh/review the booking. Early Checkout retains its existing separate review flow.
 
 The sheet scrolls on short phone screens while its action buttons remain accessible above navigation. No messages are automatically sent to owners.
 

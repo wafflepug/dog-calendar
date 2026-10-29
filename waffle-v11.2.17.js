@@ -102,7 +102,7 @@
     style.textContent = `
       .v11217-early-checkout-button{min-height:38px;padding:8px 12px;border:1px solid #f59e0b;border-radius:9px;background:#fffbeb;color:#92400e;font:inherit;font-size:10px;font-weight:900;cursor:pointer}
       .v11217-early-checkout-button:hover{background:#fef3c7}.v11217-early-checkout-button:focus-visible{outline:3px solid rgba(245,158,11,.32);outline-offset:2px}
-      .v11217-roster-actions{display:flex;flex-wrap:wrap;gap:8px;max-width:360px;margin-left:auto;padding:0 12px 12px}.v11217-roster-actions button{flex:1;min-width:0;min-height:44px;padding:9px 12px;border:1px solid var(--v10-border,#cbd5e1);border-radius:10px;background:var(--v10-card-soft,#f8fafc);color:var(--v10-text,#172033);font:inherit;font-size:12px;font-weight:850;cursor:pointer}.v11217-roster-actions [data-v11217-roster-checkin]{border-color:#86efac;background:#f0fdf4;color:#166534}.v11217-roster-actions [data-v11217-roster-checkout]{border-color:#fda4af;background:#fff1f2;color:#9f1239}.v11217-roster-actions button:focus-visible{outline:3px solid rgba(37,99,235,.28);outline-offset:2px}.v11217-roster-actions button:disabled{opacity:.62;cursor:wait}
+      .v11217-roster-actions{display:flex;flex-wrap:wrap;gap:8px;max-width:360px;margin-left:auto;padding:0 12px 12px}.v11217-roster-actions button{flex:1;min-width:0;min-height:44px;padding:9px 12px;border:1px solid var(--v10-border,#cbd5e1);border-radius:10px;background:var(--v10-card-soft,#f8fafc);color:var(--v10-text,#172033);font:inherit;font-size:12px;font-weight:850;cursor:pointer}.v11217-roster-actions [data-v11217-roster-checkin]{border-color:#86efac;background:#f0fdf4;color:#166534}.v11217-roster-actions [data-v11217-roster-checkout]{border-color:#fda4af;background:#fff1f2;color:#9f1239}.v11217-roster-actions button:focus-visible{outline:3px solid rgba(37,99,235,.28);outline-offset:2px}.v11217-roster-actions button:disabled{opacity:.62;cursor:wait}.v11217-roster-more-actions{width:100%}.v11217-roster-more-actions>summary{cursor:pointer;min-height:44px;display:flex;align-items:center}.v11217-roster-more-actions [data-v11217-roster-owner-call]{display:flex;align-items:center;min-height:44px;padding:8px 10px;color:var(--v10-link,#1d4ed8);font-size:13px;font-weight:800}
       @media(max-width:600px){.v11217-roster-actions{max-width:none;margin-left:0}}
       body.dark-theme .v11217-roster-actions [data-v11217-roster-checkin]{border-color:#4ade80;background:#14532d;color:#dcfce7}body.dark-theme .v11217-roster-actions [data-v11217-roster-checkout]{border-color:#fb7185;background:#4c0519;color:#ffe4e6}
       body.dark-theme .v11217-early-checkout-button{border-color:#d97706;background:#451a03;color:#fde68a}
@@ -114,7 +114,8 @@
       .v11217-modal-body{display:grid;gap:11px;padding:16px 18px}.v11217-modal-dog{padding:11px 12px;border:1px solid #fde68a;border-radius:11px;background:#fffbeb}.v11217-modal-dog strong{display:block;font-size:14px}.v11217-modal-dog span{display:block;margin-top:2px;color:#92400e;font-size:9px;font-weight:800}.v11217-modal-facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.v11217-modal-fact{padding:10px;border:1px solid var(--v10-border,#e2e8f0);border-radius:10px;background:var(--v10-card-soft,#f8fafc)}.v11217-modal-fact small{display:block;color:var(--v10-muted,#64748b);font-size:8px;font-weight:900}.v11217-modal-fact strong{display:block;margin-top:4px;font-size:10px;line-height:1.35}.v11217-modal-preserve{padding:10px;border-radius:10px;background:#eff6ff;color:#1e40af;font-size:9px;line-height:1.45;font-weight:750}.v11217-field label{display:block;margin-bottom:5px;font-size:9px;font-weight:900}.v11217-field textarea{width:100%;min-height:82px;box-sizing:border-box;resize:vertical;border:1px solid var(--v10-border,#cbd5e1);border-radius:10px;padding:10px;background:var(--v10-card,#fff);color:inherit;font:inherit;font-size:10px;line-height:1.45}.v11217-field textarea:focus{outline:3px solid rgba(245,158,11,.2);border-color:#f59e0b}
       .v11217-action-feedback{display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:10px;border:1px solid #fda4af;border-radius:10px;background:#fff1f2;color:#881337;font-size:10px;line-height:1.45}.v11217-action-feedback[hidden]{display:none}.v11217-action-feedback button{min-width:88px;min-height:44px;padding:8px 12px;border:1px solid currentColor;border-radius:8px;background:transparent;color:inherit;font:inherit;font-size:13px;font-weight:850;cursor:pointer}.v11217-action-feedback button:focus-visible{outline:3px solid rgba(37,99,235,.3);outline-offset:2px}body.dark-theme .v11217-action-feedback{background:#4c0519;color:#ffe4e6;border-color:#fb7185}.v11217-modal-actions{display:flex;justify-content:flex-end;gap:8px;padding:12px 18px 18px}.v11217-modal-actions button{min-height:41px;padding:9px 13px;border-radius:10px;font:inherit;font-size:10px;font-weight:900;cursor:pointer}.v11217-cancel{border:1px solid var(--v10-border,#cbd5e1);background:var(--v10-card-soft,#f8fafc);color:inherit}.v11217-confirm{border:1px solid #d97706;background:#d97706;color:#fff}.v11217-confirm:disabled{opacity:.65;cursor:wait}
       body.dark-theme .v11217-profile-badge,body.dark-theme .v11217-modal-dog{background:#451a03;color:#fde68a;border-color:#92400e}body.dark-theme .v11217-modal-dog span{color:#fde68a}body.dark-theme .v11217-modal-preserve{background:#172554;color:#bfdbfe}
-      @media(max-width:768px){.v11217-profile-grid,.v11217-modal-facts{grid-template-columns:1fr}.v11217-early-checkout-button{width:100%}.v11217-modal{align-items:flex-end;padding:10px}.v11217-modal-card{width:100%;max-height:91vh;border-radius:18px 18px 12px 12px}.v11217-modal-actions{display:grid;grid-template-columns:1fr 1fr}.v11217-modal-actions button{width:100%}}
+      .v11217-discard-prompt{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 18px;border-top:1px solid var(--v10-border,#cbd5e1);font-size:13px}.v11217-discard-prompt[hidden]{display:none}.v11217-discard-prompt span{flex:1 1 100%;font-weight:800}.v11217-discard-prompt button{min-height:44px;padding:9px 13px;border:1px solid var(--v10-border,#cbd5e1);border-radius:10px;background:var(--v10-card-soft,#f8fafc);color:inherit;font:inherit;font-weight:800;cursor:pointer}.v11217-discard-prompt [data-v11217-discard-confirm]{border-color:#be123c;background:#be123c;color:white}.v11217-discard-prompt button:focus-visible{outline:3px solid rgba(37,99,235,.3);outline-offset:2px}
+      @media(max-width:768px){.v11217-profile-grid,.v11217-modal-facts{grid-template-columns:1fr}.v11217-early-checkout-button{width:100%}.v11217-modal{align-items:flex-end;padding:10px}.v11217-modal-card{width:100%;max-height:91vh;border-radius:18px 18px 12px 12px}.v11217-modal-actions{display:grid;grid-template-columns:1fr 1fr}.v11217-modal-actions button{width:100%}.v11217-discard-prompt button{flex:1}}
     `;
     document.head.appendChild(style);
   }
@@ -268,28 +269,35 @@
 
   function decorateRosterActions(card) {
     const tile = card?.querySelector?.('.directory-guest-tile-open');
+    if (!tile || card.classList.contains('is-profile-active')) {
+      card?.querySelector?.('[data-v11217-roster-actions]')?.remove();
+      return;
+    }
     const p = payloadForCard(card);
     const today = todayKey();
     const isStaying = !!tile && !card.classList.contains('is-profile-active') && card.dataset?.v1082PastStay !== 'true' &&
       !!p.startDate && !!p.endDate && p.startDate <= today && p.endDate >= today;
     let actions = card?.querySelector?.('[data-v11217-roster-actions]');
-    if (!isStaying) {
+    const ownerTel = p.stayId && p.stayKey && p.dogId ? safeOwnerTel(p.phone) : '';
+    if (!isStaying && !ownerTel) {
       actions?.remove();
       return;
     }
 
-    const state = typeof window.v110OperationDisplayState === 'function'
+    // Historical and future cards can show already-loaded owner contact, but
+    // only current stays enter the operational eligibility/lookup path.
+    const state = isStaying && typeof window.v110OperationDisplayState === 'function'
       ? window.v110OperationDisplayState(card) : null;
-    const operation = operationForCard(card);
+    const operation = isStaying ? operationForCard(card) : null;
     const colliding = state?.code === 'collision';
     const checkedOut = operation?.status === 'checked_out' || state?.code === 'checked_out';
     const checkedIn = operation?.status === 'checked_in' || state?.code === 'checked_in';
-    const early = !checkedOut && !colliding && earlyCheckoutEligible(card);
+    const early = isStaying && !checkedOut && !colliding && earlyCheckoutEligible(card);
     const canCheckIn = !checkedOut && !checkedIn && !colliding && state?.code === 'date_active';
     const canCheckout = !checkedOut && !colliding && !early &&
       (checkedIn || state?.code === 'date_active') && p.endDate <= today;
-    const signature = JSON.stringify([p.stayId, p.stayKey, p.dogId, canCheckIn, canCheckout, early, state?.code]);
-    if (!canCheckIn && !canCheckout && !early) {
+    const signature = JSON.stringify([p.stayId, p.stayKey, p.dogId, p.dogName, p.ownerName, p.phone, card.dataset.directoryDogNumber, canCheckIn, canCheckout, early, state?.code]);
+    if (!canCheckIn && !canCheckout && !early && !ownerTel) {
       actions?.remove();
       return;
     }
@@ -306,8 +314,9 @@
     const earlyButtonMarkup = early ? '<button type="button" class="v11217-early-checkout-button" data-v11217-early-checkout>⏱️ Early Checkout</button>' : '';
     const hasPrimaryStayAction = canCheckIn || canCheckout;
     const secondaryActions = `${early && hasPrimaryStayAction ? earlyButtonMarkup : ''}`;
-    const moreActions = secondaryActions
-      ? `<details class="v11217-roster-more-actions"><summary>More actions</summary>${secondaryActions}</details>`
+    const ownerCall = ownerTel ? `<a data-v11217-roster-owner-call href="tel:${esc(ownerTel)}" aria-label="Call ${esc(p.ownerName || 'owner')} about ${esc(p.dogName || 'this dog')}${card.dataset.directoryDogNumber ? `, Dog ID ${esc(card.dataset.directoryDogNumber)}` : ''} · ${esc(String(p.phone || '').trim())}">Call owner · ${esc(String(p.phone || '').trim())}</a>` : '';
+    const moreActions = secondaryActions || ownerCall
+      ? `<details class="v11217-roster-more-actions"><summary>More actions</summary>${secondaryActions}${ownerCall}</details>`
       : '';
     const primaryAction = `${checkInMarkup}${canCheckout ? checkOutMarkup : ''}${early && !hasPrimaryStayAction ? earlyButtonMarkup : ''}`;
     actions.innerHTML = `${primaryAction}${moreActions}`;
@@ -319,6 +328,18 @@
     }
     const earlyButton = actions.querySelector('[data-v11217-early-checkout]');
     if (earlyButton) earlyButton.setAttribute('aria-label', `Record early checkout for ${p.dogName || 'guest'}`);
+    const ownerLink = actions.querySelector('[data-v11217-roster-owner-call]');
+    if (ownerLink && !ownerLink.dataset.identityGuard) {
+      ownerLink.dataset.identityGuard = 'true';
+      ownerLink.addEventListener('click', event => {
+        const current = payloadForCard(card);
+        if (!card.isConnected || current.stayId !== p.stayId || current.stayKey !== p.stayKey || current.dogId !== p.dogId || current.ownerName !== p.ownerName || current.dogName !== p.dogName ||
+            String(current.phone || '').trim() !== String(p.phone || '').trim() || safeOwnerTel(current.phone) !== ownerTel) {
+          event.preventDefault();
+          event.stopPropagation();
+        }
+      });
+    }
     const saveKey = String(p.stayId || '').trim().toLowerCase() ||
       `${String(p.stayKey || '').trim()}|${String(p.dogId || '').trim().toLowerCase()}|${String(p.dogName || '').trim().toLowerCase()}`;
     const saving = activeStatusSaves.has(saveKey);
@@ -419,6 +440,7 @@
           <div class="v11217-field"><label for="v11217EarlyCheckoutNote">Optional checkout note</label><textarea id="v11217EarlyCheckoutNote" data-v11217-note maxlength="1000" placeholder="Add collection details or other context…"></textarea></div>
           <div class="v11217-action-feedback" data-v11217-feedback role="status" aria-live="polite" hidden><span data-v11217-feedback-message></span><button type="button" data-v11217-retry hidden>Retry Early Checkout</button></div>
         </div>
+        <div class="v11217-discard-prompt" data-v11217-discard-prompt role="group" aria-label="Unsaved note confirmation" hidden><span>Discard this unsaved checkout note?</span><button type="button" data-v11217-discard-keep>Keep editing</button><button type="button" data-v11217-discard-confirm>Discard note</button></div>
         <div class="v11217-modal-actions">
           <button type="button" class="v11217-cancel" data-v11217-close>Cancel</button>
           <button type="button" class="v11217-confirm" data-v11217-confirm>Confirm Early Checkout</button>
@@ -426,6 +448,7 @@
       </div>
     `;
     document.body.appendChild(modal);
+    modal.querySelector('.v11217-modal-actions').prepend(modal.querySelector('[data-v11217-discard-prompt]'));
     const note = modal.querySelector('[data-v11217-note]');
     note.style.maxHeight = '180px';
     note.style.overflowY = 'auto';
@@ -433,16 +456,48 @@
     return modal;
   }
 
-  function closeModal(savedSuccess = false) {
+  function showDiscardPrompt(modal, message) {
+    const prompt = modal?.querySelector('[data-v11217-discard-prompt]');
+    if (!prompt) return false;
+    if (!prompt.hidden) { prompt.querySelector('[data-v11217-discard-keep]')?.focus({ preventScroll: true }); return true; }
+    const question = prompt.querySelector('span');
+    question.id = `${modal.id}DiscardQuestion`;
+    question.textContent = message;
+    prompt.querySelectorAll('button').forEach(button => button.setAttribute('aria-describedby', question.id));
+    const note = modal.querySelector('[data-v11217-note], [data-v11217-guided-note]');
+    if (note) {
+      prompt.dataset.caretStart = String(note.selectionStart);
+      prompt.dataset.caretEnd = String(note.selectionEnd);
+      prompt.dataset.noteScroll = String(note.scrollTop);
+    }
+    prompt.hidden = false;
+    const confirm = modal.querySelector('[data-v11217-confirm], [data-v11217-guided-confirm]');
+    if (confirm) { prompt.dataset.confirmWasDisabled = confirm.disabled ? 'true' : 'false'; confirm.disabled = true; }
+    modal.querySelectorAll('.v11217-modal-actions > button').forEach(button => { button.dataset.discardWasHidden = String(button.hidden); button.hidden = true; });
+    prompt.querySelector('[data-v11217-discard-keep]')?.focus({ preventScroll: true });
+    return true;
+  }
+  function hideDiscardPrompt(modal, focusNote = true) {
+    const prompt = modal?.querySelector('[data-v11217-discard-prompt]');
+    if (!prompt || prompt.hidden) return;
+    prompt.hidden = true;
+    const confirm = modal.querySelector('[data-v11217-confirm], [data-v11217-guided-confirm]');
+    if (confirm) { confirm.disabled = prompt.dataset.confirmWasDisabled === 'true'; delete prompt.dataset.confirmWasDisabled; }
+    modal.querySelectorAll('.v11217-modal-actions > button').forEach(button => { button.hidden = button.dataset.discardWasHidden === 'true'; delete button.dataset.discardWasHidden; });
+    if (focusNote) {
+      const note = modal.querySelector('[data-v11217-note], [data-v11217-guided-note]');
+      if (note) { note.focus({ preventScroll: true }); note.setSelectionRange(Number(prompt.dataset.caretStart), Number(prompt.dataset.caretEnd)); note.scrollTop = Number(prompt.dataset.noteScroll); }
+    }
+  }
+  function closeModal(savedSuccess = false, discardConfirmed = false) {
     savedSuccess = savedSuccess === true;
     const modal = document.getElementById('v11217EarlyCheckoutModal');
     if (!modal || modal.hidden || (earlyCheckoutBusy && !savedSuccess)) return;
-    if (!savedSuccess && String(modal.querySelector('[data-v11217-note]')?.value || '').trim() && !window.confirm('Discard this unsaved checkout note?')) {
-      modal.querySelector('[data-v11217-note]')?.focus({ preventScroll: true });
-      return;
-    }
+    if (!savedSuccess && !discardConfirmed && String(modal.querySelector('[data-v11217-note]')?.value || '').trim()) { showDiscardPrompt(modal, 'Discard this unsaved checkout note?'); return; }
+    hideDiscardPrompt(modal, false);
     const completionPayload = savedSuccess && activeCard ? { ...payloadForCard(activeCard) } : null;
     modal.hidden = true;
+    modal.querySelector('[data-v11217-discard-prompt]').hidden = true;
     activeCard = null;
     const focus = previousFocus;
     previousFocus = null;
@@ -484,6 +539,7 @@
     const p = payloadForCard(card);
     if (!earlyCheckoutEligible(card)) return;
     const modal = ensureModal();
+    hideDiscardPrompt(modal, false);
     activeCard = card;
     previousFocus = trigger || document.activeElement;
     modal.querySelector('[data-v11217-dog]').textContent = p.dogName || 'Guest';
@@ -492,6 +548,7 @@
     modal.querySelector('[data-v11217-original-date]').textContent = formatDate(p.endDate);
     modal.querySelector('[data-v11217-requested-by]').textContent = p.ownerName || 'Owner';
     modal.querySelector('[data-v11217-note]').value = '';
+    modal.querySelector('[data-v11217-discard-prompt]').hidden = true;
     modal.querySelector('[data-v11217-feedback]').hidden = true;
     modal.hidden = false;
     sizeEarlyNote(modal);
@@ -506,6 +563,7 @@
       return;
     }
     const modal = ensureModal();
+    if (!modal.querySelector('[data-v11217-discard-prompt]').hidden) return;
     const p = payloadForCard(card);
     const originalStayId = p.stayId;
     const note = String(modal.querySelector('[data-v11217-note]')?.value || '').trim();
@@ -532,6 +590,7 @@
     earlyCheckoutBusy = true;
     modal.querySelector('[data-v11217-note]').readOnly = true;
     modal.querySelectorAll('[data-v11217-close]').forEach(control => { control.disabled = true; });
+    modal.querySelectorAll('[data-v11217-discard-keep],[data-v11217-discard-confirm]').forEach(control => { control.disabled = true; });
     modal.setAttribute('aria-busy', 'true');
     try {
       if (typeof window.v110SaveOperationalStatus !== 'function') {
@@ -592,6 +651,7 @@
       earlyCheckoutBusy = false;
       modal.querySelector('[data-v11217-note]').readOnly = false;
       modal.querySelectorAll('[data-v11217-close]').forEach(control => { control.disabled = false; });
+      modal.querySelectorAll('[data-v11217-discard-keep],[data-v11217-discard-confirm]').forEach(control => { control.disabled = false; });
       modal.removeAttribute('aria-busy');
       button.disabled = false;
       button.textContent = originalText;
@@ -609,6 +669,8 @@
     const card = button.closest('.directory-card');
     if (!card || button.disabled) return;
     const payload = payloadForCard(card);
+    let continuity = null;
+    if (checkinButton) { try { continuity = window.WAFFLE_CARE_ROSTER_FOCUS?.captureCheckIn?.(card, checkinButton) || null; } catch (_) {} }
     const originalStayId = payload.stayId;
     const status = checkinButton ? 'checked_in' : 'checked_out';
     const original = button.textContent;
@@ -616,11 +678,15 @@
     const actionName = status === 'checked_in' ? 'Check In' : 'Check Out';
     let activeButton = button;
     const attempt = async (checkoutNote = '') => {
-      if (!identityMatchesCard(card, payload, originalStayId)) return status === 'checked_out'
-        ? { message: 'This card changed while saving. The current stay was not moved; review its identity in Care.', retryable: false }
-        : false;
+      if (!identityMatchesCard(card, payload, originalStayId)) {
+        if (status === 'checked_in' && continuity) { try { window.WAFFLE_CARE_ROSTER_FOCUS?.cancelCheckIn?.(continuity); } catch (_) {} }
+        return status === 'checked_out'
+          ? { message: 'This card changed while saving. The current stay was not moved; review its identity in Care.', retryable: false }
+          : false;
+      }
       activeButton = card.querySelector(status === 'checked_in' ? '[data-v11217-roster-checkin]' : '[data-v11217-roster-checkout]') || activeButton;
       if (!activeButton?.isConnected) {
+        if (status === 'checked_in' && continuity) { try { window.WAFFLE_CARE_ROSTER_FOCUS?.cancelCheckIn?.(continuity); } catch (_) {} }
         if (typeof window.v110ShowActionFeedback === 'function') window.v110ShowActionFeedback(card, `${actionName} is no longer available for this stay. Refresh Care and review its current status.`);
         return;
       }
@@ -659,6 +725,7 @@
       });
       const feedbackHost = card;
       if (typeof window.v110ClearActionFeedback === 'function') window.v110ClearActionFeedback(feedbackHost, `${payload.dogName} ${status === 'checked_in' ? 'checked in' : 'checked out'} successfully.`);
+      if (status === 'checked_in') { try { window.WAFFLE_CARE_ROSTER_FOCUS?.completeCheckIn?.(continuity, card, { ...payload, verified: true }); } catch (_) {} }
       return status === 'checked_out' ? { ok: true, payload, response } : true;
     } catch (error) {
       if (!identityMatchesCard(card, payload, originalStayId)) return status === 'checked_out'
@@ -673,6 +740,7 @@
         ? { message: `Check Out could not be saved. ${message}${guidance}`, retryable: retry }
         : false;
     } finally {
+      if (status === 'checked_in' && continuity) { try { window.WAFFLE_CARE_ROSTER_FOCUS?.cancelCheckIn?.(continuity); } catch (_) {} }
       activeButton = card.querySelector(status === 'checked_in' ? '[data-v11217-roster-checkin]' : '[data-v11217-roster-checkout]') || activeButton;
       if (activeButton?.isConnected) { activeButton.disabled = false; activeButton.textContent = original; }
     }
@@ -708,19 +776,22 @@
     modal.innerHTML = `<section class="v11217-modal-card">
       <header class="v11217-modal-head"><div><small>DEPARTURE</small><h3 id="v11217GuidedCheckoutTitle" tabindex="-1">Check out</h3><p>Review this stay before confirming departure.</p></div><button type="button" class="v11217-modal-close" data-v11217-guided-close aria-label="Close checkout">×</button></header>
       <div class="v11217-modal-body"><div class="v11217-modal-dog"><strong data-v11217-guided-dog></strong><span data-v11217-guided-dogid></span><div class="v11217-guided-dates"><span><small>Booked stay</small><span data-v11217-guided-dates></span></span><span><small data-v11217-guided-checkout-caption>Checkout today</small><span data-v11217-guided-checkout-today></span></span></div></div>
-      <div class="v11217-guided-owner" data-v11217-guided-owner hidden><span data-v11217-guided-owner-name></span><a data-v11217-guided-owner-call hidden>Call owner</a></div><details class="v11217-guided-handover" data-v11217-guided-handover hidden><summary>Saved handover note</summary><div data-v11217-guided-handover-note></div></details>
+      <div class="v11217-guided-owner" data-v11217-guided-owner hidden><span data-v11217-guided-owner-name></span><a data-v11217-guided-owner-call hidden>Call owner</a></div><details class="v11217-guided-handover" data-v11217-guided-handover hidden><summary>Saved handover note<span data-v11217-guided-handover-preview hidden></span></summary><div data-v11217-guided-handover-note></div></details>
       <div class="v11217-guided-checklist"><section class="v11217-guided-evidence" data-v11217-guided-belongings-section><strong>Belongings</strong><details data-v11217-guided-belongings-details><summary data-v11217-guided-belongings-summary></summary><div data-v11217-guided-belongings></div></details><div class="v11217-guided-unknown" data-v11217-guided-belongings-unknown hidden>Not available in this summary</div></section><section class="v11217-guided-evidence" data-v11217-guided-medication-section><strong>Medication</strong><div data-v11217-guided-medication></div><div class="v11217-guided-unknown" data-v11217-guided-medication-unknown hidden>Not available in this summary</div></section></div>
       <div class="v11217-guided-missing" data-v11217-guided-missing hidden><span data-v11217-guided-missing-message>Review saved care before handover.</span><button type="button" data-v11217-guided-review-care>Review missing details</button></div>
       <div class="v11217-field"><label for="v11217GuidedCheckoutNote">Departure note (optional)</label><textarea id="v11217GuidedCheckoutNote" data-v11217-guided-note rows="2" maxlength="1000" placeholder="Optional handover details…"></textarea></div>
       <div class="v11217-action-feedback" data-v11217-guided-feedback role="alert" aria-live="assertive" hidden></div></div>
-      <footer class="v11217-modal-actions"><button type="button" class="v11217-cancel" data-v11217-guided-close>Cancel</button><button type="button" class="v11217-confirm" data-v11217-guided-confirm>Confirm checkout</button></footer>
+      <div class="v11217-discard-prompt" data-v11217-discard-prompt role="group" aria-label="Unsaved note confirmation" hidden><span>Discard this unsaved departure note?</span><button type="button" data-v11217-discard-keep>Keep editing</button><button type="button" data-v11217-discard-confirm>Discard note</button></div><footer class="v11217-modal-actions"><button type="button" class="v11217-cancel" data-v11217-guided-close>Cancel</button><button type="button" class="v11217-confirm" data-v11217-guided-confirm>Confirm checkout</button></footer>
       </section>`;
     document.body.appendChild(modal);
+    modal.querySelector('.v11217-modal-actions').prepend(modal.querySelector('[data-v11217-discard-prompt]'));
     const note = modal.querySelector('[data-v11217-guided-note]');
     note.style.maxHeight = '180px';
     note.style.overflowY = 'auto';
     modal.addEventListener('click', event => {
       if (event.target.closest('[data-v11217-guided-review-care]')) { void reviewGuidedCare(); return; }
+      if (event.target.closest('[data-v11217-discard-keep]')) { event.preventDefault(); if (!guidedCheckoutBusy) hideDiscardPrompt(modal); return; }
+      if (event.target.closest('[data-v11217-discard-confirm]')) { event.preventDefault(); if (!guidedCheckoutBusy) closeGuidedCheckout(false, true); return; }
       if (!guidedCheckoutBusy && (event.target === modal || event.target.closest('[data-v11217-guided-close]'))) closeGuidedCheckout(false);
       if (event.target.closest('[data-v11217-guided-confirm]')) runGuidedCheckout();
     });
@@ -728,7 +799,7 @@
       if (event.target.matches('[data-v11217-guided-note]')) sizeGuidedNote(modal);
     });
     modal.addEventListener('keydown', event => {
-      if (event.key === 'Escape') { event.preventDefault(); if (!guidedCheckoutBusy) closeGuidedCheckout(false); }
+      if (event.key === 'Escape') { event.preventDefault(); if (!guidedCheckoutBusy) { const prompt = modal.querySelector('[data-v11217-discard-prompt]'); if (!prompt.hidden) hideDiscardPrompt(modal); else closeGuidedCheckout(false); } }
       if (event.key === 'Tab') {
         const visible = node => {
           if (!node.isConnected || node.disabled || node.closest('[hidden],[aria-hidden="true"],[inert]') || !node.getClientRects().length) return false;
@@ -775,6 +846,7 @@
   function openGuidedCheckout(card, trigger, attempt, payload) {
     if (guidedCheckoutBusy) return;
     const modal = ensureGuidedCheckout();
+    hideDiscardPrompt(modal, false);
     guidedTrigger = trigger;
     guidedCheckoutAttempt = attempt;
     guidedCheckoutCard = card;
@@ -793,6 +865,7 @@
     if (ownerTel) callOwner.href = `tel:${ownerTel}`; else callOwner.removeAttribute('href');
     const savedNote = card.querySelector('[data-directory-edit-field="notes"]')?.dataset?.directoryCurrentValue;
     const handover = modal.querySelector('[data-v11217-guided-handover]');
+    const handoverPreview = modal.querySelector('[data-v11217-guided-handover-preview]');
     const handoverText = String(savedNote || '');
     const trimmedHandover = handoverText.trim();
     const handoverLineCount = handoverText ? handoverText.split(/\r\n|[\n\r\u2028\u2029]/).length : 0;
@@ -800,6 +873,13 @@
     const openHandover = meaningfulHandover && Array.from(handoverText).length <= 120 && handoverLineCount <= 2;
     handover.hidden = !meaningfulHandover;
     handover.open = !!openHandover;
+    handoverPreview.hidden = !meaningfulHandover || openHandover;
+    handoverPreview.textContent = '';
+    if (meaningfulHandover && !openHandover) {
+      const excerpt = handoverText.replace(/\s+/gu, ' ').trim();
+      const points = Array.from(excerpt);
+      handoverPreview.textContent = ` · ${points.length > 66 ? `${points.slice(0, 66).join('').trimEnd()}…` : points.join('')}`;
+    }
     modal.querySelector('[data-v11217-guided-handover-note]').textContent = meaningfulHandover ? handoverText : '';
     const dogNumber = card.dataset?.directoryDogNumber || card.querySelector('#dogNumber, [data-directory-dog-number], .directory-dog-number')?.textContent?.trim();
     modal.querySelector('[data-v11217-guided-dogid]').textContent = dogNumber ? `Dog ID: ${dogNumber}` : '';
@@ -826,6 +906,7 @@
     setEvidence('medication', medication);
     const exactStay = { stayId: payload.stayId, dogId: payload.dogId, stayKey: payload.stayKey };
     modal.querySelector('[data-v11217-guided-note]').value = '';
+    modal.querySelector('[data-v11217-discard-prompt]').hidden = true;
     const missingEvidence = !belongings || !medication;
     const reviewCare = modal.querySelector('[data-v11217-guided-review-care]');
     const hasStableIdentity = !!exactStay.stayId && !!exactStay.dogId && !!exactStay.stayKey;
@@ -980,20 +1061,21 @@
         const identityStillCurrent = exactGuidedCard(expected) === card && sameGuidedStay(expected, guidedCheckoutPayload);
         if (!identityStillCurrent) confirm.disabled = true;
         else if (confirm.textContent === 'Confirm checkout') confirm.disabled = false;
+        const discardPrompt = modal.querySelector('[data-v11217-discard-prompt]');
+        if (!discardPrompt.hidden) { discardPrompt.dataset.confirmWasDisabled = String(confirm.disabled); confirm.disabled = true; }
       }
     }
   }
-  function closeGuidedCheckout(savedSuccess = false) {
+  function closeGuidedCheckout(savedSuccess = false, discardConfirmed = false) {
     savedSuccess = savedSuccess === true;
     if (guidedCheckoutBusy && !savedSuccess) return;
     const modal = document.getElementById('v11217GuidedCheckout');
     if (!modal || modal.hidden) return;
-    if (!savedSuccess && String(modal.querySelector('[data-v11217-guided-note]')?.value || '').trim() && !window.confirm('Discard this unsaved departure note?')) {
-      modal.querySelector('[data-v11217-guided-note]')?.focus({ preventScroll: true });
-      return;
-    }
+    if (!savedSuccess && !discardConfirmed && String(modal.querySelector('[data-v11217-guided-note]')?.value || '').trim()) { showDiscardPrompt(modal, 'Discard this unsaved departure note?'); return; }
+    hideDiscardPrompt(modal, false);
     const completionPayload = savedSuccess && guidedCheckoutCard ? { ...payloadForCard(guidedCheckoutCard) } : null;
     modal.hidden = true;
+    modal.querySelector('[data-v11217-discard-prompt]').hidden = true;
     guidedReviewSequence += 1;
     guidedReviewPromise = null;
     guidedCheckoutAttempt = null;
@@ -1020,12 +1102,13 @@
   async function runGuidedCheckout() {
     const modal = ensureGuidedCheckout();
     const confirm = modal.querySelector('[data-v11217-guided-confirm]');
-    if (guidedReviewPromise || confirm.disabled || !guidedCheckoutAttempt) return;
+    if (guidedReviewPromise || confirm.disabled || !guidedCheckoutAttempt || !modal.querySelector('[data-v11217-discard-prompt]').hidden) return;
     const attempt = guidedCheckoutAttempt;
     confirm.disabled = true;
     confirm.textContent = 'Checking out…';
     modal.querySelector('[data-v11217-guided-note]').readOnly = true;
     modal.querySelectorAll('[data-v11217-guided-close]').forEach(button => { button.disabled = true; });
+    modal.querySelectorAll('[data-v11217-discard-keep],[data-v11217-discard-confirm]').forEach(button => { button.disabled = true; });
     try {
       guidedCheckoutBusy = true;
       const note = String(modal.querySelector('[data-v11217-guided-note]').value || '').trim();
@@ -1051,11 +1134,15 @@
       guidedCheckoutBusy = false;
       modal.querySelector('[data-v11217-guided-note]').readOnly = false;
       modal.querySelectorAll('[data-v11217-guided-close]').forEach(button => { button.disabled = false; });
+      modal.querySelectorAll('[data-v11217-discard-keep],[data-v11217-discard-confirm]').forEach(button => { button.disabled = false; });
       if (!confirm.disabled && confirm.textContent !== 'Retry checkout') confirm.textContent = 'Confirm checkout';
     }
   }
 
   document.addEventListener('click', event => {
+    const earlyModal = event.target?.closest?.('#v11217EarlyCheckoutModal');
+    if (earlyModal && event.target.closest('[data-v11217-discard-keep]')) { event.preventDefault(); if (!earlyCheckoutBusy) hideDiscardPrompt(earlyModal); return; }
+    if (earlyModal && event.target.closest('[data-v11217-discard-confirm]')) { event.preventDefault(); if (!earlyCheckoutBusy) closeModal(false, true); return; }
     const earlyButton = event.target?.closest?.('[data-v11217-early-checkout]');
     if (earlyButton) {
       event.preventDefault();
@@ -1083,7 +1170,15 @@
     if (!modal || modal.hidden) return;
     if (event.key === 'Escape') {
       event.preventDefault();
-      closeModal();
+      if (!earlyCheckoutBusy && !modal.querySelector('[data-v11217-discard-prompt]').hidden) hideDiscardPrompt(modal);
+      else closeModal();
+    }
+    if (event.key === 'Tab') {
+      const visible = node => node.isConnected && !node.disabled && !node.closest('[hidden],[aria-hidden="true"],[inert]') && node.getClientRects().length;
+      const items = [...modal.querySelectorAll('button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),a[href],[tabindex]:not([tabindex="-1"])')].filter(visible);
+      const first = items[0], last = items[items.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
     }
   });
 

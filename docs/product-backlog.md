@@ -5,7 +5,9 @@ Reviewed 17 September 2026. Repository: `wafflepug/dog-calendar`; always start i
 
 ## Current Care iteration - 29 October 2026
 
-Candidate 2026.10.29.03: [Care journey shortcuts](care-journey-shortcuts.md). Direct due-today checkout, Enter to open one visible search result and immediate short saved handover notes. Preserve confirmation, exact identities, drafts, lazy reads and full text. Next: review phone arrival and pickup action placement with representative long-name and missing-data cases.
+Candidate 2026.10.29.04: [Care owner flow](care-owner-flow.md). Five improvements: secondary roster owner calls, visible/loaded filter counts, verified check-in focus continuity, inline checkout discard choices and long saved handover previews. Preserve exact identity, explicit writes, complete care and lazy reads. Next: review owner handoff and arrival preparation on physical phones before adding controls.
+
+Published 2026.10.29.03 (PR #277): [Care journey shortcuts](care-journey-shortcuts.md). Direct due-today checkout, Enter to open one visible search result and immediate short saved handover notes. Preserve confirmation, exact identities, drafts, lazy reads and full text. Next: review phone arrival and pickup action placement with representative long-name and missing-data cases.
 
 Published 2026.10.29.02 (PR #276): [Care reading layout](care-reading-layout.md). Three refinements: readable identity/status and care text, bounded desktop reading width and aligned heading/search. Preserve existing actions, full instructions and lazy reads. Next: review the arrival-to-profile-to-checkout journey with a sitter before adding controls.
 

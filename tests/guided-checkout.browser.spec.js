@@ -125,8 +125,8 @@ test('explicit detail review stays in the sheet, reads each missing source once,
   expect(await page.evaluate(() => window.movedIds)).toEqual([]);
 
   const second = page.locator('[data-directory-stay-id="stay-c"]');
-  page.once('dialog',dialog=>dialog.accept());
   await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await dialog.locator('[data-v11217-discard-confirm]').click();
   await openCheckout(second);
   await expect(dialog.locator('[data-v11217-guided-note]')).toHaveValue('');
   await page.getByRole('button', { name: 'Cancel', exact: true }).click();
@@ -223,8 +223,8 @@ test('confirm is disabled while detail review is pending and cancel ignores its 
     { source: 'belongings', stayId: 'stay-a' },
     { source: 'profile', stayId: 'stay-a' }
   ]);
-  page.once('dialog',dialog=>dialog.accept());
   await dialog.locator('[data-v11217-guided-close].v11217-cancel').click();
+  await dialog.locator('[data-v11217-discard-confirm]').click();
   await page.evaluate(() => window.finishDetail());
   await expect(dialog).toBeHidden();
   expect(await page.evaluate(() => window.writes.length)).toBe(0);
@@ -496,9 +496,10 @@ test('saved handover disclosure opens only for concise notes and resets for each
  },value);
  const handover=dialog.locator('[data-v11217-guided-handover]');
  const handoverText=dialog.locator('[data-v11217-guided-handover-note]');
+ const preview=dialog.locator('[data-v11217-guided-handover-preview]');
  const openAndCheck=async(value,{visible=true,open=false,rendered=value}={})=>{
   await putNote(value);await openCheckout(first);
-  if(visible){await expect(handover).toBeVisible();await expect(handover).toHaveJSProperty('open',open);await expect(handoverText).toHaveText(rendered);}
+  if(visible){await expect(handover).toBeVisible();await expect(handover).toHaveJSProperty('open',open);await expect(handoverText).toHaveText(rendered);if(!open && (Array.from(value).length>120||value.split(/\r\n|[\n\r\u2028\u2029]/).length>2)){await expect(preview).toBeVisible();const compact=value.replace(/\s+/gu,' ').trim();await expect(preview).toHaveText(` · ${Array.from(compact).slice(0,66).join('').trimEnd()}${Array.from(compact).length>66?'…':''}`);}}
   else {await expect(handover).toBeHidden();await expect(handoverText).toHaveText('');}
   await expect(dialog.locator('[data-v11217-guided-note]')).toHaveValue('');
   await dialog.getByRole('button',{name:'Cancel',exact:true}).click();
@@ -529,15 +530,36 @@ test('saved handover disclosure opens only for concise notes and resets for each
  await expect(handoverText).toHaveText('short saved note');
 });
 
-test('dirty departure note requires explicit discard and rejection keeps the draft and focus',async({page})=>{
+test('dirty departure note uses inline discard confirmation and Keep editing retains the draft',async({page})=>{
  await setup(page);await openCheckout(page.getByTestId('selected-card'));
  const dialog=page.locator('#v11217GuidedCheckout'),note=dialog.locator('[data-v11217-guided-note]');
  await note.fill('Give the owner the blue bag.');
- page.once('dialog',async prompt=>{expect(prompt.message()).toBe('Discard this unsaved departure note?');await prompt.dismiss();});
  await page.keyboard.press('Escape');
- await expect(dialog).toBeVisible();await expect(note).toHaveValue('Give the owner the blue bag.');await expect(note).toBeFocused();
- page.once('dialog',prompt=>prompt.accept());await dialog.getByRole('button',{name:'Cancel',exact:true}).click();
+ const prompt=dialog.locator('[data-v11217-discard-prompt]');await expect(prompt).toBeVisible();await expect(prompt.locator('[data-v11217-discard-keep]')).toBeFocused();
+ await expect(dialog.locator('[data-v11217-guided-confirm]')).toBeDisabled();
+ await page.keyboard.press('Escape');await expect(prompt).toBeHidden();await expect(dialog).toBeVisible();await expect(note).toHaveValue('Give the owner the blue bag.');await expect(note).toBeFocused();
+ await dialog.getByRole('button',{name:'Cancel',exact:true}).click();await expect(prompt).toBeVisible();await prompt.locator('[data-v11217-discard-confirm]').click();
  await expect(dialog).toBeHidden();await openCheckout(page.getByTestId('selected-card'));await expect(note).toHaveValue('');
+ expect(await page.evaluate(()=>window.writes)).toEqual([]);
+});
+
+test('care detail completion cannot enable checkout behind a pending inline discard choice',async({page})=>{
+ await setup(page,{loadedEvidence:false});await openCheckout(page.getByTestId('selected-card'));
+ const dialog=page.locator('#v11217GuidedCheckout');
+ await page.evaluate(()=>{
+  let release;const gate=new Promise(resolve=>release=resolve);window.releaseDiscardReview=release;
+  for(const api of [window.WAFFLE_CARE_PROFILE_READS,window.WAFFLE_CARE_BELONGINGS_READS]){const read=api.read;api.read=async(...args)=>{await gate;return read(...args);};}
+ });
+ await dialog.locator('[data-v11217-guided-note]').fill('Keep this pending departure note.');
+ await dialog.locator('[data-v11217-guided-review-care]').click();
+ await dialog.getByRole('button',{name:'Cancel',exact:true}).click();
+ await expect(dialog.locator('[data-v11217-discard-prompt]')).toBeVisible();
+ await page.evaluate(()=>window.releaseDiscardReview());
+ await expect(dialog.locator('[data-v11217-guided-review-care]')).toBeEnabled();
+ await expect(dialog.locator('[data-v11217-guided-confirm]')).toBeDisabled();
+ await dialog.locator('[data-v11217-discard-keep]').click();
+ await expect(dialog.locator('[data-v11217-guided-confirm]')).toBeEnabled();
+ await expect(dialog.locator('[data-v11217-guided-note]')).toHaveValue('Keep this pending departure note.');
  expect(await page.evaluate(()=>window.writes)).toEqual([]);
 });
 

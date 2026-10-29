@@ -1158,3 +1158,33 @@ body[data-waffle-page="directory"] #directoryTabPanel .directory-dashboard-fused
 }
 body[data-waffle-page="directory"] #directoryTabPanel .directory-dashboard-fused:not(.is-profile-mode) .guest-directory-toolbar>.care-roster-focus[open]{grid-column:1/-1}
 body[data-waffle-page="directory"] #directoryTabPanel .guest-directory-toolbar:has(>.care-roster-focus-clear:not([hidden]))>.care-record-maintenance{grid-column:1/-1}
+
+/* Secondary contact and draft choices stay inside the existing Care surfaces. */
+body[data-waffle-page="directory"] #directoryTabPanel [data-v11217-roster-owner-call]{
+ display:flex;align-items:center;min-width:0;max-width:100%;min-height:44px;box-sizing:border-box;padding:8px 10px;
+ border:1px solid var(--wh-border,#dbe3ea);border-radius:8px;background:var(--wh-surface,#fff);color:var(--wh-text,#172033);
+ font-size:14px;line-height:1.4;white-space:normal;overflow-wrap:anywhere;text-decoration:none;
+}
+body[data-waffle-page="directory"] [data-v11217-discard-prompt]{
+ display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-column:1/-1;gap:8px;min-width:0;max-width:100%;margin:8px 0;padding:10px;
+ border:1px solid var(--wh-border,#cbd5e1);border-radius:10px;background:var(--wh-surface-muted,#f1f5f9);color:var(--wh-text,#172033);
+ font-size:14px;line-height:1.45;overflow-wrap:anywhere;
+}
+body[data-waffle-page="directory"] [data-v11217-discard-prompt][hidden]{display:none!important}
+body[data-waffle-page="directory"] .v11217-modal-actions>button[hidden]{display:none!important}
+body[data-waffle-page="directory"] [data-v11217-discard-prompt]>span{grid-column:1/-1}
+body[data-waffle-page="directory"] [data-v11217-discard-prompt] button{
+ min-width:44px;min-height:44px;max-width:100%;padding:8px 12px;border:1px solid var(--wh-border,#cbd5e1);border-radius:8px;
+ background:var(--wh-surface,#fff);color:var(--wh-text,#172033);font:inherit;font-weight:700;white-space:normal;overflow-wrap:anywhere;
+}
+body[data-waffle-page="directory"] [data-v11217-discard-prompt] [data-v11217-discard-confirm]{border-color:#b91c1c;color:#b91c1c}
+body.dark-theme[data-waffle-page="directory"] [data-v11217-discard-prompt] [data-v11217-discard-confirm]{border-color:#fca5a5;color:#fca5a5}
+body[data-waffle-page="directory"] [data-v11217-guided-handover-preview]{
+ display:block;min-width:0;max-width:100%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
+ font-size:13px;line-height:1.4;color:var(--wh-text-muted,#526174);
+}
+body[data-waffle-page="directory"] [data-v11217-guided-handover-preview][hidden]{display:none!important}
+body[data-waffle-page="directory"] [data-v11217-discard-prompt] button:focus-visible,
+body[data-waffle-page="directory"] #directoryTabPanel [data-v11217-roster-owner-call]:focus-visible{
+ outline:3px solid var(--wh-focus,#7562db);outline-offset:2px;
+}
