@@ -1188,3 +1188,124 @@ body[data-waffle-page="directory"] [data-v11217-discard-prompt] button:focus-vis
 body[data-waffle-page="directory"] #directoryTabPanel [data-v11217-roster-owner-call]:focus-visible{
  outline:3px solid var(--wh-focus,#7562db);outline-offset:2px;
 }
+
+/* Align the current profile rows within the Directory-only canonical layer. */
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-card-identity {
+  gap: 8px;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-profile-stay-dates {
+  width: 100%;
+  justify-self: stretch;
+  padding-inline-start: 0 !important;
+  column-gap: 16px;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-heading h3,
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-note-heading h4 {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  width: auto;
+  min-width: 0;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-heading {
+  align-items: baseline;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-freshness summary {
+  padding-block: 10px;
+  line-height: 1.5;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-note-heading {
+  align-items: center;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-owner-line {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: 6px 12px;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-owner-inline {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(88px, max-content);
+  align-items: center;
+  gap: 2px 12px;
+  width: 100%;
+  text-align: left;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active [data-care-brief-owner-name] {
+  grid-column: 1;
+  grid-row: 1;
+  min-width: 0;
+  text-align: left;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active [data-care-brief-call-owner] {
+  display: contents;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active [data-care-brief-call-owner] > .directory-care-brief-action {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  width: auto;
+  min-width: 88px;
+  margin: 0;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-owner-phone,
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-owner-contact-missing {
+  grid-column: 1;
+  grid-row: 2;
+  text-align: left;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-actions {
+  align-items: start;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-actions > .directory-care-brief-action,
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-owner-care-action-group > [data-p4-dir="owner"] {
+  min-height: 56px;
+  padding: 8px 10px;
+  font-size: 14px;
+  line-height: 1.35;
+  margin: 0;
+  align-self: start;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-owner-care-action-group {
+  align-items: flex-start;
+  align-content: start;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-more-actions-list > [data-p4-dir],
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-more-actions-list > [data-owner-care-sharing-options] {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 0;
+  min-height: 44px;
+  max-width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--care-card-line);
+  border-radius: 8px;
+  background: var(--care-card-soft);
+  color: var(--care-card-text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.35;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-more-actions-list > [data-p4-dir] small {
+  display: none;
+}
+@media (min-width: 769px) {
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-profile-stay-dates {
+    width: fit-content;
+    justify-self: start;
+  }
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-owner-line {
+    grid-template-columns: 120px minmax(0, 1fr);
+  }
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-owner-care-action-group > [data-p4-dir="owner"] {
+  flex: 1 1 100%;
+  width: 100%;
+  min-width: 0;
+}
