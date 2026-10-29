@@ -1240,6 +1240,9 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active [data-care-
 body[data-waffle-page="directory"] .directory-card.is-profile-active [data-care-brief-call-owner] {
   display: contents;
 }
+body[data-waffle-page="directory"] .directory-card.is-profile-active [data-care-brief-call-owner][hidden] {
+  display: none;
+}
 body[data-waffle-page="directory"] .directory-card.is-profile-active [data-care-brief-call-owner] > .directory-care-brief-action {
   grid-column: 2;
   grid-row: 1 / span 2;
@@ -1291,9 +1294,6 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-
   white-space: normal;
   overflow-wrap: anywhere;
   cursor: pointer;
-}
-body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-more-actions-list > [data-p4-dir] small {
-  display: none;
 }
 @media (min-width: 769px) {
   body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-profile-stay-dates {

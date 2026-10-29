@@ -347,6 +347,19 @@ test('profile heading, contact and action rows align with received form status a
     }
   }
   expect(fixture.reads.filter(action=>['get_guest_profile','get_dog_history','get_belongings','get_guest_belongings'].includes(action))).toEqual(reads);
+  // Missing or invalid numbers retain the existing explicit edit action, never a dial link.
+  for(const phone of ['', 'not a phone']){
+    await card.evaluate((card,phone)=>{card.querySelector('[data-directory-edit-field="phone"]').dataset.directoryCurrentValue=phone;card.dataset.v1088Phone=phone;window.WAFFLE_REFRESH_CARE_SETUP(card);},phone);
+    await expect(card.locator('.directory-owner-contact-missing')).toBeVisible();
+    await expect(card.locator('[data-care-brief-call-owner] a')).toHaveCount(0);
+    await expect(card.getByRole('button',{name:'Add number',exact:true})).toBeVisible();
+  }
+  const contact=card.locator('[data-care-brief-call-owner]');
+  await contact.evaluate(node=>{node.hidden=true;});
+  await expect(contact.locator('button')).toBeHidden();
+  await expect(contact.locator('.directory-owner-contact-missing')).toBeHidden();
+  await contact.evaluate(node=>{node.hidden=false;});
+  await expect(contact.locator('.directory-owner-contact-missing')).toBeVisible();
   expect(await card.getAttribute('data-directory-stay-id')).toBe(bookings[0].stayId);
   expect(await card.getAttribute('data-directory-dog-id')).toBe(bookings[0].dogId);
 });
