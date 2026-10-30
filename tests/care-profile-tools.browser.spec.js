@@ -371,7 +371,16 @@ for (const [name, width, colorScheme] of [['320-light', 320, 'light'], ['320-dar
     });
     expect(geometry.scrollWidth).toBeLessThanOrEqual(geometry.clientWidth + 1);
     expect(geometry.buttons.every(button => button.height >= 44 && button.right <= width + 1 && !button.covered)).toBeTruthy();
-    if (width >= 769) expect(geometry.buttons.filter(button => button.width >= 220).every(button => button.width >= 280)).toBe(true);
+    if (width >= 769) {
+      const grid = await list.evaluate(node => {
+        const styles = getComputedStyle(node);
+        const contentWidth = node.clientWidth - parseFloat(styles.paddingLeft) - parseFloat(styles.paddingRight);
+        const trackWidths = [...styles.gridTemplateColumns.matchAll(/[\d.]+px/g)].map(match => Number.parseFloat(match[0]));
+        return { contentWidth, trackWidths };
+      });
+      expect(grid.trackWidths.length).toBeGreaterThan(0);
+      expect(grid.trackWidths.every(trackWidth => trackWidth + 1 >= Math.min(280, grid.contentWidth))).toBe(true);
+    }
     // The share action is direct even with every secondary group closed.
     await summary.click();
     await expect(tools).not.toHaveAttribute('open', '');
