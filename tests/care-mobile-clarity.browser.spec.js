@@ -95,7 +95,7 @@ test('care essentials and the quiet routine shortcut stay readable across phone,
   const safety=brief.locator('[data-care-brief-safety]');
   const medication=brief.locator('[data-care-brief-medication]');
   const ownerName=brief.locator('[data-care-brief-owner-name]');
-  const callOwner=brief.locator('[data-care-brief-call-owner]');
+  const callOwner=brief.locator('[data-care-brief-call-owner] > .directory-care-brief-action');
   const routineEdit=brief.locator('button[data-care-brief-action="edit-routine"]');
   for(const essential of [feeding,walks,safety,medication,ownerName,callOwner,routineEdit])await expect(essential).toBeVisible();
   await expect(routineEdit).toHaveAccessibleName('Edit routine');
@@ -116,7 +116,7 @@ test('care essentials and the quiet routine shortcut stay readable across phone,
     await page.locator('body').evaluate((body,isDark)=>body.classList.toggle('dark-theme',isDark),dark);
     await card.locator('.directory-profile-stay-dates').scrollIntoViewIfNeeded();
     const geometry=await page.evaluate(()=>{
-      const selectors=['[data-care-brief-safety]','[data-care-brief-feeding]','[data-care-brief-walks]','[data-care-brief-medication]','[data-care-brief-owner-name]','[data-care-brief-call-owner]','[data-care-brief-action="edit-routine"]'];
+      const selectors=['[data-care-brief-safety]','[data-care-brief-feeding]','[data-care-brief-walks]','[data-care-brief-medication]','[data-care-brief-owner-name]','[data-care-brief-call-owner] > .directory-care-brief-action','[data-care-brief-action="edit-routine"]'];
       const elements=selectors.map(selector=>document.querySelector(selector)).filter(element=>element?.getClientRects().length);
       const rect=element=>{const value=element.getBoundingClientRect();return{left:value.left,right:value.right,top:value.top,bottom:value.bottom,width:value.width,height:value.height}};
       const intersects=(a,b)=>a.left<b.right&&a.right>b.left&&a.top<b.bottom&&a.bottom>b.top;
@@ -165,7 +165,7 @@ test('care essentials and the quiet routine shortcut stay readable across phone,
     expect(geometry.header.nameTextOverflow).not.toBe('ellipsis');
     expect(geometry.header.nameScrollHeight).toBeLessThanOrEqual(geometry.header.nameClientHeight+2);
     expect(geometry.values.every(value=>['normal','pre-wrap'].includes(value.whiteSpace)&&value.textOverflow!=='ellipsis'&&value.scrollHeight<=value.clientHeight+2),JSON.stringify({width,dark,values:geometry.values})).toBe(true);
-    const controls=await card.locator('.v11160-desktop-tabs [role="tab"], [data-care-brief-action="edit-routine"], [data-care-brief-call-owner]').all();
+    const controls=await card.locator('.v11160-desktop-tabs [role="tab"], [data-care-brief-action="edit-routine"], [data-care-brief-call-owner] > .directory-care-brief-action').all();
     for(const control of controls){
       if(!await control.isVisible())continue;
       await control.scrollIntoViewIfNeeded();
@@ -191,12 +191,12 @@ test('care essentials and the quiet routine shortcut stay readable across phone,
   await page.setViewportSize({width:390,height:844});
   await page.evaluate(()=>{
     const card=document.querySelector('.directory-card.is-profile-active');
-    for(const element of card.querySelectorAll('.directory-dog-name-btn,.directory-profile-stay-dates,[data-care-brief-safety],[data-care-brief-feeding],[data-care-brief-walks],[data-care-brief-medication],[data-care-brief-owner-name],[data-care-brief-call-owner],[data-care-brief-action="edit-routine"],.v11160-desktop-tabs [role="tab"]')){
+    for(const element of card.querySelectorAll('.directory-dog-name-btn,.directory-profile-stay-dates,[data-care-brief-safety],[data-care-brief-feeding],[data-care-brief-walks],[data-care-brief-medication],[data-care-brief-owner-name],[data-care-brief-call-owner] > .directory-care-brief-action,[data-care-brief-action="edit-routine"],.v11160-desktop-tabs [role="tab"]')){
       const size=parseFloat(getComputedStyle(element).fontSize);
       element.style.setProperty('font-size',`${size*2}px`,'important');
     }
   });
-  const enlarged=await page.evaluate(()=>({width:innerWidth,scrollWidth:document.documentElement.scrollWidth,items:[...document.querySelectorAll('.directory-card.is-profile-active .directory-profile-stay-dates,.directory-card.is-profile-active [data-care-brief-safety],.directory-card.is-profile-active [data-care-brief-feeding],.directory-card.is-profile-active [data-care-brief-walks],.directory-card.is-profile-active [data-care-brief-medication],.directory-card.is-profile-active [data-care-brief-owner-name],.directory-card.is-profile-active [data-care-brief-call-owner],.directory-card.is-profile-active [data-care-brief-action="edit-routine"]')].filter(element=>element.getClientRects().length).map(element=>{const rect=element.getBoundingClientRect();return{left:rect.left,right:rect.right,height:rect.height}}),name:(()=>{const element=document.querySelector('.directory-card.is-profile-active .directory-dog-name-btn'),rect=element.getBoundingClientRect();return{left:rect.left,right:rect.right,height:rect.height,scrollHeight:element.scrollHeight,clientHeight:element.clientHeight}})()}));
+  const enlarged=await page.evaluate(()=>({width:innerWidth,scrollWidth:document.documentElement.scrollWidth,items:[...document.querySelectorAll('.directory-card.is-profile-active .directory-profile-stay-dates,.directory-card.is-profile-active [data-care-brief-safety],.directory-card.is-profile-active [data-care-brief-feeding],.directory-card.is-profile-active [data-care-brief-walks],.directory-card.is-profile-active [data-care-brief-medication],.directory-card.is-profile-active [data-care-brief-owner-name],.directory-card.is-profile-active [data-care-brief-call-owner] > .directory-care-brief-action,.directory-card.is-profile-active [data-care-brief-action="edit-routine"]')].filter(element=>element.getClientRects().length).map(element=>{const rect=element.getBoundingClientRect();return{left:rect.left,right:rect.right,height:rect.height}}),name:(()=>{const element=document.querySelector('.directory-card.is-profile-active .directory-dog-name-btn'),rect=element.getBoundingClientRect();return{left:rect.left,right:rect.right,height:rect.height,scrollHeight:element.scrollHeight,clientHeight:element.clientHeight}})()}));
   expect(enlarged.scrollWidth).toBeLessThanOrEqual(390);
   expect(enlarged.items.every(item=>item.left>=-1&&item.right<=391&&item.height>0)).toBe(true);
   expect(enlarged.name.left).toBeGreaterThanOrEqual(0);

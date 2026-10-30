@@ -5,7 +5,9 @@ Reviewed 17 September 2026. Repository: `wafflepug/dog-calendar`; always start i
 
 ## Current Care iteration - 29 October 2026
 
-Candidate 2026.10.29.05: [Care arrival and handoff](care-arrival-handoff.md). Five bounded refinements: visible share-error recovery, compact care-link and full-message copy focus continuity, labeled belongings summaries and owner-aware arrival-review labels. Preserve complete care, exact identity, explicit sharing and lazy reads. Next: review future-arrival date context and deferred-arrival recovery using existing loaded data.
+Candidate 2026.10.29.06: [Care profile alignment](care-profile-alignment.md). Refine identity/date spacing, heading and saved-status alignment, grouped owner contact, primary action baselines and themed supporting buttons. Preserve complete care, exact identities, drafts, explicit writes and lazy reads. Next: validate profile reading and call placement on physical phones.
+
+Published 2026.10.29.05 (PR #279): [Care arrival and handoff](care-arrival-handoff.md). Five bounded refinements: visible share-error recovery, compact care-link and full-message copy focus continuity, labeled belongings summaries and owner-aware arrival-review labels. Preserve complete care, exact identity, explicit sharing and lazy reads. Next: review future-arrival date context and deferred-arrival recovery using existing loaded data.
 
 Published 2026.10.29.04 (PR #278): [Care owner flow](care-owner-flow.md). Five improvements: secondary roster owner calls, visible/loaded filter counts, verified check-in focus continuity, inline checkout discard choices and long saved handover previews. Preserve exact identity, explicit writes, complete care and lazy reads. Next: review owner handoff and arrival preparation on physical phones before adding controls.
 

@@ -1,6 +1,7 @@
 const { test, expect } = require('@playwright/test');
 const fs = require('node:fs');
 const path = require('node:path');
+const { settlePointerTargetAfterScroll } = require('./fixtures/care-pointer-readiness');
 const { resolveLocalBackendAction } = require('../scripts/local-network-policy');
 
 test.setTimeout(120_000);
@@ -171,7 +172,10 @@ test('checklist drafts and save payload survive a data refresh while disclosures
   const fixture = installFixture(page);
   const { card, host } = await openBelongings(page, baseURL, fixture);
   const disclosure = host.locator('[data-belongings-checklist-details]');
-  await disclosure.locator('summary').click();
+  const editSummary = disclosure.locator('summary');
+  await settlePointerTargetAfterScroll(page, editSummary);
+  await editSummary.click();
+  await expect(disclosure).toHaveAttribute('open', '');
   const toys = host.locator('[data-belongings-item-present="toys"]');
   const description = host.locator('[data-belongings-item-description="toys"]');
   await toys.check();

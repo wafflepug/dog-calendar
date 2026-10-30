@@ -449,7 +449,9 @@ test('share cancellation restores focus in both layouts and hidden hosts do not 
     await expect.poll(() => page.evaluate(() => typeof window.shareFinished)).toBe('function');
     await page.evaluate(() => { document.querySelector('#handoff').hidden = true; window.shareFinished(); });
     await expect(page.locator('#handoff')).toBeHidden();
-    expect(await page.evaluate(() => !document.querySelector('#handoff').contains(document.activeElement))).toBeTruthy();
+    await expect(page.locator('#handoff [aria-busy="true"]')).toHaveCount(0);
+    // WebKit can clear native focus on its next rendering update after the share settles.
+    await expect.poll(() => page.evaluate(() => !document.querySelector('#handoff').contains(document.activeElement))).toBeTruthy();
   }
 });
 

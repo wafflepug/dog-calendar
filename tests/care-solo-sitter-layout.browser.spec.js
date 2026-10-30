@@ -295,3 +295,71 @@ test('Care editor resets field input hints and cancelled focus never returns to 
   await page.locator('#guestDetailEditLabel').click();
   await expect(input).toBeFocused();
 });
+
+test('profile heading, contact and action rows align with received form status and enlarged text',async({page,baseURL},info)=>{
+  const fixture=await install(page);
+  await page.goto(`${baseURL}/directory.html?careAlignmentFixture=1`,{waitUntil:'domcontentloaded'});
+  const card=page.locator(`#directory-grid [data-directory-stay-id="${bookings[0].stayId}"]`);
+  await card.locator('[data-open-directory-profile]').click();
+  await expect(card.locator('[data-care-brief-freshness]')).toHaveAttribute('data-state','fresh');
+  await expect(card.locator('[data-compact-intake-status]')).toHaveText('Form received');
+  const reads=fixture.reads.filter(action=>['get_guest_profile','get_dog_history','get_belongings','get_guest_belongings'].includes(action));
+  const more=card.locator('.directory-care-more-actions');
+  await more.locator(':scope > summary').click();
+  const secondary=more.locator(':scope > .directory-care-more-actions-list > [data-p4-dir="again"], :scope > .directory-care-more-actions-list > [data-owner-care-sharing-options]');
+  await expect(secondary).toHaveCount(2);
+  for(const dark of [false,true])for(const scale of [1,2]){
+    await page.evaluate(dark=>document.body.classList.toggle('dark-theme',dark),dark);
+    await card.evaluate((card,scale)=>{
+      for(const node of card.querySelectorAll('.directory-care-brief-heading h3,.directory-care-brief-freshness summary,.directory-care-brief-note-heading h4,[data-care-brief-owner-name],.directory-care-owner-phone,.directory-care-brief-actions button,[data-care-brief-call-owner] a')){
+        if(!node.dataset.alignmentFont)node.dataset.alignmentFont=parseFloat(getComputedStyle(node).fontSize);
+        node.style.fontSize=`${Number(node.dataset.alignmentFont)*scale}px`;
+      }
+    },scale);
+    const geometry=await card.evaluate(card=>{
+      const box=selector=>{const node=card.querySelector(selector),r=node.getBoundingClientRect();return {left:r.left,right:r.right,top:r.top,bottom:r.bottom,height:r.height};};
+      return {overflow:card.scrollWidth>card.clientWidth+1,viewportOverflow:document.documentElement.scrollWidth>innerWidth+1,
+        primary:box('[data-care-brief-action="full-profile"]'),owner:box('[data-p4-dir="owner"]'),status:box('[data-compact-intake-status]'),
+        name:box('[data-care-brief-owner-name]'),phone:box('.directory-care-owner-phone'),call:box('[data-care-brief-call-owner] a')};
+    });
+    expect(geometry.overflow).toBe(false);
+    expect(geometry.viewportOverflow).toBe(false);
+    expect(geometry.name.left).toBeCloseTo(geometry.phone.left,0);
+    expect(geometry.name.bottom).toBeLessThanOrEqual(geometry.phone.top+1);
+    expect(geometry.name.right).toBeLessThanOrEqual(geometry.call.left);
+    expect(geometry.phone.right).toBeLessThanOrEqual(geometry.call.left);
+    expect(geometry.call.height).toBeGreaterThanOrEqual(44);
+    if(page.viewportSize().width>360)expect(geometry.primary.top).toBeCloseTo(geometry.owner.top,0);
+    expect(geometry.status.top).toBeGreaterThanOrEqual(geometry.owner.bottom);
+    for(const control of await secondary.all()){
+      await control.scrollIntoViewIfNeeded();
+      const style=await control.evaluate(node=>{const r=node.getBoundingClientRect(),s=getComputedStyle(node),hit=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);return {height:r.height,border:s.borderTopWidth,radius:s.borderTopLeftRadius,hit:hit===node||node.contains(hit),overflow:node.scrollWidth>node.clientWidth+1};});
+      expect(style.height).toBeGreaterThanOrEqual(44);
+      expect(style.border).toBe('1px');
+      expect(style.radius).toBe('8px');
+      expect(style.overflow).toBe(false);
+      expect(style.hit).toBe(true);
+    }
+    if(process.env.WAFFLE_CAPTURE_ALIGNMENT==='1'){
+      const dir=path.resolve(__dirname,'../output/care-profile-alignment');fs.mkdirSync(dir,{recursive:true});
+      await card.locator('.directory-care-owner-line').evaluate(node=>node.scrollIntoView({block:'start',behavior:'instant'}));
+      await page.screenshot({path:path.join(dir,`${info.project.name}-${dark?'dark':'light'}-${scale}x.png`)});
+    }
+  }
+  expect(fixture.reads.filter(action=>['get_guest_profile','get_dog_history','get_belongings','get_guest_belongings'].includes(action))).toEqual(reads);
+  // Missing or invalid numbers retain the existing explicit edit action, never a dial link.
+  for(const phone of ['', 'not a phone']){
+    await card.evaluate((card,phone)=>{card.querySelector('[data-directory-edit-field="phone"]').dataset.directoryCurrentValue=phone;card.dataset.v1088Phone=phone;window.WAFFLE_REFRESH_CARE_SETUP(card);},phone);
+    await expect(card.locator('.directory-owner-contact-missing')).toBeVisible();
+    await expect(card.locator('[data-care-brief-call-owner] a')).toHaveCount(0);
+    await expect(card.getByRole('button',{name:'Add number',exact:true})).toBeVisible();
+  }
+  const contact=card.locator('[data-care-brief-call-owner]');
+  await contact.evaluate(node=>{node.hidden=true;});
+  await expect(contact.locator('button')).toBeHidden();
+  await expect(contact.locator('.directory-owner-contact-missing')).toBeHidden();
+  await contact.evaluate(node=>{node.hidden=false;});
+  await expect(contact.locator('.directory-owner-contact-missing')).toBeVisible();
+  expect(await card.getAttribute('data-directory-stay-id')).toBe(bookings[0].stayId);
+  expect(await card.getAttribute('data-directory-dog-id')).toBe(bookings[0].dogId);
+});
