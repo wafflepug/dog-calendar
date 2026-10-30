@@ -14,6 +14,7 @@ No controls, icons, runtime handlers, backend behavior or Today/Calendar layouts
 - Existing Care mobile clarity, routine heading and solo-sitter checks: long names and complete instructions, touch targets, forced colors, emergency lookup, retained handover editing, editor focus and draft failure recovery.
 - UI stability contract and release/deployment attribution contracts.
 - CI exposed a WebKit focus-timing race in the existing owner-share test: the hidden host and completed action were recorded before native focus cleared. The test now waits for action completion and polls the same focus-outside-host assertion; no delay, weakened assertion or runtime change.
+- WebKit CI also missed two pointer actions immediately after native scrolling (Stay history after closing handover, and Edit checklist below the saved summary). Recordings show offscreen targets moving into view without a Settings overlay. These two fixture actions now reuse the existing three-frame stable geometry and hit-target readiness helper after native scroll; real pointer clicks, history assertions, and checklist draft/save assertions are retained. No runtime recovery or fixed delay is added.
 - Publication gate: all workflows on the final PR head and every UI regression job must pass before merge; Pages must finish before exact published asset and read-only deployment metadata verification.
 - Live checks request static assets and capability/maintenance metadata only. No guest record reads, guest writes or sample notifications.
 
