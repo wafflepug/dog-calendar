@@ -162,6 +162,14 @@ test('stay contact and handover is readable, editable and tied to the selected d
       const layout = await contact.evaluate(root => ({ overflow: root.scrollWidth > root.clientWidth, buttons: [...root.querySelectorAll('button')].map(button => { const r = button.getBoundingClientRect(); return [r.width, r.height]; }) }));
       expect(layout.overflow).toBe(false);
       expect(layout.buttons.every(([w, h]) => Math.round(w * 100) / 100 >= 44 && Math.round(h * 100) / 100 >= 44)).toBe(true);
+      if (width <= 420) {
+        const contactLayout = await contact.locator('.directory-care-contact-body').evaluate(element => ({
+          columns: getComputedStyle(element).gridTemplateColumns.split(' ').length,
+          handoverLineHeight: Number.parseFloat(getComputedStyle(element.querySelector('[data-directory-edit-field="notes"] .directory-field-value')).lineHeight)
+        }));
+        expect(contactLayout.columns).toBe(1);
+        expect(contactLayout.handoverLineHeight).toBeGreaterThanOrEqual(21);
+      }
       let readable;
       const measureReadability = root => {
         const size = selector => [...root.querySelectorAll(selector)].map(el => Number.parseFloat(getComputedStyle(el).fontSize));

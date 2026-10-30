@@ -115,7 +115,7 @@ for (const [name, viewport, colorScheme] of [['390-light', { width: 390, height:
   });
 }
 
-test('Care detail editors stay readable and reachable in the actual directory runtime', async ({ page }) => {
+test('Care detail editors stay readable and reachable in the actual directory runtime', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 320, height: 568 });
   await page.emulateMedia({ colorScheme: 'light' });
   await page.addInitScript(() => localStorage.setItem('theme', 'light'));
@@ -178,6 +178,7 @@ test('Care detail editors stay readable and reachable in the actual directory ru
             statusFont: statusStyle.fontSize,
             labelFont: getComputedStyle(root.querySelector('#guestDetailEditLabel')).fontSize,
             dogLineFont: getComputedStyle(root.querySelector('#guestDetailEditDog')).fontSize,
+            headerWrap: getComputedStyle(root.querySelector('.guest-detail-edit-header')).flexWrap,
             statusContrast: contrast(statusStyle.color, panelColor),
             statusContrasts,
             saveContrast: contrast(saveStyle.color, saveStyle.backgroundColor),
@@ -194,6 +195,7 @@ test('Care detail editors stay readable and reachable in the actual directory ru
         expect(Number.parseFloat(measured.statusFont)).toBeGreaterThanOrEqual(13);
         expect(Number.parseFloat(measured.labelFont)).toBeGreaterThanOrEqual(13);
         expect(Number.parseFloat(measured.dogLineFont)).toBeGreaterThanOrEqual(13);
+        expect(measured.headerWrap).toBe('wrap');
         expect(measured.statusContrast).toBeGreaterThanOrEqual(4.5);
         expect(measured.statusContrasts.every(ratio => ratio >= 4.5)).toBe(true);
         expect(measured.saveContrast).toBeGreaterThanOrEqual(4.5);
@@ -205,6 +207,8 @@ test('Care detail editors stay readable and reachable in the actual directory ru
         expect(await editor.evaluate(el => getComputedStyle(el).outlineStyle)).not.toBe('none');
 
         if (width === 320 && accent === 'waffle-purple' && field === 'notes') {
+          const editorImage = await page.screenshot({ fullPage: false, path: testInfo.outputPath('care-detail-editor-long-identity-320.png') });
+          await testInfo.attach('care-detail-editor-long-identity-320', { body: editorImage, contentType: 'image/png' });
           await page.setViewportSize({ width: 320, height: 380 }); // Keyboard-open visual-height emulation.
           await expect.poll(() => page.evaluate(() => document.documentElement.style.getPropertyValue('--waffle-mobile-visual-height'))).toBe('380px');
           await page.locator('.guest-detail-edit-actions').scrollIntoViewIfNeeded();

@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.10.30.01",
-  "releaseName": "Care Support Consistency",
+  "assetRevision": "2026.10.30.02",
+  "releaseName": "Expanded Care Support Readability",
   "careIteration": {
     "returningDogSuggestions": true,
     "reviewedCareInheritance": true,
