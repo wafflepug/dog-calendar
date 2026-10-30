@@ -1,9 +1,11 @@
 # Product improvement backlog
 
-Reviewed 17 September 2026. Repository: `wafflepug/dog-calendar`; always start implementation from current `origin/main` in an isolated worktree. Stack: static HTML/CSS, browser JavaScript, FullCalendar, Apps Script backend, Python contracts, Playwright. Keep production smoke checks read-only. Preserve existing theme settings, offline work, and early checkout behavior. Use Astra for bounded implementation; lead agent reviews design and integration. Complete relevant CI before merging.
+Reviewed 17 September 2026. Repository: `wafflepug/dog-calendar`; always start implementation from current `origin/main` in an isolated worktree. Stack: static HTML/CSS, browser JavaScript, FullCalendar, Apps Script backend, Python contracts, Playwright. Keep production smoke checks read-only. Preserve existing theme settings, offline work, and early checkout behavior. Use Luna for bounded implementation; lead agent reviews design and integration. Complete relevant CI before merging.
 
 
-## Current Care iteration - 29 October 2026
+## Current Care iteration - 30 October 2026
+
+Candidate 2026.10.30.01: [Care supporting-section consistency](care-support-consistency.md). Align existing Care disclosure headers and focus rings, keep Booking setup status and Review actions within long/narrow rows, and retain all existing labels, warnings, and hidden states. Preserve complete Safety and Medication, exact identity, drafts, explicit writes and lazy reads. No Today/Calendar or backend changes.
 
 Candidate 2026.10.29.06: [Care profile alignment](care-profile-alignment.md). Refine identity/date spacing, heading and saved-status alignment, grouped owner contact, primary action baselines and themed supporting buttons. Preserve complete care, exact identities, drafts, explicit writes and lazy reads. Next: validate profile reading and call placement on physical phones.
 

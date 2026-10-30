@@ -232,6 +232,7 @@ for (const [name, width, colorScheme] of [['320-light', 320, 'light'], ['320-dar
     await page.keyboard.press('Tab');
     await summary.focus();
     await expect(summary).toHaveCSS('outline-style', 'solid');
+    await expect(summary).toHaveCSS('outline-width', '3px');
     await page.keyboard.press('Enter');
     await expect(tools).toHaveAttribute('open', '');
     await expect(summary).toBeFocused();
@@ -245,6 +246,18 @@ for (const [name, width, colorScheme] of [['320-light', 320, 'light'], ['320-dar
     await expect(tools).toHaveAttribute('open', '');
     await expect(records).not.toHaveAttribute('open', '');
     await expect(bookingTools).not.toHaveAttribute('open', '');
+    const disclosureHeaders = await card.locator([
+      '.directory-care-more-actions > summary',
+      '.directory-care-records-disclosure > summary',
+      '.directory-care-contact-disclosure > summary',
+      '.p4-directory-actions > summary',
+      '.directory-care-readiness > summary'
+    ].join(',')).evaluateAll(nodes => nodes.map(node => ({
+      label: node.textContent.trim(),
+      minimum: getComputedStyle(node).minHeight
+    })));
+    expect(disclosureHeaders.length).toBeGreaterThanOrEqual(4);
+    expect(disclosureHeaders.every(header => header.minimum === '44px')).toBe(true);
     await records.locator(':scope > summary').click();
     await expect(records).toHaveAttribute('open', '');
     const historyCount = await bookingTools.locator('[data-p4-dir="history"]').count();
@@ -280,6 +293,20 @@ for (const [name, width, colorScheme] of [['320-light', 320, 'light'], ['320-dar
     await summary.click();
     const readiness = tools.locator('.directory-care-readiness');
     await readiness.locator(':scope > summary').click();
+    const readinessStatus = readiness.locator('[data-care-readiness-status]').first();
+    const originalReadinessStatus = await readinessStatus.textContent();
+    const longReadinessStatus = 'Owner response is still pending and has not been received';
+    await readinessStatus.evaluate((node, text) => { node.textContent = text; }, longReadinessStatus);
+    const readinessGeometry = await readiness.locator('[data-care-readiness-item]').first().evaluate(row => {
+      const status = row.querySelector('[data-care-readiness-status]');
+      const action = row.querySelector('button');
+      const rowRect = row.getBoundingClientRect(), statusRect = status.getBoundingClientRect(), actionRect = action.getBoundingClientRect();
+      return { rowRight: rowRect.right, statusRight: statusRect.right, actionRight: actionRect.right, text: status.textContent };
+    });
+    expect(readinessGeometry.text).toBe(longReadinessStatus);
+    expect(readinessGeometry.statusRight).toBeLessThanOrEqual(readinessGeometry.rowRight + 1);
+    expect(readinessGeometry.actionRight).toBeLessThanOrEqual(readinessGeometry.rowRight + 1);
+    await readinessStatus.evaluate((node, text) => { node.textContent = text; }, originalReadinessStatus);
     await readiness.locator('[data-care-readiness-action="intake"]').click();
     await expect(tools).toHaveAttribute('open', '');
     await expect(records).toHaveAttribute('open', '');
@@ -364,6 +391,32 @@ for (const [name, width, colorScheme] of [['320-light', 320, 'light'], ['320-dar
     await expect(ownerLink).toBeFocused();
     await expect(amount).toHaveValue('2 cups draft');
     expect(reads.filter(action => action === 'get_guest_profile')).toHaveLength(profileReadsBeforeShare);
+    const enlargedTextGeometry = await page.evaluate(longStatus => {
+      const root = document.documentElement;
+      const status = document.querySelector('.directory-care-readiness-status');
+      const priorFontSize = root.style.fontSize;
+      const priorStatus = status?.textContent || '';
+      root.style.fontSize = '200%';
+      if (status) status.textContent = longStatus;
+      const row = status?.closest('[data-care-readiness-item]');
+      const action = row?.querySelector('button');
+      const rowRect = row?.getBoundingClientRect(), statusRect = status?.getBoundingClientRect(), actionRect = action?.getBoundingClientRect();
+      const result = {
+        scrollWidth: root.scrollWidth,
+        clientWidth: root.clientWidth,
+        rowRight: rowRect?.right,
+        statusRight: statusRect?.right,
+        actionRight: actionRect?.right,
+        statusText: status?.textContent
+      };
+      if (status) status.textContent = priorStatus;
+      root.style.fontSize = priorFontSize;
+      return result;
+    }, longReadinessStatus);
+    expect(enlargedTextGeometry.scrollWidth).toBeLessThanOrEqual(enlargedTextGeometry.clientWidth + 1);
+    expect(enlargedTextGeometry.statusRight).toBeLessThanOrEqual(enlargedTextGeometry.rowRight + 1);
+    expect(enlargedTextGeometry.actionRight).toBeLessThanOrEqual(enlargedTextGeometry.rowRight + 1);
+    expect(enlargedTextGeometry.statusText).toBe(longReadinessStatus);
     await testInfo.attach(`care-profile-tools-${name}`, { body: await page.screenshot({ path: testInfo.outputPath(`care-profile-tools-${name}.png`), fullPage: true }), contentType: 'image/png' });
   });
 }

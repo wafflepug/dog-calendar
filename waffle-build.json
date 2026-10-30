@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.10.29.06",
-  "releaseName": "Care Profile Alignment",
+  "assetRevision": "2026.10.30.01",
+  "releaseName": "Care Support Consistency",
   "careIteration": {
     "returningDogSuggestions": true,
     "reviewedCareInheritance": true,
