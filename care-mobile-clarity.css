@@ -1309,3 +1309,42 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-
   width: 100%;
   min-width: 0;
 }
+
+/* Supporting profile disclosures use the same touch-height and focus treatment. */
+body[data-waffle-page="directory"] .directory-card.is-profile-active :is(
+  .directory-care-readiness > summary,
+  .directory-care-records-disclosure > summary,
+  .directory-care-contact-disclosure > summary,
+  .directory-care-more-actions > summary,
+  .p4-directory-actions > summary
+) {
+  box-sizing: border-box;
+  min-height: 44px;
+  padding-block: 6px;
+}
+
+body[data-waffle-page="directory"] .directory-card.is-profile-active :is(
+  .directory-care-readiness > summary,
+  .directory-care-records-disclosure > summary,
+  .directory-care-contact-disclosure > summary,
+  .directory-care-more-actions > summary,
+  .p4-directory-actions > summary
+):focus-visible {
+  outline: 3px solid var(--wh-focus, #7562db);
+  outline-offset: 2px;
+}
+
+/* Readiness text can grow without pushing the action outside its row. */
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-readiness-row {
+  min-width: 0;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-readiness-status {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-readiness-row > button {
+  justify-self: end;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
