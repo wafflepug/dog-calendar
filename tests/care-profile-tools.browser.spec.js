@@ -300,12 +300,21 @@ for (const [name, width, colorScheme] of [['320-light', 320, 'light'], ['320-dar
     const readinessGeometry = await readiness.locator('[data-care-readiness-item]').first().evaluate(row => {
       const status = row.querySelector('[data-care-readiness-status]');
       const action = row.querySelector('button');
-      const rowRect = row.getBoundingClientRect(), statusRect = status.getBoundingClientRect(), actionRect = action.getBoundingClientRect();
-      return { rowRight: rowRect.right, statusRight: statusRect.right, actionRight: actionRect.right, text: status.textContent };
+      const copy = row.querySelector('.directory-care-readiness-copy');
+      const rowRect = row.getBoundingClientRect(), statusRect = status.getBoundingClientRect(), actionRect = action.getBoundingClientRect(), copyRect = copy.getBoundingClientRect();
+      return { rowRight: rowRect.right, rowLeft: rowRect.left, statusRight: statusRect.right, statusLeft: statusRect.left, statusTop: statusRect.top, statusHeight: statusRect.height, actionRight: actionRect.right, actionLeft: actionRect.left, actionTop: actionRect.top, actionHeight: actionRect.height, copyLeft: copyRect.left, copyRight: copyRect.right, text: status.textContent };
     });
     expect(readinessGeometry.text).toBe(longReadinessStatus);
     expect(readinessGeometry.statusRight).toBeLessThanOrEqual(readinessGeometry.rowRight + 1);
     expect(readinessGeometry.actionRight).toBeLessThanOrEqual(readinessGeometry.rowRight + 1);
+    if (width <= 520) {
+      expect(readinessGeometry.copyLeft).toBeLessThanOrEqual(readinessGeometry.rowLeft + 16);
+      expect(readinessGeometry.copyRight).toBeGreaterThanOrEqual(readinessGeometry.rowRight - 12);
+      const statusCenter = readinessGeometry.statusTop + readinessGeometry.statusHeight / 2;
+      const actionCenter = readinessGeometry.actionTop + readinessGeometry.actionHeight / 2;
+      expect(Math.abs(statusCenter - actionCenter)).toBeLessThanOrEqual(2);
+      expect(readinessGeometry.statusLeft).toBeLessThan(readinessGeometry.actionLeft);
+    }
     await readinessStatus.evaluate((node, text) => { node.textContent = text; }, originalReadinessStatus);
     await readiness.locator('[data-care-readiness-action="intake"]').click();
     await expect(tools).toHaveAttribute('open', '');
@@ -358,10 +367,20 @@ for (const [name, width, colorScheme] of [['320-light', 320, 'light'], ['320-dar
     const geometry = await page.evaluate(() => {
       const doc = document.documentElement, footer = document.getElementById('wh75MobileBottomNav'), footerRect = footer?.getBoundingClientRect();
       const buttons = [...document.querySelectorAll('.directory-care-more-actions-list button')].filter(button => button.getClientRects().length);
-      return { scrollWidth: doc.scrollWidth, clientWidth: doc.clientWidth, buttons: buttons.map(button => { const rect = button.getBoundingClientRect(); return { height: rect.height, right: rect.right, covered: !!footerRect?.height && rect.bottom > footerRect.top && rect.top < footerRect.bottom }; }) };
+      return { scrollWidth: doc.scrollWidth, clientWidth: doc.clientWidth, buttons: buttons.map(button => { const rect = button.getBoundingClientRect(); return { width: rect.width, height: rect.height, right: rect.right, covered: !!footerRect?.height && rect.bottom > footerRect.top && rect.top < footerRect.bottom }; }) };
     });
     expect(geometry.scrollWidth).toBeLessThanOrEqual(geometry.clientWidth + 1);
     expect(geometry.buttons.every(button => button.height >= 44 && button.right <= width + 1 && !button.covered)).toBeTruthy();
+    if (width >= 769) {
+      const grid = await list.evaluate(node => {
+        const styles = getComputedStyle(node);
+        const contentWidth = node.clientWidth - parseFloat(styles.paddingLeft) - parseFloat(styles.paddingRight);
+        const trackWidths = [...styles.gridTemplateColumns.matchAll(/[\d.]+px/g)].map(match => Number.parseFloat(match[0]));
+        return { contentWidth, trackWidths };
+      });
+      expect(grid.trackWidths.length).toBeGreaterThan(0);
+      expect(grid.trackWidths.every(trackWidth => trackWidth + 1 >= Math.min(280, grid.contentWidth))).toBe(true);
+    }
     // The share action is direct even with every secondary group closed.
     await summary.click();
     await expect(tools).not.toHaveAttribute('open', '');

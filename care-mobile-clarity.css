@@ -1348,3 +1348,69 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-
   white-space: normal;
   overflow-wrap: anywhere;
 }
+
+/* Keep long secondary-tool labels readable in wide profiles without changing
+   the existing action order or collapsing any disclosure. */
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-more-actions-list {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+}
+
+/* On phones, let Booking setup names use the full row, then pair the complete
+   status with its existing Review action. */
+@media (max-width: 520px) {
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-readiness-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 6px 8px;
+  }
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-readiness-copy {
+    grid-column: 1 / -1;
+    grid-row: 1;
+  }
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-readiness-status {
+    grid-column: 1;
+    grid-row: 2;
+    align-self: center;
+    text-align: left;
+  }
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-readiness-row > button {
+    grid-column: 2;
+    grid-row: 2;
+  }
+}
+
+/* Records & forms actions use the same clear focus ring as their disclosure. */
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-records-body :is(
+  .directory-intake-action,
+  .directory-legacy-upload-action,
+  .directory-legacy-open-action
+):focus-visible {
+  outline: 3px solid var(--wh-focus, #7562db);
+  outline-offset: 2px;
+}
+
+/* Give owner and contact values the full phone width; handover stays a full
+   width third field at every breakpoint. */
+@media (max-width: 420px) {
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-contact-body.directory-attributes-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-contact-body [data-directory-edit-field="notes"] .directory-field-value {
+  line-height: 1.55;
+}
+
+/* Keep the detail editor's identity context readable when its heading wraps. */
+body[data-waffle-page="directory"] #guestDetailEditModal .guest-detail-edit-header {
+  flex-wrap: wrap;
+  align-items: center;
+}
+body[data-waffle-page="directory"] #guestDetailEditModal .guest-detail-edit-header > :first-child {
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+body[data-waffle-page="directory"] #guestDetailEditModal .guest-detail-edit-dog {
+  font-size: .875rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}

@@ -182,10 +182,12 @@ test('Records & forms stays readable and keeps real state/action targets at 320,
     await records.locator('.directory-care-records-body .directory-intake-action').first().focus();
     const focused = await page.evaluate(() => ({
       isAction: document.activeElement?.matches('.directory-care-records-body .directory-intake-action'),
-      outline: getComputedStyle(document.activeElement).outlineStyle
+      outline: getComputedStyle(document.activeElement).outlineStyle,
+      outlineWidth: getComputedStyle(document.activeElement).outlineWidth
     }));
     expect(focused.isAction).toBe(true);
     expect(focused.outline).not.toBe('none');
+    expect(focused.outlineWidth).toBe('3px');
   }
 });
 
