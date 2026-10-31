@@ -1414,3 +1414,142 @@ body[data-waffle-page="directory"] #guestDetailEditModal .guest-detail-edit-dog 
   line-height: 1.45;
   overflow-wrap: anywhere;
 }
+
+/* Keep the daily brief's label/value rail consistent from tablet to desktop.
+   The rail scales with available width, but its cap leaves the value column
+   room for long care instructions and enlarged text. */
+body[data-waffle-page="directory"] .directory-card.is-profile-active {
+  --care-daily-label-rail: clamp(8.5rem, 18vw, 11rem);
+}
+@media (min-width: 700px) {
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-grid > .directory-care-brief-item,
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-grid > .directory-care-brief-supporting-grid > .directory-care-brief-item {
+    display: grid;
+    grid-template-columns: minmax(min(34%, var(--care-daily-label-rail)), var(--care-daily-label-rail)) minmax(0, 1fr);
+    align-items: start;
+    gap: 4px 12px;
+  }
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-grid > .directory-care-brief-safety {
+    grid-template-columns: minmax(min(34%, var(--care-daily-label-rail)), var(--care-daily-label-rail)) minmax(0, 1fr) minmax(8rem, max-content);
+    align-items: center;
+  }
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-note {
+    grid-template-columns: minmax(min(34%, var(--care-daily-label-rail)), var(--care-daily-label-rail)) minmax(0, 1fr) minmax(8rem, max-content);
+    padding-inline: 0;
+    border: 0;
+    border-bottom: 1px solid var(--care-card-line);
+    border-radius: 0;
+    background: transparent;
+  }
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-feeding-walks {
+    grid-template-columns: minmax(min(34%, var(--care-daily-label-rail)), var(--care-daily-label-rail)) minmax(0, 1fr) minmax(8rem, max-content);
+  }
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-safety > .directory-care-brief-note-heading:not([hidden]),
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-note > .directory-care-brief-note-heading:not([hidden]),
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-feeding-walks > .directory-care-brief-note-heading:not([hidden]) {
+    display: grid;
+    grid-column: 1 / -1;
+    grid-row: 1;
+    grid-template-columns: minmax(min(34%, var(--care-daily-label-rail)), var(--care-daily-label-rail)) minmax(0, 1fr) max-content;
+    align-items: center;
+    gap: 4px 12px;
+    min-width: 0;
+  }
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-grid > .directory-care-brief-item > .directory-care-brief-note-heading > h4,
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-grid > .directory-care-brief-supporting-grid > .directory-care-brief-item > .directory-care-brief-note-heading > h4 {
+    grid-column: 1;
+    grid-row: 1;
+    min-width: 0;
+    margin: 0;
+  }
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-grid > .directory-care-brief-item > .directory-care-brief-value,
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-grid > .directory-care-brief-supporting-grid > .directory-care-brief-item > .directory-care-brief-value {
+    grid-column: 2;
+    grid-row: 1;
+    margin: 0;
+  }
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-safety [data-care-brief-action="emergency-contact"],
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-note [data-care-brief-action="handover"],
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-feeding-walks [data-care-brief-action="edit-routine"] {
+    grid-column: 3;
+    grid-row: 1;
+    justify-self: end;
+  }
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-safety > [data-care-brief-safety],
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-note > [data-care-brief-handover-note],
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-feeding-walks > .directory-care-brief-subsection {
+    grid-column: 2;
+    min-width: 0;
+    margin: 0;
+  }
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-owner-line {
+    display: grid;
+    grid-template-columns: minmax(min(34%, var(--care-daily-label-rail)), var(--care-daily-label-rail)) minmax(0, 1fr);
+    align-items: start;
+    gap: 4px 12px;
+  }
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-owner-label {
+    grid-column: 1;
+  }
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-owner-inline {
+    grid-column: 2;
+  }
+}
+
+/* Category heading actions share a wrap-safe row on narrow and enlarged views. */
+@media (max-width: 699px) {
+  body[data-waffle-page="directory"] .directory-card.is-profile-active :is(
+    .directory-care-brief-safety,
+    .directory-care-brief-note,
+    .directory-care-brief-feeding-walks
+  ) > .directory-care-brief-note-heading:not([hidden]) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 4px 8px;
+    min-width: 0;
+  }
+  body[data-waffle-page="directory"] .directory-card.is-profile-active :is(
+    .directory-care-brief-safety,
+    .directory-care-brief-note,
+    .directory-care-brief-feeding-walks
+  ) > .directory-care-brief-note-heading > h4 {
+    min-width: 0;
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+  body[data-waffle-page="directory"] .directory-card.is-profile-active :is(
+    [data-care-brief-action="emergency-contact"],
+    [data-care-brief-action="edit-routine"],
+    [data-care-brief-action="handover"]
+  ) {
+    max-width: 100%;
+  }
+}
+
+/* Booking setup status remains as legible as its item label in both themes. */
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-readiness-status {
+  font-size: .875rem;
+  line-height: 1.4;
+}
+@media (min-width: 521px) and (max-width: 820px) {
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-readiness-row {
+    grid-template-columns: minmax(8rem, .7fr) minmax(0, 1fr) auto;
+    gap: 8px;
+  }
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-readiness-status {
+    min-width: 0;
+    text-align: left;
+  }
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-readiness-row > button {
+    justify-self: end;
+  }
+}
+
+/* Preserve complete instructions and give every daily value the same reading rhythm. */
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-grid .directory-care-brief-value {
+  line-height: 1.55;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-grid > .directory-care-brief-supporting-grid {
+  padding: 0;
+}
