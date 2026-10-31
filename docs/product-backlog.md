@@ -3,11 +3,13 @@
 Reviewed 17 September 2026. Repository: `wafflepug/dog-calendar`; always start implementation from current `origin/main` in an isolated worktree. Stack: static HTML/CSS, browser JavaScript, FullCalendar, Apps Script backend, Python contracts, Playwright. Keep production smoke checks read-only. Preserve existing theme settings, offline work, and early checkout behavior. Use Luna for bounded implementation; lead agent reviews design and integration. Complete relevant CI before merging.
 
 
-## Current Care iteration - 30 October 2026
+## Current Care iteration - 31 October 2026
 
 Published 2026.10.30.01 (PR #281): [Care supporting-section consistency](care-support-consistency.md). Align existing Care disclosure headers and focus rings, keep Booking setup status and Review actions within long/narrow rows, and retain all existing labels, warnings, and hidden states. Preserve complete Safety and Medication, exact identity, drafts, explicit writes and lazy reads. No Today/Calendar or backend changes.
 
-Candidate 2026.10.30.02: [Expanded Care support readability](care-expanded-six.md). Six Care-only refinements across secondary tools, phone Booking setup rows, Records & forms focus, owner/contact field width, multiline handover rhythm and detail-editor identity wrapping. Preserve full labels and notes, 44px targets, exact identity, drafts, explicit writes and lazy reads. No Today/Calendar or backend changes. Require current-head CI and static-asset release attribution.
+Published 2026.10.30.02 (PR #282): [Expanded Care support readability](care-expanded-six.md). Six Care-only refinements across secondary tools, phone Booking setup rows, Records & forms focus, owner/contact field width, multiline handover rhythm and detail-editor identity wrapping. Preserve full labels and notes, 44px targets, exact identity, drafts, explicit writes and lazy reads. No Today/Calendar or backend changes.
+
+Candidate 2026.10.31.01: [Care daily scan](care-daily-scan-five.md). Five Directory-only readability refinements align daily care labels, values and existing actions, keep complete values readable, and preserve mobile stacking, exact identity, drafts, explicit writes and lazy reads. No Today/Calendar or backend changes. Publication requires exact-head CI and static-asset release attribution.
 
 Candidate 2026.10.29.06: [Care profile alignment](care-profile-alignment.md). Refine identity/date spacing, heading and saved-status alignment, grouped owner contact, primary action baselines and themed supporting buttons. Preserve complete care, exact identities, drafts, explicit writes and lazy reads. Next: validate profile reading and call placement on physical phones.
 
