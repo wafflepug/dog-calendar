@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.10.30.02",
-  "releaseName": "Expanded Care Support Readability",
+  "assetRevision": "2026.10.31.01",
+  "releaseName": "Care Daily Scan",
   "careIteration": {
     "returningDogSuggestions": true,
     "reviewedCareInheritance": true,
