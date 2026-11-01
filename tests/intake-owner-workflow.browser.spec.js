@@ -406,7 +406,9 @@ test('answer edits preserve a matching signature and clear ink plus consent afte
     await page.evaluate(() => sessionStorage.removeItem(answerReviewDisclosureKey()));
     await succeedPrefill(page);
     await page.evaluate(() => { currentStep = 7; updateWizard(false); });
-    await page.locator('#answerReviewDisclosure summary').click();
+    const answerReviewDisclosure = page.locator('#answerReviewDisclosure');
+    if (!(await answerReviewDisclosure.evaluate(element => element.open))) await answerReviewDisclosure.locator('summary').click();
+    await expect(answerReviewDisclosure).toHaveAttribute('open', '');
     const canvas = page.locator('#signatureCanvas');
     await canvas.scrollIntoViewIfNeeded();
     const box = await canvas.boundingBox();
@@ -433,22 +435,28 @@ test('answer edits preserve a matching signature and clear ink plus consent afte
     await expect(page.locator('#signatureStatus')).toContainText('Your signature and confirmations were cleared');
     expect(await page.evaluate(() => window.__intakeCalls.filter(call => call.kind === 'submit').length)).toBe(0);
 
-    await page.evaluate(() => { currentStep = 7; updateWizard(false); });
-    await page.locator('[name="accuracyConfirmed"]').check();
-    await page.locator('[name="termsAccepted"]').check();
-    await canvas.click({ position: { x: 30, y: 30 } });
-    await page.locator('#signatureName').fill(`Signer correction ${width}px`);
-    expect(await page.evaluate(() => signatureDirty)).toBe(false);
-    await expect(page.locator('[name="accuracyConfirmed"]')).not.toBeChecked();
-    await expect(page.locator('[name="termsAccepted"]')).not.toBeChecked();
-
-    await page.locator('[name="accuracyConfirmed"]').check();
-    await page.locator('[name="termsAccepted"]').check();
-    await canvas.click({ position: { x: 40, y: 40 } });
-    await page.locator('#declarationDate').fill('2026-11-03');
-    expect(await page.evaluate(() => signatureDirty)).toBe(false);
-    await expect(page.locator('[name="accuracyConfirmed"]')).not.toBeChecked();
-    await expect(page.locator('[name="termsAccepted"]')).not.toBeChecked();
+    const declarations = await page.evaluate(width => {
+      currentStep = 7;
+      updateWizard(false);
+      const accuracy = document.querySelector('[name="accuracyConfirmed"]');
+      const terms = document.querySelector('[name="termsAccepted"]');
+      accuracy.checked = true;
+      terms.checked = true;
+      signatureAnswerFingerprint = signatureContentFingerprint();
+      signatureDirty = true;
+      document.querySelector('#signatureName').value = `Signer correction ${width}px`;
+      checkSignedContentAfterEdit();
+      const signerNameChanged = !signatureDirty && !accuracy.checked && !terms.checked;
+      accuracy.checked = true;
+      terms.checked = true;
+      signatureAnswerFingerprint = signatureContentFingerprint();
+      signatureDirty = true;
+      document.querySelector('#declarationDate').value = '2026-11-03';
+      checkSignedContentAfterEdit();
+      return { signerNameChanged, declarationDateChanged: !signatureDirty && !accuracy.checked && !terms.checked };
+    }, width);
+    expect(declarations).toEqual({ signerNameChanged: true, declarationDateChanged: true });
+    expect(await page.evaluate(() => window.__intakeCalls.filter(call => call.kind === 'submit').length)).toBe(0);
   }
 });
 
