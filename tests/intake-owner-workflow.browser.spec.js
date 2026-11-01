@@ -168,6 +168,7 @@ for (const [width, colorScheme] of [[320, 'light'], [320, 'dark'], [390, 'light'
     await expect(signature).toBeFocused();
     await expect(signature).toHaveAttribute('tabindex', '-1');
     await expect(signature).toHaveAttribute('aria-invalid', 'true');
+    await expect(signature).toHaveAttribute('aria-describedby', 'signatureInstructions intake-error-signatureCanvas');
     await expect(page.locator('#intake-error-signatureCanvas')).toHaveText('Please sign inside the electronic signature box.');
     expect(await page.evaluate(() => window.__intakeCalls.filter(call => call.kind === 'submit'))).toHaveLength(0);
   });
@@ -295,4 +296,47 @@ test('debounces typing, flushes on change and pagehide, and keeps submit feedbac
   await expect(page.locator('.completed h2')).toHaveAttribute('aria-live', 'polite');
   await expect(page.locator('.completed h2')).toBeFocused();
   expect(await page.evaluate(() => sessionStorage.getItem('waffle-intake-draft:fixture-secure-token'))).toBeNull();
+});
+
+test('signing context stays tied to the booking and signature clearing requires existing ink', async ({ page }) => {
+  for (const width of [320, 390, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    await openIntake(page);
+    await succeedPrefill(page);
+    await page.evaluate(() => { currentStep = 7; updateWizard(false); });
+    await expect(page.locator('#signatureName')).toHaveValue('Owner One');
+    await expect(page.locator('#declarationDogName')).toHaveValue('Cino');
+    expect(await page.locator('#declarationDate').inputValue()).toBe(await page.evaluate(() => isoToday()));
+
+    await expect(page.locator('#signingDog')).toHaveText('Cino');
+    await expect(page.locator('#signingDates')).toHaveText('1 Nov 2026 – 11 Nov 2026');
+    await page.locator('#declarationDogName').fill('Another dog');
+    await expect(page.locator('#signingDog')).toHaveText('Cino');
+
+    const canvas = page.locator('#signatureCanvas');
+    await expect(canvas).toHaveAttribute('aria-describedby', 'signatureInstructions');
+    await expect(page.locator('#signatureInstructions')).toContainText('finger, stylus, or mouse');
+    const clear = page.locator('#clearSignature');
+    await expect(clear).toBeDisabled();
+    await canvas.scrollIntoViewIfNeeded();
+    const box = await canvas.boundingBox();
+    await page.mouse.click(box.x + 20, box.y + 20);
+    await expect(clear).toBeEnabled();
+    await expect(canvas).toHaveAttribute('aria-describedby', 'signatureInstructions');
+    await clear.click();
+    await expect(clear).toBeDisabled();
+    await expect(canvas).toBeFocused();
+    await expect(page.locator('#signatureStatus')).toHaveText('Signature cleared. Please sign again.');
+    expect(await page.locator('[name="termsAccepted"]').isChecked()).toBe(false);
+    expect(await page.locator('[name="accuracyConfirmed"]').isChecked()).toBe(false);
+    expect(await page.evaluate(() => window.__intakeCalls.filter(call => call.kind === 'submit').length)).toBe(0);
+
+    const nextBox = await canvas.boundingBox();
+    await page.mouse.click(nextBox.x + 30, nextBox.y + 30);
+    await expect(clear).toBeEnabled();
+    await expect(page.locator('#signatureStatus')).toBeEmpty();
+    await clear.click();
+    await expect(clear).toBeDisabled();
+    await expect(page.locator('#signatureStatus')).toHaveText('Signature cleared. Please sign again.');
+  }
 });
