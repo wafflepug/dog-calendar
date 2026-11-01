@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.11.01.01",
-  "releaseName": "Cino Intake Identity and Date Recovery",
+  "assetRevision": "2026.11.01.02",
+  "releaseName": "Care Daily Scan and Cino Intake Recovery",
   "careIteration": {
     "returningDogSuggestions": true,
     "reviewedCareInheritance": true,

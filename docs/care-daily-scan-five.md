@@ -1,6 +1,6 @@
 # Care daily scan
 
-Release candidate `2026.10.31.01` · service worker `v11.4.162-care-daily-scan-five-2026.10.31.01`.
+Release candidate `2026.11.01.02` · service worker `v11.4.164-care-daily-scan-2026.11.01.02` (after Cino intake release `2026.11.01.01` / SW163).
 
 Five Directory-only presentation refinements make the existing daily care information easier to scan:
 
