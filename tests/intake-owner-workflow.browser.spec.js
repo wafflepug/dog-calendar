@@ -277,6 +277,7 @@ test('debounces typing, flushes on change and pagehide, and keeps submit feedbac
       if (el.type === 'checkbox') el.checked = true;
       else if (el.type !== 'radio') el.value = el.type === 'date' ? '2026-11-01' : 'Completed';
     });
+    signatureAnswerFingerprint = signatureContentFingerprint();
     signatureDirty = true;
     document.querySelector('#intakeForm').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
   });
@@ -339,4 +340,161 @@ test('signing context stays tied to the booking and signature clearing requires 
     await expect(clear).toBeDisabled();
     await expect(page.locator('#signatureStatus')).toHaveText('Signature cleared. Please sign again.');
   }
+});
+
+test('Step 7 reviews all six answer groups safely and edits return to the source step', async ({ page }) => {
+  for (const [width, colorScheme] of [[320, 'light'], [320, 'dark'], [390, 'light'], [390, 'dark'], [1440, 'light'], [1440, 'dark']]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.emulateMedia({ colorScheme });
+    await openIntake(page);
+    await page.evaluate(() => sessionStorage.removeItem(answerReviewDisclosureKey()));
+    await succeedPrefill(page);
+    await page.locator('body').evaluate(element => { element.style.fontSize = '20px'; });
+    await page.evaluate(() => {
+      const instructions = document.querySelector('#additionalInstructions');
+      instructions.value = '<img src=x onerror="alert(1)"> unknown & missing';
+      const password = document.createElement('input');
+      password.type = 'password';
+      password.name = 'fixturePassword';
+      password.value = 'never-review-this';
+      page(6).append(password);
+      currentStep = 7;
+      updateWizard(false);
+    });
+    const review = page.locator('#answerReview');
+    const disclosure = page.locator('#answerReviewDisclosure');
+    await expect(disclosure).not.toHaveAttribute('open', '');
+    await disclosure.locator('summary').click();
+    await expect(disclosure).toHaveAttribute('open', '');
+    await expect(review.locator('.answer-review-group')).toHaveCount(6);
+    await expect(review.locator('.answer-review-group h3')).toHaveText([
+      'Booking & owner', 'Dog information', 'Behaviour & safety', 'Food & walks', 'Health & home', 'Daily care & handling'
+    ]);
+    const answerFieldCount = await page.evaluate(() => new Set(Array.from(document.querySelectorAll('.wizard-page[data-step]:not([data-step="7"]) [name]')).filter(control => control.type !== 'password').map(control => control.name)).size);
+    await expect(review.locator('.answer-review-item dd')).toHaveCount(answerFieldCount);
+    await expect(review).toContainText('<img src=x onerror="alert(1)"> unknown & missing');
+    await expect(review.locator('img, script')).toHaveCount(0);
+    await expect(review).not.toContainText('never-review-this');
+    await expect(review).not.toContainText('I have read and agree to the Dog Sitting Terms');
+    await expect(review).not.toContainText('Owner signature');
+    await expect(review).toContainText('Not provided');
+    expect(await review.evaluate(element => element.scrollWidth <= element.clientWidth)).toBeTruthy();
+
+    if (width === 320 && colorScheme === 'light') {
+      await expect.poll(() => page.evaluate(() => sessionStorage.getItem(answerReviewDisclosureKey()))).toBe('1');
+      await openIntake(page);
+      await succeedPrefill(page);
+      await page.evaluate(() => { currentStep = 7; updateWizard(false); });
+      await expect(disclosure).toHaveAttribute('open', '');
+    }
+
+    await review.getByRole('button', { name: 'Edit Dog information answers' }).click();
+    await expect(page.locator('#pageCounter')).toHaveText('2 / 7');
+    await expect(page.locator('#dogName')).toBeFocused();
+    await page.locator('#dogName').fill('Updated dog');
+    await page.evaluate(() => { currentStep = 7; updateWizard(false); });
+    await expect(disclosure).toHaveAttribute('open', '');
+    await expect(review).toContainText('Updated dog');
+    expect(await page.evaluate(() => window.__intakeCalls.filter(call => call.kind === 'submit').length)).toBe(0);
+  }
+});
+
+test('answer edits preserve a matching signature and clear ink plus consent after a correction', async ({ page }) => {
+  for (const width of [320, 390, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    await openIntake(page);
+    await page.evaluate(() => sessionStorage.removeItem(answerReviewDisclosureKey()));
+    await succeedPrefill(page);
+    await page.evaluate(() => { currentStep = 7; updateWizard(false); });
+    await page.locator('#answerReviewDisclosure summary').click();
+    const canvas = page.locator('#signatureCanvas');
+    await canvas.scrollIntoViewIfNeeded();
+    const box = await canvas.boundingBox();
+    await page.mouse.click(box.x + 20, box.y + 20);
+    await expect(page.locator('#clearSignature')).toBeEnabled();
+    await page.locator('[name="accuracyConfirmed"]').check();
+    await page.locator('[name="termsAccepted"]').check();
+    await expect(page.locator('#signatureStatus')).toBeEmpty();
+
+    await page.locator('#answerReview').getByRole('button', { name: 'Edit Dog information answers' }).click();
+    await expect(page.locator('#pageCounter')).toHaveText('2 / 7');
+    await page.evaluate(() => { currentStep = 7; updateWizard(false); });
+    expect(await page.evaluate(() => signatureDirty)).toBe(true);
+    await expect(page.locator('[name="accuracyConfirmed"]')).toBeChecked();
+    await expect(page.locator('[name="termsAccepted"]')).toBeChecked();
+
+    await page.locator('#answerReview').getByRole('button', { name: 'Edit Daily care & handling answers' }).click();
+    await page.locator('#additionalInstructions').fill(`This correction changes the signed intake at ${width}px.`);
+    const correctionState = await page.evaluate(() => ({ dirty: signatureDirty, original: signatureAnswerFingerprint, current: signatureContentFingerprint(), answer: document.querySelector('#additionalInstructions').value }));
+    expect(correctionState.dirty).toBe(false);
+    await expect(page.locator('#clearSignature')).toBeDisabled();
+    await expect(page.locator('[name="accuracyConfirmed"]')).not.toBeChecked();
+    await expect(page.locator('[name="termsAccepted"]')).not.toBeChecked();
+    await expect(page.locator('#signatureStatus')).toContainText('Your signature and confirmations were cleared');
+    expect(await page.evaluate(() => window.__intakeCalls.filter(call => call.kind === 'submit').length)).toBe(0);
+
+    await page.evaluate(() => { currentStep = 7; updateWizard(false); });
+    await page.locator('[name="accuracyConfirmed"]').check();
+    await page.locator('[name="termsAccepted"]').check();
+    await canvas.click({ position: { x: 30, y: 30 } });
+    await page.locator('#signatureName').fill(`Signer correction ${width}px`);
+    expect(await page.evaluate(() => signatureDirty)).toBe(false);
+    await expect(page.locator('[name="accuracyConfirmed"]')).not.toBeChecked();
+    await expect(page.locator('[name="termsAccepted"]')).not.toBeChecked();
+
+    await page.locator('[name="accuracyConfirmed"]').check();
+    await page.locator('[name="termsAccepted"]').check();
+    await canvas.click({ position: { x: 40, y: 40 } });
+    await page.locator('#declarationDate').fill('2026-11-03');
+    expect(await page.evaluate(() => signatureDirty)).toBe(false);
+    await expect(page.locator('[name="accuracyConfirmed"]')).not.toBeChecked();
+    await expect(page.locator('[name="termsAccepted"]')).not.toBeChecked();
+  }
+});
+
+test('intake diagnostics expose numeric stages and separately measure browser RPC and form rendering', async ({ page }) => {
+  await openIntake(page);
+  await page.evaluate(() => {
+    window.__intakeDiagnosticEvents = [];
+    window.addEventListener('waffle:intake-diagnostics', event => window.__intakeDiagnosticEvents.push(event.detail));
+  });
+  await page.evaluate(() => window.__intakeCalls[0].success({
+    status: 'Awaiting Owner',
+    booking: { dogName: 'Cino', breed: 'Jack Russell', startDate: '2026-11-01', endDate: '2026-11-11', ownerName: 'Owner One', phone: '0400000000', bookingType: 'Confirmed Boarding' },
+    savedAnswers: { additionalInstructions: 'Fixture answer must not enter diagnostics.' },
+    diagnostics: { bookingSheetReadCount: 1, bookingSheetReadExclusiveMs: 2, bookingResolutionCount: 1, bookingResolutionInclusiveMs: 4, auditReadCount: 0, auditReadExclusiveMs: 0, auditVerificationCount: 0, auditVerificationInclusiveMs: 0, timezoneLookupCount: 1, timezoneLookupExclusiveMs: 1, token: 'must-not-leak' }
+  }));
+  const metrics = await page.evaluate(() => window.__intakeDiagnosticEvents[0]);
+  expect(metrics.rpcMs).toEqual(expect.any(Number));
+  expect(metrics.renderMs).toEqual(expect.any(Number));
+  expect(metrics.bookingSheetReadCount).toBe(1);
+  expect(metrics.bookingResolutionInclusiveMs).toBe(4);
+  expect(metrics.auditReadCount).toBe(0);
+  expect(metrics.timezoneLookupCount).toBe(1);
+  expect(Object.values(metrics).every(value => typeof value === 'number' && Number.isFinite(value) && value >= 0)).toBe(true);
+  expect(JSON.stringify(metrics)).not.toContain('must-not-leak');
+  expect(JSON.stringify(metrics)).not.toContain('Fixture answer');
+});
+
+test('submission rechecks the signed answer snapshot when an autofill change emits no input event', async ({ page }) => {
+  await openIntake(page);
+  await succeedPrefill(page);
+  await page.evaluate(() => { currentStep = 7; updateWizard(false); });
+  await page.locator('[name="accuracyConfirmed"]').check();
+  await page.locator('[name="termsAccepted"]').check();
+  const canvas = page.locator('#signatureCanvas');
+  await canvas.scrollIntoViewIfNeeded();
+  await canvas.click({ position: { x: 20, y: 20 } });
+  expect(await page.evaluate(() => signatureDirty)).toBe(true);
+
+  await page.evaluate(() => {
+    document.querySelector('#additionalInstructions').value = 'Silent autofill correction';
+    document.querySelector('#intakeForm').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+  });
+  expect(await page.evaluate(() => signatureDirty)).toBe(false);
+  await expect(page.locator('#clearSignature')).toBeDisabled();
+  await expect(page.locator('[name="accuracyConfirmed"]')).not.toBeChecked();
+  await expect(page.locator('[name="termsAccepted"]')).not.toBeChecked();
+  await expect(page.locator('#signatureStatus')).toContainText('Your signature and confirmations were cleared');
+  expect(await page.evaluate(() => window.__intakeCalls.filter(call => call.kind === 'submit').length)).toBe(0);
 });

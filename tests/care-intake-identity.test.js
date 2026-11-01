@@ -139,6 +139,51 @@ test('an old-key Potential Updated audit can recover a link after the same stay 
   assert.equal(resolved.booking.bookingType, 'Confirmed Boarding');
 });
 
+test('owner prefill returns numeric lookup diagnostics and performs only the existing booking and audit reads', () => {
+  const h = fixture({ end: '2026-11-11', audit: [movedAudit()] });
+  const intakeRow = Array(h.context.INTAKE_HEADERS_.length).fill('');
+  intakeRow[3] = 'Awaiting Owner';
+  intakeRow[4] = 'owner-token-fixture';
+  intakeRow[5] = 'cino|2026-11-01|2026-11-10';
+  intakeRow[7] = 'Cino';
+  intakeRow[9] = '2026-11-01';
+  intakeRow[10] = '2026-11-10';
+  intakeRow[17] = 2;
+  const intakeSheet = sheet('Dog_Intake_Records', [h.context.INTAKE_HEADERS_, intakeRow], h.bookings.getParent(), null, h.reads);
+  h.setIntakeSheet(intakeSheet);
+
+  const result = h.context.getIntakePrefill_('owner-token-fixture');
+  const diagnostics = result.diagnostics;
+  assert.equal(result.booking.endDate, '2026-11-11');
+  assert.equal(diagnostics.bookingSheetReadCount, 1);
+  assert.equal(diagnostics.bookingResolutionCount, 1);
+  assert.equal(diagnostics.auditReadCount, 1);
+  assert.equal(diagnostics.auditVerificationCount, 1);
+  assert.equal(diagnostics.timezoneLookupCount, 1);
+  assert.equal(h.reads.Bookings, 1, 'the existing booking snapshot is read once');
+  assert.equal(h.reads.Audit_Log, 1, 'the existing audit proof is read once');
+  for (const value of Object.values(diagnostics)) assert.ok(Number.isFinite(value) && value >= 0);
+});
+
+test('owner prefill diagnostics report no audit verification when stable identity resolves directly', () => {
+  const h = fixture();
+  const intakeRow = Array(h.context.INTAKE_HEADERS_.length).fill('');
+  intakeRow[3] = 'Awaiting Owner';
+  intakeRow[4] = 'stable-owner-token';
+  intakeRow[5] = 'cino|2026-11-01|2026-11-11';
+  intakeRow[7] = 'Cino';
+  intakeRow[18] = stayIdA;
+  intakeRow[19] = dogIdA;
+  h.setIntakeSheet(sheet('Dog_Intake_Records', [h.context.INTAKE_HEADERS_, intakeRow], h.bookings.getParent(), null, h.reads));
+
+  const result = h.context.getIntakePrefill_('stable-owner-token');
+  assert.equal(result.diagnostics.bookingSheetReadCount, 1);
+  assert.equal(result.diagnostics.auditReadCount, 0);
+  assert.equal(result.diagnostics.auditVerificationCount, 0);
+  assert.equal(h.reads.Audit_Log || 0, 0);
+  assert.equal(h.reads.Bookings, 1);
+});
+
 test('preparing a replacement link reuses the uniquely audited old token and preserves owner answers', () => {
   const h = fixture({ end: '2026-11-11', audit: [movedAudit()] });
   const intakeRows = [

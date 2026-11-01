@@ -11540,7 +11540,12 @@ function intakeBookingSnapshotFromValues_(rows, index, resolutionContext) {
       if (!value) return "";
       if (value instanceof Date && !isNaN(value.getTime())) {
         if (!resolutionContext.hasOwnProperty("timezone")) {
+          var timezoneStartedAt = Date.now();
           resolutionContext.timezone = resolutionContext.mainSheet.getParent().getSpreadsheetTimeZone();
+          if (resolutionContext.diagnostics) {
+            resolutionContext.diagnostics.timezoneLookupCount++;
+            resolutionContext.diagnostics.timezoneLookupExclusiveMs += Math.max(0, Date.now() - timezoneStartedAt);
+          }
         }
         return Utilities.formatDate(value, resolutionContext.timezone, "yyyy-MM-dd");
       }
@@ -11604,25 +11609,39 @@ function intakeBookingHasDateMigrationProof_(mainSheet, record, booking, booking
 }
 
 
-function resolveIntakeBookingForRecord_(mainSheet, rows, record, auditRows) {
+function resolveIntakeBookingForRecord_(mainSheet, rows, record, auditRows, diagnostics) {
   record = record && typeof record === "object" ? record : {};
   var resolutionContext = {
     mainSheet: mainSheet,
     auditRows: Array.isArray(auditRows) ? auditRows : null,
-    auditRowsLoaded: Array.isArray(auditRows)
+    auditRowsLoaded: Array.isArray(auditRows),
+    diagnostics: diagnostics || null
   };
   function migrationProof(booking, bookingRow) {
     if (!record.bookingRow || !record.dogName || !record.startDate || !record.endDate || !booking.stayId ||
         (record.startDate === booking.startDate && record.endDate === booking.endDate)) return false;
+    var verificationStartedAt = Date.now();
     if (!resolutionContext.auditRowsLoaded) {
       var auditSheet = mainSheet.getParent().getSheetByName("Audit_Log");
       var auditLastRow = auditSheet ? auditSheet.getLastRow() : 0;
-      resolutionContext.auditRows = auditLastRow >= 2
-        ? auditSheet.getRange(2, 1, auditLastRow - 1, AUDIT_LOG_HEADERS_.length).getValues()
-        : [];
+      if (auditLastRow >= 2) {
+        var auditStartedAt = Date.now();
+        resolutionContext.auditRows = auditSheet.getRange(2, 1, auditLastRow - 1, AUDIT_LOG_HEADERS_.length).getValues();
+        if (resolutionContext.diagnostics) {
+          resolutionContext.diagnostics.auditReadCount++;
+          resolutionContext.diagnostics.auditReadExclusiveMs += Math.max(0, Date.now() - auditStartedAt);
+        }
+      } else {
+        resolutionContext.auditRows = [];
+      }
       resolutionContext.auditRowsLoaded = true;
     }
-    return intakeBookingHasDateMigrationProof_(mainSheet, record, booking, bookingRow, resolutionContext.auditRows);
+    var proof = intakeBookingHasDateMigrationProof_(mainSheet, record, booking, bookingRow, resolutionContext.auditRows);
+    if (resolutionContext.diagnostics) {
+      resolutionContext.diagnostics.auditVerificationCount++;
+      resolutionContext.diagnostics.auditVerificationInclusiveMs += Math.max(0, Date.now() - verificationStartedAt);
+    }
+    return proof;
   }
 
   var stayId = String(record.stayId || "").trim();
@@ -12373,6 +12392,18 @@ function verifyWaffleHouseDigitalIntakeDirectoryStatus() {
 
 
 function getIntakePrefill_(token) {
+  var diagnostics = {
+    bookingSheetReadCount: 0,
+    bookingSheetReadExclusiveMs: 0,
+    bookingResolutionCount: 0,
+    bookingResolutionInclusiveMs: 0,
+    auditReadCount: 0,
+    auditReadExclusiveMs: 0,
+    auditVerificationCount: 0,
+    auditVerificationInclusiveMs: 0,
+    timezoneLookupCount: 0,
+    timezoneLookupExclusiveMs: 0
+  };
   var intakeSheet = getIntakeSheet_();
   var record = findIntakeRecordByToken_(intakeSheet, token);
 
@@ -12383,9 +12414,15 @@ function getIntakePrefill_(token) {
   }
 
   var mainSheet = getTargetSheet_();
+  var bookingReadStartedAt = Date.now();
   var rows = mainSheet.getDataRange().getValues();
+  diagnostics.bookingSheetReadCount++;
+  diagnostics.bookingSheetReadExclusiveMs += Math.max(0, Date.now() - bookingReadStartedAt);
 
-  var resolved = resolveIntakeBookingForRecord_(mainSheet, rows, record);
+  var resolutionStartedAt = Date.now();
+  var resolved = resolveIntakeBookingForRecord_(mainSheet, rows, record, null, diagnostics);
+  diagnostics.bookingResolutionCount++;
+  diagnostics.bookingResolutionInclusiveMs += Math.max(0, Date.now() - resolutionStartedAt);
   var booking = resolved.booking;
 
   return {
@@ -12394,7 +12431,8 @@ function getIntakePrefill_(token) {
     submittedAt: record.submittedAt,
     booking: booking,
     identityResolution: resolved.method,
-    savedAnswers: record.answers || {}
+    savedAnswers: record.answers || {},
+    diagnostics: diagnostics
   };
 }
 
