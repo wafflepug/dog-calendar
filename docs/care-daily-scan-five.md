@@ -14,9 +14,9 @@ No controls, labels, warnings, hidden states, identities, drafts, handlers, data
 
 ## Verification
 
-- Actual Directory runtime with `tests/fixtures/care-daily-workflows.js` and the Milo production-profile renderer at 700px and 768px, 200% root text, light and dark: complete five-value content, 44px emergency/routine/handover actions, and no profile horizontal overflow. Screenshots: `evidence/care-overview/production-{700,768}-{light,dark}-200pct-final.png`.
-- `care-overview-refinement.browser.spec.js`: 33/33 passed in Chromium desktop, Chromium mobile, and iPhone WebKit before the final hidden-heading guard. After that final CSS guard, the three focused layout specs passed 6/6 in Chromium and WebKit at 390px. The actual runtime geometry capture above also reflects the final guard.
-- The broader 330-case daily-workflows run was interrupted during investigation after its first geometry failure; it is not counted as passing. The failing alignment was reproduced and corrected, then focused affected specs were rerun (results recorded in the PR).
+- Actual Milo Directory renderer at 700px and 768px, 200% root text, light and dark: complete safety, medication, feeding, walks and handover values remain visible, no profile overflow, and the three existing actions are 44px with center-point hits. Screenshots: `evidence/care-overview/production-{700,768}-{light,dark}-200pct-final.png`.
+- The existing Care alignment browser spec passes 6/6 across Chromium and WebKit after correcting the tablet track widths. Local contracts pass: Care Future Stays, Early Checkout, Media Carousel, and MVP readiness (425/425).
+- The broader 330-case daily-workflows run was interrupted during investigation and is not counted as passing. Its first exact-head CI run found six failures in the Care alignment assertion because the initial tablet fallback moved Safety values to a second row. The latest correction restores the shared row at standard tablet text sizes while keeping readable 136–176px label rails and an intrinsic-width action track; the focused six-case assertion now passes.
 - Exact-head CI and production static-asset/release metadata verification are required before publication. No production guest reads, writes, or notifications are used.
 
 Physical phone and mobile PWA refresh checks remain manual.
