@@ -12392,7 +12392,13 @@ function verifyWaffleHouseDigitalIntakeDirectoryStatus() {
 
 
 function getIntakePrefill_(token) {
+  var prefillStartedAt = Date.now();
   var diagnostics = {
+    totalServerInclusiveMs: 0,
+    intakeSheetSetupCount: 0,
+    intakeSheetSetupInclusiveMs: 0,
+    intakeTokenLookupCount: 0,
+    intakeTokenLookupInclusiveMs: 0,
     bookingSheetReadCount: 0,
     bookingSheetReadExclusiveMs: 0,
     bookingResolutionCount: 0,
@@ -12404,8 +12410,14 @@ function getIntakePrefill_(token) {
     timezoneLookupCount: 0,
     timezoneLookupExclusiveMs: 0
   };
+  var intakeSheetStartedAt = Date.now();
   var intakeSheet = getIntakeSheet_();
+  diagnostics.intakeSheetSetupCount++;
+  diagnostics.intakeSheetSetupInclusiveMs += Math.max(0, Date.now() - intakeSheetStartedAt);
+  var tokenLookupStartedAt = Date.now();
   var record = findIntakeRecordByToken_(intakeSheet, token);
+  diagnostics.intakeTokenLookupCount++;
+  diagnostics.intakeTokenLookupInclusiveMs += Math.max(0, Date.now() - tokenLookupStartedAt);
 
   if (!record) {
     throw new Error(
@@ -12424,6 +12436,7 @@ function getIntakePrefill_(token) {
   diagnostics.bookingResolutionCount++;
   diagnostics.bookingResolutionInclusiveMs += Math.max(0, Date.now() - resolutionStartedAt);
   var booking = resolved.booking;
+  diagnostics.totalServerInclusiveMs = Math.max(0, Date.now() - prefillStartedAt);
 
   return {
     token: record.token,
