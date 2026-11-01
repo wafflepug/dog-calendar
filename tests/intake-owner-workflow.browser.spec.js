@@ -76,6 +76,7 @@ test('prefill shows progress, then offers one explicit retry and rejects stale r
       await expect(page.locator('#loadingMessage')).toHaveText('Still loading your secure intake form…');
       await fireTimer(page, 30_000);
       await expect(page.getByRole('button', { name: 'Retry loading form' })).toBeVisible();
+      expect(await page.locator('#retryPrefillBtn').evaluate(button => button.getBoundingClientRect().height)).toBeGreaterThanOrEqual(44);
       expect(await page.locator('#loadingMessage').getAttribute('aria-live')).toBe('polite');
       const dimensions = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
       expect(dimensions.scroll).toBeLessThanOrEqual(dimensions.client);
@@ -90,6 +91,87 @@ test('prefill shows progress, then offers one explicit retry and rejects stale r
     }
   }
 });
+
+for (const [width, colorScheme] of [[320, 'light'], [320, 'dark'], [390, 'light'], [390, 'dark'], [1440, 'light'], [1440, 'dark']]) {
+  test(`intake progress, inline validation and touch targets at ${width}px ${colorScheme} preference`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.emulateMedia({ colorScheme });
+    await openIntake(page);
+    await succeedPrefill(page);
+
+    const progress = page.getByRole('progressbar', { name: 'Intake form progress' });
+    await expect(progress).toHaveAttribute('aria-valuenow', '1');
+    await expect(progress).toHaveAttribute('aria-valuetext', 'Step 1 of 7: Booking & owner');
+
+    await page.evaluate(() => {
+      STEPS[0] = 'A very long localized booking and owner details step title';
+      updateWizard(false);
+    });
+    const title = page.locator('#stepTitle');
+    await expect(title).toHaveText('A very long localized booking and owner details step title');
+    await expect(title).toHaveCSS('white-space', 'normal');
+    expect(await title.evaluate(element => element.scrollWidth <= element.clientWidth)).toBeTruthy();
+
+    await page.evaluate(() => {
+      const owner = document.querySelector('#ownerName');
+      const hint = document.createElement('span');
+      hint.id = 'ownerNameHint';
+      hint.textContent = 'Enter the booking owner name.';
+      owner.closest('.field').append(hint);
+      owner.setAttribute('aria-describedby', hint.id);
+      owner.value = '';
+    });
+    await page.locator('#nextBtn').click();
+    const ownerName = page.locator('#ownerName');
+    await expect(ownerName).toBeFocused();
+    await expect(ownerName).toHaveAttribute('aria-invalid', 'true');
+    await expect(ownerName).toHaveAttribute('aria-describedby', /ownerNameHint intake-error-ownerName/);
+    await expect(page.locator('#intake-error-ownerName')).toHaveText('Please complete “Owner name” before continuing.');
+    await expect(page.locator('#formMessage')).toBeHidden();
+    await ownerName.fill('Cino Owner');
+    await expect(ownerName).not.toHaveAttribute('aria-invalid', 'true');
+    await expect(ownerName).toHaveAttribute('aria-describedby', 'ownerNameHint');
+    await expect(page.locator('#intake-error-ownerName')).toHaveCount(0);
+
+    await page.evaluate(() => {
+      currentStep = 6;
+      updateWizard(false);
+    });
+    const transportGroup = page.getByRole('group', { name: 'Owner permits sitter to transport the dog by car if reasonably required' });
+    await expect(transportGroup).toBeVisible();
+    expect(await page.locator('.field-long-question .yesno label').evaluateAll(labels => labels.every(label => label.getBoundingClientRect().height >= 52))).toBeTruthy();
+    expect(await page.locator('.section-desc').first().evaluate(element => getComputedStyle(element).fontSize)).toBe('13px');
+    await transportGroup.locator('input[value="No"]').evaluate(input => { input.id = 'transportPermissionNoOption'; });
+    await transportGroup.locator('input[value="Yes"]').evaluate(input => input.required = true);
+    await page.locator('#nextBtn').click();
+    await expect(transportGroup.locator('input[value="Yes"]')).toBeFocused();
+    expect(await transportGroup.locator('input[type="radio"]').evaluateAll(radios => radios.every(radio => radio.getAttribute('aria-invalid') === 'true'))).toBeTruthy();
+    await expect(page.locator('#intake-error-transportPermission')).toHaveText('Please choose a response for “Owner permits sitter to transport the dog by car if reasonably required” before continuing.');
+    await expect(page.locator('#intake-error-transportPermission')).toHaveCount(1);
+    await transportGroup.locator('input[value="No"]').check();
+    await expect(page.locator('#intake-error-transportPermission')).toHaveCount(0);
+    expect(await transportGroup.locator('input[type="radio"]').evaluateAll(radios => radios.every(radio => !radio.hasAttribute('aria-invalid')))).toBeTruthy();
+
+    await page.evaluate(() => {
+      currentStep = 7;
+      updateWizard(false);
+    });
+    const clearSignature = page.locator('#clearSignature');
+    await expect(clearSignature).toBeVisible();
+    expect(await clearSignature.evaluate(button => button.getBoundingClientRect().height)).toBeGreaterThanOrEqual(44);
+    await expect(page.locator('#progressTrack')).toHaveAttribute('aria-valuenow', '7');
+    await expect(page.locator('#progressTrack')).toHaveAttribute('aria-valuetext', 'Step 7 of 7: Review & sign');
+    await page.locator('[name="accuracyConfirmed"]').check();
+    await page.locator('[name="termsAccepted"]').check();
+    await page.locator('#submitBtn').click();
+    const signature = page.locator('#signatureCanvas');
+    await expect(signature).toBeFocused();
+    await expect(signature).toHaveAttribute('tabindex', '-1');
+    await expect(signature).toHaveAttribute('aria-invalid', 'true');
+    await expect(page.locator('#intake-error-signatureCanvas')).toHaveText('Please sign inside the electronic signature box.');
+    expect(await page.evaluate(() => window.__intakeCalls.filter(call => call.kind === 'submit'))).toHaveLength(0);
+  });
+}
 
 test('a late success after the wait state opens the form when no retry was started', async ({ page }) => {
   await openIntake(page);
