@@ -8,12 +8,13 @@ const bookings = [
   {dogName:'Fern',breed:'Kelpie',startDate:'2026-10-17',endDate:'2026-10-18',ownerName:'Casey',notes:'Private care note should not be shared.',dogNumber:'#00019'}
 ].map((row,index)=>({...row,timestamp:'2026-10-17',phone:'0400000000',bookingType:'Boarding',stayKey:`${row.dogName.toLowerCase()}|${row.startDate}|${row.endDate}`,dogId:`11111111-1111-4111-8111-${String(index+1).padStart(12,'0')}`,stayId:`aaaaaaaa-aaaa-4aaa-8aaa-${String(index+1).padStart(12,'0')}`}));
 const digitalIntakes=[{stayKey:bookings[0].stayKey,status:'Complete',submittedAt:'2026-10-18T00:00:00Z'}];
-function profile(booking) {
-  return {stayKey:booking.stayKey,identity:{stayKey:booking.stayKey,stayId:booking.stayId,dogId:booking.dogId},resolution:{status:'resolved',method:'fixture'},updatedAt:'2026-10-18T00:00:00Z',riskFlags:{},intakeAttributesSource:'Saved profile',intakeAttributes:{feedingTimes:'8am and 6pm',foodAmount:'1 cup',foodBrandType:'Sensitive formula',notes:booking.notes}};
+function profile(booking,overrides={}) {
+  return {stayKey:booking.stayKey,identity:{stayKey:booking.stayKey,stayId:booking.stayId,dogId:booking.dogId},resolution:{status:'resolved',method:'fixture'},updatedAt:'2026-10-18T00:00:00Z',riskFlags:{},intakeAttributesSource:'Saved profile',intakeAttributes:{feedingTimes:'8am and 6pm',foodAmount:'1 cup',foodBrandType:'Sensitive formula',notes:booking.notes,...(overrides[booking.stayId]||{})}};
 }
-async function install(page,{bookingOverrides=[],holdProfileRead=false,fernMedication=''}={}) {
+async function install(page,{bookingOverrides=[],profileOverrides={},holdProfileRead=false,fernMedication=''}={}) {
   const fixtureBookings=bookings.map(booking=>({...booking,...(bookingOverrides.find(override=>override.stayId===booking.stayId)||{})}));
   const reads=[];
+  const profileLookups=[];
   // Reads must reflect acknowledged writes so a later refresh cannot resurrect the initial fixture state.
   let operations=[{...fixtureBookings[2],status:"checked_in",checkedInAt:"2026-10-17T02:00:00Z"}];
   const completed=[];
@@ -46,13 +47,14 @@ async function install(page,{bookingOverrides=[],holdProfileRead=false,fernMedic
       if(resolved.action==='get_past_guest_directory')result={result:'success',bookings:completed,totalPastStays:completed.length,returned:completed.length,summaries:[],digitalIntakes,legacyIntakes:[]};
       if(resolved.action==='get_data_versions')result={result:'success',versions:{stayOperationIdentityVersion:1,careRecordIdentityWritesEnabled:false}};
       if(resolved.action==='get_guest_profile'){
+        profileLookups.push({...payload});
         if(holdProfileRead)await profileReadBlocked;
         const booking=fixtureBookings.find(b=>b.stayId===payload.stayId)||fixtureBookings.find(b=>b.stayKey===payload.stayKey);
-        const record=booking?profile(booking):null;
+        const record=booking?profile(booking,profileOverrides):null;
         if(record&&booking.dogName==='Fern'&&fernMedication)record.intakeAttributes.medicationInstructions=fernMedication;
         result={result:'success',record};
       }
-      if(resolved.action==='get_belongings')result={result:'success',records:fixtureBookings.map(profile)};
+      if(resolved.action==='get_belongings')result={result:'success',records:fixtureBookings.map(booking=>profile(booking,profileOverrides))};
       if(resolved.action==='get_guest_belongings'){
         const booking=fixtureBookings.find(row=>row.stayKey===payload.stayKey);
         result={result:'success',record:{stayKey:payload.stayKey,identityResolution:{status:booking?'resolved':'not_found',identity:booking?{stayKey:booking.stayKey,stayId:booking.stayId,dogId:booking.dogId}:null},items:booking?{leadsHarnesses:{present:true,description:'Blue lead and fitted harness'}}:{},photos:[]}};
@@ -80,6 +82,6 @@ async function install(page,{bookingOverrides=[],holdProfileRead=false,fernMedic
     operations=operations.filter(row=>row.stayId!==record.stayId).concat(record);
     return {result:'success',record};
   }
-  return {reads,bookings:fixtureBookings,recordCheckout,recordCheckIn,releaseProfileRead:()=>releaseProfileRead?.()};
+  return {reads,profileLookups,bookings:fixtureBookings,recordCheckout,recordCheckIn,releaseProfileRead:()=>releaseProfileRead?.()};
 }
 module.exports={install,bookings};
