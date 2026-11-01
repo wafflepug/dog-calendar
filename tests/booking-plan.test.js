@@ -10,7 +10,7 @@ function input(overrides = {}) {
   return {
     dogs: [{ key: 'dog-a', dogName: 'Milo', breed: 'Kelpie' }],
     visits: [{ startDate: '2026-12-01', endDate: '2026-12-02' }, { startDate: '2026-12-08', endDate: '2026-12-08' }],
-    ownerName: 'Alex Owner', phone: '0400000000', source: 'Referral', visitMode: 'stay',
+    ownerName: 'Alex Owner', phone: '0400000000', source: 'Pawshake', visitMode: 'stay',
     ...overrides
   };
 }
@@ -43,6 +43,12 @@ test('validation catches required fields, date errors, limits, and within-plan o
   assert.ok(result.issues.some(issue => issue.includes('Same-day')));
   const tooLarge = validatePlan(input({ dogs: Array.from({ length: 5 }, (_, n) => ({ key: `d${n}`, dogName: `Dog ${n}`, breed: 'Mix' })), visits: Array.from({ length: 7 }, (_, n) => ({ startDate: `2026-12-${String(n * 7 + 1).padStart(2, '0')}`, endDate: `2026-12-${String(n * 7 + 1).padStart(2, '0')}` })) }));
   assert.ok(tooLarge.issues.some(issue => issue.includes('30 dog visits')));
+});
+
+test('planned visits reject legacy unsupported source values before creating save rows', () => {
+  assert.throws(() => createPlan(input({ source: 'Direct' }), uuid), error =>
+    error.issues.some(issue => issue === 'Choose where the Boarding request came from.')
+  );
 });
 
 test('same-day mode requires same dates, and identity duplicates are explicit', () => {
@@ -132,7 +138,8 @@ test('createPlan builds stable create_boarding payloads and reviewed inheritance
   assert.match(first.clientMutationId, /^[0-9a-f-]{36}$/i);
   assert.equal(first.ownerName, 'Alex Owner');
   assert.equal(first.phone, '0400000000');
-  assert.match(first.notes, /Source: Referral/);
+  assert.match(first.notes, /Source: Pawshake/);
+  assert.equal(first.requestSource, 'Pawshake');
   assert.deepEqual(first.inheritCareReview, reviewed);
   reviewed.profile.medicalConditions = 'mutated';
   assert.equal(first.inheritCareReview.profile.medicalConditions, 'None');
@@ -178,13 +185,14 @@ test('savePlan retries partial failure with stable IDs, skips saved rows, and re
 test('queued writes pause the batch and unsafe intake links are discarded', async () => {
   const plan = createPlan(input(), uuid);
   let calls = 0;
-  const result = await savePlan(plan, { write: async () => { calls++; return { result: 'success', queued: true }; } });
+  const result = await savePlan(plan, { write: async payload => { calls++; assert.equal(payload.requestSource, 'Pawshake'); payload.requestSource = 'Other'; return { result: 'success', queued: true }; } });
   assert.equal(result.status, 'queued');
   assert.equal(calls, 1);
   assert.equal(plan.rows[0].status, 'queued');
   assert.equal(plan.rows[1].status, 'pending');
   assert.match(plan.rows[0].error, /queued/);
   assert.equal(plan.rows[0].intakeLink, '');
+  assert.equal(plan.rows[0].payload.requestSource, 'Pawshake');
 });
 
 test('savePlan rejects stale identity responses and rejects concurrent clicks', async () => {
