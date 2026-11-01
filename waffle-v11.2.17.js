@@ -84,6 +84,50 @@
     return date.toLocaleDateString('en-AU', { day:'numeric', month:'short', year:'numeric' });
   }
 
+  function publicDogNumberForCard(card) {
+    const normalize = value => {
+      const raw = String(value || '').trim();
+      if (!/^#?\d{1,5}$/.test(raw)) return '';
+      const digits = raw.replace(/^#/, '');
+      return Number(digits) > 0 ? `#${digits.padStart(5, '0')}` : '';
+    };
+    const fromData = normalize(card?.dataset?.directoryDogNumber);
+    if (fromData) return fromData;
+    const rendered = String(card?.querySelector?.('#dogNumber, [data-directory-dog-number], .directory-dog-number')?.textContent || '').trim();
+    const renderedMatch = rendered.match(/^(?:Dog ID\s*:?[\s\u00a0]+)?(#?\d{1,5})$/i);
+    return normalize(renderedMatch?.[1]);
+  }
+
+  function accessibleStayContext(card, payload, includeDates = false) {
+    const parts = [];
+    const dogNumber = publicDogNumberForCard(card);
+    const ownerName = String(payload?.ownerName || '').trim();
+    if (dogNumber) parts.push(`Dog ID ${dogNumber}`);
+    if (ownerName) parts.push(`owner ${ownerName}`);
+    if (includeDates && (payload?.startDate || payload?.endDate)) {
+      const contextDate = value => {
+        if (!value) return 'date unavailable';
+        const match = String(value).trim().match(/^(\d{4})-(\d{2})-(\d{2})(?:T.*)?$/);
+        if (!match) return 'date unavailable';
+        const year = Number(match[1]), month = Number(match[2]), day = Number(match[3]);
+        const date = new Date(year, month - 1, day);
+        if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) return 'date unavailable';
+        const label = formatDate(`${match[1]}-${match[2]}-${match[3]}`);
+        return /\b\d{4}\b/.test(label) ? label : `${label} ${match[1]}`;
+      };
+      const start = payload.startDate ? contextDate(payload.startDate) : 'start date unavailable';
+      const end = payload.endDate ? contextDate(payload.endDate) : 'end date unavailable';
+      parts.push(`booked ${start} to ${end}`);
+    }
+    return parts;
+  }
+
+  function accessibleStayActionLabel(action, card, payload) {
+    const guest = String(payload?.dogName || '').trim() || 'guest';
+    const context = accessibleStayContext(card, payload, true).join(', ');
+    return `${action} ${guest}${context ? `, ${context}` : ''}`;
+  }
+
   function formatDateTime(value, fallbackDate) {
     const text = String(value || '').trim();
     const date = text ? new Date(text) : null;
@@ -166,14 +210,18 @@
     /* Before the scheduled end date, the explicit early action replaces the
        generic checkout so every departure is classified correctly. */
     actions.querySelectorAll('[data-v110-checkout]').forEach(button => button.remove());
-    if (existingEarly) return;
+    const p = payloadForCard(card);
+    if (existingEarly) {
+      existingEarly.setAttribute('aria-label', accessibleStayActionLabel('Record owner-requested early checkout for', card, p));
+      return;
+    }
 
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'v11217-early-checkout-button';
     button.dataset.v11217EarlyCheckout = '';
     button.textContent = '⏱️ Early Checkout';
-    button.setAttribute('aria-label', `Record owner-requested early checkout for ${payloadForCard(card).dogName || 'guest'}`);
+    button.setAttribute('aria-label', accessibleStayActionLabel('Record owner-requested early checkout for', card, p));
     actions.appendChild(button);
   }
 
@@ -296,7 +344,7 @@
     const canCheckIn = !checkedOut && !checkedIn && !colliding && state?.code === 'date_active';
     const canCheckout = !checkedOut && !colliding && !early &&
       (checkedIn || state?.code === 'date_active') && p.endDate <= today;
-    const signature = JSON.stringify([p.stayId, p.stayKey, p.dogId, p.dogName, p.ownerName, p.phone, card.dataset.directoryDogNumber, canCheckIn, canCheckout, early, state?.code]);
+    const signature = JSON.stringify([p.stayId, p.stayKey, p.dogId, p.dogName, p.ownerName, p.phone, p.startDate, p.endDate, card.dataset.directoryDogNumber, canCheckIn, canCheckout, early, state?.code]);
     if (!canCheckIn && !canCheckout && !early && !ownerTel) {
       actions?.remove();
       return;
@@ -309,8 +357,8 @@
     }
     if (actions.dataset.renderSignature === signature) return;
     actions.dataset.renderSignature = signature;
-    const checkInMarkup = canCheckIn ? `<button type="button" class="v110-checkin-button" data-v11217-roster-checkin aria-label="Check in ${esc(p.dogName || 'guest')}">🛬 Check In</button>` : '';
-    const checkOutMarkup = canCheckout ? `<button type="button" class="v110-checkout-button" data-v11217-roster-checkout aria-label="Check out ${esc(p.dogName || 'guest')}">👋 Check Out</button>` : '';
+    const checkInMarkup = canCheckIn ? `<button type="button" class="v110-checkin-button" data-v11217-roster-checkin aria-label="${esc(accessibleStayActionLabel('Check in', card, p))}">🛬 Check In</button>` : '';
+    const checkOutMarkup = canCheckout ? `<button type="button" class="v110-checkout-button" data-v11217-roster-checkout aria-label="${esc(accessibleStayActionLabel('Check out', card, p))}">👋 Check Out</button>` : '';
     const earlyButtonMarkup = early ? '<button type="button" class="v11217-early-checkout-button" data-v11217-early-checkout>⏱️ Early Checkout</button>' : '';
     const hasPrimaryStayAction = canCheckIn || canCheckout;
     const secondaryActions = `${early && hasPrimaryStayAction ? earlyButtonMarkup : ''}`;
@@ -327,7 +375,7 @@
       });
     }
     const earlyButton = actions.querySelector('[data-v11217-early-checkout]');
-    if (earlyButton) earlyButton.setAttribute('aria-label', `Record early checkout for ${p.dogName || 'guest'}`);
+    if (earlyButton) earlyButton.setAttribute('aria-label', accessibleStayActionLabel('Record early checkout for', card, p));
     const ownerLink = actions.querySelector('[data-v11217-roster-owner-call]');
     if (ownerLink && !ownerLink.dataset.identityGuard) {
       ownerLink.dataset.identityGuard = 'true';
@@ -773,8 +821,9 @@
     modal.setAttribute('role', 'dialog');
     modal.setAttribute('aria-modal', 'true');
     modal.setAttribute('aria-labelledby', 'v11217GuidedCheckoutTitle');
+    modal.setAttribute('aria-describedby', 'v11217GuidedCheckoutDescription');
     modal.innerHTML = `<section class="v11217-modal-card">
-      <header class="v11217-modal-head"><div><small>DEPARTURE</small><h3 id="v11217GuidedCheckoutTitle" tabindex="-1">Check out</h3><p>Review this stay before confirming departure.</p></div><button type="button" class="v11217-modal-close" data-v11217-guided-close aria-label="Close checkout">×</button></header>
+      <header class="v11217-modal-head"><div><small>DEPARTURE</small><h3 id="v11217GuidedCheckoutTitle" tabindex="-1">Check out</h3><p id="v11217GuidedCheckoutDescription">Review this stay before confirming departure.</p></div><button type="button" class="v11217-modal-close" data-v11217-guided-close aria-label="Close checkout">×</button></header>
       <div class="v11217-modal-body"><div class="v11217-modal-dog"><strong data-v11217-guided-dog></strong><span data-v11217-guided-dogid></span><div class="v11217-guided-dates"><span><small>Booked stay</small><span data-v11217-guided-dates></span></span><span><small data-v11217-guided-checkout-caption>Checkout today</small><span data-v11217-guided-checkout-today></span></span></div></div>
       <div class="v11217-guided-owner" data-v11217-guided-owner hidden><span data-v11217-guided-owner-name></span><a data-v11217-guided-owner-call hidden>Call owner</a></div><details class="v11217-guided-handover" data-v11217-guided-handover hidden><summary>Saved handover note<span data-v11217-guided-handover-preview hidden></span></summary><div data-v11217-guided-handover-note></div></details>
       <div class="v11217-guided-checklist"><section class="v11217-guided-evidence" data-v11217-guided-belongings-section><strong>Belongings</strong><details data-v11217-guided-belongings-details><summary data-v11217-guided-belongings-summary></summary><div data-v11217-guided-belongings></div></details><div class="v11217-guided-unknown" data-v11217-guided-belongings-unknown hidden>Not available in this summary</div></section><section class="v11217-guided-evidence" data-v11217-guided-medication-section><strong>Medication</strong><div data-v11217-guided-medication></div><div class="v11217-guided-unknown" data-v11217-guided-medication-unknown hidden>Not available in this summary</div></section></div>
@@ -853,7 +902,14 @@
     guidedCheckoutPayload = { ...payload };
     guidedReviewSequence += 1;
     guidedReviewPromise = null;
-    modal.querySelector('[data-v11217-guided-dog]').textContent = payload.dogName || 'Guest';
+    const dogName = String(payload.dogName || '').trim() || 'Guest';
+    const title = modal.querySelector('#v11217GuidedCheckoutTitle');
+    title.textContent = `Check out ${dogName}`;
+    const context = accessibleStayContext(card, payload, true);
+    modal.querySelector('#v11217GuidedCheckoutDescription').textContent = context.length
+      ? `${context.join(' · ')}. Review this stay before confirming departure.`
+      : 'Review this stay before confirming departure.';
+    modal.querySelector('[data-v11217-guided-dog]').textContent = dogName;
     const owner = modal.querySelector('[data-v11217-guided-owner]');
     const ownerName = String(payload.ownerName || '').trim();
     const ownerTel = safeOwnerTel(payload.phone);
@@ -881,7 +937,7 @@
       handoverPreview.textContent = ` · ${points.length > 66 ? `${points.slice(0, 66).join('').trimEnd()}…` : points.join('')}`;
     }
     modal.querySelector('[data-v11217-guided-handover-note]').textContent = meaningfulHandover ? handoverText : '';
-    const dogNumber = card.dataset?.directoryDogNumber || card.querySelector('#dogNumber, [data-directory-dog-number], .directory-dog-number')?.textContent?.trim();
+    const dogNumber = publicDogNumberForCard(card);
     modal.querySelector('[data-v11217-guided-dogid]').textContent = dogNumber ? `Dog ID: ${dogNumber}` : '';
     modal.querySelector('[data-v11217-guided-dates]').textContent = `${formatDate(payload.startDate)} → ${formatDate(payload.endDate)}`;
     const today = todayKey();
@@ -921,7 +977,7 @@
     modal.querySelectorAll('[data-v11217-guided-close]').forEach(button => { button.disabled = false; });
     modal.hidden = false;
     sizeGuidedNote(modal);
-    modal.querySelector('#v11217GuidedCheckoutTitle').focus();
+    title.focus();
   }
   function renderGuidedEvidence(modal, kind, evidence, { unknown: remainUnknown = false } = {}) {
     const details = modal.querySelector(`[data-v11217-guided-${kind}-details]`);

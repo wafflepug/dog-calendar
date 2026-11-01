@@ -3,6 +3,83 @@ const path=require('node:path');
 const fs=require('node:fs');
 const {install,bookings}=require('./fixtures/care-daily-workflows');
 
+test('same-name roster operations expose the exact public guest context without opening profiles',async({page,baseURL})=>{
+  const fixture=await install(page);
+  await page.goto(`${baseURL}/directory.html?ownerFlowFixture=1`,{waitUntil:'domcontentloaded'});
+  await page.waitForFunction(()=>document.documentElement.dataset.waffleUiReady==='true'&&window.WAFFLE_CARE_ROSTER_FOCUS);
+  const first=page.locator(`#directory-grid [data-directory-stay-id="${bookings[0].stayId}"]`);
+  const second=page.locator(`#directory-grid [data-directory-stay-id="${bookings[1].stayId}"]`);
+  await expect(first.locator('[data-v11217-roster-checkin]')).toHaveAccessibleName('Check in Milo, Dog ID #00017, owner Alex, booked 18 Oct 2026 to 20 Oct 2026');
+  await expect(second.locator('[data-v11217-roster-checkin]')).toHaveAccessibleName('Check in Milo, Dog ID #00018, owner Bea, booked 18 Oct 2026 to 18 Oct 2026');
+  await first.locator('.v11217-roster-more-actions summary').click();
+  await expect(first.locator('.v11217-roster-more-actions [data-v11217-early-checkout]')).toHaveAccessibleName('Record early checkout for Milo, Dog ID #00017, owner Alex, booked 18 Oct 2026 to 20 Oct 2026');
+  expect(fixture.reads.filter(action=>action==='get_guest_profile')).toHaveLength(0);
+});
+
+test('same-owner stays without a public Dog Number use their booked dates to distinguish actions',async({page,baseURL})=>{
+  const fixture=await install(page,{bookingOverrides:[
+    {stayId:bookings[0].stayId,dogNumber:'00000',ownerName:'Alex',endDate:'2026-10-18'},
+    {stayId:bookings[1].stayId,dogNumber:'11111111-1111-4111-8111-111111111111',ownerName:'Alex',startDate:'2026-10-17'}
+  ]});
+  await page.goto(`${baseURL}/directory.html?ownerFlowFixture=1`,{waitUntil:'domcontentloaded'});
+  await page.waitForFunction(()=>document.documentElement.dataset.waffleUiReady==='true'&&window.WAFFLE_CARE_ROSTER_FOCUS);
+  const first=page.locator(`#directory-grid [data-directory-stay-id="${bookings[0].stayId}"] [data-v11217-roster-checkin]`);
+  const second=page.locator(`#directory-grid [data-directory-stay-id="${bookings[1].stayId}"] [data-v11217-roster-checkin]`);
+  await expect(first).toHaveAccessibleName('Check in Milo, owner Alex, booked 18 Oct 2026 to 18 Oct 2026');
+  await expect(second).toHaveAccessibleName('Check in Milo, owner Alex, booked 17 Oct 2026 to 18 Oct 2026');
+  expect(await first.getAttribute('aria-label')).not.toContain('Dog ID');
+  expect(await second.getAttribute('aria-label')).not.toContain('Dog ID');
+  await page.evaluate(()=>{window.__identityWrites=[];window.sendPayloadToAppsScript=async payload=>{window.__identityWrites.push(payload);return{result:'success'};};});
+  await page.locator(`#directory-grid [data-directory-stay-id="${bookings[0].stayId}"] [data-v11217-roster-checkout]`).click();
+  const modal=page.locator('#v11217GuidedCheckout');
+  await expect(modal).toHaveAccessibleDescription(/owner Alex · booked 18 Oct 2026 to 18 Oct 2026/);
+  await expect(modal.locator('[data-v11217-guided-dogid]')).toBeEmpty();
+  await modal.locator('[data-v11217-guided-close]').last().click();
+  expect(await page.evaluate(()=>window.__identityWrites)).toHaveLength(0);
+  expect(fixture.reads.filter(action=>action==='get_guest_profile')).toHaveLength(0);
+});
+
+test('a rendered public Dog Number is used only when its whole label parses as a number',async({page,baseURL})=>{
+  const fixture=await install(page);
+  await page.goto(`${baseURL}/directory.html?ownerFlowFixture=1`,{waitUntil:'domcontentloaded'});
+  await page.waitForFunction(()=>document.documentElement.dataset.waffleUiReady==='true'&&window.WAFFLE_CARE_ROSTER_FOCUS);
+  const second=page.locator(`#directory-grid [data-directory-stay-id="${bookings[1].stayId}"]`);
+  await second.evaluate(card=>{
+    card.dataset.directoryDogNumber='not-a-public-id';
+    const rendered=document.createElement('span');
+    rendered.className='directory-dog-number';
+    rendered.textContent='Dog ID: #18';
+    card.appendChild(rendered);
+    window.v110EnsureCareOperationBar(card);
+  });
+  await expect(second.locator('[data-v11217-roster-checkin]')).toHaveAccessibleName('Check in Milo, Dog ID #00018, owner Bea, booked 18 Oct 2026 to 18 Oct 2026');
+  expect(fixture.reads.filter(action=>action==='get_guest_profile')).toHaveLength(0);
+});
+
+test('same-name checkout dialog refreshes its public identity context for each selected stay',async({page,baseURL})=>{
+  const fixture=await install(page,{bookingOverrides:[{stayId:bookings[0].stayId,endDate:'2026-10-18'}]});
+  await page.goto(`${baseURL}/directory.html?ownerFlowFixture=1`,{waitUntil:'domcontentloaded'});
+  await page.waitForFunction(()=>document.documentElement.dataset.waffleUiReady==='true'&&window.WAFFLE_CARE_ROSTER_FOCUS);
+  const first=page.locator(`#directory-grid [data-directory-stay-id="${bookings[0].stayId}"]`);
+  const second=page.locator(`#directory-grid [data-directory-stay-id="${bookings[1].stayId}"]`);
+  await expect(first.locator('[data-v11217-roster-checkout]')).toHaveAccessibleName('Check out Milo, Dog ID #00017, owner Alex, booked 18 Oct 2026 to 18 Oct 2026');
+  await expect(second.locator('[data-v11217-roster-checkout]')).toHaveAccessibleName('Check out Milo, Dog ID #00018, owner Bea, booked 18 Oct 2026 to 18 Oct 2026');
+  await page.evaluate(()=>{window.__identityWrites=[];window.sendPayloadToAppsScript=async payload=>{window.__identityWrites.push(payload);return{result:'success'};};});
+  const modal=page.locator('#v11217GuidedCheckout');
+  await first.locator('[data-v11217-roster-checkout]').click();
+  await expect(modal).toHaveAccessibleName('Check out Milo');
+  await expect(modal).toHaveAccessibleDescription(/Dog ID #00017 · owner Alex · booked 18 Oct 2026 to 18 Oct 2026/);
+  await modal.locator('[data-v11217-guided-close]').last().click();
+  await expect(modal).toBeHidden();
+  await second.locator('[data-v11217-roster-checkout]').click();
+  await expect(modal).toHaveAccessibleName('Check out Milo');
+  await expect(modal).toHaveAccessibleDescription(/Dog ID #00018 · owner Bea · booked 18 Oct 2026 to 18 Oct 2026/);
+  await modal.locator('[data-v11217-guided-close]').last().click();
+  await expect(modal).toBeHidden();
+  expect(await page.evaluate(()=>window.__identityWrites)).toHaveLength(0);
+  expect(fixture.reads.filter(action=>action==='get_guest_profile')).toHaveLength(0);
+});
+
 test('Care owner contact, filtered counts and verified check-in preserve the next arrival without profile reads',async({page,baseURL})=>{
   const fixture=await install(page,{bookingOverrides:[{stayId:bookings[0].stayId,phone:'+61 (400) 123-456'}]});
   await page.goto(`${baseURL}/directory.html?ownerFlowFixture=1`,{waitUntil:'domcontentloaded'});
