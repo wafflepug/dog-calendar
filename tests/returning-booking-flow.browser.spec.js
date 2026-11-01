@@ -155,6 +155,7 @@ test('identity choice focuses only a missing date while preserving date and phon
   await page.locator('#p4GuestDetails > summary').click();
   await page.locator('#p4Phone').fill('0400000000');
   await page.locator('#p4Phone').focus();
+  await chooseSource(page, 'Pawshake');
   await page.locator('#p4PlanDisclosure > summary').click();
   await page.locator('#p4PlanOwner').fill('Alex');
   await page.locator('#p4PlanPhone').fill('0400000000');

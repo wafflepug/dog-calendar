@@ -180,6 +180,9 @@ test('the shipped loader opens Multiple visits from Add and restores a reusable 
     const modal = page.locator('#p4Modal');
     await expect(modal).toBeVisible();
     await expect(page.locator('#p4PlanDisclosure')).toHaveAttribute('open', '');
+    const guestDetails = page.locator('#p4GuestDetails');
+    if (!(await guestDetails.evaluate(node => node.open))) await guestDetails.locator('summary').click();
+    await page.locator('#p4Source').selectOption('MadPaws');
     await page.locator('#p4PlanOwner').fill('Fixture owner');
     const captureRuntime = process.env.WAFFLE_CAPTURE_UI_EVIDENCE === '1' && ['chromium', 'chromium-390'].includes(testInfo.project.name);
     const evidenceDir = path.resolve(__dirname, '..', 'output', 'releases', '2026.10.22.01', 'evidence');
@@ -263,6 +266,9 @@ test('the shipped booking modal keeps returning Care compact, editable and reach
     await page.locator('[data-v10-quick-action="visit-plan"]').click();
     const modal = page.locator('#p4Modal');
     await expect(modal).toBeVisible();
+    const guestDetails = page.locator('#p4GuestDetails');
+    if (!(await guestDetails.evaluate(node => node.open))) await guestDetails.locator('summary').click();
+    await page.locator('#p4Source').selectOption('MadPaws');
     await page.locator('#p4PlanOwner').fill('Alex Example');
     await page.locator('#p4PlanNext').click();
     await page.locator('#p4LoadDogIdentities').click();
