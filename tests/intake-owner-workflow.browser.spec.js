@@ -5,7 +5,7 @@ const path = require('node:path');
 const template = fs.readFileSync(path.join(__dirname, '..', 'apps-script', 'Intake.html'), 'utf8')
   .replace('<?!= JSON.stringify(intakeToken) ?>', JSON.stringify('fixture-secure-token'));
 
-async function openIntake(page) {
+async function openIntake(page, submissionId = null) {
   await page.route('http://intake.test/', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html><html><head></head><body></body></html>' }));
   await page.goto('http://intake.test/');
   await page.setContent(template.replace(/<script>[\s\S]*<\/script>/, ''));
@@ -22,6 +22,10 @@ async function openIntake(page) {
       },
       submitIntakeFromHtml(payload) {
         window.__intakeCalls.push({ kind: 'submit', payload, success: this.success, failure: this.failure });
+        return this;
+      },
+      getIntakeSubmissionStatusForHtml(token, submissionId) {
+        window.__intakeCalls.push({ kind: 'status', token, submissionId, success: this.success, failure: this.failure });
         return this;
       }
     };
@@ -45,7 +49,7 @@ async function openIntake(page) {
   });
   const script = template.match(/<script>([\s\S]*)<\/script>/)[1];
   await page.addScriptTag({ content: script });
-  await page.evaluate(() => document.dispatchEvent(new Event('DOMContentLoaded')));
+  await page.evaluate(id => { if (id) sessionStorage.setItem('waffle-intake-submission:fixture-secure-token', id); document.dispatchEvent(new Event('DOMContentLoaded')); }, submissionId);
   await expect.poll(() => page.evaluate(() => window.__intakeCalls.length)).toBe(1);
 }
 
@@ -286,13 +290,29 @@ test('debounces typing, flushes on change and pagehide, and keeps submit feedbac
   await expect(page.locator('#submitBtn')).toBeDisabled();
   await page.evaluate(() => document.querySelector('#intakeForm').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
   expect(await page.evaluate(() => window.__intakeCalls.filter(call => call.kind === 'submit').length)).toBe(1);
-  await page.evaluate(() => window.__intakeCalls.find(call => call.kind === 'submit').failure({ message: 'The server rejected this fixture.' }));
-  await expect(page.locator('#formMessage')).toContainText('The server rejected this fixture.');
+  await page.evaluate(() => window.__intakeCalls.find(call => call.kind === 'submit').failure({ message: 'The network response was lost.' }));
+  await expect(page.locator('#formMessage')).toContainText('outcome is unconfirmed');
+  await expect(page.locator('#submitBtn')).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Check submission status' })).toBeVisible();
+  const frozenIntent = await page.evaluate(() => ({ id: sessionStorage.getItem('waffle-intake-submission:fixture-secure-token'), draft: sessionStorage.getItem('waffle-intake-draft:fixture-secure-token'), fields: JSON.parse(sessionStorage.getItem('waffle-intake-draft:fixture-secure-token')).fields }));
+  await page.evaluate(() => window.dispatchEvent(new Event('pagehide')));
+  expect(await page.evaluate(() => sessionStorage.getItem('waffle-intake-draft:fixture-secure-token'))).toBe(frozenIntent.draft);
+  expect(frozenIntent.id).toMatch(/^[A-Za-z0-9_-]{8,128}$/);
+  expect(Object.hasOwn(frozenIntent.fields, 'signatureData')).toBe(false);
+  expect(Object.hasOwn(frozenIntent.fields, 'termsAccepted')).toBe(false);
+  await page.locator('#intakeStatusBtn').click();
+  await page.evaluate(() => window.__intakeCalls.filter(call => call.kind === 'status')[0].success({ state: 'pending' }));
+  await expect(page.locator('#submitBtn')).toBeDisabled();
+  await page.evaluate(() => document.querySelector('#intakeForm').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
+  expect(await page.evaluate(() => window.__intakeCalls.filter(call => call.kind === 'submit').length)).toBe(1);
+  await page.locator('#intakeStatusBtn').click();
+  await page.evaluate(() => window.__intakeCalls.filter(call => call.kind === 'status')[1].success({ state: 'not-started' }));
   await expect(page.locator('#submitBtn')).toBeEnabled();
   await expect(page.locator('#formMessage')).toHaveAttribute('aria-live', 'polite');
   await page.evaluate(() => document.querySelector('#intakeForm').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
   expect(await page.evaluate(() => window.__intakeCalls.filter(call => call.kind === 'submit').length)).toBe(2);
-  await page.evaluate(() => window.__intakeCalls.filter(call => call.kind === 'submit')[1].success({ dogName: 'Cino' }));
+  expect(await page.evaluate(() => window.__intakeCalls.filter(call => call.kind === 'submit').map(call => call.payload.submissionId))).toEqual([frozenIntent.id, frozenIntent.id]);
+  await page.evaluate(() => window.__intakeCalls.filter(call => call.kind === 'submit')[1].success({ result: 'success', dogName: 'Cino' }));
   await expect(page.locator('.completed h2')).toHaveText('Intake submitted successfully');
   await expect(page.locator('.completed h2')).toHaveAttribute('aria-live', 'polite');
   await expect(page.locator('.completed h2')).toBeFocused();
@@ -458,6 +478,80 @@ test('answer edits preserve a matching signature and clear ink plus consent afte
     expect(declarations).toEqual({ signerNameChanged: true, declarationDateChanged: true });
     expect(await page.evaluate(() => window.__intakeCalls.filter(call => call.kind === 'submit').length)).toBe(0);
   }
+});
+
+test('a hung submission exposes status without unlocking or resubmitting, then accepts late completion', async ({ page }) => {
+  await openIntake(page);
+  await succeedPrefill(page);
+  await page.evaluate(() => {
+    document.querySelectorAll('#intakeForm [required]').forEach(el => {
+      if (el.type === 'checkbox') el.checked = true;
+      else if (el.type !== 'radio') el.value = el.type === 'date' ? '2026-11-01' : 'Completed';
+    });
+    signatureAnswerFingerprint = signatureContentFingerprint();
+    signatureDirty = true;
+    document.querySelector('#intakeForm').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+  });
+  expect(await page.evaluate(() => window.__intakeCalls.filter(call => call.kind === 'submit').length)).toBe(1);
+  await fireTimer(page, 30_000);
+  await expect(page.getByRole('button', { name: 'Check submission status' })).toBeVisible();
+  await expect(page.locator('#submitBtn')).toBeDisabled();
+  await page.locator('#intakeStatusBtn').click();
+  await page.evaluate(() => window.__intakeCalls.filter(call => call.kind === 'status')[0].success({ state: 'pending' }));
+  await expect(page.locator('#submitBtn')).toBeDisabled();
+  await page.locator('#intakeStatusBtn').click();
+  await page.evaluate(() => window.__intakeCalls.filter(call => call.kind === 'status')[1].success({ state: 'complete' }));
+  await expect(page.locator('.completed h2')).toHaveText('Intake submitted successfully');
+  await page.evaluate(() => window.__intakeCalls.filter(call => call.kind === 'submit')[0].success({ result: 'success', dogName: 'Cino' }));
+  await expect(page.locator('.completed h2')).toHaveText('Intake submitted successfully');
+  expect(await page.evaluate(() => window.__intakeCalls.filter(call => call.kind === 'submit').length)).toBe(1);
+});
+
+test('late status responses cannot downgrade or crash an already completed submission', async ({ page }) => {
+  const pageErrors = [];
+  page.on('pageerror', error => pageErrors.push(error.message));
+  for (const lateStatus of ['pending', 'failure']) {
+    await openIntake(page);
+    await succeedPrefill(page);
+    await page.evaluate(() => {
+      document.querySelectorAll('#intakeForm [required]').forEach(el => {
+        if (el.type === 'checkbox') el.checked = true;
+        else if (el.type !== 'radio') el.value = el.type === 'date' ? '2026-11-01' : 'Completed';
+      });
+      signatureAnswerFingerprint = signatureContentFingerprint();
+      signatureDirty = true;
+      document.querySelector('#intakeForm').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    });
+    await fireTimer(page, 30_000);
+    await page.locator('#intakeStatusBtn').click();
+    expect(await page.evaluate(() => window.__intakeCalls.filter(call => call.kind === 'submit').length)).toBe(1);
+    await page.evaluate(() => window.__intakeCalls.filter(call => call.kind === 'submit')[0].success({ result: 'success', dogName: 'Cino' }));
+    await expect(page.locator('.completed h2')).toHaveText('Intake submitted successfully');
+    if (lateStatus === 'pending') {
+      await page.evaluate(() => window.__intakeCalls.filter(call => call.kind === 'status')[0].success({ state: 'pending' }));
+    } else {
+      await page.evaluate(() => window.__intakeCalls.filter(call => call.kind === 'status')[0].failure({ message: 'A late status error.' }));
+    }
+    await expect(page.locator('.completed h2')).toHaveText('Intake submitted successfully');
+    expect(await page.evaluate(() => window.__intakeCalls.filter(call => call.kind === 'submit').length)).toBe(1);
+  }
+  expect(pageErrors).toEqual([]);
+});
+
+test('reload with a stored submission reference checks status only and never resubmits automatically', async ({ page }) => {
+  await openIntake(page, 'submission-id-reloaded');
+  await succeedPrefill(page);
+  await expect.poll(() => page.evaluate(() => window.__intakeCalls.length)).toBe(2);
+  await expect(page.locator('#submitBtn')).toBeDisabled();
+  await page.evaluate(() => document.querySelector('#intakeForm').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
+  expect(await page.evaluate(() => window.__intakeCalls.filter(call => call.kind === 'submit').length)).toBe(0);
+  expect(await page.evaluate(() => window.__intakeCalls[1].kind)).toBe('status');
+  expect(await page.evaluate(() => window.__intakeCalls[1].submissionId)).toBe('submission-id-reloaded');
+  expect(await page.evaluate(() => window.__intakeCalls.filter(call => call.kind === 'submit').length)).toBe(0);
+  await page.evaluate(() => window.__intakeCalls[1].success({ state: 'pending' }));
+  await expect(page.locator('#submitBtn')).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Check submission status' })).toBeVisible();
+  expect(await page.evaluate(() => window.__intakeCalls.filter(call => call.kind === 'submit').length)).toBe(0);
 });
 
 test('intake diagnostics expose numeric stages and separately measure browser RPC and form rendering', async ({ page }) => {

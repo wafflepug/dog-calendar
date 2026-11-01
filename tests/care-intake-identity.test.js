@@ -3,6 +3,7 @@ const { test } = require('node:test');
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
+const crypto = require('node:crypto');
 
 const source = fs.readFileSync(path.join(__dirname, '..', 'apps-script', 'Code.js'), 'utf8');
 const dogIdA = 'dog-a-0001';
@@ -44,11 +45,18 @@ function isoDate(date, timezone) {
 
 function fixture({ end = '2026-11-11', bookingType = 'Confirmed Boarding', records = [], extraBookings = [], audit = [] } = {}) {
   let intakeSheet = null;
+  let receiptSheet = null;
   const reads = {};
+  const lockStats = { depth: 0, acquired: 0, released: 0 };
   const spreadsheet = {
     getSpreadsheetTimeZone: () => { reads.timezoneLookups = (reads.timezoneLookups || 0) + 1; return 'Australia/Sydney'; },
-    getSheetByName(name) { return name === 'Audit_Log' ? auditSheet : name === 'Dog_Intake_Records' ? intakeSheet : null; },
-    insertSheet(name) { intakeSheet = sheet(name, [], spreadsheet); return intakeSheet; }
+    getSheetByName(name) { return name === 'Audit_Log' ? auditSheet : name === 'Dog_Intake_Records' ? intakeSheet : name === 'Intake_Submission_Receipts' ? receiptSheet : null; },
+    insertSheet(name) {
+      const added = sheet(name, [], spreadsheet, null, reads);
+      if (name === 'Dog_Intake_Records') intakeSheet = added;
+      if (name === 'Intake_Submission_Receipts') receiptSheet = added;
+      return added;
+    }
   };
   const dateCell = value => new Date(`${value}T00:00:00+11:00`);
   const bookings = sheet('Bookings', [
@@ -67,7 +75,17 @@ function fixture({ end = '2026-11-11', bookingType = 'Confirmed Boarding', recor
     Number,
     RegExp,
     isNaN,
-    Utilities: { formatDate: (date, timezone) => isoDate(date, timezone) },
+    Utilities: {
+      DigestAlgorithm: { SHA_256: 'SHA_256' },
+      Charset: { UTF_8: 'UTF-8' },
+      computeDigest: (_, value) => [...crypto.createHash('sha256').update(value, 'utf8').digest()],
+      base64EncodeWebSafe: bytes => Buffer.from(bytes).toString('base64url'),
+      base64Decode: value => [...Buffer.from(value, 'base64')],
+      newBlob: (bytes, contentType, name) => ({ bytes, contentType, name }),
+      formatDate: (date, timezone) => isoDate(date, timezone)
+    },
+    LockService: { getScriptLock: () => ({ tryLock() { lockStats.depth++; lockStats.acquired++; return true; }, waitLock() {}, releaseLock() { lockStats.depth--; lockStats.released++; } }) },
+    SpreadsheetApp: { flush() {} },
     Session: { getScriptTimeZone: () => 'UTC' },
     PropertiesService: { getScriptProperties: () => ({ getProperty: () => null }) },
     AUDIT_LOG_HEADERS_: Array(13).fill(''),
@@ -106,7 +124,7 @@ function fixture({ end = '2026-11-11', bookingType = 'Confirmed Boarding', recor
       stayId: String(value?.[14] || '')
     };
   };
-  return { context, bookings, auditSheet, reads, sourceAuditBookingSnapshotFromValues, setIntakeSheet(value) { intakeSheet = value; } };
+  return { context, bookings, auditSheet, reads, lockStats, sourceAuditBookingSnapshotFromValues, setIntakeSheet(value) { intakeSheet = value; }, setReceiptSheet(value) { receiptSheet = value; }, get receiptSheet() { return receiptSheet; } };
 }
 
 function record({ stayKey, start = '2026-11-01', end = '2026-11-11', stayId = '', dogId = '', bookingRow = 2, dogName = 'Cino', bookingType = 'Potential Stay' } = {}) {
@@ -236,14 +254,46 @@ test('createIntakeLinkForBooking_ repairs the verified old token and keeps submi
   assert.deepEqual(JSON.parse(intake.rows[1][13]), answers);
 });
 
-test('prefill and local submission resolve an already-migrated token to current confirmed dates', () => {
+function setupIntakeSubmissionHarness(options = {}) {
   const h = fixture({ end: '2026-11-11', bookingType: 'Confirmed Boarding' });
   const token = 'cino-migrated-owner-token';
-  const intake = sheet('Dog_Intake_Records', [h.context.INTAKE_HEADERS_.slice(), [new Date(), new Date(), '', 'Awaiting Owner', token,
+  const intake = h.bookings.getParent().insertSheet('Dog_Intake_Records');
+  intake.rows.push(h.context.INTAKE_HEADERS_.slice(), [new Date(), new Date(), '', 'Awaiting Owner', token,
     'cino|2026-11-01|2026-11-11', 'Potential Stay', 'Cino', 'Jack Russell', '2026-11-01', '2026-11-10', 'Owner One', '0400000000',
-    JSON.stringify({ additionalInstructions: 'Blue harness.' }), '', '', '', 2, stayIdA, dogIdA]], h.bookings.getParent(), null, h.reads);
+    JSON.stringify({ additionalInstructions: 'Blue harness.' }), '', '', '', 2, stayIdA, dogIdA]);
   h.context.getIntakeSheet_ = () => intake;
+  const counts = { flags: 0, profiles: 0, pdf: 0, audit: 0, touch: 0, push: 0 };
+  Object.assign(h.context, {
+    ensureStableStayIdV11225_: () => { assert.equal(h.lockStats.depth, 0, 'stable-ID helper runs outside the submission lock'); if (options.onStable) options.onStable(); return stayIdA; },
+    ensureIntakeBelongingsFlags_() { counts.flags++; if (options.failAt === 'flags') throw new Error('injected flags interruption'); },
+    saveIntakeAttributesForStay_() { counts.profiles++; if (options.failAt === 'profile') throw new Error('injected profile interruption'); },
+    auditObjectChangedFields_: () => [],
+    logAuditEvent_() { counts.audit++; },
+    touchWaffleDataVersion_() { counts.touch++; },
+    notifyPushIntakeCompleted_() { counts.push++; if (options.failAt === 'push') throw new Error('injected push interruption'); },
+    buildIntakePdf_() {
+      counts.pdf++;
+      if (options.failAt === 'pdf') throw new Error('injected PDF interruption');
+      if (options.changeDateDuringPdf) h.bookings.rows[1][4] = new Date('2026-11-12T00:00:00+11:00');
+      const id = `synthetic-pdf-${counts.pdf}`;
+      return { pdfFile: { getId: () => id, getUrl: () => `https://example.invalid/${id}` }, signatureFile: { getId: () => `synthetic-signature-${counts.pdf}` } };
+    }
+  });
+  return { h, intake, token, counts, options };
+}
 
+const validSignaturePng = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/T5cAAAAASUVORK5CYII=';
+function intakeSubmissionPayload(token, submissionId, dogName = 'Cino') {
+  return {
+    token, submissionId,
+    answers: { signatureName: 'Owner One', termsAccepted: true, dogName, breed: 'Jack Russell', ownerName: 'Owner One', mobile: '0400000000' },
+    signatureData: validSignaturePng
+  };
+}
+
+test('prefill and local submission resolve an already-migrated token to current confirmed dates', () => {
+  const { h, intake, token, counts } = setupIntakeSubmissionHarness();
+  h.context.getIntakeSheet_ = () => intake;
   const prefill = h.context.getIntakePrefill_(token);
   assert.equal(prefill.identityResolution, 'stable-identifiers');
   assert.equal(prefill.booking.startDate, '2026-11-01');
@@ -262,35 +312,131 @@ test('prefill and local submission resolve an already-migrated token to current 
   assert.equal(h.reads.Audit_Log || 0, 0, 'stable identity resolution does not read the audit log');
   assert.equal(h.reads.timezoneLookups, 1, 'booking dates share one spreadsheet timezone lookup');
 
-  Object.assign(h.context, {
-    ensureStableStayIdV11225_: () => stayIdA,
-    SpreadsheetApp: { flush() {} },
-    ensureIntakeBelongingsFlags_() {},
-    saveIntakeAttributesForStay_() {},
-    auditObjectChangedFields_: () => [],
-    logAuditEvent_() {},
-    touchWaffleDataVersion_() {},
-    notifyPushIntakeCompleted_() {},
-    Utilities: {
-      ...h.context.Utilities,
-      base64Decode: () => [1, 2, 3],
-      newBlob: () => ({ synthetic: true })
-    },
-    buildIntakePdf_: () => ({ pdfFile: { getId: () => 'synthetic-pdf-id', getUrl: () => 'https://example.invalid/intake.pdf' }, signatureFile: { getId: () => 'synthetic-signature-id' } })
-  });
-
-  const result = h.context.processIntakeSubmission_({
-    token,
-    answers: { signatureName: 'Owner One', termsAccepted: true, dogName: 'Cino', breed: 'Jack Russell', ownerName: 'Owner One', mobile: '0400000000' },
-    signatureData: 'data:image/png;base64,c3ludGhldGlj'
-  });
-  assert.equal(result.result, 'success');
-  assert.equal(result.dogName, 'Cino');
-  assert.equal(result.stayKey, 'cino|2026-11-01|2026-11-11');
+  const original = intakeSubmissionPayload(token, 'submission-id-0001');
+  const first = h.context.processIntakeSubmission_(original);
+  assert.equal(first.result, 'success');
+  assert.equal(first.dogName, 'Cino');
+  assert.equal(first.stayKey, 'cino|2026-11-01|2026-11-11');
   assert.equal(intake.rows[1][3], 'Complete');
   assert.equal(intake.rows[1][10], '2026-11-11');
   assert.equal(intake.rows[1][18], stayIdA);
   assert.equal(intake.rows[1][19], dogIdA);
+  assert.deepEqual(counts, { flags: 1, profiles: 1, pdf: 1, audit: 1, touch: 1, push: 1 });
+
+  const snapshot = JSON.stringify(h.bookings.rows);
+  const replay = h.context.processIntakeSubmission_(original);
+  assert.equal(replay.pdfFileId, first.pdfFileId);
+  assert.equal(JSON.stringify(h.bookings.rows), snapshot);
+  assert.deepEqual(counts, { flags: 1, profiles: 1, pdf: 1, audit: 1, touch: 1, push: 1 }, 'receipt replay has no side effects');
+  assert.throws(() => h.context.processIntakeSubmission_(intakeSubmissionPayload(token, 'submission-id-0001', 'Changed Answers')), /different answers or signature/);
+
+  const correction = h.context.processIntakeSubmission_(intakeSubmissionPayload(token, 'submission-id-0002', 'Cino Updated'));
+  assert.equal(correction.dogName, 'Cino Updated');
+  assert.equal(counts.pdf, 2);
+  assert.equal(counts.push, 2);
+  const afterCorrection = JSON.stringify(h.bookings.rows);
+  const originalAfterCorrection = h.context.processIntakeSubmission_(original);
+  assert.equal(originalAfterCorrection.dogName, 'Cino', 'an old receipt remains tied to its original signed payload');
+  assert.equal(JSON.stringify(h.bookings.rows), afterCorrection);
+  assert.deepEqual(counts, { flags: 2, profiles: 2, pdf: 2, audit: 2, touch: 2, push: 2 }, 'old receipt replay after correction is read-only');
+  assert.equal(h.context.getIntakeSubmissionStatusForHtml(token, 'submission-id-0001').state, 'complete');
+  assert.equal(h.context.getIntakeSubmissionStatusForHtml(token, 'submission-id-0002').state, 'complete');
+  assert.equal(h.lockStats.depth, 0);
+  assert.equal(h.lockStats.acquired, h.lockStats.released, 'every short script lock is released');
+  const ledgerJson = JSON.stringify(h.bookings.getParent().getSheetByName('Intake_Submission_Receipts').rows);
+  assert.equal(ledgerJson.includes(token), false, 'the receipt ledger stores only a token hash');
+  assert.equal(ledgerJson.includes(validSignaturePng), false, 'the receipt ledger never stores the signature image');
+  assert.equal(ledgerJson.includes('additionalInstructions'), false, 'the receipt ledger never stores answers');
+  const receipts = h.bookings.getParent().getSheetByName('Intake_Submission_Receipts');
+  receipts.appendRow(receipts.rows[1]);
+  assert.throws(() => h.context.processIntakeSubmission_(original), /Duplicate intake submission receipts/);
+  assert.equal(h.context.getIntakeSubmissionStatusForHtml(token, 'submission-id-0001').state, 'identity-conflict');
+});
+
+test('signature PNG is fully preflighted before intake or booking writes', () => {
+  const { h, token } = setupIntakeSubmissionHarness();
+  const before = JSON.stringify(h.bookings.rows);
+  let intakeLookups = 0;
+  h.context.getIntakeSheet_ = () => { intakeLookups++; throw new Error('must not reach mutation setup'); };
+  const bad = intakeSubmissionPayload(token, 'submission-id-invalid');
+  bad.signatureData = 'data:image/png;base64,iVBORw0KGgo=';
+  assert.throws(() => h.context.processIntakeSubmission_(bad), /could not be decoded/);
+  assert.equal(intakeLookups, 0);
+  assert.equal(JSON.stringify(h.bookings.rows), before);
+  assert.equal(h.bookings.getParent().getSheetByName('Intake_Submission_Receipts'), null);
+});
+
+test('interrupted profile/PDF work remains pending and cannot be retried as a new intent', () => {
+  const { h, token, counts } = setupIntakeSubmissionHarness({ failAt: 'pdf' });
+  const payload = intakeSubmissionPayload(token, 'submission-id-pending');
+  assert.throws(() => h.context.processIntakeSubmission_(payload), /injected PDF interruption/);
+  assert.deepEqual(counts, { flags: 1, profiles: 1, pdf: 1, audit: 0, touch: 0, push: 0 });
+  assert.equal(h.context.getIntakeSubmissionStatusForHtml(token, payload.submissionId).state, 'pending');
+  const beforeRetry = JSON.stringify(h.bookings.rows);
+  assert.equal(h.context.processIntakeSubmission_(payload).result, 'pending');
+  assert.equal(JSON.stringify(h.bookings.rows), beforeRetry);
+  assert.deepEqual(counts, { flags: 1, profiles: 1, pdf: 1, audit: 0, touch: 0, push: 0 }, 'uncertain work is never automatically replayed');
+  assert.throws(() => h.context.processIntakeSubmission_(intakeSubmissionPayload(token, 'submission-id-another')), /still unconfirmed/);
+  assert.equal(h.context.getIntakeSubmissionStatusForHtml(token, 'submission-id-another').state, 'pending-other');
+});
+
+test('a concurrent duplicate intent observes Pending and creates no second set of side effects', () => {
+  const harness = setupIntakeSubmissionHarness();
+  const payload = intakeSubmissionPayload(harness.token, 'submission-id-concurrent');
+  let concurrentResult = null;
+  harness.options.onStable = () => { concurrentResult = harness.h.context.processIntakeSubmission_(payload); };
+  const result = harness.h.context.processIntakeSubmission_(payload);
+  assert.equal(result.result, 'success');
+  assert.equal(concurrentResult.result, 'pending');
+  assert.deepEqual(harness.counts, { flags: 1, profiles: 1, pdf: 1, audit: 1, touch: 1, push: 1 });
+  assert.equal(harness.h.lockStats.depth, 0);
+  assert.equal(harness.h.lockStats.acquired, harness.h.lockStats.released);
+});
+
+test('failure immediately after booking mutation stays pending without replaying the booking write', () => {
+  const { h, intake, token, counts } = setupIntakeSubmissionHarness({ failAt: 'flags' });
+  const payload = intakeSubmissionPayload(token, 'submission-id-after-mutation');
+  assert.throws(() => h.context.processIntakeSubmission_(payload), /injected flags interruption/);
+  assert.equal(h.bookings.rows[1][1], 'Cino');
+  assert.equal(intake.rows[1][3], 'Awaiting Owner');
+  const afterMutation = JSON.stringify(h.bookings.rows);
+  assert.equal(h.context.processIntakeSubmission_(payload).result, 'pending');
+  assert.equal(JSON.stringify(h.bookings.rows), afterMutation);
+  assert.deepEqual(counts, { flags: 1, profiles: 0, pdf: 0, audit: 0, touch: 0, push: 0 });
+});
+
+test('booking date changes during PDF work leave the receipt pending without stale canonical dates', () => {
+  const { h, intake, token, counts } = setupIntakeSubmissionHarness({ changeDateDuringPdf: true });
+  const payload = intakeSubmissionPayload(token, 'submission-id-date-race');
+  assert.throws(() => h.context.processIntakeSubmission_(payload), /booking details changed/);
+  assert.equal(intake.rows[1][3], 'Awaiting Owner', 'the canonical intake row is not committed using stale dates');
+  assert.equal(intake.rows[1][10], '2026-11-10');
+  assert.equal(h.context.getIntakeSubmissionStatusForHtml(token, payload.submissionId).state, 'pending');
+  assert.deepEqual(counts, { flags: 1, profiles: 1, pdf: 1, audit: 0, touch: 0, push: 0 });
+});
+
+test('lost response after receipt commit replays complete without repeating push or document work', () => {
+  const { h, token, counts } = setupIntakeSubmissionHarness({ failAt: 'push' });
+  const payload = intakeSubmissionPayload(token, 'submission-id-push');
+  assert.throws(() => h.context.processIntakeSubmission_(payload), /injected push interruption/);
+  assert.deepEqual(counts, { flags: 1, profiles: 1, pdf: 1, audit: 1, touch: 1, push: 1 });
+  assert.equal(h.context.getIntakeSubmissionStatusForHtml(token, payload.submissionId).state, 'complete');
+  assert.equal(h.context.processIntakeSubmission_(payload).result, 'success');
+  assert.deepEqual(counts, { flags: 1, profiles: 1, pdf: 1, audit: 1, touch: 1, push: 1 }, 'complete replay does not send a duplicate push or PDF');
+});
+
+test('submission status fails closed when a Complete receipt lacks its saved file references', () => {
+  const harness = setupIntakeSubmissionHarness();
+  const payload = intakeSubmissionPayload(harness.token, 'submission-id-corrupt-receipt');
+  harness.h.context.processIntakeSubmission_(payload);
+  const ledger = harness.h.bookings.getParent().getSheetByName('Intake_Submission_Receipts');
+  ledger.rows[1][13] = '';
+  assert.equal(harness.h.context.getIntakeSubmissionStatusForHtml(harness.token, payload.submissionId).state, 'identity-conflict');
+  assert.throws(() => harness.h.context.processIntakeSubmission_(payload), /unknown state/);
+  ledger.rows[1][13] = 'synthetic-signature-1';
+  ledger.rows[1][14] = '';
+  assert.equal(harness.h.context.getIntakeSubmissionStatusForHtml(harness.token, payload.submissionId).state, 'identity-conflict');
+  assert.deepEqual(harness.counts, { flags: 1, profiles: 1, pdf: 1, audit: 1, touch: 1, push: 1 });
 });
 
 test('request-local date formatting matches the existing booking snapshot for Date and string cells', () => {
