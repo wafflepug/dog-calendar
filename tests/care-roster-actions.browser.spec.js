@@ -74,9 +74,9 @@ test('roster actions are separate from profile open, isolate same-name dogs, ret
   await setup(page);
   const staying = page.locator('[data-directory-stay-id="stay-a"]');
   const checkin = staying.locator('[data-v11217-roster-checkin]');
-  await expect(checkin).toHaveAccessibleName('Check in Twin Pup');
+  await expect(checkin).toHaveAccessibleName('Check in Twin Pup, owner Owner a, booked 11 Oct 2026 to 11 Oct 2026');
   const checkout = staying.locator('[data-v11217-roster-checkout]');
-  await expect(checkout).toHaveAccessibleName('Check out Twin Pup');
+  await expect(checkout).toHaveAccessibleName('Check out Twin Pup, owner Owner a, booked 11 Oct 2026 to 11 Oct 2026');
   await expect(staying.locator('[data-v11217-roster-actions] > button')).toHaveCount(2);
   expect(await checkin.evaluate(button => button.closest('.directory-guest-tile-open'))).toBeNull();
 
@@ -182,7 +182,7 @@ test('Early Checkout stays under More actions while Check In is the primary acti
   await expect(staying.locator('[data-v11217-roster-checkout]')).toHaveCount(0);
   await expect(staying.locator('[data-v11217-early-checkout]')).toBeHidden();
   await more.locator('summary').click();
-  await expect(more.locator('[data-v11217-early-checkout]')).toHaveAccessibleName('Record early checkout for Twin Pup');
+  await expect(more.locator('[data-v11217-early-checkout]')).toHaveAccessibleName('Record early checkout for Twin Pup, owner Owner b, booked 11 Oct 2026 to 14 Oct 2026');
 });
 
 test('a late save response cannot apply to a card reused for a different same-name stay', async ({ page }) => {
@@ -213,7 +213,7 @@ test('early checkout uses its review modal and controls fit on a narrow mobile v
   const moreActions = early.locator('.v11217-roster-more-actions');
   await moreActions.locator('summary').click();
   const button = early.locator('[data-v11217-early-checkout]');
-  await expect(button).toHaveAccessibleName('Record early checkout for Twin Pup');
+  await expect(button).toHaveAccessibleName('Record early checkout for Twin Pup, owner Owner b, booked 11 Oct 2026 to 14 Oct 2026');
   const bounds = await page.evaluate(() => ({
     width: document.documentElement.scrollWidth,
     viewport: innerWidth,

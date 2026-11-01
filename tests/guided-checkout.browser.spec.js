@@ -15,9 +15,10 @@ test('same-day checkout reviews selected identity, opens without writes, and con
   await setup(page);
   const card = page.getByTestId('selected-card');
   await openCheckout(card);
-  const dialog = page.getByRole('dialog', { name: 'Check out' });
+  const dialog = page.getByRole('dialog', { name: 'Check out Twin' });
   await expect(dialog).toBeVisible();
-  await expect(dialog).toContainText('Dog ID: #0017');
+  await expect(dialog).toHaveAccessibleDescription(/Dog ID #00017 · booked 18 Oct 2026 to 18 Oct 2026/);
+  await expect(dialog).toContainText('Dog ID: #00017');
   await expect(dialog.locator('[data-v11217-guided-belongings-summary]')).toHaveText('2 listed · review');
   await expect(dialog.locator('[data-v11217-guided-belongings-details]')).toHaveJSProperty('open', false);
   await expect(dialog.locator('[data-v11217-guided-medication]')).toHaveText('Return blue inhaler');
