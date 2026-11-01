@@ -19,7 +19,7 @@ test('same-day checkout reviews selected identity, opens without writes, and con
   await expect(dialog).toBeVisible();
   await expect(dialog).toHaveAccessibleDescription(/Dog ID #00017 · booked 18 Oct 2026 to 18 Oct 2026/);
   await expect(dialog).toContainText('Dog ID: #00017');
-  await expect(dialog.locator('[data-v11217-guided-belongings-summary]')).toHaveText('2 listed · review');
+  await expect(dialog.locator('[data-v11217-guided-belongings-summary]')).toHaveText('2 items listed · review');
   await expect(dialog.locator('[data-v11217-guided-belongings-details]')).toHaveJSProperty('open', false);
   await expect(dialog.locator('[data-v11217-guided-medication]')).toHaveText('Return blue inhaler');
   await dialog.locator('[data-v11217-guided-belongings-summary]').click();
@@ -369,6 +369,7 @@ test('explicit empty belongings stay distinct from pending list evidence', async
   await openCheckout(card);
   const dialog = page.locator('#v11217GuidedCheckout');
   await expect(dialog.locator('[data-v11217-guided-belongings]')).toHaveText('No belongings recorded');
+  await expect(dialog.locator('[data-v11217-guided-belongings-summary]')).toHaveText('0 items recorded · review');
   await expect(dialog.locator('[data-v11217-guided-missing]')).toBeHidden();
   await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
   await evidence.evaluate(node => { node.innerHTML = '<ul class="belongings-summary-list"><li>Loading belongings…</li></ul>'; });

@@ -3,6 +3,11 @@
 Reviewed 17 September 2026. Repository: `wafflepug/dog-calendar`; always start implementation from current `origin/main` in an isolated worktree. Stack: static HTML/CSS, browser JavaScript, FullCalendar, Apps Script backend, Python contracts, Playwright. Keep production smoke checks read-only. Preserve existing theme settings, offline work, and early checkout behavior. Use Luna for bounded implementation; lead agent reviews design and integration. Complete relevant CI before merging.
 
 
+## Current owner workflow iteration - 2 November 2026
+
+Candidate 2026.11.02.01 (SW167): [Owner Journey Clarity](owner-journey-clarity.md). Seven bounded improvements across arrival preparation, pickup, daily care priorities, returning bookings, shared-owner multi-dog plans, repeated-visit review and unsaved profile guidance. Scoped refresh preservation was also verified against the existing state and read-count regression tests; no refresh behavior change was needed. Preserve exact identities, loaded-data truth, complete care, drafts, explicit writes, lazy reads and existing signing/consent boundaries. The remaining owner-intake review and local loading diagnostics are tracked separately.
+
+
 ## Current Care iteration - 31 October 2026
 
 Published 2026.10.30.01 (PR #281): [Care supporting-section consistency](care-support-consistency.md). Align existing Care disclosure headers and focus rings, keep Booking setup status and Review actions within long/narrow rows, and retain all existing labels, warnings, and hidden states. Preserve complete Safety and Medication, exact identity, drafts, explicit writes and lazy reads. No Today/Calendar or backend changes.

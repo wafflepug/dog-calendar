@@ -1570,3 +1570,9 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-
 body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-grid > .directory-care-brief-supporting-grid {
   padding: 0;
 }
+
+/* Loaded care priorities use a restrained accent in the existing profile summary. */
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-item[data-care-priority="attention"] {
+  border-inline-start: 3px solid var(--wh-attention, #b45309) !important;
+  background: color-mix(in srgb, var(--wh-attention, #b45309) 8%, var(--wh-surface, #ffffff)) !important;
+}

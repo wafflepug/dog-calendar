@@ -988,11 +988,13 @@
       const summary = modal.querySelector(`[data-v11217-guided-${kind}-summary]`);
       const direct = !!evidence && evidence.listItems.length <= 1 && !remainUnknown;
       details.open = direct;
-      summary.hidden = direct;
+      summary.hidden = direct && evidence.listItems.length > 0;
       details.hidden = !evidence;
       if (evidence) summary.textContent = evidence.listItems.length
-        ? `${evidence.listItems.length} listed · review`
-        : 'Recorded details · review';
+        ? `${evidence.listItems.length} ${evidence.listItems.length === 1 ? 'item' : 'items'} listed · review`
+        : kind === 'belongings' && /no belongings recorded/i.test(evidence.value)
+          ? '0 items recorded · review'
+          : 'Recorded details · review';
     }
     content.replaceChildren();
     if (!evidence) return;

@@ -5511,6 +5511,11 @@ registerWaffleServiceWorker();
             ?.addEventListener(
                 'click',
                 function() {
+                    const activeProfile = document.querySelector('.directory-card.is-profile-active');
+                    const draftNotice = directoryProfileDraftNotice(activeProfile);
+                    if (draftNotice) {
+                        window.WAFFLE_V1118?.showToast?.('Draft kept', draftNotice, { kind: 'info', duration: 5000 });
+                    }
                     closeDirectoryGuestProfile();
                 }
             );
@@ -9444,6 +9449,9 @@ registerWaffleServiceWorker();
                             ? 'Medication details unavailable'
                             : 'Loading with full profile…');
             medicationHost.classList.toggle('is-pending', !attributes && !medicationText && !missingProfile && !profileIdentityNeedsReview && profileReadState !== 'error');
+            const medicationSection = medicationHost.closest('.directory-care-brief-item');
+            const verifiedCare = !!validatedProfileRecord && ['fresh', 'saved'].includes(profileReadState) && !missingProfile && !profileIdentityNeedsReview;
+            setDirectorySummaryData(medicationSection, 'carePriority', !verifiedCare ? 'unknown' : medicationText ? 'attention' : 'routine');
         }
 
         if (freshnessHost) {
@@ -11906,11 +11914,31 @@ registerWaffleServiceWorker();
             panel.closest('[data-care-category]')?.classList.toggle('is-expanded', isExpanded);
         });
     }
+    function directoryProfileDraftNotice(card) {
+        const state = card && typeof directoryProfileEditDrafts !== 'undefined'
+            ? directoryProfileEditDrafts.get(directoryProfileEditKey(card))
+            : null;
+        if (!directoryProfileEditIsDirty(card, state)) return '';
+
+        const categories = Array.from(card.querySelectorAll('[data-care-change-category-count]:not([hidden])'))
+            .map(badge => DIRECTORY_PROFILE_SECONDARY_TABS.find(tab => tab.key === badge.dataset.careChangeCategoryCount)?.label)
+            .filter(Boolean);
+        const guest = String(card.dataset.directoryDogName || card.dataset.dogName || 'This guest').trim();
+        const unfinished = categories.length ? categories.join(', ') : 'care profile';
+        return `${guest} has unsaved changes in ${unfinished}. Your draft is kept; reopen the profile to continue editing.`;
+    }
+
     async function openDirectoryGuestProfile(
         card,
         options = {}
     ) {
         if (!card) return;
+
+        const activeProfile = document.querySelector('.directory-card.is-profile-active');
+        if (activeProfile && activeProfile !== card && !options.preserveState) {
+            const draftNotice = directoryProfileDraftNotice(activeProfile);
+            if (draftNotice) window.WAFFLE_V1118?.showToast?.('Draft kept', draftNotice, { kind: 'info', duration: 5000 });
+        }
 
         const stayKey =
             String(
