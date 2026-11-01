@@ -76,6 +76,9 @@ on:
       - 'tests/directory-profile-selection.test.js'
       - 'care-mobile-clarity.css'
       - 'playwright.arrival-checkout.config.js'
+      - 'playwright.intake-owner-workflow.config.js'
+      - 'apps-script/Intake.html'
+      - 'tests/intake-owner-workflow.browser.spec.js'
       - 'tests/care-arrival-ready.browser.spec.js'
       - 'tests/care-intake-status.browser.spec.js'
       - 'tests/guided-checkout.browser.spec.js'
@@ -237,6 +240,9 @@ on:
       - 'tests/directory-profile-selection.test.js'
       - 'care-mobile-clarity.css'
       - 'playwright.arrival-checkout.config.js'
+      - 'playwright.intake-owner-workflow.config.js'
+      - 'apps-script/Intake.html'
+      - 'tests/intake-owner-workflow.browser.spec.js'
       - 'tests/care-arrival-ready.browser.spec.js'
       - 'tests/care-intake-status.browser.spec.js'
       - 'tests/guided-checkout.browser.spec.js'
@@ -383,7 +389,7 @@ jobs:
           - group: care-daily-workflows
             configs: playwright.care-daily-workflows.config.js
           - group: arrival-checkout
-            configs: playwright.arrival-checkout.config.js
+            configs: playwright.arrival-checkout.config.js playwright.intake-owner-workflow.config.js
           - group: owner-handoff
             configs: playwright.owner-handoff.config.js playwright.booking-owner-share.config.js
           - group: phone-clearance

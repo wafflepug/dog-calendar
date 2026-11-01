@@ -414,7 +414,10 @@ test('stale dates without matching audit evidence and duplicate current keys are
 test('owner form drafts cannot restore stale booking identity or date fields', () => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'apps-script', 'Intake.html'), 'utf8');
   assert.match(html, /function isBookingIdentityField\(name\)\{return name==="bookingPeriod"\|\|name==="dogName"\|\|name==="declarationDogName"\}/);
+  assert.match(html, /function isIntakeDraftExcludedField\(name\)\{return name==="termsAccepted"\|\|name==="accuracyConfirmed"\|\|name==="signatureName"\|\|name==="declarationDate"\|\|isBookingIdentityField\(name\)\}/);
   assert.match(html, /applyAnswers\(saved,true\)/);
-  assert.match(html, /!isBookingIdentityField\(name\)/);
-  assert.match(html, /el\.name==="termsAccepted"\|\|el\.name==="accuracyConfirmed"\|\|isBookingIdentityField\(el\.name\)/);
+  assert.match(html, /restorable=Object\.entries\(draft\.fields\)\.filter\(\(\[name\]\)=>!isIntakeDraftExcludedField\(name\)/);
+  assert.match(html, /restorable\.forEach\(\(\[name,value\]\)=>setGroup\(name,value\)\)/);
+  assert.match(html, /if\(isIntakeDraftExcludedField\(el\.name\)\)continue/);
+  assert.match(html, /if\(preserveBookingIdentity&&isIntakeDraftExcludedField\(k\)\)return/);
 });
