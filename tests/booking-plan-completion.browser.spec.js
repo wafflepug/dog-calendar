@@ -54,6 +54,7 @@ async function setup(page, baseURL, options = {}) {
   await page.addScriptTag({ path: path.join(root, 'booking-plan.js') });
   await page.addScriptTag({ path: path.join(root, 'phase4-booking.js') });
   await page.locator('#p4PlanDisclosure').evaluate(el => { el.open = true; el.dispatchEvent(new Event('toggle')); });
+  await page.locator('#p4Source').selectOption('MadPaws');
   await page.locator('#p4PlanOwner').fill('Synthetic Owner');
   await page.locator('#p4PlanPhone').fill('0400000000');
   await page.locator('#p4PlanNext').click();
