@@ -470,11 +470,14 @@ test('intake diagnostics expose numeric stages and separately measure browser RP
     status: 'Awaiting Owner',
     booking: { dogName: 'Cino', breed: 'Jack Russell', startDate: '2026-11-01', endDate: '2026-11-11', ownerName: 'Owner One', phone: '0400000000', bookingType: 'Confirmed Boarding' },
     savedAnswers: { additionalInstructions: 'Fixture answer must not enter diagnostics.' },
-    diagnostics: { bookingSheetReadCount: 1, bookingSheetReadExclusiveMs: 2, bookingResolutionCount: 1, bookingResolutionInclusiveMs: 4, auditReadCount: 0, auditReadExclusiveMs: 0, auditVerificationCount: 0, auditVerificationInclusiveMs: 0, timezoneLookupCount: 1, timezoneLookupExclusiveMs: 1, token: 'must-not-leak' }
+    diagnostics: { totalServerInclusiveMs: 8, intakeSheetSetupCount: 1, intakeSheetSetupInclusiveMs: 1, intakeTokenLookupCount: 1, intakeTokenLookupInclusiveMs: 2, bookingSheetReadCount: 1, bookingSheetReadExclusiveMs: 2, bookingResolutionCount: 1, bookingResolutionInclusiveMs: 4, auditReadCount: 0, auditReadExclusiveMs: 0, auditVerificationCount: 0, auditVerificationInclusiveMs: 0, timezoneLookupCount: 1, timezoneLookupExclusiveMs: 1, token: 'must-not-leak' }
   }));
   const metrics = await page.evaluate(() => window.__intakeDiagnosticEvents[0]);
   expect(metrics.rpcMs).toEqual(expect.any(Number));
   expect(metrics.renderMs).toEqual(expect.any(Number));
+  expect(metrics.totalServerInclusiveMs).toBe(8);
+  expect(metrics.intakeSheetSetupCount).toBe(1);
+  expect(metrics.intakeTokenLookupInclusiveMs).toBe(2);
   expect(metrics.bookingSheetReadCount).toBe(1);
   expect(metrics.bookingResolutionInclusiveMs).toBe(4);
   expect(metrics.auditReadCount).toBe(0);

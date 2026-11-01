@@ -250,6 +250,13 @@ test('prefill and local submission resolve an already-migrated token to current 
   assert.equal(prefill.booking.endDate, '2026-11-11');
   assert.equal(prefill.booking.bookingType, 'Confirmed Boarding');
   assert.equal(prefill.savedAnswers.additionalInstructions, 'Blue harness.');
+  assert.equal(prefill.diagnostics.intakeSheetSetupCount, 1);
+  assert.equal(prefill.diagnostics.intakeTokenLookupCount, 1);
+  assert.equal(prefill.diagnostics.bookingSheetReadCount, 1);
+  assert.equal(prefill.diagnostics.bookingResolutionCount, 1);
+  assert.ok(prefill.diagnostics.totalServerInclusiveMs >= 0);
+  assert.ok(prefill.diagnostics.intakeSheetSetupInclusiveMs >= 0);
+  assert.ok(prefill.diagnostics.intakeTokenLookupInclusiveMs >= 0);
   assert.equal(h.reads.Dog_Intake_Records, 1, 'prefill reads the intake range once');
   assert.equal(h.reads.Bookings, 1, 'stable identity lookup reuses the already-loaded booking rows');
   assert.equal(h.reads.Audit_Log || 0, 0, 'stable identity resolution does not read the audit log');
