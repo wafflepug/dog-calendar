@@ -9,6 +9,12 @@ const newDog = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
 const bookingUi = fs.readFileSync(path.join(root, 'phase4-booking.js'), 'utf8');
 const planEngine = fs.readFileSync(path.join(root, 'booking-plan.js'), 'utf8');
 const core = fs.readFileSync(path.join(root, 'phase4-core.js'), 'utf8');
+const legacySourceRuntime = fs.readFileSync(path.join(root, 'waffle-v11.1.js'), 'utf8');
+const sourceHelpersStart = legacySourceRuntime.indexOf('function v111RequestSourceOptions');
+const sourceHelpersEnd = legacySourceRuntime.indexOf('function v111WireFormSources', sourceHelpersStart);
+const sourceWrapperStart = legacySourceRuntime.indexOf('function v111WireMutationThrobber');
+const sourceWrapperEnd = legacySourceRuntime.indexOf('\nfunction ', sourceWrapperStart + 10);
+const legacySourceBridge = `function v111SetBusy() {}\n${legacySourceRuntime.slice(sourceHelpersStart, sourceHelpersEnd)}\n${legacySourceRuntime.slice(sourceWrapperStart, sourceWrapperEnd)}\nwindow.installLegacySourceBridge = v111WireMutationThrobber;`;
 const styleStart = core.indexOf('function style(){');
 const styleEnd = core.indexOf('\nlet active=', styleStart);
 
@@ -44,6 +50,11 @@ async function setup(page) {
 async function selectDog(page, id) {
   await page.locator('#p4DogIdentity').selectOption(id);
   await expect(page.locator('#p4DogIdentity')).toHaveValue(id);
+}
+
+async function chooseSource(page, source) {
+  if (!(await page.locator('#p4GuestDetails').evaluate(node => node.open))) await page.locator('#p4GuestDetails > summary').click();
+  await page.locator('#p4Source').selectOption(source);
 }
 
 test('identity selection stays fast and explicit care review coalesces, opens review, and uses the exact Dog ID', async ({ page }) => {
@@ -101,6 +112,7 @@ test('no-care confirmed save stays exact and never inherits care; approved care 
   await page.locator('#p4Dog').fill('Luna');
   await page.locator('#p4Start').fill('2026-11-10');
   await page.locator('#p4End').fill('2026-11-11');
+  await chooseSource(page, 'Pawshake');
   await page.locator('#p4SaveConfirmed').click();
   await expect.poll(() => page.evaluate(() => window.fixtureWrites.length)).toBe(1);
   const noCare = await page.evaluate(() => window.fixtureWrites[0]);
@@ -122,6 +134,7 @@ test('no-care confirmed save stays exact and never inherits care; approved care 
   expect(await page.evaluate(() => document.querySelector('[data-p4-care-profile="feedingTimes"]') === window.reviewInputNode)).toBe(true);
   await page.locator('#p4Start').fill('2026-11-10');
   await page.locator('#p4End').fill('2026-11-11');
+  await chooseSource(page, 'Pawshake');
   await page.locator('#p4SaveConfirmed').click();
   await expect.poll(() => page.evaluate(() => window.fixtureWrites.length)).toBe(1);
   const approved = await page.evaluate(() => window.fixtureWrites[0]);
@@ -142,6 +155,7 @@ test('identity choice focuses only a missing date while preserving date and phon
   await page.locator('#p4GuestDetails > summary').click();
   await page.locator('#p4Phone').fill('0400000000');
   await page.locator('#p4Phone').focus();
+  await chooseSource(page, 'Pawshake');
   await page.locator('#p4PlanDisclosure > summary').click();
   await page.locator('#p4PlanOwner').fill('Alex');
   await page.locator('#p4PlanPhone').fill('0400000000');
@@ -175,6 +189,7 @@ test('single booking save focuses inline field errors and writes only after corr
   await page.evaluate(() => window.WAFFLE_PHASE4_BOOKING.fill({ dogName: 'Milo' }));
   await page.locator('#p4Start').fill('2026-11-12');
   await page.locator('#p4End').fill('2026-11-12');
+  await chooseSource(page, 'Pawshake');
   await page.locator('#p4GuestDetails > summary').click();
   await page.locator('#p4SavePotential').click();
   await expect(page.locator('#p4GuestDetails')).toHaveAttribute('open', '');
@@ -198,6 +213,89 @@ test('single booking save focuses inline field errors and writes only after corr
   await page.locator('#p4SaveConfirmed').click();
   await expect.poll(() => page.evaluate(() => window.fixtureWrites.length)).toBe(1);
   await expect(page.locator('#p4End')).not.toHaveAttribute('aria-invalid', 'true');
+});
+
+test('Book Again carries only a recognized saved request source and an unknown source requires a visible choice', async ({ page }) => {
+  await setup(page);
+  await page.evaluate(() => { window.sourceIdentityRead = new Promise(resolve => { window.releaseSourceIdentity = resolve; }); window.identityRead = payload => payload.action === 'list_dog_identities' ? window.sourceIdentityRead : Promise.resolve({ history: { previousStays: [] } }); });
+  await page.evaluate(({ dogA }) => window.WAFFLE_PHASE4_BOOKING.openReturningBooking({
+    dogId: dogA, dogName: 'Luna', breed: 'Pug', ownerName: 'Alex', requestSource: 'Mad Paws'
+  }), { dogA });
+  await expect(page.locator('#p4Source')).toHaveValue('MadPaws');
+  await chooseSource(page, 'Facebook');
+  await page.evaluate(() => window.releaseSourceIdentity({ identities: window.identityRows }));
+  await expect(page.locator('#p4DogIdentity')).toHaveValue(dogA);
+  await expect(page.locator('#p4Source')).toHaveValue('Facebook');
+  await page.locator('#p4Start').fill('2026-11-10');
+  await page.locator('#p4End').fill('2026-11-11');
+  await page.locator('#p4SaveConfirmed').click();
+  await expect.poll(() => page.evaluate(() => window.fixtureWrites.length)).toBe(1);
+  expect(await page.evaluate(() => window.fixtureWrites[0].requestSource)).toBe('Facebook');
+
+  await setup(page);
+  await page.evaluate(({ dogA }) => window.WAFFLE_PHASE4_BOOKING.openReturningBooking({
+    dogId: dogA, dogName: 'Luna', breed: 'Pug', ownerName: 'Alex', requestSource: 'Direct'
+  }), { dogA });
+  await expect(page.locator('#p4DogIdentity')).toHaveValue(dogA);
+  await expect(page.locator('#p4Source')).toHaveValue('');
+  await page.locator('#p4Start').fill('2026-11-10');
+  await page.locator('#p4End').fill('2026-11-11');
+  await page.locator('#p4SaveConfirmed').click();
+  await expect(page.locator('#p4GuestDetails')).toHaveAttribute('open', '');
+  await expect(page.locator('#p4Source')).toBeVisible();
+  await expect(page.locator('#p4Source')).toBeFocused();
+  await expect(page.locator('#p4SourceError')).toHaveText('Choose where the Boarding request came from.');
+  expect(await page.evaluate(() => window.fixtureWrites)).toHaveLength(0);
+  expect(await page.evaluate(() => window.lastToast)).toBeUndefined();
+  for (const width of [320, 390, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    for (const dark of [false, true]) {
+      await page.evaluate(value => document.body.classList.toggle('dark-theme', value), dark);
+      const geometry = await page.locator('#p4Source').evaluate(element => {
+        const rect = element.getBoundingClientRect();
+        return { left: rect.left, right: rect.right, width: rect.width, height: rect.height, label: element.labels?.[0]?.innerText || '' };
+      });
+      expect(geometry.left).toBeGreaterThanOrEqual(0);
+      expect(geometry.right).toBeLessThanOrEqual(width);
+      expect(geometry.width).toBeGreaterThan(0);
+      expect(geometry.height).toBeGreaterThanOrEqual(24);
+      expect(geometry.label).toContain('REQUEST CAME FROM');
+    }
+  }
+  await page.locator('#p4Source').selectOption('Facebook');
+  await expect(page.locator('#p4SourceError')).toBeHidden();
+  await page.locator('#p4SaveConfirmed').click();
+  await expect.poll(() => page.evaluate(() => window.fixtureWrites.length)).toBe(1);
+  expect(await page.evaluate(() => window.fixtureWrites[0].requestSource)).toBe('Facebook');
+
+  await page.evaluate(() => window.WAFFLE_PHASE4_BOOKING.fill({ dogName: 'Milo' }));
+  await expect(page.locator('#p4Source')).toHaveValue('');
+});
+
+test('Book Again passes the selected source through the actual legacy write wrapper without relying on its hidden modal field', async ({ page }) => {
+  await setup(page);
+  const cooperId = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
+  await page.evaluate(() => {
+    document.body.insertAdjacentHTML('beforeend', '<section id="v108BoardingModal" hidden><div class="v108-form-grid"><label><textarea data-v108-board="notes"></textarea></label></div></section>');
+    window.legacyRequests = [];
+    window.sendPayloadToAppsScript = async payload => { window.legacyRequests.push(structuredClone(payload)); return { result: 'success', dogId: payload.dogId || 'cccccccc-cccc-4ccc-8ccc-cccccccccccc', stayId: payload.stayId, dogNumber: '00003' }; };
+    window.WAFFLE_PHASE4_CORE.write = payload => window.sendPayloadToAppsScript(payload);
+  });
+  await page.evaluate(cooperId => window.identityRows.push({ dogId: cooperId, dogNumber: '00047', dogName: 'Cooper', breed: 'Labrador', ownerName: 'Sam' }), cooperId);
+  await page.addScriptTag({ content: legacySourceBridge });
+  await page.evaluate(() => window.installLegacySourceBridge());
+  await page.evaluate(cooperId => window.WAFFLE_PHASE4_BOOKING.openReturningBooking({
+    dogId: cooperId, dogName: 'Cooper', breed: 'Labrador', ownerName: 'Sam', requestSource: 'Facebook'
+  }), cooperId);
+  await expect(page.locator('#p4DogIdentity')).toHaveValue(cooperId);
+  await page.locator('#p4Start').fill('2026-11-10');
+  await page.locator('#p4End').fill('2026-11-11');
+  await page.locator('#p4SaveConfirmed').click();
+  await expect.poll(() => page.evaluate(() => window.legacyRequests.length)).toBe(1);
+  expect(await page.evaluate(() => window.legacyRequests[0].requestSource)).toBe('Facebook');
+  expect(await page.evaluate(() => window.legacyRequests[0].dogId)).toBe(cooperId);
+  await expect(page.locator('#v108BoardingModal [data-v111-request-source="boarding"]')).toHaveValue('');
+  expect(await page.evaluate(() => window.lastToast)).not.toMatch(/Choose where the Boarding request came from/);
 });
 
 
@@ -301,6 +399,8 @@ test('pending identity keeps edited guest details, date focus and potential vali
   }), { dogA });
   await page.locator('#p4Start').fill('2026-11-10');
   await page.locator('#p4End').fill('2026-11-12');
+  if (!(await page.locator('#p4GuestDetails').evaluate(node => node.open))) await page.locator('#p4GuestDetails > summary').click();
+  await chooseSource(page, 'Pawshake');
   await page.locator('#p4SavePotential').click();
   await expect(page.locator('#p4Owner')).toBeFocused();
   await expect(page.locator('#p4OwnerError')).toHaveText('Owner name is required for a Potential Stay.');

@@ -71,6 +71,7 @@ async function fillRequiredBooking(page) {
   await page.locator('#p4Breed').fill('Pug');
   await page.locator('#p4Owner').fill('Alex');
   await page.locator('#p4Phone').fill('0400 000 1234');
+  await page.locator('#p4Source').selectOption('MadPaws');
   await page.locator('#p4Start').fill('2026-11-01');
   await page.locator('#p4End').fill('2026-11-04');
 }
@@ -217,6 +218,7 @@ test('Potential save reuses the same intent after a lost response and changed de
   await page.locator('#p4Dog').fill('Milo');
   await page.locator('#p4Owner').fill('Sam');
   await page.locator('#p4Phone').fill('0400 111 222');
+  await page.locator('#p4Source').selectOption('MadPaws');
   await page.locator('#p4Start').fill('2026-11-01');
   await page.locator('#p4End').fill('2026-11-03');
   await page.evaluate(() => { window.failFirstWrite = true; });

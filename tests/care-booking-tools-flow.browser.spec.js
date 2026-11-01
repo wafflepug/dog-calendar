@@ -23,7 +23,7 @@ async function setup(page, readHandler) {
       norm: value => String(value ?? '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim(),
       fmt: value => String(value ?? ''), today: () => '2026-10-06', rows: () => [], visits: () => [],
       read: payload => { window.fixtureReads.push(payload); return window.identityRead(payload); },
-      write: async payload => { window.fixtureWrites.push(structuredClone(payload)); return { result: 'success' }; },
+      write: async payload => { window.fixtureWrites.push(structuredClone(payload)); if (['create_boarding', 'create_potential'].includes(payload.action) && !['MadPaws', 'Pawshake', 'Facebook', 'Other'].includes(payload.requestSource)) throw Error('Choose where the Boarding request came from.'); return { result: 'success' }; },
       duplicate: () => null, capacity: () => ({ band: 'green' }), renderDecision: () => {}, toast: message => { window.lastToast = message; },
       saveSettings: () => ({ preferred: 4, absolute: 6 }), parseBooking: () => ({})
     };
@@ -54,7 +54,7 @@ test('Book Again opens a clean new stay immediately and confirms only the exact 
   await setup(page);
   await page.evaluate(() => { window.identityRead = payload => payload.action === 'list_dog_identities' ? window.pendingIdentityRead : Promise.resolve({ history: { previousStays: [] } }); });
   await page.evaluate(() => { window.pendingIdentityRead = new Promise(resolve => { window.resolveIdentityRead = resolve; }); });
-  await page.evaluate(dogA => window.WAFFLE_PHASE4_BOOKING.fillOwner({ dogName: 'Luna', dogId: dogA, dogNumber: '00001', breed: 'Pug', ownerName: 'Alex', phone: '0400000000', startDate: '2025-01-01', endDate: '2025-01-02' }), dogA);
+  await page.evaluate(dogA => window.WAFFLE_PHASE4_BOOKING.fillOwner({ dogName: 'Luna', dogId: dogA, dogNumber: '00001', breed: 'Pug', ownerName: 'Alex', requestSource: 'Pawshake', phone: '0400000000', startDate: '2025-01-01', endDate: '2025-01-02' }), dogA);
   await expect(page.locator('#p4OwnerBookingContext')).toContainText('Dog ID #00001');
   await expect(page.locator('#p4OwnerBookingContext')).toContainText('2025-01-01–2025-01-02');
   await page.locator('#p4OwnerOtherOptions summary').click();
@@ -214,6 +214,31 @@ test('directory Book Again preserves a deliberate field focus through delayed ex
   expect(await page.evaluate(() => window.fixtureWrites.length)).toBe(0);
 });
 
+test('directory Book Again carries the selected stay request source from its profile card', async ({ page }) => {
+  await setup(page);
+  await page.evaluate(() => {
+    window.fixturePage = 'directory';
+    document.getElementById('p4Modal').hidden = true;
+    window.WAFFLE_PHASE4_CORE.open = () => { document.getElementById('p4Modal').hidden = false; };
+    const card = document.createElement('article');
+    card.className = 'directory-card';
+    Object.assign(card.dataset, { directoryStayKey: 'luna|2026-01-01|2026-01-03', directoryDogName: 'Luna', directoryDogId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', directoryDogNumber: '00001', directoryStartDate: '2026-01-01', directoryEndDate: '2026-01-03' });
+    card.innerHTML = '<header class="directory-card-header"></header><section class="directory-care-brief"><div class="directory-care-brief-actions"><details class="directory-care-more-actions"><summary>More tools</summary><div class="directory-care-more-actions-list"></div></details></div></section><span class="directory-primary-breed" data-directory-current-value="Pug"></span><span data-directory-edit-field="ownerName" data-directory-current-value="Alex"></span><span data-v1117-care-source-badge="MadPaws">MadPaws</span>';
+    document.body.appendChild(card);
+    window.WAFFLE_PHASE4_BOOKING.enhanceDirectory();
+  });
+  await page.locator('.directory-care-more-actions > summary').click();
+  await page.locator('[data-p4-dir="again"]').click();
+  await expect(page.locator('#p4DogIdentity')).toHaveValue(dogA);
+  await expect(page.locator('#p4Source')).toHaveValue('MadPaws');
+  await page.locator('#p4Start').fill('2026-12-10');
+  await page.locator('#p4End').fill('2026-12-11');
+  await page.locator('#p4SaveConfirmed').click();
+  await expect.poll(() => page.evaluate(() => window.fixtureWrites.length)).toBe(1);
+  expect(await page.evaluate(() => window.fixtureWrites[0].requestSource)).toBe('MadPaws');
+  expect(await page.evaluate(() => window.lastToast)).not.toMatch(/Choose where the Boarding request came from/);
+});
+
 test('stale generic identity failure cannot reset a newer Book Again action', async ({ page }) => {
   await setup(page);
   await page.evaluate(() => { window.identityRead = payload => payload.action === 'list_dog_identities' ? new Promise((resolve, reject) => { window.pendingReads ||= []; window.pendingReads.push({ resolve, reject }); }) : Promise.resolve({ history: { previousStays: [] } }); });
@@ -234,7 +259,7 @@ test('post-save identity refresh failure blocks another confirmed save', async (
   await page.evaluate(dogA => { let lists = 0; window.identityRead = payload => {
     if (payload.action === 'list_dog_identities') { lists++; return lists === 1 ? Promise.resolve({ identities: [{ dogId: dogA, dogNumber: '00001', dogName: 'Luna', breed: 'Pug', ownerName: 'Alex' }] }) : Promise.reject(new Error('registry offline after save')); }
     return Promise.resolve({ history: { dogId: payload.dogId, previousStays: [], stayCount: 0 } });
-  }; window.WAFFLE_PHASE4_BOOKING.openReturningBooking({ dogName: 'Luna', dogId: dogA }); }, dogA);
+  }; window.WAFFLE_PHASE4_BOOKING.openReturningBooking({ dogName: 'Luna', dogId: dogA, requestSource: 'Pawshake' }); }, dogA);
   await expect(page.locator('#p4DogIdentity')).toHaveValue(dogA);
   await page.locator('#p4Start').fill('2026-12-10');
   await page.locator('#p4End').fill('2026-12-12');

@@ -47,6 +47,7 @@ async function setup(page) {
   await page.addScriptTag({ content: core.slice(styleStart, styleEnd) + '\nstyle();' });
   await page.addScriptTag({ content: planEngine });
   await page.addScriptTag({ content: bookingUi });
+  await page.locator('#p4Source').selectOption('MadPaws');
   await page.locator('#p4PlanDisclosure').evaluate(el => { el.open = true; el.dispatchEvent(new Event('toggle')); });
   await page.locator('#p4PlanOwner').fill('Alex');
   await page.locator('#p4PlanPhone').fill('0400000000');
@@ -156,6 +157,23 @@ test('two dogs and two date ranges save four distinct confirmed stay intents', a
   await expect(page.locator('.p4-plan-review-contact')).toBeVisible();
   await expect(page.locator('.p4-plan-review-dogs')).toBeHidden();
   await expect(page.locator('#p4PlanRows')).toBeVisible();
+});
+
+test('a plan with missing request source opens the visible source field before advancing', async ({ page }) => {
+  await setup(page);
+  await page.locator('#p4PlanBack').click();
+  await page.locator('#p4Source').evaluate(field => { field.value = ''; field.dispatchEvent(new Event('change', { bubbles: true })); });
+  await page.locator('#p4PlanNext').click();
+  await expect(page.locator('#p4PlanStepLabel')).toHaveText('Step 1 of 4 · Owner');
+  await expect(page.locator('#p4GuestDetails')).toHaveAttribute('open', '');
+  await expect(page.locator('#p4Source')).toBeVisible();
+  await expect(page.locator('#p4Source')).toBeFocused();
+  await expect(page.locator('#p4SourceError')).toHaveText('Choose where the Boarding request came from.');
+  await page.locator('#p4Source').selectOption('Facebook');
+  await expect(page.locator('#p4SourceError')).toBeHidden();
+  await expect(page.locator('#p4Source')).not.toHaveAttribute('aria-invalid', 'true');
+  await page.locator('#p4PlanNext').click();
+  await expect(page.locator('#p4PlanStepLabel')).toHaveText('Step 2 of 4 · Dogs');
 });
 
 test('each added dog keeps its own reviewed-care snapshot and Dates context', async ({ page }, testInfo) => {

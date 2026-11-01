@@ -57,7 +57,7 @@ async function setup(page, baseURL, { saveResponse, linkResponse, clipboardFails
   await page.addStyleTag({ url: `${baseURL}/waffle-runtime.css` });
   await page.addScriptTag({ content: bookingScript });
   await page.evaluate(() => {
-    window.WAFFLE_PHASE4_BOOKING.fill({ dogName: 'Test Dog', breed: 'Kelpie', ownerName: 'Synthetic Owner', phone: '0400000000', startDate: '2026-11-10', endDate: '2026-11-13' });
+    window.WAFFLE_PHASE4_BOOKING.fill({ source: 'MadPaws', dogName: 'Test Dog', breed: 'Kelpie', ownerName: 'Synthetic Owner', phone: '0400000000', startDate: '2026-11-10', endDate: '2026-11-13' });
     document.getElementById('p4Modal').hidden = false;
   });
 }

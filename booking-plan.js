@@ -70,6 +70,7 @@
 
     if (!String(plan.ownerName || '').trim()) issues.push('Owner name is required.');
     if (!String(plan.phone || '').trim()) issues.push('Phone is required.');
+    if (!['MadPaws', 'Pawshake', 'Facebook', 'Other'].includes(String(plan.source || '').trim())) issues.push('Choose where the Boarding request came from.');
     if (dogs.length < 1) issues.push('Add at least one dog.');
     if (dogs.length > MAX_DOGS) issues.push('A plan cannot contain more than 5 dogs.');
     if (visits.length < 1) issues.push('Add at least one visit.');
@@ -201,6 +202,7 @@
       const notes = [dog.notes, source.source && source.source !== 'Other' ? `Source: ${String(source.source).trim()}` : '', source.visitMode === 'same-day' ? 'Same-day care visit' : ''].filter(Boolean).join('\n');
       const payload = {
         action: 'create_boarding',
+        requestSource: String(source.source || '').trim(),
         stayIdentityVersion: 1,
         stayId,
         clientMutationId: uuid(),
