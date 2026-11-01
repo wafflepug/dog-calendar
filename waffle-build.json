@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.10.30.02",
-  "releaseName": "Expanded Care Support Readability",
+  "assetRevision": "2026.11.01.01",
+  "releaseName": "Cino Intake Identity and Date Recovery",
   "careIteration": {
     "returningDogSuggestions": true,
     "reviewedCareInheritance": true,

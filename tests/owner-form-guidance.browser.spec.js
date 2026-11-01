@@ -31,7 +31,7 @@ async function setupOwnerDialog(page, baseURL) {
   await page.addScriptTag({ content: coreScript.slice(styleStart, styleEnd) + '\nstyle();' });
   await page.addStyleTag({ url: `${baseURL}/waffle-runtime.css` });
   await page.addScriptTag({ content: bookingScript });
-  await page.evaluate(() => { window.WAFFLE_PHASE4_BOOKING.fillOwner({ dogName: 'Milo', breed: 'Kelpie', ownerName: 'Alex', startDate: '2026-11-10', endDate: '2026-11-13', dogId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' }); document.getElementById('p4Modal').hidden = false; });
+  await page.evaluate(() => { window.WAFFLE_PHASE4_BOOKING.fillOwner({ dogName: 'Milo', breed: 'Kelpie', ownerName: 'Alex', startDate: '2026-11-10', endDate: '2026-11-13', stayId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', dogId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' }); document.getElementById('p4Modal').hidden = false; });
 }
 
 test('owner preparation validates fields locally and exposes associated errors', async ({ page, baseURL }) => {
@@ -57,6 +57,7 @@ test('owner preparation validates fields locally and exposes associated errors',
   await expect(page.locator('#p4OwnerDogError')).toBeHidden();
   await expect(page.locator('#p4OwnerStartError')).toBeHidden();
   await expect(page.locator('#p4OwnerEndError')).toBeHidden();
+  await page.evaluate(() => { window.fixtureRows = [{ dogName: 'Milo', startDate: '2026-11-10', endDate: '2026-11-10', stayId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', dogId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' }]; });
   await page.locator('#p4OwnerLink').click();
   await expect(page.locator('.owner-handoff')).toBeVisible();
   expect(await page.evaluate(() => window.fixtureWrites.length)).toBe(1);

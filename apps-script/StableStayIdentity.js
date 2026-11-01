@@ -490,7 +490,15 @@ function recoverStayMutationV11225_(receiptSheet, receipt, bookingSheet) {
   }
   if (action === 'update_boarding_dates' && pendingPlan.oldStayKey && pendingPlan.newStayKey && pendingPlan.oldStayKey !== pendingPlan.newStayKey) {
     migrateBelongingsIdentityForGuest_(bookingSheet.getParent(), pendingPlan.oldStayKey, pendingPlan.newStayKey, pendingPlan.dogName, receipt.stayId);
-    migrateIntakeIdentitiesForGuest_(pendingPlan.oldStayKey, pendingPlan.newStayKey, pendingPlan.dogName);
+    var currentRows = bookingSheet.getDataRange().getValues();
+    var currentBooking = auditBookingSnapshotFromSheetRow_(bookingSheet, row);
+    migrateIntakeIdentitiesForGuest_(pendingPlan.oldStayKey, pendingPlan.newStayKey, pendingPlan.dogName, {
+      mainSheet: bookingSheet,
+      row: row,
+      before: pendingPlan.before || {},
+      after: currentBooking,
+      dogId: String(v108DogIdentityAt_(currentRows, row - 1).dogId || '').trim()
+    });
   }
   var recoveredDog = null;
   if (action === 'confirm_potential') {

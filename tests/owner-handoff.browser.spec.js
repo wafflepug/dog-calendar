@@ -51,7 +51,7 @@ async function setupOwnerDialog(page, baseURL = 'http://127.0.0.1:4327') {
   await page.addScriptTag({ content: coreScript.slice(styleStart, styleEnd) + '\nstyle();' });
   await page.addStyleTag({ url: `${baseURL}/waffle-runtime.css` });
   await page.addScriptTag({ content: bookingScript });
-  await page.evaluate(() => { window.WAFFLE_PHASE4_BOOKING.fillOwner({ dogName: 'Milo', breed: 'Kelpie', ownerName: 'Alex', startDate: '2026-11-10', endDate: '2026-11-13' }); document.getElementById('p4Modal').hidden = false; });
+  await page.evaluate(() => { window.WAFFLE_PHASE4_BOOKING.fillOwner({ dogName: 'Milo', breed: 'Kelpie', ownerName: 'Alex', startDate: '2026-11-10', endDate: '2026-11-13', stayId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', dogId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' }); document.getElementById('p4Modal').hidden = false; });
 }
 
 test('owner handoff renders readable owner message and adapts without horizontal overflow', async ({ page, baseURL }) => {
@@ -186,6 +186,7 @@ test('phase-4 owner dialog reuses an unchanged prepare, shows the owner card, an
   await setupOwnerDialog(page);
   await page.locator('#p4OwnerLink').click();
   await expect(page.locator('.owner-handoff')).toBeVisible();
+  expect(await page.evaluate(() => window.fixtureWrites[0])).toMatchObject({ stayId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', dogId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' });
   await expect(page.locator('#p4OwnerPrepare')).toBeHidden();
   await expect(page.getByRole('button', { name: 'Copy owner care link', exact: true })).toBeVisible();
   expect(await page.getByLabel('Message to owner').inputValue()).toContain('Milo');
@@ -352,6 +353,7 @@ test('validation errors release the prepare lock and corrected dates can be retr
   await expect(page.locator('#p4OwnerDetails')).toHaveAttribute('open', '');
   await page.locator('#p4OwnerStart').fill('2026-11-10');
   await page.locator('#p4OwnerEnd').fill('2026-11-13');
+  await page.evaluate(() => { window.fixtureRows = [{ dogName: 'Milo', startDate: '2026-11-10', endDate: '2026-11-13', stayId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', dogId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' }]; });
   await page.locator('#p4OwnerLink').click();
   await expect(page.locator('.owner-handoff')).toBeVisible();
   expect(await page.evaluate(() => window.fixtureWrites.length)).toBe(1);
