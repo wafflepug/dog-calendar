@@ -90,6 +90,23 @@
     const profile = card.querySelector('[data-directory-detail="profile"]');
     const profileFresh = profile?.dataset.profileReadState === 'fresh';
 
+    const safety = card.querySelector('[data-care-brief-safety]');
+    const safetyState = profileFresh ? String(safety?.dataset.state || '') : '';
+    const safetyAlerts = safety?.querySelectorAll('.care-brief-alert').length || 0;
+    const safetyNeedsReview = safetyState !== 'clear';
+    const safetyDetail = safetyState === 'attention' && safetyAlerts
+      ? `${safetyAlerts} active ${safetyAlerts === 1 ? 'safety item' : 'safety items'}; review before arrival.`
+      : safetyState === 'clear'
+        ? 'No active safety flags recorded.'
+        : 'Safety status is unknown; review before arrival.';
+    tasks.push({
+      key: 'safety',
+      title: 'Safety',
+      detail: safetyDetail,
+      action: 'safety',
+      actionLabel: safetyNeedsReview ? 'Review first' : 'Review'
+    });
+
     const medication = card.querySelector('[data-care-brief-medication]');
     const medicationText = String(medication?.textContent || '').replace(/\s+/g, ' ').trim();
     const medicationKnown = profileFresh && !!medicationText && !!medication && !medication.matches('[aria-busy="true"]') &&
@@ -99,11 +116,26 @@
     tasks.push({
       key: 'medication',
       title: 'Medication',
-      detail: medicationSaved ? 'Read saved instructions before check-in.' : medicationKnown
+      detail: medicationSaved ? 'Read saved instructions before arrival.' : medicationKnown
         ? 'No saved medication instructions are recorded.'
-        : 'Medication instructions are unknown and not verified.',
+        : 'Medication is unknown; verify before arrival.',
       action: 'medication',
-      actionLabel: 'Review'
+      actionLabel: medicationSaved || !medicationKnown ? 'Review first' : 'Review'
+    });
+
+    const feeding = card.querySelector('[data-care-brief-feeding]');
+    const feedingText = String(feeding?.textContent || '').replace(/\s+/g, ' ').trim();
+    const feedingKnown = profileFresh && !!feeding && !!feedingText && !feeding.matches('[aria-busy="true"]') &&
+      !/^(loading|checking|not loaded|pending|unavailable|not available|care record needs identity review)/i.test(feedingText);
+    const feedingSaved = feedingKnown && !/^(no saved feeding instructions|no feeding instructions saved)/i.test(feedingText);
+    tasks.push({
+      key: 'feeding',
+      title: 'Feeding',
+      detail: feedingSaved ? 'Check the saved feeding routine.' : feedingKnown
+        ? 'No feeding instructions are recorded.'
+        : 'Feeding instructions are unknown.',
+      action: 'feeding',
+      actionLabel: 'Review routine'
     });
 
     const belongings = card.querySelector('[data-belongings-summary]');
@@ -120,7 +152,14 @@
       action: 'belongings',
       actionLabel: 'Review'
     });
-    tasks.summary = `Care checks · ${medicationSummary} · Belongings: ${belongingsSummary}`;
+
+    const beforeArrival = [safetyNeedsReview ? 'Safety' : '', medicationSaved || !medicationKnown ? 'Medication' : ''].filter(Boolean);
+    const routine = [feedingSaved ? 'Feeding' : '', belongingsKnown && itemCount ? 'Belongings' : ''].filter(Boolean);
+    tasks.summary = [
+      beforeArrival.length ? `Before arrival: ${beforeArrival.join(' and ')}` : 'No urgent care checks recorded',
+      `${medicationSummary} · Belongings: ${belongingsSummary}`,
+      routine.length ? `Routine: ${routine.join(' and ')}` : ''
+    ].filter(Boolean).join(' · ');
     return tasks;
   }
 
@@ -385,10 +424,10 @@
     function meaningfulAttributeTarget(target, card, scope) {
       if (target === scope || target?.contains?.(grid)) return true;
       const checkin = card?.querySelector('[data-v11217-roster-checkin]');
-      return !!card && (target === card || !!target?.closest?.('[data-v11217-roster-checkin]') || !!target?.closest?.('[data-directory-intake]') || !!target?.closest?.('[data-belongings-summary]') || !!checkin && !!target?.contains?.(checkin));
+      return !!card && (target === card || !!target?.closest?.('[data-v11217-roster-checkin]') || !!target?.closest?.('[data-directory-intake]') || !!target?.closest?.('[data-belongings-summary]') || !!target?.closest?.('[data-care-brief-safety]') || !!checkin && !!target?.contains?.(checkin));
     }
     function relevantAddedNode(node) {
-      return node?.nodeType === 1 && (node.matches?.(`${CARD},${OWN},[data-waffle-arrival-next],[data-directory-detail="profile"],[data-care-brief-medication],[data-belongings-summary],[data-v11217-roster-checkin],[data-directory-intake],[data-v1082-stay-tab]`) || node.querySelector?.(`${CARD},[data-directory-detail="profile"],[data-care-brief-medication],[data-belongings-summary],[data-v11217-roster-checkin],[data-directory-intake]`));
+      return node?.nodeType === 1 && (node.matches?.(`${CARD},${OWN},[data-waffle-arrival-next],[data-directory-detail="profile"],[data-care-brief-safety],[data-care-brief-medication],[data-care-brief-feeding],[data-belongings-summary],[data-v11217-roster-checkin],[data-directory-intake],[data-v1082-stay-tab]`) || node.querySelector?.(`${CARD},[data-directory-detail="profile"],[data-care-brief-safety],[data-care-brief-medication],[data-care-brief-feeding],[data-belongings-summary],[data-v11217-roster-checkin],[data-directory-intake]`));
     }
     observer = new MutationObserver(records => {
       const meaningful = records.some(record => {
@@ -396,21 +435,22 @@
           const changed = [...record.addedNodes, ...record.removedNodes];
           const target = record.target.nodeType === 1 ? record.target : record.target.parentElement;
           const card = target?.closest?.(CARD);
-          return changed.some(node => relevantAddedNode(node) && !(node.nodeType === 1 && (node.matches?.(OWN) || node.matches?.('[data-waffle-arrival-next]')))) || !!target?.closest?.('[data-directory-intake]') || !!card && (card.contains(target) && (!!target.closest?.('[data-belongings-summary]') || !!target.closest?.('[data-care-brief-medication]')));
+          return changed.some(node => relevantAddedNode(node) && !(node.nodeType === 1 && (node.matches?.(OWN) || node.matches?.('[data-waffle-arrival-next]')))) || !!target?.closest?.('[data-directory-intake]') || !!card && (card.contains(target) && (!!target.closest?.('[data-belongings-summary]') || !!target.closest?.('[data-care-brief-safety],[data-care-brief-medication],[data-care-brief-feeding]')));
         }
         const target = record.target.nodeType === 1 ? record.target : record.target.parentElement;
         const card = target?.closest?.(CARD);
-        if (record.type === 'characterData') return !!target?.closest?.('[data-care-brief-medication],[data-belongings-summary],[data-directory-intake]');
+        if (record.type === 'characterData') return !!target?.closest?.('[data-care-brief-safety],[data-care-brief-medication],[data-care-brief-feeding],[data-belongings-summary],[data-directory-intake]');
         const name = record.attributeName;
         if (['data-directory-stay-id','data-directory-dog-name','data-dog-name','data-directory-dog-id','data-directory-dog-number','data-directory-stay-key','data-directory-start-date','data-directory-end-date','data-directory-owner-name','data-v1088-owner-name','data-v1082-past-stay'].includes(name)) return !!card;
-        if (name === 'data-profile-read-state' || name === 'aria-busy') return !!target?.closest?.('[data-directory-detail="profile"],[data-care-brief-medication],[data-belongings-summary]');
+        if (name === 'data-profile-read-state' || name === 'aria-busy') return !!target?.closest?.('[data-directory-detail="profile"],[data-care-brief-safety],[data-care-brief-medication],[data-care-brief-feeding],[data-belongings-summary]');
+        if (name === 'data-state') return !!target?.closest?.('[data-care-brief-safety]');
         if (['disabled','aria-disabled','aria-hidden','inert','hidden','open','style','class'].includes(name)) return meaningfulAttributeTarget(target, card, scope);
         return false;
       });
       if (meaningful) scheduleRefresh();
     });
     const scope = grid.closest('.directory-dashboard-fused') || document.querySelector('.v1082-stay-panels') || grid.parentElement;
-    observer.observe(scope, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['data-directory-stay-id', 'data-directory-dog-name', 'data-dog-name', 'data-directory-dog-id', 'data-directory-dog-number', 'data-directory-stay-key', 'data-directory-start-date', 'data-directory-end-date', 'data-directory-owner-name', 'data-v1088-owner-name', 'data-v1082-past-stay', 'data-profile-read-state', 'aria-busy', 'style', 'class', 'hidden', 'open', 'disabled', 'aria-disabled', 'aria-hidden', 'inert'] });
+    observer.observe(scope, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['data-directory-stay-id', 'data-directory-dog-name', 'data-dog-name', 'data-directory-dog-id', 'data-directory-dog-number', 'data-directory-stay-key', 'data-directory-start-date', 'data-directory-end-date', 'data-directory-owner-name', 'data-v1088-owner-name', 'data-v1082-past-stay', 'data-profile-read-state', 'data-state', 'aria-busy', 'style', 'class', 'hidden', 'open', 'disabled', 'aria-disabled', 'aria-hidden', 'inert'] });
     document.querySelectorAll('[data-v1082-stay-tab]').forEach(tab => tab.addEventListener('click', () => setTimeout(scheduleRefresh, 0)));
     document.getElementById('guestDirectorySearch')?.addEventListener('input', scheduleRefresh);
   }

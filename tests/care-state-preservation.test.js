@@ -20,11 +20,12 @@ const saveEnd = source.indexOf('    function routeToDatabaseCell', saveStart);
 const identityStart = source.indexOf('    function getDirectoryEditorIdentity');
 const identityEnd = source.indexOf('    function restoreDirectoryGuestDetailDraft', identityStart);
 const openStart = source.indexOf('    async function openDirectoryGuestProfile');
+const draftNoticeStart = source.indexOf('    function directoryProfileDraftNotice');
 const closeStart = source.indexOf('    function closeDirectoryGuestProfile', openStart);
 const editorStart = source.indexOf('    function openGuestDetailEditor');
 const editorEnd = source.indexOf('    function decodeDirectoryCsvCell', editorStart);
 const closeEditorStart = source.indexOf('    function closeGuestDetailEditor');
-assert(captureStart >= 0 && captureEnd > captureStart && restoreStart > captureEnd && restoreEnd > restoreStart && saveStart > 0 && saveEnd > saveStart && identityStart > 0 && identityEnd > identityStart && openStart > 0 && closeStart > openStart && closeEditorStart > 0 && editorStart > closeEditorStart && editorEnd > editorStart);
+assert(captureStart >= 0 && captureEnd > captureStart && restoreStart > captureEnd && restoreEnd > restoreStart && saveStart > 0 && saveEnd > saveStart && identityStart > 0 && identityEnd > identityStart && draftNoticeStart > 0 && openStart > draftNoticeStart && closeStart > openStart && closeEditorStart > 0 && editorStart > closeEditorStart && editorEnd > editorStart);
 
 function makeCard(stayKey, { mainTab = 'profile', secondaryTab = 'overview', secondaryTabs = '', desktopTab = 'profile', editing = false } = {}) {
   const card = {
@@ -126,9 +127,13 @@ function openHarness({ active = false } = {}) {
     switchDirectoryProfileSubTab: (_card, tab) => calls.push(['secondary', tab]),
     loadDirectoryProfileDetail: async () => {},
     restoreDirectoryGuestDetailDraft() {},
+    directoryProfileEditDrafts: new Map(),
+    directoryProfileEditKey: () => '',
+    directoryProfileEditIsDirty: () => false,
+    DIRECTORY_PROFILE_SECONDARY_TABS: [],
     globalCalendar: null
   };
-  vm.runInNewContext(`${source.slice(source.indexOf('    function moveDirectoryRosterBadgesIntoProfileHeader'), source.indexOf('    function restoreDirectoryProfileNavigationOrigin'))}\n${source.slice(openStart, closeStart)}\nthis.open = openDirectoryGuestProfile;`, sandbox);
+  vm.runInNewContext(`${source.slice(source.indexOf('    function moveDirectoryRosterBadgesIntoProfileHeader'), source.indexOf('    function restoreDirectoryProfileNavigationOrigin'))}\n${source.slice(draftNoticeStart, openStart)}\n${source.slice(openStart, closeStart)}\nthis.open = openDirectoryGuestProfile;`, sandbox);
   return { sandbox, card, calls };
 }
 

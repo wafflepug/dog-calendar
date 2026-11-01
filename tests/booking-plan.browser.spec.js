@@ -132,6 +132,7 @@ async function capturePlanEvidence(page, name, width, dark) {
 test('two dogs and two date ranges save four distinct confirmed stay intents', async ({ page }) => {
   await setup(page);
   await addDog(page, 'Luna', dogA);
+  await expect(page.locator('#p4Notes').locator('xpath=..')).toContainText('Booking notes for this dog');
   await addDog(page, 'Milo', dogB);
   await addVisit(page, '2026-11-10', '2026-11-12');
   await addVisit(page, '2026-11-20', '2026-11-22');
@@ -414,6 +415,8 @@ test('guided steps announce progress and require each section before advancing',
 
 test('weekly same-day visits expand into three independent occurrences', async ({ page }) => {
   await setup(page);
+  await expect(page.locator('#p4PlanOwner').locator('xpath=..')).toContainText('Shared owner for every dog');
+  await expect(page.locator('#p4PlanPhone').locator('xpath=..')).toContainText('Shared phone for every dog');
   await addDog(page, 'Luna', dogA);
   await page.locator('#p4PlanNext').click();
   await page.locator('#p4PlanMode').selectOption('same-day');
@@ -422,6 +425,7 @@ test('weekly same-day visits expand into three independent occurrences', async (
   await page.locator('#p4PlanWeekly').click();
   await expect(page.locator('#p4PlanVisits .p4-plan-item')).toHaveCount(3);
   await expect(page.locator('#p4PlanVisits .p4-plan-item').first()).toContainText('Same-day visit · Mon, 2 Nov 2026');
+  await expect(page.locator('[data-p4-plan-date-overview]')).toHaveText('Review 3 visits · Mon, 2 Nov 2026 – Mon, 16 Nov 2026');
   await expect(page.locator('#p4PlanVisits [data-p4-plan-remove-visit]').first()).toHaveAccessibleName('Remove Same-day visit · Mon, 2 Nov 2026');
   await openReview(page);
   await expect(page.locator('[data-p4-review-count]')).toHaveText('1 dog · 3 dates · 3 total stays');
@@ -463,6 +467,16 @@ test('weekly same-day visits expand into three independent occurrences', async (
   expect(writes.map(row => [row.startDate, row.endDate])).toEqual([
     ['2026-11-02', '2026-11-02'], ['2026-11-09', '2026-11-09'], ['2026-11-16', '2026-11-16']
   ]);
+});
+
+test('date overview spans the earliest start through the latest overlapping end', async ({ page }) => {
+  await setup(page);
+  await addDog(page, 'Luna', dogA);
+  await addVisit(page, '2026-11-02', '2026-11-30');
+  await addVisit(page, '2026-11-20', '2026-11-22');
+  await expect(page.locator('[data-p4-plan-date-overview]')).toHaveText('Review 2 visits · Mon, 2 Nov 2026 – Mon, 30 Nov 2026');
+  await expect(page.locator('#p4PlanVisits .p4-plan-item')).toHaveCount(2);
+  await expect(page.locator('#p4PlanVisits .p4-plan-item').nth(1)).toContainText('Overnight stay · Fri, 20 Nov 2026 – Sun, 22 Nov 2026');
 });
 
 test('changing the input mode cannot relabel an existing overnight range as a single day', async ({ page }) => {

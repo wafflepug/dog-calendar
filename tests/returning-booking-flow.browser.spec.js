@@ -57,6 +57,24 @@ async function chooseSource(page, source) {
   await page.locator('#p4Source').selectOption(source);
 }
 
+test('returning booking keeps owner, source and optional care choice in the existing compact review context', async ({ page }) => {
+  await setup(page);
+  await page.evaluate(id => window.WAFFLE_PHASE4_BOOKING.openReturningBooking({ dogId: id, dogName: 'Luna', breed: 'Pug', ownerName: 'Alex', phone: '0400000000', requestSource: 'Pawshake' }), dogA);
+  const context = page.locator('#p4BookingContext [data-p4-context-review]');
+  await expect(context).toContainText('Owner: Alex · Source: Pawshake · no saved care selected');
+  await page.locator('[data-p4-load-saved-care]').click();
+  await expect(context).toContainText('saved care available; not copied');
+  await page.locator('#p4CareConfirm').check();
+  await expect(context).toContainText('reviewed care approved');
+  await page.locator('#p4GuestDetails').evaluate(details => { details.open = true; });
+  await expect(page.locator('#p4Source')).toBeVisible();
+  await page.locator('#p4Source').selectOption('MadPaws');
+  await expect(context).toContainText('Source: MadPaws · reviewed care approved');
+  await page.locator('#p4Owner').fill('');
+  await expect(context).toContainText('Owner: not confirmed · Source: MadPaws');
+  expect(await page.evaluate(() => window.fixtureWrites)).toHaveLength(0);
+});
+
 test('identity selection stays fast and explicit care review coalesces, opens review, and uses the exact Dog ID', async ({ page }) => {
   await setup(page);
   await selectDog(page, dogA);

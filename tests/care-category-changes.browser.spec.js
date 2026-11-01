@@ -37,6 +37,29 @@ async function fixture(page) {
   return reads;
 }
 
+test('leaving a profile with a draft names its unfinished section and keeps the draft on return', async ({page,baseURL})=>{
+  await fixture(page);
+  await page.goto(baseURL + '/directory.html?categoryChangeExitFixture=1',{waitUntil:'domcontentloaded'});
+  await page.waitForFunction(()=>document.documentElement.dataset.waffleUiReady==='true');
+  await page.locator('#directory-grid [data-open-directory-profile]').click();
+  const card=page.locator('.directory-card.is-profile-active');
+  await card.locator('.directory-care-more-actions > summary').click();
+  await card.locator('[data-care-brief-action="edit"]').click();
+  await card.locator('[data-profile-subtab="healthHome"]').click();
+  const medication=card.locator('[data-intake-attribute="medicationInstructions"]');
+  await medication.fill('Draft medication instruction');
+  await expect(card.locator('[data-care-change-category-count="healthHome"]')).toContainText('1 changed field');
+
+  await page.locator('#directoryBackToGuestsBtn').click();
+  await expect(page.locator('.directory-dashboard-fused.is-profile-mode')).toHaveCount(0);
+  await expect(page.locator('#v1118Toast')).toContainText('Health & Home');
+  await expect(page.locator('#v1118Toast')).toContainText('Your draft is kept');
+  await page.locator('#directory-grid [data-open-directory-profile]').click();
+  const reopened=page.locator('.directory-card.is-profile-active');
+  await reopened.locator('[data-profile-subtab="healthHome"]').click();
+  await expect(reopened.locator('[data-intake-attribute="medicationInstructions"]')).toHaveValue('Draft medication instruction');
+});
+
 test('changed fields identify only their categories and survive collapse, refresh, undo and discard', async ({page,baseURL})=>{
   const reads=await fixture(page);
   await page.goto(`${baseURL}/directory.html?categoryChangeFixture=1`,{waitUntil:'domcontentloaded'});
@@ -44,6 +67,10 @@ test('changed fields identify only their categories and survive collapse, refres
   await page.locator('#directory-grid [data-open-directory-profile]').click();
   const card=page.locator('.directory-card.is-profile-active');
   await expect(card.locator('[data-care-brief-medication]')).toHaveText(record.intakeAttributes.medicationInstructions);
+  const urgentMedication=card.locator('.directory-care-brief-item[data-care-priority="attention"]');
+  await expect(urgentMedication).toContainText('Give with dinner.');
+  await expect(card.locator('.directory-care-brief-safety[data-state="attention"]')).toBeVisible();
+  expect(await urgentMedication.evaluate(element=>getComputedStyle(element).borderInlineStartWidth)).toBe('3px');
   await card.locator('.directory-care-more-actions > summary').click();
   await card.locator('[data-care-brief-action="edit"]').click();
   const profileReadsBefore=reads.filter(action=>action==='get_guest_profile').length;

@@ -201,7 +201,7 @@ test('the complete Care runtime combines filters, truthful setup and optional ve
   await expect(grid.locator('.directory-card:visible')).toHaveCount(1);
   const first=grid.locator(`[data-directory-stay-id="${bookings[0].stayId}"]`);
   const arrivalSummary=first.locator('[data-arrival-task-heading]');
-  await expect(arrivalSummary).toContainText('Care checks');
+  await expect(arrivalSummary).toContainText('Before arrival');
   for(const dark of [false,true]){
     await page.locator('body').evaluate((node,on)=>node.classList.toggle('dark-theme',on),dark);
     await arrivalSummary.evaluate(node=>node.scrollIntoView({block:'center'}));

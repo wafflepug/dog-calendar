@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.11.01.04",
-  "releaseName": "Care Operational Identity Context",
+  "assetRevision": "2026.11.02.01",
+  "releaseName": "Owner Journey Clarity",
   "careIteration": {
     "returningDogSuggestions": true,
     "reviewedCareInheritance": true,
