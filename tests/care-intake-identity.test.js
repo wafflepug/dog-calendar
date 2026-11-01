@@ -10,8 +10,9 @@ const dogIdB = 'dog-b-0002';
 const stayIdA = 'stay-a-0001';
 const stayIdB = 'stay-b-0002';
 
-function sheet(name, rows, parent, max = null) {
+function sheet(name, rows, parent, max = null, stats = null) {
   let maxColumns = max === null ? Math.max(20, ...rows.map(row => row.length)) : max;
+  const countRead = () => { if (stats) stats[name] = (stats[name] || 0) + 1; };
   return {
     name,
     rows,
@@ -23,10 +24,10 @@ function sheet(name, rows, parent, max = null) {
     appendRow(row) { rows.push(row.slice()); },
     setFrozenRows() {},
     setColumnWidth() {},
-    getDataRange() { return { getValues: () => rows.map(row => row.slice()) }; },
+    getDataRange() { return { getValues: () => { countRead(); return rows.map(row => row.slice()); } }; },
     getRange(row, col, height = 1, width = 1) {
       return {
-        getValues: () => Array.from({ length: height }, (_, r) => Array.from({ length: width }, (_, c) => rows[row + r - 1]?.[col + c - 1] ?? '')),
+        getValues: () => { countRead(); return Array.from({ length: height }, (_, r) => Array.from({ length: width }, (_, c) => rows[row + r - 1]?.[col + c - 1] ?? '')); },
         setValue(value) { if (!rows[row - 1]) rows[row - 1] = []; rows[row - 1][col - 1] = value; },
         setValues(values) { values.forEach((line, r) => line.forEach((value, c) => { if (!rows[row + r - 1]) rows[row + r - 1] = []; rows[row + r - 1][col + c - 1] = value; })); },
         setFontWeight() { return this; }, setBackground() { return this; }, setFontColor() { return this; }
@@ -43,8 +44,9 @@ function isoDate(date, timezone) {
 
 function fixture({ end = '2026-11-11', bookingType = 'Confirmed Boarding', records = [], extraBookings = [], audit = [] } = {}) {
   let intakeSheet = null;
+  const reads = {};
   const spreadsheet = {
-    getSpreadsheetTimeZone: () => 'Australia/Sydney',
+    getSpreadsheetTimeZone: () => { reads.timezoneLookups = (reads.timezoneLookups || 0) + 1; return 'Australia/Sydney'; },
     getSheetByName(name) { return name === 'Audit_Log' ? auditSheet : name === 'Dog_Intake_Records' ? intakeSheet : null; },
     insertSheet(name) { intakeSheet = sheet(name, [], spreadsheet); return intakeSheet; }
   };
@@ -53,8 +55,8 @@ function fixture({ end = '2026-11-11', bookingType = 'Confirmed Boarding', recor
     ['Created At', 'Dog Name', 'Breed', 'Start Date', 'End Date', 'Owner', 'Phone', 'Likes', 'Dislikes', 'Notes', 'Edit Link', 'Booking Type', 'Dog ID', 'Dog Number', 'Stay ID'],
     [new Date(), 'Cino', 'Jack Russell', dateCell('2026-11-01'), dateCell(end), 'Owner One', '0400000000', '', '', '', '', bookingType, dogIdA, '00062', stayIdA],
     ...extraBookings
-  ], spreadsheet);
-  const auditSheet = sheet('Audit_Log', [['Timestamp', 'Event ID', 'Category', 'Action', 'Dog Name', 'Booking Type', 'Reference', 'Summary', 'Changed Fields', 'Before JSON', 'After JSON', 'Source', 'Actor'], ...audit], spreadsheet);
+  ], spreadsheet, null, reads);
+  const auditSheet = sheet('Audit_Log', [['Timestamp', 'Event ID', 'Category', 'Action', 'Dog Name', 'Booking Type', 'Reference', 'Summary', 'Changed Fields', 'Before JSON', 'After JSON', 'Source', 'Actor'], ...audit], spreadsheet, null, reads);
   const context = {
     console,
     Date,
@@ -85,6 +87,7 @@ function fixture({ end = '2026-11-11', bookingType = 'Confirmed Boarding', recor
   };
   vm.createContext(context);
   vm.runInContext(source, context, { filename: 'Code.js' });
+  const sourceAuditBookingSnapshotFromValues = context.auditBookingSnapshotFromValues_;
   context.getTargetSheet_ = () => bookings;
   context.normalizeDateValue_ = value => value instanceof Date ? value.toISOString().slice(0, 10) : String(value || '').slice(0, 10);
   context.makeGuestStayKey_ = (name, start, until) => `${String(name || '').trim().toLowerCase()}|${start}|${until}`;
@@ -103,7 +106,7 @@ function fixture({ end = '2026-11-11', bookingType = 'Confirmed Boarding', recor
       stayId: String(value?.[14] || '')
     };
   };
-  return { context, bookings, auditSheet, setIntakeSheet(value) { intakeSheet = value; } };
+  return { context, bookings, auditSheet, reads, sourceAuditBookingSnapshotFromValues, setIntakeSheet(value) { intakeSheet = value; } };
 }
 
 function record({ stayKey, start = '2026-11-01', end = '2026-11-11', stayId = '', dogId = '', bookingRow = 2, dogName = 'Cino', bookingType = 'Potential Stay' } = {}) {
@@ -193,7 +196,7 @@ test('prefill and local submission resolve an already-migrated token to current 
   const token = 'cino-migrated-owner-token';
   const intake = sheet('Dog_Intake_Records', [h.context.INTAKE_HEADERS_.slice(), [new Date(), new Date(), '', 'Awaiting Owner', token,
     'cino|2026-11-01|2026-11-11', 'Potential Stay', 'Cino', 'Jack Russell', '2026-11-01', '2026-11-10', 'Owner One', '0400000000',
-    JSON.stringify({ additionalInstructions: 'Blue harness.' }), '', '', '', 2, stayIdA, dogIdA]], h.bookings.getParent());
+    JSON.stringify({ additionalInstructions: 'Blue harness.' }), '', '', '', 2, stayIdA, dogIdA]], h.bookings.getParent(), null, h.reads);
   h.context.getIntakeSheet_ = () => intake;
 
   const prefill = h.context.getIntakePrefill_(token);
@@ -202,6 +205,10 @@ test('prefill and local submission resolve an already-migrated token to current 
   assert.equal(prefill.booking.endDate, '2026-11-11');
   assert.equal(prefill.booking.bookingType, 'Confirmed Boarding');
   assert.equal(prefill.savedAnswers.additionalInstructions, 'Blue harness.');
+  assert.equal(h.reads.Dog_Intake_Records, 1, 'prefill reads the intake range once');
+  assert.equal(h.reads.Bookings, 1, 'stable identity lookup reuses the already-loaded booking rows');
+  assert.equal(h.reads.Audit_Log || 0, 0, 'stable identity resolution does not read the audit log');
+  assert.equal(h.reads.timezoneLookups, 1, 'booking dates share one spreadsheet timezone lookup');
 
   Object.assign(h.context, {
     ensureStableStayIdV11225_: () => stayIdA,
@@ -232,6 +239,93 @@ test('prefill and local submission resolve an already-migrated token to current 
   assert.equal(intake.rows[1][10], '2026-11-11');
   assert.equal(intake.rows[1][18], stayIdA);
   assert.equal(intake.rows[1][19], dogIdA);
+});
+
+test('request-local date formatting matches the existing booking snapshot for Date and string cells', () => {
+  const h = fixture();
+  h.context.auditBookingSnapshotFromValues_ = h.sourceAuditBookingSnapshotFromValues;
+  const rows = h.bookings.rows.map(row => row.slice());
+  const resolutionContext = { mainSheet: h.bookings };
+  const legacyDateSnapshot = h.context.intakeBookingSnapshotFromValues_(rows, 1);
+  const requestDateSnapshot = h.context.intakeBookingSnapshotFromValues_(rows, 1, resolutionContext);
+  assert.deepEqual(JSON.parse(JSON.stringify(requestDateSnapshot)), JSON.parse(JSON.stringify(legacyDateSnapshot)));
+  assert.equal(h.reads.timezoneLookups, 3, 'two existing Date normalizations and one request-local lookup produce the same values');
+
+  rows[1][3] = '2026-11-01';
+  rows[1][4] = '2026-11-11';
+  const legacyStringSnapshot = h.context.intakeBookingSnapshotFromValues_(rows, 1);
+  const requestStringSnapshot = h.context.intakeBookingSnapshotFromValues_(rows, 1, { mainSheet: h.bookings });
+  assert.deepEqual(JSON.parse(JSON.stringify(requestStringSnapshot)), JSON.parse(JSON.stringify(legacyStringSnapshot)));
+  assert.equal(h.reads.timezoneLookups, 3, 'ISO string dates do not request spreadsheet timezone data');
+});
+
+test('consecutive prefill requests reload booking rows and observe later date changes', () => {
+  const h = fixture();
+  const token = 'cino-request-local-owner-token';
+  const intake = sheet('Dog_Intake_Records', [h.context.INTAKE_HEADERS_.slice(), [new Date(), new Date(), '', 'Awaiting Owner', token,
+    'cino|2026-11-01|2026-11-11', 'Confirmed Boarding', 'Cino', 'Jack Russell', '2026-11-01', '2026-11-11', 'Owner One', '0400000000',
+    '{}', '', '', '', 2, stayIdA, dogIdA]], h.bookings.getParent(), null, h.reads);
+  h.context.getIntakeSheet_ = () => intake;
+
+  assert.equal(h.context.getIntakePrefill_(token).booking.endDate, '2026-11-11');
+  h.bookings.rows[1][4] = new Date('2026-11-12T00:00:00+11:00');
+  assert.equal(h.context.getIntakePrefill_(token).booking.endDate, '2026-11-12');
+  assert.equal(h.reads.Bookings, 2, 'each prefill uses its own booking-row snapshot');
+  assert.equal(h.reads.Dog_Intake_Records, 2, 'each prefill reads the saved token afresh');
+  assert.equal(h.reads.Audit_Log || 0, 0, 'stable identity remains on the audit-free path');
+  assert.equal(h.reads.timezoneLookups, 2, 'each request owns its timezone lookup');
+});
+
+test('legacy date-change prefill reads audit evidence once and reuses the matched proof', () => {
+  const h = fixture({ end: '2026-11-11', audit: [movedAudit()] });
+  const token = 'cino-legacy-owner-token';
+  const intake = sheet('Dog_Intake_Records', [h.context.INTAKE_HEADERS_.slice(), [new Date(), new Date(), '', 'Awaiting Owner', token,
+    'cino|2026-11-01|2026-11-10', 'Potential Stay', 'Cino', 'Jack Russell', '2026-11-01', '2026-11-10', 'Owner One', '0400000000',
+    JSON.stringify({ additionalInstructions: 'Blue harness.' }), '', '', '', 2, '', '']], h.bookings.getParent(), null, h.reads);
+  h.context.getIntakeSheet_ = () => intake;
+
+  const prefill = h.context.getIntakePrefill_(token);
+  assert.equal(prefill.identityResolution, 'audited-date-change');
+  assert.equal(prefill.booking.endDate, '2026-11-11');
+  assert.equal(prefill.savedAnswers.additionalInstructions, 'Blue harness.');
+  assert.equal(h.reads.Dog_Intake_Records, 1, 'token lookup uses one intake range read');
+  assert.equal(h.reads.Bookings, 1, 'legacy resolution uses one booking range read');
+  assert.equal(h.reads.Audit_Log, 1, 'date migration proof loads audit evidence once');
+  assert.equal(h.reads.timezoneLookups, 1, 'repeated booking snapshots reuse the spreadsheet timezone');
+});
+
+test('legacy prefill rejects missing and duplicate migration evidence while loading audit data once', () => {
+  const token = 'cino-legacy-owner-token';
+  const makeLegacyPrefill = audit => {
+    const h = fixture({ end: '2026-11-11', audit });
+    const intake = sheet('Dog_Intake_Records', [h.context.INTAKE_HEADERS_.slice(), [new Date(), new Date(), '', 'Awaiting Owner', token,
+      'cino|2026-11-01|2026-11-11', 'Potential Stay', 'Cino', 'Jack Russell', '2026-11-01', '2026-11-10', 'Owner One', '0400000000',
+      '{}', '', '', '', 2, '', '']], h.bookings.getParent(), null, h.reads);
+    h.context.getIntakeSheet_ = () => intake;
+    return h;
+  };
+
+  const missing = makeLegacyPrefill([]);
+  assert.throws(() => missing.context.getIntakePrefill_(token), /outdated/);
+  assert.equal(missing.reads.Audit_Log || 0, 0, 'an empty audit sheet needs no range read');
+
+  const collision = makeLegacyPrefill([movedAudit(), movedAudit()]);
+  assert.throws(() => collision.context.getIntakePrefill_(token), /outdated|could refer/);
+  assert.equal(collision.reads.Audit_Log, 1, 'duplicate audit evidence is rejected from one audit read');
+});
+
+test('legacy prefill keeps same-name different-dog ambiguity fail-closed', () => {
+  const duplicateDog = [new Date(), 'Cino', 'Jack Russell', new Date('2026-11-01T00:00:00+11:00'), new Date('2026-11-10T00:00:00+11:00'), 'Owner Two', '0411111111', '', '', '', '', 'Potential Stay', dogIdB, '00063', stayIdB];
+  const h = fixture({ end: '2026-11-11', extraBookings: [duplicateDog], audit: [movedAudit()] });
+  const token = 'cino-ambiguous-owner-token';
+  const intake = sheet('Dog_Intake_Records', [h.context.INTAKE_HEADERS_.slice(), [new Date(), new Date(), '', 'Awaiting Owner', token,
+    'cino|2026-11-01|2026-11-10', 'Potential Stay', 'Cino', 'Jack Russell', '2026-11-01', '2026-11-10', 'Owner One', '0400000000',
+    '{}', '', '', '', 2, '', '']], h.bookings.getParent(), null, h.reads);
+  h.context.getIntakeSheet_ = () => intake;
+
+  assert.throws(() => h.context.getIntakePrefill_(token), /could refer to more than one booking/);
+  assert.equal(h.reads.Bookings, 1, 'ambiguous legacy prefill still reads booking rows once');
+  assert.equal(h.reads.Audit_Log, 1, 'ambiguous legacy prefill still loads audit evidence once');
 });
 
 test('date migration updates only a uniquely proven intake record and keeps the form answers', () => {
