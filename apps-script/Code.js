@@ -11454,12 +11454,12 @@ function findIntakeRecordByStayKey_(sheet, stayKey) {
 }
 
 
-function intakeBookingRowByStableIds_(mainSheet, stayId, dogId) {
+function intakeBookingRowByStableIds_(mainSheet, stayId, dogId, rows) {
   stayId = String(stayId || "").trim();
   dogId = String(dogId || "").trim();
   if (!stayId || !dogId) return -1;
 
-  var rows = mainSheet.getDataRange().getValues();
+  rows = Array.isArray(rows) ? rows : mainSheet.getDataRange().getValues();
   var header = rows[0] || [];
   var stayColumn = header.map(function(value) { return String(value || "").trim().toLowerCase(); }).indexOf("stay id");
   var dogColumn = header.map(function(value) { return String(value || "").trim().toLowerCase(); }).indexOf("dog id");
@@ -11530,11 +11530,38 @@ function normalizeIntakeDateValue_(value) {
 }
 
 
-function intakeBookingSnapshotFromValues_(rows, index) {
+function intakeBookingSnapshotFromValues_(rows, index, resolutionContext) {
   var row = rows[index] || [];
   var header = rows[0] || [];
   var stayColumn = header.map(function(value) { return String(value || "").trim().toLowerCase(); }).indexOf("stay id");
-  var snapshot = auditBookingSnapshotFromValues_(row);
+  var snapshot;
+  if (resolutionContext) {
+    function formatDate(value) {
+      if (!value) return "";
+      if (value instanceof Date && !isNaN(value.getTime())) {
+        if (!resolutionContext.hasOwnProperty("timezone")) {
+          resolutionContext.timezone = resolutionContext.mainSheet.getParent().getSpreadsheetTimeZone();
+        }
+        return Utilities.formatDate(value, resolutionContext.timezone, "yyyy-MM-dd");
+      }
+      return normalizeDateValue_(value);
+    }
+    snapshot = {
+      dogName: String(row[1] || ""),
+      breed: String(row[2] || ""),
+      startDate: formatDate(row[3]),
+      endDate: formatDate(row[4]),
+      ownerName: String(row[5] || ""),
+      phone: String(row[6] || ""),
+      likes: String(row[7] || ""),
+      dislikes: String(row[8] || ""),
+      notes: String(row[9] || ""),
+      editLink: String(row[10] || ""),
+      bookingType: String(row[11] || "Boarding")
+    };
+  } else {
+    snapshot = auditBookingSnapshotFromValues_(row);
+  }
   snapshot.stayId = stayColumn < 0 ? "" : String(row[stayColumn] || "").trim();
   return snapshot;
 }
@@ -11579,13 +11606,32 @@ function intakeBookingHasDateMigrationProof_(mainSheet, record, booking, booking
 
 function resolveIntakeBookingForRecord_(mainSheet, rows, record, auditRows) {
   record = record && typeof record === "object" ? record : {};
+  var resolutionContext = {
+    mainSheet: mainSheet,
+    auditRows: Array.isArray(auditRows) ? auditRows : null,
+    auditRowsLoaded: Array.isArray(auditRows)
+  };
+  function migrationProof(booking, bookingRow) {
+    if (!record.bookingRow || !record.dogName || !record.startDate || !record.endDate || !booking.stayId ||
+        (record.startDate === booking.startDate && record.endDate === booking.endDate)) return false;
+    if (!resolutionContext.auditRowsLoaded) {
+      var auditSheet = mainSheet.getParent().getSheetByName("Audit_Log");
+      var auditLastRow = auditSheet ? auditSheet.getLastRow() : 0;
+      resolutionContext.auditRows = auditLastRow >= 2
+        ? auditSheet.getRange(2, 1, auditLastRow - 1, AUDIT_LOG_HEADERS_.length).getValues()
+        : [];
+      resolutionContext.auditRowsLoaded = true;
+    }
+    return intakeBookingHasDateMigrationProof_(mainSheet, record, booking, bookingRow, resolutionContext.auditRows);
+  }
+
   var stayId = String(record.stayId || "").trim();
   var dogId = String(record.dogId || "").trim();
   if (stayId || dogId) {
     if (!stayId || !dogId) throw new Error("This care form is missing part of its saved booking identity. Please request a fresh link.");
-    var stableRow = intakeBookingRowByStableIds_(mainSheet, stayId, dogId);
+    var stableRow = intakeBookingRowByStableIds_(mainSheet, stayId, dogId, rows);
     if (stableRow < 0) throw new Error("The saved booking could not be verified. Please request a fresh link.");
-    return { row: stableRow, booking: intakeBookingSnapshotFromValues_(rows, stableRow - 1), method: "stable-identifiers" };
+    return { row: stableRow, booking: intakeBookingSnapshotFromValues_(rows, stableRow - 1, resolutionContext), method: "stable-identifiers" };
   }
 
   var key = String(record.stayKey || "").trim();
@@ -11594,7 +11640,7 @@ function resolveIntakeBookingForRecord_(mainSheet, rows, record, auditRows) {
   for (var i = 1; i < rows.length; i++) {
     var type = String(rows[i][11] || "").trim().toLowerCase();
     if (type === "meet & greet") continue;
-    var snapshot = intakeBookingSnapshotFromValues_(rows, i);
+    var snapshot = intakeBookingSnapshotFromValues_(rows, i, resolutionContext);
     var candidateKey = makeGuestStayKey_(snapshot.dogName, snapshot.startDate, snapshot.endDate);
     if (candidateKey === key) matches.push({ row: i + 1, booking: snapshot });
   }
@@ -11602,9 +11648,9 @@ function resolveIntakeBookingForRecord_(mainSheet, rows, record, auditRows) {
   for (var j = 1; j < rows.length; j++) {
     var rowType = String(rows[j][11] || "").trim().toLowerCase();
     if (rowType === "meet & greet") continue;
-    var candidate = intakeBookingSnapshotFromValues_(rows, j);
+    var candidate = intakeBookingSnapshotFromValues_(rows, j, resolutionContext);
     if (candidate.stayId && String(candidate.dogName || "").trim().toLowerCase() === String(record.dogName || "").trim().toLowerCase() &&
-        intakeBookingHasDateMigrationProof_(mainSheet, record, candidate, j + 1, auditRows)) auditedMatches.push({ row: j + 1, booking: candidate });
+        migrationProof(candidate, j + 1)) auditedMatches.push({ row: j + 1, booking: candidate, migrationProof: true });
   }
   if (auditedMatches.length > 1 || (auditedMatches.length === 1 && matches.length === 1 && auditedMatches[0].row !== matches[0].row)) {
     throw new Error("This care form could refer to more than one booking. Please request a fresh link.");
@@ -11623,7 +11669,7 @@ function resolveIntakeBookingForRecord_(mainSheet, rows, record, auditRows) {
   if (record.startDate === match.booking.startDate && record.endDate === match.booking.endDate) {
     return { row: match.row, booking: match.booking, method: "unique-current-stay-key" };
   }
-  if (!intakeBookingHasDateMigrationProof_(mainSheet, record, match.booking, match.row, auditRows)) {
+  if (!match.migrationProof && !migrationProof(match.booking, match.row)) {
     throw new Error("This care form’s saved dates are outdated and the booking change cannot be verified. Please request a fresh link.");
   }
   return { row: match.row, booking: match.booking, method: "audited-date-change" };
