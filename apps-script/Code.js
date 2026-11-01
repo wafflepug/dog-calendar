@@ -141,6 +141,7 @@ function doPost(e) {
       data = {
         action: "submit_intake",
         token: String(params.token || ""),
+        submissionId: String(params.submissionId || ""),
         answers: intakePayload,
         signatureData: String(params.signatureData || "")
       };
@@ -210,6 +211,7 @@ function doPost(e) {
           data = {
             action: "submit_intake",
             token: String(decodedForm.token || ""),
+            submissionId: String(decodedForm.submissionId || ""),
             answers: decodedAnswers,
             signatureData: String(decodedForm.signatureData || "")
           };
@@ -6796,6 +6798,81 @@ function getIntakePrefillForHtml(token) {
 }
 
 
+function intakeSubmissionCurrentIdentity_(mainSheet, rows, intakeRecord) {
+  var resolved = resolveIntakeBookingForRecord_(mainSheet, rows, intakeRecord);
+  var dogId = String(v108DogIdentityAt_(rows, resolved.row - 1).dogId || "").trim();
+  return {
+    stayId: String(resolved.booking.stayId || "").trim(),
+    dogId: dogId,
+    bookingRow: resolved.row,
+    booking: resolved.booking,
+    method: resolved.method
+  };
+}
+
+
+function intakeSubmissionReceiptMatchesIdentity_(receipt, identity) {
+  return !!(receipt && receipt.stayId && receipt.dogId && identity &&
+    receipt.stayId === identity.stayId && receipt.dogId === identity.dogId);
+}
+
+
+function getIntakeSubmissionStatusForHtml(token, submissionId) {
+  token = String(token || "").trim();
+  submissionId = String(submissionId || "").trim();
+  if (!token || !submissionId) return { result: "success", state: "not-started" };
+  var mainSheet = getTargetSheet_();
+  var spreadsheet = mainSheet && mainSheet.getParent ? mainSheet.getParent() : null;
+  var intakeName = String(PropertiesService.getScriptProperties().getProperty("INTAKE_SHEET_NAME") || "Dog_Intake_Records").trim();
+  var intakeSheet = spreadsheet ? spreadsheet.getSheetByName(intakeName) : null;
+  if (!intakeSheet) return { result: "success", state: "not-found" };
+  var intakeRecord = findIntakeRecordByToken_(intakeSheet, token);
+  if (!intakeRecord) return { result: "success", state: "not-found" };
+  var receiptName = String(PropertiesService.getScriptProperties().getProperty("INTAKE_SUBMISSION_RECEIPTS_SHEET_NAME") || "Intake_Submission_Receipts").trim();
+  var receiptSheet = spreadsheet.getSheetByName(receiptName);
+  if (!receiptSheet || receiptSheet.getLastRow() < 2) return { result: "success", state: "not-started" };
+  var tokenHash = intakeSubmissionTokenHash_(token);
+  var receipts = findIntakeSubmissionReceiptsForToken_(receiptSheet, tokenHash);
+  if (!receipts.length) return { result: "success", state: "not-started" };
+  var rows = mainSheet.getDataRange().getValues();
+  var identity;
+  try { identity = intakeSubmissionCurrentIdentity_(mainSheet, rows, intakeRecord); }
+  catch (_) { return { result: "success", state: "identity-conflict" }; }
+  var matching = receipts.filter(function(item) { return item.submissionId === submissionId; });
+  if (matching.length > 1) return { result: "success", state: "identity-conflict" };
+  var pendingReceipts = receipts.filter(function(item) { return item.state === "Pending"; });
+  if (pendingReceipts.length > 1) return { result: "success", state: "identity-conflict" };
+  var receipt = matching[0] || null;
+  if (!receipt) {
+    var pending = pendingReceipts[0];
+    if (!pending) return { result: "success", state: "not-started" };
+    return { result: "success", state: intakeSubmissionReceiptMatchesIdentity_(pending, identity) ? "pending-other" : "identity-conflict" };
+  }
+  if (!intakeSubmissionReceiptMatchesIdentity_(receipt, identity)) return { result: "success", state: "identity-conflict" };
+  if (receipt.state === "Complete") {
+    if (!receipt.digest || !receipt.submittedAt || !receipt.pdfFileId || !receipt.pdfUrl || !receipt.signatureFileId) {
+      return { result: "success", state: "identity-conflict" };
+    }
+    return { result: "success", state: "complete" };
+  }
+  return { result: "success", state: receipt.state === "Pending" ? "pending" : "identity-conflict" };
+}
+
+
+function intakeSubmissionResultFromReceipt_(receipt) {
+  return {
+    result: "success",
+    action: "submit_intake",
+    status: "Complete",
+    dogName: receipt.dogName,
+    stayKey: receipt.stayKey,
+    submittedAt: receipt.submittedAt instanceof Date ? receipt.submittedAt.toISOString() : String(receipt.submittedAt || ""),
+    pdfFileId: receipt.pdfFileId,
+    pdfUrl: receipt.pdfUrl
+  };
+}
+
+
 /**
  * Public wrapper for the Apps Script-hosted Intake.html page.
  *
@@ -6811,6 +6888,7 @@ function submitIntakeFromHtml(payload) {
   return processIntakeSubmission_({
     action: "submit_intake",
     token: String(payload.token || "").trim(),
+    submissionId: String(payload.submissionId || "").trim(),
     answers:
       payload.answers && typeof payload.answers === "object"
         ? payload.answers
@@ -11163,6 +11241,118 @@ var INTAKE_HEADERS_ = [
 ];
 
 
+var INTAKE_SUBMISSION_RECEIPT_HEADERS_ = [
+  "Created At",
+  "Updated At",
+  "Token Hash",
+  "Submission ID",
+  "Payload Digest",
+  "State",
+  "Stay ID",
+  "Dog ID",
+  "Booking Row",
+  "Dog Name",
+  "Stay Key",
+  "PDF File ID",
+  "PDF URL",
+  "Signature File ID",
+  "Submitted At"
+];
+
+
+function getIntakeSubmissionReceiptsSheet_() {
+  var mainSheet = getTargetSheet_();
+  var spreadsheet = mainSheet.getParent();
+  var name = String(PropertiesService.getScriptProperties().getProperty("INTAKE_SUBMISSION_RECEIPTS_SHEET_NAME") || "Intake_Submission_Receipts").trim();
+  var sheet = spreadsheet.getSheetByName(name);
+  if (!sheet) sheet = spreadsheet.insertSheet(name);
+  if (sheet.getMaxColumns() < INTAKE_SUBMISSION_RECEIPT_HEADERS_.length) {
+    sheet.insertColumnsAfter(sheet.getMaxColumns(), INTAKE_SUBMISSION_RECEIPT_HEADERS_.length - sheet.getMaxColumns());
+  }
+  if (sheet.getLastRow() === 0) {
+    sheet.getRange(1, 1, 1, INTAKE_SUBMISSION_RECEIPT_HEADERS_.length).setValues([INTAKE_SUBMISSION_RECEIPT_HEADERS_]);
+    sheet.setFrozenRows(1);
+  } else {
+    var headers = sheet.getRange(1, 1, 1, INTAKE_SUBMISSION_RECEIPT_HEADERS_.length).getValues()[0];
+    if (INTAKE_SUBMISSION_RECEIPT_HEADERS_.some(function(header, index) { return String(headers[index] || "") !== header; })) {
+      throw new Error("The intake submission receipt sheet has an unexpected layout. No submission was saved.");
+    }
+  }
+  return sheet;
+}
+
+
+function intakeSubmissionTokenHash_(token) {
+  var bytes = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, String(token || ""), Utilities.Charset.UTF_8);
+  return Utilities.base64EncodeWebSafe(bytes).replace(/=+$/, "");
+}
+
+
+function findIntakeSubmissionReceiptsForToken_(sheet, tokenHash) {
+  if (!sheet || sheet.getLastRow() < 2) return [];
+  var rows = sheet.getRange(2, 1, sheet.getLastRow() - 1, INTAKE_SUBMISSION_RECEIPT_HEADERS_.length).getValues();
+  var receipts = [];
+  rows.forEach(function(row, index) {
+    if (String(row[2] || "") !== tokenHash) return;
+    receipts.push({
+      row: index + 2,
+      createdAt: row[0],
+      updatedAt: row[1],
+      tokenHash: String(row[2] || ""),
+      submissionId: String(row[3] || ""),
+      digest: String(row[4] || ""),
+      state: String(row[5] || ""),
+      stayId: String(row[6] || "").trim(),
+      dogId: String(row[7] || "").trim(),
+      bookingRow: Number(row[8] || 0) || null,
+      dogName: String(row[9] || ""),
+      stayKey: String(row[10] || ""),
+      pdfFileId: String(row[11] || ""),
+      pdfUrl: String(row[12] || ""),
+      signatureFileId: String(row[13] || ""),
+      submittedAt: row[14] instanceof Date ? row[14].toISOString() : String(row[14] || "")
+    });
+  });
+  return receipts;
+}
+
+
+function findIntakeSubmissionReceipt_(sheet, tokenHash, submissionId) {
+  var matches = findIntakeSubmissionReceiptsForToken_(sheet, tokenHash).filter(function(receipt) {
+    return receipt.submissionId === submissionId;
+  });
+  if (matches.length > 1) throw new Error("Duplicate intake submission receipts were found. No submission was replayed.");
+  return matches[0] || null;
+}
+
+
+function writeIntakeSubmissionReceipt_(sheet, receipt) {
+  var values = [
+    receipt.createdAt,
+    receipt.updatedAt,
+    receipt.tokenHash,
+    receipt.submissionId,
+    receipt.digest,
+    receipt.state,
+    receipt.stayId,
+    receipt.dogId,
+    receipt.bookingRow,
+    receipt.dogName,
+    receipt.stayKey,
+    receipt.pdfFileId,
+    receipt.pdfUrl,
+    receipt.signatureFileId,
+    receipt.submittedAt
+  ];
+  if (receipt.row) sheet.getRange(receipt.row, 1, 1, INTAKE_SUBMISSION_RECEIPT_HEADERS_.length).setValues([values]);
+  else {
+    sheet.appendRow(values);
+    receipt.row = sheet.getLastRow();
+  }
+  return receipt;
+}
+
+
 var INTAKE_TERMS_ = [
   {
     title: "1. Accuracy of Information",
@@ -12959,249 +13149,343 @@ function buildIntakePdf_(
 }
 
 
-function processIntakeSubmission_(data) {
+function stableIntakeJson_(value) {
+  if (Array.isArray(value)) return "[" + value.map(stableIntakeJson_).join(",") + "]";
+  if (value && typeof value === "object") {
+    return "{" + Object.keys(value).sort().map(function(key) {
+      return JSON.stringify(key) + ":" + stableIntakeJson_(value[key]);
+    }).join(",") + "}";
+  }
+  return JSON.stringify(value);
+}
+
+
+function validateIntakeSignaturePngBytes_(bytes) {
+  if (!bytes || bytes.length < 45 || bytes.length > 4 * 1024 * 1024) return false;
+  function u8(index) { return Number(bytes[index]) & 255; }
+  var signature = [137, 80, 78, 71, 13, 10, 26, 10];
+  for (var s = 0; s < signature.length; s++) if (u8(s) !== signature[s]) return false;
+  var offset = 8;
+  var sawHeader = false;
+  var sawImageData = false;
+  var sawEnd = false;
+  while (offset + 12 <= bytes.length) {
+    var length = u8(offset) * 16777216 + u8(offset + 1) * 65536 + u8(offset + 2) * 256 + u8(offset + 3);
+    if (length > bytes.length || offset + 12 + length > bytes.length) return false;
+    var type = String.fromCharCode(u8(offset + 4), u8(offset + 5), u8(offset + 6), u8(offset + 7));
+    if (!sawHeader) {
+      if (type !== "IHDR" || length !== 13) return false;
+      var width = u8(offset + 8) * 16777216 + u8(offset + 9) * 65536 + u8(offset + 10) * 256 + u8(offset + 11);
+      var height = u8(offset + 12) * 16777216 + u8(offset + 13) * 65536 + u8(offset + 14) * 256 + u8(offset + 15);
+      var bitDepth = u8(offset + 16);
+      var colorType = u8(offset + 17);
+      var validDepths = { 0: [1, 2, 4, 8, 16], 2: [8, 16], 3: [1, 2, 4, 8], 4: [8, 16], 6: [8, 16] };
+      if (!width || !height || width > 4096 || height > 4096 || width * height > 16000000 ||
+          !validDepths[colorType] || validDepths[colorType].indexOf(bitDepth) < 0 ||
+          u8(offset + 18) !== 0 || u8(offset + 19) !== 0 || u8(offset + 20) > 1) return false;
+      sawHeader = true;
+    } else if (type === "IHDR") {
+      return false;
+    }
+    if (type === "IDAT" && length > 0) sawImageData = true;
+    offset += 12 + length;
+    if (type === "IEND") {
+      if (length !== 0 || offset !== bytes.length) return false;
+      sawEnd = true;
+      break;
+    }
+  }
+  return sawHeader && sawImageData && sawEnd;
+}
+
+
+function prepareIntakeSubmission_(data) {
   data = data && typeof data === "object" ? data : {};
-
   var token = String(data.token || "").trim();
-  var answers =
-    data.answers && typeof data.answers === "object"
-      ? data.answers
-      : {};
-
+  var answers = data.answers && typeof data.answers === "object" ? data.answers : {};
   var signatureData = String(data.signatureData || "");
-  var signatureName = String(
-    answers.signatureName ||
-    answers.ownerName ||
-    ""
-  ).trim();
-
+  var signatureName = String(answers.signatureName || answers.ownerName || "").trim();
   if (!token) throw new Error("The intake token is missing.");
   if (!signatureName) throw new Error("Owner signature name is required.");
   if (!signatureData) throw new Error("An electronic signature is required.");
-
-  if (
-    answers.termsAccepted !== true &&
-    String(answers.termsAccepted).toLowerCase() !== "true"
-  ) {
-    throw new Error(
-      "The Terms & Conditions must be accepted before submission."
-    );
+  if (answers.termsAccepted !== true && String(answers.termsAccepted).toLowerCase() !== "true") {
+    throw new Error("The Terms & Conditions must be accepted before submission.");
   }
-
-  var intakeSheet = getIntakeSheet_();
-  var intakeRecord = findIntakeRecordByToken_(
-    intakeSheet,
-    token
-  );
-
-  if (!intakeRecord) {
-    throw new Error(
-      "This intake link is invalid or has expired."
-    );
+  var signatureMatch = signatureData.match(/^data:image\/png;base64,([A-Za-z0-9+/]+={0,2})$/i);
+  if (!signatureMatch) throw new Error("The electronic signature image could not be decoded.");
+  var signatureBytes;
+  try { signatureBytes = Utilities.base64Decode(signatureMatch[1]); }
+  catch (_) { throw new Error("The electronic signature image could not be decoded."); }
+  if (!validateIntakeSignaturePngBytes_(signatureBytes)) {
+    throw new Error("The electronic signature image could not be decoded.");
   }
-
-  var mainSheet = getTargetSheet_();
-  var rows = mainSheet.getDataRange().getValues();
-
-  var intakeResolution = resolveIntakeBookingForRecord_(mainSheet, rows, intakeRecord);
-  var bookingRow = intakeResolution.row;
-
-  var bookingBefore = auditBookingSnapshotFromSheetRow_(
-    mainSheet,
-    bookingRow
-  );
-
-  var oldStayKey = makeGuestStayKey_(
-    bookingBefore.dogName,
-    bookingBefore.startDate,
-    bookingBefore.endDate
-  );
-
-  var newDogName = String(
-    answers.dogName || bookingBefore.dogName
-  ).trim();
-
-  var newBreed = String(
-    answers.breed || bookingBefore.breed
-  ).trim();
-
-  var newOwner = String(
-    answers.ownerName || bookingBefore.ownerName
-  ).trim();
-
-  var newMobile = String(
-    answers.mobile || bookingBefore.phone
-  ).trim();
-
-  // Intake can rename a dog and thereby change its Care key. Retain proof of
-  // this exact booking before applying owner-submitted fields.
-  var mutationStayId = ensureStableStayIdV11225_(mainSheet, bookingRow);
-
-  mainSheet.getRange(bookingRow, 2).setValue(newDogName);
-  mainSheet.getRange(bookingRow, 3).setValue(newBreed);
-  mainSheet.getRange(bookingRow, 6).setValue(newOwner);
-  mainSheet.getRange(bookingRow, 7).setValue(newMobile);
-
-  /*
-   * Likes / Dislikes are legacy booking columns and are no longer managed
-   * by the Waffle House Web App. Intake answers now live in the canonical
-   * guest profile stored with Pet_Belongings.
-   */
-
-  SpreadsheetApp.flush();
-
-  var bookingAfter = auditBookingSnapshotFromSheetRow_(
-    mainSheet,
-    bookingRow
-  );
-
-  var newStayKey = makeGuestStayKey_(
-    bookingAfter.dogName,
-    bookingAfter.startDate,
-    bookingAfter.endDate
-  );
-
-  if (oldStayKey !== newStayKey) {
-    migrateBelongingsIdentityForGuest_(
-      mainSheet.getParent(),
-      oldStayKey,
-      newStayKey,
-      bookingAfter.dogName,
-      mutationStayId
-    );
-  }
-
-  var riskFlags = {
-    escapeRisk:
-      normalizeIntakeYesNo_(answers.escapeAttempts) === true,
-    foodAllergy:
-      hasMeaningfulIntakeText_(answers.foodAllergies),
-    medicated:
-      hasMeaningfulIntakeText_(answers.medicationInstructions),
-    separationAnxiety:
-      normalizeIntakeYesNo_(answers.separationAnxiety) === true,
-    weightManagement:
-      normalizeIntakeYesNo_(answers.weightManagement) === true
-  };
-
-  ensureIntakeBelongingsFlags_(
-    bookingAfter.dogName,
-    bookingAfter.startDate,
-    bookingAfter.endDate,
-    newStayKey,
-    riskFlags
-  );
-
-  saveIntakeAttributesForStay_(
-    bookingAfter.dogName,
-    bookingAfter.startDate,
-    bookingAfter.endDate,
-    newStayKey,
-    normalizeGuestIntakeAttributes_(
-      answers
-    ),
-    "Digital Intake"
-  );
-
-  var signatureMatch = signatureData.match(
-    /^data:image\/png;base64,(.+)$/i
-  );
-
-  if (!signatureMatch) {
-    throw new Error(
-      "The electronic signature image could not be decoded."
-    );
-  }
-
-  var signatureBlob = Utilities.newBlob(
-    Utilities.base64Decode(signatureMatch[1]),
-    "image/png",
-    "Owner-Signature.png"
-  );
-
-  var submittedAt = new Date();
-
-  var pdfResult = buildIntakePdf_(
-    bookingAfter,
-    answers,
-    signatureBlob,
-    signatureName,
-    submittedAt
-  );
-
-  var row = intakeRecord.row;
-
-  intakeSheet.getRange(row, 2).setValue(submittedAt);
-  intakeSheet.getRange(row, 3).setValue(submittedAt);
-  intakeSheet.getRange(row, 4).setValue("Complete");
-  intakeSheet.getRange(row, 6).setValue(newStayKey);
-  intakeSheet.getRange(row, 7).setValue(bookingAfter.bookingType || "Boarding");
-  intakeSheet.getRange(row, 8).setValue(bookingAfter.dogName || "");
-  intakeSheet.getRange(row, 9).setValue(bookingAfter.breed || "");
-  intakeSheet.getRange(row, 10).setValue(bookingAfter.startDate || "");
-  intakeSheet.getRange(row, 11).setValue(bookingAfter.endDate || "");
-  intakeSheet.getRange(row, 12).setValue(bookingAfter.ownerName || "");
-  intakeSheet.getRange(row, 13).setValue(bookingAfter.phone || "");
-  intakeSheet.getRange(row, 14).setValue(JSON.stringify(answers));
-  intakeSheet.getRange(row, 15).setValue(pdfResult.pdfFile.getId());
-  intakeSheet.getRange(row, 16).setValue(pdfResult.pdfFile.getUrl());
-  intakeSheet.getRange(row, 17).setValue(pdfResult.signatureFile.getId());
-  intakeSheet.getRange(row, 18).setValue(bookingRow);
-  intakeSheet.getRange(row, 19).setValue(mutationStayId);
-  intakeSheet.getRange(row, 20).setValue(String(v108DogIdentityAt_(mainSheet.getDataRange().getValues(), bookingRow - 1).dogId || "").trim());
-
-  var changedFields = auditObjectChangedFields_(
-    bookingBefore,
-    bookingAfter,
-    auditBookingFieldLabels_()
-  );
-
-  logAuditEvent_({
-    category: "Intake",
-    action: "Intake Submitted",
-    dogName: bookingAfter.dogName,
-    bookingType: bookingAfter.bookingType || "Boarding",
-    reference: newStayKey,
-    summary:
-      "Signed digital intake submitted and PDF generated for " +
-      bookingAfter.dogName +
-      ".",
-    changedFields: changedFields.concat([
-      "Care & Safety",
-      "Signed Intake PDF"
-    ]),
-    before: bookingBefore,
-    after: {
-      booking: bookingAfter,
-      careFlags: riskFlags,
-      intakeStatus: "Complete",
-      pdfFileId: pdfResult.pdfFile.getId()
-    },
-    source: "External Intake Form"
-  });
-
-  touchWaffleDataVersion_(
-    "directory"
-  );
-
-  notifyPushIntakeCompleted_(
-    newStayKey,
-    bookingAfter.dogName
-  );
-
+  var snapshot = stableIntakeJson_({ token: token, answers: answers, signatureData: signatureData });
+  var digestBytes = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, snapshot, Utilities.Charset.UTF_8);
+  var digest = Utilities.base64EncodeWebSafe(digestBytes).replace(/=+$/, "");
+  var submissionId = String(data.submissionId || "").trim();
+  if (!submissionId) submissionId = "legacy-" + digest;
+  if (!/^[A-Za-z0-9_-]{8,128}$/.test(submissionId)) throw new Error("The submission reference is invalid.");
   return {
-    result: "success",
-    action: "submit_intake",
-    status: "Complete",
-    stayKey: newStayKey,
-    dogName: bookingAfter.dogName,
-    submittedAt: submittedAt.toISOString(),
-    pdfFileId: pdfResult.pdfFile.getId(),
-    pdfUrl: pdfResult.pdfFile.getUrl()
+    token: token,
+    answers: answers,
+    signatureData: signatureData,
+    signatureBlob: Utilities.newBlob(signatureBytes, "image/png", "Owner-Signature.png"),
+    submissionId: submissionId,
+    submissionDigest: digest
   };
 }
 
 
+function processIntakeSubmission_(data) {
+  var prepared = prepareIntakeSubmission_(data);
+  return processIntakeSubmissionLocked_(prepared);
+}
+
+
+function intakeSubmissionBookingSnapshotMatches_(left, right) {
+  if (!left || !right) return false;
+  var fields = ["dogName", "breed", "startDate", "endDate", "ownerName", "phone", "bookingType", "stayId"];
+  return fields.every(function(field) { return String(left[field] || "").trim() === String(right[field] || "").trim(); });
+}
+
+
+function intakeSubmissionWithScriptLock_(callback, failureMessage) {
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(5000)) throw new Error(failureMessage || "Another update is being saved. Check the submission status before retrying.");
+  try { return callback(); }
+  finally { lock.releaseLock(); }
+}
+
+
+function processIntakeSubmissionLocked_(prepared) {
+  var data = prepared && typeof prepared === "object" ? prepared : {};
+  var token = String(data.token || "").trim();
+  var answers = data.answers && typeof data.answers === "object" ? data.answers : {};
+  var signatureBlob = data.signatureBlob;
+  var submissionId = String(data.submissionId || "").trim();
+  var submissionDigest = String(data.submissionDigest || "").trim();
+  var signatureName = String(answers.signatureName || answers.ownerName || "").trim();
+  if (!token || !signatureName || !signatureBlob || !submissionId || !submissionDigest) {
+    throw new Error("The intake submission is incomplete. No changes were saved.");
+  }
+
+  // Reserve and flush the immutable intent before any booking, profile, or Drive writes.
+  var reservation = intakeSubmissionWithScriptLock_(function() {
+    var intakeSheet = getIntakeSheet_();
+    var intakeRecord = findIntakeRecordByToken_(intakeSheet, token);
+    if (!intakeRecord) throw new Error("This intake link is invalid or has expired.");
+    var mainSheet = getTargetSheet_();
+    var rows = mainSheet.getDataRange().getValues();
+    var identity = intakeSubmissionCurrentIdentity_(mainSheet, rows, intakeRecord);
+    if (!identity.dogId) throw new Error("This booking has no stable dog identity. No intake changes were saved.");
+    var receiptSheet = getIntakeSubmissionReceiptsSheet_();
+    var tokenHash = intakeSubmissionTokenHash_(token);
+    var receipts = findIntakeSubmissionReceiptsForToken_(receiptSheet, tokenHash);
+    var prior = findIntakeSubmissionReceipt_(receiptSheet, tokenHash, submissionId);
+    if (prior) {
+      if (prior.digest !== submissionDigest) {
+        throw new Error("This submission reference already belongs to different answers or signature. Check submission status before starting another form.");
+      }
+      if (prior.state === "Pending") {
+        if ((prior.stayId && prior.stayId !== identity.stayId) || (prior.dogId && prior.dogId !== identity.dogId)) {
+          throw new Error("This pending submission no longer matches its exact booking identity. No save was repeated.");
+        }
+        return { replay: "pending", receipt: prior };
+      }
+      if (!intakeSubmissionReceiptMatchesIdentity_(prior, identity)) {
+        throw new Error("This intake submission no longer matches its exact booking identity. No save was repeated.");
+      }
+      if (prior.state === "Complete" && prior.submittedAt && prior.pdfFileId && prior.pdfUrl && prior.signatureFileId) {
+        return { replay: "complete", receipt: prior };
+      }
+      throw new Error("This intake submission receipt has an unknown state. No save was repeated.");
+    }
+    if (receipts.some(function(receipt) { return receipt.state === "Pending"; })) {
+      throw new Error("A previous intake submission is still unconfirmed. Check its status before starting another submission.");
+    }
+    var pending = writeIntakeSubmissionReceipt_(receiptSheet, {
+      createdAt: new Date(), updatedAt: new Date(), tokenHash: tokenHash,
+      submissionId: submissionId, digest: submissionDigest, state: "Pending",
+      stayId: identity.stayId, dogId: identity.dogId, bookingRow: identity.bookingRow,
+      dogName: String(identity.booking.dogName || ""), stayKey: String(intakeRecord.stayKey || ""),
+      pdfFileId: "", pdfUrl: "", signatureFileId: "", submittedAt: ""
+    });
+    SpreadsheetApp.flush();
+    return { receipt: pending };
+  }, "Another update is being saved. Check the submission status before retrying.");
+
+  if (reservation.replay === "pending") return { result: "pending", action: "submit_intake", status: "Pending" };
+  if (reservation.replay === "complete") return intakeSubmissionResultFromReceipt_(reservation.receipt);
+
+  var pendingReceipt = reservation.receipt;
+  var mainSheet = getTargetSheet_();
+  var intakeSheet = getIntakeSheet_();
+  var intakeRecord = findIntakeRecordByToken_(intakeSheet, token);
+  if (!intakeRecord) throw new Error("The intake token could not be revalidated. Submission remains pending for manual review.");
+
+  // Resolve again before the stable-ID write so a moved booking row is never used by its stale row number.
+  var preStableRows = mainSheet.getDataRange().getValues();
+  var preStableIdentity = intakeSubmissionCurrentIdentity_(mainSheet, preStableRows, intakeRecord);
+  if ((pendingReceipt.dogId && pendingReceipt.dogId !== preStableIdentity.dogId) ||
+      (pendingReceipt.stayId && pendingReceipt.stayId !== preStableIdentity.stayId)) {
+    throw new Error("The exact booking identity changed while this intake was being prepared. Submission remains pending for manual review.");
+  }
+  // Pending has been flushed before this stable-ID write; keep it outside the submission lock.
+  var mutationStayId = ensureStableStayIdV11225_(mainSheet, preStableIdentity.bookingRow);
+  var identityState = intakeSubmissionWithScriptLock_(function() {
+    var currentIntake = findIntakeRecordByToken_(getIntakeSheet_(), token);
+    if (!currentIntake) throw new Error("The intake token could not be revalidated. Submission remains pending for manual review.");
+    var rows = mainSheet.getDataRange().getValues();
+    var current = intakeSubmissionCurrentIdentity_(mainSheet, rows, currentIntake);
+    var dogId = current.dogId;
+    if (!dogId || current.stayId !== mutationStayId ||
+        (pendingReceipt.dogId && pendingReceipt.dogId !== dogId) ||
+        (pendingReceipt.stayId && pendingReceipt.stayId !== current.stayId)) {
+      throw new Error("The exact booking identity changed while this intake was being prepared. Submission remains pending for manual review.");
+    }
+    var sheet = getIntakeSubmissionReceiptsSheet_();
+    var currentReceipt = findIntakeSubmissionReceipt_(sheet, pendingReceipt.tokenHash, submissionId);
+    if (!currentReceipt || currentReceipt.state !== "Pending" || currentReceipt.digest !== submissionDigest) {
+      throw new Error("The pending intake receipt could not be revalidated. No further changes were saved.");
+    }
+    currentReceipt.stayId = current.stayId;
+    currentReceipt.dogId = dogId;
+    currentReceipt.bookingRow = current.bookingRow;
+    currentReceipt.updatedAt = new Date();
+    writeIntakeSubmissionReceipt_(sheet, currentReceipt);
+    SpreadsheetApp.flush();
+    return { intakeRecord: currentIntake, identity: current, receipt: currentReceipt };
+  }, "Another update is being saved. This submission remains pending for manual review.");
+  intakeRecord = identityState.intakeRecord;
+  pendingReceipt = identityState.receipt;
+  var identity = identityState.identity;
+  var bookingRow = identity.bookingRow;
+  var bookingBefore;
+  var bookingAfter;
+  var oldStayKey;
+  var newStayKey;
+
+  // Apply the booking row while serialized; all later profile/PDF work remains under
+  // the durable Pending receipt, so an interruption can never replay side effects.
+  intakeSubmissionWithScriptLock_(function() {
+    var currentIntake = findIntakeRecordByToken_(getIntakeSheet_(), token);
+    if (!currentIntake) throw new Error("The intake token could not be revalidated. Submission remains pending for manual review.");
+    var currentRows = mainSheet.getDataRange().getValues();
+    var current = intakeSubmissionCurrentIdentity_(mainSheet, currentRows, currentIntake);
+    if (current.bookingRow !== bookingRow || current.stayId !== identity.stayId || current.dogId !== identity.dogId) {
+      throw new Error("The exact booking identity changed before save. Submission remains pending for manual review.");
+    }
+    bookingBefore = auditBookingSnapshotFromSheetRow_(mainSheet, bookingRow);
+    var newDogName = String(answers.dogName || bookingBefore.dogName).trim();
+    var newBreed = String(answers.breed || bookingBefore.breed).trim();
+    var newOwner = String(answers.ownerName || bookingBefore.ownerName).trim();
+    var newMobile = String(answers.mobile || bookingBefore.phone).trim();
+    mainSheet.getRange(bookingRow, 2).setValue(newDogName);
+    mainSheet.getRange(bookingRow, 3).setValue(newBreed);
+    mainSheet.getRange(bookingRow, 6).setValue(newOwner);
+    mainSheet.getRange(bookingRow, 7).setValue(newMobile);
+    SpreadsheetApp.flush();
+    bookingAfter = auditBookingSnapshotFromSheetRow_(mainSheet, bookingRow);
+    oldStayKey = makeGuestStayKey_(bookingBefore.dogName, bookingBefore.startDate, bookingBefore.endDate);
+    newStayKey = makeGuestStayKey_(bookingAfter.dogName, bookingAfter.startDate, bookingAfter.endDate);
+  }, "Another update is being saved. This submission remains pending for manual review.");
+  if (oldStayKey !== newStayKey) {
+    migrateBelongingsIdentityForGuest_(mainSheet.getParent(), oldStayKey, newStayKey, bookingAfter.dogName, mutationStayId);
+  }
+
+  var riskFlags = {
+    escapeRisk: normalizeIntakeYesNo_(answers.escapeAttempts) === true,
+    foodAllergy: hasMeaningfulIntakeText_(answers.foodAllergies),
+    medicated: hasMeaningfulIntakeText_(answers.medicationInstructions),
+    separationAnxiety: normalizeIntakeYesNo_(answers.separationAnxiety) === true,
+    weightManagement: normalizeIntakeYesNo_(answers.weightManagement) === true
+  };
+  ensureIntakeBelongingsFlags_(bookingAfter.dogName, bookingAfter.startDate, bookingAfter.endDate, newStayKey, riskFlags);
+  saveIntakeAttributesForStay_(
+    bookingAfter.dogName, bookingAfter.startDate, bookingAfter.endDate, newStayKey,
+    normalizeGuestIntakeAttributes_(answers), "Digital Intake"
+  );
+
+  var submittedAt = new Date();
+  var pdfResult = buildIntakePdf_(bookingAfter, answers, signatureBlob, signatureName, submittedAt);
+  if (!pdfResult || !pdfResult.pdfFile || !pdfResult.signatureFile) {
+    throw new Error("The signed intake files could not be confirmed. Submission remains pending for manual review.");
+  }
+  var pdfFileId = String(pdfResult.pdfFile.getId() || "").trim();
+  var pdfUrl = String(pdfResult.pdfFile.getUrl() || "").trim();
+  var signatureFileId = String(pdfResult.signatureFile.getId() || "").trim();
+  if (!pdfFileId || !pdfUrl || !signatureFileId) {
+    throw new Error("The signed intake files could not be confirmed. Submission remains pending for manual review.");
+  }
+
+  // Commit the form row and Complete receipt together, after all output IDs exist.
+  var completedReceipt = intakeSubmissionWithScriptLock_(function() {
+    var currentIntake = findIntakeRecordByToken_(getIntakeSheet_(), token);
+    if (!currentIntake) throw new Error("The intake token could not be revalidated. Submission remains pending for manual review.");
+    var latestRows = mainSheet.getDataRange().getValues();
+    var current = intakeSubmissionCurrentIdentity_(mainSheet, latestRows, currentIntake);
+    if (current.bookingRow !== bookingRow || current.stayId !== mutationStayId || current.dogId !== identity.dogId ||
+        !intakeSubmissionBookingSnapshotMatches_(current.booking, bookingAfter)) {
+      throw new Error("The exact booking details changed before receipt commit. Submission remains pending for manual review.");
+    }
+    var receiptSheet = getIntakeSubmissionReceiptsSheet_();
+    var receipt = findIntakeSubmissionReceipt_(receiptSheet, pendingReceipt.tokenHash, submissionId);
+    if (!receipt || receipt.state !== "Pending" || receipt.digest !== submissionDigest ||
+        receipt.stayId !== mutationStayId || receipt.dogId !== identity.dogId) {
+      throw new Error("The pending intake receipt could not be revalidated. Submission remains pending for manual review.");
+    }
+    var row = currentIntake.row;
+    var completedValues = getIntakeSheet_().getRange(row, 1, 1, INTAKE_HEADERS_.length).getValues()[0];
+    completedValues[1] = new Date();
+    completedValues[2] = submittedAt;
+    completedValues[3] = "Complete";
+    completedValues[5] = newStayKey;
+    completedValues[6] = bookingAfter.bookingType || "Boarding";
+    completedValues[7] = bookingAfter.dogName || "";
+    completedValues[8] = bookingAfter.breed || "";
+    completedValues[9] = bookingAfter.startDate || "";
+    completedValues[10] = bookingAfter.endDate || "";
+    completedValues[11] = bookingAfter.ownerName || "";
+    completedValues[12] = bookingAfter.phone || "";
+    completedValues[13] = JSON.stringify(answers);
+    completedValues[14] = pdfFileId;
+    completedValues[15] = pdfUrl;
+    completedValues[16] = signatureFileId;
+    completedValues[17] = bookingRow;
+    completedValues[18] = mutationStayId;
+    completedValues[19] = identity.dogId;
+    getIntakeSheet_().getRange(row, 1, 1, INTAKE_HEADERS_.length).setValues([completedValues]);
+
+    receipt.updatedAt = new Date();
+    receipt.state = "Complete";
+    receipt.stayId = mutationStayId;
+    receipt.dogId = identity.dogId;
+    receipt.bookingRow = bookingRow;
+    receipt.dogName = bookingAfter.dogName || "";
+    receipt.stayKey = newStayKey;
+    receipt.pdfFileId = pdfFileId;
+    receipt.pdfUrl = pdfUrl;
+    receipt.signatureFileId = signatureFileId;
+    receipt.submittedAt = submittedAt;
+    writeIntakeSubmissionReceipt_(receiptSheet, receipt);
+    SpreadsheetApp.flush();
+    return receipt;
+  }, "Another update is being saved. The intake remains pending for manual review.");
+
+  var changedFields = auditObjectChangedFields_(bookingBefore, bookingAfter, auditBookingFieldLabels_());
+  logAuditEvent_({
+    category: "Intake", action: "Intake Submitted", dogName: bookingAfter.dogName,
+    bookingType: bookingAfter.bookingType || "Boarding", reference: newStayKey,
+    summary: "Signed digital intake submitted and PDF generated for " + bookingAfter.dogName + ".",
+    changedFields: changedFields.concat(["Care & Safety", "Signed Intake PDF"]),
+    before: bookingBefore,
+    after: { booking: bookingAfter, careFlags: riskFlags, intakeStatus: "Complete", pdfFileId: pdfResult.pdfFile.getId() },
+    source: "External Intake Form"
+  });
+  touchWaffleDataVersion_("directory");
+  notifyPushIntakeCompleted_(newStayKey, bookingAfter.dogName);
+  return intakeSubmissionResultFromReceipt_(completedReceipt);
+}
 
 
 function verifyWaffleHouseRelease() {
