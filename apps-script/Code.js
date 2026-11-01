@@ -4450,7 +4450,7 @@ function createV108Boarding_(data) {
     dogPhotoSync=seedDogStayPhotoForConfirmedBookingV11208_({dogId:dogId,dogName:dogName,breed:breed,stayKey:stayKey});
     if (dogPhotoSync && dogPhotoSync.reason === "photo-source-unavailable") throw new Error("The stay was saved, but its existing dog photo could not be checked yet. Retry this same save to finish photo syncing.");
   }
-  var intake=createIntakeLinkForBooking_(sheet,sheet.getDataRange().getValues(),{dogName:dogName,startDate:start,endDate:end});
+  var intake=createIntakeLinkForBooking_(sheet,sheet.getDataRange().getValues(),{dogName:dogName,startDate:start,endDate:end,stayId:appended.stayId,dogId:dogIdentity.dogId});
   var after=auditBookingSnapshotFromSheetRow_(sheet,row);
   after.dogNumber=dogIdentity.dogNumber;
   logAuditEvent_({category:"Boarding",action:"Booking Created",dogName:dogName,bookingType:"Confirmed Boarding",reference:sheet.getName()+"!A"+row,summary:"Confirmed boarding created for "+dogName+" from the Waffle House popup.",changedFields:["New record","Intake Link"],after:after,source:"Web App"});
@@ -4466,6 +4466,8 @@ function updateV108BoardingDates_(data) {
   var before=auditBookingSnapshotFromSheetRow_(sheet,row), start=normalizeDateValue_(data.startDate), end=normalizeDateValue_(data.endDate||data.startDate);
   if (!start || !end || end < start) throw new Error("New boarding dates are invalid.");
   var stayId=ensureStableStayIdV11225_(sheet,row);
+  before.stayId = stayId;
+  rows = sheet.getDataRange().getValues();
   var oldStayKey = makeGuestStayKey_(before.dogName, before.startDate, before.endDate);
   if (typeof bindLegacyStayOperationToIdV11226_ === "function") {
     bindLegacyStayOperationToIdV11226_(sheet, oldStayKey, row, stayId);
@@ -4473,8 +4475,17 @@ function updateV108BoardingDates_(data) {
   updateStableStayRowV11225_(sheet,row,{4:start,5:end},String(data.clientMutationId||""));
   var newStayKey = makeGuestStayKey_(before.dogName, start, end);
   if (oldStayKey !== newStayKey) {
-        migrateBelongingsIdentityForGuest_(sheet.getParent(), oldStayKey, newStayKey, before.dogName, stayId);
-    migrateIntakeIdentitiesForGuest_(oldStayKey, newStayKey, before.dogName);
+    migrateBelongingsIdentityForGuest_(sheet.getParent(), oldStayKey, newStayKey, before.dogName, stayId);
+    var updatedBooking = auditBookingSnapshotFromSheetRow_(sheet, row);
+    var currentDogId = String(v108DogIdentityAt_(rows, row - 1).dogId || "").trim();
+    migrateIntakeIdentitiesForGuest_(oldStayKey, newStayKey, before.dogName, {
+      mainSheet: sheet,
+      sourceRows: rows,
+      row: row,
+      before: before,
+      after: updatedBooking,
+      dogId: currentDogId
+    });
   }
   var after=auditBookingSnapshotFromSheetRow_(sheet,row);
   logAuditEvent_({category:"Boarding",action:"Booking Dates Moved",dogName:after.dogName,bookingType:after.bookingType,reference:sheet.getName()+"!A"+row,summary:after.dogName+" moved to "+start+" – "+end+" from the calendar.",changedFields:["Start Date","End Date"],before:before,after:after,source:"Calendar Drag"});
@@ -5126,6 +5137,9 @@ function processSheetAction_(data) {
         sheet,
         updateRow
       );
+      var potentialStayId = ensureStableStayIdV11225_(sheet, updateRow);
+      potentialBefore.stayId = potentialStayId;
+      rows = sheet.getDataRange().getValues();
 
       updateStableStayRowV11225_(sheet, updateRow, {
         2: data.dogName || "", 3: data.breed || "", 4: data.startDate || "",
@@ -5141,6 +5155,19 @@ function processSheetAction_(data) {
         sheet,
         updateRow
       );
+      potentialAfter.stayId = potentialStayId;
+      var potentialOldKey = makeGuestStayKey_(potentialBefore.dogName, potentialBefore.startDate, potentialBefore.endDate);
+      var potentialNewKey = makeGuestStayKey_(potentialAfter.dogName, potentialAfter.startDate, potentialAfter.endDate);
+      if (potentialOldKey !== potentialNewKey) {
+        migrateIntakeIdentitiesForGuest_(potentialOldKey, potentialNewKey, potentialAfter.dogName, {
+          mainSheet: sheet,
+          sourceRows: rows,
+          row: updateRow,
+          before: potentialBefore,
+          after: potentialAfter,
+          dogId: String(v108DogIdentityAt_(rows, updateRow - 1).dogId || "").trim()
+        });
+      }
 
       var potentialChanges = auditObjectChangedFields_(
         potentialBefore,
@@ -5183,6 +5210,9 @@ function processSheetAction_(data) {
         sheet,
         confirmRow
       );
+      var confirmStayId = ensureStableStayIdV11225_(sheet, confirmRow);
+      confirmBefore.stayId = confirmStayId;
+      rows = sheet.getDataRange().getValues();
 
       // Save any edits in the modal, then mark the SAME row confirmed.
       updateStableStayRowV11225_(sheet, confirmRow, {
@@ -5204,6 +5234,20 @@ function processSheetAction_(data) {
         sheet,
         confirmRow
       );
+      confirmAfter.stayId = confirmStayId;
+      var confirmOldKey = makeGuestStayKey_(confirmBefore.dogName, confirmBefore.startDate, confirmBefore.endDate);
+      var confirmNewKey = makeGuestStayKey_(confirmAfter.dogName, confirmAfter.startDate, confirmAfter.endDate);
+      if (confirmOldKey !== confirmNewKey) {
+        migrateIntakeIdentitiesForGuest_(confirmOldKey, confirmNewKey, confirmAfter.dogName, {
+          mainSheet: sheet,
+          sourceRows: rows,
+          row: confirmRow,
+          before: confirmBefore,
+          after: confirmAfter,
+          dogId: confirmedDogId
+        });
+      }
+      syncIntakeRecordForBooking_(sheet, confirmRow, confirmedDogId);
 
       var confirmChanges = auditObjectChangedFields_(
         confirmBefore,
@@ -5502,6 +5546,8 @@ function processSheetAction_(data) {
         throw new Error("Dog Name cannot be blank.");
       }
       var mutationStayId = ensureStableStayIdV11225_(sheet, guestRow);
+      guestBefore.stayId = mutationStayId;
+      rows = sheet.getDataRange().getValues();
 
       var oldStayKey = makeGuestStayKey_(
         guestBefore.dogName,
@@ -5545,7 +5591,15 @@ function processSheetAction_(data) {
           migrateIntakeIdentitiesForGuest_(
             oldStayKey,
             newStayKey,
-            guestAfter.dogName
+            guestAfter.dogName,
+            {
+              mainSheet: sheet,
+              sourceRows: rows,
+              row: guestRow,
+              before: guestBefore,
+              after: guestAfter,
+              dogId: String(v108DogIdentityAt_(rows, guestRow - 1).dogId || "").trim()
+            }
           );
       }
 
@@ -8088,6 +8142,8 @@ function applyLegacyIntakeProfileUpdates_(
   // Capture the exact booking row's stable identity before OCR/extracted
   // profile fields can change its legacy stay key.
   var mutationStayId = ensureStableStayIdV11225_(mainSheet, bookingRow);
+  before.stayId = mutationStayId;
+  rows = mainSheet.getDataRange().getValues();
 
   var appliedDirectory = {};
   var changedLabels = [];
@@ -8154,7 +8210,15 @@ function applyLegacyIntakeProfileUpdates_(
     migrateIntakeIdentitiesForGuest_(
       oldStayKey,
       newStayKey,
-      after.dogName
+      after.dogName,
+      {
+        mainSheet: mainSheet,
+        sourceRows: rows,
+        row: bookingRow,
+        before: before,
+        after: after,
+        dogId: String(v108DogIdentityAt_(rows, bookingRow - 1).dogId || "").trim()
+      }
     );
   }
 
@@ -10937,7 +11001,8 @@ function reassignLegacyIntakeFromHtml(payload) {
 function migrateIntakeIdentitiesForGuest_(
   oldStayKey,
   newStayKey,
-  newDogName
+  newDogName,
+  migration
 ) {
   if (
     !oldStayKey ||
@@ -10952,6 +11017,35 @@ function migrateIntakeIdentitiesForGuest_(
 
   var digitalMigrated = 0;
   var legacyMigrated = 0;
+  migration = migration && typeof migration === "object" ? migration : null;
+
+  function verifiedDigitalRecord_(row) {
+    if (!migration || !migration.before || !migration.after || !migration.row || !migration.before.stayId) return false;
+    if (String(row[7] || "").trim().toLowerCase() !== String(migration.before.dogName || "").trim().toLowerCase() ||
+        normalizeIntakeDateValue_(row[9]) !== migration.before.startDate ||
+        normalizeIntakeDateValue_(row[10]) !== migration.before.endDate) return false;
+    if ((String(row[18] || "").trim() && String(row[18]).trim().toLowerCase() !== String(migration.before.stayId || "").toLowerCase()) ||
+        (String(row[19] || "").trim() && String(row[19]).trim().toLowerCase() !== String(migration.dogId).toLowerCase())) return false;
+    if (String(row[18] || "").trim() && String(row[19] || "").trim()) {
+      return String(row[18]).trim().toLowerCase() === String(migration.before.stayId || "").toLowerCase() &&
+        String(row[19]).trim().toLowerCase() === String(migration.dogId).toLowerCase() &&
+        String(migration.after.stayId || "").toLowerCase() === String(migration.before.stayId || "").toLowerCase();
+    }
+    if (Number(row[17] || 0) !== Number(migration.row)) return false;
+    if (!migration.sourceRows || !migration.mainSheet) return false;
+    var exactBeforeRows = 0;
+    for (var i = 1; i < migration.sourceRows.length; i++) {
+      var source = migration.sourceRows[i];
+      if (String(source[11] || "").trim().toLowerCase() === "meet & greet") continue;
+      if (String(source[1] || "").trim().toLowerCase() === String(migration.before.dogName || "").trim().toLowerCase() &&
+          normalizeIntakeDateValue_(source[3]) === migration.before.startDate &&
+          normalizeIntakeDateValue_(source[4] || source[3]) === migration.before.endDate) exactBeforeRows++;
+    }
+    if (exactBeforeRows !== 1) return false;
+    var sourceIdentity = v108DogIdentityAt_(migration.sourceRows, migration.row - 1);
+    return String(sourceIdentity.dogId || "").toLowerCase() === String(migration.dogId || "").toLowerCase() &&
+      String(migration.after.stayId || "").toLowerCase() === String(migration.before.stayId).toLowerCase();
+  }
 
   try {
     var digitalSheet = getIntakeSheet_();
@@ -10974,6 +11068,8 @@ function migrateIntakeIdentitiesForGuest_(
           return;
         }
 
+        if (!verifiedDigitalRecord_(row)) return;
+
         var rowNumber = index + 2;
 
         digitalSheet.getRange(rowNumber, 2)
@@ -10984,6 +11080,13 @@ function migrateIntakeIdentitiesForGuest_(
 
         digitalSheet.getRange(rowNumber, 8)
           .setValue(newDogName);
+
+        digitalSheet.getRange(rowNumber, 7).setValue(migration.after.bookingType || "Boarding");
+        digitalSheet.getRange(rowNumber, 10).setValue(migration.after.startDate);
+        digitalSheet.getRange(rowNumber, 11).setValue(migration.after.endDate);
+        digitalSheet.getRange(rowNumber, 18).setValue(migration.row);
+        digitalSheet.getRange(rowNumber, 19).setValue(migration.after.stayId);
+        digitalSheet.getRange(rowNumber, 20).setValue(migration.dogId);
 
         digitalMigrated++;
       });
@@ -11054,7 +11157,9 @@ var INTAKE_HEADERS_ = [
   "PDF File ID",
   "PDF URL",
   "Signature File ID",
-  "Booking Row"
+  "Booking Row",
+  "Stay ID",
+  "Dog ID"
 ];
 
 
@@ -11239,16 +11344,76 @@ function intakeRowToObject_(row, rowNumber) {
     bookingType: String(row[6] || ""),
     dogName: String(row[7] || ""),
     breed: String(row[8] || ""),
-    startDate: normalizeDateValue_(row[9]),
-    endDate: normalizeDateValue_(row[10]),
+    startDate: normalizeIntakeDateValue_(row[9]),
+    endDate: normalizeIntakeDateValue_(row[10]),
     ownerName: String(row[11] || ""),
     mobile: String(row[12] || ""),
     answers: intakeJson,
     pdfFileId: String(row[14] || ""),
     pdfUrl: String(row[15] || ""),
     signatureFileId: String(row[16] || ""),
-    bookingRow: Number(row[17] || 0) || null
+    bookingRow: Number(row[17] || 0) || null,
+    stayId: String(row[18] || "").trim(),
+    dogId: String(row[19] || "").trim()
   };
+}
+
+
+function findIntakeRecordByStableStayId_(sheet, stayId, dogId) {
+  stayId = String(stayId || "").trim().toLowerCase();
+  if (!stayId || sheet.getLastRow() < 2) return null;
+  var values = sheet.getRange(2, 1, sheet.getLastRow() - 1, INTAKE_HEADERS_.length).getValues();
+  var found = null;
+  for (var i = values.length - 1; i >= 0; i--) {
+    if (String(values[i][18] || "").trim().toLowerCase() !== stayId) continue;
+    var recordDogId = String(values[i][19] || "").trim().toLowerCase();
+    if (recordDogId && recordDogId !== String(dogId || "").trim().toLowerCase()) {
+      throw new Error("The care form Stay ID is associated with a different Dog ID.");
+    }
+    if (!recordDogId) continue;
+    if (found) throw new Error("Several care forms are linked to this Stay ID. Contact Waffle Boarding House.");
+    found = intakeRowToObject_(values[i], i + 2);
+  }
+  return found;
+}
+
+
+function findIntakeRecordForBooking_(sheet, mainSheet, stayId, dogId) {
+  var existing = findIntakeRecordByStableStayId_(sheet, stayId, dogId);
+  if (existing) return existing;
+  if (sheet.getLastRow() < 2) return null;
+  var rows = mainSheet.getDataRange().getValues();
+  var values = sheet.getRange(2, 1, sheet.getLastRow() - 1, INTAKE_HEADERS_.length).getValues();
+  var auditRows = [];
+  var auditSheet = mainSheet.getParent().getSheetByName("Audit_Log");
+  if (auditSheet && auditSheet.getLastRow() >= 2) {
+    auditRows = auditSheet.getRange(2, 1, auditSheet.getLastRow() - 1, AUDIT_LOG_HEADERS_.length).getValues();
+  }
+  var resolvedMatches = [];
+  for (var i = values.length - 1; i >= 0; i--) {
+    var record = intakeRowToObject_(values[i], i + 2);
+    if (record.stayId && String(record.stayId).toLowerCase() === String(stayId).toLowerCase() && !record.dogId) {
+      var stableRow = intakeBookingRowByStableIds_(mainSheet, stayId, dogId);
+      var stableBooking = stableRow > 0 ? intakeBookingSnapshotFromValues_(rows, stableRow - 1) : null;
+      var partialIdentityMatches = stableBooking && Number(record.bookingRow) === stableRow &&
+        String(record.dogName || "").trim().toLowerCase() === String(stableBooking.dogName || "").trim().toLowerCase() &&
+        (record.startDate === stableBooking.startDate && record.endDate === stableBooking.endDate ||
+          intakeBookingHasDateMigrationProof_(mainSheet, record, stableBooking, stableRow, auditRows));
+      if (partialIdentityMatches) resolvedMatches.push(record);
+      continue;
+    }
+    if (record.stayId || record.dogId) continue;
+    try {
+      var resolved = resolveIntakeBookingForRecord_(mainSheet, rows, record, auditRows);
+      if (String(resolved.booking.stayId || "").toLowerCase() === String(stayId).toLowerCase() &&
+          String(v108DogIdentityAt_(rows, resolved.row - 1).dogId || "").toLowerCase() === String(dogId).toLowerCase()) resolvedMatches.push(record);
+    } catch (_) {
+      // An unresolved old token is left untouched; it is never adopted by a different stay.
+    }
+  }
+  if (resolvedMatches.length > 1) throw new Error("Several existing care forms match this stay. Review the forms before preparing another link.");
+  if (resolvedMatches.length === 1) return resolvedMatches[0];
+  return null;
 }
 
 
@@ -11289,26 +11454,214 @@ function findIntakeRecordByStayKey_(sheet, stayKey) {
 }
 
 
-function findIntakeBookingRow_(rows, dogName, startDate, endDate) {
-  var targetDog = String(dogName || "").trim().toLowerCase();
-  var targetStart = normalizeDateValue_(startDate);
-  var targetEnd = normalizeDateValue_(endDate || startDate);
+function intakeBookingRowByStableIds_(mainSheet, stayId, dogId) {
+  stayId = String(stayId || "").trim();
+  dogId = String(dogId || "").trim();
+  if (!stayId || !dogId) return -1;
 
+  var rows = mainSheet.getDataRange().getValues();
+  var header = rows[0] || [];
+  var stayColumn = header.map(function(value) { return String(value || "").trim().toLowerCase(); }).indexOf("stay id");
+  var dogColumn = header.map(function(value) { return String(value || "").trim().toLowerCase(); }).indexOf("dog id");
+  if (stayColumn < 0 || dogColumn < 0) return -1;
+  var matches = [];
+  for (var i = 1; i < rows.length; i++) {
+    var type = String(rows[i][11] || "").trim().toLowerCase();
+    if (type === "meet & greet") continue;
+    if (String(rows[i][stayColumn] || "").trim().toLowerCase() !== stayId.toLowerCase()) continue;
+    var persistedDogId = String(rows[i][dogColumn] || "").trim();
+    if (!persistedDogId || persistedDogId.toLowerCase() !== dogId.toLowerCase()) {
+      throw new Error("Stay ID and Dog ID do not identify the same booking.");
+    }
+    matches.push(i + 1);
+  }
+  if (matches.length > 1) throw new Error("This stay has a duplicate Stay ID; intake is blocked for safety.");
+  return matches.length === 1 ? matches[0] : -1;
+}
+
+
+function findIntakeBookingRow_(rows, dogName, startDate, endDate, identity) {
+  identity = identity && typeof identity === "object" ? identity : {};
+  var stayId = String(identity.stayId || "").trim();
+  var dogId = String(identity.dogId || "").trim();
+  if (stayId || dogId) {
+    if (!stayId || !dogId) throw new Error("A Stay ID and Dog ID are both required to identify this booking.");
+    var identifiedRow = intakeBookingRowByStableIds_(getTargetSheet_(), stayId, dogId);
+    if (identifiedRow < 0) return -1;
+    var identified = intakeBookingSnapshotFromValues_(rows, identifiedRow - 1);
+    if (String(dogName || "").trim() && String(identified.dogName || "").trim().toLowerCase() !== String(dogName).trim().toLowerCase()) {
+      throw new Error("Stay ID and dog name do not match. Refresh the booking and try again.");
+    }
+    if (normalizeIntakeDateValue_(startDate) && identified.startDate !== normalizeIntakeDateValue_(startDate) ||
+        normalizeIntakeDateValue_(endDate || startDate) && identified.endDate !== normalizeIntakeDateValue_(endDate || startDate)) {
+      throw new Error("The selected booking dates changed. Refresh the booking before preparing its care form.");
+    }
+    return identifiedRow;
+  }
+
+  var targetDog = String(dogName || "").trim().toLowerCase();
+  var targetStart = normalizeIntakeDateValue_(startDate);
+  var targetEnd = normalizeIntakeDateValue_(endDate || startDate);
+  var matches = [];
   for (var i = 1; i < rows.length; i++) {
     var rowDog = String(rows[i][1] || "").trim().toLowerCase();
     var rowType = String(rows[i][11] || "").trim().toLowerCase();
-    var rowStart = normalizeDateValue_(rows[i][3]);
-    var rowEnd = normalizeDateValue_(rows[i][4] || rows[i][3]);
+    var rowStart = normalizeIntakeDateValue_(rows[i][3]);
+    var rowEnd = normalizeIntakeDateValue_(rows[i][4] || rows[i][3]);
 
     if (rowType === "meet & greet") continue;
     if (targetDog && rowDog !== targetDog) continue;
     if (targetStart && rowStart !== targetStart) continue;
     if (targetEnd && rowEnd !== targetEnd) continue;
 
-    return i + 1;
+    matches.push(i + 1);
+  }
+  if (matches.length > 1) throw new Error("Several bookings match these dog and stay dates. Refresh and select the exact stay.");
+  return matches.length === 1 ? matches[0] : -1;
+}
+
+
+function normalizeIntakeDateValue_(value) {
+  if (value instanceof Date && !isNaN(value.getTime())) {
+    var spreadsheet = getTargetSheet_().getParent();
+    return Utilities.formatDate(value, spreadsheet.getSpreadsheetTimeZone() || Session.getScriptTimeZone(), "yyyy-MM-dd");
+  }
+  return normalizeDateValue_(value);
+}
+
+
+function intakeBookingSnapshotFromValues_(rows, index) {
+  var row = rows[index] || [];
+  var header = rows[0] || [];
+  var stayColumn = header.map(function(value) { return String(value || "").trim().toLowerCase(); }).indexOf("stay id");
+  var snapshot = auditBookingSnapshotFromValues_(row);
+  snapshot.stayId = stayColumn < 0 ? "" : String(row[stayColumn] || "").trim();
+  return snapshot;
+}
+
+
+function intakeBookingHasDateMigrationProof_(mainSheet, record, booking, bookingRow, auditRows) {
+  if (!record.bookingRow || !record.dogName || !record.startDate || !record.endDate || !booking.stayId) return false;
+  var values = auditRows;
+  if (!Array.isArray(values)) {
+    var auditSheet = mainSheet.getParent().getSheetByName("Audit_Log");
+    if (!auditSheet || auditSheet.getLastRow() < 2) return false;
+    values = auditSheet.getRange(2, 1, auditSheet.getLastRow() - 1, AUDIT_LOG_HEADERS_.length).getValues();
+  }
+  var expectedDog = String(record.dogName || "").trim().toLowerCase();
+  var proofCount = 0;
+  for (var i = values.length - 1; i >= 0; i--) {
+    var row = values[i];
+    var action = String(row[3] || "");
+    if (action !== "Booking Dates Moved" && action !== "Potential Updated" &&
+        action !== "Potential Confirmed" && action !== "Guest Detail Updated") continue;
+    if (String(row[6] || "") !== mainSheet.getName() + "!A" + Number(record.bookingRow)) continue;
+    var before = {}, after = {};
+    try { before = JSON.parse(String(row[9] || "{}")); } catch (_) { continue; }
+    try { after = JSON.parse(String(row[10] || "{}")); } catch (_) { continue; }
+    if (String(before.stayId || "").toLowerCase() !== String(booking.stayId).toLowerCase() ||
+        String(after.stayId || "").toLowerCase() !== String(booking.stayId).toLowerCase()) continue;
+    if (String(before.dogName || "").trim().toLowerCase() !== expectedDog ||
+        normalizeDateValue_(before.startDate) !== record.startDate ||
+        normalizeDateValue_(before.endDate) !== record.endDate) continue;
+    if (String(after.dogName || "").trim().toLowerCase() !== String(booking.dogName || "").trim().toLowerCase() ||
+        normalizeDateValue_(after.startDate) !== booking.startDate ||
+        normalizeDateValue_(after.endDate) !== booking.endDate) continue;
+    var beforeKey = makeGuestStayKey_(before.dogName, normalizeDateValue_(before.startDate), normalizeDateValue_(before.endDate));
+    var afterKey = makeGuestStayKey_(after.dogName, normalizeDateValue_(after.startDate), normalizeDateValue_(after.endDate));
+    if (beforeKey === afterKey || (record.stayKey !== beforeKey && record.stayKey !== afterKey)) continue;
+    if (Number(record.bookingRow) !== bookingRow && String(row[6] || "") !== mainSheet.getName() + "!A" + Number(record.bookingRow)) continue;
+    proofCount++;
+  }
+  return proofCount === 1;
+}
+
+
+function resolveIntakeBookingForRecord_(mainSheet, rows, record, auditRows) {
+  record = record && typeof record === "object" ? record : {};
+  var stayId = String(record.stayId || "").trim();
+  var dogId = String(record.dogId || "").trim();
+  if (stayId || dogId) {
+    if (!stayId || !dogId) throw new Error("This care form is missing part of its saved booking identity. Please request a fresh link.");
+    var stableRow = intakeBookingRowByStableIds_(mainSheet, stayId, dogId);
+    if (stableRow < 0) throw new Error("The saved booking could not be verified. Please request a fresh link.");
+    return { row: stableRow, booking: intakeBookingSnapshotFromValues_(rows, stableRow - 1), method: "stable-identifiers" };
   }
 
-  return -1;
+  var key = String(record.stayKey || "").trim();
+  if (!key) throw new Error("This care form has no verifiable booking identity. Please request a fresh link.");
+  var matches = [];
+  for (var i = 1; i < rows.length; i++) {
+    var type = String(rows[i][11] || "").trim().toLowerCase();
+    if (type === "meet & greet") continue;
+    var snapshot = intakeBookingSnapshotFromValues_(rows, i);
+    var candidateKey = makeGuestStayKey_(snapshot.dogName, snapshot.startDate, snapshot.endDate);
+    if (candidateKey === key) matches.push({ row: i + 1, booking: snapshot });
+  }
+  var auditedMatches = [];
+  for (var j = 1; j < rows.length; j++) {
+    var rowType = String(rows[j][11] || "").trim().toLowerCase();
+    if (rowType === "meet & greet") continue;
+    var candidate = intakeBookingSnapshotFromValues_(rows, j);
+    if (candidate.stayId && String(candidate.dogName || "").trim().toLowerCase() === String(record.dogName || "").trim().toLowerCase() &&
+        intakeBookingHasDateMigrationProof_(mainSheet, record, candidate, j + 1, auditRows)) auditedMatches.push({ row: j + 1, booking: candidate });
+  }
+  if (auditedMatches.length > 1 || (auditedMatches.length === 1 && matches.length === 1 && auditedMatches[0].row !== matches[0].row)) {
+    throw new Error("This care form could refer to more than one booking. Please request a fresh link.");
+  }
+  if (auditedMatches.length === 1) matches = auditedMatches;
+  if (matches.length !== 1) {
+    throw new Error(matches.length ? "This care form matches more than one current booking. Please request a fresh link." : "The matching booking could not be found. Please contact Waffle Boarding House.");
+  }
+  var match = matches[0];
+  if (!match.booking.stayId || !String(v108DogIdentityAt_(rows, match.row - 1).dogId || "").trim()) {
+    throw new Error("The matching booking has no complete stable identity. Please request a fresh link.");
+  }
+  if (String(record.dogName || "").trim().toLowerCase() !== String(match.booking.dogName || "").trim().toLowerCase()) {
+    throw new Error("This care form does not match the current dog name. Please request a fresh link.");
+  }
+  if (record.startDate === match.booking.startDate && record.endDate === match.booking.endDate) {
+    return { row: match.row, booking: match.booking, method: "unique-current-stay-key" };
+  }
+  if (!intakeBookingHasDateMigrationProof_(mainSheet, record, match.booking, match.row, auditRows)) {
+    throw new Error("This care form’s saved dates are outdated and the booking change cannot be verified. Please request a fresh link.");
+  }
+  return { row: match.row, booking: match.booking, method: "audited-date-change" };
+}
+
+
+function syncIntakeRecordForBooking_(mainSheet, bookingRow, dogId) {
+  var booking = auditBookingSnapshotFromSheetRow_(mainSheet, bookingRow);
+  dogId = String(dogId || "").trim();
+  if (!booking || !booking.stayId || !dogId) return { updated: false, reason: "incomplete-identity" };
+  var intakeSheet = getIntakeSheet_();
+  if (intakeSheet.getLastRow() < 2) return { updated: false, reason: "no-existing-form" };
+  var rows = mainSheet.getDataRange().getValues();
+  var values = intakeSheet.getRange(2, 1, intakeSheet.getLastRow() - 1, INTAKE_HEADERS_.length).getValues();
+  var matches = [];
+  for (var i = values.length - 1; i >= 0; i--) {
+    var record = intakeRowToObject_(values[i], i + 2);
+    try {
+      var resolved = resolveIntakeBookingForRecord_(mainSheet, rows, record);
+      if (String(resolved.booking.stayId || "").toLowerCase() === String(booking.stayId).toLowerCase() &&
+          (!record.dogId || String(record.dogId).toLowerCase() === dogId.toLowerCase())) matches.push(record);
+    } catch (_) {}
+  }
+  if (matches.length !== 1) return { updated: false, reason: matches.length ? "ambiguous-existing-forms" : "no-proven-existing-form" };
+  var record = matches[0], row = record.row, stayKey = makeGuestStayKey_(booking.dogName, booking.startDate, booking.endDate);
+  intakeSheet.getRange(row, 2).setValue(new Date());
+  intakeSheet.getRange(row, 6).setValue(stayKey);
+  intakeSheet.getRange(row, 7).setValue(booking.bookingType || "Boarding");
+  intakeSheet.getRange(row, 8).setValue(booking.dogName || "");
+  intakeSheet.getRange(row, 9).setValue(booking.breed || "");
+  intakeSheet.getRange(row, 10).setValue(booking.startDate || "");
+  intakeSheet.getRange(row, 11).setValue(booking.endDate || "");
+  intakeSheet.getRange(row, 12).setValue(booking.ownerName || "");
+  intakeSheet.getRange(row, 13).setValue(booking.phone || "");
+  intakeSheet.getRange(row, 18).setValue(bookingRow);
+  intakeSheet.getRange(row, 19).setValue(booking.stayId);
+  intakeSheet.getRange(row, 20).setValue(dogId);
+  return { updated: true, row: row };
 }
 
 
@@ -11327,7 +11680,8 @@ function createIntakeLinkForBooking_(mainSheet, rows, data) {
     rows,
     dogName,
     startDate,
-    endDate
+    endDate,
+    data
   );
 
   if (bookingRow === -1) {
@@ -11340,6 +11694,10 @@ function createIntakeLinkForBooking_(mainSheet, rows, data) {
     mainSheet,
     bookingRow
   );
+  var bookingDogId = String(v108DogIdentityAt_(rows, bookingRow - 1).dogId || "").trim();
+  if (!booking.stayId || !bookingDogId) {
+    throw new Error("This booking needs a complete Stay ID and Dog ID before a care form can be prepared.");
+  }
 
   var stayKey = makeGuestStayKey_(
     booking.dogName,
@@ -11348,10 +11706,10 @@ function createIntakeLinkForBooking_(mainSheet, rows, data) {
   );
 
   var intakeSheet = getIntakeSheet_();
-  var existing = findIntakeRecordByStayKey_(
-    intakeSheet,
-    stayKey
-  );
+  var existing = findIntakeRecordForBooking_(intakeSheet, mainSheet, booking.stayId, bookingDogId);
+  if (existing && existing.dogId && String(existing.dogId).toLowerCase() !== bookingDogId.toLowerCase()) {
+    throw new Error("The existing care form is linked to a different Dog ID. No link was changed.");
+  }
 
   var token = existing ? existing.token : makeIntakeToken_();
   var now = new Date();
@@ -11367,6 +11725,8 @@ function createIntakeLinkForBooking_(mainSheet, rows, data) {
     intakeSheet.getRange(existing.row, 12).setValue(booking.ownerName || "");
     intakeSheet.getRange(existing.row, 13).setValue(booking.phone || "");
     intakeSheet.getRange(existing.row, 18).setValue(bookingRow);
+    intakeSheet.getRange(existing.row, 19).setValue(booking.stayId);
+    intakeSheet.getRange(existing.row, 20).setValue(bookingDogId);
   } else {
     intakeSheet.appendRow([
       now,
@@ -11386,7 +11746,9 @@ function createIntakeLinkForBooking_(mainSheet, rows, data) {
       "",
       "",
       "",
-      bookingRow
+      bookingRow,
+      booking.stayId,
+      bookingDogId
     ]);
 
     existing = findIntakeRecordByToken_(
@@ -11434,6 +11796,8 @@ function createIntakeLinkForBooking_(mainSheet, rows, data) {
     dogName: booking.dogName,
     startDate: booking.startDate,
     endDate: booking.endDate,
+    stayId: booking.stayId,
+    dogId: bookingDogId,
     submittedAt: record.submittedAt || "",
     pdfUrl: record.pdfUrl || "",
     link:
@@ -11975,33 +12339,15 @@ function getIntakePrefill_(token) {
   var mainSheet = getTargetSheet_();
   var rows = mainSheet.getDataRange().getValues();
 
-  var bookingRow = findIntakeBookingRow_(
-    rows,
-    record.dogName,
-    record.startDate,
-    record.endDate
-  );
-
-  var booking = bookingRow === -1
-    ? {
-        dogName: record.dogName,
-        breed: record.breed,
-        startDate: record.startDate,
-        endDate: record.endDate,
-        ownerName: record.ownerName,
-        phone: record.mobile,
-        bookingType: record.bookingType
-      }
-    : auditBookingSnapshotFromSheetRow_(
-        mainSheet,
-        bookingRow
-      );
+  var resolved = resolveIntakeBookingForRecord_(mainSheet, rows, record);
+  var booking = resolved.booking;
 
   return {
     token: record.token,
     status: record.status,
     submittedAt: record.submittedAt,
     booking: booking,
+    identityResolution: resolved.method,
     savedAnswers: record.answers || {}
   };
 }
@@ -12560,18 +12906,8 @@ function processIntakeSubmission_(data) {
   var mainSheet = getTargetSheet_();
   var rows = mainSheet.getDataRange().getValues();
 
-  var bookingRow = findIntakeBookingRow_(
-    rows,
-    intakeRecord.dogName,
-    intakeRecord.startDate,
-    intakeRecord.endDate
-  );
-
-  if (bookingRow === -1) {
-    throw new Error(
-      "The matching booking could not be found. Please contact Waffle Boarding House."
-    );
-  }
+  var intakeResolution = resolveIntakeBookingForRecord_(mainSheet, rows, intakeRecord);
+  var bookingRow = intakeResolution.row;
 
   var bookingBefore = auditBookingSnapshotFromSheetRow_(
     mainSheet,
@@ -12714,6 +13050,8 @@ function processIntakeSubmission_(data) {
   intakeSheet.getRange(row, 16).setValue(pdfResult.pdfFile.getUrl());
   intakeSheet.getRange(row, 17).setValue(pdfResult.signatureFile.getId());
   intakeSheet.getRange(row, 18).setValue(bookingRow);
+  intakeSheet.getRange(row, 19).setValue(mutationStayId);
+  intakeSheet.getRange(row, 20).setValue(String(v108DogIdentityAt_(mainSheet.getDataRange().getValues(), bookingRow - 1).dogId || "").trim());
 
   var changedFields = auditObjectChangedFields_(
     bookingBefore,

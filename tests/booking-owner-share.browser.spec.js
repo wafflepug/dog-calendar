@@ -17,7 +17,7 @@ async function setup(page, baseURL, { saveResponse, linkResponse, clipboardFails
     window.fixtureWrites = [];
     window.fixtureReads = [];
     window.fixtureIdentityRows = [];
-    window.fixtureSaveResponse = saveResponse;
+    window.fixtureSaveResponse = { stayId: '00000000-0000-4000-8000-000000000001', dogId: '00000000-0000-4000-8000-000000000002', ...(saveResponse || {}) };
     window.fixtureLinkResponse = linkResponse;
     window.fixtureClipboardFails = clipboardFails;
     window.fixtureClipboardWrites = [];
@@ -107,7 +107,7 @@ test('missing returned link requires an explicit prepare click and reuses the pr
   await host.getByRole('button', { name: 'Copy owner care link' }).click();
   expect(await page.evaluate(() => window.fixtureWrites.map(item => item.action))).toEqual(['create_boarding', 'create_intake_link']);
   const create = await page.evaluate(() => window.fixtureWrites.find(item => item.action === 'create_intake_link'));
-  expect(create).toMatchObject({ action: 'create_intake_link', dogName: 'Test Dog', startDate: '2026-11-10', endDate: '2026-11-13' });
+  expect(create).toMatchObject({ action: 'create_intake_link', dogName: 'Test Dog', startDate: '2026-11-10', endDate: '2026-11-13', stayId: '00000000-0000-4000-8000-000000000001', dogId: '00000000-0000-4000-8000-000000000002' });
   expect(await page.evaluate(() => window.fixtureClipboardWrites)).toEqual(['https://care.example.test/stay/explicit-token', 'https://care.example.test/stay/explicit-token']);
 });
 
