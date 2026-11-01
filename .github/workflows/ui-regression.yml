@@ -163,6 +163,8 @@ on:
       - 'tests/fixtures/mobile-navigation-observer-baseline.js'
       - 'playwright.mvp-observer.config.js'
       - 'playwright.care-navigation-continuity.config.js'
+      - 'playwright.care-busy-day-journey.config.js'
+      - 'tests/care-busy-day-journey.browser.spec.js'
       - 'scripts/local-network-policy.js'
       - 'scripts/run-local-ui.js'
       - 'package.json'
@@ -327,6 +329,8 @@ on:
       - 'tests/fixtures/mobile-navigation-observer-baseline.js'
       - 'playwright.mvp-observer.config.js'
       - 'playwright.care-navigation-continuity.config.js'
+      - 'playwright.care-busy-day-journey.config.js'
+      - 'tests/care-busy-day-journey.browser.spec.js'
       - 'scripts/local-network-policy.js'
       - 'scripts/run-local-ui.js'
       - 'package.json'
@@ -386,6 +390,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          - group: care-busy-day-journey
+            configs: playwright.care-busy-day-journey.config.js
           - group: care-daily-workflows
             configs: playwright.care-daily-workflows.config.js
           - group: arrival-checkout
