@@ -42,7 +42,7 @@ const APP_SHELL = [
   './waffle-ui.js?build=2026.08.28.01',
   './waffle-ai.js?build=2026.08.28.01',
   './phase4.js?build=2026.08.28.01',
-  './phase4-core.js?build=2026.08.28.01',
+  './phase4-core.js?build=2026.08.28.01&rev=2026.11.02.03',
   './booking-plan.js?build=2026.08.28.01&rev=2026.11.02.03',
   './phase4-booking.js?build=2026.08.28.01&rev=2026.11.02.03',
   './phase4-operations.js?build=2026.08.28.01',

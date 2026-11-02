@@ -334,3 +334,17 @@ test('future arrival bridge preserves persisted IDs even with reordered identity
   assert.equal(events[0].extendedProps.stayId, stayId);
   assert.equal(events[0].extendedProps.dogNumber, '#00052');
 });
+
+test('Phase 4 rows preserve valid Stay IDs and leave legacy or malformed IDs blank', () => {
+  const dogId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+  const stayId = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+  const csv = [
+    'Timestamp,Dog Name,Breed,Start Date,End Date,Owner,Phone,Likes,Dislikes,Notes,Edit Link,Booking Type,Stay ID,Dog Number,Dog ID',
+    `2026-10-01,Milo,Kelpie,2026-11-10,2026-11-13,Alex,0400111222,,,,,Boarding,${stayId},#00001,${dogId}`,
+    `2026-10-01,Nova,Kelpie,2026-11-10,2026-11-13,Alex,0400111222,,,,,Boarding,not-a-uuid,#00002,${dogId}`,
+    `2026-10-01,Bella,Kelpie,2026-11-10,2026-11-13,Alex,0400111222,,,,,Boarding,,#00003,${dogId}`
+  ].join('\n');
+  const rows = phase4BookingRows(storageWith(csv))();
+  assert.deepEqual(Array.from(rows, row => row.stayId), [stayId, '', '']);
+  assert.deepEqual(Array.from(rows, row => row.dogId), [dogId, dogId, dogId]);
+});
