@@ -1889,3 +1889,38 @@ body.dark-theme[data-waffle-page="directory"] #directoryTabPanel .v11217-roster-
   background: var(--wh-surface, #1e293b) !important;
   color: var(--wh-text-muted, #cbd5e1) !important;
 }
+
+/* Compact, on-demand completed activity in the selected stay's Overview. */
+body[data-waffle-page="directory"] .directory-card.is-profile-active .care-routine-log {
+  margin: 12px 0 4px; border: 1px solid var(--care-card-line, #d5dee9); border-radius: 10px;
+  background: var(--care-card-soft, #f7f9fc); color: var(--care-card-text, #17243b); min-width: 0;
+}
+body[data-waffle-page="directory"] .care-routine-log summary {
+  min-height: 48px; padding: 9px 12px; display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; cursor: pointer; list-style: none;
+}
+body[data-waffle-page="directory"] .care-routine-log summary::-webkit-details-marker { display: none; }
+body[data-waffle-page="directory"] .care-routine-log summary > span:first-child { display: grid; gap: 2px; min-width: 0; }
+body[data-waffle-page="directory"] .care-routine-log summary small, .care-routine-status, .care-routine-empty { color: var(--wh-text-muted, #64748b); }
+body[data-waffle-page="directory"] .care-routine-count { font-size: 12px; white-space: nowrap; }
+body[data-waffle-page="directory"] .care-routine-body { display: grid; gap: 10px; padding: 0 12px 12px; min-width: 0; }
+body[data-waffle-page="directory"] .care-routine-status, .care-routine-empty { margin: 0; font-size: 13px; }
+body[data-waffle-page="directory"] .care-routine-events { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+body[data-waffle-page="directory"] .care-routine-events li { padding: 8px 10px; border: 1px solid var(--care-card-line, #d5dee9); border-radius: 8px; background: var(--wh-surface, #fff); overflow-wrap: anywhere; }
+body[data-waffle-page="directory"] .care-routine-events li > div { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 10px; }
+body[data-waffle-page="directory"] .care-routine-events time { color: var(--wh-text-muted, #64748b); font-size: 12px; }
+body[data-waffle-page="directory"] .care-routine-events p { margin: 4px 0 0; white-space: pre-wrap; }
+body[data-waffle-page="directory"] .care-routine-log fieldset { margin: 0; padding: 10px; border: 1px solid var(--care-card-line, #d5dee9); border-radius: 8px; min-width: 0; }
+body[data-waffle-page="directory"] .care-routine-log legend { padding: 0 4px; font-size: 13px; font-weight: 700; }
+body[data-waffle-page="directory"] .care-routine-types { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+body[data-waffle-page="directory"] .care-routine-log button { min-height: 42px; padding: 7px 10px; border: 1px solid var(--care-card-line, #cbd5e1); border-radius: 7px; background: var(--wh-surface, #fff); color: inherit; font: inherit; font-size: 13px; cursor: pointer; }
+body[data-waffle-page="directory"] .care-routine-log [data-care-routine-type][aria-pressed="true"] { border-color: var(--care-card-accent, #155e8a); box-shadow: inset 0 0 0 1px var(--care-card-accent, #155e8a); font-weight: 700; }
+body[data-waffle-page="directory"] .care-routine-log label { display: grid; gap: 4px; font-size: 13px; font-weight: 600; }
+body[data-waffle-page="directory"] .care-routine-log textarea { box-sizing: border-box; width: 100%; min-width: 0; max-width: 100%; resize: vertical; padding: 8px; border: 1px solid var(--care-card-line, #cbd5e1); border-radius: 7px; color: inherit; background: var(--wh-surface, #fff); font: inherit; font-size: 14px; }
+body[data-waffle-page="directory"] .care-routine-log [data-care-routine-submit] { margin-top: 8px; width: 100%; font-weight: 700; }
+body[data-waffle-page="directory"] .care-routine-log button:disabled { opacity: .58; cursor: not-allowed; }
+body[data-waffle-page="directory"] .care-routine-log :focus-visible { outline: 3px solid var(--wh-focus, #7562db); outline-offset: 2px; }
+body.dark-theme[data-waffle-page="directory"] .care-routine-log { color: var(--care-card-text, #e2e8f0); }
+body.dark-theme[data-waffle-page="directory"] .care-routine-events li,
+body.dark-theme[data-waffle-page="directory"] .care-routine-log button,
+body.dark-theme[data-waffle-page="directory"] .care-routine-log textarea { background: var(--wh-surface, #1e293b); color: inherit; }
