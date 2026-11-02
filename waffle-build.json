@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.11.03.01",
-  "releaseName": "Calmer Care identity and save feedback",
+  "assetRevision": "2026.11.03.02",
+  "releaseName": "Loaded Care needs-attention filter",
   "careIteration": {
     "returningDogSuggestions": true,
     "reviewedCareInheritance": true,

@@ -3,7 +3,8 @@
   'use strict';
   if (window.WAFFLE_CARE_ROSTER_FOCUS) return;
 
-  const MODES = Object.freeze({ all: 'All stays', arriving: 'Arriving today', leaving: 'Leaving today' });
+  const MODES = Object.freeze({ all: 'All stays', arriving: 'Arriving today', leaving: 'Leaving today', attention: 'Needs attention' });
+  const ATTENTION_SIGNALS = Object.freeze(['Intake missing', 'Reminder due', 'Medication', 'Food allergy', 'Escape risk', 'Separation anxiety', 'Weight management']);
   let mode = 'all';
   let stateCache = new WeakMap();
   let rootObserver = null;
@@ -53,6 +54,7 @@
   function matchesMode(card, requested = mode) {
     if (requested === 'all') return true;
     const state = stayState(card);
+    if (requested === 'attention') return isCurrentLoadedStay(state) && hasAttentionSignal(card);
     if (state.kind !== 'known') return false;
     const key = today();
     if (requested === 'arriving') return state.start === key && state.end >= key && state.code === 'date_active';
@@ -60,18 +62,32 @@
     return true;
   }
 
+  function isCurrentLoadedStay(state) {
+    const key = today();
+    return state.kind !== 'out' && validDate(state.start) && validDate(state.end) && state.start <= key && state.end >= key;
+  }
+
+  function hasAttentionSignal(card) {
+    return ATTENTION_SIGNALS.some(label => {
+      if (!card.querySelector(`[data-v1118-signal-label="${label}"]`)) return false;
+      if (label !== 'Intake missing') return true;
+      try { return window.WAFFLE_INTAKE_STATUS?.getState?.(card)?.code === 'not_prepared'; } catch (_) { return false; }
+    });
+  }
+
   function counts() {
     const cards = Array.from(document.querySelectorAll('#directory-grid .directory-card'));
-    let arriving = 0, leaving = 0, unknown = 0;
+    let arriving = 0, leaving = 0, attention = 0, unknown = 0;
     const key = today();
     cards.forEach(card => {
       const state = stayState(card);
+      if (isCurrentLoadedStay(state) && hasAttentionSignal(card)) attention++;
       if (state.start !== key && state.end !== key) return;
       if (state.kind !== 'known') { if (state.kind === 'unknown') unknown++; return; }
       if (state.start === key && state.end >= key && state.code === 'date_active') arriving++;
       if (state.end === key && ['date_active', 'checked_in'].includes(state.code)) leaving++;
     });
-    return { arriving, leaving, unknown, loaded: cards.length };
+    return { arriving, leaving, attention, unknown, loaded: cards.length };
   }
 
   function getState() {
@@ -86,6 +102,23 @@
     const toolbar = document.querySelector('.guest-directory-toolbar');
     if (!toolbar) return null;
     let details = toolbar.querySelector('[data-care-roster-focus]');
+    let attention = toolbar.querySelector('[data-care-roster-attention]');
+    if (!attention) {
+      attention = document.createElement('button');
+      attention.type = 'button';
+      attention.dataset.careRosterAttention = '';
+      attention.className = 'care-roster-attention';
+      attention.setAttribute('aria-pressed', 'false');
+      attention.title = 'Count of loaded current guests with explicit care signals';
+      attention.innerHTML = 'Needs attention <span data-focus-count="attention">0</span>';
+      attention.style.minHeight = '44px';
+      attention.addEventListener('click', () => {
+        mode = mode === 'attention' ? 'all' : 'attention';
+        renderControls();
+        applyCanonicalFilter();
+      });
+      toolbar.appendChild(attention);
+    }
     if (details) return details;
     details = document.createElement('details');
     details.dataset.careRosterFocus = '';
@@ -128,6 +161,11 @@
     const details = ensureDisclosure();
     if (!details) return;
     const data = counts();
+    const attentionButton = details.closest('.guest-directory-toolbar')?.querySelector('[data-care-roster-attention]');
+    const attentionCount = attentionButton?.querySelector('[data-focus-count="attention"]');
+    if (attentionCount && attentionCount.textContent !== String(data.attention)) attentionCount.textContent = String(data.attention);
+    if (attentionButton && attentionButton.getAttribute('aria-pressed') !== String(mode === 'attention')) attentionButton.setAttribute('aria-pressed', String(mode === 'attention'));
+    if (attentionButton) attentionButton.setAttribute('aria-label', `Needs attention: ${data.attention} loaded guest${data.attention === 1 ? '' : 's'} with explicit care signals`);
     const arrivingCount = details.querySelector('[data-focus-count="arriving"]');
     const leavingCount = details.querySelector('[data-focus-count="leaving"]');
     if (arrivingCount.textContent !== String(data.arriving)) arrivingCount.textContent = String(data.arriving);
@@ -142,30 +180,36 @@
       ? context.profileMode || context.activeView !== 'current'
       : document.querySelector('.directory-dashboard-fused')?.classList.contains('is-profile-mode') ||
         document.querySelector('[data-v1082-stay-tab].is-active')?.dataset.v1082StayTab !== 'current';
-    const hideClear = mode === 'all' || clearUnavailable;
+    const hideClear = mode === 'all' || mode === 'attention' || clearUnavailable;
     if (clear.hidden !== hideClear) clear.hidden = hideClear;
     if (clear.disabled) clear.disabled = false;
     const summary = details.querySelector('[data-focus-summary]');
     const visible = context && context.activeView === 'current' && !context.profileMode && Number.isFinite(Number(context.visibleMatches))
       ? Math.max(0, Number(context.visibleMatches)) : data[mode];
     const narrowed = mode !== 'all' && context?.activeView === 'current' && !context.profileMode && !!context.search && visible < data[mode];
-    const nextSummary = mode === 'all' ? "Today's work" : `${MODES[mode]} · ${narrowed ? `${visible} of ${data[mode]}` : data[mode]}`;
+    const nextSummary = mode === 'all' || mode === 'attention' ? "Today's work" : `${MODES[mode]} · ${narrowed ? `${visible} of ${data[mode]}` : data[mode]}`;
     if (summary.textContent !== nextSummary) summary.textContent = nextSummary;
-    const summaryLabel = mode === 'all' ? "Today's work filters" : narrowed
+    const summaryLabel = mode === 'all' || mode === 'attention' ? "Today's work filters" : narrowed
       ? `${MODES[mode]} filter · ${visible} visible of ${data[mode]} loaded stays`
       : `${MODES[mode]} filter · ${data[mode]} loaded stays`;
     if (summary.getAttribute('aria-label') !== summaryLabel) summary.setAttribute('aria-label', summaryLabel);
     const clearLabel = mode === 'all' ? 'Clear filter' : `Clear ${MODES[mode]} filter`;
     if (clear.getAttribute('aria-label') !== clearLabel) clear.setAttribute('aria-label', clearLabel);
     const status = details.querySelector('[data-focus-status]');
-    const unknownText = data.unknown ? ` ${data.unknown} loaded stay${data.unknown === 1 ? '' : 's'} ${data.unknown === 1 ? 'has' : 'have'} unknown or conflicting operational status and ${data.unknown === 1 ? 'is' : 'are'} omitted from today's counts${mode === 'all' ? '' : ' and this filter'}.` : '';
+    const unknownText = data.unknown ? mode === 'attention'
+      ? ` ${data.unknown} loaded stay${data.unknown === 1 ? '' : 's'} ${data.unknown === 1 ? 'has' : 'have'} unknown or conflicting operational status; only explicit care signals are included.`
+      : ` ${data.unknown} loaded stay${data.unknown === 1 ? '' : 's'} ${data.unknown === 1 ? 'has' : 'have'} unknown or conflicting operational status and ${data.unknown === 1 ? 'is' : 'are'} omitted from today's counts${mode === 'all' || mode === 'attention' ? '' : ' and this filter'}.` : '';
     const nextStatus = mode === 'all'
       ? `${data.arriving} pending arrival${data.arriving === 1 ? '' : 's'} · ${data.leaving} departure${data.leaving === 1 ? '' : 's'} today in the loaded roster.${unknownText}`
-      : `${MODES[mode]} · ${context?.activeView ? `combined with ${context.activeView === 'current' ? 'Staying' : context.activeView === 'future' ? 'Arriving' : 'Past'}` : 'combined with the selected stay tab'} and search.${unknownText}`;
+      : mode === 'attention'
+        ? `${data.attention} loaded guest${data.attention === 1 ? '' : 's'} with explicit intake, reminder or care flag signals in Staying, combined with search.${unknownText}`
+        : `${MODES[mode]} · ${context?.activeView ? `combined with ${context.activeView === 'current' ? 'Staying' : context.activeView === 'future' ? 'Arriving' : 'Past'}` : 'combined with the selected stay tab'} and search.${unknownText}`;
     if (status.textContent !== nextStatus) status.textContent = nextStatus;
     if (context) {
       const hidden = !!(context.profileMode || context.activeView !== 'current');
       if (details.hidden !== hidden) details.hidden = hidden;
+      const directAttention = details.closest('.guest-directory-toolbar')?.querySelector('[data-care-roster-attention]');
+      if (directAttention && directAttention.hidden !== hidden) directAttention.hidden = hidden;
     }
   }
 
