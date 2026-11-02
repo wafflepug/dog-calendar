@@ -2,8 +2,8 @@
    Build: 2026.08.27.04
    Historical base styles remain compatibility sources during Phase 3A, but pages no longer
    reference them individually. Preserve this import order until modules are folded in. */
-@import url("waffle-app.css?build=2026.08.27.04&rev=2026.11.02.03");
-@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.11.02.03");
+@import url("waffle-app.css?build=2026.08.27.04&rev=2026.11.02.04");
+@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.11.02.04");
 @import url("waffle-v10.8.2.css?build=2026.08.27.04");
 @import url("waffle-v10.8.3.css?build=2026.08.27.04");
 @import url("waffle-v10.8.5.css?build=2026.08.27.04");
@@ -11,12 +11,12 @@
 @import url("waffle-v10.8.7.css?build=2026.08.27.04");
 @import url("waffle-v10.8.8.css?build=2026.08.27.04");
 @import url("waffle-v10.8.9.css?build=2026.08.27.04");
-@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.11.02.03");
+@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.11.02.04");
 @import url("waffle-v11.0.3.css?build=2026.08.27.04");
 @import url("waffle-v11.0.5.css?build=2026.08.27.04");
-@import url("waffle-v11.1.94.css?build=2026.11.02.03");
-@import url("waffle-v11.1.95.css?build=2026.11.02.03");
-@import url("waffle-v11.1.96.css?build=2026.11.02.03&rev=2026.11.02.03");
+@import url("waffle-v11.1.94.css?build=2026.11.02.04");
+@import url("waffle-v11.1.95.css?build=2026.11.02.04");
+@import url("waffle-v11.1.96.css?build=2026.11.02.04&rev=2026.11.02.04");
 
 /* ============================================================
    MOBILE FIRST-PAINT STABILITY GATE
@@ -1383,11 +1383,6 @@ body[data-waffle-page="directory"] .guest-detail-edit-save:disabled {
   color: var(--wh75-accent-ink, #4338ca);
   cursor: not-allowed;
 }
-@media (max-width: 520px) {
-  body[data-waffle-page="directory"] .guest-detail-edit-actions {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
-  }
-}
 @media (max-width: 600px) {
   body[data-waffle-page="directory"] .directory-profile-section-tools {
     flex-wrap: wrap;
@@ -2441,12 +2436,18 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active :is(.v110-m
 body[data-waffle-page="directory"] .directory-card.is-profile-active :is(.v110-master-fields strong,.v11160-master-grid strong,.v110-master-note p,.v11160-master-record .v11160-note p){font-size:.875rem!important;line-height:1.5!important;overflow-wrap:anywhere;max-height:none!important}
 body[data-waffle-page="directory"] .directory-card.is-profile-active :is(.v110-master-note,.v11160-master-record .v11160-note)>summary{font-size:.875rem!important;line-height:1.5!important;min-height:44px;overflow-wrap:anywhere}
 @media(max-width:520px){body[data-waffle-page="directory"] .directory-card.is-profile-active :is(.v110-master-fields,.v11160-master-grid){grid-template-columns:minmax(0,1fr)!important}}
+body[data-waffle-page="directory"] #v11113StayDatesModal .v108-modal-card{box-sizing:border-box;padding-inline:12px}
+body[data-waffle-page="directory"] #v11113StayDatesModal .v108-modal-head{position:static!important}
+body[data-waffle-page="directory"] #v11113StayDatesModal .v11113-stay-dates-fields{grid-template-columns:repeat(auto-fit,minmax(min(100%,13em),1fr));padding-inline:8px}
 body[data-waffle-page="directory"] #v11113StayDatesModal .v11113-stay-dates-fields :is(label,input){min-width:0;box-sizing:border-box}
+body[data-waffle-page="directory"] #v11113StayDatesModal .v11113-stay-dates-fields input{padding-inline:6px}
 body[data-waffle-page="directory"] #v11113StayDatesModal .v11113-stay-dates-fields label{font-size:.875rem;line-height:1.5}
 body[data-waffle-page="directory"] #v11113StayDatesModal .v11113-stay-dates-status{font-size:.875rem;line-height:1.5;overflow-wrap:anywhere}
 body[data-waffle-page="directory"] :is(#v11113StayDatesModal .v11113-stay-dates-actions,#guestDetailEditModal .guest-detail-edit-actions){position:sticky;bottom:0;z-index:2;flex-wrap:wrap;background:var(--wh-surface,var(--v10-card,#fff));padding-block:12px;gap:10px;border-top:1px solid var(--wh-border,#d9e2ec)}
-body[data-waffle-page="directory"] :is(#v11113StayDatesModal .v11113-stay-dates-actions,#guestDetailEditModal .guest-detail-edit-actions)>button{min-height:44px;min-width:0;font-size:.875rem;line-height:1.5;white-space:normal;overflow-wrap:anywhere}
-body[data-waffle-page="directory"] :is(#v11113StayDatesModal .v108-modal-card,#guestDetailEditModal .guest-detail-edit-panel){scroll-padding-bottom:8rem!important}
+body[data-waffle-page="directory"] #guestDetailEditModal .guest-detail-edit-actions{display:flex!important;flex-wrap:wrap;grid-template-columns:none!important}
+body[data-waffle-page="directory"] #v11113StayDatesModal .v11113-stay-dates-actions>button{flex:1 1 max-content;min-height:44px;min-width:0;font-size:.875rem;line-height:1.5;white-space:normal;overflow-wrap:normal;word-break:normal}
+body[data-waffle-page="directory"] #guestDetailEditModal .guest-detail-edit-actions>button{flex:1 1 9em!important;min-height:44px;min-width:44px;width:auto!important;font-size:.875rem;line-height:1.5;white-space:normal;overflow-wrap:normal;word-break:normal}
+body[data-waffle-page="directory"] :is(#v11113StayDatesModal .v108-modal-card,#guestDetailEditModal .guest-detail-edit-panel){scroll-padding-bottom:12rem!important}
 
 body[data-waffle-page="directory"] .v1082-past-core-details{gap:8px!important}
 body[data-waffle-page="directory"] .v1082-past-core-details .directory-attribute{min-height:0!important;padding:10px!important}

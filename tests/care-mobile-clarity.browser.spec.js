@@ -2,6 +2,7 @@ const {test,expect}=require('@playwright/test');
 const fs=require('node:fs');
 const path=require('node:path');
 const {install,bookings}=require('./fixtures/care-daily-workflows');
+const {applyTrueTextScale}=require('./fixtures/true-text-scale');
 
 const longDogName='Alexandria Peterson-Smith-Wellington and Family';
 const longOwnerName='Casey Alexandra Wellington-Smith';
@@ -208,6 +209,90 @@ test('care essentials and the quiet routine shortcut stay readable across phone,
   expect(profileReads).toHaveLength(1);
   expect(fixture.reads.filter(action=>['get_guest_profile','get_dog_history','get_belongings','get_guest_belongings'].includes(action))).toEqual(readsAfterOpen);
   expect(liveWrites).toEqual([]);
+});
+
+test('selected Care profile preserves whole labels and contact details at true 200% text',async({page,baseURL},testInfo)=>{
+  const fixture=await install(page);
+  const liveWrites=[];
+  page.on('request',request=>{if(request.url().includes('script.google.com')&&!['GET','HEAD'].includes(request.method()))liveWrites.push(request.method())});
+  for(const viewport of [{width:320,height:568},{width:390,height:844},{width:700,height:900},{width:1440,height:900}]){
+    await page.setViewportSize(viewport);
+    const card=await openFirstStay(page,baseURL,fixture);
+    await card.locator('[data-open-directory-profile]').click();
+    await expect(card.locator('[data-directory-detail="profile"]')).toHaveAttribute('data-detail-loaded','true');
+    for(const dark of [false,true]){
+      await page.locator('body').evaluate((body,isDark)=>body.classList.toggle('dark-theme',isDark),dark);
+      await card.locator('.directory-profile-stay-dates').scrollIntoViewIfNeeded();
+      await page.screenshot({path:testInfo.outputPath(`care-profile-baseline-${viewport.width}-${dark?'dark':'light'}.png`)});
+    }
+    await page.locator('body').evaluate(body=>body.classList.remove('dark-theme'));
+    await applyTrueTextScale(card);
+    for(const dark of [false,true]){
+      await page.locator('body').evaluate((body,isDark)=>body.classList.toggle('dark-theme',isDark),dark);
+      const layout=await card.evaluate(root=>{
+        const rect=element=>{const value=element.getBoundingClientRect();return{left:value.left,right:value.right,top:value.top,bottom:value.bottom,width:value.width,height:value.height}};
+        const wordsKeepTogether=element=>{
+          const walker=document.createTreeWalker(element,NodeFilter.SHOW_TEXT),lines=[];let node;
+          while((node=walker.nextNode()))for(const match of node.textContent.matchAll(/\S+/g)){
+            const range=document.createRange();range.setStart(node,match.index);range.setEnd(node,match.index+match[0].length);lines.push({word:match[0],lines:range.getClientRects().length});
+          }
+          return lines;
+        };
+        const textRects=element=>{const range=document.createRange();range.selectNodeContents(element);return[...range.getClientRects()].map(value=>({left:value.left,right:value.right,top:value.top,bottom:value.bottom}))};
+        const dates=root.querySelector('.directory-profile-stay-dates');
+        const safety=root.querySelector('.directory-care-brief-safety');
+        const handover=root.querySelector('.directory-care-brief-note');
+        const safetyHeading=safety.querySelector('.directory-care-brief-note-heading h4');
+        const handoverHeading=handover.querySelector('.directory-care-brief-note-heading h4');
+        const phone=root.querySelector('.directory-care-owner-phone');
+        const call=root.querySelector('[data-care-brief-call-owner] > a');
+        return{
+          pageWidth:document.documentElement.scrollWidth,
+          dates:{box:rect(dates),labels:[...dates.querySelectorAll(':scope > span')].map(element=>({text:element.innerText,box:rect(element),words:wordsKeepTogether(element)}))},
+          safety:{heading:rect(safetyHeading),headingText:safetyHeading.innerText,headingWords:wordsKeepTogether(safetyHeading),textRects:textRects(safetyHeading),value:rect(safety.querySelector('[data-care-brief-safety]')),action:rect(safety.querySelector('[data-care-brief-action="emergency-contact"]'))},
+          handover:{heading:rect(handoverHeading),headingText:handoverHeading.innerText,headingWords:wordsKeepTogether(handoverHeading),textRects:textRects(handoverHeading),value:rect(handover.querySelector('[data-care-brief-handover-note]')),action:rect(handover.querySelector('[data-care-brief-action="handover"]'))},
+          owner:{name:rect(root.querySelector('[data-care-brief-owner-name]')),phone:rect(phone),phoneText:phone.innerText,phoneWords:wordsKeepTogether(phone),call:rect(call)}
+        };
+      });
+      expect(layout.pageWidth).toBeLessThanOrEqual(viewport.width);
+      const intersects=(a,b)=>a.left<b.right&&a.right>b.left&&a.top<b.bottom&&a.bottom>b.top;
+      expect(layout.dates.box.right).toBeLessThanOrEqual(viewport.width+1);
+      for(const label of layout.dates.labels){
+        expect(label.box.left).toBeGreaterThanOrEqual(-1);
+        expect(label.box.right).toBeLessThanOrEqual(viewport.width+1);
+        expect(label.words.filter(item=>item.word.includes('CHECK')).every(item=>item.lines===1),JSON.stringify({viewport,dark,label})).toBe(true);
+      }
+      for(const group of [layout.safety,layout.handover]){
+        expect(group.heading.left).toBeGreaterThanOrEqual(-1);
+        expect(group.heading.right).toBeLessThanOrEqual(viewport.width+1);
+        expect(group.action.left).toBeGreaterThanOrEqual(-1);
+        expect(group.action.right).toBeLessThanOrEqual(viewport.width+1);
+        for(const textRect of group.textRects){
+          expect(textRect.left).toBeGreaterThanOrEqual(group.heading.left-1);
+          expect(textRect.right).toBeLessThanOrEqual(group.heading.right+1);
+          expect(intersects(textRect,group.value),JSON.stringify({viewport,dark,heading:group.headingText,textRect,value:group.value})).toBe(false);
+          expect(intersects(textRect,group.action),JSON.stringify({viewport,dark,heading:group.headingText,textRect,action:group.action})).toBe(false);
+        }
+        expect(group.headingWords.every(item=>item.lines===1),JSON.stringify({viewport,dark,heading:group.headingText,words:group.headingWords})).toBe(true);
+      }
+      const contact=layout.owner;
+      const contactRects={name:contact.name,phone:contact.phone,call:contact.call};
+      expect(contactRects.phone.left).toBeGreaterThanOrEqual(-1);
+      expect(contactRects.phone.right).toBeLessThanOrEqual(viewport.width+1);
+      expect(contactRects.call.right).toBeLessThanOrEqual(viewport.width+1);
+      expect(intersects(contactRects.phone,contactRects.call),JSON.stringify({viewport,dark,phone:contact.phone,call:contact.call})).toBe(false);
+      expect(contact.phoneWords.every(item=>item.lines===1),JSON.stringify({viewport,dark,phone:contact.phoneText,words:contact.phoneWords})).toBe(true);
+      if([320,390,700].includes(viewport.width)){
+        await card.locator('.directory-profile-stay-dates').scrollIntoViewIfNeeded();
+        await page.screenshot({path:testInfo.outputPath(`care-profile-header-2x-${viewport.width}-${dark?'dark':'light'}.png`)});
+        await card.locator('.directory-care-brief-safety').scrollIntoViewIfNeeded();
+        await page.screenshot({path:testInfo.outputPath(`care-profile-2x-${viewport.width}-${dark?'dark':'light'}.png`)});
+        await card.locator('.directory-care-owner-line').scrollIntoViewIfNeeded();
+        await page.screenshot({path:testInfo.outputPath(`care-profile-contact-2x-${viewport.width}-${dark?'dark':'light'}.png`)});
+      }
+    }
+    expect(liveWrites).toEqual([]);
+  }
 });
 
 test('long handover note keeps its own expandable full text and short notes stay directly visible after rerender',async({page,baseURL})=>{

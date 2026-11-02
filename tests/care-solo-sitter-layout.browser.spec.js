@@ -318,16 +318,25 @@ test('profile heading, contact and action rows align with received form status a
     },scale);
     const geometry=await card.evaluate(card=>{
       const box=selector=>{const node=card.querySelector(selector),r=node.getBoundingClientRect();return {left:r.left,right:r.right,top:r.top,bottom:r.bottom,height:r.height};};
+      const phoneNode=card.querySelector('.directory-care-owner-phone');
+      const phoneRange=document.createRange();phoneRange.selectNodeContents(phoneNode);
+      const phoneTextRects=[...phoneRange.getClientRects()].map(r=>({left:r.left,right:r.right,top:r.top,bottom:r.bottom}));
       return {overflow:card.scrollWidth>card.clientWidth+1,viewportOverflow:document.documentElement.scrollWidth>innerWidth+1,
         primary:box('[data-care-brief-action="full-profile"]'),owner:box('[data-p4-dir="owner"]'),status:box('[data-compact-intake-status]'),
-        name:box('[data-care-brief-owner-name]'),phone:box('.directory-care-owner-phone'),call:box('[data-care-brief-call-owner] a')};
+        name:box('[data-care-brief-owner-name]'),phone:box('.directory-care-owner-phone'),phoneText:phoneNode.innerText,phoneTextRects,call:box('[data-care-brief-call-owner] a')};
     });
     expect(geometry.overflow).toBe(false);
     expect(geometry.viewportOverflow).toBe(false);
     expect(geometry.name.left).toBeCloseTo(geometry.phone.left,0);
     expect(geometry.name.bottom).toBeLessThanOrEqual(geometry.phone.top+1);
-    expect(geometry.name.right).toBeLessThanOrEqual(geometry.call.left);
-    expect(geometry.phone.right).toBeLessThanOrEqual(geometry.call.left);
+    const nameAndCallShareRow=Math.abs((geometry.name.top+geometry.name.bottom)/2-(geometry.call.top+geometry.call.bottom)/2)<2;
+    if(nameAndCallShareRow)expect(geometry.name.right).toBeLessThanOrEqual(geometry.call.left+1);
+    else expect(geometry.name.bottom,JSON.stringify({viewport:page.viewportSize(),scale,dark,geometry})).toBeLessThanOrEqual(geometry.call.top+1);
+    expect(geometry.phone.top).toBeGreaterThanOrEqual(geometry.call.bottom-1);
+    expect(geometry.phoneText.replace(/\s/g,'')).toBe(bookings[0].phone.replace(/\s/g,''));
+    expect(geometry.phoneTextRects.length).toBe(1);
+    expect(geometry.phoneTextRects[0].left).toBeGreaterThanOrEqual(0);
+    expect(geometry.phoneTextRects[0].right).toBeLessThanOrEqual(page.viewportSize().width+1);
     expect(geometry.call.height).toBeGreaterThanOrEqual(44);
     if(page.viewportSize().width>360)expect(geometry.primary.top).toBeCloseTo(geometry.owner.top,0);
     expect(geometry.status.top).toBeGreaterThanOrEqual(geometry.owner.bottom);
