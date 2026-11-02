@@ -18,8 +18,12 @@ JavaScript syntax/diff review; phone/desktop before/after captures with fictiona
 ## Manual use after publication
 Care > select current guest > Recent care activity > choose activity > optional note > Record completed activity. Review the confirmed timestamp. For an owner message: Owner sharing options > Owner update > Daily check-in > Use saved activity for this stay > review > Copy/Share. During ordinary use, confirm that offline/rejected requests retain the draft and a retry cannot duplicate the same entry.
 
-## Release gate
-Production project 190HV0h4qkpo5i8agQi415LAM0u51GCo2BgDUkgeFnWga96LbKFfnaYyJ matches the live endpoint. It has 200 versions (2–201); live web app uses 201. Deployed historical versions are 13,16,18; Version 2 is unused. No history has been deleted and no production source has been pushed. Live version 201 and unpublished HEAD were downloaded for review and match repository base (excluding generated deployment attribution). Release requires explicit approval to permanently remove unused Version 2, then push/deploy this reviewed candidate. Keep the frontend unmerged until backend capability is available.
+## Publication and history cleanup
+On 3 November 2026, following the user's request to remove redundant Apps Scripts, removed 21 oldest unused historical versions: 2–12, 14–15, 17 and 19–25. Google's deletion dialog confirmed these were not used by active deployments. All current source files, deployed versions 13/16/18/201 and recent rollback history were preserved. Version count fell from 200 to 179; no guest data or triggers were changed.
+
+Production project 190HV0h4qkpo5i8agQi415LAM0u51GCo2BgDUkgeFnWga96LbKFfnaYyJ was published manually as Version 202 from reviewed commit 591b430. The existing live deployment URL was retained. A cache-busted read-only get_data_versions request confirmed careRoutineLogVersion=1 and Care identity enrollment still disabled. No activity writes or notifications were sent. The manual deployment intentionally has no workflow attribution; the main-branch deployment workflow can supply its own attribution on publication.
+
+Before deployment, downloaded live201 and unpublished HEAD matched the repository base except generated deployment attribution. Rollback201 remains available. Cleanup receipt: output/care-routine-deployment/history-cleanup.jpg.
 
 Screenshot summary: output/care-routine-review/review.html. Cache revision candidate 2026.11.03.07.
 
