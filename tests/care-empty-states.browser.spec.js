@@ -33,7 +33,7 @@ async function mount(page, { current = 0, arriving = 0, past = 0, rosterState = 
         <div class="no-dogs">Old empty placeholder</div>
         ${current ? '<article class="directory-card" data-directory-dog-name="Maple" data-directory-start-date="2026-10-18"><button>Maple</button></article>' : ''}
 
-        <button type="button" data-v11196-expand-later data-v11196-action="expand" aria-expanded="false" ${arriving ? '' : 'hidden'}>View 2 later arrivals · First arrives 18 Nov</button>
+        <button type="button" data-v11196-expand-later data-v11196-action="expand" aria-expanded="false" ${arriving ? '' : 'hidden'}>View 2 later arrivals · Arrival dates 18 Nov 2026–21 Nov 2026</button>
       </div></section>
       <section id="v1082FutureStayPanel" data-v1082-stay-panel="future" hidden>        ${arriving ? '<article class="directory-card" data-directory-dog-name="Ravioli" data-directory-start-date="2026-10-29" data-v1082-stay-kind="future"><button>Ravioli</button></article>' : ''}</section>
       <section id="v1082PastStayPanel" data-v1082-stay-panel="past" hidden><div id="past-directory-grid">
@@ -130,7 +130,7 @@ test('search clear retains the active category, restores focus, and deferred arr
   await page.locator('#guestDirectorySearch').fill('no such dog');
   await expect(page.locator('#directory-search-status')).toContainText('Later arrivals are not included until opened.');
   await expect(page.locator('#directory-empty-state')).toBeVisible();
-  await expect(page.locator('#directory-empty-state [data-directory-empty-action]')).toHaveText('Clear search');
+  await expect(page.locator('#directory-empty-state [data-directory-empty-action]')).toHaveText('View later arrivals');
   await expect(page.locator('#directory-search-status')).toBeHidden();
   await page.locator('[data-directory-search-clear]').click();
   await expect(page.locator('#guestDirectorySearch')).toBeFocused();

@@ -5,7 +5,9 @@ Reviewed 17 September 2026. Repository: `wafflepug/dog-calendar`; always start i
 
 ## Current owner workflow iteration - 2 November 2026
 
-Candidate 2026.11.02.01 (SW167): [Owner Journey Clarity](owner-journey-clarity.md). Seven bounded improvements across arrival preparation, pickup, daily care priorities, returning bookings, shared-owner multi-dog plans, repeated-visit review and unsaved profile guidance. Scoped refresh preservation was also verified against the existing state and read-count regression tests; no refresh behavior change was needed. Preserve exact identities, loaded-data truth, complete care, drafts, explicit writes, lazy reads and existing signing/consent boundaries. The remaining owner-intake review and local loading diagnostics are tracked separately.
+Candidate 2026.11.02.02 (SW168): [Owner efficiency next five](owner-efficiency-next-five.md). Split the existing full Care daily workflow group into three complete, disjoint CI shards; show truthful deferred-arrival start-date bounds; add explicit no-match recovery to later arrivals with preserved search and lazy profile data; let owners replace a restored draft with the loaded canonical answers through a confirmation; and let long intake textareas grow up to a bounded height. Preserve exact identities, booking dates, full Safety and Medication notes, explicit writes, lazy reads, submission receipts, consent and signature boundaries. No Today/Calendar changes.
+
+Published 2026.11.02.01 (PR #292/293): [Owner Journey Clarity](owner-journey-clarity.md). Seven bounded improvements across arrival preparation, pickup, daily care priorities, returning bookings, shared-owner multi-dog plans, repeated-visit review and unsaved profile guidance. Scoped refresh preservation was also verified against the existing state and read-count regression tests; no refresh behavior change was needed. Preserve exact identities, loaded-data truth, complete care, drafts, explicit writes, lazy reads and existing signing/consent boundaries.
 
 
 ## Current Care iteration - 31 October 2026
