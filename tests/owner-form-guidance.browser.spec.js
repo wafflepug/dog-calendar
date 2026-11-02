@@ -15,6 +15,7 @@ async function setupOwnerDialog(page, baseURL) {
     document.documentElement.dataset.waffleUiReady = 'true';
     window.fixtureWrites = [];
     window.fixtureReads = [];
+    window.fixtureRows = [{ dogId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', stayId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', dogNumber: '#00001', dogName: 'Milo', startDate: '2026-11-10', endDate: '2026-11-13', breed: 'Kelpie', ownerName: 'Alex', phone: '0400111222' }];
     window.fixtureIdentityRows = [{ dogId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', dogNumber: '00001', dogName: 'Milo', breed: 'Kelpie', ownerName: 'Alex' }];
     window.fixtureWriteHandler = async () => ({ intake: { link: 'https://care.example.test/stay/AbC123' } });
     window.fixtureReadHandler = async payload => payload.action === 'list_dog_identities' ? { identities: window.fixtureIdentityRows } : { history: { previousStays: [], stayCount: 0 } };

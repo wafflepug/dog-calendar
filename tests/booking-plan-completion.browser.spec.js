@@ -16,6 +16,7 @@ async function setup(page, baseURL, options = {}) {
   await page.evaluate(({ dogA, dogB, options }) => {
     window.fixtureWrites = []; window.fixtureReads = []; window.fixtureCopies = [];
     window.fixtureOutcomes = options.outcomes || [];
+    window.fixtureErrorMessage = options.errorMessage || 'Synthetic save failure';
     window.fixtureCopyFails = !!options.copyFails;
     window.fixtureHoldWriteAt = options.holdWriteAt || 0;
     window.fixtureHoldCopy = false;
@@ -30,7 +31,7 @@ async function setup(page, baseURL, options = {}) {
       if (window.fixtureCopyFails) throw Error('Synthetic clipboard denial');
     } } });
     window.WAFFLE_PHASE4_CORE = {
-      modal: () => document.getElementById('p4Modal'), page: () => 'booking', open: () => {},
+      modal: () => document.getElementById('p4Modal'), page: () => 'booking', open: tab => document.querySelectorAll('[data-p4-panel]').forEach(panel => { panel.hidden = panel.dataset.p4Panel !== tab; }),
       settings: () => ({ preferred: 4, absolute: 6 }),
       esc: value => String(value ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]),
       norm: value => String(value ?? '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim(),
@@ -39,9 +40,10 @@ async function setup(page, baseURL, options = {}) {
       write: async payload => {
         window.fixtureWrites.push(structuredClone(payload));
         if (window.fixtureWrites.length === window.fixtureHoldWriteAt) await new Promise(resolve => { window.resolveFixtureWrite = resolve; });
+        if (payload.action === 'create_intake_link') return { result: 'success', intake: { link: `https://example.test/care/${payload.stayId}` } };
         const outcome = window.fixtureOutcomes.shift() || 'saved';
         if (outcome === 'queued') return { result: 'success', queued: true };
-        if (outcome === 'error') throw Error('Synthetic save failure');
+        if (outcome === 'error') throw Error(window.fixtureErrorMessage);
         return { result: 'success', dogId: payload.dogId, dogNumber: options.noDogNumber ? '' : payload.dogId === dogA ? '00001' : '00002', stayId: payload.stayId,
           intakeLink: outcome === 'missing' ? '' : outcome === 'unsafe' ? 'javascript:alert(1)' : `https://example.test/care/${payload.stayId}` };
       },
@@ -164,7 +166,7 @@ test('Check saved visits reconciles only an exact server stay and keeps its unav
   await page.locator('#p4PlanSave').click();
   await expect(page.locator('#p4PlanRows > [role="status"]')).toContainText('Saved 2 · Queued 0');
   await expect(page.locator('[data-p4-result-status="saved"]')).toHaveCount(2);
-  await expect(page.locator('.p4-plan-next-action')).toContainText('Owner Care Link in Care');
+  await expect(page.locator('.p4-plan-next-action')).toContainText('Choose a stay marked Care form not returned above');
   await expect(page.locator('#p4PlanShareStay option')).toHaveCount(2);
   expect(await page.evaluate(() => window.fixtureReads)).toEqual([{
     action: 'get_dog_history', dogName: 'Luna', dogId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
@@ -367,7 +369,7 @@ for (const width of [320, 390, 1440]) for (const dark of [false, true]) {
     await page.locator('#p4PlanSave').click();
     const writesBeforeReview = await page.evaluate(() => structuredClone(window.fixtureWrites));
     await expect(page.locator('#p4PlanRows > [role="status"]')).toContainText('Saved 1 · Queued 1');
-    await expect(page.locator('[data-p4-result-status="queued"]')).toContainText('queued');
+    await expect(page.locator('[data-p4-result-status="queued"]')).toContainText('Pending Sync · not confirmed');
     await expect(page.locator('.p4-plan-next-action')).toContainText('not confirmed saved');
     const resume = page.locator('#p4PlanSave');
     await expect(resume).toHaveText('Check saved visits');
@@ -382,7 +384,7 @@ for (const width of [320, 390, 1440]) for (const dark of [false, true]) {
     await expect.poll(() => page.evaluate(() => window.pendingSyncOpened)).toBe(true);
     expect(await page.evaluate(() => window.fixtureWrites)).toEqual(writesBeforeReview);
     await expect(page.locator('#p4PlanRows > [role="status"]')).toContainText('Saved 1 · Queued 1');
-    await expect(page.locator('[data-p4-result-status="queued"]')).toContainText('queued');
+    await expect(page.locator('[data-p4-result-status="queued"]')).toContainText('Pending Sync · not confirmed');
     await expect(page.locator('#p4PlanShareStay option')).toHaveCount(2);
     const payloads = await page.evaluate(() => window.fixtureWrites);
     expect(payloads.map(row => row.stayId)).toEqual(writesBeforeReview.map(row => row.stayId));
@@ -393,7 +395,7 @@ for (const width of [320, 390, 1440]) for (const dark of [false, true]) {
 
 test('missing and unsafe returned links never offer a copy action or create a token', async ({ page, baseURL }) => {
   await setup(page, baseURL, { outcomes: ['missing', 'unsafe'] }); await save(page);
-  await expect(page.locator('.p4-plan-next-action')).toContainText('Owner Care Link in Care');
+  await expect(page.locator('.p4-plan-next-action')).toContainText('Choose a stay marked Care form not returned above');
   await expect(page.locator('#p4PlanShare')).toHaveCount(0);
   await expect(page.locator('[data-p4-plan-copy]')).toHaveCount(0);
   expect(await page.evaluate(() => window.fixtureWrites.length)).toBe(2);
@@ -438,7 +440,101 @@ test('missing readable dog number disables copying without exposing an internal 
   await expect(page.locator('[data-p4-plan-copy]')).toBeDisabled();
   await expect(page.locator('#p4PlanShareCard')).toContainText('not returned');
   await expect(page.locator('#p4PlanShareCard')).not.toContainText(dogA);
+  await expect(page.locator('[data-p4-result-dog]')).toContainText('Dog ID not returned');
+  await expect(page.locator('[data-p4-result-dog]')).not.toContainText(dogA);
+  await expect(page.locator('[data-p4-result-row] [data-p4-plan-prepare-care]')).toHaveCount(0);
+  expect(await page.evaluate(() => window.fixtureWrites.map(item => item.action))).toEqual(['create_boarding', 'create_boarding']);
   expect(await page.evaluate(() => window.fixtureCopies)).toEqual([]);
+});
+
+test('a missing care form does not open owner preparation when no readable public Dog Number is available', async ({ page, baseURL }) => {
+  await setup(page, baseURL, { noDogNumber: true, outcomes: ['missing'] });
+  await save(page);
+  const row = page.locator('.p4-plan-result-row').first();
+  await expect(row).toContainText('Care form not returned');
+  await expect(row).toContainText('A readable Dog ID was not returned');
+  await expect(row.locator('[data-p4-plan-prepare-care]')).toHaveCount(0);
+  await expect(page.locator('[data-p4-result-dog]')).not.toContainText(dogA);
+  expect(await page.evaluate(() => window.fixtureWrites.map(item => item.action))).toEqual(['create_boarding', 'create_boarding']);
+  expect(await page.evaluate(() => window.fixtureCopies)).toEqual([]);
+});
+
+test('mixed saved rows identify the missing care form and prepare only that exact stay after an explicit click', async ({ page, baseURL }) => {
+  await setup(page, baseURL, { outcomes: ['saved', 'missing'] });
+  await save(page);
+  const resultRows = page.locator('.p4-plan-result-row');
+  await expect(resultRows).toHaveCount(2);
+  await expect(resultRows.nth(0)).toContainText('8 Dec 2026');
+  await expect(resultRows.nth(0)).toContainText('Care form ready');
+  await expect(resultRows.nth(0).locator('[data-p4-plan-prepare-care]')).toHaveCount(0);
+  await expect(resultRows.nth(1)).toContainText('15 Dec 2026');
+  await expect(resultRows.nth(1)).toContainText('Care form not returned');
+  await expect(resultRows.nth(1).locator('[data-p4-plan-prepare-care]')).toHaveAccessibleName(/Prepare care form for Luna.*15 Dec 2026/);
+  await expect(page.locator('#p4PlanShare summary')).toHaveCSS('display', 'list-item');
+
+  const readsBeforePrepare = await page.evaluate(() => window.fixtureReads.length);
+  const missingStayId = await page.evaluate(() => window.fixtureWrites[1].stayId);
+  await resultRows.nth(1).locator('[data-p4-plan-prepare-care]').click();
+  await expect(page.locator('#p4OwnerLink')).toBeVisible();
+  await expect(page.locator('#p4OwnerDog')).toHaveValue('Luna');
+  await expect(page.locator('#p4OwnerStart')).toHaveValue('2026-12-15');
+  await expect(page.locator('#p4OwnerEnd')).toHaveValue('2026-12-20');
+  expect(await page.evaluate(() => window.fixtureReads.length)).toBe(readsBeforePrepare);
+  expect(await page.evaluate(() => window.fixtureWrites.map(item => item.action))).toEqual(['create_boarding', 'create_boarding']);
+
+  await page.locator('#p4OwnerLink').click();
+  await expect(page.locator('#p4LinkResult')).toContainText('Owner care link ready');
+  const linkRequest = await page.evaluate(() => window.fixtureWrites.find(item => item.action === 'create_intake_link'));
+  expect(linkRequest).toMatchObject({ dogName: 'Luna', startDate: '2026-12-15', endDate: '2026-12-20', stayId: missingStayId, dogId: dogA });
+  expect(await page.evaluate(() => window.fixtureReads.length)).toBe(readsBeforePrepare);
+  await expect(resultRows.nth(1)).toContainText('Care form ready');
+  await expect(resultRows.nth(1).locator('[data-p4-result-link-state]')).toHaveAttribute('data-p4-result-link-state', 'ready');
+  await expect(resultRows.nth(1).locator('[data-p4-plan-prepare-care]')).toHaveCount(0);
+  const preparedRowKey = await resultRows.nth(1).getAttribute('data-p4-result-row');
+  await expect(page.locator(`#p4PlanShareStay option[value="${preparedRowKey}"]`)).toContainText('Luna · Dog ID #00001');
+  expect(await page.evaluate(() => window.fixtureWrites.map(item => item.action))).toEqual(['create_boarding', 'create_boarding', 'create_intake_link']);
+});
+
+test('result status labels are readable, save details retain the full error, and narrow enlarged text does not overflow', async ({ page, baseURL }) => {
+  const longErrorMessage = `The full save diagnostic must stay available. ${'unbroken-error-token-'.repeat(30)}\nSecond line: please review the exact stay identity and try again.`;
+  await setup(page, baseURL, { width: 320, outcomes: ['error'], errorMessage: longErrorMessage });
+  await page.locator('#p4PlanSave').click();
+  const result = page.locator('.p4-plan-result-row').first();
+  await expect(result).toContainText('Needs attention');
+  await expect(result).not.toContainText('needs-attention');
+  await expect(result.locator('details')).toContainText('Save details');
+  await result.locator('summary').click();
+  await expect(result.locator('summary')).toHaveCSS('min-height', '44px');
+  expect(await result.locator('details p').evaluate(element => element.textContent)).toBe(longErrorMessage);
+  const scale = await result.evaluate(element => {
+    const nodes = [element, ...element.querySelectorAll('*')];
+    const sizes = nodes.map(node => parseFloat(getComputedStyle(node).fontSize));
+    nodes.forEach((node, index) => node.style.setProperty('font-size', `${sizes[index] * 2}px`, 'important'));
+    const status = element.querySelector('[data-p4-result-status]');
+    return { before: sizes[nodes.indexOf(status)], after: parseFloat(getComputedStyle(status).fontSize) };
+  });
+  expect(scale.after).toBeGreaterThanOrEqual(scale.before * 2);
+  for (const dark of [false, true]) {
+    await page.locator('body').evaluate((body, value) => body.classList.toggle('dark-theme', value), dark);
+    expect(await result.evaluate(element => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+  }
+});
+
+test('missing-form preparation stays disabled and guarded while another frozen visit is saving', async ({ page, baseURL }) => {
+  await setup(page, baseURL, { outcomes: ['missing', 'saved'], holdWriteAt: 2 });
+  await page.locator('#p4PlanSave').click();
+  await expect.poll(() => page.evaluate(() => typeof window.resolveFixtureWrite)).toBe('function');
+  const prepare = page.locator('[data-p4-plan-prepare-care]').first();
+  await expect(prepare).toBeDisabled();
+  await prepare.evaluate(button => button.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+  await expect(page.locator('[data-p4-panel="owner"]')).toBeHidden();
+  expect(await page.evaluate(() => window.fixtureWrites.map(item => item.action))).toEqual(['create_boarding', 'create_boarding']);
+
+  await page.evaluate(() => window.resolveFixtureWrite());
+  await expect(page.locator('#p4PlanSave')).toHaveText('All visits saved');
+  await expect(prepare).toBeEnabled();
+  expect(await page.evaluate(() => window.fixtureWrites.map(item => item.action))).toEqual(['create_boarding', 'create_boarding']);
 });
 
 test('manual-copy field remains selected when another visit completes saving', async ({ page, baseURL }) => {

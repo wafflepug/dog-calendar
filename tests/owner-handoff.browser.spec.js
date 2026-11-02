@@ -1,6 +1,7 @@
 const { test, expect } = require('@playwright/test');
 const fs = require('node:fs');
 const path = require('node:path');
+const { install: installCareDailyFixture, bookings: careDailyBookings } = require('./fixtures/care-daily-workflows');
 
 const root = path.resolve(__dirname, '..');
 const helper = path.join(root, 'owner-handoff.js');
@@ -27,31 +28,41 @@ async function setup(page, baseURL, { share = false, clipboardFails = false } = 
 
 const valid = { link: 'https://care.example.test/stay/AbC123', dogName: 'Milo', startDate: '2026-11-10', endDate: '2026-11-13' };
 
-async function setupOwnerDialog(page, baseURL = 'http://127.0.0.1:4327') {
-  await page.setContent('<body data-waffle-page="booking"><div id="p4Modal" class="p4-modal"><section class="p4-card" role="dialog" aria-modal="true"><header class="p4-head"><h2>Booking</h2><button data-p4-close type="button">Close</button></header><nav class="p4-tabs"></nav><div class="p4-body"><section class="p4-panel" data-p4-panel="booking" hidden></section><section class="p4-panel" data-p4-panel="capacity" hidden></section><section class="p4-panel" data-p4-panel="owner"></section></div></section></div></body>');
-  await page.evaluate(() => {
+async function setupOwnerDialog(page, baseURL = 'http://127.0.0.1:4327', { pageKind = 'booking', directoryCard = false, productionCoreRows = false, csv = '' } = {}) {
+  await page.goto(`${baseURL}/waffle-runtime.css`, { waitUntil: 'domcontentloaded' });
+  const card = directoryCard ? '<main id="directory-grid"><article class="directory-card" data-directory-stay-key="milo-stay-key" data-directory-dog-id="aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" data-directory-stay-id="bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb" data-directory-dog-number="00001" data-directory-dog-name="Milo" data-directory-start-date="2026-11-10" data-directory-end-date="2026-11-13" data-v1088-breed="Kelpie" data-v1088-owner-name="Alex" data-v1088-phone="0400111222"><h2>Milo</h2><div class="directory-care-brief"></div></article></main>' : '';
+  await page.setContent(`<body data-waffle-page="${pageKind}">${card}<div id="p4Modal" class="p4-modal"><section class="p4-card" role="dialog" aria-modal="true"><header class="p4-head"><h2>Booking</h2><button data-p4-close type="button">Close</button></header><nav class="p4-tabs"></nav><div class="p4-body"><section class="p4-panel" data-p4-panel="booking" hidden></section><section class="p4-panel" data-p4-panel="capacity" hidden></section><section class="p4-panel" data-p4-panel="owner"></section></div></section></div></body>`);
+  if (productionCoreRows) {
+    await page.evaluate(value => localStorage.setItem('boardingDataCache', value), csv);
+    await page.addScriptTag({ path: path.join(root, 'waffle-csv.js') });
+    await page.addScriptTag({ content: coreScript });
+  }
+  await page.evaluate(pageKind => {
     document.documentElement.dataset.waffleUiReady = 'true';
     window.fixtureWrites = [];
     window.fixtureReads = [];
+    window.fixtureRows = [{ dogId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', stayId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', dogNumber: '#00001', dogName: 'Milo', startDate: '2026-11-10', endDate: '2026-11-13', breed: 'Kelpie', ownerName: 'Alex', phone: '0400111222' }];
     window.fixtureIdentityRows = [{ dogId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', dogNumber: '00001', dogName: 'Milo', breed: 'Kelpie', ownerName: 'Alex' }];
     window.fixtureWriteHandler = async payload => ({ intake: { link: 'https://care.example.test/stay/AbC123' } });
+    const productionRows = window.WAFFLE_PHASE4_CORE?.rows;
     window.WAFFLE_PHASE4_CORE = {
-      modal: () => document.getElementById('p4Modal'), page: () => 'booking', open: () => {},
+      modal: () => document.getElementById('p4Modal'), page: () => pageKind, open: () => { const modal = document.getElementById('p4Modal'); if (modal) modal.hidden = false; },
       settings: () => ({ preferred: 4, absolute: 6 }),
       esc: value => String(value ?? '').replace(/[&<>"']/g, ch => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' })[ch]),
       norm: value => String(value ?? '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim(),
-      fmt: value => String(value ?? ''), today: () => '2026-10-18', rows: () => window.fixtureRows || [], visits: () => [],
+      fmt: value => String(value ?? ''), today: () => '2026-10-18', rows: productionRows ? () => productionRows() : () => window.fixtureRows || [], visits: () => [],
       read: async payload => { window.fixtureReads.push(payload); return payload.action === 'list_dog_identities' ? { identities: window.fixtureIdentityRows } : { history: { previousStays: [], stayCount: 0 } }; },
       write: async payload => { window.fixtureWrites.push(structuredClone(payload)); return window.fixtureWriteHandler(payload); },
       duplicate: () => null, capacity: () => ({ band: 'green' }), renderDecision: () => {}, toast: message => { window.lastToast = message; },
       saveSettings: () => ({ preferred: 4, absolute: 6 }), parseBooking: () => ({})
     };
-  });
+  }, pageKind);
   await page.addScriptTag({ path: helper });
   await page.addScriptTag({ content: coreScript.slice(styleStart, styleEnd) + '\nstyle();' });
   await page.addStyleTag({ url: `${baseURL}/waffle-runtime.css` });
   await page.addScriptTag({ content: bookingScript });
-  await page.evaluate(() => { window.WAFFLE_PHASE4_BOOKING.fillOwner({ dogName: 'Milo', breed: 'Kelpie', ownerName: 'Alex', startDate: '2026-11-10', endDate: '2026-11-13', stayId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', dogId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' }); document.getElementById('p4Modal').hidden = false; });
+  if (directoryCard) await page.evaluate(() => { window.WAFFLE_PHASE4_BOOKING.enhanceDirectory(); document.getElementById('p4Modal').hidden = true; });
+  if (!directoryCard) await page.evaluate(() => { window.WAFFLE_PHASE4_BOOKING.fillOwner({ dogName: 'Milo', breed: 'Kelpie', ownerName: 'Alex', startDate: '2026-11-10', endDate: '2026-11-13', stayId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', dogId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' }); document.getElementById('p4Modal').hidden = false; });
 }
 
 test('owner handoff renders readable owner message and adapts without horizontal overflow', async ({ page, baseURL }) => {
@@ -266,8 +277,9 @@ test('failed owner link writes show an inline error and allow retry', async ({ p
   expect(await page.evaluate(() => window.fixtureWrites.length)).toBe(2);
 });
 
-test('same-name identities block owner-link generation before any write', async ({ page }) => {
-  await setupOwnerDialog(page);
+test('same-name identities allow an exact saved stay before name-based inventory lookup', async ({ page }) => {
+  const csv = 'Timestamp,Dog Name,Breed,Start Date,End Date,Owner,Phone,Likes,Dislikes,Notes,Edit Link,Booking Type,Stay ID,Dog Number,Dog ID\n2026-10-01,Milo,Kelpie,2026-11-10,2026-11-13,Alex,0400111222,,,,,Boarding,bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb,#00001,aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+  await setupOwnerDialog(page, undefined, { productionCoreRows: true, csv });
   await page.evaluate(() => {
     window.fixtureIdentityRows = [
       { dogId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', dogNumber: '00001', dogName: 'Milo', breed: 'Kelpie' },
@@ -275,9 +287,89 @@ test('same-name identities block owner-link generation before any write', async 
     ];
   });
   await page.locator('#p4OwnerLink').click();
-  await expect(page.locator('#p4OwnerStatus')).toContainText(/more than one Dog ID/i);
-  expect(await page.evaluate(() => window.fixtureWrites.length)).toBe(0);
+  await expect(page.locator('.owner-handoff')).toBeVisible();
+  expect(await page.evaluate(() => window.fixtureWrites[0])).toMatchObject({ dogId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', stayId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb' });
   expect(await page.evaluate(() => window.fixtureReads.map(item => item.action))).not.toContain('get_dog_history');
+  expect(await page.evaluate(() => window.fixtureReads.map(item => item.action))).not.toContain('list_dog_identities');
+});
+
+test('the selected connected Care card prepares its exact owner link while CSV rows are still empty', async ({ page }) => {
+  await setupOwnerDialog(page, undefined, { pageKind: 'directory', directoryCard: true, productionCoreRows: true });
+  expect(await page.evaluate(() => window.WAFFLE_PHASE4_CORE.rows())).toHaveLength(0);
+  await page.locator('.p4-directory-actions > summary').click();
+  await page.getByRole('button', { name: 'Owner Care Link for Milo' }).click();
+  await page.locator('#p4OwnerLink').click();
+  await expect(page.locator('.owner-handoff')).toBeVisible();
+  expect(await page.evaluate(() => window.fixtureWrites[0])).toMatchObject({ action: 'create_intake_link', dogId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', stayId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb' });
+  expect(await page.evaluate(() => window.fixtureReads.map(item => item.action))).not.toContain('list_dog_identities');
+});
+
+test('the full directory API-first Milo action keeps exact IDs without cached booking rows', async ({ page, baseURL }) => {
+  const fixture = await installCareDailyFixture(page);
+  await page.goto(`${baseURL}/directory.html?dailyCareFixture=1`, { waitUntil: 'domcontentloaded' });
+  await page.waitForFunction(() => document.documentElement.dataset.waffleUiReady === 'true' && window.WAFFLE_PHASE4_BOOKING);
+  const milo = page.locator(`#directory-grid [data-directory-stay-id="${careDailyBookings[1].stayId}"]`);
+  await expect(milo).toHaveAttribute('data-directory-dog-id', careDailyBookings[1].dogId);
+  await page.evaluate(() => localStorage.removeItem('boardingDataCache'));
+  expect(await page.evaluate(() => window.WAFFLE_PHASE4_CORE.rows())).toHaveLength(0);
+  await page.evaluate(() => {
+    window.__ownerLinkWrites = [];
+    window.sendPayloadToAppsScript = async payload => {
+      window.__ownerLinkWrites.push({ ...payload });
+      return { result: 'success', intake: { link: 'https://care.example.test/api-first-milo' } };
+    };
+  });
+  const identityReadsBefore = fixture.reads.filter(action => action === 'list_dog_identities').length;
+  await milo.locator('[data-open-directory-profile]').click();
+  const ownerAction = milo.locator('.directory-care-brief-actions > [data-care-owner-link-group] > [data-p4-dir="owner"]');
+  await expect(ownerAction).toBeVisible();
+  await ownerAction.click();
+  await page.locator('#p4OwnerDetails > summary').click();
+  await page.locator('#p4OwnerPhone').fill('0412 345 678');
+  await page.locator('#p4OwnerLink').click();
+  await expect(page.locator('.owner-handoff')).toBeVisible();
+  expect(await page.evaluate(() => window.__ownerLinkWrites[0])).toMatchObject({ action: 'create_intake_link', dogId: careDailyBookings[1].dogId, stayId: careDailyBookings[1].stayId });
+  expect(fixture.reads.filter(action => action === 'list_dog_identities').length).toBe(identityReadsBefore);
+});
+
+test('duplicate rendered cards for the selected Stay ID block link preparation', async ({ page }) => {
+  await setupOwnerDialog(page, undefined, { pageKind: 'directory', directoryCard: true, productionCoreRows: true });
+  await page.locator('.directory-card').evaluate(card => card.parentElement.appendChild(card.cloneNode(true)));
+  await page.locator('.p4-directory-actions > summary').first().click();
+  await page.getByRole('button', { name: 'Owner Care Link for Milo' }).first().click();
+  await page.locator('#p4OwnerLink').click();
+  await expect(page.locator('#p4OwnerStatus')).toContainText(/no longer unique/i);
+  expect(await page.evaluate(() => window.fixtureWrites)).toHaveLength(0);
+});
+
+test('detaching the selected Care card invalidates its owner-link proof', async ({ page }) => {
+  await setupOwnerDialog(page, undefined, { pageKind: 'directory', directoryCard: true, productionCoreRows: true });
+  await page.locator('.p4-directory-actions > summary').click();
+  await page.getByRole('button', { name: 'Owner Care Link for Milo' }).click();
+  await page.locator('.directory-card').evaluate(card => card.remove());
+  await page.locator('#p4OwnerLink').click();
+  await expect(page.locator('#p4OwnerStatus')).toContainText(/changed or is no longer unique/i);
+  expect(await page.evaluate(() => window.fixtureWrites)).toHaveLength(0);
+});
+
+test('changing a selected Care card stay date invalidates its owner-link proof', async ({ page }) => {
+  await setupOwnerDialog(page, undefined, { pageKind: 'directory', directoryCard: true, productionCoreRows: true });
+  await page.locator('.p4-directory-actions > summary').click();
+  await page.getByRole('button', { name: 'Owner Care Link for Milo' }).click();
+  await page.locator('.directory-card').evaluate(card => { card.dataset.directoryEndDate = '2026-11-14'; });
+  await page.locator('#p4OwnerLink').click();
+  await expect(page.locator('#p4OwnerStatus')).toContainText(/changed or is no longer unique/i);
+  expect(await page.evaluate(() => window.fixtureWrites)).toHaveLength(0);
+});
+
+test('a conflicting current CSV row blocks an otherwise exact selected-card owner link', async ({ page }) => {
+  const csv = 'Timestamp,Dog Name,Breed,Start Date,End Date,Owner,Phone,Likes,Dislikes,Notes,Edit Link,Booking Type,Stay ID,Dog Number,Dog ID\n2026-10-01,Milo,Kelpie,2026-11-10,2026-11-13,Alex,0400111222,,,,,Boarding,bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb,#00001,cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+  await setupOwnerDialog(page, undefined, { pageKind: 'directory', directoryCard: true, productionCoreRows: true, csv });
+  await page.locator('.p4-directory-actions > summary').click();
+  await page.getByRole('button', { name: 'Owner Care Link for Milo' }).click();
+  await page.locator('#p4OwnerLink').click();
+  await expect(page.locator('#p4OwnerStatus')).toContainText(/changed or is no longer unique/i);
+  expect(await page.evaluate(() => window.fixtureWrites)).toHaveLength(0);
 });
 
 test('owner phone and stay date labels stay clear of their fields on phone viewports', async ({ page, baseURL }, testInfo) => {
@@ -291,6 +383,7 @@ test('owner phone and stay date labels stay clear of their fields on phone viewp
   await page.locator('#p4OwnerDetails > summary').click();
   await page.locator('#p4OwnerPhone').fill('0400 111 222 · owner phone contact details');
   await page.locator('#p4OwnerDog').fill('Milo, the very long named family dog of Alexandria Peterson-Smith');
+  await page.evaluate(() => { window.fixtureRows = [{ dogId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', stayId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', dogNumber: '#00001', dogName: 'Milo, the very long named family dog of Alexandria Peterson-Smith', startDate: '2026-11-10', endDate: '2026-11-13', breed: 'Kelpie', ownerName: 'Alex' }]; });
   for (const viewport of sizes) {
     await page.setViewportSize(viewport);
     for (const textScale of [1, 2]) {

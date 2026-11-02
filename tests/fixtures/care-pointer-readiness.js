@@ -4,6 +4,18 @@ async function settlePointerTargetAfterScroll(page, locator) {
   // Sample stable geometry after scrolling, not only before the native scroll.
   await locator.evaluate(element => element.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' }));
   const selector = await locator.evaluate(element => {
+    const rosterAction = ['data-v11217-roster-checkin', 'data-v11217-roster-checkout']
+      .find(name => element.hasAttribute(name));
+    if (rosterAction) {
+      const card = element.closest('#directory-grid [data-directory-stay-id][data-directory-dog-id]');
+      const stayId = card?.getAttribute('data-directory-stay-id') || '';
+      const dogId = card?.getAttribute('data-directory-dog-id') || '';
+      const uuid = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
+      if (!card || !uuid.test(stayId) || !uuid.test(dogId) || !card.contains(element)) {
+        throw new Error('Roster action is missing exact Dog ID/Stay ID identity');
+      }
+      return `#directory-grid [data-directory-stay-id="${stayId}"][data-directory-dog-id="${dogId}"] [${rosterAction}]`;
+    }
     const attribute = ['data-profile-subtab', 'data-v11160-tab', 'data-belongings-checklist-summary']
       .find(name => element.hasAttribute(name));
     if (!attribute) throw new Error('Unsupported Care pointer target');
@@ -15,6 +27,7 @@ async function settlePointerTargetAfterScroll(page, locator) {
   }, selector);
   try {
     await page.waitForFunction(targetSelector => {
+      if (document.querySelectorAll(targetSelector).length !== 1) return false;
       const target = document.querySelector(targetSelector);
       if (!target?.isConnected) return false;
       const rect = target.getBoundingClientRect();
