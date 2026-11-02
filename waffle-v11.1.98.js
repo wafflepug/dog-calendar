@@ -293,14 +293,19 @@
       action.setAttribute('aria-label', 'Delete this confirmed stay');
       action.textContent = 'Delete Confirmed Stay';
     }
-    let danger = tools.querySelector(':scope > .directory-care-danger-actions');
+    let dangerDisclosure = tools.querySelector(':scope > .directory-care-danger-disclosure');
+    if (!dangerDisclosure) {
+      dangerDisclosure = document.createElement('details');
+      dangerDisclosure.className = 'directory-care-danger-disclosure';
+      dangerDisclosure.innerHTML = '<summary>Remove stay</summary>';
+      tools.append(dangerDisclosure);
+    }
+    let danger = dangerDisclosure.querySelector(':scope > .directory-care-danger-actions');
     if (!danger) {
       danger = document.createElement('div');
       danger.className = 'directory-care-danger-actions';
       danger.setAttribute('role', 'group');
-      danger.setAttribute('aria-label', 'Remove stay');
-      danger.innerHTML = '<span>Remove stay</span>';
-      tools.append(danger);
+      dangerDisclosure.append(danger);
     }
     if (action.parentElement !== danger) danger.append(action);
   }

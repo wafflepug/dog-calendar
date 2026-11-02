@@ -9562,8 +9562,6 @@ registerWaffleServiceWorker();
             target = card.querySelector('[data-profile-subtab="healthHome"]');
         } else if (action === 'intake') {
             const disclosure = card.querySelector('.directory-care-records-disclosure');
-            const toolsDisclosure = disclosure?.closest('.directory-care-more-actions');
-            if (toolsDisclosure) toolsDisclosure.open = true;
             if (disclosure) disclosure.open = true;
             target = disclosure?.querySelector('[data-create-intake-link]');
         } else if (action === 'safety') {
@@ -18099,11 +18097,9 @@ registerWaffleServiceWorker();
                                                     Care details
                                                 </button>
 
-                                                <details class="directory-care-more-actions">
-                                                    <summary aria-label="More profile tools">More tools</summary>
+                                                <div class="directory-care-more-actions" aria-label="Profile tools">
                                                 <div class="directory-care-more-actions-list">
                                                 <section class="directory-care-photo-tools" aria-label="Photo tools">
-                                                    <strong>Photo tools</strong>
                                                     <div>
                                                         <button type="button" class="directory-photo-edit-button" data-upload-dog-photo title="Change and position dog profile photo" aria-label="Change and position ${escapeDashboardHtml(dogName.trim())} profile photo">Change profile photo</button>
                                                     </div>
@@ -18179,7 +18175,7 @@ registerWaffleServiceWorker();
                                                     </div>
                                                 </details>
                                                 </div>
-                                                </details>
+                                                </div>
                                             </div>
                                         </section>
 
