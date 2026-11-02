@@ -505,7 +505,5 @@ test('PDF return failure retains the saved document and retries the same guest',
 
 async function revealSecondaryTools(page) {
   const tools = page.locator('.directory-card.is-profile-active .directory-care-more-actions');
-  if (await tools.count() && await tools.getAttribute('open') === null) {
-    await tools.locator(':scope > summary').click();
-  }
+  await expect(tools.locator('.directory-care-more-actions-list')).toBeVisible();
 }
