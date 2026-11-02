@@ -16,7 +16,7 @@ The CSS is scoped to the Directory page. Today, Calendar, Apps Script, identity,
 
 | Surface | Viewports | Themes | Browser coverage | Checks |
 |---|---|---|---|---|
-| Selected Care profile | 320×568, 390×844, 1440×900 | Light and dark | Chromium and WebKit | True per-node 2× baseline, whole Check-in/Check-out and Safety/Handover words, owner phone and Call owner do not overlap, no page horizontal overflow, fixture records no writes |
+| Selected Care profile | 320×568, 390×844, 700×900, 1440×900 | Light and dark | Chromium and WebKit | True per-node 2× baseline, whole Check-in/Check-out and Safety/Handover words, heading text clears the adjacent value and action, owner phone and Call owner do not overlap, no page horizontal overflow, fixture records no writes |
 | Stay-date and guest-detail dialogs | 320×568, 390×320, 1440×900 | Light and dark | Chromium and WebKit | Exact 2× computed font size after restoring prior inline sizes, native date value and input width, keyboard Tab from Check-in to Check-out, full input above sticky footer, centered target hit, footer buttons at least 44px, whole action words, retained guest draft |
 
 Browser tests run with synthetic local fixtures and blocked writes. Playwright Chromium and WebKit do not replace physical iPhone or Android verification; native date controls can vary by OS/browser version.

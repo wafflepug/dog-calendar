@@ -1207,6 +1207,8 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-
   border: 0;
   width: auto;
   min-width: 0;
+  overflow-wrap: normal;
+  word-break: normal;
 }
 body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-heading {
   align-items: baseline;
@@ -1249,7 +1251,11 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active [data-care-
   min-width: 88px;
   margin: 0;
 }
-body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-owner-phone,
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-owner-phone {
+  flex: 1 1 100%;
+  min-width: 0;
+  text-align: left;
+}
 body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-owner-contact-missing {
   flex: 1 1 8em;
   min-width: 0;
@@ -1418,7 +1424,7 @@ body[data-waffle-page="directory"] #guestDetailEditModal .guest-detail-edit-dog 
    The rail scales with available width, but its cap leaves the value column
    room for long care instructions and enlarged text. */
 body[data-waffle-page="directory"] .directory-card.is-profile-active {
-  --care-daily-label-rail: clamp(136px, 18vw, 176px);
+  --care-daily-label-rail: clamp(8.5em, 18vw, 11em);
 }
 @media (min-width: 700px) {
   body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-grid > .directory-care-brief-item,
@@ -1534,7 +1540,6 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active {
     min-width: 0;
     max-width: 100%;
     margin: 0;
-    overflow-wrap: anywhere;
   }
   body[data-waffle-page="directory"] .directory-card.is-profile-active :is(
     [data-care-brief-action="emergency-contact"],
