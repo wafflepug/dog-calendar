@@ -1577,6 +1577,76 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-
   padding: 0;
 }
 
+/* Keep the selected stay identity compact while preserving all four anchors. */
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-card-header {
+  grid-template-columns: 60px minmax(0, 1fr);
+  column-gap: 10px;
+  margin-bottom: 8px;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-photo-shell {
+  width: 60px !important;
+  height: 60px !important;
+  min-width: 60px;
+  min-height: 60px;
+  flex-basis: 60px;
+  border-radius: 10px;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-card-identity {
+  gap: 3px;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-profile-stay-dates {
+  min-height: 0;
+  margin-top: 1px !important;
+  padding: 2px 20px 2px 0 !important;
+  border: 0;
+  background: transparent;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+/* Let the information sit on the page; reserve color for actual state. */
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief {
+  border-color: var(--care-card-line);
+  background: var(--care-card-space);
+  box-shadow: none;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-item,
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-profile-section {
+  border-color: var(--care-card-line);
+  box-shadow: none;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-grid > .directory-care-brief-item:not(.directory-care-brief-safety):not(.directory-care-brief-note) {
+  border-color: transparent;
+  border-bottom: 1px solid var(--care-card-line);
+  border-radius: 0;
+  background: transparent;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-profile-section-heading {
+  border-bottom-color: var(--care-card-line);
+  background: var(--care-card-space);
+}
+
+/* A small consistent outline mark for the most used Care actions. */
+body[data-waffle-page="directory"] .directory-card.is-profile-active .care-tool-icon {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  margin-inline-end: 5px;
+  color: currentColor;
+  vertical-align: -3px;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .care-tool-icon svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.7;
+}
+
 /* Loaded care priorities use a restrained accent in the existing profile summary. */
 body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-item[data-care-priority="attention"] {
   border-inline-start: 3px solid var(--wh-attention, #b45309) !important;

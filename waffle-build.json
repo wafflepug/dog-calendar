@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.11.02.06",
-  "releaseName": "Quick arrival and departure actions on Today",
+  "assetRevision": "2026.11.03.01",
+  "releaseName": "Calmer Care identity and save feedback",
   "careIteration": {
     "returningDogSuggestions": true,
     "reviewedCareInheritance": true,
