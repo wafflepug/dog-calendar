@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.11.02.04",
-  "releaseName": "Care profile and dialog readability at 200% text",
+  "assetRevision": "2026.11.02.05",
+  "releaseName": "Visible Care profile tools",
   "careIteration": {
     "returningDogSuggestions": true,
     "reviewedCareInheritance": true,

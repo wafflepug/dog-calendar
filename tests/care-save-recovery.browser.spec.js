@@ -8,7 +8,7 @@ async function openEditor(page,baseURL){
   const card=page.locator('.directory-card.is-profile-active');
   await expect(card.locator('[data-care-brief-medication]')).toHaveText('Give with dinner.');
   await page.waitForFunction(()=>window.__polishPendingProfileReads?.()===0);
-  await card.locator('.directory-care-more-actions > summary').click();
+  await expect(card.locator('.directory-care-more-actions-list')).toBeVisible();
   await card.locator('[data-care-brief-action="edit"]').click();
   const toggle=card.locator('[data-profile-subtab="foodWalks"]');
   if(await toggle.getAttribute('aria-expanded')!=='true')await toggle.click();

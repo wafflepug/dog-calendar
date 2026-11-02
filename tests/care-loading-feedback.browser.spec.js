@@ -577,7 +577,5 @@ test('successful empty intake stays concise while the profile read is lazy and t
 
 async function revealSecondaryTools(page) {
   const tools = page.locator('.directory-card.is-profile-active .directory-care-more-actions');
-  if (await tools.count() && await tools.getAttribute('open') === null) {
-    await tools.locator(':scope > summary').click();
-  }
+  await expect(tools.locator('.directory-care-more-actions-list')).toBeVisible();
 }

@@ -109,7 +109,8 @@ test('actual Care profile stays compact, keeps exceptions visible and preserves 
     await expect(tools).not.toHaveAttribute('open', '');
     for (const selector of ['.directory-care-readiness', '[data-directory-stay-contact]', '.directory-care-records-disclosure']) {
       await expect(tools.locator(selector)).toHaveCount(1);
-      await expect(tools.locator(`${selector} > summary`)).toBeHidden();
+      await expect(tools.locator(`${selector} > summary`)).toBeVisible();
+      await expect(tools.locator(selector)).not.toHaveAttribute('open', '');
     }
     const readsBeforeTools = reads.filter(x => x === 'get_guest_profile').length;
     const handoverAction = brief.locator('.directory-care-brief-note [data-care-brief-action="handover"]');
@@ -120,11 +121,11 @@ test('actual Care profile stays compact, keeps exceptions visible and preserves 
     await expect(emergencyAction).toHaveText('Emergency details');
     await expect(emergencyAction).toBeVisible();
     await expect(brief.locator('.directory-care-brief-actions [data-care-brief-action="handover"], .directory-care-brief-actions [data-care-brief-action="emergency-contact"]')).toHaveCount(0);
-    const toolsToggle = tools.locator(':scope > summary');
-    await toolsToggle.focus();await page.keyboard.press('Enter');
+    const toolsToggle = tools.locator('[data-care-brief-action="refresh"]');
+    await page.keyboard.press('Tab');await toolsToggle.focus();await expect(toolsToggle).toHaveCSS('outline-style', 'solid');
     await expect(tools.locator('[data-care-brief-action="refresh"]')).toBeVisible();
     await expect(tools.locator('[data-care-brief-action="handover"], [data-care-brief-action="emergency-contact"]')).toHaveCount(0);
-    await page.keyboard.press('Space');await expect(tools).not.toHaveAttribute('open', '');
+    await expect(tools.locator(':scope > summary')).toHaveCount(0);
     expect(reads.filter(x => x === 'get_guest_profile').length).toBe(readsBeforeTools);
     const aligned = await brief.locator('.directory-care-brief-grid').evaluate(grid => {const bounds=grid.getBoundingClientRect();return [...grid.children].every(row=>Math.abs(row.getBoundingClientRect().left-bounds.left)<2 && Math.abs(row.getBoundingClientRect().right-bounds.right)<2)});
     expect(aligned).toBe(true);
@@ -145,7 +146,7 @@ test('actual Care profile stays compact, keeps exceptions visible and preserves 
     for (const group of await card.locator('.care-category-panel > .intake-profile-group').all()) await expect(group).toBeHidden();
     await card.locator('[data-profile-subpanel="foodWalks"]').scrollIntoViewIfNeeded();
     await page.screenshot({ path: testInfo.outputPath(`care-details-${width}-${theme}.png`) });
-    await card.locator('.directory-care-more-actions > summary').click();
+    await expect(card.locator('.directory-care-more-actions-list')).toBeVisible();
     await card.locator('[data-care-brief-action="edit"]').click();
     await expect(card).toHaveClass(/is-profile-editing/);
     const amount = card.locator('[data-intake-attribute="foodAmount"]');
@@ -271,7 +272,7 @@ test('simple Care editor preserves optional drafts and category focus without ad
   const health=card.locator('[data-profile-subtab="healthHome"]');
   if(await health.getAttribute('aria-expanded')!=='true') await health.click();
   for(const disclosure of await card.locator('.intake-profile-optional').all()) await expect(disclosure).toBeHidden();
-  await card.locator('.directory-care-more-actions > summary').click();
+  await expect(card.locator('.directory-care-more-actions-list')).toBeVisible();
   await card.locator('[data-care-brief-action="edit"]').click();
   const controlCount=await card.locator('[data-intake-attribute]').count();
   const age=card.locator('[data-intake-attribute="age"]');
@@ -355,7 +356,7 @@ async function openChangeReviewEditor(page,baseURL){
   const card=page.locator('.directory-card.is-profile-active');
   await expect(card.locator('[data-care-brief-medication]')).toHaveText(record.intakeAttributes.medicationInstructions);
   await expect(card.locator('[data-care-change-review]')).toBeHidden();
-  await card.locator('.directory-care-more-actions > summary').click();
+  await expect(card.locator('.directory-care-more-actions-list')).toBeVisible();
   await card.locator('[data-care-brief-action="edit"]').click();
   return card;
 }

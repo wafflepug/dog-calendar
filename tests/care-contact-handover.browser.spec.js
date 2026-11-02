@@ -120,7 +120,7 @@ test('stay contact and handover is readable, editable and tied to the selected d
   await expect(handoverHost.locator('[data-care-brief-handover-full]')).toBeVisible();
   expect(await handoverHost.locator('[data-care-brief-handover-full]').textContent()).toBe(selectedNote);
   await expect(handoverHost).toHaveCSS('text-align', 'start');
-  await card.locator('.directory-care-more-actions > summary').click();
+  await expect(card.locator('.directory-care-more-actions-list')).toBeVisible();
   const contact = card.locator('[data-directory-stay-contact]');
   await contact.locator('summary').click();
   for (const theme of ['light', 'dark']) {
@@ -227,7 +227,7 @@ test('stay contact and handover is readable, editable and tied to the selected d
   await page.getByRole('tab', { name: /Staying/ }).click();
   await expect(emptyCard.locator('[data-open-directory-profile]')).toBeVisible();
   await emptyCard.locator('[data-open-directory-profile]').click();
-  await emptyCard.locator('.directory-care-more-actions > summary').click();
+  await expect(emptyCard.locator('.directory-care-more-actions-list')).toBeVisible();
   const emptyContact = emptyCard.locator('[data-directory-stay-contact]');
   await emptyContact.locator('summary').click();
   await expect(emptyContact).toContainText('Owner not provided');

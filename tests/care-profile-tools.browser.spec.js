@@ -191,15 +191,15 @@ for (const [name, width, colorScheme] of [['320-light', 320, 'light'], ['320-dar
     await expect(card).toHaveCount(1);
 
     const tools = card.locator('.directory-care-more-actions');
-    const summary = tools.locator(':scope > summary');
     const list = tools.locator(':scope > .directory-care-more-actions-list');
     const ownerLink = card.locator('.directory-care-brief-actions > [data-care-owner-link-group] > [data-p4-dir="owner"]');
     await expect(ownerLink).toBeVisible();
     await expect(ownerLink).toHaveAccessibleName('Prepare owner form for Milo');
     await expect(card.locator('[data-p4-dir="owner"]')).toHaveCount(1);
     await expect(tools.locator('[data-p4-dir="owner"]')).toHaveCount(0);
-    await expect(summary).toHaveText('More tools');
-    await expect(tools).not.toHaveAttribute('open', '');
+    await expect(tools.locator(':scope > summary')).toHaveCount(0);
+    await expect(list).toBeVisible();
+    await expect(tools).toHaveAttribute('aria-label', 'Profile tools');
     await expect(list.locator('[data-care-brief-action="belongings"]')).toHaveCount(0);
     await expect(card.locator('[data-v11160-tab="belongings"]')).toBeVisible();
     const records = list.locator('.directory-care-records-disclosure');
@@ -211,9 +211,10 @@ for (const [name, width, colorScheme] of [['320-light', 320, 'light'], ['320-dar
     const stayMore = card.locator('.v11217-profile-more-actions');
     await expect(stayMore).toHaveCount(1);
     await expect(stayMore.locator(':scope > summary')).toBeVisible();
-    const deleteGroup = tools.locator(':scope > .directory-care-danger-actions');
-    await expect(deleteGroup).toHaveCount(1);
-    await expect(deleteGroup).toContainText('Remove stay');
+    const deleteDisclosure = tools.locator(':scope > .directory-care-danger-disclosure');
+    const deleteGroup = deleteDisclosure.locator(':scope > .directory-care-danger-actions');
+    await expect(deleteDisclosure.locator(':scope > summary')).toHaveText('Remove stay');
+    await expect(deleteDisclosure).not.toHaveAttribute('open', '');
     await expect(deleteGroup.locator('[data-v11198-delete-confirmed]')).toHaveCount(1);
     await expect(deleteGroup.locator('[data-v11198-delete-confirmed]')).toBeHidden();
 
@@ -229,25 +230,13 @@ for (const [name, width, colorScheme] of [['320-light', 320, 'light'], ['320-dar
     // tools-only baseline; Care intentionally leaves unused secondary data lazy.
     await expect.poll(() => reads.pending.size).toBe(0);
     const initialReads = [...reads];
-    await page.keyboard.press('Tab');
-    await summary.focus();
-    await expect(summary).toHaveCSS('outline-style', 'solid');
-    await expect(summary).toHaveCSS('outline-width', '3px');
-    await page.keyboard.press('Enter');
-    await expect(tools).toHaveAttribute('open', '');
-    await expect(summary).toBeFocused();
     await expect(list.locator('[data-care-brief-action="edit"]')).toBeVisible();
-    await page.keyboard.press('Space');
-    await expect(tools).not.toHaveAttribute('open', '');
-    await expect(summary).toBeFocused();
     expect(reads).toEqual(initialReads);
+    await testInfo.attach(`care-profile-tools-visible-${name}`, { body: await list.screenshot({ path: testInfo.outputPath(`visible-tools-${name}.png`) }), contentType: 'image/png' });
 
-    await summary.click();
-    await expect(tools).toHaveAttribute('open', '');
     await expect(records).not.toHaveAttribute('open', '');
     await expect(bookingTools).not.toHaveAttribute('open', '');
     const disclosureHeaders = await card.locator([
-      '.directory-care-more-actions > summary',
       '.directory-care-records-disclosure > summary',
       '.directory-care-contact-disclosure > summary',
       '.p4-directory-actions > summary',
@@ -256,7 +245,7 @@ for (const [name, width, colorScheme] of [['320-light', 320, 'light'], ['320-dar
       label: node.textContent.trim(),
       minimum: getComputedStyle(node).minHeight
     })));
-    expect(disclosureHeaders.length).toBeGreaterThanOrEqual(4);
+    expect(disclosureHeaders.length).toBeGreaterThanOrEqual(3);
     expect(disclosureHeaders.every(header => header.minimum === '44px')).toBe(true);
     await records.locator(':scope > summary').click();
     await expect(records).toHaveAttribute('open', '');
@@ -286,11 +275,8 @@ for (const [name, width, colorScheme] of [['320-light', 320, 'light'], ['320-dar
     await testInfo.attach(`care-profile-tools-expanded-${name}`, { body: await page.screenshot({ path: testInfo.outputPath(`care-profile-tools-expanded-${name}.png`), fullPage: true }), contentType: 'image/png' });
     if (historyCount) await bookingTools.locator(':scope > summary').click();
     await records.locator(':scope > summary').click();
-    await summary.click();
-    await expect(tools).not.toHaveAttribute('open', '');
     await expect(records).not.toHaveAttribute('open', '');
 
-    await summary.click();
     const readiness = tools.locator('.directory-care-readiness');
     await readiness.locator(':scope > summary').click();
     const readinessStatus = readiness.locator('[data-care-readiness-status]').first();
@@ -317,7 +303,6 @@ for (const [name, width, colorScheme] of [['320-light', 320, 'light'], ['320-dar
     }
     await readinessStatus.evaluate((node, text) => { node.textContent = text; }, originalReadinessStatus);
     await readiness.locator('[data-care-readiness-action="intake"]').click();
-    await expect(tools).toHaveAttribute('open', '');
     await expect(records).toHaveAttribute('open', '');
     const createLink = records.locator('[data-create-intake-link]');
     await expect(createLink).toBeVisible();
@@ -339,10 +324,9 @@ for (const [name, width, colorScheme] of [['320-light', 320, 'light'], ['320-dar
     await expect(card.locator('[data-care-brief-safety]')).toContainText('Food Allergy');
     await expect(card.locator('.directory-care-brief-note .directory-care-brief-value')).toHaveText(booking.notes);
 
-    // Re-render the profile's real safety panel and make sure the tools disclosure and
-    // its existing action buttons retain their DOM identity and open state.
+    // Re-render the profile and make sure visible tools retain their DOM identity.
     await page.evaluate(record => window.__renderDirectoryCareProfile(document.querySelector('.directory-card.is-profile-active'), record), profileRecord);
-    await expect(tools).toHaveAttribute('open', '');
+    await expect(list).toBeVisible();
     expect(await list.evaluate(node => node === window.__toolsListNode && [...node.querySelectorAll('button')].every((button, index) => button === window.__toolsButtonNodes[index]))).toBe(true);
     expect(await list.locator('button').evaluateAll(nodes => nodes.map(node => ({ text: node.textContent.trim(), action: node.getAttribute('data-p4-dir') || node.getAttribute('data-care-brief-action') })))).toEqual(actionIdentity.map(({ text, action }) => ({ text, action })));
     const editCare = list.locator('[data-care-brief-action="edit"]');
@@ -361,7 +345,6 @@ for (const [name, width, colorScheme] of [['320-light', 320, 'light'], ['320-dar
     await page.evaluate(record => window.__renderDirectoryIntake(document.querySelector('.directory-card.is-profile-active'), record), profileRecord);
     await expect(amount).toHaveValue('2 cups draft');
     await expect(amount).toBeFocused();
-    await expect(tools).toHaveAttribute('open', '');
     expect(reads).toEqual(initialReads);
 
     const geometry = await page.evaluate(() => {
@@ -373,17 +356,13 @@ for (const [name, width, colorScheme] of [['320-light', 320, 'light'], ['320-dar
     expect(geometry.buttons.every(button => button.height >= 44 && button.right <= width + 1 && !button.covered)).toBeTruthy();
     if (width >= 769) {
       const grid = await list.evaluate(node => {
-        const styles = getComputedStyle(node);
-        const contentWidth = node.clientWidth - parseFloat(styles.paddingLeft) - parseFloat(styles.paddingRight);
-        const trackWidths = [...styles.gridTemplateColumns.matchAll(/[\d.]+px/g)].map(match => Number.parseFloat(match[0]));
-        return { contentWidth, trackWidths };
+      const styles = getComputedStyle(node);
+      const buttons = [...node.querySelectorAll('button')].filter(button => button.getClientRects().length);
+      return { display: styles.display, wraps: styles.flexWrap, hasVisibleButtons: buttons.length > 0, buttonsFit: buttons.every(button => button.getBoundingClientRect().right <= innerWidth + 1) };
       });
-      expect(grid.trackWidths.length).toBeGreaterThan(0);
-      expect(grid.trackWidths.every(trackWidth => trackWidth + 1 >= Math.min(280, grid.contentWidth))).toBe(true);
+      expect(grid).toEqual({ display: 'flex', wraps: 'wrap', hasVisibleButtons: true, buttonsFit: true });
     }
     // The share action is direct even with every secondary group closed.
-    await summary.click();
-    await expect(tools).not.toHaveAttribute('open', '');
     await expect(ownerLink).toBeVisible();
     await ownerLink.focus();
     const unchangedTools = await ownerLink.evaluate(button => {

@@ -43,7 +43,7 @@ test('leaving a profile with a draft names its unfinished section and keeps the 
   await page.waitForFunction(()=>document.documentElement.dataset.waffleUiReady==='true');
   await page.locator('#directory-grid [data-open-directory-profile]').click();
   const card=page.locator('.directory-card.is-profile-active');
-  await card.locator('.directory-care-more-actions > summary').click();
+  await expect(card.locator('.directory-care-more-actions-list')).toBeVisible();
   await card.locator('[data-care-brief-action="edit"]').click();
   await card.locator('[data-profile-subtab="healthHome"]').click();
   const medication=card.locator('[data-intake-attribute="medicationInstructions"]');
@@ -71,7 +71,7 @@ test('changed fields identify only their categories and survive collapse, refres
   await expect(urgentMedication).toContainText('Give with dinner.');
   await expect(card.locator('.directory-care-brief-safety[data-state="attention"]')).toBeVisible();
   expect(await urgentMedication.evaluate(element=>getComputedStyle(element).borderInlineStartWidth)).toBe('3px');
-  await card.locator('.directory-care-more-actions > summary').click();
+  await expect(card.locator('.directory-care-more-actions-list')).toBeVisible();
   await card.locator('[data-care-brief-action="edit"]').click();
   const profileReadsBefore=reads.filter(action=>action==='get_guest_profile').length;
   const badge=category=>card.locator(`[data-care-change-category-count="${category}"]`);

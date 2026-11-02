@@ -148,15 +148,14 @@ for (const [width, colorScheme] of [[320, 'light'], [320, 'dark'], [390, 'light'
     await discardProfileEdits.focus();
     await discardProfileEdits.press('Enter');
     await expect(profile).not.toHaveClass(/is-profile-editing/);
-    const tools = brief.locator('.directory-care-more-actions > summary');
+    const tools = brief.locator('[data-care-brief-action="edit"]');
     await tools.focus();
     await expect(tools).toHaveCSS('outline-style', 'solid');
-    await tools.press('Enter');
-    await expect(brief.locator('.directory-care-more-actions')).toHaveAttribute('open', '');
+    await expect(brief.locator('.directory-care-more-actions-list')).toBeVisible();
     await expect(profile.locator('[data-v11160-tab="belongings"]')).toBeVisible();
     await expect(brief.locator('[data-care-brief-action="belongings"]')).toHaveCount(0);
     await expect(brief.getByRole('button', { name: 'Edit care details' })).toBeVisible();
-    await expect(brief.getByRole('button', { name: 'Delete this confirmed stay' })).toBeVisible();
+    await expect(brief.getByRole('button', { name: 'Delete this confirmed stay' })).toBeHidden();
     const bookingTools = profile.locator('.p4-directory-actions');
     await expect(bookingTools).toBeHidden();
     await expect(profile.locator('.directory-care-brief-actions > [data-care-owner-link-group] > [data-p4-dir="owner"]')).toBeVisible();
@@ -310,7 +309,7 @@ for (const [name, viewport, colorScheme] of [['320-light', { width: 320, height:
     await page.locator('#cancelGuestDetailEdit').click();
     await contactDisclosure.locator('summary').click();
     await expect(contactDisclosure).not.toHaveAttribute('open', '');
-    await selectedProfile.locator('.directory-care-more-actions > summary').click();
+    await expect(selectedProfile.locator('.directory-care-more-actions-list')).toBeVisible();
     await page.keyboard.press('Tab');
     const profileTab = sectionNav.locator('[data-v11160-tab="profile"]');
     const belongingsTab = sectionNav.locator('[data-v11160-tab="belongings"]');
@@ -389,10 +388,10 @@ for (const [name, viewport, colorScheme] of [['320-light', { width: 320, height:
     await expect(page.locator('.directory-dashboard-fused.is-profile-mode #v11190PdfOcrReviewNote')).toBeHidden();
     await expect(page.locator('.directory-dashboard-fused.is-profile-mode #directory-care-summary')).toBeHidden();
     await expect(careBrief.getByRole('heading', { name: 'Care essentials' })).toBeVisible();
-    await expect(careBrief.locator('.directory-care-more-actions > summary')).toHaveText('More tools');
+    await expect(careBrief.locator('.directory-care-more-actions > summary')).toHaveCount(0);
     await page.keyboard.press('Tab');
-    await careBrief.locator('.directory-care-more-actions > summary').focus();
-    await expect(careBrief.locator('.directory-care-more-actions > summary')).toHaveCSS('outline-style', 'solid');
+    await careBrief.locator('[data-care-brief-action="edit"]').focus();
+    await expect(careBrief.locator('[data-care-brief-action="edit"]')).toHaveCSS('outline-style', 'solid');
     const readiness = careBrief.locator('.directory-care-readiness');
     await expect(careBrief.locator('.directory-care-more-actions .directory-care-readiness')).toHaveCount(1);
     await expect(careBrief.locator('.directory-care-owner-line [data-care-brief-call-owner]')).toHaveCount(1);
@@ -590,7 +589,5 @@ test('Care brief actions stay visible and keyboard focused in forced-colors mode
 
 async function revealSecondaryTools(page) {
   const tools = page.locator('.directory-card.is-profile-active .directory-care-more-actions');
-  if (await tools.count() && await tools.getAttribute('open') === null) {
-    await tools.locator(':scope > summary').click();
-  }
+  await expect(tools.locator('.directory-care-more-actions-list')).toBeVisible();
 }

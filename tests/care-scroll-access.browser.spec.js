@@ -190,7 +190,7 @@ for (const [name, viewport, colorScheme, reducedMotion] of [
     const sectionNav = profile.locator('.v11160-desktop-tabs');
     const handover = careBrief.getByRole('button', { name: 'Update handover' });
 
-    await careBrief.locator('.directory-care-more-actions > summary').click();
+    await expect(careBrief.locator('.directory-care-more-actions-list')).toBeVisible();
     await expect(handover).toBeVisible();
     await handover.click();
     const expectedScrollBehavior = viewport.width <= 768 || reducedMotion === 'reduce' ? 'auto' : 'smooth';

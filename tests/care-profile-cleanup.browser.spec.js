@@ -110,7 +110,7 @@ test('Care profile back bar, handover note and section tabs stay clear and reada
   expect(enlarged.backHit).toBe(true);
   expect(enlarged.tabs.every(tab=>tab.height>=44&&tab.right<=320&&tab.labelScroll<=tab.labelWidth+1)).toBe(true);
 
-  await card.locator('.directory-care-more-actions > summary').click();
+  await expect(card.locator('.directory-care-more-actions-list')).toBeVisible();
   await card.locator('[data-directory-stay-contact] summary').click();
   await card.locator('[data-directory-edit-field="notes"]').click();
   await expect(page.locator('#guestDetailEditModal')).toHaveClass(/open/);

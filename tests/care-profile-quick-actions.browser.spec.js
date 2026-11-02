@@ -43,11 +43,13 @@ test('Care quick actions stay compact, truthful and bound to the selected stay',
   const photoTools=first.locator('.directory-care-photo-tools');
   const more=first.locator('.directory-care-more-actions');
   await expect(photoTools).toHaveCount(1);
-  await expect(more).not.toHaveAttribute('open','');
+  await expect(more.locator(':scope > summary')).toHaveCount(0);
+  await expect(more.locator('.directory-care-more-actions-list')).toBeVisible();
+  await expect(photoTools.locator('strong')).toHaveCount(0);
   await expect(first.locator('.directory-photo-shell [data-upload-dog-photo], .directory-photo-shell [data-v108-gallery]')).toHaveCount(0);
-  await more.locator(':scope > summary').click();
   await expect(photoTools.locator('[data-upload-dog-photo]')).toBeVisible();
   await expect(photoTools.locator('[data-v108-gallery]')).toBeVisible();
+  expect(await photoTools.evaluate(node=>node.scrollWidth<=node.clientWidth+1)).toBe(true);
   expect(await photoTools.locator('button').evaluateAll(buttons=>buttons.every(button=>button.getBoundingClientRect().height>=44))).toBe(true);
   expect(profileReads.length).toBe(readsAfterProfile);
   await page.evaluate(()=>{
