@@ -4,7 +4,7 @@ const path = require('node:path');
 const {resolveLocalBackendAction} = require('../scripts/local-network-policy');
 const calendar = fs.readFileSync(path.join(__dirname, 'fixtures/fullcalendar.global.min.js'), 'utf8');
 
-test('the shipped Today page opens its exact Meet & Greet and exposes identity-specific Care links', async ({page, baseURL}, info) => {
+test('the shipped Today page keeps profile links, exposes direct confirmed-stay actions and opens its exact Meet & Greet', async ({page, baseURL}, info) => {
   const writes = [];
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
@@ -42,18 +42,23 @@ test('the shipped Today page opens its exact Meet & Greet and exposes identity-s
     if (/^https?:/.test(url) && new URL(url).hostname !== '127.0.0.1') return route.fulfill({body:'',contentType:req.resourceType()==='script'?'application/javascript':'text/css'});
     return route.continue();
   });
-  for (const width of [390,1440]) {
+  for (const width of [320,390,1440]) {
     await page.setViewportSize({width,height:900});
     await page.goto(`${baseURL}/index.html?view=today&ownerWorkflowFixture=1`, {waitUntil:'domcontentloaded'});
     await page.waitForFunction(() => document.documentElement.dataset.waffleUiReady === 'true');
     const queue = page.locator('#v10TodayAgenda');
     await expect(queue.locator('.v10-agenda-item')).toHaveCount(3);
     await expect(queue).toBeVisible();
+    await expect(queue.getByRole('button', {name:'Check in Milo'})).toBeVisible();
+    await expect(queue.getByRole('button', {name:'Check out Coco'})).toBeVisible();
+    const checkin = queue.getByRole('button', {name:'Check in Milo'});
+    await expect.poll(() => checkin.evaluate(button => button.isConnected ? button.getBoundingClientRect().height : 0)).toBeGreaterThanOrEqual(44);
+    await expect.poll(() => checkin.evaluate(button => button.isConnected ? parseFloat(getComputedStyle(button).fontSize) : 0)).toBeGreaterThanOrEqual(13);
     const headingFonts = await page.evaluate(() => ['#today-actions-title','#whHomeGuestsTitle'].map(selector => getComputedStyle(document.querySelector(selector)).fontSize));
     expect(headingFonts[0]).toBe(headingFonts[1]);
     await expect(queue.getByRole('link', {name:/Open Milo care profile/})).toHaveAttribute('href', /stayId=11111111-1111-4111-8111-111111111111.*dogId=aaaaaaaa/);
     await page.evaluate(dark => document.body.classList.toggle('dark-theme', dark), width === 1440);
-    await expect.poll(() => queue.locator('.v10-agenda-action').first().evaluate(element => {
+    await expect.poll(() => queue.locator('.v10-agenda-action:visible').first().evaluate(element => {
       // A scheduled render can replace a row between locator resolution and
       // evaluation. Unknown/detached colours remain below the threshold.
       const rgb = value => {
