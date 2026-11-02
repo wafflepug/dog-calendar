@@ -4,7 +4,7 @@ const READ_ACTIONS = new Set([
   'maintenance_status', 'health', 'belongings_health', 'waffle_ai_health',
   'get_data_versions', 'get_audit_log', 'get_guest_directory', 'get_potential_stays',
   'get_past_guest_directory', 'get_guest_profile', 'get_guest_belongings',
-  'get_stay_operations', 'get_dog_master_profile', 'get_dog_history',
+  'get_stay_operations', 'get_care_routine_log', 'get_dog_master_profile', 'get_dog_history',
   'get_notification_centre', 'get_push_device', 'list_dog_identities', 'list_dog_stays_for_linking',
   'get_returning_guest_prefill', 'get_reminders_notes', 'get_intake_statuses',
   'get_legacy_intake_statuses', 'get_intake_prefill', 'get_belongings'

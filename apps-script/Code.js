@@ -3009,7 +3009,9 @@ function getWaffleDataVersions_() {
     reminders:
       getWaffleDataVersion_("reminders"),
     audit:
-      getWaffleDataVersion_("audit")
+      getWaffleDataVersion_("audit"),
+    careRoutineLog:
+      getWaffleDataVersion_("careRoutineLog")
   };
 }
 
@@ -3083,7 +3085,8 @@ var READ_ONLY_SHEET_ACTIONS_ = {
   get_intake_statuses: true,
   get_legacy_intake_statuses: true,
   get_intake_prefill: true,
-  get_belongings: true
+  get_belongings: true,
+  get_care_routine_log: true
 };
 
 
@@ -3371,7 +3374,8 @@ function processReadOnlySheetAction_(data) {
         stableStayIdentityVersion: STABLE_STAY_IDENTITY_VERSION_V11225_,
         stayOperationIdentityVersion: STAY_OPERATION_IDENTITY_VERSION_V11226_,
         careRecordIdentityVersion: typeof CARE_RECORD_IDENTITY_VERSION_ === "number" ? CARE_RECORD_IDENTITY_VERSION_ : 0,
-        careRecordIdentityWritesEnabled: typeof careRecordIdentityWritesEnabled_ === "function" ? careRecordIdentityWritesEnabled_() : false
+        careRecordIdentityWritesEnabled: typeof careRecordIdentityWritesEnabled_ === "function" ? careRecordIdentityWritesEnabled_() : false,
+        careRoutineLogVersion: typeof CARE_ROUTINE_LOG_VERSION_ === "number" ? CARE_ROUTINE_LOG_VERSION_ : 0
       })
     };
   }
@@ -3516,6 +3520,12 @@ function processReadOnlySheetAction_(data) {
         };
       }
     );
+  }
+
+  if (action === "get_care_routine_log") {
+    return getVersionedWaffleRead_("careRoutineLog", action, data, 20, function() {
+      return getCareRoutineLog_(data);
+    });
   }
 
   if (action === "get_stay_operations") {
@@ -4956,6 +4966,8 @@ function processSheetAction_(data) {
 
     if (data.action === "backfill_dog_ids") return backfillV108DogIds_();
     if (data.action === "link_stay_to_dog") return linkV108StayToDog_(data);
+
+    if (data.action === "record_care_routine_event") return recordCareRoutineEvent_(data);
 
     if (data.action === "checkin_stay") { result.record=setStayOperationalStatus_(data,"checked_in"); return result; }
     if (data.action === "checkout_stay") { result.record=setStayOperationalStatus_(data,"checked_out"); return result; }

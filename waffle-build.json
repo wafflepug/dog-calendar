@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.11.03.06",
-  "releaseName": "Owner update templates and message previews",
+  "assetRevision": "2026.11.03.07",
+  "releaseName": "Timestamped Care routines and saved-activity updates",
   "careIteration": {
     "returningDogSuggestions": true,
     "reviewedCareInheritance": true,
