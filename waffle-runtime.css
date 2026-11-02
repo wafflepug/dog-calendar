@@ -2,8 +2,8 @@
    Build: 2026.08.27.04
    Historical base styles remain compatibility sources during Phase 3A, but pages no longer
    reference them individually. Preserve this import order until modules are folded in. */
-@import url("waffle-app.css?build=2026.08.27.04&rev=2026.11.03.05");
-@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.11.03.05");
+@import url("waffle-app.css?build=2026.08.27.04&rev=2026.11.03.06");
+@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.11.03.06");
 @import url("waffle-v10.8.2.css?build=2026.08.27.04");
 @import url("waffle-v10.8.3.css?build=2026.08.27.04");
 @import url("waffle-v10.8.5.css?build=2026.08.27.04");
@@ -11,12 +11,12 @@
 @import url("waffle-v10.8.7.css?build=2026.08.27.04");
 @import url("waffle-v10.8.8.css?build=2026.08.27.04");
 @import url("waffle-v10.8.9.css?build=2026.08.27.04");
-@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.11.03.05");
+@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.11.03.06");
 @import url("waffle-v11.0.3.css?build=2026.08.27.04");
 @import url("waffle-v11.0.5.css?build=2026.08.27.04");
-@import url("waffle-v11.1.94.css?build=2026.11.03.05");
-@import url("waffle-v11.1.95.css?build=2026.11.03.05");
-@import url("waffle-v11.1.96.css?build=2026.11.03.05&rev=2026.11.03.05");
+@import url("waffle-v11.1.94.css?build=2026.11.03.06");
+@import url("waffle-v11.1.95.css?build=2026.11.03.06");
+@import url("waffle-v11.1.96.css?build=2026.11.03.06&rev=2026.11.03.06");
 
 /* ============================================================
    MOBILE FIRST-PAINT STABILITY GATE
@@ -2850,6 +2850,14 @@ body.dark-theme .owner-handoff-actions button:not(.primary){background:#22304a;c
 #p4Modal [data-p4-panel="owner"]{font:400 14px/1.5 system-ui,sans-serif}
 #p4Modal [data-p4-panel="owner"] h3{font-size:18px;line-height:1.4}
 #p4Modal [data-p4-panel="owner"] .p4-section>p,#p4Modal #p4OwnerBookingContext,#p4Modal #p4OwnerStatus{font-size:14px;line-height:1.5;overflow-wrap:anywhere}
+#p4Modal #p4OwnerPurpose{margin:.55rem 0 .35rem}
+#p4Modal .p4-owner-update{margin:.45rem 0}
+#p4Modal .p4-owner-update-note{margin:.2rem 0 .5rem;font-size:13px;line-height:1.4}
+#p4Modal .p4-owner-update textarea{width:100%;max-width:100%;box-sizing:border-box;min-height:3.5rem;resize:vertical}
+#p4Modal .p4-owner-update .p4-actions{display:flex;flex-wrap:wrap;gap:.5rem}
+#p4Modal .p4-owner-update .p4-actions button,#p4Modal .p4-owner-update button{min-height:44px}
+#p4Modal .p4-owner-update [role="status"]{min-height:1.4em;margin:.35rem 0;font-size:13px}
+#p4Modal .p4-owner-update [hidden],#p4Modal #p4OwnerFormMode[hidden]{display:none!important}
 #p4Modal [data-p4-panel="owner"] button{min-height:44px;font-size:15px}
 #p4Modal [data-p4-panel="owner"] .p4-field>span{font-size:13px;text-transform:none;letter-spacing:normal}
 #p4Modal [data-p4-panel="owner"] .p4-field input{min-height:44px;font-size:16px}
