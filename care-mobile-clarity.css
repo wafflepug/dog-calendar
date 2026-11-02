@@ -75,10 +75,33 @@ body[data-waffle-page="directory"] #directoryTabPanel .directory-dashboard-fused
   grid-column: 1 / -1;
   justify-self: start;
 }
+body[data-waffle-page="directory"] #directoryTabPanel .directory-dashboard-fused:not(.is-profile-mode) .guest-directory-toolbar > .care-roster-attention {
+  grid-column: 1 / -1;
+  justify-self: start;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--wh75-accent, var(--wh-accent, #7562db));
+  border-radius: 999px;
+  background: var(--wh-surface, #fff);
+  color: var(--wh-text, #1f2937);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+body[data-waffle-page="directory"] #directoryTabPanel .directory-dashboard-fused:not(.is-profile-mode) .guest-directory-toolbar > .care-roster-attention[aria-pressed="true"] {
+  background: var(--wh75-accent, var(--wh-accent, #7562db));
+  color: #fff;
+}
+body[data-waffle-page="directory"] #directoryTabPanel .guest-directory-toolbar > .care-roster-attention:focus-visible {
+  outline: 3px solid var(--wh75-accent, var(--wh-accent, #7562db));
+  outline-offset: 2px;
+}
+body[data-waffle-page="directory"] #directoryTabPanel .guest-directory-toolbar > .care-roster-attention[hidden] { display: none; }
 body[data-waffle-page="directory"] #directoryTabPanel .guest-directory-search-wrap > [data-directory-search-clear][hidden],
 body[data-waffle-page="directory"] #directoryTabPanel .guest-directory-toolbar > .care-roster-focus-clear[hidden] { display: none; }
 body.dark-theme[data-waffle-page="directory"] #directoryTabPanel .guest-directory-search-wrap > [data-directory-search-clear],
-body.dark-theme[data-waffle-page="directory"] #directoryTabPanel .guest-directory-toolbar > .care-roster-focus-clear { background: var(--wh-surface, #1e293b); }
+body.dark-theme[data-waffle-page="directory"] #directoryTabPanel .guest-directory-toolbar > .care-roster-focus-clear,
+body.dark-theme[data-waffle-page="directory"] #directoryTabPanel .guest-directory-toolbar > .care-roster-attention[aria-pressed="false"] { background: var(--wh-surface, #1e293b); }
 body[data-waffle-page="directory"] #directoryTabPanel .directory-dashboard-fused:not(.is-profile-mode) .guest-directory-toolbar > .care-roster-focus,
 body[data-waffle-page="directory"] #directoryTabPanel .directory-dashboard-fused:not(.is-profile-mode) .guest-directory-toolbar > .care-record-maintenance {
   box-sizing: border-box;
@@ -1651,4 +1674,9 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active .care-tool-
 body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-item[data-care-priority="attention"] {
   border-inline-start: 3px solid var(--wh-attention, #b45309) !important;
   background: color-mix(in srgb, var(--wh-attention, #b45309) 8%, var(--wh-surface, #ffffff)) !important;
+}
+
+/* Keep non-interactive match feedback below the paired roster disclosures. */
+body[data-waffle-page="directory"] #directoryTabPanel .guest-directory-toolbar:has(> .care-roster-attention[aria-pressed="true"]) > .directory-search-status {
+  order: 1;
 }
