@@ -43,7 +43,7 @@ test('Today queue deduplicates stable event identity and opens the exact stay pr
     const departsToday = { title: 'Luna', extendedProps: { dogName: 'Luna', stayKey: 'luna|2026-10-12|2026-10-16', stayId: 'stay-3', stableId: 'visit-3', start: '2026-10-12', end: '2026-10-16' } };
     renderV10OperationsHome([sameVisit, sameVisit, sameNameOtherVisit, departsToday]);
   });
-  const links = page.locator('#v10TodayAgenda > a.v10-agenda-item');
+  const links = page.locator('#v10TodayAgenda .v10-agenda-row a.v10-agenda-item');
   await expect(links).toHaveCount(3);
   await expect(page.locator('#v10ArrivalCount')).toHaveText('2');
   await expect(page.locator('#v10DepartureCount')).toHaveText('1');
@@ -56,6 +56,85 @@ test('Today queue deduplicates stable event identity and opens the exact stay pr
   await expect(links.nth(0)).toContainText('Open profile');
   await expect(page.locator('.v10-agenda-care-link')).toHaveText('Medication and intake checks are in Care profiles');
   await expect(page.locator('#v10TodayAgenda')).not.toContainText('Medication due');
+});
+
+test('confirmed same-day arrivals expose one direct Check-in action and transition to Check-out after confirmation', async ({ page }) => {
+  await loadQueue(page);
+  await page.evaluate(() => {
+    const stay = { title: 'Pip', extendedProps: { dogName: 'Pip', dogId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', stayId: '11111111-1111-4111-8111-111111111111', stayKey: 'pip|2026-10-16|2026-10-16', stableId: 'pip-visit', bookingType: 'Confirmed Boarding', start: '2026-10-16', end: '2026-10-16' } };
+    window.todayStay = stay;
+    window.todayWrites = [];
+    window.todayOperation = null;
+    window.confirm = () => true;
+    window.v110OperationForStay = () => window.todayOperation;
+    window.queryAppsScript = async () => ({ result: 'success', records: window.todayOperation ? [{ stayId: stay.extendedProps.stayId, stayKey: stay.extendedProps.stayKey, dogName: 'Pip', status: window.todayOperation.status }] : [] });
+    window.v110IndexOperations = () => {};
+    window.v110SaveOperationalStatus = async (payload, status, target) => {
+      window.todayWrites.push({ payload, status, target });
+      window.todayOperation = { status };
+      return { result: 'success' };
+    };
+    window.globalCalendar = { getEvents: () => [stay] };
+    renderV10OperationsHome([stay]);
+  });
+  const action = page.getByRole('button', { name: 'Check in Pip' });
+  await expect(action).toHaveCount(1);
+  await expect(action).toHaveAttribute('data-today-action', 'checkin');
+  await action.dblclick();
+  await expect.poll(() => page.evaluate(() => window.todayWrites.length)).toBe(1);
+  await expect(page.getByRole('button', { name: 'Check out Pip' })).toHaveAttribute('data-today-action', 'checkout');
+  await page.getByRole('button', { name: 'Check out Pip' }).click();
+  await expect.poll(() => page.evaluate(() => window.todayWrites.length)).toBe(2);
+  const writes = await page.evaluate(() => window.todayWrites.map(write => ({
+    status: write.status,
+    dogId: write.payload.dogId,
+    stayId: write.payload.stayId,
+    targetIsExactVisit: write.target === window.todayStay
+  })));
+  expect(writes).toEqual([
+    { status: 'checked_in', dogId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', stayId: '11111111-1111-4111-8111-111111111111', targetIsExactVisit: true },
+    { status: 'checked_out', dogId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', stayId: '11111111-1111-4111-8111-111111111111', targetIsExactVisit: true }
+  ]);
+});
+
+test('Today action failures stay visible and stale event identity is rejected without a write', async ({ page }) => {
+  await loadQueue(page);
+  await page.evaluate(() => {
+    const stay = { title: 'Milo', extendedProps: { dogName: 'Milo', dogId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', stayId: '22222222-2222-4222-8222-222222222222', stayKey: 'milo|2026-10-16|2026-10-20', stableId: 'milo-visit', bookingType: 'Boarding', start: '2026-10-16', end: '2026-10-20' } };
+    window.todayStay = stay;
+    window.todayWrites = 0;
+    window.v110OperationForStay = () => null;
+    window.queryAppsScript = async () => ({ result: 'success', records: [] });
+    window.v110IndexOperations = () => {};
+    window.v110SaveOperationalStatus = async () => { window.todayWrites++; throw new Error('Server did not confirm the stay.'); };
+    window.globalCalendar = { getEvents: () => [stay] };
+    renderV10OperationsHome([stay]);
+  });
+  await page.getByRole('button', { name: 'Check in Milo' }).click();
+  await expect(page.locator('[data-today-action-status]')).toContainText('could not be confirmed');
+  await expect(page.locator('[data-today-action-status]')).toContainText('Server did not confirm the stay');
+  await expect(page.getByRole('button', { name: 'Check in Milo' })).toBeEnabled();
+  await page.evaluate(() => {
+    window.todayStay.extendedProps.start = '2026-10-18';
+  });
+  await page.getByRole('button', { name: 'Check in Milo' }).click();
+  await expect(page.locator('[data-today-action-status]')).toContainText('changed or is not eligible');
+  await expect.poll(() => page.evaluate(() => window.todayWrites)).toBe(1);
+});
+
+test('potential and unconfirmed visits never expose operational actions; completed operations remain truthful', async ({ page }) => {
+  await loadQueue(page);
+  await page.evaluate(() => {
+    const confirmed = { title: 'Coco', extendedProps: { dogName: 'Coco', dogId: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc', stayId: '33333333-3333-4333-8333-333333333333', stayKey: 'coco|2026-10-16|2026-10-20', stableId: 'coco-visit', bookingType: 'Boarding', start: '2026-10-16', end: '2026-10-20' } };
+    const potential = { title: 'Nori', extendedProps: { dogName: 'Nori', dogId: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd', stayId: '44444444-4444-4444-8444-444444444444', stayKey: 'nori|2026-10-16|2026-10-20', stableId: 'nori-visit', bookingType: 'Potential Stay', isPotential: true, start: '2026-10-16', end: '2026-10-20' } };
+    const unconfirmed = { title: 'Biscuit', extendedProps: { dogName: 'Biscuit', dogId: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee', stayId: '55555555-5555-4555-8555-555555555555', stayKey: 'biscuit|2026-10-16|2026-10-20', stableId: 'biscuit-visit', start: '2026-10-16', end: '2026-10-20' } };
+    window.v110OperationForStay = event => event.extendedProps.stayId === '33333333-3333-4333-8333-333333333333' ? { status: 'checked_in' } : null;
+    renderV10OperationsHome([confirmed, potential, unconfirmed]);
+  });
+  await expect(page.getByRole('button', { name: 'Check in Coco' })).toHaveCount(0);
+  await expect(page.locator('#v10TodayAgenda')).toContainText('Checked in');
+  await expect(page.getByRole('button', { name: /Nori|Biscuit/ })).toHaveCount(0);
+  await expect(page.locator('#v10TodayAgenda .v10-agenda-operation')).toHaveCount(0);
 });
 
 test('Today queue has a clear empty state and the Care profiles destination', async ({ page }) => {
@@ -197,7 +276,7 @@ test('Today queue stays readable, touchable, and within the viewport in light an
   await loadQueue(page);
   await page.addStyleTag({ content: queueCss });
   await page.evaluate(() => {
-    const event = { title: 'A very long guest name that should wrap without pushing the page sideways', extendedProps: { dogName: 'A very long guest name that should wrap without pushing the page sideways', stayKey: 'guest|2026-10-16|2026-10-20', stayId: 'stay-1', stableId: 'visit-1', start: '2026-10-16', end: '2026-10-20' } };
+    const event = { title: 'A very long guest name that should wrap without pushing the page sideways', extendedProps: { dogName: 'A very long guest name that should wrap without pushing the page sideways', dogId: 'ffffffff-ffff-4fff-8fff-ffffffffffff', stayKey: 'guest|2026-10-16|2026-10-20', stayId: '66666666-6666-4666-8666-666666666666', stableId: 'visit-1', bookingType: 'Boarding', start: '2026-10-16', end: '2026-10-20' } };
     renderV10OperationsHome([event]);
   });
   for (const width of [320, 390, 1440]) {
@@ -205,13 +284,16 @@ test('Today queue stays readable, touchable, and within the viewport in light an
     for (const theme of ['', 'dark-theme']) {
       await page.locator('body').evaluate((body, className) => { body.className = className; }, theme);
       const layout = await page.evaluate(() => {
-        const link = document.querySelector('.v10-agenda-item');
+      const link = document.querySelector('.v10-agenda-row .v10-agenda-item');
         const action = document.querySelector('.v10-agenda-action');
+        const operation = document.querySelector('.v10-agenda-operation');
         return {
           bodyWidth: document.body.scrollWidth,
           viewportWidth: window.innerWidth,
           linkHeight: link.getBoundingClientRect().height,
           actionHeight: action.getBoundingClientRect().height,
+          operationHeight: operation?.getBoundingClientRect().height || 0,
+          operationFont: operation ? parseFloat(getComputedStyle(operation).fontSize) : 0,
           actionFont: parseFloat(getComputedStyle(action).fontSize),
           guestFont: parseFloat(getComputedStyle(document.querySelector('.v10-agenda-copy strong')).fontSize),
           queueWidth: document.querySelector('#v10TodayAgenda').getBoundingClientRect().width
@@ -219,7 +301,10 @@ test('Today queue stays readable, touchable, and within the viewport in light an
       });
       expect(layout.bodyWidth).toBeLessThanOrEqual(layout.viewportWidth);
       expect(layout.linkHeight).toBeGreaterThanOrEqual(44);
-      expect(layout.actionHeight).toBeGreaterThanOrEqual(44);
+      if (width <= 420) expect(layout.actionHeight).toBe(0);
+      else expect(layout.actionHeight).toBeGreaterThanOrEqual(44);
+      expect(layout.operationHeight).toBeGreaterThanOrEqual(44);
+      expect(layout.operationFont).toBeGreaterThanOrEqual(13);
       expect(layout.actionFont).toBeGreaterThanOrEqual(13);
       expect(layout.guestFont).toBeGreaterThanOrEqual(14);
       expect(layout.queueWidth).toBeLessThanOrEqual(layout.viewportWidth);

@@ -1399,19 +1399,48 @@ function todayQueueIdentity(event) {
 function todayQueueItem(event, type, icon, title, meta, sort) {
     const props = event?.extendedProps || {};
     const stayKey = typeof v110StayKeyForEvent === 'function' ? v110StayKeyForEvent(event) : String(props.stayKey || '');
+    const dates = v10EventRawDates(event);
     const identity = todayQueueIdentity(event);
     const stayId = String(props.stayId || '').trim();
     const dogId = String(props.dogId || '').trim();
     const href = 'directory.html?stayKey=' + encodeURIComponent(stayKey)
         + (typeof v110ValidStayId === 'function' && v110ValidStayId(stayId) ? '&stayId=' + encodeURIComponent(stayId) : '')
         + (dogId ? '&dogId=' + encodeURIComponent(dogId) : '');
-    return { identity, href, type, icon, title, meta, sort, isMeet: type === 'meet' };
+    const bookingType = String(props.bookingType || '').trim().toLowerCase();
+    const confirmed = bookingType === 'boarding' || bookingType === 'confirmed boarding';
+    const hasActionIdentity = !!stayKey && !!dogId && typeof v110ValidStayId === 'function' && v110ValidStayId(stayId);
+    const operation = confirmed && typeof v110OperationForStay === 'function' ? v110OperationForStay(event) : null;
+    const operationStatus = String(operation?.status || '').toLowerCase();
+    const today = getLocalTodayDateString();
+    const isSameDayVisit = type !== 'meet' && dates.start === today && dates.end === today;
+    const actionType = isSameDayVisit && ['checked_in', 'checked_out'].includes(operationStatus) ? 'departure' : type;
+    let action = '';
+    let actionLabel = '';
+    if (actionType === 'arrival' && confirmed && hasActionIdentity && !['checked_in', 'checked_out'].includes(operationStatus)) {
+        action = 'checkin';
+        actionLabel = 'Check in';
+    } else if (actionType === 'departure' && confirmed && hasActionIdentity && operationStatus !== 'checked_out') {
+        action = 'checkout';
+        actionLabel = 'Check out';
+    }
+    if (operationStatus === 'checked_in' && (type === 'arrival' || isSameDayVisit)) meta = 'Checked in';
+    if (operationStatus === 'checked_out') meta = 'Checked out';
+    const lockKey = stayId.toLowerCase();
+    const activeActions = typeof v110ActiveOperationalActions !== 'undefined' ? v110ActiveOperationalActions : window.todayQueueActionLocks;
+    const actionPending = !!action && !!activeActions?.has(lockKey);
+    return { identity, href, action, actionLabel, actionPending, stayId, dogId, stayKey, type, icon, title, meta, sort, isMeet: type === 'meet' };
 }
 
 function wireTodayQueueActions() {
     if (window.todayQueueActionsWired) return;
     window.todayQueueActionsWired = true;
     document.addEventListener('click', event => {
+        const actionButton = event.target.closest('[data-today-action]');
+        if (actionButton) {
+            event.preventDefault();
+            runTodayQueueStayAction(actionButton);
+            return;
+        }
         const button = event.target.closest('[data-today-open-meet]');
         if (!button) return;
         event.preventDefault();
@@ -1423,6 +1452,114 @@ function wireTodayQueueActions() {
         if (!current || typeof handler !== 'function') { window.location.href = 'index.html?view=calendar'; return; }
         handler({ event: current, jsEvent: event, el: button, view: globalCalendar.view });
     });
+}
+
+async function runTodayQueueStayAction(button) {
+    if (!button || button.disabled) return;
+    const action = String(button.dataset.todayAction || '');
+    const status = action === 'checkin' ? 'checked_in' : action === 'checkout' ? 'checked_out' : '';
+    const identity = String(button.dataset.todayIdentity || '');
+    if (!status || !identity) return;
+    const lockKey = String(button.dataset.todayStayId || identity).toLowerCase();
+    window.todayQueueActionLocks ||= new Set();
+    const actionLocks = typeof v110ActiveOperationalActions !== 'undefined' ? v110ActiveOperationalActions : window.todayQueueActionLocks;
+    if (actionLocks.has(lockKey)) return;
+    actionLocks.add(lockKey);
+    const originalText = button.textContent;
+    button.disabled = true;
+    button.textContent = 'Checking status…';
+    let feedback = button.closest('.v10-agenda-row')?.querySelector('[data-today-action-status]');
+    const showFailure = message => {
+        if (!feedback?.isConnected) {
+            const liveButton = Array.from(document.querySelectorAll('[data-today-action]')).find(item => item.dataset.todayIdentity === identity);
+            feedback = liveButton?.closest('.v10-agenda-row')?.querySelector('[data-today-action-status]') || document.getElementById('v10TodayActionFeedback');
+        }
+        if (feedback) {
+            feedback.textContent = message;
+            feedback.hidden = false;
+        }
+    };
+    try {
+        const liveEvents = globalCalendar?.getEvents?.() || (typeof v110LatestCalendarEvents !== 'undefined' ? v110LatestCalendarEvents : []);
+        const matches = liveEvents.filter(item => todayQueueIdentity(item) === identity);
+        if (matches.length !== 1) throw new Error('This stay is no longer uniquely available. Refresh Today and review the booking before trying again.');
+        let current = matches[0];
+        let props = current.extendedProps || {};
+        let dates = v10EventRawDates(current);
+        const bookingType = String(props.bookingType || '').trim().toLowerCase();
+        const confirmed = bookingType === 'boarding' || bookingType === 'confirmed boarding';
+        const expectedStayId = String(button.dataset.todayStayId || '');
+        const expectedDogId = String(button.dataset.todayDogId || '');
+        const expectedStayKey = String(button.dataset.todayStayKey || '');
+        if (!confirmed || !expectedStayId || !expectedDogId ||
+            String(props.stayId || '') !== expectedStayId || String(props.dogId || '') !== expectedDogId ||
+            v110StayKeyForEvent(current) !== expectedStayKey || dates.start > getLocalTodayDateString() || dates.end < getLocalTodayDateString() ||
+            props.isPotential === true || props.isMeetGreet === true) {
+            throw new Error('This confirmed stay changed or is not eligible for a Today action. Refresh Today and review the booking.');
+        }
+        if (typeof queryAppsScript !== 'function' || typeof v110IndexOperations !== 'function') throw new Error('The current stay status could not be refreshed. Nothing was saved.');
+        const operationsRead = await queryAppsScript({ action: 'get_stay_operations' }, { maxAttempts: 1, timeoutMs: 20000, dedupe: false });
+        if (operationsRead?.result !== 'success' || !Array.isArray(operationsRead.records)) throw new Error('The current stay status could not be confirmed. Nothing was saved.');
+        const latestEvents = globalCalendar?.getEvents?.() || (typeof v110LatestCalendarEvents !== 'undefined' ? v110LatestCalendarEvents : []);
+        const latestMatches = latestEvents.filter(item => todayQueueIdentity(item) === identity);
+        if (latestMatches.length !== 1) throw new Error('This stay changed while its status was loading. Nothing was saved; refresh Today and review the booking.');
+        current = latestMatches[0];
+        props = current.extendedProps || {};
+        dates = v10EventRawDates(current);
+        const latestBookingType = String(props.bookingType || '').trim().toLowerCase();
+        if (String(props.stayId || '') !== expectedStayId || String(props.dogId || '') !== expectedDogId ||
+            v110StayKeyForEvent(current) !== expectedStayKey || dates.start > getLocalTodayDateString() || dates.end < getLocalTodayDateString() ||
+            !['boarding', 'confirmed boarding'].includes(latestBookingType) || props.isPotential === true || props.isMeetGreet === true ||
+            (status === 'checked_in' ? dates.start !== getLocalTodayDateString() : dates.end !== getLocalTodayDateString())) {
+            throw new Error('This stay changed while its status was loading. Nothing was saved; refresh Today and review the booking.');
+        }
+        v110IndexOperations(operationsRead.records, { authoritative: true });
+        const operation = typeof v110OperationForStay === 'function' ? v110OperationForStay(current) : null;
+        const operationStatus = String(operation?.status || '').toLowerCase();
+        const actionStillAvailable = status === 'checked_in'
+            ? dates.start === getLocalTodayDateString() && !['checked_in', 'checked_out'].includes(operationStatus)
+            : dates.end === getLocalTodayDateString() && operationStatus !== 'checked_out';
+        if (!actionStillAvailable) throw new Error('This stay has already changed state or no longer matches today. Refresh Today before continuing.');
+        const payload = {
+            stayId: expectedStayId,
+            stayKey: expectedStayKey,
+            dogId: expectedDogId,
+            dogName: String(props.dogName || current.title || '').trim(),
+            breed: String(props.breed || ''),
+            startDate: dates.start,
+            endDate: dates.end,
+            ownerName: String(props.ownerName || props.owner || ''),
+            phone: String(props.phone || '')
+        };
+        if (status === 'checked_out' && !window.confirm(`Check out ${payload.dogName}? The stay will be marked complete if the server confirms it.`)) return;
+        if (typeof v110SaveOperationalStatus !== 'function') throw new Error('Stay operations are unavailable. Open Care and review this stay before trying again.');
+        button.textContent = status === 'checked_in' ? 'Checking in…' : 'Checking out…';
+        if (feedback) { feedback.hidden = true; feedback.textContent = ''; }
+        const response = await v110SaveOperationalStatus(payload, status, current);
+        if (response?.queued) throw new Error('Stay operations cannot be queued offline. Nothing was saved.');
+        actionLocks.delete(lockKey);
+        const refreshedEvents = globalCalendar?.getEvents?.() || (typeof v110LatestCalendarEvents !== 'undefined' ? v110LatestCalendarEvents : []) || liveEvents;
+        try { renderV10OperationsHome(refreshedEvents.slice ? refreshedEvents.slice() : refreshedEvents); }
+        catch (renderError) { console.warn('Today queue refresh after a confirmed stay action failed:', renderError); }
+        const actionLabel = status === 'checked_in' ? 'checked in' : 'checked out';
+        const announcement = document.getElementById('v10TodayActionFeedback');
+        if (announcement) announcement.textContent = `${payload.dogName} ${actionLabel} successfully.`;
+    } catch (error) {
+        const message = String(error?.message || error || 'Unknown error');
+        showFailure(`${action === 'checkin' ? 'Check-in' : 'Check-out'} could not be confirmed. ${message}`);
+        if (button.isConnected) {
+            button.disabled = false;
+            button.textContent = originalText;
+        }
+    } finally {
+        actionLocks.delete(lockKey);
+        const activeButton = button.isConnected ? button : Array.from(document.querySelectorAll('[data-today-action]')).find(item => item.dataset.todayIdentity === identity);
+        if (activeButton?.isConnected && activeButton.disabled) {
+            activeButton.disabled = false;
+            activeButton.removeAttribute('aria-busy');
+            activeButton.textContent = activeButton.dataset.todayAction === 'checkin' ? 'Check in' : 'Check out';
+        }
+    }
 }
 
 
@@ -1635,13 +1772,19 @@ function renderV10OperationsHome(events) {
         });
         const queue = Array.from(uniqueAgenda.values()).sort((a, b) => a.sort - b.sort || a.title.localeCompare(b.title) || a.identity.localeCompare(b.identity));
         agendaHost.innerHTML = queue.length
-            ? queue.map(item => item.isMeet ? '<button type="button" class="v10-agenda-item type-meet" data-today-open-meet="' + escapeDashboardHtml(item.identity) + '" aria-label="Open ' + escapeDashboardHtml(item.title) + ' Meet & Greet in calendar"><span class="v10-agenda-icon" aria-hidden="true">' + item.icon + '</span><span class="v10-agenda-copy"><strong>' + escapeDashboardHtml(item.title) + '</strong><span>' + escapeDashboardHtml(item.meta) + '</span></span><span class="v10-agenda-action">Open event <span aria-hidden="true">↗</span></span></button>' : '<a class="v10-agenda-item type-' + escapeDashboardHtml(item.type) + '" href="' + escapeDashboardHtml(item.href) + '" aria-label="Open ' + escapeDashboardHtml(item.title) + ' care profile, ' + escapeDashboardHtml(item.meta) + '"><span class="v10-agenda-icon" aria-hidden="true">' + item.icon + '</span><span class="v10-agenda-copy"><strong>' + escapeDashboardHtml(item.title) + '</strong><span>' + escapeDashboardHtml(item.meta) + '</span></span><span class="v10-agenda-action">Open profile <span aria-hidden="true">↗</span></span></a>').join('')
+            ? queue.map(item => item.isMeet ? '<button type="button" class="v10-agenda-item type-meet" data-today-open-meet="' + escapeDashboardHtml(item.identity) + '" aria-label="Open ' + escapeDashboardHtml(item.title) + ' Meet & Greet in calendar"><span class="v10-agenda-icon" aria-hidden="true">' + item.icon + '</span><span class="v10-agenda-copy"><strong>' + escapeDashboardHtml(item.title) + '</strong><span>' + escapeDashboardHtml(item.meta) + '</span></span><span class="v10-agenda-action">Open event <span aria-hidden="true">↗</span></span></button>' : '<div class="v10-agenda-row"><div class="v10-agenda-row-main"><a class="v10-agenda-item type-' + escapeDashboardHtml(item.type) + '" href="' + escapeDashboardHtml(item.href) + '" aria-label="Open ' + escapeDashboardHtml(item.title) + ' care profile, ' + escapeDashboardHtml(item.meta) + '"><span class="v10-agenda-icon" aria-hidden="true">' + item.icon + '</span><span class="v10-agenda-copy"><strong>' + escapeDashboardHtml(item.title) + '</strong><span>' + escapeDashboardHtml(item.meta) + '</span></span><span class="v10-agenda-action">Open profile <span aria-hidden="true">↗</span></span></a>' + (item.action ? '<button type="button" class="v10-agenda-operation" data-today-action="' + item.action + '" data-today-identity="' + escapeDashboardHtml(item.identity) + '" data-today-stay-id="' + escapeDashboardHtml(item.stayId) + '" data-today-dog-id="' + escapeDashboardHtml(item.dogId) + '" data-today-stay-key="' + escapeDashboardHtml(item.stayKey) + '" aria-label="' + item.actionLabel + ' ' + escapeDashboardHtml(item.title) + '"' + (item.actionPending ? ' disabled aria-busy="true"' : '') + '>' + item.actionLabel + '</button>' : '') + '</div>' + (item.action ? '<span class="v10-agenda-action-status" data-today-action-status role="status" hidden></span>' : '') + '</div>').join('')
             : '<div class="v10-empty v10-all-clear" role="status"><span aria-hidden="true">✓</span><div><strong>No arrivals, departures or Meet & Greets today</strong><small>The Today queue has no scheduled actions.</small></div></div>';
         const careNote = document.createElement('a');
         careNote.className = 'v10-agenda-care-link';
         careNote.href = 'directory.html';
         careNote.textContent = 'Medication and intake checks are in Care profiles';
         agendaHost.appendChild(careNote);
+        const actionFeedback = document.createElement('span');
+        actionFeedback.id = 'v10TodayActionFeedback';
+        actionFeedback.className = 'v10-agenda-action-feedback';
+        actionFeedback.setAttribute('role', 'status');
+        actionFeedback.setAttribute('aria-live', 'polite');
+        agendaHost.appendChild(actionFeedback);
     }
 
     const nextHost =
