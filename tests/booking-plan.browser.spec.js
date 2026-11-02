@@ -531,8 +531,10 @@ test('resume retries only the failed visit with its original stable intent', asy
   await page.locator('#p4PlanSave').click();
   await expect(page.locator('.p4-plan-review-dogs')).toBeHidden();
   await expect(page.locator('#p4PlanRows')).toBeVisible();
-  await expect(page.locator('#p4PlanRows')).toContainText('saved');
+  await expect(page.locator('#p4PlanRows')).toContainText('Saved');
   await expect(page.locator('#p4PlanRows')).toContainText('temporary outage');
+  await expect(page.locator('#p4PlanStatus')).toHaveText('Some visits need attention. Review each visit before resuming.');
+  await expect(page.locator('#p4PlanStatus')).not.toContainText('temporary outage');
   await page.locator('#p4PlanDisclosure > summary').click();
   await expect(page.locator('#p4PlanDisclosure')).not.toHaveAttribute('open', '');
   await expect(page.locator('#p4Dog')).toBeEnabled();
