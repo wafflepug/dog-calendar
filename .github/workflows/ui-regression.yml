@@ -392,8 +392,15 @@ jobs:
         include:
           - group: care-busy-day-journey
             configs: playwright.care-busy-day-journey.config.js
-          - group: care-daily-workflows
+          - group: care-daily-workflows-shard-1-of-3
             configs: playwright.care-daily-workflows.config.js
+            shard: 1/3
+          - group: care-daily-workflows-shard-2-of-3
+            configs: playwright.care-daily-workflows.config.js
+            shard: 2/3
+          - group: care-daily-workflows-shard-3-of-3
+            configs: playwright.care-daily-workflows.config.js
+            shard: 3/3
           - group: arrival-checkout
             configs: playwright.arrival-checkout.config.js playwright.intake-owner-workflow.config.js
           - group: owner-handoff
@@ -485,12 +492,17 @@ jobs:
         env:
           FIXTURE_CONFIGS: ${{ matrix.configs }}
           FIXTURE_GROUP: ${{ matrix.group }}
+          FIXTURE_SHARD: ${{ matrix.shard }}
         run: |
           set -euo pipefail
+          args=()
+          if [[ -n "$FIXTURE_SHARD" ]]; then
+            args+=("--shard=$FIXTURE_SHARD")
+          fi
           for config in $FIXTURE_CONFIGS; do
             name="${config##*/}"
             name="${name%.js}"
-            node node_modules/@playwright/test/cli.js test --config="$config" --output="test-results/$FIXTURE_GROUP-$name"
+            node node_modules/@playwright/test/cli.js test --config="$config" "${args[@]}" --output="test-results/$FIXTURE_GROUP-$name"
           done
       - name: Upload fixture reports and evidence
         if: always()

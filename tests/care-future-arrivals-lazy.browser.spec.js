@@ -21,8 +21,8 @@ async function mountCareRange(page) {
   const distantStart = addDays(today, 35);
   const distantEnd = addDays(today, 39);
   await page.setContent(`<!doctype html><html><body data-waffle-page="directory">
-    <main class="directory-dashboard-fused" data-v11195-stay-view="future">
-      <section id="v1082CurrentStayPanel">
+    <main class="directory-dashboard-fused" data-directory-roster-load-state="success" data-v11195-stay-view="future">
+      <section id="v1082CurrentStayPanel" data-v1082-stay-panel="future">
         <div id="v11195FutureStayHeading"><span></span></div>
         <div id="directory-grid">
           <article class="directory-card" data-directory-stay-key="near pup|${nearStart}|${nearEnd}"
@@ -35,6 +35,10 @@ async function mountCareRange(page) {
           </article>
         </div>
       </section>
+      <div id="directory-empty-state" class="directory-empty-state" role="status" aria-live="polite" hidden>
+        <strong data-directory-empty-title></strong><p data-directory-empty-copy></p><button type="button" data-directory-empty-action></button>
+      </div>
+      <button type="button" id="manualRefreshBtn"></button>
       <nav><button type="button" data-v1082-stay-tab="current" class="is-active">Staying</button><button type="button" data-v1082-stay-tab="future">Arriving</button></nav>
       <div class="guest-directory-toolbar"><input id="guestDirectorySearch" aria-label="Find dog or owner"></div>
       <p class="guest-directory-toolbar-note"></p>
@@ -70,7 +74,7 @@ test('Care defers later arrivals until requested, keeps total count, and leaves 
   await expect(page.locator('#directory-grid .directory-card')).toHaveCount(1);
   await expect(page.locator('#directory-grid [data-v11196-synthetic-future="true"]')).toHaveCount(0);
   await expect(page.locator('#v11196FutureRangeControl')).toBeVisible();
-  await expect(page.getByRole('button', { name: /View 1 later arrivals.*First arrives/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /View 1 later arrivals · Arrival date/ })).toBeVisible();
   await expect(page.locator('#v11195FutureStayHeading')).toContainText('Next 7 days');
   expect(await page.evaluate(() => window.WAFFLE_V11196_FUTURE_RANGE.totalFutureCount())).toBe(2);
 
@@ -148,7 +152,7 @@ test('Care defers later arrivals until requested, keeps total count, and leaves 
   expect(lazyDetails).toBe(true);
 });
 
-test('later same-day arrivals show one date and an explicit service label without loading Care', async ({ page }) => {
+test('later same-day arrivals show one full date and an explicit service label without loading Care', async ({ page }) => {
   await mountCareRange(page);
   await page.evaluate(() => {
     const event = window.fixtureEvents[1];
@@ -156,6 +160,7 @@ test('later same-day arrivals show one date and an explicit service label withou
     event.extendedProps.rawEndDate = event.start;
     window.WAFFLE_V11196_FUTURE_RANGE.updateEvents(window.fixtureEvents);
   });
+  await expect(page.getByRole('button', { name: /Arrival date \d{1,2} \w{3} \d{4}/ })).toBeVisible();
   await page.getByRole('button', { name: /View 1 later arrivals/ }).click();
   const card = page.locator('[data-v11196-synthetic-future="true"]');
   await expect(card.locator('.directory-roster-context')).toContainText('Same-day care');
@@ -166,15 +171,10 @@ test('later same-day arrivals show one date and an explicit service label withou
 test('Care search stays lazy until requested and reports identity matches across expanded arrivals', async ({ page }) => {
   await mountCareRange(page);
   await page.locator('.directory-dashboard-fused').evaluate(node => { node.dataset.v11195StayView = 'current'; });
-  await page.evaluate(filters => {
-    window.getLocalTodayDateString = () => new Date().toISOString().slice(0, 10);
-    window.eval(filters);
-    filterGuestDirectoryCards();
-  }, rosterFilters);
+  await page.evaluate(filters => { window.getLocalTodayDateString = () => new Date().toISOString().slice(0, 10); window.eval(filters); filterGuestDirectoryCards(); }, rosterFilters);
   await page.getByLabel('Find dog or owner').fill('Distant Pup');
   await expect(page.locator('#directory-grid [data-v11196-synthetic-future="true"]')).toHaveCount(0);
   await expect(page.locator('.directory-dashboard-fused')).toHaveAttribute('data-v11195-stay-view', 'current');
-
   await page.locator('[data-v1082-stay-tab="future"]').click();
   await expect(page.getByRole('button', { name: /View 1 later arrivals/ })).toBeVisible();
   await expect(page.locator('#directory-search-status')).toContainText('No loaded arrivals match');
@@ -195,6 +195,80 @@ test('Care search stays lazy until requested and reports identity matches across
   await page.getByRole('button', { name: 'Show next 7 days only' }).click();
   await page.getByLabel('Find dog or owner').fill('Distant Pup');
   await expect(page.locator('#directory-search-status')).toContainText('Later arrivals are not included');
+});
+
+test('deferred no-match state explicitly opens later arrivals without changing query or loading Care', async ({ page }) => {
+  await mountCareRange(page);
+  await page.evaluate(filters => {
+    window.getLocalTodayDateString = () => new Date().toISOString().slice(0, 10);
+    window.eval(filters);
+    filterGuestDirectoryCards();
+  }, rosterFilters);
+  await page.locator('[data-v1082-stay-tab="future"]').click();
+  await page.getByLabel('Find dog or owner').fill('Distant Pup');
+  const empty = page.locator('#directory-empty-state');
+  await expect(empty).toBeVisible();
+  await expect(empty.locator('button')).toHaveText('View later arrivals');
+  await expect(empty.locator('p')).toContainText('Later arrivals are not included until opened.');
+  await expect(page.locator('#directory-grid [data-v11196-synthetic-future="true"]')).toHaveCount(0);
+  await empty.locator('button').click();
+  await expect(page.getByLabel('Find dog or owner')).toHaveValue('Distant Pup');
+  await expect(page.getByLabel('Find dog or owner')).toBeFocused();
+  await expect(page.locator('[data-v1082-stay-tab="future"]')).toHaveClass(/is-active/);
+  const distant = page.locator('#directory-grid [data-v11196-synthetic-future="true"]');
+  await expect(distant).toHaveCount(1);
+  await expect(distant).toBeVisible();
+  await expect(distant.locator('[data-directory-detail="profile"]')).toHaveAttribute('data-detail-loaded', 'false');
+  await expect(page.locator('#directory-search-status')).toContainText('1 match in Arriving');
+  await page.evaluate(() => { document.querySelector('.directory-dashboard-fused').dataset.directoryRosterLoadState = 'cached-failure'; });
+  await page.getByRole('button', { name: 'Show next 7 days only' }).click();
+  await expect(empty).toBeVisible();
+  await expect(empty.locator('[data-directory-empty-action]')).toHaveText('Clear search');
+  await expect(page.locator('[data-v11196-expand-later]:not([hidden])')).toBeVisible();
+  await expect(page.locator('#directory-grid [data-v11196-synthetic-future="true"]')).toHaveCount(0);
+});
+test('deferred summary uses sorted arrival start bounds with years across a calendar year', async ({ page }) => {
+  await mountCareRange(page);
+  await page.evaluate(() => {
+    const distant = window.fixtureEvents[1];
+    const second = { ...distant, id: 'new-year', title: 'New Year Pup', start: '2027-01-03', end: '2027-01-05', extendedProps: { ...distant.extendedProps, dogName: 'New Year Pup', rawStartDate: '2027-01-03', rawEndDate: '2027-01-05' } };
+    const invalid = { ...second, id: 'bad-february', title: 'Bad February Pup', extendedProps: { ...second.extendedProps, dogName: 'Bad February Pup', rawStartDate: '2027-02-31' } };
+    const invalidMonth = { ...second, id: 'bad-month', title: 'Bad Month Pup', extendedProps: { ...second.extendedProps, dogName: 'Bad Month Pup', rawStartDate: '2027-13-55' } };
+    distant.start = '2026-12-30';
+    distant.end = '2027-01-02';
+    distant.extendedProps.rawStartDate = '2026-12-30';
+    distant.extendedProps.rawEndDate = '2027-01-02';
+    window.WAFFLE_V11196_FUTURE_RANGE.updateEvents([second, distant, invalid, invalidMonth]);
+  });
+  await expect(page.getByRole('button', { name: /View \d+ later arrivals · Arrival dates 30 Dec 2026–3 Jan 2027/ })).toBeVisible();
+});
+
+test('invalid deferred start dates do not become a plausible displayed arrival range', async ({ page }) => {
+  await mountCareRange(page);
+  await page.evaluate(() => {
+    const invalid = { ...window.fixtureEvents[1], extendedProps: { ...window.fixtureEvents[1].extendedProps, rawStartDate: '2027-02-31' } };
+    window.WAFFLE_V11196_FUTURE_RANGE.updateEvents([invalid]);
+  });
+  const button = page.getByRole('button', { name: /View 1 later arrivals/ });
+  await expect(button).toBeVisible();
+  await expect(button).not.toContainText(/Arrival date/);
+});
+
+test('cached refresh failure keeps its refresh guidance and does not expand deferred arrivals', async ({ page }) => {
+  await mountCareRange(page);
+  await page.locator('.directory-dashboard-fused').evaluate(node => { node.dataset.v11195StayView = 'current'; node.dataset.directoryRosterLoadState = 'cached-failure'; });
+  await page.evaluate(filters => { window.getLocalTodayDateString = () => new Date().toISOString().slice(0, 10); window.eval(filters); filterGuestDirectoryCards(); }, rosterFilters);
+  await page.locator('[data-v1082-stay-tab="future"]').click();
+  await page.getByLabel('Find dog or owner').fill('Distant Pup');
+  const empty = page.locator('#directory-empty-state');
+  await expect(empty).toBeVisible();
+  await expect(empty.locator('p')).toContainText('last refresh failed');
+  await expect(empty.locator('p')).toContainText('refresh');
+  await expect(empty.locator('button')).toHaveText('Clear search');
+  expect(await page.evaluate(() => window.WAFFLE_V11196_FUTURE_RANGE.isExpanded())).toBe(false);
+  await empty.locator('button').click();
+  await expect(page.getByLabel('Find dog or owner')).toHaveValue('');
+  expect(await page.evaluate(() => window.WAFFLE_V11196_FUTURE_RANGE.isExpanded())).toBe(false);
 });
 
 test('later arrivals keep stable identity conflicts separate and collapse matching copies', async ({ page }) => {
@@ -305,8 +379,21 @@ test('full Arriving page consolidates loaded and later cards with dates and stab
   await expect(benny).toHaveCount(1);
   await expect(benny.locator(':scope > [data-open-directory-profile]')).toContainText(/14 Oct.*20 Oct/);
   await expect(page.getByRole('button',{name:/View 2 later arrivals/})).toBeVisible();
+  await page.getByLabel('Find dog, owner or Dog ID').fill('Luna');
+  const noLoadedMatch = page.locator('#directory-empty-state');
+  await expect(noLoadedMatch).toBeVisible();
+  await expect(noLoadedMatch.locator('[data-directory-empty-action]')).toHaveText('View later arrivals');
+  await expect(page.locator('#directory-grid > .directory-card[data-directory-dog-name="Luna"]')).toHaveCount(0);
   expect(reads.filter(p => p.action === 'get_guest_profile')).toHaveLength(0);
-  await page.getByRole('button',{name:/View 2 later arrivals/}).click();
+  await noLoadedMatch.locator('[data-directory-empty-action]').click();
+  await expect(page.getByLabel('Find dog, owner or Dog ID')).toHaveValue('Luna');
+  await expect(page.getByLabel('Find dog, owner or Dog ID')).toBeFocused();
+  await expect(page.locator('#directory-grid > .directory-card[data-directory-dog-name="Luna"]')).toHaveCount(1);
+  await expect(page.locator('#directory-grid > .directory-card[data-directory-dog-name="Luna"]')).toBeVisible();
+  await expect(page.locator('#directory-grid > .directory-card[data-directory-dog-name="Luna"] [data-directory-detail="profile"]')).toHaveAttribute('data-detail-loaded','false');
+  expect(reads.filter(p => p.action === 'get_guest_profile')).toHaveLength(0);
+  await page.locator('[data-directory-search-clear]').click();
+  await expect(page.locator('#directory-grid > .directory-card[data-directory-dog-name="Luna"]')).toHaveCount(1);
   await expect(page.locator('#directory-grid > .directory-card[data-directory-dog-name="Benny"]')).toHaveCount(1);
   await expect(page.locator('#directory-grid > .directory-card[data-directory-dog-name="Scooby"]')).toHaveCount(2);
   await expect(page.locator('#directory-grid > .directory-card[data-directory-dog-name="Luna"]')).toHaveCount(1);

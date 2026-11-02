@@ -12307,9 +12307,9 @@ registerWaffleServiceWorker();
             empty.addEventListener('click', event => {
                 const action = event.target.closest('[data-directory-empty-action]');
                 if (!action) return;
-                const focusIfStillOnAction = target => window.requestAnimationFrame(() => {
+                const focusIfStillOnAction = (target, allowFilledSearch = false) => window.requestAnimationFrame(() => {
                     if (!target || !target.isConnected || !(document.activeElement === action || document.activeElement === document.body)) return;
-                    if (target === document.getElementById('guestDirectorySearch') && target.value) return;
+                    if (target === document.getElementById('guestDirectorySearch') && target.value && !allowFilledSearch) return;
                     if (!target.hidden) target.focus();
                 });
                 const destination = action.dataset.directoryEmptyAction;
@@ -12332,6 +12332,15 @@ registerWaffleServiceWorker();
                     window.WAFFLE_CARE_ROSTER_FOCUS?.clear?.();
                     if (destination === 'search-and-filter' && searchInput) focusIfStillOnAction(searchInput);
                     else focusIfStillOnAction(document.querySelector('[data-care-roster-focus] [data-focus-summary]'));
+                    return;
+                }
+                if (destination === 'expand-later') {
+                    const range = window.WAFFLE_V11196_FUTURE_RANGE;
+                    if (range?.isExpanded?.() === false && range?.deferredCount?.() > 0) {
+                        range.activateLaterArrivals?.();
+                        filterGuestDirectoryCards();
+                        focusIfStillOnAction(document.getElementById('guestDirectorySearch'), true);
+                    }
                     return;
                 }
                 if (destination === 'refresh') {
@@ -12383,6 +12392,16 @@ registerWaffleServiceWorker();
             const deferredArrivals = activeView === 'future' && (typeof range?.isExpanded === 'function' && typeof range?.deferredCount === 'function'
                 ? Number(range.deferredCount()) > 0 && !range.isExpanded()
                 : document.querySelector('[data-v11196-expand-later]:not([hidden])')?.dataset?.v11196Action === 'expand');
+            if (hasSearch && deferredArrivals && !isCachedFailure) {
+                titleText = 'No matches in the next 7 days';
+                copyText = `No loaded guest matches “${search}”. Later arrivals are not included until opened.`;
+                actionText = 'View later arrivals';
+                actionTarget = 'expand-later';
+                for (const [host, value] of [[title, titleText], [copy, copyText], [action, actionText]]) if (host.textContent !== value) host.textContent = value;
+                if (action.dataset.directoryEmptyAction !== actionTarget) action.dataset.directoryEmptyAction = actionTarget;
+                setVisible(true);
+                return;
+            }
             titleText = `No loaded matches in ${label}`;
             copyText = isCachedFailure ? savedCopy : hasSearch && hasWorkflowFilter
                 ? `No loaded guest matches “${search}” for ${queryLabel}.${deferredArrivals ? ' Later arrivals remain outside the loaded range until opened.' : ''}`

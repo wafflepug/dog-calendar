@@ -32,14 +32,25 @@ const expectedConfigs = [
 test('parallel fixture matrix retains every existing configuration exactly once', () => {
   assert.deepEqual(Object.keys(jobs).sort(), ['contracts', 'fixtures', 'placement', 'ui-regression']);
   const configs = [...jobs.fixtures.matchAll(/^\s+configs: (.+)$/gm)].flatMap(([, line]) => line.trim().split(/\s+/));
-  assert.equal(new Set(configs).size, configs.length, 'fixture configs must not be duplicated');
-  for (const config of expectedConfigs) assert.equal(configs.filter(value => value === config).length, 1, `${config} must remain in exactly one fixture group`);
+  const careDailyConfig = 'playwright.care-daily-workflows.config.js';
+  const nonShardedConfigs = configs.filter(config => config !== careDailyConfig);
+  assert.equal(new Set(nonShardedConfigs).size, nonShardedConfigs.length, 'non-sharded fixture configs must not be duplicated');
+  for (const config of expectedConfigs.filter(value => value !== careDailyConfig)) assert.equal(configs.filter(value => value === config).length, 1, `${config} must remain in exactly one fixture group`);
+  assert.equal(configs.filter(value => value === careDailyConfig).length, 3, 'the full Care daily workflow config must run in three shards');
+  const dailyShards = [...jobs.fixtures.matchAll(/- group: (care-daily-workflows-shard-[1-3]-of-3)\r?\n\s+configs: playwright\.care-daily-workflows\.config\.js\r?\n\s+shard: ([1-3]\/3)/g)];
+  assert.deepEqual(dailyShards.map(([, group, shard]) => [group, shard]), [
+    ['care-daily-workflows-shard-1-of-3', '1/3'],
+    ['care-daily-workflows-shard-2-of-3', '2/3'],
+    ['care-daily-workflows-shard-3-of-3', '3/3']
+  ]);
   for (const changedPath of ['playwright.booking-owner-share.config.js', 'tests/booking-owner-share.browser.spec.js', 'tests/notification-device-settings.config.js', 'tests/notification-device-settings.browser.spec.js', 'tests/care-roster-efficiency.browser.spec.js']) {
     assert.equal(workflow.split('\n').filter(line => line.trim() === `- '${changedPath}'`).length, 2, `${changedPath} must trigger both PR and push workflows`);
   }
   for (const name of ['contracts', 'fixtures', 'placement']) assert.doesNotMatch(jobs[name], /\bneeds:/);
   assert.match(jobs.fixtures, /fail-fast: false/);
-  assert.match(jobs.fixtures, /--config="\$config" --output="test-results\/\$FIXTURE_GROUP-\$name"/);
+  assert.match(jobs.fixtures, /FIXTURE_SHARD: \$\{\{ matrix\.shard \}\}/);
+  assert.match(jobs.fixtures, /args=\(\)[\s\S]*if \[\[ -n "\$FIXTURE_SHARD" \]\]; then[\s\S]*args\+=\("--shard=\$FIXTURE_SHARD"\)[\s\S]*fi/);
+  assert.match(jobs.fixtures, /--config="\$config" "\$\{args\[@\]\}" --output="test-results\/\$FIXTURE_GROUP-\$name"/);
   assert.match(jobs.fixtures, /install-deps chromium firefox webkit/);
   assert.match(jobs.fixtures, /install chromium firefox webkit/);
 });

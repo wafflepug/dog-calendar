@@ -5,9 +5,10 @@ const path = require('node:path');
 const template = fs.readFileSync(path.join(__dirname, '..', 'apps-script', 'Intake.html'), 'utf8')
   .replace('<?!= JSON.stringify(intakeToken) ?>', JSON.stringify('fixture-secure-token'));
 
-async function openIntake(page, submissionId = null) {
+async function openIntake(page, submissionId = null, preserveSessionStorage = false) {
   await page.route('http://intake.test/', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html><html><head></head><body></body></html>' }));
   await page.goto('http://intake.test/');
+  if (!preserveSessionStorage) await page.evaluate(() => sessionStorage.clear());
   await page.setContent(template.replace(/<script>[\s\S]*<\/script>/, ''));
   await page.evaluate(() => {
     window.__intakeCalls = [];
@@ -62,12 +63,12 @@ async function fireTimer(page, delay) {
   }, delay);
 }
 
-async function succeedPrefill(page, index = 0, dogName = 'Cino', savedAnswers = { additionalInstructions: 'Use the blue harness.' }) {
-  await page.evaluate(({ index, dogName, savedAnswers }) => window.__intakeCalls[index].success({
-    status: 'Awaiting Owner',
+async function succeedPrefill(page, index = 0, dogName = 'Cino', savedAnswers = { additionalInstructions: 'Use the blue harness.' }, status = 'Awaiting Owner') {
+  await page.evaluate(({ index, dogName, savedAnswers, status }) => window.__intakeCalls[index].success({
+    status,
     booking: { dogName, breed: 'Jack Russell', startDate: '2026-11-01', endDate: '2026-11-11', ownerName: 'Owner One', phone: '0400000000', bookingType: 'Confirmed Boarding' },
     savedAnswers
-  }), { index, dogName, savedAnswers });
+  }), { index, dogName, savedAnswers, status });
 }
 
 test('prefill shows progress, then offers one explicit retry and rejects stale results at phone and desktop widths', async ({ page }) => {
@@ -249,6 +250,147 @@ test('restores only permitted draft fields and reports restoration without submi
   await expect(page.locator('#pageCounter')).toHaveText('2 / 7');
 });
 
+test('discarding a restored draft returns to loaded canonical answers without erasing another token', async ({ page }) => {
+  await openIntake(page);
+  await page.evaluate(() => {
+    sessionStorage.setItem('waffle-intake-draft:fixture-secure-token', JSON.stringify({ step: 7, fields: {
+      ownerAddress: 'Draft address', additionalInstructions: 'Draft-only care note', foodAllergies: 'Stale field absent from current saved answers',
+      dogName: 'Wrong dog', bookingPeriod: 'Wrong dates', termsAccepted: true, accuracyConfirmed: true
+    } }));
+    sessionStorage.setItem('waffle-intake-draft:other-token', JSON.stringify({ step: 2, fields: { ownerAddress: 'Other booking' } }));
+  });
+  await succeedPrefill(page, 0, 'Cino', { ownerAddress: 'Canonical address', additionalInstructions: 'Latest saved note.' });
+  await expect(page.locator('#draftRestoredStatus')).toBeVisible();
+  await expect(page.locator('#ownerAddress')).toHaveValue('Draft address');
+  await expect(page.locator('#additionalInstructions')).toHaveValue('Draft-only care note');
+  await expect(page.locator('#reviewSavedAnswersBtn')).toHaveText('Use saved answers instead');
+
+  await page.evaluate(() => { currentStep = 7; updateWizard(false); });
+  await page.evaluate(() => {
+    const canvas = document.getElementById('signatureCanvas');
+    canvas.getContext('2d').fillRect(2, 2, 4, 4);
+    signatureDirty = true;
+    signatureAnswerFingerprint = signatureContentFingerprint();
+    document.querySelector('[name="termsAccepted"]').checked = true;
+    document.querySelector('[name="accuracyConfirmed"]').checked = true;
+  });
+  await page.locator('#reviewSavedAnswersBtn').click();
+  await expect(page.locator('#draftDiscardConfirmation')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Keep my draft' })).toBeFocused();
+  expect(await page.locator('#draftDiscardConfirmation button').evaluateAll(buttons => buttons.every(button => button.getBoundingClientRect().height >= 44))).toBe(true);
+  await page.getByRole('button', { name: 'Keep my draft' }).click();
+  await expect(page.locator('#draftDiscardConfirmation')).toBeHidden();
+  await expect(page.locator('#ownerAddress')).toHaveValue('Draft address');
+  expect(await page.evaluate(() => sessionStorage.getItem('waffle-intake-draft:fixture-secure-token'))).not.toBeNull();
+
+  await page.locator('#reviewSavedAnswersBtn').click();
+  await page.locator('#discardRestoredDraftBtn').click();
+  await expect(page.locator('#pageCounter')).toHaveText('1 / 7');
+  await expect(page.locator('#ownerAddress')).toHaveValue('Canonical address');
+  await expect(page.locator('#additionalInstructions')).toHaveValue('Latest saved note.');
+  await expect(page.locator('#foodAllergies')).toHaveValue('');
+  await expect(page.locator('#dogName')).toHaveValue('Cino');
+  await expect(page.locator('#bookingPeriod')).toHaveValue('1 Nov 2026 – 11 Nov 2026');
+  await expect(page.locator('[name="termsAccepted"]')).not.toBeChecked();
+  await expect(page.locator('[name="accuracyConfirmed"]')).not.toBeChecked();
+  expect(await page.evaluate(() => signatureDirty)).toBe(false);
+  await expect(page.locator('#signatureStatus')).toContainText('signature and confirmations were cleared');
+  expect(await page.evaluate(() => {
+    const canvas = document.getElementById('signatureCanvas');
+    return canvas.getContext('2d').getImageData(2, 2, 1, 1).data[3];
+  })).toBe(0);
+  expect(await page.evaluate(() => sessionStorage.getItem('waffle-intake-draft:fixture-secure-token'))).toBeNull();
+  expect(await page.evaluate(() => sessionStorage.getItem('waffle-intake-draft:other-token'))).not.toBeNull();
+  await page.evaluate(() => window.dispatchEvent(new Event('pagehide')));
+  expect(await page.evaluate(() => sessionStorage.getItem('waffle-intake-draft:fixture-secure-token'))).toBeNull();
+
+  await page.locator('#ownerAddress').fill('New answer');
+  await expect.poll(() => page.evaluate(() => sessionStorage.getItem('waffle-intake-draft:fixture-secure-token'))).not.toBeNull();
+  expect(JSON.parse(await page.evaluate(() => sessionStorage.getItem('waffle-intake-draft:fixture-secure-token'))).fields.ownerAddress).toBe('New answer');
+});
+
+test('canonical-answer reset preserves a signature and confirmations when the answers do not change', async ({ page }) => {
+  await openIntake(page);
+  await page.evaluate(() => sessionStorage.setItem('waffle-intake-draft:fixture-secure-token', JSON.stringify({ step: 1, fields: { additionalInstructions: 'Use the blue harness.' } })));
+  await succeedPrefill(page);
+  await page.evaluate(() => {
+    currentStep = 7;
+    updateWizard(false);
+    signatureDirty = true;
+    signatureAnswerFingerprint = signatureContentFingerprint();
+    document.querySelector('[name="termsAccepted"]').checked = true;
+    document.querySelector('[name="accuracyConfirmed"]').checked = true;
+  });
+  await page.locator('#reviewSavedAnswersBtn').click();
+  await page.locator('#discardRestoredDraftBtn').click();
+  expect(await page.evaluate(() => signatureDirty)).toBe(true);
+  await expect(page.locator('[name="termsAccepted"]')).toBeChecked();
+  await expect(page.locator('[name="accuracyConfirmed"]')).toBeChecked();
+});
+
+test('pending or complete owner submissions do not offer the restored-draft reset', async ({ page }) => {
+  for (const status of ['Awaiting Owner', 'Complete']) {
+    await openIntake(page, status === 'Awaiting Owner' ? 'pending-intent' : null);
+    await page.evaluate(() => sessionStorage.setItem('waffle-intake-draft:fixture-secure-token', JSON.stringify({ step: 2, fields: { ownerAddress: 'Retained draft' } })));
+    await succeedPrefill(page, 0, 'Cino', { additionalInstructions: 'Saved note' }, status);
+    await expect(page.locator('#draftRestoredStatus')).toBeVisible();
+    await expect(page.locator('#ownerAddress')).toHaveValue('Retained draft');
+    if (status === 'Awaiting Owner') await expect(page.locator('#reviewSavedAnswersBtn')).toBeHidden();
+    else await expect(page.locator('#reviewSavedAnswersBtn')).toBeVisible();
+  }
+});
+
+test('a restored draft can reset after a read-only not-started status unlocks the existing intent', async ({ page }) => {
+  await openIntake(page, 'reusable-intent');
+  await page.evaluate(() => sessionStorage.setItem('waffle-intake-draft:fixture-secure-token', JSON.stringify({ step: 2, fields: {
+    ownerAddress: 'Draft address', foodAllergies: 'Draft-only allergy'
+  } })));
+  await succeedPrefill(page, 0, 'Cino', { ownerAddress: 'Saved address' });
+  await expect(page.locator('#reviewSavedAnswersBtn')).toBeHidden();
+  await page.evaluate(() => window.__intakeCalls.find(call => call.kind === 'status').success({ state: 'not-started' }));
+  await expect(page.locator('#submitBtn')).toBeEnabled();
+  await expect(page.locator('#reviewSavedAnswersBtn')).toBeVisible();
+  await page.locator('#reviewSavedAnswersBtn').click();
+  await page.locator('#discardRestoredDraftBtn').click();
+  await expect(page.locator('#ownerAddress')).toHaveValue('Saved address');
+  await expect(page.locator('#foodAllergies')).toHaveValue('');
+  expect(await page.evaluate(() => sessionStorage.getItem('waffle-intake-submission:fixture-secure-token'))).toBe('reusable-intent');
+  expect(await page.evaluate(() => window.__intakeCalls.filter(call => call.kind === 'submit').length)).toBe(0);
+});
+
+test('owner care textareas grow to a readable cap while keeping full text, focus, selection and manual resize', async ({ page }) => {
+  for (const { width, theme } of [{ width: 320, theme: '' }, { width: 390, theme: 'dark-theme' }, { width: 1440, theme: '' }]) {
+    await page.setViewportSize({ width, height: 900 });
+    await openIntake(page);
+    await page.locator('body').evaluate((el, value) => el.classList.toggle('dark-theme', value), theme === 'dark-theme');
+    await succeedPrefill(page, 0, 'Cino', { additionalInstructions: 'Short saved note.' });
+    await page.evaluate(() => { document.documentElement.style.fontSize = '200%'; currentStep = 6; updateWizard(false); });
+    const notes = page.locator('#additionalInstructions');
+    const longText = Array.from({ length: 90 }, (_, index) => `Care instruction ${index + 1}: keep the complete saved answer available for careful review.`).join('\n');
+    await notes.fill(longText);
+    await notes.evaluate(el => el.setSelectionRange(11, 29));
+    await notes.dispatchEvent('input');
+    const afterAutoGrow = await notes.evaluate(el => ({ value: el.value, height: el.getBoundingClientRect().height, max: parseFloat(getComputedStyle(el).maxHeight), overflow: getComputedStyle(el).overflowY, selection: [el.selectionStart, el.selectionEnd], focused: document.activeElement === el, resize: getComputedStyle(el).resize, scrollWidth: document.documentElement.scrollWidth, clientWidth: document.documentElement.clientWidth }));
+    expect(afterAutoGrow.value).toBe(longText);
+    expect(afterAutoGrow.height).toBeLessThanOrEqual(afterAutoGrow.max + 1);
+    expect(afterAutoGrow.overflow).toBe('auto');
+    expect(afterAutoGrow.selection).toEqual([11, 29]);
+    expect(afterAutoGrow.focused).toBe(true);
+    expect(afterAutoGrow.resize).toBe('vertical');
+    expect(afterAutoGrow.scrollWidth).toBeLessThanOrEqual(afterAutoGrow.clientWidth);
+    const manualHeight = Math.max(130, afterAutoGrow.max / 2);
+    await notes.evaluate((el, height) => {
+      const rect = el.getBoundingClientRect();
+      el.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: rect.right - 2, clientY: rect.bottom - 2 }));
+      el.style.height = `${height}px`;
+      document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, clientX: rect.right - 2, clientY: rect.bottom - 2 }));
+    }, manualHeight);
+    await notes.dispatchEvent('input');
+    await expect.poll(() => notes.evaluate(el => el.getBoundingClientRect().height)).toBeCloseTo(manualHeight, 0);
+    await expect(notes).toHaveValue(longText);
+  }
+});
+
 test('debounces typing, flushes on change and pagehide, and keeps submit feedback single-flight', async ({ page }) => {
   await openIntake(page);
   await succeedPrefill(page);
@@ -402,7 +544,7 @@ test('Step 7 reviews all six answer groups safely and edits return to the source
 
     if (width === 320 && colorScheme === 'light') {
       await expect.poll(() => page.evaluate(() => sessionStorage.getItem(answerReviewDisclosureKey()))).toBe('1');
-      await openIntake(page);
+      await openIntake(page, null, true);
       await succeedPrefill(page);
       await page.evaluate(() => { currentStep = 7; updateWizard(false); });
       await expect(disclosure).toHaveAttribute('open', '');
