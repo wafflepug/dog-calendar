@@ -1680,3 +1680,93 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-
 body[data-waffle-page="directory"] #directoryTabPanel .guest-directory-toolbar:has(> .care-roster-attention[aria-pressed="true"]) > .directory-search-status {
   order: 1;
 }
+
+/* Keep stay navigation primary and the attention filter available as a quieter chip. */
+body[data-waffle-page="directory"] #directoryTabPanel .directory-roster-filters {
+  gap: 6px !important;
+  padding: 4px !important;
+  border-color: var(--wh-border, #dbe3ea) !important;
+  background: var(--wh-surface, #fff) !important;
+}
+body[data-waffle-page="directory"] #directoryTabPanel .directory-roster-filters .v1082-stay-tab {
+  min-height: 44px !important;
+  border-color: transparent !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--wh-text-muted, #526174) !important;
+}
+body[data-waffle-page="directory"] #directoryTabPanel .directory-roster-filters .v1082-stay-tab.is-active {
+  border-color: color-mix(in srgb, var(--wh75-accent, #7562db) 28%, var(--wh-border, #dbe3ea)) !important;
+  background: color-mix(in srgb, var(--wh75-accent, #7562db) 10%, var(--wh-surface, #fff)) !important;
+  color: var(--wh-text, #172033) !important;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--wh75-accent, #7562db) 14%, transparent) !important;
+}
+body[data-waffle-page="directory"] #directoryTabPanel .directory-roster-filters .v1082-stay-tab > span:first-child {
+  font-weight: 800 !important;
+}
+body[data-waffle-page="directory"] #directoryTabPanel .directory-roster-filters .v1082-stay-tab > strong {
+  min-width: 24px !important;
+  min-height: 24px !important;
+  font-size: 12px !important;
+}
+body[data-waffle-page="directory"] #directoryTabPanel .directory-dashboard-fused:not(.is-profile-mode) .guest-directory-toolbar > .care-roster-attention {
+  grid-column: 1 / -1;
+  justify-self: start;
+  min-height: 44px;
+  padding: 5px 10px;
+  border-color: var(--wh-border, #dbe3ea);
+  background: var(--wh-surface-muted, #f8fafc);
+  color: var(--wh-text-muted, #526174);
+  font-size: 13px;
+  font-weight: 650;
+}
+body[data-waffle-page="directory"] #directoryTabPanel .directory-dashboard-fused:not(.is-profile-mode) .guest-directory-toolbar > .care-roster-attention[aria-pressed="true"] {
+  border-color: color-mix(in srgb, var(--wh75-accent, #7562db) 36%, var(--wh-border, #dbe3ea));
+  background: color-mix(in srgb, var(--wh75-accent, #7562db) 9%, var(--wh-surface, #fff));
+  color: var(--wh-text, #172033);
+}
+body[data-waffle-page="directory"] #directoryTabPanel .directory-dashboard-fused:not(.is-profile-mode) .guest-directory-toolbar > .care-roster-attention:focus-visible {
+  outline: 3px solid var(--wh-focus, #7562db);
+  outline-offset: 2px;
+}
+body.dark-theme[data-waffle-page="directory"] #directoryTabPanel .directory-roster-filters,
+body.dark-theme[data-waffle-page="directory"] #directoryTabPanel .guest-directory-toolbar > .care-roster-attention {
+  background: var(--wh-surface, #1e293b) !important;
+}
+
+/* Give the roster one quiet surface boundary; keep each guest and its status readable. */
+body[data-waffle-page="directory"] #directoryTabPanel .v1082-stay-panels {
+  padding: 8px 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+body[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused:not(.is-profile-active) {
+  border-color: var(--wh-border, #dbe3ea);
+  border-radius: 12px;
+  box-shadow: none !important;
+}
+body[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused:not(.is-profile-active) > .directory-guest-tile-open {
+  border: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+/* When both stay actions are shown, make Check In the clear first action. */
+body[data-waffle-page="directory"] #directoryTabPanel .v11217-roster-actions:has(> [data-v11217-roster-checkin]):has(> [data-v11217-roster-checkout]) > [data-v11217-roster-checkout] {
+  border-color: var(--wh-border, #cbd5e1) !important;
+  background: var(--wh-surface, #fff) !important;
+  color: var(--wh-text-muted, #526174) !important;
+  box-shadow: none !important;
+}
+body[data-waffle-page="directory"] #directoryTabPanel .v11217-roster-actions:has(> [data-v11217-roster-checkin]):has(> [data-v11217-roster-checkout]) > [data-v11217-roster-checkout]:hover {
+  border-color: var(--wh-border, #94a3b8) !important;
+  background: var(--wh-surface-muted, #f1f5f9) !important;
+  color: var(--wh-text, #172033) !important;
+}
+body.dark-theme[data-waffle-page="directory"] #directoryTabPanel .v11217-roster-actions:has(> [data-v11217-roster-checkin]):has(> [data-v11217-roster-checkout]) > [data-v11217-roster-checkout] {
+  border-color: var(--wh-border, #475569) !important;
+  background: var(--wh-surface, #1e293b) !important;
+  color: var(--wh-text-muted, #cbd5e1) !important;
+}
