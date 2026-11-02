@@ -529,6 +529,63 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-
   min-height: 44px;
 }
 
+/* Care type rhythm: identity first, section labels next, instructions at body size. */
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-dog-name-btn { font-size: 21px !important; line-height: 1.25; }
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-heading h3 { font-size: 18px; line-height: 1.3; }
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-item h4 { font-size: 16px; line-height: 1.35; }
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-value,
+body[data-waffle-page="directory"] .directory-card.is-profile-active [data-care-brief-medication],
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-row > span,
+body[data-waffle-page="directory"] .directory-card.is-profile-active [data-care-brief-handover-full] { font-size: 15px; line-height: 1.5; }
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-freshness,
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-primary-breed,
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-profile-stay-dates { line-height: 1.45; }
+body[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused > .directory-guest-tile-open .directory-roster-copy { font-size: 16px; line-height: 1.4; }
+body[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused > .directory-guest-tile-open .directory-roster-context,
+body[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused > .directory-guest-tile-open .directory-roster-owner { line-height: 1.45; }
+
+/* Status colors reinforce the visible text label; medication stays neutral. */
+body[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused .v1118-care-status.is-at-home,
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-status-tag.tag-at-home { background: #dcfce7; border-color: #86c99b; color: #14532d; }
+body[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused .v1118-care-status.is-upcoming,
+body[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused .v1118-care-status.is-arriving-today,
+body[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused .v1118-care-status.is-meet-and-greet,
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-status-tag.tag-upcoming { background: #dbeafe; border-color: #93b9e8; color: #1e40af; }
+body[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused .v1118-care-status.is-leaving-today,
+body[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused .v1118-care-status.is-potential { background: #fef3c7; border-color: #d6b85f; color: #713f12; }
+body[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused .v1118-care-status.is-checked-out,
+body[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused .v1118-care-status.is-past-stay { background: #f1f5f9; border-color: #cbd5e1; color: #475569; }
+body[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused .v1118-care-signal[data-v1118-signal-label="Reminder due"],
+body[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused .v1118-care-signal[data-v1118-signal-label="Intake missing"],
+body[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused .v1118-care-signal[data-v1118-signal-label="Intake unverified"],
+body[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused .v1118-care-signal[data-v1118-signal-label="Phone missing"] { background: #fef3c7; border-color: #d6b85f; color: #713f12; }
+body[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused .v1118-care-signal[data-v1118-signal-label="Food allergy"],
+body[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused .v1118-care-signal[data-v1118-signal-label="Escape risk"],
+body[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused .v1118-care-signal[data-v1118-signal-label="Separation anxiety"] { background: #fee2e2; border-color: #e5a0a0; color: #7f1d1d; }
+body[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused .v1118-care-signal[data-v1118-signal-label="Medication"],
+body[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused .v1118-care-signal[data-v1118-signal-label="Weight management"],
+body[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused .v1118-care-signal[data-v1118-signal-label="Link ready"] { background: #f1f5f9; border-color: #cbd5e1; color: #475569; }
+body.dark-theme[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused .v1118-care-status.is-at-home,
+body.dark-theme[data-waffle-page="directory"] .directory-card.is-profile-active .directory-status-tag.tag-at-home { background: #143322; border-color: #276749; color: #bbf7d0; }
+body.dark-theme[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused .v1118-care-status.is-upcoming,
+body.dark-theme[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused .v1118-care-status.is-arriving-today,
+body.dark-theme[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused .v1118-care-status.is-meet-and-greet,
+body.dark-theme[data-waffle-page="directory"] .directory-card.is-profile-active .directory-status-tag.tag-upcoming { background: #172f52; border-color: #315a8d; color: #bfdbfe; }
+body.dark-theme[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused .v1118-care-status.is-leaving-today,
+body.dark-theme[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused .v1118-care-status.is-potential,
+body.dark-theme[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused .v1118-care-signal[data-v1118-signal-label="Reminder due"],
+body.dark-theme[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused .v1118-care-signal[data-v1118-signal-label="Intake missing"],
+body.dark-theme[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused .v1118-care-signal[data-v1118-signal-label="Intake unverified"],
+body.dark-theme[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused .v1118-care-signal[data-v1118-signal-label="Phone missing"] { background: #3b3218; border-color: #705f22; color: #fde68a; }
+body.dark-theme[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused .v1118-care-status.is-checked-out,
+body.dark-theme[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused .v1118-care-status.is-past-stay,
+body.dark-theme[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused .v1118-care-signal[data-v1118-signal-label="Medication"],
+body.dark-theme[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused .v1118-care-signal[data-v1118-signal-label="Weight management"],
+body.dark-theme[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused .v1118-care-signal[data-v1118-signal-label="Link ready"] { background: #22304a; border-color: #475569; color: #cbd5e1; }
+body.dark-theme[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused .v1118-care-signal[data-v1118-signal-label="Food allergy"],
+body.dark-theme[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused .v1118-care-signal[data-v1118-signal-label="Escape risk"],
+body.dark-theme[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused .v1118-care-signal[data-v1118-signal-label="Separation anxiety"] { background: #3b1d25; border-color: #8b3a45; color: #fecdd3; }
+
 /* Long handover text uses its native disclosure when present. */
 body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-row details > summary {
   box-sizing: border-box;

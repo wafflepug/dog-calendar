@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.11.03.03",
-  "releaseName": "Care visual focus and action hierarchy",
+  "assetRevision": "2026.11.03.04",
+  "releaseName": "Care typography and semantic status colours",
   "careIteration": {
     "returningDogSuggestions": true,
     "reviewedCareInheritance": true,
