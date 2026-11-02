@@ -1810,6 +1810,68 @@ body[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused:not(
   background: transparent !important;
 }
 
+/* Keep visible profile tools consistent, flexible and easy to press. */
+body[data-waffle-page="directory"] .directory-card.is-profile-active :is(
+  .directory-care-more-actions-list > [data-owner-care-sharing-options],
+  .directory-care-more-actions-list > [data-care-brief-action="edit"],
+  .directory-care-more-actions-list > [data-care-brief-action="refresh"],
+  .directory-care-more-actions-list > [data-care-sitter-summary="copy"],
+  .directory-care-more-actions-list > [data-p4-dir="again"],
+  .directory-care-photo-tools button.directory-photo-edit-button,
+  .directory-care-photo-tools button.v108-gallery-button
+) {
+  box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center;
+  flex: 1 1 120px; width: auto; min-width: min(100%, 120px); max-width: 100%; min-height: 44px;
+  padding: 8px 12px; border: 1px solid var(--care-card-line, #d5dee9) !important; border-radius: 8px;
+  background: var(--care-card-soft, #f7f9fc) !important; color: var(--care-card-text, #17243b) !important;
+  font-family: inherit !important; font-size: 14px !important; font-weight: 600 !important; line-height: 1.35 !important; text-align: center;
+  white-space: normal; overflow-wrap: anywhere; cursor: pointer;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active :is(
+  .directory-care-more-actions-list > [data-owner-care-sharing-options],
+  .directory-care-more-actions-list > [data-care-brief-action="edit"],
+  .directory-care-more-actions-list > [data-care-brief-action="refresh"],
+  .directory-care-more-actions-list > [data-care-sitter-summary="copy"],
+  .directory-care-more-actions-list > [data-p4-dir="again"],
+  .directory-care-photo-tools button.directory-photo-edit-button,
+  .directory-care-photo-tools button.v108-gallery-button
+):hover { background: color-mix(in srgb, var(--care-card-accent, #155e8a) 9%, var(--care-card-soft, #f7f9fc)) !important; }
+body[data-waffle-page="directory"] .directory-card.is-profile-active :is(
+  .directory-care-more-actions-list > [data-owner-care-sharing-options],
+  .directory-care-more-actions-list > [data-care-brief-action="edit"],
+  .directory-care-more-actions-list > [data-care-brief-action="refresh"],
+  .directory-care-more-actions-list > [data-care-sitter-summary="copy"],
+  .directory-care-more-actions-list > [data-p4-dir="again"],
+  .directory-care-photo-tools button.directory-photo-edit-button,
+  .directory-care-photo-tools button.v108-gallery-button
+):active { background: color-mix(in srgb, var(--care-card-accent, #155e8a) 16%, var(--care-card-soft, #f7f9fc)) !important; }
+body[data-waffle-page="directory"] .directory-card.is-profile-active :is(
+  .directory-care-more-actions-list > [data-owner-care-sharing-options],
+  .directory-care-more-actions-list > [data-care-brief-action="edit"],
+  .directory-care-more-actions-list > [data-care-brief-action="refresh"],
+  .directory-care-more-actions-list > [data-care-sitter-summary="copy"],
+  .directory-care-more-actions-list > [data-p4-dir="again"],
+  .directory-care-photo-tools button.directory-photo-edit-button,
+  .directory-care-photo-tools button.v108-gallery-button
+):focus-visible { outline: 3px solid var(--wh-focus, #7562db) !important; outline-offset: 2px; }
+body.dark-theme[data-waffle-page="directory"] .directory-card.is-profile-active :is(
+  .directory-care-more-actions-list > [data-owner-care-sharing-options],
+  .directory-care-more-actions-list > [data-care-brief-action="edit"],
+  .directory-care-more-actions-list > [data-care-brief-action="refresh"],
+  .directory-care-more-actions-list > [data-care-sitter-summary="copy"],
+  .directory-care-more-actions-list > [data-p4-dir="again"],
+  .directory-care-photo-tools button.directory-photo-edit-button,
+  .directory-care-photo-tools button.v108-gallery-button
+):is(:hover, :active) { color: var(--care-card-text, #e2e8f0) !important; }
+
+/* Align Safety, Feeding and Handover actions beside their headings when they fit. */
+body[data-waffle-page="directory"] .directory-card.is-profile-active :is(.directory-care-brief-safety, .directory-care-brief-feeding-walks, .directory-care-brief-note) > .directory-care-brief-note-heading:not([hidden]) {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 8px; min-width: 0;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active :is(.directory-care-brief-safety, .directory-care-brief-feeding-walks, .directory-care-brief-note) > .directory-care-brief-note-heading > h4 {
+  flex: 0 1 auto; min-width: 0;
+}
+
 /* When both stay actions are shown, make Check In the clear first action. */
 body[data-waffle-page="directory"] #directoryTabPanel .v11217-roster-actions:has(> [data-v11217-roster-checkin]):has(> [data-v11217-roster-checkout]) > [data-v11217-roster-checkout] {
   border-color: var(--wh-border, #cbd5e1) !important;
