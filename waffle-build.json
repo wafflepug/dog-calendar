@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.11.03.05",
-  "releaseName": "Consistent Care tools and interaction states",
+  "assetRevision": "2026.11.03.06",
+  "releaseName": "Owner update templates and message previews",
   "careIteration": {
     "returningDogSuggestions": true,
     "reviewedCareInheritance": true,
