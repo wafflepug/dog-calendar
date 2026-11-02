@@ -1,5 +1,6 @@
 const {test,expect}=require('@playwright/test');
 const {install,bookings}=require('./fixtures/care-daily-workflows');
+const {settlePointerTargetAfterScroll}=require('./fixtures/care-pointer-readiness');
 
 test('busy day: check in the correct Milo, review that stay’s care, then complete pickup checkout',async({page,baseURL})=>{
   const runtimeErrors=[];
@@ -34,7 +35,7 @@ test('busy day: check in the correct Milo, review that stay’s care, then compl
   });
 
   const arrivalAction=sameName.locator('[data-v11217-roster-checkin]');
-  await arrivalAction.scrollIntoViewIfNeeded();
+  await settlePointerTargetAfterScroll(page,arrivalAction);
   const arrivalHit=await arrivalAction.evaluate(node=>{const r=node.getBoundingClientRect();return{height:r.height,right:r.right,width:innerWidth,hit:node.contains(document.elementFromPoint(r.left+r.width/2,r.top+r.height/2))};});
   expect(arrivalHit.height).toBeGreaterThanOrEqual(44);expect(arrivalHit.right).toBeLessThanOrEqual(arrivalHit.width);expect(arrivalHit.hit).toBe(true);
   await arrivalAction.click();
@@ -64,7 +65,7 @@ test('busy day: check in the correct Milo, review that stay’s care, then compl
   await expect(checkedIn).not.toHaveClass(/is-profile-active/);
   await expect(checkedIn.locator('[data-v11217-roster-checkout]')).toBeVisible();
   const pickupAction=checkedIn.locator('[data-v11217-roster-checkout]');
-  await pickupAction.scrollIntoViewIfNeeded();
+  await settlePointerTargetAfterScroll(page,pickupAction);
   const pickupHit=await pickupAction.evaluate(node=>{const r=node.getBoundingClientRect();return{height:r.height,right:r.right,width:innerWidth,hit:node.contains(document.elementFromPoint(r.left+r.width/2,r.top+r.height/2))};});
   expect(pickupHit.height).toBeGreaterThanOrEqual(44);expect(pickupHit.right).toBeLessThanOrEqual(pickupHit.width);expect(pickupHit.hit).toBe(true);
   await pickupAction.click();
