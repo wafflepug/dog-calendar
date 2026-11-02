@@ -122,7 +122,7 @@ test('actual Care profile stays compact, keeps exceptions visible and preserves 
     await expect(emergencyAction).toBeVisible();
     await expect(brief.locator('.directory-care-brief-actions [data-care-brief-action="handover"], .directory-care-brief-actions [data-care-brief-action="emergency-contact"]')).toHaveCount(0);
     const toolsToggle = tools.locator('[data-care-brief-action="refresh"]');
-    await toolsToggle.focus();await expect(toolsToggle).toHaveCSS('outline-style', 'solid');
+    await page.keyboard.press('Tab');await toolsToggle.focus();await expect(toolsToggle).toHaveCSS('outline-style', 'solid');
     await expect(tools.locator('[data-care-brief-action="refresh"]')).toBeVisible();
     await expect(tools.locator('[data-care-brief-action="handover"], [data-care-brief-action="emergency-contact"]')).toHaveCount(0);
     await expect(tools.locator(':scope > summary')).toHaveCount(0);

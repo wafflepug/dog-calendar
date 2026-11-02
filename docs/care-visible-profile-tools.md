@@ -20,6 +20,7 @@
 - Chromium: 8 profile-tool checks passed across 320/390/1440 light and dark views.
 - WebKit: all 6 responsive profile-tool checks passed.
 - Photo editor/gallery and saved-care quick-action regressions: 4 checks passed across Chromium and WebKit.
+- Updated contact and booking suites: 27 passed; mobile glance and hierarchy checks: 11 passed.
 - Bootstrap/release tests: 12 passed; active runtime contract and JavaScript syntax checks passed.
 - Visual review: final tool area uses matching button typography and row heights. All automated data is synthetic; no production records were changed.
 
