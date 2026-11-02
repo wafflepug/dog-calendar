@@ -2,6 +2,7 @@ const { test, expect } = require('@playwright/test');
 const fs = require('node:fs');
 const path = require('node:path');
 const { resolveLocalBackendAction } = require('../scripts/local-network-policy');
+const { applyTrueTextScale, resetTrueTextScale } = require('./fixtures/true-text-scale');
 
 test.setTimeout(90_000);
 
@@ -122,6 +123,113 @@ test('Care date and detail editor actions remain reachable on short phone viewpo
   page.once('dialog',dialog=>dialog.accept());
   await cancel.click();
   await expect(editor).not.toHaveClass(/open/);
+});
+
+test('Care stay-date and guest editor dialogs keep native fields and whole action labels at true 200% text',async({page,baseURL},testInfo)=>{
+  await page.route('**/*',installFixture(page));
+  await page.setViewportSize({width:390,height:844});
+  await page.clock.setFixedTime(new Date('2026-10-05T12:00:00Z'));
+  await page.goto(`${baseURL}/directory.html`,{waitUntil:'domcontentloaded'});
+  await page.waitForFunction(()=>document.documentElement.dataset.waffleUiReady==='true');
+  const sizes=[{width:320,height:568},{width:390,height:320},{width:1440,height:900}];
+  const lineWords=element=>element.evaluate(node=>{
+    const walker=document.createTreeWalker(node,NodeFilter.SHOW_TEXT),words=[];let text;
+    while((text=walker.nextNode()))for(const match of text.textContent.matchAll(/\S+/g)){
+      const range=document.createRange();range.setStart(text,match.index);range.setEnd(text,match.index+match[0].length);words.push({word:match[0],lines:range.getClientRects().length});
+    }
+    return words;
+  });
+  const card=page.locator('.directory-card[data-directory-dog-name="Milo"]');
+  await card.locator('[data-open-directory-profile]').click();
+  for(const viewport of sizes){
+    await page.setViewportSize(viewport);
+    await card.locator('.v11113-editable-stay-dates').first().click();
+    const modal=page.locator('#v11113StayDatesModal');
+    await expect(modal).toBeVisible();
+    await resetTrueTextScale(modal);
+    const baseDateFont=await modal.locator('[data-v11113-end-date]').evaluate(element=>parseFloat(getComputedStyle(element).fontSize));
+    const baseCancelFont=await modal.locator('.v11113-stay-dates-actions button').first().evaluate(element=>parseFloat(getComputedStyle(element).fontSize));
+    await applyTrueTextScale(modal);
+    for(const dark of [false,true]){
+      await page.locator('body').evaluate((body,isDark)=>body.classList.toggle('dark-theme',isDark),dark);
+      const end=modal.locator('[data-v11113-end-date]');
+      await modal.locator('[data-v11113-start-date]').focus();
+      for(let tabStep=0;tabStep<8;tabStep++){
+        await page.keyboard.press('Tab');
+        const focus=await modal.evaluate(root=>({inside:root.contains(document.activeElement),end:document.activeElement===root.querySelector('[data-v11113-end-date]'),save:document.activeElement===root.querySelector('[data-v11113-stay-dates-save]')}));
+        expect(focus.inside,JSON.stringify({viewport,dark,tabStep,focus})).toBe(true);
+        expect(focus.save,JSON.stringify({viewport,dark,tabStep,focus})).toBe(false);
+        if(focus.end)break;
+      }
+      await expect(end).toBeFocused();
+      const focusedEnd=await end.boundingBox();
+      const focusedFooter=await modal.locator('.v11113-stay-dates-actions').boundingBox();
+      expect(focusedEnd.y).toBeGreaterThanOrEqual(0);
+      expect(focusedEnd.y+focusedEnd.height).toBeLessThanOrEqual(viewport.height+1);
+      expect(focusedEnd.y+focusedEnd.height).toBeLessThanOrEqual(focusedFooter.y+1,JSON.stringify({viewport,dark,focusedEnd,focusedFooter}));
+      expect(await end.evaluate(element=>{const rect=element.getBoundingClientRect(),hit=document.elementFromPoint(rect.left+rect.width/2,rect.top+rect.height/2);return hit===element||element.contains(hit);})).toBe(true);
+      await end.evaluate(element=>element.scrollIntoView({block:'center',inline:'nearest',behavior:'instant'}));
+      await expect(end).toHaveValue('2027-01-01');
+      const endBox=await end.boundingBox();
+      const footer=await modal.locator('.v11113-stay-dates-actions').boundingBox();
+      const header=await modal.locator('.v108-modal-head').boundingBox();
+      expect(endBox.height).toBeGreaterThanOrEqual(44);
+      expect(endBox.x).toBeGreaterThanOrEqual(0);
+      expect(endBox.x+endBox.width).toBeLessThanOrEqual(viewport.width+1);
+      expect(endBox.y).toBeGreaterThanOrEqual(header.y+header.height-1);
+      expect(endBox.y+endBox.height).toBeLessThanOrEqual(footer.y+1,JSON.stringify({viewport,dark,endBox,footer}));
+      expect(await end.evaluate(element=>parseFloat(getComputedStyle(element).fontSize))).toBeCloseTo(baseDateFont*2,1);
+      const nativeField=await end.evaluate(element=>({scrollWidth:element.scrollWidth,clientWidth:element.clientWidth}));
+      expect(nativeField.scrollWidth).toBeLessThanOrEqual(nativeField.clientWidth+1,JSON.stringify({viewport,dark,nativeField}));
+      expect(await end.evaluate(element=>{const rect=element.getBoundingClientRect(),hit=document.elementFromPoint(rect.left+rect.width/2,rect.top+rect.height/2);return hit===element||element.contains(hit);})).toBe(true);
+      for(const button of await modal.locator('.v11113-stay-dates-actions button:visible').all()){
+        await button.scrollIntoViewIfNeeded();
+        const box=await button.boundingBox();
+        expect(box.height).toBeGreaterThanOrEqual(44);
+        expect(box.y).toBeGreaterThanOrEqual(0);
+        expect(box.y+box.height).toBeLessThanOrEqual(viewport.height+1);
+        expect(box.x+box.width).toBeLessThanOrEqual(viewport.width+1);
+        expect(await button.evaluate(element=>parseFloat(getComputedStyle(element).fontSize))).toBeCloseTo(baseCancelFont*2,1);
+        expect(await button.evaluate(element=>{const rect=element.getBoundingClientRect(),hit=document.elementFromPoint(rect.left+rect.width/2,rect.top+rect.height/2);return hit===element||element.contains(hit);})).toBe(true);
+        expect((await lineWords(button)).every(item=>item.lines===1),JSON.stringify({viewport,dark,label:await button.innerText(),words:await lineWords(button)})).toBe(true);
+      }
+      if(viewport.width===320)await page.screenshot({path:testInfo.outputPath(`care-stay-dates-2x-320-${dark?'dark':'light'}.png`)});
+    }
+    await modal.locator('[data-v11113-stay-dates-close]').last().click();
+  }
+  for(const viewport of sizes){
+    await page.setViewportSize(viewport);
+    await card.locator('[data-directory-edit-field="dogName"]').click();
+    const editor=page.locator('#guestDetailEditModal');
+    await expect(editor).toBeVisible();
+    await editor.locator('#guestDetailEditInput').fill('Unsaved dog-name draft');
+    await editor.locator('#guestDetailEditStatus').evaluate(element=>element.textContent='Example error message. '.repeat(8));
+    await resetTrueTextScale(editor);
+    const baseActionFont=await editor.locator('#cancelGuestDetailEdit').evaluate(element=>parseFloat(getComputedStyle(element).fontSize));
+    await applyTrueTextScale(editor);
+    for(const dark of [false,true]){
+      await page.locator('body').evaluate((body,isDark)=>body.classList.toggle('dark-theme',isDark),dark);
+      const cancel=editor.locator('#cancelGuestDetailEdit');
+      const save=editor.locator('#saveGuestDetailEdit');
+      for(const button of [cancel,save]){
+        const box=await button.boundingBox();
+        expect(box.height).toBeGreaterThanOrEqual(44);
+        expect(box.y).toBeGreaterThanOrEqual(0);
+        expect(box.y+box.height).toBeLessThanOrEqual(viewport.height+1);
+        expect(box.x).toBeGreaterThanOrEqual(0);
+        expect(box.x+box.width).toBeLessThanOrEqual(viewport.width+1);
+        expect(await button.evaluate(element=>parseFloat(getComputedStyle(element).fontSize))).toBeCloseTo(baseActionFont*2,1);
+        expect(await button.evaluate(element=>{const rect=element.getBoundingClientRect(),hit=document.elementFromPoint(rect.left+rect.width/2,rect.top+rect.height/2);return hit===element||element.contains(hit);})).toBe(true);
+        if(viewport.width===320){const textWidth=await button.evaluate(element=>({scrollWidth:element.scrollWidth,clientWidth:element.clientWidth}));expect(textWidth.scrollWidth).toBeLessThanOrEqual(textWidth.clientWidth+1,JSON.stringify({viewport,dark,textWidth,label:await button.innerText()}));}
+        expect((await lineWords(button)).every(item=>item.lines===1),JSON.stringify({viewport,dark,label:await button.innerText(),words:await lineWords(button)})).toBe(true);
+      }
+      await expect(editor.locator('#guestDetailEditInput')).toHaveValue('Unsaved dog-name draft');
+      if(viewport.width===320)await page.screenshot({path:testInfo.outputPath(`care-guest-editor-2x-320-${dark?'dark':'light'}.png`)});
+    }
+    page.once('dialog',dialog=>dialog.accept());
+    await editor.locator('#cancelGuestDetailEdit').click();
+    await expect(editor).not.toHaveClass(/open/);
+  }
 });
 
 

@@ -251,8 +251,8 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-
   text-align: left;
 }
 body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-profile-stay-dates {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   align-items: start;
   justify-items: start;
   align-content: center;
@@ -275,6 +275,7 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-
   transform: translateY(-50%);
 }
 body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-profile-stay-dates > span {
+  flex: 1 1 4.75em;
   display: block;
   min-width: 0;
   max-width: 100%;
@@ -283,6 +284,7 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-
 }
 @media (min-width: 601px) {
   body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-profile-stay-dates {
+    display: grid;
     grid-template-columns: repeat(2, max-content);
     justify-content: start;
     width: fit-content;
@@ -742,7 +744,6 @@ body.dark-theme[data-waffle-page="directory"] .directory-card.is-profile-active 
     font-size: 18px !important;
   }
   body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-profile-stay-dates {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 2px 6px;
     min-height: 48px;
     margin-top: 2px !important;
@@ -1224,16 +1225,15 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-
   gap: 6px 12px;
 }
 body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-owner-inline {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(88px, max-content);
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 2px 12px;
+  gap: 4px 12px;
   width: 100%;
   text-align: left;
 }
 body[data-waffle-page="directory"] .directory-card.is-profile-active [data-care-brief-owner-name] {
-  grid-column: 1;
-  grid-row: 1;
+  flex: 1 1 5em;
   min-width: 0;
   text-align: left;
 }
@@ -1244,16 +1244,15 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active [data-care-
   display: none;
 }
 body[data-waffle-page="directory"] .directory-card.is-profile-active [data-care-brief-call-owner] > .directory-care-brief-action {
-  grid-column: 2;
-  grid-row: 1 / span 2;
+  flex: 0 1 auto;
   width: auto;
   min-width: 88px;
   margin: 0;
 }
 body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-owner-phone,
 body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-owner-contact-missing {
-  grid-column: 1;
-  grid-row: 2;
+  flex: 1 1 8em;
+  min-width: 0;
   text-align: left;
 }
 body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-actions {
@@ -1520,8 +1519,8 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active {
     .directory-care-brief-note,
     .directory-care-brief-feeding-walks
   ) > .directory-care-brief-note-heading:not([hidden]) {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+    display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 4px 8px;
     min-width: 0;
@@ -1531,7 +1530,9 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active {
     .directory-care-brief-note,
     .directory-care-brief-feeding-walks
   ) > .directory-care-brief-note-heading > h4 {
+    flex: 1 1 6em;
     min-width: 0;
+    max-width: 100%;
     margin: 0;
     overflow-wrap: anywhere;
   }
