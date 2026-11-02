@@ -11366,7 +11366,7 @@ registerWaffleServiceWorker();
             status.textContent = 'Save failed. Your draft is still here. Try saving again or discard it.';
             status.className = 'guest-detail-edit-status is-error';
         } else if (status && editor.saved) {
-            status.textContent = 'Your changes were saved and synced.';
+            status.textContent = 'Your change is saved to the shared booking record.';
             status.className = 'guest-detail-edit-status is-success';
         } else if (status) {
             status.textContent = isDirty ? 'Unsaved changes.' : 'No unsaved changes.';
@@ -14027,7 +14027,7 @@ registerWaffleServiceWorker();
                 belongingsState.failed = false;
                 belongingsState.failureMessage = '';
                 const status = card.querySelector('[data-belongings-edit-status]');
-                updateBelongingsItemDraftFeedback(card, 'Belongings saved successfully.');
+                updateBelongingsItemDraftFeedback(card, 'Belongings saved to the shared Care record.');
             }
 
             setTimeout(() => { if (saveContextIsCurrent()) button.innerText = originalText; }, 1800);
@@ -16393,7 +16393,7 @@ registerWaffleServiceWorker();
             );
 
             status.textContent =
-                `✅ ${response.fieldLabel || config.label} saved and synced.`;
+                `${response.fieldLabel || config.label} saved to the shared booking record.`;
             status.className =
                 'guest-detail-edit-status is-success';
             context.initialValue = config.multiline ? textarea.value : input.value;
@@ -18185,7 +18185,7 @@ registerWaffleServiceWorker();
                                                 <section class="directory-care-brief-item directory-care-brief-safety">
                                                     <div class="directory-care-brief-note-heading">
                                                         <h4>Safety</h4>
-                                                        <button type="button" class="directory-care-brief-action" data-care-brief-action="emergency-contact">Emergency details</button>
+                                                        <button type="button" class="directory-care-brief-action" data-care-brief-action="emergency-contact"><span class="care-tool-icon" aria-hidden="true"><svg viewBox="0 0 20 20"><path d="M10 2.5 16 5v4.2c0 3.8-2.4 6.5-6 8.3-3.6-1.8-6-4.5-6-8.3V5z"/><path d="M10 6.2v5.2M7.4 8.8h5.2"/></svg></span>Emergency details</button>
                                                     </div>
                                                     <div class="directory-care-brief-value" data-care-brief-safety aria-live="polite">
                                                         <span class="care-brief-state is-pending">Safety profile not yet available</span>
@@ -18201,7 +18201,7 @@ registerWaffleServiceWorker();
                                                 <section class="directory-care-brief-item directory-care-brief-feeding-walks" aria-label="Feeding and walks">
                                                     <div class="directory-care-brief-note-heading">
                                                         <h4>Feeding &amp; walks</h4>
-                                                        <button type="button" class="directory-care-brief-action directory-care-brief-edit-routine" data-care-brief-action="edit-routine">Edit routine</button>
+                                                        <button type="button" class="directory-care-brief-action directory-care-brief-edit-routine" data-care-brief-action="edit-routine"><span class="care-tool-icon" aria-hidden="true"><svg viewBox="0 0 20 20"><path d="M4 14.8 13.8 5l2.2 2.2-9.8 9.8L3 17z"/><path d="m12.7 6.1 2.2 2.2M10 17h7"/></svg></span>Edit routine</button>
                                                     </div>
                                                     <div class="directory-care-brief-subsection">
                                                     <div class="directory-care-brief-value is-pending" data-care-brief-feeding>
@@ -18226,7 +18226,7 @@ registerWaffleServiceWorker();
                                                 <section class="directory-care-brief-item directory-care-brief-note" aria-label="Handover note">
                                                     <div class="directory-care-brief-note-heading">
                                                         <h4>Handover note</h4>
-                                                        <button type="button" class="directory-care-brief-action" data-care-brief-action="handover">Update handover</button>
+                                                        <button type="button" class="directory-care-brief-action" data-care-brief-action="handover"><span class="care-tool-icon" aria-hidden="true"><svg viewBox="0 0 20 20"><path d="M4 3.5h12v13H4z"/><path d="M7 7h6M7 10h6M7 13h3"/></svg></span>Update handover</button>
                                                     </div>
                                                     <div class="directory-care-brief-value" data-care-brief-handover-note>${escapeDashboardHtml(notes ? notes.trim() : 'No handover note recorded')}</div>
                                                 </section>
@@ -18237,7 +18237,7 @@ registerWaffleServiceWorker();
 
                                             <div class="directory-care-brief-actions" aria-label="Care profile actions">
                                                 <button type="button" class="directory-care-brief-action is-primary" data-care-brief-action="full-profile">
-                                                    Care details
+                                                    <span class="care-tool-icon" aria-hidden="true"><svg viewBox="0 0 20 20"><path d="M3 4.5h5a2 2 0 0 1 2 2v10a2 2 0 0 0-2-2H3zM17 4.5h-5a2 2 0 0 0-2 2v10a2 2 0 0 1 2-2h5z"/></svg></span>Care details
                                                 </button>
 
                                                 <div class="directory-care-more-actions" aria-label="Profile tools">
