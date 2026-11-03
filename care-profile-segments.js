@@ -1,0 +1,185 @@
+/* Segmented views for the active Care profile. Existing controls and content
+   stay in place so the profile, booking and records handlers keep their nodes. */
+(() => {
+  'use strict';
+
+  const segments = ['overview', 'activity', 'records', 'tools'];
+  const labels = { overview: 'Overview', activity: 'Activity', records: 'Records', tools: 'Tools' };
+  const mounted = new WeakMap();
+
+  function isDirectory() {
+    return window.WAFFLE_PAGE === 'directory' || document.body?.dataset?.wafflePage === 'directory';
+  }
+
+  function identity(card) {
+    return [card.dataset.directoryStayId, card.dataset.directoryDogId, card.dataset.directoryStayKey].join('\u001f');
+  }
+
+  function mark(node, segment) {
+    if (node && node.dataset.careProfileSegment !== segment) node.dataset.careProfileSegment = segment;
+  }
+
+  function unmark(node) {
+    if (node?.hasAttribute('data-care-profile-segment')) node.removeAttribute('data-care-profile-segment');
+  }
+
+  function controlsFor(card) {
+    return [...card.querySelectorAll('.care-profile-segment-button')];
+  }
+
+  function select(card, requested, focus = false) {
+    if (!segments.includes(requested)) return;
+    const brief = card.querySelector('[data-directory-care-brief]');
+    if (!brief) return;
+    const state = mounted.get(brief);
+    if (!state) return;
+    state.active = requested;
+    if (card.dataset.careProfileSegmentActive !== requested) card.dataset.careProfileSegmentActive = requested;
+    if (brief.dataset.careProfileSegmentActive !== requested) brief.dataset.careProfileSegmentActive = requested;
+    controlsFor(card).forEach(button => {
+      const active = button.dataset.careProfileSegmentButton === requested;
+      if (button.getAttribute('aria-pressed') !== String(active)) button.setAttribute('aria-pressed', String(active));
+      const tabIndex = active ? '0' : '-1';
+      if (button.getAttribute('tabindex') !== tabIndex) button.setAttribute('tabindex', tabIndex);
+      if (focus && active) button.focus();
+    });
+
+    const routine = card.querySelector('[data-care-routine-log]');
+    const routineDetails = routine?.querySelector('details');
+    const summary = routineDetails?.querySelector(':scope > summary');
+    if (routineDetails && requested === 'activity') {
+      if (!routineDetails.open) routineDetails.open = true;
+      if (summary) {
+        if (summary.getAttribute('role') !== 'heading') summary.setAttribute('role', 'heading');
+        if (summary.getAttribute('aria-level') !== '3') summary.setAttribute('aria-level', '3');
+        if (summary.getAttribute('tabindex') !== '-1') summary.setAttribute('tabindex', '-1');
+      }
+    } else if (summary) {
+      if (summary.getAttribute('role') === 'heading') summary.removeAttribute('role');
+      if (summary.getAttribute('aria-level') === '3') summary.removeAttribute('aria-level');
+      if (summary.getAttribute('tabindex') === '-1') summary.removeAttribute('tabindex');
+    }
+
+    if (requested === 'records' || requested === 'tools') {
+      card.querySelectorAll(`[data-care-profile-segment="${requested}"]`).forEach(details => {
+        if (details.tagName === 'DETAILS' && !details.open) details.open = true;
+      });
+    }
+  }
+
+  function mount(card) {
+    if (!card?.classList.contains('is-profile-active')) return;
+    const brief = card.querySelector('[data-directory-care-brief]');
+    if (!brief) return;
+    const key = identity(card);
+    let state = mounted.get(brief);
+    if (state && state.key !== key) {
+      state.key = key;
+      state.active = 'overview';
+      if (card.dataset.careProfileSegmentActive !== 'overview') card.dataset.careProfileSegmentActive = 'overview';
+      if (brief.dataset.careProfileSegmentActive !== 'overview') brief.dataset.careProfileSegmentActive = 'overview';
+      controlsFor(card).forEach(button => {
+        const selected = button.dataset.careProfileSegmentButton === 'overview';
+        button.setAttribute('aria-pressed', String(selected));
+        button.tabIndex = selected ? 0 : -1;
+      });
+    }
+    if (state) return;
+
+    state = { key, active: 'overview' };
+    mounted.set(brief, state);
+    card.dataset.careProfileSegmentActive = 'overview';
+    if (!brief.id) brief.id = `care-profile-${Math.random().toString(36).slice(2, 10)}`;
+    brief.dataset.careProfileSegmentActive = 'overview';
+
+    const nav = document.createElement('div');
+    nav.className = 'care-profile-segments';
+    nav.dataset.careProfileSegments = '';
+    nav.setAttribute('role', 'group');
+    nav.setAttribute('aria-label', 'Care profile sections');
+    nav.innerHTML = segments.map((segment, index) => `<button type="button" class="care-profile-segment-button" data-care-profile-segment-button="${segment}" aria-controls="${brief.id}" aria-pressed="${index === 0}" tabindex="${index === 0 ? '0' : '-1'}">${labels[segment]}</button>`).join('');
+
+    const heading = brief.querySelector('.directory-care-brief-heading');
+    if (heading) heading.before(nav);
+    else brief.prepend(nav);
+
+    mark(brief.querySelector('.directory-care-brief-heading'), 'overview');
+    mark(brief.querySelector('.directory-care-brief-grid'), 'overview');
+    mark(brief.querySelector('[data-care-brief-action="full-profile"]'), 'overview');
+    mark(card.querySelector('[data-care-routine-log]'), 'activity');
+
+    const assign = () => {
+      const records = card.querySelector('.directory-care-records-disclosure');
+      const readiness = card.querySelector('.directory-care-readiness, .directory-care-readiness-disclosure');
+      mark(records, 'records');
+      mark(readiness, 'tools');
+      card.querySelectorAll('.directory-care-more-actions-list > *').forEach(node => {
+        if (node === records || (records && node.contains(records))) {
+          if (node.dataset.careProfileSegment === 'tools') unmark(node);
+          return;
+        }
+        mark(node, 'tools');
+      });
+      // These are section headings in the segmented view, not another navigation layer.
+      card.querySelectorAll('.directory-care-records-disclosure, .directory-care-contact-disclosure, .directory-care-readiness').forEach(details => {
+        if (!details.hasAttribute('data-care-segment-flat')) details.dataset.careSegmentFlat = '';
+        const summary = details.querySelector(':scope > summary');
+        if (summary && summary.getAttribute('tabindex') !== '-1') summary.setAttribute('tabindex', '-1');
+        if (summary && summary.getAttribute('role') !== 'heading') summary.setAttribute('role', 'heading');
+        if (summary && summary.getAttribute('aria-level') !== '3') summary.setAttribute('aria-level', '3');
+      });
+      // A section may be relocated into the tools list after this script mounts.
+      if (records?.dataset.careProfileSegment === 'tools') mark(records, 'records');
+    };
+    assign();
+
+    card.addEventListener('click', event => {
+      const summary = event.target.closest('[data-care-segment-flat] > summary');
+      if (summary && card.contains(summary)) event.preventDefault();
+    });
+
+    nav.addEventListener('click', event => {
+      const button = event.target.closest('[data-care-profile-segment-button]');
+      if (!button || !nav.contains(button)) return;
+      select(card, button.dataset.careProfileSegmentButton);
+    });
+    nav.addEventListener('keydown', event => {
+      const button = event.target.closest('[data-care-profile-segment-button]');
+      if (!button || !nav.contains(button)) return;
+      const current = segments.indexOf(button.dataset.careProfileSegmentButton);
+      let next = current;
+      if (event.key === 'ArrowRight' || event.key === 'ArrowDown') next = (current + 1) % segments.length;
+      else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') next = (current - 1 + segments.length) % segments.length;
+      else if (event.key === 'Home') next = 0;
+      else if (event.key === 'End') next = segments.length - 1;
+      else return;
+      event.preventDefault();
+      select(card, segments[next], true);
+    });
+
+    const observer = new MutationObserver(records => {
+      if (identity(card) !== state.key) {
+        state.key = identity(card);
+        select(card, 'overview');
+      }
+      if (records.some(record => record.type === 'childList')) assign();
+      for (const record of records) {
+        if (record.type !== 'attributes' || record.attributeName !== 'open' || !record.target.open) continue;
+        const targetSegment = record.target.closest('[data-care-profile-segment]')?.dataset.careProfileSegment;
+        if (targetSegment && targetSegment !== state.active && targetSegment !== 'overview') select(card, targetSegment);
+      }
+      mark(card.querySelector('[data-care-routine-log]'), 'activity');
+    });
+    observer.observe(card, { childList: true, subtree: true, attributes: true, attributeFilter: ['open', 'data-directory-stay-id', 'data-directory-dog-id', 'data-directory-stay-key'] });
+  }
+
+  function scan() {
+    if (isDirectory()) document.querySelectorAll('.directory-card.is-profile-active').forEach(mount);
+  }
+
+  if (isDirectory()) {
+    const observer = new MutationObserver(scan);
+    observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'data-directory-stay-id', 'data-directory-dog-id', 'data-directory-stay-key'] });
+    scan();
+  }
+})();
