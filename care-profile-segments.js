@@ -179,6 +179,10 @@
       const readiness = card.querySelector('.directory-care-readiness, .directory-care-readiness-disclosure');
       mark(records, 'records');
       mark(readiness, 'tools');
+      // The owner form action is part of Records, including while the form
+      // is rendered asynchronously by the directory profile.
+      card.querySelectorAll('.directory-owner-care-action-group, [data-care-owner-link-group]').forEach(node => mark(node, 'records'));
+      card.querySelectorAll('[data-p4-dir="owner"]').forEach(node => mark(node, 'records'));
       card.querySelectorAll('.directory-care-more-actions-list > *').forEach(node => {
         if (node === records || (records && node.contains(records))) {
           if (node.dataset.careProfileSegment === 'tools') unmark(node);
