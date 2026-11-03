@@ -19,7 +19,7 @@ Syntax and diff checks; fictional local preview at 320/390/1440px, including a 3
 4. Use Tab, arrows, Home/End; inspect focus and wrapping at narrow widths and enlarged text.
 5. Switch dogs and confirm the new profile starts on Overview with the correct identity. Existing loading/error/identity warnings must remain honest.
 
-Screenshot summary: `output/care-segment-review/review.html`, fictional Milo/Alex data. Cache revision 2026.11.03.08. Rollback is a normal source revert; there is no data migration.
+Screenshot summary: `output/care-segment-review/review.html`, fictional Milo/Alex data. Cache revision 2026.11.03.09. Rollback is a normal source revert; there is no data migration.
 
 ## Next backlog item
 Reduce repeated blank optional fields within detailed Care categories while preserving safety warnings and explicit missing-data states.

@@ -1,6 +1,6 @@
 {
   "release": "phase3d-2026.08.28.01",
-  "currentRelease": "2026.11.03.08",
+  "currentRelease": "2026.11.03.09",
   "currentReleaseName": "Segmented Care profiles",
   "currentImprovements": ["Overview, Activity, Records and Tools segments", "First-level owner form access with compact status", "Section navigation preserves existing controls and drafts"],
   "latestMergedSha": "41c7d27",
