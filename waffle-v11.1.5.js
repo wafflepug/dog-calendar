@@ -84,7 +84,8 @@
       if (tabs && tabs.parentElement) tabs.parentElement.insertBefore(sourceHost, tabs);
       else panel.insertBefore(sourceHost, panel.firstChild);
     }
-    sourceHost.innerHTML = sourceBadgeHtml(record.requestSource);
+    // The current source editor owns this node once its stay identity is set.
+    if (!sourceHost.dataset.v11112SourceIdentity) sourceHost.innerHTML = sourceBadgeHtml(record.requestSource);
 
     let danger = panel.querySelector('[data-v1115-profile-danger]');
     if (!danger) {

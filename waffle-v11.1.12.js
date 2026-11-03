@@ -61,6 +61,19 @@
     return card?.querySelector('[data-directory-edit-field="notes"]') || null;
   }
 
+  function ensureHeaderTools(card) {
+    const header = card?.querySelector('.directory-card-header');
+    if (!header) return null;
+    let tools = header.querySelector('[data-care-header-tools]');
+    if (!tools) {
+      tools = document.createElement('div');
+      tools.className = 'care-header-tools';
+      tools.dataset.careHeaderTools = '';
+      header.append(tools);
+    }
+    return tools;
+  }
+
   function ensureStableSourceHost(card) {
     if (!card) return null;
 
@@ -75,11 +88,10 @@
     host.classList.add('v11112-care-source-host');
     host.setAttribute('data-v11112-care-source-host', 'true');
 
-    const careBrief = card.querySelector('[data-directory-care-brief]');
-    if (careBrief?.parentElement) {
-      if (host.parentElement !== careBrief.parentElement || careBrief.nextElementSibling !== host) {
-        careBrief.insertAdjacentElement('afterend', host);
-      }
+    const headerTools = ensureHeaderTools(card);
+    if (headerTools) {
+      if (host.parentElement !== headerTools) headerTools.append(host);
+      if (card.dataset.careSourceHeaderPresent !== 'true') card.dataset.careSourceHeaderPresent = 'true';
       return host;
     }
 
@@ -226,6 +238,14 @@
       ? String(host.querySelector('[data-v11112-source-status]')?.textContent || '').trim()
       : '';
     const visibleStatus = statusText || previousStatus;
+    const isPast = card.dataset.v1082PastStay === 'true';
+    const renderedValue = host.querySelector('[data-v11112-care-source-current] strong');
+    const renderedMode = host.querySelector(isPast ? '.v11112-care-source-readonly' : '[data-v11112-source-details]');
+    // Repeated hydration must not replace an open header control or its focus
+    // when the saved record, choices and status have not changed.
+    if (sameIdentity && renderedMode && renderedValue?.textContent === sourceLabel &&
+        (!statusText || statusText === previousStatus) &&
+        (isPast || host.querySelectorAll('[data-v1117-profile-source-value]').length === sourceDefinitions().length)) return;
     host.dataset.v1117SourceRender = `${stayKey}|${selected}`;
     host.dataset.v11112SourceIdentity = identity;
     if (card.dataset.v1082PastStay === 'true') {
@@ -245,12 +265,13 @@
       <section class="v1117-profile-source-picker v11112-care-source-picker"
         data-v1117-profile-source-picker
         data-v1117-stay-key="${escapeHtml(stayKey)}">
-        <div class="v11112-care-source-current" data-v11112-care-source-current><span>Request source</span><strong>${escapeHtml(sourceLabel)}</strong></div>
-        <strong data-v11112-source-status role="status">${escapeHtml(visibleStatus)}</strong>
         <details data-v11112-source-details${disclosureOpen ? ' open' : ''}>
-          <summary tabindex="0">Change booking source</summary>
+          <summary tabindex="0"><span class="v11112-care-source-summary-copy" data-v11112-care-source-current><small>Request source</small><strong>${escapeHtml(sourceLabel)}</strong></span><span class="v11112-care-source-summary-chevron" aria-hidden="true"></span></summary>
+          <div class="v11112-care-source-expanded">
+            <strong data-v11112-source-status role="status">${escapeHtml(visibleStatus)}</strong>
           <div class="v1117-profile-source-grid v11112-care-source-grid" role="group" aria-label="Request From">
             ${sourceDefinitions().map(source => sourceTileHtml(source, selected)).join('')}
+          </div>
           </div>
         </details>
       </section>`;
@@ -271,12 +292,8 @@
     if (!host.querySelector('[data-v1117-profile-source-picker]')) {
       host.innerHTML = `
         <section class="v1117-profile-source-picker v11112-care-source-picker is-loading">
-          <div class="v1117-profile-source-heading v11112-care-source-heading">
-            <div>
-              <span>REQUEST FROM</span>
-              <small>Loading saved request source…</small>
-            </div>
-          </div>
+          <div class="v11112-care-source-current" data-v11112-care-source-current><span>Request source</span><strong>Loading…</strong></div>
+          <strong data-v11112-source-status role="status">Loading saved request source…</strong>
         </section>`;
     }
 
@@ -363,6 +380,10 @@
     window.v11112SourceLifecycleWired = true;
 
     document.addEventListener('click', event => {
+      const sourceDisclosure = event.target.closest('[data-v11112-source-details]');
+      if (!sourceDisclosure) {
+        document.querySelectorAll('[data-v11112-source-details][open]').forEach(details => { details.open = false; });
+      }
       const sourceChoice = event.target.closest('[data-v11112-care-source-host] [data-v1117-profile-source-value]');
       if (sourceChoice) {
         /* V11.1.7 owns the save itself. Reconcile afterward so the stable
@@ -376,6 +397,16 @@
       if (profileOpen) {
         scheduleActiveHydrate();
       }
+    });
+
+    document.addEventListener('keydown', event => {
+      if (event.key !== 'Escape') return;
+      const details = event.target.closest?.('[data-v11112-source-details][open]') ||
+        document.querySelector('[data-v11112-source-details][open]');
+      if (!details) return;
+      event.preventDefault();
+      details.open = false;
+      details.querySelector(':scope > summary')?.focus({ preventScroll: true });
     });
 
     document.addEventListener('visibilitychange', () => {

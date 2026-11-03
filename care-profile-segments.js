@@ -35,6 +35,18 @@
     if (returnFocus) details.querySelector(':scope > summary')?.focus();
   }
 
+  function ensureHeaderTools(header) {
+    if (!header) return null;
+    let tools = header.querySelector('[data-care-header-tools]');
+    if (!tools) {
+      tools = document.createElement('div');
+      tools.className = 'care-header-tools';
+      tools.dataset.careHeaderTools = '';
+      header.append(tools);
+    }
+    return tools;
+  }
+
   function mountPhotoMenu(card) {
     const header = card.querySelector('.directory-card-header');
     const upload = card.querySelector('.directory-care-photo-tools [data-upload-dog-photo]');
@@ -43,13 +55,14 @@
       card.querySelector('[data-care-photo-options]')?.remove();
       return false;
     }
+    const tools = ensureHeaderTools(header);
     let details = header.querySelector('[data-care-photo-options]');
     if (!details) {
       details = document.createElement('details');
       details.className = 'care-photo-options';
       details.dataset.carePhotoOptions = '';
       details.innerHTML = '<summary aria-label="Photo options"><svg aria-hidden="true" viewBox="0 0 24 24" focusable="false"><path d="M4 7h3l1.5-2h7L17 7h3v12H4z"/><circle cx="12" cy="13" r="3.5"/></svg><span aria-hidden="true" class="care-photo-options-chevron"></span></summary><div class="care-photo-options-panel"><button type="button" data-care-change-profile-photo>Change profile photo</button></div>';
-      header.append(details);
+      tools.append(details);
       details.addEventListener('click', event => {
         const button = event.target.closest('[data-care-change-profile-photo]');
         if (!button || !details.contains(button)) return;
@@ -81,6 +94,7 @@
         });
       }
     }
+    if (tools && details.parentElement !== tools) tools.append(details);
     if (card.dataset.carePhotoOptionsMounted !== 'true') card.dataset.carePhotoOptionsMounted = 'true';
     return true;
   }

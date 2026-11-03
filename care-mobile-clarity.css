@@ -2117,3 +2117,190 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active .care-photo
   outline: 3px solid var(--care-card-accent, #155e8a);
   outline-offset: 2px;
 }
+
+/* Keep source and photo actions in a compact header toolbar above the identity. */
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-card-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active [data-care-header-tools] {
+  position: relative;
+  z-index: 5;
+  order: -1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-photo-shell {
+  order: 0;
+  grid-column: auto;
+  grid-row: auto;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-card-identity {
+  order: 1;
+  grid-column: auto;
+  grid-row: auto;
+  flex: 1 1 180px;
+  min-width: 0;
+  padding-right: 0 !important;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .care-photo-options {
+  position: relative;
+  inset: auto;
+  order: 1;
+  flex: 0 0 44px;
+  width: 44px;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .v11112-care-source-host {
+  position: static;
+  flex: 0 1 240px;
+  width: min(100%, 240px);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .v11112-care-source-picker {
+  position: static;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  padding: 0 !important;
+  border: 0 !important;
+  box-shadow: none;
+  border-radius: 0;
+  background: transparent !important;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active [data-v11112-source-details] {
+  position: static;
+  width: 100%;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active [data-v11112-source-details] > summary {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  min-height: 44px;
+  padding: 5px 10px;
+  border: 1px solid var(--care-card-line, #d5dee9);
+  border-radius: 9px;
+  background: var(--care-card-space, #fff);
+  color: var(--care-card-text, #17243b);
+  cursor: pointer;
+  list-style: none;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active [data-v11112-source-details] > summary::-webkit-details-marker { display: none; }
+body[data-waffle-page="directory"] .directory-card.is-profile-active [data-v11112-source-details] > summary::marker { content: ""; }
+body[data-waffle-page="directory"] .directory-card.is-profile-active .v11112-care-source-summary-copy,
+body[data-waffle-page="directory"] .directory-card.is-profile-active .v11112-care-source-current {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+  min-width: 0;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .v11112-care-source-summary-copy small,
+body[data-waffle-page="directory"] .directory-card.is-profile-active .v11112-care-source-current > span {
+  color: var(--care-card-muted, #526174);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .v11112-care-source-summary-copy strong,
+body[data-waffle-page="directory"] .directory-card.is-profile-active .v11112-care-source-current > strong {
+  max-width: 100%;
+  color: var(--care-card-text, #17243b);
+  font-size: 14px;
+  font-weight: 750;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .v11112-care-source-summary-chevron {
+  flex: 0 0 7px;
+  width: 7px;
+  height: 7px;
+  margin: -3px 2px 0 0;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(45deg);
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active [data-v11112-source-details][open] .v11112-care-source-summary-chevron {
+  margin-top: 4px;
+  transform: rotate(225deg);
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active [data-v11112-source-details] > summary:focus-visible {
+  outline: 3px solid var(--care-card-accent, #155e8a);
+  outline-offset: 2px;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .v11112-care-source-expanded {
+  position: absolute;
+  z-index: 8;
+  top: calc(100% + 5px);
+  right: 0;
+  box-sizing: border-box;
+  width: min(410px, 100%);
+  max-height: min(70vh, 520px);
+  padding: 10px;
+  overflow: auto;
+  border: 1px solid var(--care-card-line, #d5dee9);
+  border-radius: 10px;
+  background: var(--care-card-space, #fff);
+  color: var(--care-card-text, #17243b);
+  box-shadow: 0 8px 24px rgb(15 23 42 / 18%);
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .v11112-care-source-expanded > [data-v11112-source-status] {
+  display: block;
+  margin: 0 0 8px;
+  color: var(--care-card-muted, #526174);
+  font-size: 13px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .v11112-care-source-grid {
+  width: 100%;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .v1117-profile-source-caption {
+  font-size: 13px !important;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active[data-care-source-header-present="true"] [data-v1117-care-source-badge] {
+  display: none !important;
+}
+body.dark-theme[data-waffle-page="directory"] .directory-card.is-profile-active [data-v11112-source-details] > summary {
+  background: var(--care-card-space, #1e293b);
+  color: var(--care-card-text, #f1f5f9);
+}
+body.dark-theme[data-waffle-page="directory"] .directory-card.is-profile-active .v11112-care-source-expanded {
+  background: var(--care-card-space, #1e293b);
+  color: var(--care-card-text, #f1f5f9);
+}
+
+@media (max-width: 600px) {
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .v11112-care-source-host {
+    flex-basis: min(240px, calc(100% - 52px));
+    width: min(240px, calc(100% - 52px));
+  }
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .v11112-care-source-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .v1117-profile-source-circle {
+    width: 48px;
+    height: 48px;
+  }
+}
