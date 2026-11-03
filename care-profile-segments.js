@@ -136,7 +136,13 @@
     card.addEventListener('click', event => {
       const summary = event.target.closest('[data-care-segment-flat] > summary');
       if (summary && card.contains(summary)) event.preventDefault();
-    });
+      // An already-open details node emits no new toggle when an existing
+      // shortcut targets it. Reveal the section before that handler focuses it.
+      const shortcut = event.target.closest('[data-care-brief-action], [data-care-readiness-action]');
+      const action = shortcut?.dataset.careReadinessAction || shortcut?.dataset.careBriefAction;
+      if (action === 'intake') select(card, 'records');
+      else if (action === 'handover') select(card, 'tools');
+    }, true);
 
     nav.addEventListener('click', event => {
       const button = event.target.closest('[data-care-profile-segment-button]');
