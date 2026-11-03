@@ -2024,3 +2024,96 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active[data-care-p
 body[data-waffle-page="directory"] .directory-card.is-profile-active[data-care-profile-segment-active] [data-care-segment-flat] > summary::-webkit-details-marker { display: none; }
 body[data-waffle-page="directory"] .directory-card.is-profile-active[data-care-profile-segment-active] [data-care-segment-flat] > summary::marker { content: ""; }
 body[data-waffle-page="directory"] .directory-card.is-profile-active[data-care-profile-segment-active] [data-care-segment-flat] > summary :is(.directory-care-records-chevron, .directory-care-readiness-chevron) { display: none; }
+
+/* Profile photo shortcut: compact, contained and present only after the existing
+   editor control is found in the active profile's Tools area. */
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-card-header {
+  position: relative;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active[data-care-photo-options-mounted] .directory-card-identity {
+  padding-right: 50px;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active[data-care-photo-options-mounted] .directory-care-photo-tools [data-upload-dog-photo] {
+  display: none !important;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .care-photo-options {
+  position: absolute;
+  z-index: 4;
+  top: 0;
+  right: 0;
+  width: 44px;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .care-photo-options > summary {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  width: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 7px;
+  border: 1px solid var(--care-card-line, #d5dee9);
+  border-radius: 9px;
+  background: var(--care-card-space, #fff);
+  color: var(--care-card-text, #17243b);
+  cursor: pointer;
+  list-style: none;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .care-photo-options > summary::-webkit-details-marker { display: none; }
+body[data-waffle-page="directory"] .directory-card.is-profile-active .care-photo-options > summary::marker { content: ""; }
+body[data-waffle-page="directory"] .directory-card.is-profile-active .care-photo-options > summary svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .care-photo-options-chevron {
+  width: 6px;
+  height: 6px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(45deg) translateY(-2px);
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .care-photo-options[open] .care-photo-options-chevron {
+  transform: rotate(225deg) translate(-1px, -1px);
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .care-photo-options-panel {
+  position: absolute;
+  top: calc(100% + 5px);
+  right: 0;
+  box-sizing: border-box;
+  width: min(220px, calc(100vw - 24px));
+  padding: 5px;
+  border: 1px solid var(--care-card-line, #d5dee9);
+  border-radius: 10px;
+  background: var(--care-card-space, #fff);
+  box-shadow: 0 8px 24px rgb(15 23 42 / 16%);
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .care-photo-options-panel button {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--care-card-text, #17243b);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 650;
+  text-align: left;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .care-photo-options-panel button:hover,
+body[data-waffle-page="directory"] .directory-card.is-profile-active .care-photo-options-panel button:active {
+  background: color-mix(in srgb, var(--care-card-accent, #155e8a) 10%, var(--care-card-space, #fff));
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .care-photo-options :is(summary, button):focus-visible {
+  outline: 3px solid var(--care-card-accent, #155e8a);
+  outline-offset: 2px;
+}

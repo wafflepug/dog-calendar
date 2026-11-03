@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.11.03.09",
-  "releaseName": "Segmented Care profiles",
+  "assetRevision": "2026.11.03.10",
+  "releaseName": "Care profile photo menu",
   "careIteration": {
     "returningDogSuggestions": true,
     "reviewedCareInheritance": true,
