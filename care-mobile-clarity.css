@@ -1924,3 +1924,103 @@ body.dark-theme[data-waffle-page="directory"] .care-routine-log { color: var(--c
 body.dark-theme[data-waffle-page="directory"] .care-routine-events li,
 body.dark-theme[data-waffle-page="directory"] .care-routine-log button,
 body.dark-theme[data-waffle-page="directory"] .care-routine-log textarea { background: var(--wh-surface, #1e293b); color: inherit; }
+
+/* Compact, always-visible section switcher for an active Care profile. */
+body[data-waffle-page="directory"] .directory-card.is-profile-active [data-directory-care-brief] {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-actions { display: contents; }
+body[data-waffle-page="directory"] .directory-card.is-profile-active [data-care-profile-segments] { order: -2; }
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-actions > :is(.directory-owner-care-action-group, [data-care-owner-link-group]) {
+  order: -1;
+  align-self: flex-start;
+  margin: 0 0 10px;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-actions > [data-care-brief-action="full-profile"] { order: 2; }
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-actions > .directory-care-more-actions { order: 3; }
+body[data-waffle-page="directory"] .directory-card.is-profile-active [data-care-profile-segment="activity"] { order: 1; }
+body[data-waffle-page="directory"] .directory-card.is-profile-active [data-care-profile-segments] {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 3px;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  margin: 0 0 12px;
+  padding: 3px;
+  border: 1px solid var(--care-card-line, #d5dee9);
+  border-radius: 10px;
+  background: var(--care-card-soft, #f7f9fc);
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .care-profile-segment-button {
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  min-height: 44px;
+  padding: 4px 2px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  color: var(--care-card-muted, #526174);
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.15;
+  text-align: center;
+  white-space: nowrap;
+  cursor: pointer;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .care-profile-segment-button[aria-pressed="true"] {
+  border-color: var(--care-card-line, #d5dee9);
+  color: var(--care-card-text, #17243b);
+  background: var(--care-card-space, #fff);
+  box-shadow: 0 1px 2px rgb(15 23 42 / 10%);
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .care-profile-segment-button:focus-visible {
+  outline: 3px solid var(--care-card-accent, #155e8a);
+  outline-offset: 2px;
+  z-index: 1;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active[data-care-profile-segment-active="overview"] [data-care-profile-segment="activity"],
+body[data-waffle-page="directory"] .directory-card.is-profile-active[data-care-profile-segment-active="overview"] [data-care-profile-segment="records"],
+body[data-waffle-page="directory"] .directory-card.is-profile-active[data-care-profile-segment-active="overview"] [data-care-profile-segment="tools"],
+body[data-waffle-page="directory"] .directory-card.is-profile-active[data-care-profile-segment-active="activity"] [data-care-profile-segment="overview"],
+body[data-waffle-page="directory"] .directory-card.is-profile-active[data-care-profile-segment-active="activity"] [data-care-profile-segment="records"],
+body[data-waffle-page="directory"] .directory-card.is-profile-active[data-care-profile-segment-active="activity"] [data-care-profile-segment="tools"],
+body[data-waffle-page="directory"] .directory-card.is-profile-active[data-care-profile-segment-active="records"] [data-care-profile-segment="overview"],
+body[data-waffle-page="directory"] .directory-card.is-profile-active[data-care-profile-segment-active="records"] [data-care-profile-segment="activity"],
+body[data-waffle-page="directory"] .directory-card.is-profile-active[data-care-profile-segment-active="records"] [data-care-profile-segment="tools"],
+body[data-waffle-page="directory"] .directory-card.is-profile-active[data-care-profile-segment-active="tools"] [data-care-profile-segment="overview"],
+body[data-waffle-page="directory"] .directory-card.is-profile-active[data-care-profile-segment-active="tools"] [data-care-profile-segment="activity"],
+body[data-waffle-page="directory"] .directory-card.is-profile-active[data-care-profile-segment-active="tools"] [data-care-profile-segment="records"] {
+  display: none !important;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active[data-care-profile-segment-active="activity"] [data-care-routine-log] > details[open] > summary {
+  list-style: none;
+  cursor: default;
+  pointer-events: none;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active[data-care-profile-segment-active="activity"] [data-care-routine-log] > details[open] > summary::-webkit-details-marker { display: none; }
+body[data-waffle-page="directory"] .directory-card.is-profile-active[data-care-profile-segment-active="activity"] [data-care-routine-log] > details[open] > summary::marker { content: ""; }
+@media (max-width: 360px) {
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .care-profile-segment-button { font-size: 12px; }
+}
+body.dark-theme[data-waffle-page="directory"] .directory-card.is-profile-active [data-care-profile-segments] { background: var(--care-card-soft, #172033); }
+body.dark-theme[data-waffle-page="directory"] .directory-card.is-profile-active .care-profile-segment-button[aria-pressed="true"] { background: var(--care-card-space, #1e293b); }
+
+/* Keep the first-level form action compact; long/localised labels still wrap. */
+body[data-waffle-page="directory"] .directory-card.is-profile-active[data-care-profile-segment-active] .directory-care-brief-actions > .directory-owner-care-action-group {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px; width: 100%; min-width: 0; margin-bottom: 6px;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active[data-care-profile-segment-active] .directory-owner-care-action-group > button {
+  flex: 1 1 170px; width: auto !important; min-width: 0 !important; min-height: 44px; padding: 8px 12px; font-size: 13px; line-height: 1.25;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active[data-care-profile-segment-active] [data-care-segment-flat] > summary {
+  pointer-events: none; cursor: default; list-style: none;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active[data-care-profile-segment-active] [data-care-segment-flat] > summary::-webkit-details-marker { display: none; }
+body[data-waffle-page="directory"] .directory-card.is-profile-active[data-care-profile-segment-active] [data-care-segment-flat] > summary::marker { content: ""; }
+body[data-waffle-page="directory"] .directory-card.is-profile-active[data-care-profile-segment-active] [data-care-segment-flat] > summary :is(.directory-care-records-chevron, .directory-care-readiness-chevron) { display: none; }
