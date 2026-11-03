@@ -6,6 +6,7 @@
   const segments = ['overview', 'activity', 'records', 'tools'];
   const labels = { overview: 'Overview', activity: 'Activity', records: 'Records', tools: 'Tools' };
   const mounted = new WeakMap();
+  let photoOutsideHandlerInstalled = false;
 
   function isDirectory() {
     return window.WAFFLE_PAGE === 'directory' || document.body?.dataset?.wafflePage === 'directory';
@@ -25,6 +26,63 @@
 
   function controlsFor(card) {
     return [...card.querySelectorAll('.care-profile-segment-button')];
+  }
+
+  function closePhotoMenu(card, returnFocus = false) {
+    const details = card?.querySelector('[data-care-photo-options]');
+    if (!details?.open) return;
+    details.open = false;
+    if (returnFocus) details.querySelector(':scope > summary')?.focus();
+  }
+
+  function mountPhotoMenu(card) {
+    const header = card.querySelector('.directory-card-header');
+    const upload = card.querySelector('.directory-care-photo-tools [data-upload-dog-photo]');
+    if (!header || !upload || !upload.isConnected) {
+      card.removeAttribute('data-care-photo-options-mounted');
+      card.querySelector('[data-care-photo-options]')?.remove();
+      return false;
+    }
+    let details = header.querySelector('[data-care-photo-options]');
+    if (!details) {
+      details = document.createElement('details');
+      details.className = 'care-photo-options';
+      details.dataset.carePhotoOptions = '';
+      details.innerHTML = '<summary aria-label="Photo options"><svg aria-hidden="true" viewBox="0 0 24 24" focusable="false"><path d="M4 7h3l1.5-2h7L17 7h3v12H4z"/><circle cx="12" cy="13" r="3.5"/></svg><span aria-hidden="true" class="care-photo-options-chevron"></span></summary><div class="care-photo-options-panel"><button type="button" data-care-change-profile-photo>Change profile photo</button></div>';
+      header.append(details);
+      details.addEventListener('click', event => {
+        const button = event.target.closest('[data-care-change-profile-photo]');
+        if (!button || !details.contains(button)) return;
+        const currentUpload = card.querySelector('.directory-care-photo-tools [data-upload-dog-photo]');
+        if (!card.isConnected || !card.classList.contains('is-profile-active') || !currentUpload?.isConnected) {
+          details.open = false;
+          return;
+        }
+        details.open = false;
+        details.querySelector(':scope > summary')?.focus();
+        currentUpload.click();
+      });
+      details.addEventListener('keydown', event => {
+        if (event.key === 'Escape' && details.open) {
+          event.preventDefault();
+          event.stopPropagation();
+          closePhotoMenu(card, true);
+        }
+      });
+      details.addEventListener('toggle', () => {
+        if (details.open && (!card.isConnected || !card.classList.contains('is-profile-active'))) details.open = false;
+      });
+      if (!photoOutsideHandlerInstalled) {
+        photoOutsideHandlerInstalled = true;
+        document.addEventListener('click', event => {
+          document.querySelectorAll('[data-care-photo-options][open]').forEach(openMenu => {
+            if (!openMenu.contains(event.target)) openMenu.open = false;
+          });
+        });
+      }
+    }
+    if (card.dataset.carePhotoOptionsMounted !== 'true') card.dataset.carePhotoOptionsMounted = 'true';
+    return true;
   }
 
   function select(card, requested, focus = false) {
@@ -68,7 +126,15 @@
   }
 
   function mount(card) {
-    if (!card?.classList.contains('is-profile-active')) return;
+    if (!card?.classList.contains('is-profile-active')) {
+      closePhotoMenu(card);
+      if (card?.hasAttribute('data-care-photo-options-mounted')) {
+        card.removeAttribute('data-care-photo-options-mounted');
+        card.querySelector('[data-care-photo-options]')?.remove();
+      }
+      return;
+    }
+    mountPhotoMenu(card);
     const brief = card.querySelector('[data-directory-care-brief]');
     if (!brief) return;
     const key = identity(card);
@@ -180,7 +246,10 @@
   }
 
   function scan() {
-    if (isDirectory()) document.querySelectorAll('.directory-card.is-profile-active').forEach(mount);
+    if (isDirectory()) {
+      document.querySelectorAll('.directory-card[data-care-photo-options-mounted]:not(.is-profile-active)').forEach(mount);
+      document.querySelectorAll('.directory-card.is-profile-active').forEach(mount);
+    }
   }
 
   if (isDirectory()) {
