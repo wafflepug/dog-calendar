@@ -2304,3 +2304,7 @@ body.dark-theme[data-waffle-page="directory"] .directory-card.is-profile-active 
     height: 48px;
   }
 }
+/* The legacy roster toolbar and any controls injected into it are removed as a unit. */
+.guest-directory-toolbar[data-care-roster-controls-removed] {
+  display: none !important;
+}

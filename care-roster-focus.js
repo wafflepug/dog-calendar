@@ -91,6 +91,7 @@
   }
 
   function getState() {
+    if (document.querySelector('[data-care-roster-controls-removed]')) return { mode: 'all', label: MODES.all, ...counts() };
     return { mode, label: MODES[mode], ...counts() };
   }
 
@@ -100,7 +101,7 @@
 
   function ensureDisclosure() {
     const toolbar = document.querySelector('.guest-directory-toolbar');
-    if (!toolbar) return null;
+    if (!toolbar || toolbar.hasAttribute('data-care-roster-controls-removed')) return null;
     let details = toolbar.querySelector('[data-care-roster-focus]');
     let attention = toolbar.querySelector('[data-care-roster-attention]');
     if (!attention) {
@@ -158,6 +159,7 @@
   }
 
   function renderControls(context) {
+    if (document.querySelector('[data-care-roster-controls-removed]')) return;
     const details = ensureDisclosure();
     if (!details) return;
     const data = counts();
@@ -249,7 +251,8 @@
   }
 
   function currentContext() {
-    const query = String(document.getElementById('guestDirectorySearch')?.value || '');
+    const search = document.getElementById('guestDirectorySearch');
+    const query = String(search && !search.disabled ? search.value : '');
     const activeTab = document.querySelector('[data-v1082-stay-tab].is-active')?.dataset.v1082StayTab || 'current';
     return { mode, query, activeTab, profileMode: !!document.querySelector('.directory-dashboard-fused.is-profile-mode') };
   }
@@ -355,6 +358,7 @@
   const api = Object.freeze({
     beginFilterPass() { stateCache = new WeakMap(); },
     matches(card) {
+      if (document.querySelector('[data-care-roster-controls-removed]')) return true;
       if (mode === 'all' || document.querySelector('[data-v1082-stay-tab].is-active')?.dataset.v1082StayTab !== 'current') return true;
       return matchesMode(card);
     },
@@ -370,6 +374,7 @@
   window.WAFFLE_CARE_ROSTER_FOCUS = api;
 
   function start() {
+    if (document.querySelector('[data-care-roster-controls-removed]')) mode = 'all';
     ensureDisclosure();
     observe();
     renderControls();

@@ -12498,7 +12498,7 @@ registerWaffleServiceWorker();
         const input = document.getElementById('guestDirectorySearch');
         const dashboard = document.querySelector('.directory-dashboard-fused');
         const profileMode = dashboard?.classList.contains('is-profile-mode');
-        const search = String(input?.value || '').trim();
+        const search = String(input && !input.disabled ? input.value : '').trim();
         const activeView = String(document.querySelector('[data-v1082-stay-tab].is-active')?.dataset.v1082StayTab || 'current');
         const panel = document.querySelector(`[data-v1082-stay-panel="${activeView}"]`);
         const cards = Array.from(panel?.querySelectorAll('.directory-card') || []).filter(card => card.style.display !== 'none');
@@ -12595,7 +12595,7 @@ registerWaffleServiceWorker();
 
     function filterGuestDirectoryCards() {
         const input = document.getElementById('guestDirectorySearch');
-        const search = String(input?.value || '').toLowerCase().trim();
+        const search = String(input && !input.disabled ? input.value : '').toLowerCase().trim();
 
         const profileMode =
             document

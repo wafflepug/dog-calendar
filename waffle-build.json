@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.11.04.03",
-  "releaseName": "Readable request source in profile header",
+  "assetRevision": "2026.11.04.04",
+  "releaseName": "Simplified Care roster",
   "careIteration": {
     "returningDogSuggestions": true,
     "reviewedCareInheritance": true,
