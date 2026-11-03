@@ -608,7 +608,7 @@
           <button class="wh75-nav-item" type="button" data-wh75-theme-quick><span class="wh75-nav-icon"><img class="wh75-theme-avatar" data-wh75-theme-avatar src="theme-dark-avatar-v1174.svg" alt=""></span><span data-wh75-theme-label>Dark Mode</span></button>
         </div>
       </div>
-      <div class="wh75-drawer-footer">Waffle House · v${VERSION}</div>
+      <div class="wh75-drawer-footer">Powered by Palz Stay · v${VERSION}</div>
     `;
 
     const bottom = document.createElement('nav');
