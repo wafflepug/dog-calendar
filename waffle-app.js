@@ -5758,6 +5758,23 @@ registerWaffleServiceWorker();
                         ? 'auto'
                         : 'smooth';
 
+                if (action === 'belongings-photo' || action === 'belongings-camera') {
+                    if (!card || card.dataset.v1082PastStay === 'true') return;
+                    careBriefAction.disabled = true;
+                    const identity = getDirectoryProfileEditIdentity(card);
+                    try {
+                        await ensureDirectoryDetailLoaded(card.querySelector('[data-directory-detail="belongings"]'));
+                        if (!card.isConnected || !card.classList.contains('is-profile-active') || directoryProfileEditIdentityConflicts(identity, getDirectoryProfileEditIdentity(card))) return;
+                        const trigger = card.querySelector(action === 'belongings-camera' ? '[data-take-belongings-photo]' : '[data-upload-belongings-photo]');
+                        if (!trigger) throw new Error('Belongings photos could not be loaded. Try again.');
+                        trigger.click();
+                    } catch (error) {
+                        const status = card.querySelector('[data-overview-belongings-status]');
+                        if (status) status.textContent = error.message || 'Could not load belongings photos. Try again.';
+                    } finally { if(careBriefAction.isConnected)careBriefAction.disabled=false; }
+                    return;
+                }
+
                 if (action === 'refresh') {
                     const refresh = document.getElementById('refreshGuestDirectoryBtn');
                     if (refresh && !refresh.disabled) refresh.click();
@@ -13168,7 +13185,8 @@ registerWaffleServiceWorker();
             );
 
         const checklistWasOpen = !!host.querySelector('[data-belongings-checklist-details]')?.open;
-        const photoToolsWereOpen = !!host.querySelector('[data-belongings-photo-tools-details]')?.open;
+        const photoToolsWereOpen = !!card.querySelector('[data-belongings-photo-tools-details]')?.open;
+        const photoNote = card.querySelector('[data-belongings-photo-label]')?.value || '';
         const draftBeforeRender = belongingsItemDrafts.get(directoryProfileEditKey(card));
         const draftIsDirty = !!draftBeforeRender && !belongingsItemsEqual(draftBeforeRender.values, draftBeforeRender.initial);
 
@@ -13269,7 +13287,7 @@ registerWaffleServiceWorker();
                     .join('')
                 : `
                     <div class="belongings-photo-status belongings-photo-empty">
-                        ${card.dataset.v1082PastStay === 'true' ? 'No belongings photos were saved for this visit.' : 'No belongings photos saved. Open Add belongings photos to add one.'}
+                        ${card.dataset.v1082PastStay === 'true' ? 'No belongings photos were saved for this visit.' : 'No belongings photos saved. Use Add Photos to add one.'}
                     </div>
                 `;
 
@@ -13308,6 +13326,7 @@ registerWaffleServiceWorker();
                             type="text"
                             class="belongings-description belongings-photo-note"
                             data-belongings-photo-label
+                            aria-label="Optional note for this group of belongings photos"
                             placeholder="Optional note for this group of photos">
 
                         <div class="belongings-actions belongings-actions-compact">
@@ -13340,6 +13359,20 @@ registerWaffleServiceWorker();
         }
         const hostedCheck = card.querySelector('[data-confirm-hosted-photo]');
         if (hostedCheck) hostedCheck.hidden = !hostedPendingPhotoConfirmations.has(stayKey);
+        const overview = card.querySelector('[data-overview-belongings-photos]');
+        if (overview) {
+            const module = document.createElement('section');
+            module.className = 'care-overview-belongings-module';
+            module.innerHTML = '<h4>Belongings photos</h4>';
+            for (const selector of ['[data-belongings-photo-tools-details]', '.belongings-photo-feedback', '.belongings-photo-gallery']) {
+                const node = host.querySelector(selector);
+                if (node) module.append(node);
+            }
+            const tools = module.querySelector('[data-belongings-photo-tools-details]');
+            if (tools) tools.open = true;
+            const note = module.querySelector('[data-belongings-photo-label]');if(note)note.value=photoNote;
+            overview.replaceChildren(module);
+        }
         syncHostedPhotoSessionControls();
     }
 
@@ -18213,6 +18246,15 @@ registerWaffleServiceWorker();
                                                         Loading with full profile…
                                                     </div>
                                                     </div>
+                                                </section>
+                                                <section class="care-overview-belongings" data-overview-belongings-photos aria-label="Belongings photos">
+                                                    <h4>Belongings photos</h4>
+                                                    <div class="care-overview-belongings-actions">
+                                                        <button type="button" class="directory-care-brief-action" data-care-brief-action="belongings-photo">Add photos</button>
+                                                        <button type="button" class="directory-care-brief-action" data-care-brief-action="belongings-camera">Take photo</button>
+                                                        <button type="button" class="directory-care-brief-action" data-care-brief-action="belongings">View items &amp; photos</button>
+                                                    </div>
+                                                    <p data-overview-belongings-status role="status" aria-live="polite"></p>
                                                 </section>
                                                 <div class="directory-care-owner-line" aria-label="Owner contact">
                                                     <strong class="directory-care-owner-label">Owner</strong>
