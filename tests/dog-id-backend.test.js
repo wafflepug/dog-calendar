@@ -35,6 +35,7 @@ function makeHarness(initialRows, priorProfiles = []) {
         getValue() { return cells.get(`${row}:${col}`) || (rows[row - 1] || [])[col - 1] || ''; },
         getValues() { return Array.from({ length: numRows || 1 }, (_, r) => Array.from({ length: numCols || 1 }, (_, c) => cells.get(`${row + r}:${col + c}`) ?? ((rows[row + r - 1] || [])[col + c - 1] || ''))); },
         getDisplayValues() { return Array.from({length:numRows||1},(_,r)=>(rows[row+r-1]||[]).slice(col-1,col-1+(numCols||1)).map(value=>String(value||''))); },
+        setNumberFormat(format) { assert.equal(format, '@'); return this; },
         setValue(value) {
           cells.set(`${row}:${col}`, value);
           while (rows.length < row) rows.push([]);
@@ -92,7 +93,7 @@ function makeHarness(initialRows, priorProfiles = []) {
   };
   vm.createContext(sandbox);
   const prefillStart = backend.indexOf('function getV108ReturningGuestPrefill_');
-  vm.runInContext(`${stayIdentity}\n${careInheritance}\n${backend.slice(helperStart, helperEnd)}\n${backend.slice(prefillStart, copyEnd)}\n${backend.slice(createStart, createEnd)}\nthis.api = { resolve: resolveV108DogRows_, identityAt: v108DogIdentityAt_, create: createV108Boarding_, createIntake: createV108IntakeBooking_, prefill: getV108ReturningGuestPrefill_, backfill: backfillV108DogIds_, link: linkV108StayToDog_, linkable: listV108DogStaysForLinking_ };`, sandbox);
+  vm.runInContext(`${backend.slice(backend.lastIndexOf('function phoneTextCell_'))}\n${stayIdentity}\n${careInheritance}\n${backend.slice(helperStart, helperEnd)}\n${backend.slice(prefillStart, copyEnd)}\n${backend.slice(createStart, createEnd)}\nthis.api = { resolve: resolveV108DogRows_, identityAt: v108DogIdentityAt_, create: createV108Boarding_, createIntake: createV108IntakeBooking_, prefill: getV108ReturningGuestPrefill_, backfill: backfillV108DogIds_, link: linkV108StayToDog_, linkable: listV108DogStaysForLinking_ };`, sandbox);
   return { api: sandbox.api, rows, writes, versionTouches, underActionLock(fn) { if (sandboxLockHeld) throw new Error('test action lock already held'); sandboxLockHeld=true; try { return fn(); } finally { sandboxLockHeld=false; } } };
 }
 
@@ -392,7 +393,7 @@ console.log('Dog stay link UI and route contract tests passed.');
     Utilities: { formatDate: () => '2026-09-28' }, Session: { getScriptTimeZone: () => 'Australia/Sydney' }
   };
   vm.createContext(sandbox);
-  vm.runInContext(`${stayIdentity}\n${backend.slice(helperStart, helperEnd)}\n${backend.slice(historyStart, historyEnd)}\n${backend.slice(masterStart, masterEnd)}\nthis.derive = deriveDogMasterProfile_; this.get = getDogMasterProfile_; this.history = getV108DogHistory_;`, sandbox);
+  vm.runInContext(`${backend.slice(backend.lastIndexOf('function phoneTextCell_'))}\n${stayIdentity}\n${backend.slice(helperStart, helperEnd)}\n${backend.slice(historyStart, historyEnd)}\n${backend.slice(masterStart, masterEnd)}\nthis.derive = deriveDogMasterProfile_; this.get = getDogMasterProfile_; this.history = getV108DogHistory_;`, sandbox);
   const selected = sandbox.derive('Coco', 'Cavoodle', uuid(107));
   assert.equal(selected.profile.marker, 'B');
   assert.equal(selected.dogId, uuid(107));
