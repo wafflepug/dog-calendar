@@ -1519,7 +1519,16 @@ async function runTodayQueueStayAction(button) {
         const actionStillAvailable = status === 'checked_in'
             ? dates.start === getLocalTodayDateString() && !['checked_in', 'checked_out'].includes(operationStatus)
             : dates.end === getLocalTodayDateString() && operationStatus !== 'checked_out';
-        if (!actionStillAvailable) throw new Error('This stay has already changed state or no longer matches today. Refresh Today before continuing.');
+        if (!actionStillAvailable) {
+            if (operationStatus === status && operation?.stayId && String(operation.stayId).toLowerCase() === expectedStayId.toLowerCase() && !operation.identityConflict) {
+                actionLocks.delete(lockKey);
+                renderV10OperationsHome(latestEvents);
+                const announcement = document.getElementById('v10TodayActionFeedback');
+                if (announcement) announcement.textContent = `${String(props.dogName || current.title || 'Guest')} is already ${status === 'checked_in' ? 'checked in' : 'checked out'}. Status confirmed.`;
+                return;
+            }
+            throw new Error('This stay has already changed state or no longer matches today. Refresh Today before continuing.');
+        }
         const payload = {
             stayId: expectedStayId,
             stayKey: expectedStayKey,
@@ -7326,7 +7335,9 @@ registerWaffleServiceWorker();
                     // rebuild the belongings DOM while a photo upload is still running.
                     const belongingsOnlyActions = new Set([
                         'save_belongings',
-                        'delete_belongings_photo'
+                        'delete_belongings_photo',
+                        // These update the operations sheet, not calendar dates.
+                        'checkin_stay', 'checkout_stay', 'early_checkout_stay'
                     ]);
 
                     if (!belongingsOnlyActions.has(String(payload.action || ''))) {

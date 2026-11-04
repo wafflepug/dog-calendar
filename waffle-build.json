@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.11.04.10",
-  "releaseName": "Belongings photos in Overview",
+  "assetRevision": "2026.11.04.11",
+  "releaseName": "Check-in confirmation reliability",
   "careIteration": {
     "returningDogSuggestions": true,
     "reviewedCareInheritance": true,
