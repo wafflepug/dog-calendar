@@ -312,6 +312,8 @@ function appendStableStayRowV11225_(sheet, rowData, stayId, mutationId) {
     throw new Error('Stay ID is already reserved by another mutation or a deleted booking.');
   }
   data[cols.mutationId - 1] = String(mutationId || '');
+  data[6] = String(data[6] == null ? "" : data[6]);
+  phoneTextCell_(sheet, sheet.getLastRow()+1, 7);
   sheet.appendRow(data);
   return { row: sheet.getLastRow(), stayId: data[cols.stayId - 1] };
 }
