@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.11.04.12",
-  "releaseName": "Faster repeated stay actions",
+  "assetRevision": "2026.11.04.13",
+  "releaseName": "Belongings upload in photo menu",
   "careIteration": {
     "returningDogSuggestions": true,
     "reviewedCareInheritance": true,

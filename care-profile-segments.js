@@ -61,18 +61,21 @@
       details = document.createElement('details');
       details.className = 'care-photo-options';
       details.dataset.carePhotoOptions = '';
-      details.innerHTML = '<summary aria-label="Photo options"><svg aria-hidden="true" viewBox="0 0 24 24" focusable="false"><path d="M4 7h3l1.5-2h7L17 7h3v12H4z"/><circle cx="12" cy="13" r="3.5"/></svg><span aria-hidden="true" class="care-photo-options-chevron"></span></summary><div class="care-photo-options-panel"><button type="button" data-care-change-profile-photo>Change profile photo</button></div>';
+      details.innerHTML = '<summary aria-label="Photo options"><svg aria-hidden="true" viewBox="0 0 24 24" focusable="false"><path d="M4 7h3l1.5-2h7L17 7h3v12H4z"/><circle cx="12" cy="13" r="3.5"/></svg><span aria-hidden="true" class="care-photo-options-chevron"></span></summary><div class="care-photo-options-panel"><button type="button" data-care-change-profile-photo>Change profile photo</button><button type="button" data-care-upload-belongings-photo>Upload belongings photos</button></div>';
       tools.append(details);
       details.addEventListener('click', event => {
-        const button = event.target.closest('[data-care-change-profile-photo]');
+        const button = event.target.closest('[data-care-change-profile-photo], [data-care-upload-belongings-photo]');
         if (!button || !details.contains(button)) return;
-        const currentUpload = card.querySelector('.directory-care-photo-tools [data-upload-dog-photo]');
+        const belongings = button.hasAttribute('data-care-upload-belongings-photo');
+        if(belongings && card.dataset.v1082PastStay==='true'){details.open=false;return;}
+        const currentUpload = belongings ? card.querySelector('[data-care-brief-action="belongings-photo"], [data-upload-belongings-photo]') : card.querySelector('.directory-care-photo-tools [data-upload-dog-photo]');
         if (!card.isConnected || !card.classList.contains('is-profile-active') || !currentUpload?.isConnected) {
           details.open = false;
           return;
         }
         details.open = false;
         details.querySelector(':scope > summary')?.focus();
+        if(belongings) select(card, 'overview');
         currentUpload.click();
       });
       details.addEventListener('keydown', event => {
@@ -94,6 +97,8 @@
         });
       }
     }
+    const belongingsAction=details.querySelector('[data-care-upload-belongings-photo]');
+    if(belongingsAction)belongingsAction.hidden=card.dataset.v1082PastStay==='true';
     if (tools && details.parentElement !== tools) tools.append(details);
     if (card.dataset.carePhotoOptionsMounted !== 'true') card.dataset.carePhotoOptionsMounted = 'true';
     return true;
