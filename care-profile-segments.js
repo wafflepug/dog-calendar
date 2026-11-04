@@ -61,21 +61,27 @@
       details = document.createElement('details');
       details.className = 'care-photo-options';
       details.dataset.carePhotoOptions = '';
-      details.innerHTML = '<summary aria-label="Photo options"><svg aria-hidden="true" viewBox="0 0 24 24" focusable="false"><path d="M4 7h3l1.5-2h7L17 7h3v12H4z"/><circle cx="12" cy="13" r="3.5"/></svg><span aria-hidden="true" class="care-photo-options-chevron"></span></summary><div class="care-photo-options-panel"><button type="button" data-care-change-profile-photo>Change profile photo</button><button type="button" data-care-upload-belongings-photo>Upload belongings photos</button></div>';
+      details.innerHTML = '<summary aria-label="Photo options"><svg aria-hidden="true" viewBox="0 0 24 24" focusable="false"><path d="M4 7h3l1.5-2h7L17 7h3v12H4z"/><circle cx="12" cy="13" r="3.5"/></svg><span aria-hidden="true" class="care-photo-options-chevron"></span></summary><div class="care-photo-options-panel"><button type="button" data-care-change-profile-photo>Change profile photo</button><button type="button" data-care-upload-belongings-photo data-care-brief-action="belongings-photo">Upload belongings photos</button><button type="button" data-care-view-photos data-care-brief-action="belongings">View Photos</button></div>';
       tools.append(details);
       details.addEventListener('click', event => {
-        const button = event.target.closest('[data-care-change-profile-photo], [data-care-upload-belongings-photo]');
+        const button = event.target.closest('[data-care-change-profile-photo], [data-care-upload-belongings-photo], [data-care-view-photos]');
         if (!button || !details.contains(button)) return;
         const belongings = button.hasAttribute('data-care-upload-belongings-photo');
-        if(belongings && card.dataset.v1082PastStay==='true'){details.open=false;return;}
-        const currentUpload = belongings ? card.querySelector('[data-care-brief-action="belongings-photo"], [data-upload-belongings-photo]') : card.querySelector('.directory-care-photo-tools [data-upload-dog-photo]');
+        const viewPhotos = button.hasAttribute('data-care-view-photos');
+        if(belongings || viewPhotos){
+          details.open=false;
+          if(!card.isConnected || !card.classList.contains('is-profile-active')){event.stopPropagation();return;}
+          if(belongings && card.dataset.v1082PastStay==='true'){event.stopPropagation();return;}
+          select(card,'tools');
+          return; // Existing delegated Care action owns navigation and lazy loading.
+        }
+        const currentUpload = card.querySelector('.directory-care-photo-tools [data-upload-dog-photo]');
         if (!card.isConnected || !card.classList.contains('is-profile-active') || !currentUpload?.isConnected) {
           details.open = false;
           return;
         }
         details.open = false;
         details.querySelector(':scope > summary')?.focus();
-        if(belongings) select(card, 'overview');
         currentUpload.click();
       });
       details.addEventListener('keydown', event => {
