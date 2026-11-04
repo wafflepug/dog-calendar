@@ -2330,3 +2330,30 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active .v11112-sou
 body[data-waffle-page="directory"] .directory-card.is-profile-active .v11112-care-source-expanded {
   width:min(410px,calc(100vw - 56px));
 }
+
+/* Desktop profile: one left-aligned reading order, with actions kept top-right. */
+@media (min-width: 901px) {
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-card-header {
+    display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:start; justify-items:start; gap:12px 20px;
+  }
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-card-header > .directory-photo-shell {
+    grid-column:1; grid-row:1; order:0; width:104px !important; height:104px !important;
+    min-width:104px; min-height:104px; flex-basis:104px; border-radius:16px; margin:0;
+  }
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-card-header > .directory-card-identity {
+    grid-column:1 / -1; grid-row:2; order:1; width:100%; margin:0; align-items:flex-start; text-align:left;
+  }
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-card-header .directory-name-row {
+    justify-content:flex-start; text-align:left;
+  }
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-card-header .directory-profile-stay-dates {
+    justify-content:flex-start; text-align:left;
+  }
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-card-header > .directory-profile-roster-badges {
+    grid-column:1 / -1; grid-row:3; order:2; position:static; display:flex; flex-wrap:wrap;
+    justify-content:flex-start; align-items:center; gap:8px; width:100%; margin:0;
+  }
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-card-header > [data-care-header-tools] {
+    grid-column:2; grid-row:1; order:3; width:auto; justify-self:end;
+  }
+}

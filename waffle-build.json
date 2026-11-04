@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.11.04.06",
-  "releaseName": "Compact Care source badge",
+  "assetRevision": "2026.11.04.07",
+  "releaseName": "Desktop Care profile alignment",
   "careIteration": {
     "returningDogSuggestions": true,
     "reviewedCareInheritance": true,
