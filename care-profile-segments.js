@@ -7,6 +7,7 @@
   const labels = { overview: 'Overview', activity: 'Activity', records: 'Records', tools: 'Tools' };
   const mounted = new WeakMap();
   let photoOutsideHandlerInstalled = false;
+  let rosterPhotoOutsideHandlerInstalled = false;
 
   function isDirectory() {
     return window.WAFFLE_PAGE === 'directory' || document.body?.dataset?.wafflePage === 'directory';
@@ -282,10 +283,50 @@
     observer.observe(card, { childList: true, subtree: true, attributes: true, attributeFilter: ['open', 'data-directory-stay-id', 'data-directory-dog-id', 'data-directory-stay-key'] });
   }
 
+  function mountRosterPhotoMenu(card) {
+    if(card.classList.contains('is-profile-active'))return;
+    let menu=card.querySelector('[data-care-roster-photo-menu]');
+    if(menu)return;
+    menu=document.createElement('details');menu.className='care-roster-photo-options';menu.dataset.careRosterPhotoMenu='';
+    menu.innerHTML='<summary aria-label="Photo options for '+String(card.dataset.directoryDogName||'guest').replace(/[&<>"']/g,'')+'"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7h3l1.5-2h7L17 7h3v12H4z"/><circle cx="12" cy="13" r="3.5"/></svg><span aria-hidden="true">⌄</span></summary><div class="care-roster-photo-panel"><button type="button" data-roster-photo-action="profile">Change profile photo</button><button type="button" data-roster-photo-action="upload">Upload belongings photos</button><button type="button" data-roster-photo-action="view">View gallery</button><p data-roster-photo-status role="status"></p></div>';
+    card.append(menu);
+    if(!rosterPhotoOutsideHandlerInstalled){rosterPhotoOutsideHandlerInstalled=true;document.addEventListener('click',event=>document.querySelectorAll('[data-care-roster-photo-menu][open]').forEach(openMenu=>{if(!openMenu.contains(event.target))openMenu.open=false;}));}
+    menu.querySelector('[data-roster-photo-action="upload"]').hidden=card.dataset.v1082PastStay==='true';
+    menu.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();event.stopPropagation();menu.open=false;menu.querySelector('summary').focus();}});
+    menu.addEventListener('click',async event=>{
+      const action=event.target.closest('[data-roster-photo-action]');if(!action)return;
+      event.preventDefault();event.stopPropagation();
+      if(action.disabled||!card.isConnected)return;
+      const key=identity(card),kind=action.dataset.rosterPhotoAction;
+      if(kind==='upload'&&card.dataset.v1082PastStay==='true')return;
+      const open=card.querySelector('[data-open-directory-profile]');if(!open)return;
+      action.disabled=true;
+      try{
+        open.click();
+        const active=await new Promise((resolve,reject)=>{
+          let observer,timer;
+          const check=()=>{
+            const matches=[...document.querySelectorAll('.directory-card.is-profile-active')].filter(item=>identity(item)===key);
+            if(matches.length===1&&matches[0].querySelector('[data-care-photo-options]')){clearTimeout(timer);observer?.disconnect();resolve(matches[0]);}
+          };
+          observer=new MutationObserver(check);observer.observe(document.documentElement,{subtree:true,childList:true,attributes:true,attributeFilter:['class']});
+          timer=setTimeout(()=>{observer.disconnect();reject(new Error('Open this guest profile to access photo tools.'));},8000);check();
+        });
+        menu.open=false;
+        const selector=kind==='profile'?'[data-care-change-profile-photo]':kind==='upload'?'[data-care-upload-belongings-photo]':'[data-care-view-photos]';
+        const target=active.querySelector(selector);if(!target||target.hidden)throw new Error('This photo action is not available for this stay.');
+        target.click();
+      }catch(error){const status=menu.querySelector('[data-roster-photo-status]');if(status)status.textContent=error.message;}
+      finally{if(action.isConnected)action.disabled=false;}
+    });
+    menu.addEventListener('toggle',()=>{if(menu.open)document.querySelectorAll('[data-care-roster-photo-menu][open]').forEach(other=>{if(other!==menu)other.open=false;});});
+  }
+
   function scan() {
     if (isDirectory()) {
       document.querySelectorAll('.directory-card[data-care-photo-options-mounted]:not(.is-profile-active)').forEach(mount);
       document.querySelectorAll('.directory-card.is-profile-active').forEach(mount);
+      document.querySelectorAll('.directory-card:not(.is-profile-active)').forEach(mountRosterPhotoMenu);
     }
   }
 

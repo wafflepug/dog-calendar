@@ -362,7 +362,7 @@
     const earlyButtonMarkup = early ? '<button type="button" class="v11217-early-checkout-button" data-v11217-early-checkout>⏱️ Early Checkout</button>' : '';
     const hasPrimaryStayAction = canCheckIn || canCheckout;
     const secondaryActions = `${early && hasPrimaryStayAction ? earlyButtonMarkup : ''}`;
-    const ownerCall = ownerTel ? `<a data-v11217-roster-owner-call href="tel:${esc(ownerTel)}" aria-label="Call ${esc(p.ownerName || 'owner')} about ${esc(p.dogName || 'this dog')}${card.dataset.directoryDogNumber ? `, Dog ID ${esc(card.dataset.directoryDogNumber)}` : ''} · ${esc(String(p.phone || '').trim())}">Call owner · ${esc(String(p.phone || '').trim())}</a>` : '';
+    const ownerCall = ownerTel ? `<a data-v11217-roster-owner-call href="tel:${esc(ownerTel)}" aria-label="Call ${esc(p.ownerName || 'owner')} about ${esc(p.dogName || 'this dog')}${card.dataset.directoryDogNumber ? `, Dog ID ${esc(card.dataset.directoryDogNumber)}` : ''} · ${esc(window.formatWaffleContactPhone ? window.formatWaffleContactPhone(p.phone) : String(p.phone || '').trim())}">Call owner · ${esc(window.formatWaffleContactPhone ? window.formatWaffleContactPhone(p.phone) : String(p.phone || '').trim())}</a>` : '';
     const moreActions = secondaryActions || ownerCall
       ? `<details class="v11217-roster-more-actions"><summary>More actions</summary>${secondaryActions}${ownerCall}</details>`
       : '';
@@ -881,7 +881,7 @@
     note.style.height = `${Math.min(180, Math.max(82, note.scrollHeight + border))}px`;
   }
   function safeOwnerTel(value) {
-    const raw = String(value || '').trim();
+    const raw = window.formatWaffleContactPhone ? window.formatWaffleContactPhone(value) : String(value || '').trim();
     let normalized = '';
     try {
       normalized = typeof window.normalizeDirectoryPhoneForTel === 'function'
@@ -917,7 +917,7 @@
     modal.querySelector('[data-v11217-guided-owner-name]').textContent = ownerName ? `Owner: ${ownerName}` : (ownerTel ? 'Owner contact' : '');
     const callOwner = modal.querySelector('[data-v11217-guided-owner-call]');
     callOwner.hidden = !ownerTel;
-    callOwner.textContent = ownerTel ? `Call owner · ${String(payload.phone || '').trim()}` : 'Call owner';
+    callOwner.textContent = ownerTel ? `Call owner · ${window.formatWaffleContactPhone ? window.formatWaffleContactPhone(payload.phone) : String(payload.phone || '').trim()}` : 'Call owner';
     if (ownerTel) callOwner.href = `tel:${ownerTel}`; else callOwner.removeAttribute('href');
     const savedNote = card.querySelector('[data-directory-edit-field="notes"]')?.dataset?.directoryCurrentValue;
     const handover = modal.querySelector('[data-v11217-guided-handover]');

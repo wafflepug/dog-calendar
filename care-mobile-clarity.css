@@ -2409,3 +2409,16 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-
   }
   body[data-waffle-page="directory"] #directoryTabPanel .directory-dashboard-fused:not(.is-profile-mode) :is(#directory-grid, #past-directory-grid) > :not(.directory-card) { grid-column:1 / -1; }
 }
+
+body[data-waffle-page="directory"] .directory-card:not(.is-profile-active) { position:relative; }
+body[data-waffle-page="directory"] .directory-card.is-profile-active > .care-roster-photo-options { display:none !important; }
+body[data-waffle-page="directory"] .directory-card:not(.is-profile-active) .directory-guest-tile-open { padding-right:64px !important; }
+.care-roster-photo-options { position:absolute; top:12px; right:12px; z-index:4; }
+.care-roster-photo-options > summary { display:flex; align-items:center; justify-content:center; gap:3px; width:44px; min-height:44px; box-sizing:border-box; padding:7px; border:1px solid var(--wh-border,#d5dee9); border-radius:9px; background:var(--wh-surface,#fff); color:var(--wh-text,#17243b); cursor:pointer; list-style:none; }
+.care-roster-photo-options > summary::-webkit-details-marker { display:none; }
+.care-roster-photo-options svg { width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:1.7; }
+.care-roster-photo-panel { position:absolute; top:calc(100% + 5px); right:0; width:min(240px,calc(100vw - 60px)); padding:5px; border:1px solid var(--wh-border,#d5dee9); border-radius:10px; background:var(--wh-surface,#fff); color:var(--wh-text,#17243b); box-shadow:0 8px 24px #0003; }
+.care-roster-photo-panel button { width:100%; min-height:44px; padding:8px 10px; border:0; border-radius:7px; background:transparent; color:inherit; font:inherit; font-size:14px; text-align:left; cursor:pointer; }
+.care-roster-photo-panel button:hover { background:var(--wh-surface-soft,#eef3f8); }
+.care-roster-photo-panel button[hidden], .care-roster-photo-panel p:empty { display:none; }
+.care-roster-photo-options:has(> summary:focus-visible) { outline:3px solid var(--wh-accent,#7c3aed); outline-offset:3px; border-radius:9px; }

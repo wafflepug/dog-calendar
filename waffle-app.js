@@ -1,3 +1,10 @@
+// Legacy AU mobile cells may have lost the domestic zero in Sheets.
+// Presentation only: never alter international/short values or booking identity.
+function formatWaffleContactPhone(value) {
+    const raw=String(value == null ? '' : value).trim();
+    const digits=raw.replace(/[\s().-]/g,'');
+    return /^4\d{8}$/.test(digits) ? '0'+digits : raw;
+}
 
 const WAFFLE_PAGE =
     (document.body && document.body.dataset && document.body.dataset.wafflePage) ||
@@ -9310,7 +9317,7 @@ registerWaffleServiceWorker();
     }
 
     function normalizeDirectoryPhoneForTel(value) {
-        const phone = String(value || '').trim();
+        const phone = formatWaffleContactPhone(value);
         if (!phone || !/^[+\d\s().-]+$/.test(phone)) return '';
         const digits = phone.replace(/\D/g, '');
         if (digits.length < 7 || digits.length > 15) return '';
@@ -9702,7 +9709,7 @@ registerWaffleServiceWorker();
             const phone = normalizeDirectoryPhoneForTel(
                 phoneField ? phoneField.dataset.directoryCurrentValue : card.dataset.v1088Phone
             );
-            const readablePhone = String(phoneField ? phoneField.dataset.directoryCurrentValue : card.dataset.v1088Phone || '').trim();
+            const readablePhone = formatWaffleContactPhone(phoneField ? phoneField.dataset.directoryCurrentValue : card.dataset.v1088Phone);
             const addNumber = !phone && phoneField
                 ? '<button type="button" class="directory-care-brief-action directory-care-owner-add-number" data-care-brief-action="edit-phone">Add number</button>'
                 : '';
@@ -18320,7 +18327,7 @@ registerWaffleServiceWorker();
                                                 data-directory-current-value="${escapeDashboardHtml(cleanPhone)}"
                                                 aria-label="Edit ${escapeDashboardHtml(dogName.trim())} contact">
                                                 <span class="directory-field-label">Contact</span>
-                                                <span class="directory-field-value">${escapeDashboardHtml(cleanPhone || 'Contact not provided')}</span>
+                                                <span class="directory-field-value">${escapeDashboardHtml(formatWaffleContactPhone(cleanPhone) || 'Contact not provided')}</span>
                                                 <span class="directory-contact-edit-hint" aria-hidden="true">Edit</span>
                                             </button>
 
