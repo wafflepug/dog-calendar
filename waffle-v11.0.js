@@ -251,12 +251,36 @@ async function v110LoadOperations(options={}){
   }catch(e){console.warn('Stay Operations unavailable:',e);}
 }
 
+// Reuse only a successful schema-capability check, never stay status or identity.
+let v110OperationCapabilityProof=null;
+let v110OperationCapabilityPending=null;
+function v110OperationCapabilityKey(){
+  return String(typeof APPS_SCRIPT_WEBAPP_URL!=='undefined'?APPS_SCRIPT_WEBAPP_URL:'')+'|'+String(window.WAFFLE_ASSET_REVISION||'');
+}
+async function v110EnsureOperationCapability(){
+  const key=v110OperationCapabilityKey(),now=Date.now();
+  if(v110OperationCapabilityProof?.key===key&&now-v110OperationCapabilityProof.at>=0&&now-v110OperationCapabilityProof.at<60000)return v110OperationCapabilityProof.response;
+  if(v110OperationCapabilityPending?.key===key)return v110OperationCapabilityPending.promise;
+  const pending={key,promise:null};
+  pending.promise=Promise.resolve().then(async()=>{
+    try{
+      const response=await queryAppsScript({action:'get_data_versions'},{maxAttempts:1,timeoutMs:20000});
+      if(v110OperationCapabilityKey()!==key)throw new Error('The data service changed. Reload before changing stay status.');
+      if(response?.result!=='success'||Number(response?.versions?.stayOperationIdentityVersion||0)<1)throw new Error('This server does not support Stay ID operations yet. No status change was sent.');
+      const proof={result:'success',versions:{stayOperationIdentityVersion:Number(response.versions.stayOperationIdentityVersion)}};
+      v110OperationCapabilityProof={key,at:Date.now(),response:proof};return proof;
+    }catch(error){if(v110OperationCapabilityProof?.key===key)v110OperationCapabilityProof=null;throw error;}
+    finally{if(v110OperationCapabilityPending===pending)v110OperationCapabilityPending=null;}
+  });
+  v110OperationCapabilityPending=pending;return pending.promise;
+}
+
 async function v110SaveOperationalStatus(payload,status,target){
   if(!['checked_in','checked_out'].includes(status))throw new Error('Unsupported stay operational status.');
   v110CollectCareCheckoutEvidence();
   v110CheckoutGuard(payload);
   if(typeof navigator!=='undefined'&&navigator.onLine===false)throw new Error('Check-in and checkout require a live connection. Nothing was queued.');
-  const capability=await queryAppsScript({action:'get_data_versions'},{maxAttempts:1,timeoutMs:20000});
+  const capability=await v110EnsureOperationCapability();
   if(capability?.result!=='success'||Number(capability?.versions?.stayOperationIdentityVersion||0)<1)throw new Error('This server does not support Stay ID operations yet. No status change was sent.');
   if(payload?.stayId&&!v110ValidStayId(payload.stayId))throw new Error('This stay has an invalid Stay ID. Reload the current booking before changing its operational status.');
   const action=status==='checked_out'?(payload.action==='early_checkout_stay'?'early_checkout_stay':'checkout_stay'):'checkin_stay';
