@@ -2308,3 +2308,25 @@ body.dark-theme[data-waffle-page="directory"] .directory-card.is-profile-active 
 .guest-directory-toolbar[data-care-roster-controls-removed] {
   display: none !important;
 }
+
+/* Compact source badge; the invisible 44px summary remains an easy touch target. */
+body[data-waffle-page="directory"] .directory-card.is-profile-active .v11112-care-source-host {
+  flex:0 1 auto; width:auto; max-width:calc(100% - 52px);
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active [data-v11112-source-details] > summary {
+  width:auto; min-height:44px; padding:0; border:0; border-radius:999px; background:transparent;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .v11112-source-badge {
+  display:inline-flex; flex:0 1 auto; flex-direction:row; align-items:center; gap:5px; min-width:0;
+  min-height:28px; padding:4px 8px; box-sizing:border-box; border:1px solid var(--care-card-line,#cbd5e1);
+  border-radius:999px; background:var(--care-card-space,#fff); color:var(--care-card-text,#475569); white-space:nowrap;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .v11112-source-badge img {
+  width:18px; height:18px; flex:0 0 18px; object-fit:contain; border-radius:50%;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .v11112-source-badge > strong {
+  font-size:12px; font-weight:800; line-height:1.2; overflow:hidden; text-overflow:ellipsis;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .v11112-care-source-expanded {
+  width:min(410px,calc(100vw - 56px));
+}
