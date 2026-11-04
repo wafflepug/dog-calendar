@@ -125,6 +125,9 @@
   }
 
   function activateFloorplanFromGuard() {
+    if (typeof window.WAFFLE_ORGANISER_UI?.openTab === 'function') {
+      window.WAFFLE_ORGANISER_UI.openTab('floorplan');
+    } else {
     document.querySelectorAll('[data-organiser-tab]').forEach(button => {
       const active = button.dataset.organiserTab === 'floorplan';
       button.classList.toggle('is-active', active);
@@ -133,6 +136,7 @@
     document.querySelectorAll('[data-organiser-view]').forEach(view => {
       view.hidden = view.dataset.organiserView !== 'floorplan';
     });
+    }
 
     const api = window.WAFFLE_ORGANISER_FLOORPLAN;
     if (api && typeof api.refresh === 'function') {
@@ -144,8 +148,8 @@
   function ensureFloorplanRegistration() {
     const root = document.getElementById('v11115OrganiserRoot');
     if (!root) return false;
-    const tabs = root.querySelector('.v11115-organiser-tabs');
-    const body = root.querySelector('.v11115-organiser-body');
+    const tabs = root.querySelector('.v11115-workspace-tabs') || root.querySelector('.v11115-organiser-tabs');
+    const body = root.querySelector('[data-organiser-workspace-body]') || root.querySelector('.v11115-organiser-body');
     if (!tabs || !body) return false;
 
     let button = tabs.querySelector('[data-organiser-tab="floorplan"]');
@@ -153,7 +157,7 @@
       button = document.createElement('button');
       button.type = 'button';
       button.dataset.organiserTab = 'floorplan';
-      button.textContent = '🏠 Floorplan';
+      button.textContent = 'Floorplan';
       const sleep = tabs.querySelector('[data-organiser-tab="sleep"]');
       tabs.insertBefore(button, sleep || tabs.lastElementChild);
     }
