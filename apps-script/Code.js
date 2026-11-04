@@ -21620,7 +21620,7 @@ function escapeHtmlEmail_(value) {
 
 
 
-// Phone identifiers are text, never quantities. Apply before writing so Sheets
+// Contact phone identifiers are text, never quantities. Apply before writing so Sheets
 // cannot remove leading zeroes or reinterpret a plus-prefixed international number.
 function phoneTextCell_(sheet, row, column) {
   if (sheet.getMaxRows && sheet.getMaxRows() < row) sheet.insertRowsAfter(sheet.getMaxRows(), row - sheet.getMaxRows());

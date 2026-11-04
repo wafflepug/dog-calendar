@@ -29,6 +29,7 @@ function sheet(name, rows, parent, max = null, stats = null) {
     getRange(row, col, height = 1, width = 1) {
       return {
         getValues: () => { countRead(); return Array.from({ length: height }, (_, r) => Array.from({ length: width }, (_, c) => rows[row + r - 1]?.[col + c - 1] ?? '')); },
+        setNumberFormat(format) { assert.equal(format, '@'); return this; },
         setValue(value) { if (!rows[row - 1]) rows[row - 1] = []; rows[row - 1][col - 1] = value; },
         setValues(values) { values.forEach((line, r) => line.forEach((value, c) => { if (!rows[row + r - 1]) rows[row + r - 1] = []; rows[row + r - 1][col + c - 1] = value; })); },
         setFontWeight() { return this; }, setBackground() { return this; }, setFontColor() { return this; }

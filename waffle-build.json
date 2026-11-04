@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.11.04.08",
-  "releaseName": "Care profile declutter",
+  "assetRevision": "2026.11.04.09",
+  "releaseName": "Care contact clarity",
   "careIteration": {
     "returningDogSuggestions": true,
     "reviewedCareInheritance": true,

@@ -64,6 +64,7 @@ function makeSheet(name, initialRows, parent, initialMaxColumns = 30) {
         getValue() { return cell(row, col) ?? ''; },
         getDisplayValue() { return String(cell(row, col) ?? ''); },
         getFormulas() { return Array.from({ length: numRows }, (_, r) => Array.from({ length: numCols }, (_, c) => formulas.get(`${row + r}:${col + c}`) || '')); },
+        setNumberFormat(format) { assert.equal(format, '@'); return this; },
         setValue(value) { cell(row, col); rows[row - 1][col - 1] = value; },
         setValues(values) { values.forEach((line, r) => line.forEach((value, c) => { cell(row + r, col + c); rows[row + r - 1][col + c - 1] = value; })); }
       };
@@ -179,7 +180,7 @@ function makeHarness(options = {}) {
     (options.actualCore ? `${code.slice(coreStart, coreEnd)}\n${deleteSource}\n` : '') +
   `${code.slice(inheritanceStart, createStart)}\n${code.slice(currentReadStart, currentReadEnd)}\n${code.slice(potentialReadStart, potentialReadEnd)}\n` +
     'this.createV108Boarding_ = createV108Boarding_; this.updateV108BoardingDates_ = updateV108BoardingDates_;';
-  vm.runInContext(loaded, sandbox);
+  vm.runInContext(code.slice(code.lastIndexOf('function phoneTextCell_')) + '\n' + loaded, sandbox);
   return { sandbox, bookings, ss, props, belongingsMigrationCalls, get lockHeld() { return lockHeld; }, get lockAttempts() { return lockAttempts; } };
 }
 
