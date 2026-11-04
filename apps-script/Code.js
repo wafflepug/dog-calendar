@@ -4895,7 +4895,7 @@ function saveDogMasterProfile_(data){
   var rec=stayKey?(readBelongingsRecords_(getBelongingsSheetReadOnly_(),[stayKey])[0]||null):null;
   var profile=rec&&rec.intakeAttributes?rec.intakeAttributes:(derived.profile||{}), flags=rec&&rec.riskFlags?rec.riskFlags:(derived.riskFlags||{}), primary=rec?(rec.dogPhoto||derived.primaryPhoto||null):(derived.primaryPhoto||null), gallery=rec?(rec.dogPhotoGallery||derived.photoGallery||[]):(derived.photoGallery||[]), now=new Date();
   var dataRow=[now,key,dogName,breed,String(data.ownerName||derived.ownerName||"").trim(),String(data.phone||derived.phone||"").trim(),String(data.notes||derived.notes||"").trim(),JSON.stringify(profile),JSON.stringify(flags),primary?JSON.stringify(primary):"",JSON.stringify(gallery),stayKey,Number(derived.stayCount||0)];
-  var sh=getDogMasterSheet_(), row=findDogMasterRow_(sh,key); if(row===-1){sh.appendRow(dataRow);row=sh.getLastRow();}else sh.getRange(row,1,1,dataRow.length).setValues([dataRow]);
+  var sh=getDogMasterSheet_(), row=findDogMasterRow_(sh,key); phoneTextCell_(sh,row===-1?sh.getLastRow()+1:row,6); if(row===-1){sh.appendRow(dataRow);row=sh.getLastRow();}else sh.getRange(row,1,1,dataRow.length).setValues([dataRow]);
   touchWaffleDataVersion_("directory"); logAuditEvent_({category:"Care",action:"Master Dog Profile Saved",dogName:dogName,bookingType:"Dog Master",reference:key,summary:"Persistent master profile saved for "+dogName+".",changedFields:["Dog Master Profile"],after:{masterKey:key,dogName:dogName,breed:breed,lastStayKey:stayKey},source:"Web App"});
   return getDogMasterProfile_({masterKey:key,dogId:dogId,dogName:dogName,breed:breed});
 }
@@ -5569,9 +5569,8 @@ function processSheetAction_(data) {
         guestBefore.endDate
       );
 
-      sheet
-        .getRange(guestRow, fieldConfig.column)
-        .setValue(newValue);
+      var editCell = fieldKey === "phone" ? phoneTextCell_(sheet, guestRow, fieldConfig.column) : sheet.getRange(guestRow, fieldConfig.column);
+      editCell.setValue(fieldKey === "phone" ? String(newValue) : newValue);
 
       SpreadsheetApp.flush();
 
@@ -8258,12 +8257,8 @@ function applyLegacyIntakeProfileUpdates_(
       );
     }
 
-    mainSheet
-      .getRange(
-        bookingRow,
-        config[key].column
-      )
-      .setValue(value);
+    var directoryCell = key === "phone" ? phoneTextCell_(mainSheet, bookingRow, config[key].column) : mainSheet.getRange(bookingRow, config[key].column);
+    directoryCell.setValue(value);
 
     appliedDirectory[key] =
       value;
@@ -10781,6 +10776,7 @@ function saveLegacyIntakeFromHtml(payload) {
   var legacySheet =
     getLegacyIntakeSheet_();
 
+  phoneTextCell_(legacySheet, legacySheet.getLastRow()+1, 10);
   legacySheet.appendRow([
     now,
     now,
@@ -11022,8 +11018,8 @@ function reassignLegacyIntakeFromHtml(payload) {
   legacySheet.getRange(existing.row, 9)
     .setValue(booking.ownerName || "");
 
-  legacySheet.getRange(existing.row, 10)
-    .setValue(booking.phone || "");
+  phoneTextCell_(legacySheet, existing.row, 10)
+    .setValue(String(booking.phone || ""));
 
   legacySheet.getRange(existing.row, 14)
     .setValue(0);
@@ -11924,7 +11920,7 @@ function syncIntakeRecordForBooking_(mainSheet, bookingRow, dogId) {
   intakeSheet.getRange(row, 10).setValue(booking.startDate || "");
   intakeSheet.getRange(row, 11).setValue(booking.endDate || "");
   intakeSheet.getRange(row, 12).setValue(booking.ownerName || "");
-  intakeSheet.getRange(row, 13).setValue(booking.phone || "");
+  phoneTextCell_(intakeSheet, row, 13).setValue(String(booking.phone || ""));
   intakeSheet.getRange(row, 18).setValue(bookingRow);
   intakeSheet.getRange(row, 19).setValue(booking.stayId);
   intakeSheet.getRange(row, 20).setValue(dogId);
@@ -11990,11 +11986,12 @@ function createIntakeLinkForBooking_(mainSheet, rows, data) {
     intakeSheet.getRange(existing.row, 10).setValue(booking.startDate || "");
     intakeSheet.getRange(existing.row, 11).setValue(booking.endDate || "");
     intakeSheet.getRange(existing.row, 12).setValue(booking.ownerName || "");
-    intakeSheet.getRange(existing.row, 13).setValue(booking.phone || "");
+    phoneTextCell_(intakeSheet, existing.row, 13).setValue(String(booking.phone || ""));
     intakeSheet.getRange(existing.row, 18).setValue(bookingRow);
     intakeSheet.getRange(existing.row, 19).setValue(booking.stayId);
     intakeSheet.getRange(existing.row, 20).setValue(bookingDogId);
   } else {
+    phoneTextCell_(intakeSheet, intakeSheet.getLastRow()+1, 13);
     intakeSheet.appendRow([
       now,
       now,
@@ -13466,7 +13463,9 @@ function processIntakeSubmissionLocked_(prepared) {
     completedValues[17] = bookingRow;
     completedValues[18] = mutationStayId;
     completedValues[19] = identity.dogId;
-    getIntakeSheet_().getRange(row, 1, 1, INTAKE_HEADERS_.length).setValues([completedValues]);
+    var completedSheet = getIntakeSheet_();
+    phoneTextCell_(completedSheet, row, 13);
+    completedSheet.getRange(row, 1, 1, INTAKE_HEADERS_.length).setValues([completedValues]);
 
     receipt.updatedAt = new Date();
     receipt.state = "Complete";
@@ -21620,3 +21619,10 @@ function escapeHtmlEmail_(value) {
 }
 
 
+
+// Phone identifiers are text, never quantities. Apply before writing so Sheets
+// cannot remove leading zeroes or reinterpret a plus-prefixed international number.
+function phoneTextCell_(sheet, row, column) {
+  if (sheet.getMaxRows && sheet.getMaxRows() < row) sheet.insertRowsAfter(sheet.getMaxRows(), row - sheet.getMaxRows());
+  return sheet.getRange(row, column).setNumberFormat('@');
+}
