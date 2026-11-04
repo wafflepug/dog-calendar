@@ -149,6 +149,7 @@
       return;
     }
     mountPhotoMenu(card);
+    card.querySelectorAll('[data-care-brief-action="belongings-photo"], [data-care-brief-action="belongings-camera"]').forEach(button=>{button.hidden=card.dataset.v1082PastStay==='true';});
     const brief = card.querySelector('[data-directory-care-brief]');
     if (!brief) return;
     const key = identity(card);
