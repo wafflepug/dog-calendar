@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.11.04.04",
-  "releaseName": "Simplified Care roster",
+  "assetRevision": "2026.11.04.05",
+  "releaseName": "Solo sitter Organiser",
   "careIteration": {
     "returningDogSuggestions": true,
     "reviewedCareInheritance": true,
