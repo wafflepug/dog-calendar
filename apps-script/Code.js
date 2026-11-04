@@ -2208,7 +2208,7 @@ function getGuestDirectoryPayload_() {
     legacyIntakes:
       legacyIntakes,
     operations:
-      readStayOperations_({stayKeys:stayKeys,stayIds:bookings.map(function(booking){return booking.stayId;})})
+      readStayOperations_({stayKeys:stayKeys,stayIds:bookings.map(function(booking){return booking.stayId;})},{sheet:sheet,rows:rows})
   };
 }
 
@@ -4884,7 +4884,7 @@ function getDogMasterProfile_(data){
   var persisted=readPersistedDogMaster_(key), derived=deriveDogMasterProfile_(dogName||(persisted?persisted.dogName:""),breed||(persisted?persisted.breed:""),dogId);
   if(!persisted)return derived; persisted.stayCount=Math.max(Number(persisted.stayCount||0),Number(derived.stayCount||0)); persisted.dogId=dogId; persisted.dogNumber=derived.dogNumber||""; return persisted;
 }
-function saveDogMasterProfile_(data){
+function saveDogMasterProfile_(data, options){
   data=data&&typeof data==="object"?data:{}; var dogName=String(data.dogName||"").trim(), breed=String(data.breed||"").trim(), dogId=String(data.dogId||"").trim(), stayKey=String(data.stayKey||"").trim();
   if(!dogName)throw new Error("Dog Name is required.");
   if(stayKey&&!dogId) dogId=resolveV108DogIdentityForStay_(stayKey).dogId;
@@ -4897,9 +4897,10 @@ function saveDogMasterProfile_(data){
   var dataRow=[now,key,dogName,breed,String(data.ownerName||derived.ownerName||"").trim(),String(data.phone||derived.phone||"").trim(),String(data.notes||derived.notes||"").trim(),JSON.stringify(profile),JSON.stringify(flags),primary?JSON.stringify(primary):"",JSON.stringify(gallery),stayKey,Number(derived.stayCount||0)];
   var sh=getDogMasterSheet_(), row=findDogMasterRow_(sh,key); phoneTextCell_(sh,row===-1?sh.getLastRow()+1:row,6); if(row===-1){sh.appendRow(dataRow);row=sh.getLastRow();}else sh.getRange(row,1,1,dataRow.length).setValues([dataRow]);
   touchWaffleDataVersion_("directory"); logAuditEvent_({category:"Care",action:"Master Dog Profile Saved",dogName:dogName,bookingType:"Dog Master",reference:key,summary:"Persistent master profile saved for "+dogName+".",changedFields:["Dog Master Profile"],after:{masterKey:key,dogName:dogName,breed:breed,lastStayKey:stayKey},source:"Web App"});
+  if(options && options.skipResponse === true) return {persisted:true,masterKey:key};
   return getDogMasterProfile_({masterKey:key,dogId:dogId,dogName:dogName,breed:breed});
 }
-function syncDogMasterProfileFromStay_(data){if(!String(data&&data.dogName||"").trim())return null;return saveDogMasterProfile_(data);}
+function syncDogMasterProfileFromStay_(data, options){if(!String(data&&data.dogName||"").trim())return null;return saveDogMasterProfile_(data, options);}
 
 function parseStayPhotosJson_(v){return parsePhotosJson_(v);}
 function deleteStayPhoto_(data){

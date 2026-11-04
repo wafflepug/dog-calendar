@@ -336,8 +336,8 @@ function stayOperationHeaderMapV11226_(sheet, addStayId) {
   return { map: map, width: last, stayId: idCol, duplicate: duplicate };
 }
 
-function stayOperationBookingIndexV11226_() {
-  var sheet = getTargetSheet_(), rows = sheet.getDataRange().getValues();
+function stayOperationBookingIndexV11226_(snapshot) {
+  var sheet = snapshot && snapshot.sheet || getTargetSheet_(), rows = snapshot && snapshot.rows || sheet.getDataRange().getValues();
   var cols = stableStayHeadersV11225_(sheet, false);
   var index = { byId: {}, idCounts: {}, byKey: {}, rows: rows };
   for (var i = 1; i < rows.length; i++) {
@@ -366,11 +366,11 @@ function stayOperationValueV11226_(row, headers, name, fallbackIndex) {
   return headers.width ? '' : row[fallbackIndex];
 }
 
-function readStayOperationsV11226_(filters) {
+function readStayOperationsV11226_(filters, context) {
   var sh = getStayOperationsSheet_(), schema = stayOperationHeaderMapV11226_(sh, false);
   if (sh.getLastRow() < 2) return [];
   var rows = sh.getRange(2, 1, sh.getLastRow() - 1, Math.max(schema.width, 15)).getValues();
-  var inventory = stayOperationBookingIndexV11226_(), raw = [];
+  var inventory = context && context.inventory || stayOperationBookingIndexV11226_(context), raw = [];
   rows.forEach(function(row, offset) {
     var stayKey = String(stayOperationValueV11226_(row, schema, 'Stay Key', 1) || '').trim();
     if (!stayKey) return;
@@ -474,7 +474,7 @@ function setStayOperationalStatusV11226_(data, status) {
   if (lockOwned && !lock.tryLock(5000)) throw new Error('Another Waffle House update is currently being saved. Please try again in a few seconds.');
   try {
     var target = resolveStayOperationTargetV11226_(data), sh = getStayOperationsSheet_(), schema = stayOperationHeaderMapV11226_(sh, true);
-    var records = readStayOperations_({ stayKeys: [target.stayKey], stayIds: target.stayId ? [target.stayId] : [] });
+    var records = readStayOperations_({ stayKeys: [target.stayKey], stayIds: target.stayId ? [target.stayId] : [] }, data.stayId ? {inventory:target.inventory} : null);
     var matches = records.filter(function(r) { return r.stayId && target.stayId && r.stayId.toLowerCase() === target.stayId.toLowerCase(); });
     var keyRows = records.filter(function(r) { return r.stayKey === target.stayKey; });
     if (!matches.length && keyRows.length === 1 && !keyRows[0].identityConflict && !keyRows[0].stayId) matches = keyRows;
@@ -521,7 +521,7 @@ function setStayOperationalStatusV11226_(data, status) {
         dogName: target.booking.dogName, bookingType: 'Boarding', reference: target.stayKey, summary: target.booking.dogName + (early ? ' checked out early.' : status === 'checked_in' ? ' checked in.' : ' checked out.'),
         changedFields: ['Operational Status'].concat(early ? ['Checkout Type','Checkout Reason','Original End Date','Actual Checkout Date','Checkout Requested By'] : []), before: existing, after: record, source: String(data.source || 'Web App') });
     } catch (error) { followUpErrors.push('Audit follow-up failed: ' + String(error && error.message || error)); }
-    if (status === 'checked_in') try { syncDogMasterProfileFromStay_(Object.assign({}, data, { stayKey: target.stayKey, stayId: target.stayId, dogName: target.booking.dogName })); } catch (syncError) { followUpErrors.push('Profile sync failed: ' + String(syncError && syncError.message || syncError)); }
+    if (status === 'checked_in') try { syncDogMasterProfileFromStay_(Object.assign({}, data, { stayKey: target.stayKey, stayId: target.stayId, dogName: target.booking.dogName }), {skipResponse:true}); } catch (syncError) { followUpErrors.push('Profile sync failed: ' + String(syncError && syncError.message || syncError)); }
     if (followUpErrors.length) { record.followUpNeeded = true; record.warning = 'Operation saved. ' + followUpErrors.join(' '); }
     return record;
   } finally { if (lockOwned) lock.releaseLock(); }
@@ -548,5 +548,5 @@ function bindLegacyStayOperationToIdV11226_(sheet, oldStayKey, bookingRow, stayI
 }
 
 /* These assignments intentionally follow the legacy V11.2.17 assignments. */
-readStayOperations_ = function(filters) { return readStayOperationsV11226_(filters); };
+readStayOperations_ = function(filters, context) { return readStayOperationsV11226_(filters, context); };
 setStayOperationalStatus_ = function(data, status) { return setStayOperationalStatusV11226_(data, status); };
