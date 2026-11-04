@@ -260,7 +260,19 @@ async function v110SaveOperationalStatus(payload,status,target){
   if(capability?.result!=='success'||Number(capability?.versions?.stayOperationIdentityVersion||0)<1)throw new Error('This server does not support Stay ID operations yet. No status change was sent.');
   if(payload?.stayId&&!v110ValidStayId(payload.stayId))throw new Error('This stay has an invalid Stay ID. Reload the current booking before changing its operational status.');
   const action=status==='checked_out'?(payload.action==='early_checkout_stay'?'early_checkout_stay':'checkout_stay'):'checkin_stay';
-  const r=await sendPayloadToAppsScript({...payload,action,source:'V11 Operations'});
+  let r;
+  try { r=await sendPayloadToAppsScript({...payload,action,source:'V11 Operations'}); }
+  catch(error) {
+    // A lost acknowledgement is not proof of failure. Read the exact stay once;
+    // never replay the mutation automatically or accept another dog's operation.
+    if(!payload.stayId||!/did not respond|could not reach|timeout|timed out|network|failed to fetch/i.test(String(error?.message||error)))throw error;
+    try {
+      const verified=await queryAppsScript({action:'get_stay_operations',stayIds:[payload.stayId],stayKeys:[payload.stayKey]},{maxAttempts:1,timeoutMs:15000,dedupe:false});
+      const matches=verified?.result==='success'&&Array.isArray(verified.records)?verified.records.filter(record=>String(record.stayId||'').toLowerCase()===String(payload.stayId).toLowerCase()):[];
+      if(matches.length!==1||matches[0].identityConflict||String(matches[0].status||'')!==status)throw error;
+      r={result:'success',record:matches[0],recovered:true};
+    } catch(_) { throw new Error('The request timed out and the saved status could not be verified. Refresh Today or Care to check this stay before trying again.'); }
+  }
   if(r?.queued)throw new Error('Stay operations cannot be queued offline. Nothing was saved.');
   const record=r?.record,requested=String(payload.stayId||'').toLowerCase(),returned=String(record?.stayId||'').toLowerCase();
   if(r?.result!=='success'||!record||!v110ValidStayId(returned)||(requested&&requested!==returned)||String(record.stayKey||'')!==String(payload.stayKey||'')||String(record.status||'')!==status)throw new Error('The server did not confirm the selected stay operation. Reload before continuing.');
