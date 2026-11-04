@@ -469,12 +469,16 @@ function resolveStayOperationTargetV11226_(data) {
 
 function setStayOperationalStatusV11226_(data, status) {
   data = data && typeof data === 'object' ? data : {};
+  var started=Date.now(), phaseStarted=started, timing={};
+  function markTiming(name){var nowMs=Date.now();timing[name]=Math.max(0,nowMs-phaseStarted);phaseStarted=nowMs;}
   var lockOwned = typeof WAFFLE_STAY_OPERATIONS_LOCK_HELD_V11226_ === 'undefined' || !WAFFLE_STAY_OPERATIONS_LOCK_HELD_V11226_;
   var lock = lockOwned ? LockService.getScriptLock() : null;
   if (lockOwned && !lock.tryLock(5000)) throw new Error('Another Waffle House update is currently being saved. Please try again in a few seconds.');
+  markTiming('lockWaitMs');
   try {
     var target = resolveStayOperationTargetV11226_(data), sh = getStayOperationsSheet_(), schema = stayOperationHeaderMapV11226_(sh, true);
     var records = readStayOperations_({ stayKeys: [target.stayKey], stayIds: target.stayId ? [target.stayId] : [] }, data.stayId ? {inventory:target.inventory} : null);
+    markTiming('lookupMs');
     var matches = records.filter(function(r) { return r.stayId && target.stayId && r.stayId.toLowerCase() === target.stayId.toLowerCase(); });
     var keyRows = records.filter(function(r) { return r.stayKey === target.stayKey; });
     if (!matches.length && keyRows.length === 1 && !keyRows[0].identityConflict && !keyRows[0].stayId) matches = keyRows;
@@ -508,8 +512,10 @@ function setStayOperationalStatusV11226_(data, status) {
     row[schema.stayId - 1] = target.stayId;
     if (rowNumber > 0) sh.getRange(rowNumber, 1, 1, width).setValues([row]);
     else { sh.appendRow(row); rowNumber = sh.getLastRow(); }
+    markTiming('writeMs');
     var followUpErrors = [];
     try { touchWaffleDataVersion_('directory'); } catch (versionError) { followUpErrors.push('Data version refresh failed: ' + String(versionError && versionError.message || versionError)); }
+    markTiming('versionMs');
     var record = { updatedAt: now.toISOString(), stayId: target.stayId, stayKey: target.stayKey, dogName: target.booking.dogName,
       startDate: target.booking.startDate, endDate: target.booking.endDate, status: status, checkedInAt: stayOperationIsoV11217_(checkedInAt),
       checkedOutAt: stayOperationIsoV11217_(checkedOutAt), note: String(data.note || '').trim(), checkoutType: early ? 'early' : (status === 'checked_out' ? 'standard' : ''),
@@ -521,8 +527,13 @@ function setStayOperationalStatusV11226_(data, status) {
         dogName: target.booking.dogName, bookingType: 'Boarding', reference: target.stayKey, summary: target.booking.dogName + (early ? ' checked out early.' : status === 'checked_in' ? ' checked in.' : ' checked out.'),
         changedFields: ['Operational Status'].concat(early ? ['Checkout Type','Checkout Reason','Original End Date','Actual Checkout Date','Checkout Requested By'] : []), before: existing, after: record, source: String(data.source || 'Web App') });
     } catch (error) { followUpErrors.push('Audit follow-up failed: ' + String(error && error.message || error)); }
+    markTiming('auditMs');
     if (status === 'checked_in') try { syncDogMasterProfileFromStay_(Object.assign({}, data, { stayKey: target.stayKey, stayId: target.stayId, dogName: target.booking.dogName }), {skipResponse:true}); } catch (syncError) { followUpErrors.push('Profile sync failed: ' + String(syncError && syncError.message || syncError)); }
     if (followUpErrors.length) { record.followUpNeeded = true; record.warning = 'Operation saved. ' + followUpErrors.join(' '); }
+    markTiming('profileSyncMs');
+    timing.totalMs=Math.max(0,Date.now()-started);
+    record.operationTimings=timing;
+    try { console.log(JSON.stringify({event:'stay_operation_timing',status:status,timings:timing})); } catch (_) {}
     return record;
   } finally { if (lockOwned) lock.releaseLock(); }
 }
