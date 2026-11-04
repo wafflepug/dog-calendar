@@ -218,6 +218,8 @@
 
     const selected = String(record?.requestSource || '').trim();
     const sourceLabel = selected || (hasOwnRequestSource(record) ? 'Not recorded' : 'Source not available');
+    const source = sourceDefinitions().find(item => item.value.toLowerCase() === selected.toLowerCase());
+    const badge = `<span class="v11112-source-badge" data-v11112-care-source-current>${source?.image ? `<img src="${escapeHtml(source.image)}" alt="">` : ''}<strong>${escapeHtml(sourceLabel)}</strong></span>`;
     const identity = profileCacheIdentity(card);
     const previousIdentity = host.dataset.v11112SourceIdentity || '';
     const sameIdentity = previousIdentity === identity;
@@ -251,7 +253,7 @@
     if (card.dataset.v1082PastStay === 'true') {
       host.innerHTML = `
         <section class="v1117-profile-source-picker v11112-care-source-picker v11112-care-source-readonly" data-v1117-profile-source-picker data-v1117-stay-key="${escapeHtml(stayKey)}">
-          <div class="v11112-care-source-current" data-v11112-care-source-current><span>Request source</span><strong>${escapeHtml(sourceLabel)}</strong></div>
+          ${badge}
           <strong data-v11112-source-status role="status">${escapeHtml(visibleStatus)}</strong>
         </section>`;
       return;
@@ -266,7 +268,7 @@
         data-v1117-profile-source-picker
         data-v1117-stay-key="${escapeHtml(stayKey)}">
         <details data-v11112-source-details${disclosureOpen ? ' open' : ''}>
-          <summary tabindex="0"><span class="v11112-care-source-summary-copy" data-v11112-care-source-current><small>Request source</small><strong>${escapeHtml(sourceLabel)}</strong></span><span class="v11112-care-source-summary-chevron" aria-hidden="true"></span></summary>
+          <summary tabindex="0" aria-label="Change request source. Current source: ${escapeHtml(sourceLabel)}" title="Change request source">${badge}</summary>
           <div class="v11112-care-source-expanded">
             <strong data-v11112-source-status role="status">${escapeHtml(visibleStatus)}</strong>
           <div class="v1117-profile-source-grid v11112-care-source-grid" role="group" aria-label="Request From">
