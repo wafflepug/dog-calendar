@@ -5772,14 +5772,21 @@ registerWaffleServiceWorker();
                     careBriefAction.disabled = true;
                     const identity = getDirectoryProfileEditIdentity(card);
                     try {
+                        const itemsTab=card.querySelector('[data-v11160-tab="belongings"]');
+                        if(itemsTab)itemsTab.click();
                         await ensureDirectoryDetailLoaded(card.querySelector('[data-directory-detail="belongings"]'));
+                        // Tab activation may already be loading this record. Join that
+                        // exact-stay read before finding the freshly rendered control.
+                        await window.WAFFLE_CARE_BELONGINGS_READS?.read(card);
                         if (!card.isConnected || !card.classList.contains('is-profile-active') || directoryProfileEditIdentityConflicts(identity, getDirectoryProfileEditIdentity(card))) return;
                         const trigger = card.querySelector(action === 'belongings-camera' ? '[data-take-belongings-photo]' : '[data-upload-belongings-photo]');
                         if (!trigger) throw new Error('Belongings photos could not be loaded. Try again.');
                         trigger.click();
                     } catch (error) {
                         const status = card.querySelector('[data-overview-belongings-status]');
-                        if (status) status.textContent = error.message || 'Could not load belongings photos. Try again.';
+                        const message=error.message || 'Could not load belongings photos. Try again.';
+                        if(status)status.textContent=message;
+                        if(typeof window.v110ShowActionFeedback==='function')window.v110ShowActionFeedback(card,message);
                     } finally { if(careBriefAction.isConnected)careBriefAction.disabled=false; }
                     return;
                 }
@@ -13370,20 +13377,6 @@ registerWaffleServiceWorker();
         }
         const hostedCheck = card.querySelector('[data-confirm-hosted-photo]');
         if (hostedCheck) hostedCheck.hidden = !hostedPendingPhotoConfirmations.has(stayKey);
-        const overview = card.querySelector('[data-overview-belongings-photos]');
-        if (overview) {
-            const module = document.createElement('section');
-            module.className = 'care-overview-belongings-module';
-            module.innerHTML = '<h4>Belongings photos</h4>';
-            for (const selector of ['[data-belongings-photo-tools-details]', '.belongings-photo-feedback', '.belongings-photo-gallery']) {
-                const node = host.querySelector(selector);
-                if (node) module.append(node);
-            }
-            const tools = module.querySelector('[data-belongings-photo-tools-details]');
-            if (tools) tools.open = true;
-            const note = module.querySelector('[data-belongings-photo-label]');if(note)note.value=photoNote;
-            overview.replaceChildren(module);
-        }
         syncHostedPhotoSessionControls();
     }
 
@@ -18257,15 +18250,6 @@ registerWaffleServiceWorker();
                                                         Loading with full profile…
                                                     </div>
                                                     </div>
-                                                </section>
-                                                <section class="care-overview-belongings" data-overview-belongings-photos aria-label="Belongings photos">
-                                                    <h4>Belongings photos</h4>
-                                                    <div class="care-overview-belongings-actions">
-                                                        <button type="button" class="directory-care-brief-action" data-care-brief-action="belongings-photo">Add photos</button>
-                                                        <button type="button" class="directory-care-brief-action" data-care-brief-action="belongings-camera">Take photo</button>
-                                                        <button type="button" class="directory-care-brief-action" data-care-brief-action="belongings">View items &amp; photos</button>
-                                                    </div>
-                                                    <p data-overview-belongings-status role="status" aria-live="polite"></p>
                                                 </section>
                                                 <div class="directory-care-owner-line" aria-label="Owner contact">
                                                     <strong class="directory-care-owner-label">Owner</strong>

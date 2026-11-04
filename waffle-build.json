@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.11.04.13",
-  "releaseName": "Belongings upload in photo menu",
+  "assetRevision": "2026.11.05.01",
+  "releaseName": "Care desktop columns and photo navigation",
   "careIteration": {
     "returningDogSuggestions": true,
     "reviewedCareInheritance": true,

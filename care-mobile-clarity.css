@@ -2400,18 +2400,12 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-
   }
 }
 
-body[data-waffle-page="directory"] .directory-card.is-profile-active .care-overview-belongings {
-  grid-column:1 / -1; padding:12px 0; border-bottom:1px solid var(--care-card-line,#d5dee9);
-}
-.care-overview-belongings h4 { margin:0 0 10px; }
-.care-overview-belongings-actions { display:flex; flex-wrap:wrap; gap:8px; }
-.care-overview-belongings [data-overview-belongings-status]:empty { display:none; }
-.care-overview-belongings [data-belongings-photo-tools-details] { border:0; padding:0; margin:0; }
-.care-overview-belongings [data-belongings-photo-tools-details] > summary,
-.care-overview-belongings .belongings-photo-upload-copy { display:none; }
-.care-overview-belongings .belongings-photo-upload-card { padding:0; border:0; background:transparent; }
-.care-overview-belongings .belongings-photo-gallery { display:flex; gap:10px; overflow-x:auto; max-width:100%; padding:8px 0; }
-.care-overview-belongings .belongings-photo-card { flex:0 0 140px; max-width:140px; }
 
-.care-overview-belongings .belongings-actions button { min-height:44px; }
-.care-overview-belongings .belongings-photo-empty { margin:8px 0; padding:8px 0; }
+
+/* Two guest cards across on desktop; selected profiles retain full width. */
+@media(min-width:1100px) {
+  body[data-waffle-page="directory"] #directoryTabPanel .directory-dashboard-fused:not(.is-profile-mode) :is(#directory-grid, #past-directory-grid) {
+    display:grid; grid-template-columns:repeat(2,minmax(0,1fr)) !important; align-items:start; gap:12px;
+  }
+  body[data-waffle-page="directory"] #directoryTabPanel .directory-dashboard-fused:not(.is-profile-mode) :is(#directory-grid, #past-directory-grid) > :not(.directory-card) { grid-column:1 / -1; }
+}
