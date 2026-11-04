@@ -2357,3 +2357,12 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active .v11112-car
     grid-column:2; grid-row:1; order:3; width:auto; justify-self:end;
   }
 }
+
+/* The detailed editor already supplies its own Edit control in Tools. */
+body[data-waffle-page="directory"] .directory-card.is-profile-active[data-care-profile-segment-active] [data-care-duplicate-edit] {
+  display:none !important;
+}
+
+body[data-waffle-page="directory"] #directoryTabPanel .directory-card.is-profile-active[data-care-profile-segment-active]:not([data-care-profile-segment-active="tools"]) :is(.directory-main-profile-panel, .v11160-desktop-tabs, .directory-main-profile-tabs, .v1115-profile-danger, .directory-care-danger-disclosure) {
+  display:none !important;
+}

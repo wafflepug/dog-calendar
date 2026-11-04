@@ -134,7 +134,7 @@
 
     if (requested === 'records' || requested === 'tools') {
       card.querySelectorAll(`[data-care-profile-segment="${requested}"]`).forEach(details => {
-        if (details.tagName === 'DETAILS' && !details.open) details.open = true;
+        if (details.tagName === 'DETAILS' && !details.matches('.directory-care-danger-disclosure') && !details.open) details.open = true;
       });
     }
   }
@@ -189,6 +189,13 @@
     mark(card.querySelector('[data-care-routine-log]'), 'activity');
 
     const assign = () => {
+      // Detailed editors and the older profile subnavigation belong to Tools,
+      // rather than repeating the overview underneath every primary section.
+      card.querySelectorAll('.v11160-desktop-tabs, .directory-main-profile-tabs, .directory-main-profile-panel, .v1115-profile-danger, .directory-care-danger-disclosure').forEach(node => mark(node, 'tools'));
+      const detailTabLabel = card.querySelector('.v11160-desktop-tabs [data-v11160-tab="profile"] span');
+      if (detailTabLabel && detailTabLabel.textContent !== 'Detailed care') detailTabLabel.textContent = 'Detailed care';
+      const duplicateEdit = card.querySelector('[data-care-brief-action="edit"]');
+      if (duplicateEdit) duplicateEdit.toggleAttribute('data-care-duplicate-edit', Boolean(card.querySelector('[data-toggle-profile-edit]')));
       const records = card.querySelector('.directory-care-records-disclosure');
       const readiness = card.querySelector('.directory-care-readiness, .directory-care-readiness-disclosure');
       mark(records, 'records');
@@ -225,7 +232,7 @@
       const shortcut = event.target.closest('[data-care-brief-action], [data-care-readiness-action]');
       const action = shortcut?.dataset.careReadinessAction || shortcut?.dataset.careBriefAction;
       if (action === 'intake') select(card, 'records');
-      else if (action === 'handover') select(card, 'tools');
+      else if (['handover','full-profile','edit','edit-routine','emergency-contact','feeding','medication','safety','belongings'].includes(action)) select(card, 'tools');
     }, true);
 
     nav.addEventListener('click', event => {
