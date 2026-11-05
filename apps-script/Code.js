@@ -3086,7 +3086,10 @@ var READ_ONLY_SHEET_ACTIONS_ = {
   get_legacy_intake_statuses: true,
   get_intake_prefill: true,
   get_belongings: true,
-  get_care_routine_log: true
+  get_care_routine_log: true,
+  get_sitter_planning: true,
+  get_sitter_handover: true,
+  get_sitter_day_handovers: true
 };
 
 
@@ -3521,6 +3524,10 @@ function processReadOnlySheetAction_(data) {
       }
     );
   }
+
+  if (action === "get_sitter_planning") return {result:"success",rules:sitterPlanningRules_()};
+  if (action === "get_sitter_day_handovers") return getSitterDayHandovers_();
+  if (action === "get_sitter_handover") return getSitterHandover_(data);
 
   if (action === "get_care_routine_log") {
     return getVersionedWaffleRead_("careRoutineLog", action, data, 20, function() {
@@ -3993,6 +4000,7 @@ function createV108IntakeBooking_(data, sheet) {
   if (!dogName || !validStableStayDateV11225_(startDate) || !validStableStayDateV11225_(endDate) || endDate < startDate) {
     throw new Error("A valid dog name and boarding date range are required.");
   }
+  sitterPlanningAssert_(rows,startDate,endDate,dogName,0);
   var dogId = String(data.dogId || "").trim();
   if (dogId) {
     resolveV108DogRows_(rows, {dogId:dogId}, "saving this booking");
@@ -4424,6 +4432,8 @@ function createV108Boarding_(data) {
   if (end < start) throw new Error("Check-Out cannot be earlier than Check-In.");
   var sheet=getTargetSheet_();
   var rows=sheet.getDataRange().getValues();
+  sitterPlanningAssert_(rows,start,end,dogName,0);
+  sitterHandoverValidate_(data,start,end);
   var selectedDogId=String(data.dogId||"").trim();
   var copyRequested=!!(data.inheritCareReview && data.inheritCareReview.confirmed === true);
   var photoRequested=data.inheritDogPhoto === true;
@@ -4455,6 +4465,7 @@ function createV108Boarding_(data) {
   var row=appended.row;
   var dogIdentity=assignV108DogIdentity_(sheet,row,dogId);
   var stayKey=makeGuestStayKey_(dogName,start,end);
+  if (data.dropoffTime || data.pickupTime) saveSitterHandover_({stayId:appended.stayId,dogId:dogIdentity.dogId,stayKey:stayKey,dropoffTime:data.dropoffTime,pickupTime:data.pickupTime,expectedRevision:""});
   var copied={copied:false};
   if (copyRequested) copied=applyReviewedCareInheritanceV11225_(data.inheritCareReview,dogId,dogName,stayKey,start,end,appended.stayId);
   var dogPhotoSync={applied:false,reason:photoRequested?"photo-sync-unavailable":"not-requested"};
@@ -4477,6 +4488,7 @@ function updateV108BoardingDates_(data) {
   if (row === -1) throw new Error("Confirmed boarding could not be found.");
   var before=auditBookingSnapshotFromSheetRow_(sheet,row), start=normalizeDateValue_(data.startDate), end=normalizeDateValue_(data.endDate||data.startDate);
   if (!start || !end || end < start) throw new Error("New boarding dates are invalid.");
+  sitterPlanningAssert_(rows,start,end,before.dogName,row);
   var stayId=ensureStableStayIdV11225_(sheet,row);
   before.stayId = stayId;
   rows = sheet.getDataRange().getValues();
@@ -4970,6 +4982,9 @@ function processSheetAction_(data) {
     if (data.action === "backfill_dog_ids") return backfillV108DogIds_();
     if (data.action === "link_stay_to_dog") return linkV108StayToDog_(data);
 
+    if (data.action === "save_sitter_planning") return saveSitterPlanningRules_(data);
+    if (data.action === "save_sitter_handover") return saveSitterHandover_(data);
+
     if (data.action === "record_care_routine_event") return recordCareRoutineEvent_(data);
 
     if (data.action === "checkin_stay") { result.record=setStayOperationalStatus_(data,"checked_in"); return result; }
@@ -5231,6 +5246,7 @@ function processSheetAction_(data) {
       confirmBefore.stayId = confirmStayId;
       rows = sheet.getDataRange().getValues();
 
+      sitterPlanningAssert_(rows,normalizeDateValue_(data.startDate),normalizeDateValue_(data.endDate || data.startDate),data.dogName,confirmRow);
       // Save any edits in the modal, then mark the SAME row confirmed.
       updateStableStayRowV11225_(sheet, confirmRow, {
         2: data.dogName || "", 3: data.breed || "", 4: data.startDate || "",

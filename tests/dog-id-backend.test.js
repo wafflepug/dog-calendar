@@ -92,6 +92,7 @@ function makeHarness(initialRows, priorProfiles = []) {
     console
   };
   vm.createContext(sandbox);
+  vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'apps-script', 'SitterPlanning.js'), 'utf8'), sandbox);
   const prefillStart = backend.indexOf('function getV108ReturningGuestPrefill_');
   vm.runInContext(`${backend.slice(backend.lastIndexOf('function phoneTextCell_'))}\n${stayIdentity}\n${careInheritance}\n${backend.slice(helperStart, helperEnd)}\n${backend.slice(prefillStart, copyEnd)}\n${backend.slice(createStart, createEnd)}\nthis.api = { resolve: resolveV108DogRows_, identityAt: v108DogIdentityAt_, create: createV108Boarding_, createIntake: createV108IntakeBooking_, prefill: getV108ReturningGuestPrefill_, backfill: backfillV108DogIds_, link: linkV108StayToDog_, linkable: listV108DogStaysForLinking_ };`, sandbox);
   return { api: sandbox.api, rows, writes, versionTouches, underActionLock(fn) { if (sandboxLockHeld) throw new Error('test action lock already held'); sandboxLockHeld=true; try { return fn(); } finally { sandboxLockHeld=false; } } };

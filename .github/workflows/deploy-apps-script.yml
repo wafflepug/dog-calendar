@@ -46,6 +46,8 @@ jobs:
         run: |
           set -euo pipefail
           node --check apps-script/Code.js
+          node --check apps-script/SitterPlanning.js
+          node --test tests/sitter-planning.test.js
           node --check apps-script/StayAdvancePush.js
           node --test tests/stay-advance-push.test.js tests/stay-advance-push-integration.test.js
           node --test tests/care-past-cache-contract.test.js tests/care-past-classification.test.js

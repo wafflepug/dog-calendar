@@ -197,6 +197,7 @@ function reserveStayMutationV11225_(receiptSheet, receipt, row, data) {
     };
     if (String(data.dogId || '').trim()) expectedCreate.dogId = String(data.dogId).trim();
     if (data.inheritDogPhoto === true) expectedCreate.inheritDogPhoto = true;
+    if (data.dropoffTime || data.pickupTime) {expectedCreate.dropoffTime=String(data.dropoffTime || '');expectedCreate.pickupTime=String(data.pickupTime || '');}
     if (data.inheritCareReview && data.inheritCareReview.confirmed === true) {
       expectedCreate.inheritCareReview = data.inheritCareReview;
     }
@@ -277,6 +278,7 @@ function recoverCreatedStayMutationV11225_(receiptSheet, receipt, bookingSheet) 
     applyReviewedCareInheritanceV11225_(expected.inheritCareReview, dog.dogId, expected.dogName,
       makeGuestStayKey_(expected.dogName, expected.startDate, expected.endDate), expected.startDate, expected.endDate, receipt.stayId);
   }
+  if (expected.dropoffTime || expected.pickupTime) saveSitterHandover_({stayId:receipt.stayId,dogId:dog.dogId,stayKey:makeGuestStayKey_(expected.dogName,expected.startDate,expected.endDate),dropoffTime:expected.dropoffTime,pickupTime:expected.pickupTime,expectedRevision:''});
   var dogPhotoSync = { applied:false, reason:expected.inheritDogPhoto ? 'photo-sync-unavailable' : 'not-requested' };
   if (expected.inheritDogPhoto === true && typeof seedDogStayPhotoForConfirmedBookingV11208_ === 'function') {
     dogPhotoSync = seedDogStayPhotoForConfirmedBookingV11208_({

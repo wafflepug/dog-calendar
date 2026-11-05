@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.11.05.08",
-  "releaseName": "Consistent owner call CTA",
+  "assetRevision": "2026.11.06.01",
+  "releaseName": "Sitter availability, handovers and owner updates",
   "careIteration": {
     "returningDogSuggestions": true,
     "reviewedCareInheritance": true,
