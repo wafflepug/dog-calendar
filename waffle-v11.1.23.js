@@ -220,12 +220,12 @@
   }
 
   function syncPwaMetadata() {
-    const revision = window.WAFFLE_ASSET_REVISION || '2026.11.06.04';
+    const revision = window.WAFFLE_ASSET_REVISION || '2026.11.06.05';
     const manifest = document.querySelector('link[rel="manifest"]');
     if (manifest) manifest.href = `manifest.webmanifest?v=${revision}`;
 
     document.querySelectorAll('link[rel~="icon"]').forEach(link => {
-      link.href = `pwa-icon-192.png?v=${revision}`;
+      link.href = `palz-favicon.png?v=${revision}`;
     });
 
     document.querySelectorAll('link[rel="apple-touch-icon"]').forEach(link => {
