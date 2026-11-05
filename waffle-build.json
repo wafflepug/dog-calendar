@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.11.05.04",
-  "releaseName": "Navigation accent consistency",
+  "assetRevision": "2026.11.05.05",
+  "releaseName": "Palz Stay animated loading",
   "careIteration": {
     "returningDogSuggestions": true,
     "reviewedCareInheritance": true,
