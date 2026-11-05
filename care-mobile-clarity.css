@@ -2423,14 +2423,16 @@ body[data-waffle-page="directory"] .directory-card:not(.is-profile-active) .dire
 .care-roster-photo-panel button[hidden], .care-roster-photo-panel p:empty { display:none; }
 .care-roster-photo-options:has(> summary:focus-visible) { outline:3px solid var(--wh-accent,#7c3aed); outline-offset:3px; border-radius:9px; }
 
-/* Direct owner calling: keep the name and number readable without a disclosure. */
-body[data-waffle-page="directory"] .directory-card .v11217-roster-actions > .care-roster-direct-call {
-  display:flex; flex-direction:column; align-items:flex-start; justify-content:center; gap:3px;
-  flex:1 1 100%; min-width:0; min-height:52px; padding:9px 12px; box-sizing:border-box;
-  border:1px solid var(--wh-border,#d5dee9); border-radius:10px; background:var(--wh-surface,#fff);
-  color:var(--wh75-accent-strong,#6d28d9); text-decoration:none; font-size:14px; line-height:1.4;
+/* Owner calling uses the same compact secondary CTA rhythm as Early Checkout. */
+body[data-waffle-page="directory"] #directoryTabPanel .directory-card .v11217-roster-actions > .care-roster-contact {
+  display:flex; flex-direction:column; align-items:flex-start; align-self:flex-start; gap:5px; flex:0 1 auto; min-width:0; max-width:100%;
 }
-.care-roster-direct-call > span { color:var(--wh-text,#17243b); font-size:13px; font-weight:600; overflow-wrap:anywhere; font-variant-numeric:tabular-nums; }
+body[data-waffle-page="directory"] #directoryTabPanel .directory-card .v11217-roster-actions :is(.care-roster-direct-call,.v11217-early-checkout-button) {
+  display:inline-flex; align-items:center; justify-content:center; gap:6px; min-height:44px; box-sizing:border-box; padding:9px 12px;
+  border:1px solid var(--wh-border,#d5dee9); border-radius:10px; background:var(--wh-surface-soft,#f8fafc);
+  color:var(--wh-text,#17243b); font:inherit; font-size:12px; font-weight:850; line-height:1.25; text-decoration:none;
+}
+.care-roster-contact-detail { color:var(--wh-text-muted,#526174); font-size:12px; font-weight:600; line-height:1.4; overflow-wrap:anywhere; font-variant-numeric:tabular-nums; }
 .care-roster-direct-call:focus-visible { outline:3px solid var(--wh75-accent,#7c3aed); outline-offset:2px; }
 /* Status is a single centred label, including when it wraps on narrow screens. */
 body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-status-tag {
