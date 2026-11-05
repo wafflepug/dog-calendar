@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.11.05.06",
-  "releaseName": "Direct owner calls and centred status",
+  "assetRevision": "2026.11.05.07",
+  "releaseName": "Equal guest cards and readable calendar",
   "careIteration": {
     "returningDogSuggestions": true,
     "reviewedCareInheritance": true,

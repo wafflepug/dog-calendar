@@ -2405,7 +2405,7 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-
 /* Two guest cards across on desktop; selected profiles retain full width. */
 @media(min-width:1100px) {
   body[data-waffle-page="directory"] #directoryTabPanel .directory-dashboard-fused:not(.is-profile-mode) :is(#directory-grid, #past-directory-grid) {
-    display:grid; grid-template-columns:repeat(2,minmax(0,1fr)) !important; align-items:start; gap:12px;
+    display:grid; grid-template-columns:repeat(2,minmax(0,1fr)) !important; align-items:stretch; gap:12px;
   }
   body[data-waffle-page="directory"] #directoryTabPanel .directory-dashboard-fused:not(.is-profile-mode) :is(#directory-grid, #past-directory-grid) > :not(.directory-card) { grid-column:1 / -1; }
 }
@@ -2437,4 +2437,10 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-
   display:inline-flex !important; align-items:center !important; justify-content:center !important;
   text-align:center !important; line-height:1.2 !important; min-height:32px; padding:6px 10px !important;
   box-sizing:border-box; margin-top:0 !important; margin-bottom:0 !important;
+}
+
+@media(min-width:1100px) {
+  body[data-waffle-page="directory"] #directoryTabPanel .directory-dashboard-fused:not(.is-profile-mode) :is(#directory-grid, #past-directory-grid) > .directory-card {
+    align-self:stretch !important; justify-self:stretch; width:100%; min-width:0; height:auto !important; box-sizing:border-box;
+  }
 }
