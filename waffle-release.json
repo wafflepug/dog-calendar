@@ -1,6 +1,6 @@
 {
   "release": "phase3d-2026.08.28.01",
-  "currentRelease": "2026.11.06.04",
+  "currentRelease": "2026.11.06.05",
   "currentReleaseName": "Guest checkout estimates and mobile calendar readability",
   "currentImprovements": ["Editable checkout estimate on checked-in guest cards", "Early Checkout requires a recorded check-in", "Larger mobile calendar legend"],
   "latestMergedSha": "41c7d27",
