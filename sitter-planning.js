@@ -36,13 +36,120 @@
       edit.onclick=async()=>{if(saving)return;edit.disabled=true;status.textContent='Loading saved times...';try{if(!await load())return;for(const n of ['dropoffTime','pickupTime'])form.elements[n].value=record.times[n] || '';form.hidden=false;status.textContent='';form.elements.dropoffTime.focus();}catch(e){if(current(card,id))status.textContent=e.message;}finally{edit.disabled=false;}};
       void load().catch(()=>{if(current(card,id))section.querySelector('[data-sitter-times-summary]').textContent='Handover times unavailable - select Set times to retry';});
       section.querySelector('[data-sitter-times-cancel]').onclick=()=>{if(!saving){form.hidden=true;status.textContent='';edit.focus();}};
-      form.onsubmit=async e=>{e.preventDefault();if(saving || !record || !current(card,id))return;saving=true;const times={dropoffTime:form.elements.dropoffTime.value,pickupTime:form.elements.pickupTime.value};form.querySelectorAll('button,input').forEach(n=>n.disabled=true);status.textContent='Saving…';try{const r=await write({action:'save_sitter_handover',...id,...times,expectedRevision:record.revision});if(!current(card,id))return;if(r.record.stayId!==id.stayId || r.record.dogId!==id.dogId || r.record.times.dropoffTime!==times.dropoffTime || r.record.times.pickupTime!==times.pickupTime)throw Error('Save confirmation did not match this stay. Reload to check.');record=r.record;show();form.hidden=true;status.textContent='Handover times saved.';}catch(e){if(current(card,id))status.textContent=e.message;}finally{saving=false;form.querySelectorAll('button,input').forEach(n=>n.disabled=false);}};
+      form.onsubmit=async e=>{e.preventDefault();if(saving || !record || !current(card,id))return;saving=true;const times={dropoffTime:form.elements.dropoffTime.value,pickupTime:form.elements.pickupTime.value};form.querySelectorAll('button,input').forEach(n=>n.disabled=true);status.textContent='Saving…';try{const r=await write({action:'save_sitter_handover',...id,...times,expectedRevision:record.revision});if(!current(card,id))return;if(r.record.stayId!==id.stayId || r.record.dogId!==id.dogId || r.record.times.dropoffTime!==times.dropoffTime || r.record.times.pickupTime!==times.pickupTime)throw Error('Save confirmation did not match this stay. Reload to check.');record=r.record;pickupTimes.set(key(id), record.times.pickupTime);show();form.hidden=true;status.textContent='Handover times saved.';}catch(e){if(current(card,id))status.textContent=e.message;}finally{saving=false;form.querySelectorAll('button,input').forEach(n=>n.disabled=false);}};
     }
     const oldComposer=card.querySelector('.sitter-compose');if(oldComposer && oldComposer.dataset.identity!==key(id))oldComposer.remove();
     if(!card.querySelector('[data-sitter-compose]')){const host=document.createElement('div');host.className='sitter-planning sitter-compose';host.dataset.identity=key(id);host.dataset.careProfileSegment='activity';const button=document.createElement('button');button.type='button';button.dataset.sitterCompose='';button.textContent='Prepare owner update';button.onclick=()=>{if(!current(card,id))return;const trigger=card.querySelector('[data-owner-care-sharing-options]');if(!trigger)return;trigger.click();const purpose=$('#p4OwnerPurpose');if(purpose){purpose.value='update';purpose.dispatchEvent(new Event('change',{bubbles:true}));const template=$('#p4OwnerUpdateTemplate');template.value='daily';template.dispatchEvent(new Event('change',{bubbles:true}));$('#p4OwnerUpdatePreview')?.focus();}};host.append(button);brief.append(host);}
   }
+  const pickupTimes = new Map();
+  let requestedRosterPickups = false;
+
+  function refreshCheckoutButtons() {
+    const buttons = document.querySelectorAll('[data-roster-checkout-estimate]');
+    if (buttons.length && !requestedRosterPickups) {
+      requestedRosterPickups = true;
+      read({action:'get_sitter_roster_pickups'}).then(result => {
+        for (const entry of result.pickups) {
+          const stay = key(entry);
+          if (!pickupTimes.has(stay)) pickupTimes.set(stay, entry.time);
+        }
+        refreshCheckoutButtons();
+      }).catch(() => {});
+    }
+    for (const button of buttons) {
+      const card = button.closest('.directory-card');
+      const time = pickupTimes.get(key(idFor(card)));
+      const label = time ? 'Checkout: ' + time : 'Set checkout time';
+      if (button.textContent !== label) button.textContent = label;
+    }
+  }
+
+  async function editCheckoutTime(button) {
+    if (document.querySelector('[data-roster-checkout-dialog]')) return;
+    const card = button.closest('.directory-card');
+    const identity = idFor(card);
+    const isCurrent = () => button.isConnected && key(idFor(card)) === key(identity);
+    const editor = document.createElement('dialog');
+    editor.className = 'sitter-planning sitter-planning-dialog';
+    editor.dataset.rosterCheckoutDialog = '';
+    editor.setAttribute('aria-labelledby', 'rosterCheckoutTitle');
+    editor.innerHTML = `<h3 id="rosterCheckoutTitle">Estimated checkout time</h3>
+      <p data-checkout-dog></p><form>
+        <label>Pickup time<input type="time" name="pickupTime" disabled></label>
+        <p>Use local time on the scheduled checkout day. Leave blank to clear the estimate.</p>
+        <div class="sitter-planning-actions"><button type="submit" disabled>Save time</button><button type="button">Cancel</button></div>
+        <p role="status"></p>
+      </form>`;
+    editor.querySelector('[data-checkout-dog]').textContent = card.dataset.directoryDogName || 'Guest';
+    const form = editor.querySelector('form');
+    const input = form.elements.pickupTime;
+    const save = form.querySelector('[type=submit]');
+    const cancel = form.querySelector('[type=button]');
+    const status = form.querySelector('[role=status]');
+    let record;
+    let saving = false;
+    cancel.onclick = () => editor.close();
+    editor.addEventListener('cancel', event => { if (saving) event.preventDefault(); });
+    editor.addEventListener('close', () => {
+      editor.remove();
+      if (isCurrent()) button.focus();
+    });
+    document.body.append(editor);
+    editor.showModal();
+    status.textContent = 'Loading saved time...';
+    try {
+      const result = await read({action:'get_sitter_handover', ...identity});
+      if (!editor.open) return;
+      if (!isCurrent() || result.record.stayId !== identity.stayId || result.record.dogId !== identity.dogId) {
+        throw Error('This stay changed. Close this window and try again.');
+      }
+      record = result.record;
+      input.value = record.times.pickupTime || '';
+      pickupTimes.set(key(identity), input.value);
+      refreshCheckoutButtons();
+      input.disabled = save.disabled = false;
+      input.focus();
+      status.textContent = '';
+    } catch (error) {
+      status.textContent = error.message;
+    }
+    form.onsubmit = async event => {
+      event.preventDefault();
+      if (!record || saving) return;
+      if (!isCurrent()) {
+        status.textContent = 'This stay changed. Close this window and try again.';
+        return;
+      }
+      saving = true;
+      const time = input.value;
+      input.disabled = save.disabled = cancel.disabled = true;
+      status.textContent = 'Saving...';
+      try {
+        const result = await write({action:'save_sitter_handover', ...identity,
+          dropoffTime:record.times.dropoffTime, pickupTime:time, expectedRevision:record.revision});
+        const saved = result.record;
+        if (saved.stayId !== identity.stayId || saved.dogId !== identity.dogId || saved.times.pickupTime !== time) {
+          throw Error('Save confirmation did not match this stay. Reopen to check.');
+        }
+        pickupTimes.set(key(identity), time);
+        refreshCheckoutButtons();
+        editor.close();
+      } catch (error) {
+        status.textContent = error.message;
+      } finally {
+        saving = false;
+        input.disabled = save.disabled = cancel.disabled = false;
+      }
+    };
+  }
+
+  document.addEventListener('click', event => {
+    const button = event.target.closest('[data-roster-checkout-estimate]');
+    if (button) void editCheckoutTime(button);
+  });
+
   function mountToday(){const agenda=$('#v10TodayAgenda');if(!agenda || agenda.querySelector('[data-sitter-day-handovers]'))return;const host=document.createElement('section');host.className='sitter-planning';host.dataset.sitterDayHandovers='';host.innerHTML='<button type="button" aria-expanded="false">Handover times</button><div hidden><p>Scheduled today, in local sitter time.</p><div data-sitter-day-list></div><p role="status"></p></div>';agenda.prepend(host);const button=host.querySelector('button'),panel=host.querySelector('div'),status=host.querySelector('[role=status]');let loading=false;button.onclick=async()=>{if(loading)return;if(!panel.hidden){panel.hidden=true;button.setAttribute('aria-expanded','false');return;}panel.hidden=false;button.setAttribute('aria-expanded','true');loading=true;status.textContent='Loading scheduled times...';try{const r=await read({action:'get_sitter_day_handovers'});if(!host.isConnected)return;host.querySelector('[data-sitter-day-list]').innerHTML=r.entries.length?r.entries.map(x=>`<p><strong>${esc(x.time || 'Time not confirmed')}</strong> - ${esc(x.type)} - ${esc(x.dogName)}</p>`).join(''):'No arrivals or pickups scheduled today.';status.textContent='';}catch(e){status.textContent=e.message;}finally{loading=false;}};}
-  function scan(){mountToday();const panel=$('#wh75SettingsPanel');if(panel && !panel.querySelector('[data-sitter-planning-settings]')){const section=document.createElement('section');section.className='wh75-settings-section sitter-planning';section.innerHTML='<h3>Availability</h3><button type="button" data-sitter-planning-settings>Availability & handover windows</button>';section.querySelector('button').onclick=openSettings;panel.append(section);}document.querySelectorAll('.directory-card.is-profile-active').forEach(mountCard);}
+  function scan(){refreshCheckoutButtons();mountToday();const panel=$('#wh75SettingsPanel');if(panel && !panel.querySelector('[data-sitter-planning-settings]')){const section=document.createElement('section');section.className='wh75-settings-section sitter-planning';section.innerHTML='<h3>Availability</h3><button type="button" data-sitter-planning-settings>Availability & handover windows</button>';section.querySelector('button').onclick=openSettings;panel.append(section);}document.querySelectorAll('.directory-card.is-profile-active').forEach(mountCard);}
   let queued=false;new MutationObserver(()=>{if(!queued){queued=true;requestAnimationFrame(()=>{queued=false;scan();});}}).observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['class','data-directory-stay-id','data-directory-dog-id','data-directory-stay-key']});scan();
   window.PALZ_SITTER_PLANNING=Object.freeze({openSettings});
 })();
