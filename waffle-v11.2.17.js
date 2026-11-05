@@ -362,18 +362,10 @@
     const earlyButtonMarkup = early ? '<button type="button" class="v11217-early-checkout-button" data-v11217-early-checkout>⏱️ Early Checkout</button>' : '';
     const hasPrimaryStayAction = canCheckIn || canCheckout;
     const secondaryActions = `${early && hasPrimaryStayAction ? earlyButtonMarkup : ''}`;
-    const ownerCall = ownerTel ? `<a data-v11217-roster-owner-call href="tel:${esc(ownerTel)}" aria-label="Call ${esc(p.ownerName || 'owner')} about ${esc(p.dogName || 'this dog')}${card.dataset.directoryDogNumber ? `, Dog ID ${esc(card.dataset.directoryDogNumber)}` : ''} · ${esc(window.formatWaffleContactPhone ? window.formatWaffleContactPhone(p.phone) : String(p.phone || '').trim())}">Call owner · ${esc(window.formatWaffleContactPhone ? window.formatWaffleContactPhone(p.phone) : String(p.phone || '').trim())}</a>` : '';
-    const moreActions = secondaryActions || ownerCall
-      ? `<details class="v11217-roster-more-actions"><summary>More actions</summary>${secondaryActions}${ownerCall}</details>`
-      : '';
+    const contactNumber = window.formatWaffleContactPhone ? window.formatWaffleContactPhone(p.phone) : String(p.phone || '').trim();
+    const ownerCall = ownerTel ? `<a class="care-roster-direct-call" data-v11217-roster-owner-call href="tel:${esc(ownerTel)}" aria-label="Call ${esc(p.ownerName || 'owner')} about ${esc(p.dogName || 'this dog')} · ${esc(contactNumber)}"><strong>Call Owner</strong><span>${esc(p.ownerName || 'Owner')} · ${esc(contactNumber)}</span></a>` : '';
     const primaryAction = `${checkInMarkup}${canCheckout ? checkOutMarkup : ''}${early && !hasPrimaryStayAction ? earlyButtonMarkup : ''}`;
-    actions.innerHTML = `${primaryAction}${moreActions}`;
-    if (!actions.dataset.summaryPropagationGuard) {
-      actions.dataset.summaryPropagationGuard = 'true';
-      actions.addEventListener('click', event => {
-        if (event.target?.closest?.('.v11217-roster-more-actions > summary')) event.stopPropagation();
-      });
-    }
+    actions.innerHTML = `${primaryAction}${secondaryActions}${ownerCall}`;
     const earlyButton = actions.querySelector('[data-v11217-early-checkout]');
     if (earlyButton) earlyButton.setAttribute('aria-label', accessibleStayActionLabel('Record early checkout for', card, p));
     const ownerLink = actions.querySelector('[data-v11217-roster-owner-call]');
