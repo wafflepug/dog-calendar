@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.11.05.07",
-  "releaseName": "Equal guest cards and readable calendar",
+  "assetRevision": "2026.11.05.08",
+  "releaseName": "Consistent owner call CTA",
   "careIteration": {
     "returningDogSuggestions": true,
     "reviewedCareInheritance": true,

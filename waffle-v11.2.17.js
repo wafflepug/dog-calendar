@@ -363,7 +363,7 @@
     const hasPrimaryStayAction = canCheckIn || canCheckout;
     const secondaryActions = `${early && hasPrimaryStayAction ? earlyButtonMarkup : ''}`;
     const contactNumber = window.formatWaffleContactPhone ? window.formatWaffleContactPhone(p.phone) : String(p.phone || '').trim();
-    const ownerCall = ownerTel ? `<a class="care-roster-direct-call" data-v11217-roster-owner-call href="tel:${esc(ownerTel)}" aria-label="Call ${esc(p.ownerName || 'owner')} about ${esc(p.dogName || 'this dog')} · ${esc(contactNumber)}"><strong>Call Owner</strong><span>${esc(p.ownerName || 'Owner')} · ${esc(contactNumber)}</span></a>` : '';
+    const ownerCall = ownerTel ? `<div class="care-roster-contact"><a class="care-roster-direct-call" data-v11217-roster-owner-call href="tel:${esc(ownerTel)}" aria-label="Call ${esc(p.ownerName || 'owner')} about ${esc(p.dogName || 'this dog')} · ${esc(contactNumber)}"><span>Call Owner</span></a><span class="care-roster-contact-detail">${esc(p.ownerName || 'Owner')} · ${esc(contactNumber)}</span></div>` : '';
     const primaryAction = `${checkInMarkup}${canCheckout ? checkOutMarkup : ''}${early && !hasPrimaryStayAction ? earlyButtonMarkup : ''}`;
     actions.innerHTML = `${primaryAction}${secondaryActions}${ownerCall}`;
     const earlyButton = actions.querySelector('[data-v11217-early-checkout]');
