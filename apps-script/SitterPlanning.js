@@ -92,3 +92,22 @@ function getSitterDayHandovers_() {
   entries.sort(function(a,b){return (a.time || '99:99').localeCompare(b.time || '99:99') || a.dogName.localeCompare(b.dogName);});
   return {result:'success',date:today,entries:entries};
 }
+
+function getSitterRosterPickups_() {
+  var sheet = sitterHandoverSheet_(false);
+  if (!sheet || sheet.getLastRow() < 2) return {result:'success', pickups:[]};
+  var today = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd');
+  var index = stayOperationBookingIndexV11226_();
+  var counts = Object.create(null);
+  var pickups = [];
+  sheet.getRange(2, 1, sheet.getLastRow()-1, 3).getValues().forEach(function(row) {
+    var stayId = String(row[0]).toLowerCase(), dogId = String(row[1]);
+    var booking = index.byId[stayId];
+    counts[stayId] = (counts[stayId] || 0) + 1;
+    if (!booking || index.idCounts[stayId] !== 1 || booking.dogId !== dogId ||
+        booking.startDate > today || booking.endDate < today) return;
+    var entry = {stayId:stayId, dogId:dogId, stayKey:booking.stayKey, time:JSON.parse(String(row[2])).pickupTime};
+    pickups.push(entry);
+  });
+  return {result:'success', pickups:pickups.filter(function(entry) { return entry.time && counts[entry.stayId] === 1; })};
+}

@@ -320,7 +320,8 @@
         .wh65-title { font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px; }
         .wh69-view-switch { padding:1px; }
         .wh69-view-btn { min-height:23px;padding:0 7px;font-size:7px; }
-        .wh65-legend { padding:7px 9px;gap:8px;font-size:7px; }
+        .wh65-legend { padding:10px 12px;gap:8px 14px;font-size:14px;line-height:1.4;color:var(--wh65-text); }
+        .wh65-legend-item { white-space:nowrap; }
         .wh65-weekdays span { padding:8px 2px;font-size:7px; }
         .wh65-date { min-height:27px;padding:4px;gap:4px; }
         .wh65-date-number { font-size:8px; }

@@ -192,7 +192,7 @@
     const state = typeof window.v110OperationDisplayState === 'function'
       ? window.v110OperationDisplayState(card)
       : null;
-    return state?.code === 'date_active';
+    return state?.code === 'checked_in';
   }
 
   function decorateEarlyAction(card) {
@@ -340,12 +340,13 @@
     const colliding = state?.code === 'collision';
     const checkedOut = operation?.status === 'checked_out' || state?.code === 'checked_out';
     const checkedIn = operation?.status === 'checked_in' || state?.code === 'checked_in';
+    const canSetEstimate = isStaying && checkedIn && !checkedOut && !colliding && p.stayId && p.stayKey && p.dogId;
     const early = isStaying && !checkedOut && !colliding && earlyCheckoutEligible(card);
     const canCheckIn = !checkedOut && !checkedIn && !colliding && state?.code === 'date_active';
     const canCheckout = !checkedOut && !colliding && !early &&
       (checkedIn || state?.code === 'date_active') && p.endDate <= today;
-    const signature = JSON.stringify([p.stayId, p.stayKey, p.dogId, p.dogName, p.ownerName, p.phone, p.startDate, p.endDate, card.dataset.directoryDogNumber, canCheckIn, canCheckout, early, state?.code]);
-    if (!canCheckIn && !canCheckout && !early && !ownerTel) {
+    const signature = JSON.stringify([p.stayId, p.stayKey, p.dogId, p.dogName, p.ownerName, p.phone, p.startDate, p.endDate, card.dataset.directoryDogNumber, canCheckIn, canCheckout, early, canSetEstimate, state?.code]);
+    if (!canCheckIn && !canCheckout && !early && !ownerTel && !canSetEstimate) {
       actions?.remove();
       return;
     }
@@ -365,7 +366,9 @@
     const contactNumber = window.formatWaffleContactPhone ? window.formatWaffleContactPhone(p.phone) : String(p.phone || '').trim();
     const ownerCall = ownerTel ? `<div class="care-roster-contact"><a class="care-roster-direct-call" data-v11217-roster-owner-call href="tel:${esc(ownerTel)}" aria-label="Call ${esc(p.ownerName || 'owner')} about ${esc(p.dogName || 'this dog')} · ${esc(contactNumber)}"><span>Call Owner</span></a><span class="care-roster-contact-detail">${esc(p.ownerName || 'Owner')} · ${esc(contactNumber)}</span></div>` : '';
     const primaryAction = `${checkInMarkup}${canCheckout ? checkOutMarkup : ''}${early && !hasPrimaryStayAction ? earlyButtonMarkup : ''}`;
-    actions.innerHTML = `${primaryAction}${secondaryActions}${ownerCall}`;
+    const estimate = canSetEstimate ? '<button type="button" class="care-roster-checkout-estimate" data-roster-checkout-estimate>Set checkout time</button>' : '';
+    const contactActions = estimate ? `<div class="care-roster-handover-actions">${ownerCall}${estimate}</div>` : ownerCall;
+    actions.innerHTML = `${primaryAction}${secondaryActions}${contactActions}`;
     const earlyButton = actions.querySelector('[data-v11217-early-checkout]');
     if (earlyButton) earlyButton.setAttribute('aria-label', accessibleStayActionLabel('Record early checkout for', card, p));
     const ownerLink = actions.querySelector('[data-v11217-roster-owner-call]');

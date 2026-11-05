@@ -3089,6 +3089,7 @@ var READ_ONLY_SHEET_ACTIONS_ = {
   get_care_routine_log: true,
   get_sitter_planning: true,
   get_sitter_handover: true,
+  get_sitter_roster_pickups: true,
   get_sitter_day_handovers: true
 };
 
@@ -3527,6 +3528,7 @@ function processReadOnlySheetAction_(data) {
 
   if (action === "get_sitter_planning") return {result:"success",rules:sitterPlanningRules_()};
   if (action === "get_sitter_day_handovers") return getSitterDayHandovers_();
+  if (action === "get_sitter_roster_pickups") return getSitterRosterPickups_();
   if (action === "get_sitter_handover") return getSitterHandover_(data);
 
   if (action === "get_care_routine_log") {
