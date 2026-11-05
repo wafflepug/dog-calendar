@@ -100,3 +100,27 @@
     align-self:start;
   }
 }
+
+/* Desktop calendar typography scales with its rows, not over the event bars. */
+@media(min-width:821px) {
+  body[data-waffle-page="calendar"] #wh65Calendar { container-type:inline-size; }
+  body[data-waffle-page="calendar"] #wh65Calendar .wh65-btn { font-size:13px; min-height:40px; height:auto; padding:8px 11px; line-height:1.25; }
+  body[data-waffle-page="calendar"] #wh65Calendar .wh69-view-btn { font-size:12px; min-height:32px; padding:5px 10px; }
+  body[data-waffle-page="calendar"] #wh65Calendar .wh65-legend { font-size:12px; line-height:1.4; gap:8px 14px; }
+  body[data-waffle-page="calendar"] #wh65Calendar .wh65-weekdays span { font-size:12px; line-height:1.4; }
+  body[data-waffle-page="calendar"] #wh65Calendar .wh65-date-number { font-size:16px !important; }
+  body[data-waffle-page="calendar"] #wh65Calendar .wh65-timeline { grid-auto-rows:34px; }
+  body[data-waffle-page="calendar"] #wh65Calendar .wh65-bar { font-size:13px; height:30px; line-height:1.2; box-sizing:border-box; }
+  body[data-waffle-page="calendar"] #wh65Calendar .wh65-marker { font-size:11px; width:19px; height:19px; }
+  body[data-waffle-page="calendar"] #wh65Calendar .wh65-bar-label { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  body[data-waffle-page="calendar"] #wh65Calendar .wh65-meet { font-size:12px; min-height:40px; line-height:1.3; }
+  body[data-waffle-page="calendar"] #wh65Calendar .wh65-meet-copy { min-width:0; overflow:hidden; }
+  body[data-waffle-page="calendar"] #wh65Calendar .wh65-toolbar-left,
+  body[data-waffle-page="calendar"] #wh65Calendar .wh65-toolbar-right { flex-wrap:wrap; }
+  @container(max-width:620px) {
+    body[data-waffle-page="calendar"] #wh65Calendar .wh65-toolbar { grid-template-columns:minmax(0,1fr) auto; gap:10px; }
+    body[data-waffle-page="calendar"] #wh65Calendar .wh65-toolbar-left { order:0; }
+    body[data-waffle-page="calendar"] #wh65Calendar .wh65-toolbar-right { order:1; justify-self:end; }
+    body[data-waffle-page="calendar"] #wh65Calendar .wh69-title-wrap { order:2; grid-column:1 / -1; width:100%; }
+  }
+}
