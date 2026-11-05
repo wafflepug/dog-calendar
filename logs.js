@@ -29,7 +29,7 @@
   function apply() {
     canonicaliseNavigation();
     if (pageName() !== 'audit') return;
-    document.title = 'Waffle House — Logs';
+    document.title = 'Palz Stay — Logs';
     document.body.dataset.waffleCanonicalLogs = BUILD;
     const heading = document.querySelector('#auditTabPanel h1, #auditTabPanel h2, .audit-header h1, .audit-header h2');
     if (heading && /audit/i.test(String(heading.textContent || ''))) heading.textContent = 'Logs';

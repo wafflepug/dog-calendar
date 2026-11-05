@@ -19,7 +19,7 @@
     if (pageName() !== 'reminders') return;
 
     document.body.dataset.waffleSection = 'organiser';
-    document.title = 'Waffle House — Organiser';
+    document.title = 'Palz Stay — Organiser';
 
     const legacyHeading = document.querySelector('#remindersTabPanel .reminders-header h3');
     if (legacyHeading && /reminders?\s*&?\s*notes?/i.test(String(legacyHeading.textContent || ''))) {
@@ -220,15 +220,16 @@
   }
 
   function syncPwaMetadata() {
+    const revision = window.WAFFLE_ASSET_REVISION || '2026.11.06.02';
     const manifest = document.querySelector('link[rel="manifest"]');
-    if (manifest) manifest.href = `manifest.webmanifest?v=${BRAND_VERSION}`;
+    if (manifest) manifest.href = `manifest.webmanifest?v=${revision}`;
 
     document.querySelectorAll('link[rel~="icon"]').forEach(link => {
-      link.href = `pwa-icon-192.png?v=${BRAND_VERSION}`;
+      link.href = `pwa-icon-192.png?v=${revision}`;
     });
 
     document.querySelectorAll('link[rel="apple-touch-icon"]').forEach(link => {
-      link.href = `pwa-apple-touch-icon.png?v=${BRAND_VERSION}`;
+      link.href = `pwa-apple-touch-icon.png?v=${revision}`;
     });
   }
 
