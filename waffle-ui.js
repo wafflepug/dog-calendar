@@ -271,6 +271,8 @@
       const arrivals = upcomingEvents(today);
       const arrivingKeys = new Set(arrivals.map(v110StayKeyForEvent));
       const current = v111CurrentDogEvents().filter(event => isBoarding(event) && !arrivingKeys.has(v110StayKeyForEvent(event)));
+      current.sort((a, b) => (v10EventRawDates(a).end || '9999-12-31').localeCompare(
+        v10EventRawDates(b).end || '9999-12-31'));
       let hasData = current.length + arrivals.length > 0;
       try { hasData ||= localStorage.getItem('boardingDataCache') !== null; } catch (_) {}
       scheduleHasData = hasData;
