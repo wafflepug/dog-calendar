@@ -47,7 +47,7 @@ function harness(bookings, operations) {
     console, processSheetAction_() {}, WAFFLE_V11225_RECEIPT_LOCK_HELD_: false, isReadOnlySheetAction_() { return false; }, getStayOperationsHeaders_() { return headers.slice(0, 15); },
     SpreadsheetApp: { flush() {} },
     getStayOperationsSheet_() { return ops; }, getTargetSheet_() { return bookingSheet; },
-    PropertiesService: { getScriptProperties() { return { getProperty() { return 'Stay_Operations'; } }; } },
+    PropertiesService: { getScriptProperties() { return { getProperty(key) { return key === 'PALZ_SITTER_PLANNING_V1' ? null : 'Stay_Operations'; } }; } },
     LockService: { getScriptLock() { return { tryLock() { tries++; if (held) return false; held = true; return true; }, releaseLock() { held = false; } }; } },
     Utilities: { formatDate() { return '2026-10-05'; }, getUuid() { return '00000000-0000-4000-8000-0000000000c3'; } }, Session: { getScriptTimeZone() { return 'Australia/Sydney'; } },
     normalizeDateValue_(v) { if (v instanceof Date) return v.toISOString().slice(0, 10); return String(v || '').slice(0, 10); },
@@ -63,6 +63,7 @@ function harness(bookings, operations) {
     _held(value) { held = value; }, _tries() { return tries; }, _bookings: bookingSheet, _ops: ops
   };
   vm.createContext(sandbox);
+  vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'apps-script', 'SitterPlanning.js'), 'utf8'), sandbox);
   vm.runInContext(stayIdentity, sandbox);
   vm.runInContext(code.slice(coreStart, coreEnd), sandbox);
   vm.runInContext(code.slice(dateStart, dateEnd), sandbox);

@@ -176,6 +176,7 @@ function makeHarness(options = {}) {
       throw new Error(`Unexpected fixture action ${data.action}`);
     };
   vm.createContext(sandbox);
+  vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'apps-script', 'SitterPlanning.js'), 'utf8'), sandbox);
   const loaded = `${helperSource}\n${code.slice(wrapperStart, wrapperEnd)}\n${code.slice(createStart, createEnd)}\n${code.slice(updateLookupStart, updateLookupEnd)}\n${code.slice(updateStart, updateEnd)}\n` +
     (options.actualCore ? `${code.slice(coreStart, coreEnd)}\n${deleteSource}\n` : '') +
   `${code.slice(inheritanceStart, createStart)}\n${code.slice(currentReadStart, currentReadEnd)}\n${code.slice(potentialReadStart, potentialReadEnd)}\n` +
