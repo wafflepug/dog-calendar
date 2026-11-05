@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.11.06.01",
-  "releaseName": "Sitter availability, handovers and owner updates",
+  "assetRevision": "2026.11.06.02",
+  "releaseName": "Palz Stay app name and icon",
   "careIteration": {
     "returningDogSuggestions": true,
     "reviewedCareInheritance": true,
