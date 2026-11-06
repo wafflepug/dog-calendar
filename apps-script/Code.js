@@ -3530,7 +3530,7 @@ function processReadOnlySheetAction_(data) {
     );
   }
 
-  if (action === "get_business_name") return {result:"success",name:readPalzBusinessName_()};
+  if (action === "get_business_name") return Object.assign({result:"success"},readPalzBusinessBrand_());
   if (action === "get_sitter_planning") return {result:"success",rules:sitterPlanningRules_()};
   if (action === "get_sitter_day_handovers") return getSitterDayHandovers_();
   if (action === "get_sitter_roster_pickups") return getSitterRosterPickups_();

@@ -151,10 +151,27 @@
   function mountToday(){const agenda=$('#v10TodayAgenda');if(!agenda || agenda.querySelector('[data-sitter-day-handovers]'))return;const host=document.createElement('section');host.className='sitter-planning';host.dataset.sitterDayHandovers='';host.innerHTML='<button type="button" aria-expanded="false">Handover times</button><div hidden><p>Scheduled today, in local sitter time.</p><div data-sitter-day-list></div><p role="status"></p></div>';agenda.prepend(host);const button=host.querySelector('button'),panel=host.querySelector('div'),status=host.querySelector('[role=status]');let loading=false;button.onclick=async()=>{if(loading)return;if(!panel.hidden){panel.hidden=true;button.setAttribute('aria-expanded','false');return;}panel.hidden=false;button.setAttribute('aria-expanded','true');loading=true;status.textContent='Loading scheduled times...';try{const r=await read({action:'get_sitter_day_handovers'});if(!host.isConnected)return;host.querySelector('[data-sitter-day-list]').innerHTML=r.entries.length?r.entries.map(x=>`<p><strong>${esc(x.time || 'Time not confirmed')}</strong> - ${esc(x.type)} - ${esc(x.dogName)}</p>`).join(''):'No arrivals or pickups scheduled today.';status.textContent='';}catch(e){status.textContent=e.message;}finally{loading=false;}};}
   const businessNameCache = 'palz.business-name.v1';
   let businessName = 'Waffle House';
+  let businessTagline = 'Dog sitting, organised.';
+  let businessIcon = '';
   let businessNameChanged = false;
-  try { businessName = localStorage.getItem(businessNameCache) || businessName; } catch (_) {}
+  try {
+    businessName = localStorage.getItem(businessNameCache) || businessName;
+    const saved = JSON.parse(localStorage.getItem('palz.business-brand.v1') || '{}');
+    if (typeof saved.tagline === 'string') businessTagline = saved.tagline;
+    businessIcon = saved.icon || '';
+  } catch (_) {}
 
   function showBusinessName() {
+    const drawerName = $('.wh75-drawer-brand strong');
+    const drawerTagline = $('.wh75-drawer-brand span');
+    const drawerIcon = $('.wh75-drawer-logo');
+    if (drawerName && drawerName.textContent !== businessName) drawerName.textContent = businessName;
+    if (drawerTagline && drawerTagline.textContent !== businessTagline) drawerTagline.textContent = businessTagline;
+    if (drawerTagline) drawerTagline.hidden = !businessTagline;
+    const imageSource = businessIcon || 'waffle-logo.png';
+    if (drawerIcon && drawerIcon.getAttribute('src') !== imageSource) drawerIcon.setAttribute('src', imageSource);
+    if (drawerIcon && drawerIcon.alt !== businessName) drawerIcon.alt = businessName;
+
     const sidebar = $('.wh-sitter-sidebar-brand small');
     if (sidebar && sidebar.textContent !== businessName + ' workspace') sidebar.textContent = businessName + ' workspace';
     const todayTitle = $('#v10OperationsTitle');
@@ -170,52 +187,115 @@
     }
   }
 
+  async function prepareBusinessIcon(file, payload) {
+    if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type) || file.size > 8 * 1024 * 1024) {
+      throw Error('Choose a PNG, JPG or WebP image up to 8 MB.');
+    }
+    const url = URL.createObjectURL(file);
+    try {
+      const image = new Image();
+      image.src = url;
+      await image.decode();
+      const canvas = document.createElement('canvas');
+      for (const size of [64, 48, 40, 32]) {
+        canvas.width = canvas.height = size;
+        const context = canvas.getContext('2d');
+        const scale = size / Math.max(image.naturalWidth, image.naturalHeight);
+        const width = image.naturalWidth * scale;
+        const height = image.naturalHeight * scale;
+        context.drawImage(image, (size - width) / 2, (size - height) / 2, width, height);
+        for (const quality of [0.85, 0.65, 0.45]) {
+          let icon = canvas.toDataURL('image/webp', quality);
+          if (!icon.startsWith('data:image/webp;')) icon = canvas.toDataURL('image/jpeg', quality);
+          if (/^data:image\/(webp|jpeg);/.test(icon) && icon.length <= 1350 &&
+              encodeURIComponent(JSON.stringify({...payload, icon})).length <= 1660) return icon;
+        }
+      }
+      throw Error('This icon could not be compressed enough. Try a simpler image.');
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  }
+
   function mountBusinessSettings() {
     const panel = $('#wh75SettingsPanel');
     if (!panel || panel.querySelector('[data-palz-business-settings]')) return;
     const form = document.createElement('form');
     form.dataset.palzBusinessSettings = '';
     form.className = 'wh75-settings-section sitter-planning';
-    form.innerHTML = '<label>Business name<input name="businessName" type="text" maxlength="60" required></label><div class="sitter-planning-actions"><button type="submit">Save business name</button></div><p role="status"></p>';
+    form.innerHTML = `<label>Business name<input name="businessName" type="text" maxlength="60" required></label>
+      <label>Business tagline<input name="tagline" type="text" maxlength="80"></label>
+      <label>Upload business icon<input name="icon" type="file" accept="image/png,image/jpeg,image/webp"></label>
+      <div class="sitter-planning-actions"><button type="button" data-reset-business-icon>Use default icon</button><button type="submit">Save business branding</button></div>
+      <p role="status"></p>`;
     const input = form.elements.businessName;
-    const button = form.querySelector('button');
+    const tagline = form.elements.tagline;
+    const file = form.elements.icon;
+    const button = form.querySelector('[type=submit]');
+    const reset = form.querySelector('[data-reset-business-icon]');
     const status = form.querySelector('[role=status]');
+    let resetIcon = false;
     input.value = businessName;
+    tagline.value = businessTagline;
+    reset.onclick = () => {
+      resetIcon = true;
+      file.value = '';
+      status.textContent = 'Save to use the default icon.';
+    };
+    file.onchange = () => { resetIcon = false; status.textContent = ''; };
     form.onsubmit = async event => {
       event.preventDefault();
       if (button.disabled) return;
       const name = input.value.trim();
       if (!name) { status.textContent = 'Enter a business name.'; return; }
-      button.disabled = input.disabled = true;
+      const controls = [button, input, tagline, file, reset];
+      controls.forEach(control => { control.disabled = true; });
       status.textContent = 'Saving...';
       try {
-        const result = await write({action:'save_business_name', name});
-        if (result.name !== name) throw Error('The business name could not be confirmed.');
+        const payload = {action:'save_business_name', name, tagline:tagline.value.trim()};
+        if (file.files[0]) payload.icon = await prepareBusinessIcon(file.files[0], payload);
+        else if (resetIcon) payload.icon = '';
+        const result = await write(payload);
+        if (result.name !== name || result.tagline !== payload.tagline ||
+            (payload.icon !== undefined && result.icon !== payload.icon)) {
+          throw Error('Business branding could not be confirmed.');
+        }
         businessNameChanged = true;
-        applyBusinessName(name);
-        input.value = name;
-        status.textContent = 'Business name saved.';
+        applyBusinessName(result);
+        input.value = result.name;
+        tagline.value = result.tagline;
+        file.value = '';
+        resetIcon = false;
+        status.textContent = 'Business branding saved.';
       } catch (error) {
         status.textContent = error.message;
       } finally {
-        button.disabled = input.disabled = false;
+        controls.forEach(control => { control.disabled = false; });
       }
     };
     panel.querySelector('.wh75-settings-head')?.after(form);
     if (!form.isConnected) panel.prepend(form);
   }
 
-  function applyBusinessName(name) {
-    const input = $('[data-palz-business-settings] input');
-    if (input && input.value === businessName) input.value = name;
-    businessName = name;
-    try { localStorage.setItem(businessNameCache, name); } catch (_) {}
+  function applyBusinessName(brand) {
+    const form = $('[data-palz-business-settings]');
+    if (form?.elements.businessName.value === businessName) form.elements.businessName.value = brand.name;
+    if (typeof brand.tagline === 'string') {
+      if (form?.elements.tagline.value === businessTagline) form.elements.tagline.value = brand.tagline;
+      businessTagline = brand.tagline;
+    }
+    if (typeof brand.icon === 'string') businessIcon = brand.icon;
+    businessName = brand.name;
+    try {
+      localStorage.setItem(businessNameCache, businessName);
+      localStorage.setItem('palz.business-brand.v1', JSON.stringify({tagline:businessTagline, icon:businessIcon}));
+    } catch (_) {}
     showBusinessName();
   }
 
   if (typeof window.queryAppsScript === 'function') {
     void read({action:'get_business_name'}).then(result => {
-      if (!businessNameChanged && typeof result.name === 'string' && result.name) applyBusinessName(result.name);
+      if (!businessNameChanged && typeof result.name === 'string' && result.name) applyBusinessName(result);
     }).catch(() => {});
   }
 

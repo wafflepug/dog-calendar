@@ -112,8 +112,11 @@ function getSitterRosterPickups_() {
   return {result:'success', pickups:pickups.filter(function(entry) { return entry.time && counts[entry.stayId] === 1; })};
 }
 
-function readPalzBusinessName_() {
-  return PropertiesService.getScriptProperties().getProperty('PALZ_BUSINESS_NAME') || 'Waffle House';
+function readPalzBusinessBrand_() {
+  var props = PropertiesService.getScriptProperties();
+  var stored = props.getProperty('PALZ_BUSINESS_BRAND');
+  if (stored) return JSON.parse(stored);
+  return {name:props.getProperty('PALZ_BUSINESS_NAME') || 'Waffle House', tagline:'Dog sitting, organised.', icon:''};
 }
 
 function savePalzBusinessName_(data) {
@@ -121,8 +124,23 @@ function savePalzBusinessName_(data) {
   if (!name || name.length > 60 || /[\x00-\x1f\x7f]/.test(name)) {
     throw new Error('Enter a business name between 1 and 60 characters.');
   }
-  PropertiesService.getScriptProperties().setProperty('PALZ_BUSINESS_NAME', name);
-  return {result:'success', name:name};
+  var brand = readPalzBusinessBrand_();
+  if (data.tagline !== undefined) {
+    if (typeof data.tagline !== 'string' || data.tagline.length > 80 || /[\x00-\x1f\x7f]/.test(data.tagline)) {
+      throw new Error('Use up to 80 characters for the tagline.');
+    }
+    brand.tagline = data.tagline.trim();
+  }
+  if (data.icon !== undefined) {
+    if (typeof data.icon !== 'string' || data.icon.length > 1350 ||
+        (data.icon && !/^data:image\/(?:webp|jpeg);base64,[A-Za-z0-9+/]+={0,2}$/.test(data.icon))) {
+      throw new Error('Choose a supported business icon.');
+    }
+    brand.icon = data.icon;
+  }
+  brand.name = name;
+  PropertiesService.getScriptProperties().setProperty('PALZ_BUSINESS_BRAND', JSON.stringify(brand));
+  return Object.assign({result:'success'}, brand);
 }
 
 function bookingPetSpecies_(value) {
