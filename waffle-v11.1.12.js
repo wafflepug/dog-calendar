@@ -219,7 +219,7 @@
     const selected = String(record?.requestSource || '').trim();
     const sourceLabel = selected || (hasOwnRequestSource(record) ? 'Not recorded' : 'Source not available');
     const source = sourceDefinitions().find(item => item.value.toLowerCase() === selected.toLowerCase());
-    const badge = `<span class="v11112-source-badge" data-v11112-care-source-current>${source?.image ? `<img src="${escapeHtml(source.image)}" alt="">` : ''}<strong>${escapeHtml(sourceLabel)}</strong></span>`;
+    const badge = `<span class="v11112-source-badge" data-v11112-care-source-current title="${escapeHtml(sourceLabel)}">${source?.image ? `<img src="${escapeHtml(source.image)}" alt="">` : '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.07 0l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.72"/><path d="M14 11a5 5 0 0 0-7.07 0l-3 3A5 5 0 0 0 11 21.07l1.72-1.72"/></svg>'}<strong>${escapeHtml(sourceLabel)}</strong></span>`;
     const identity = profileCacheIdentity(card);
     const previousIdentity = host.dataset.v11112SourceIdentity || '';
     const sameIdentity = previousIdentity === identity;
