@@ -82,13 +82,14 @@
   function hostIcon(host,name){if(!host)return;if(host.dataset.palzGlyph===name&&host.querySelector(':scope > [data-palz-icon]'))return;host.dataset.palzGlyph=name;host.classList.add('palz-icon-host');if(!host.matches('button,a,summary'))host.setAttribute('aria-hidden','true');host.querySelectorAll(':scope > [data-palz-icon]').forEach(n=>n.remove());host.insertAdjacentHTML('beforeend',svg(name));}
   function navigation(){
     hostIcon(document.getElementById('aw37launch'),'chat');
+    hostIcon(document.querySelector('#whSitterDesktopTools .waffle-notification-button-icon'),'bell');
     document.querySelectorAll('#wh80MobileHeaderRail [data-wh80-role="notification"]').forEach(control=>hostIcon(control,'bell'));
     document.querySelectorAll('#wh80MobileHeaderRail [data-wh80-role="search"]').forEach(control=>hostIcon(control,'search'));
     document.querySelectorAll('.directory-photo-placeholder').forEach(placeholder=>{if(placeholder.textContent.trim()==='🐶'||placeholder.dataset.palzGlyph)hostIcon(placeholder,'paw');});
     const routeIcons={today:'home',calendar:'calendar',directory:'paw',reminders:'tasks',audit:'document'};
     document.querySelectorAll('[data-wh75-route],[data-wh-sitter-route]').forEach(control=>hostIcon(control.querySelector('.wh75-nav-icon,.wh75-bottom-icon,.wh-sitter-sidebar-icon'),routeIcons[control.dataset.wh75Route||control.dataset.whSitterRoute]||'home'));
     document.querySelectorAll('[data-wh-sitter-settings]').forEach(control=>hostIcon(control.querySelector('.wh-sitter-sidebar-icon'),'settings'));
-    const controls={'[data-wh78-quick-add], [data-wh75-quick-add]':'plus','[data-wh78-ai], [data-wh75-ask]':'chat','[data-wh75-settings]':'settings','[data-wh75-theme-quick]':'moon','[data-wh-sitter-mobile-action="notifications"]':'bell','[data-wh-sitter-mobile-action="search"]':'search'};
+    const controls={'[data-wh78-quick-add], [data-wh75-quick-add]':'plus','[data-wh78-ai], [data-wh75-ask]':'chat','[data-wh75-settings]':'settings','[data-wh75-theme-quick]':'moon','[data-wh-sitter-mobile-action="notification"]':'bell','[data-wh-sitter-mobile-action="search"]':'search'};
     Object.entries(controls).forEach(([selector,name])=>document.querySelectorAll(selector).forEach(control=>hostIcon(control.querySelector('.wh75-nav-icon,.wh75-bottom-icon'),name)));
   }
   const selectors='button,summary,.v10-agenda-icon,.wh75-nav-icon,[class$="-icon"],[class*="-icon "],.directory-status-tag,.v1118-status-chip,.v1118-care-signals,.v1118-care-signal,.v11115-empty > span,.v11115-section-heading h2,.v110-operation-icon';
