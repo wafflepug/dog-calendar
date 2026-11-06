@@ -55,7 +55,7 @@ test('Today queue deduplicates stable event identity and opens the exact stay pr
   await expect(links.nth(1)).toHaveAttribute('href', /stayKey=milo%7C2026-10-16%7C2026-10-22&stayId=stay-2/);
   await expect(links.nth(0)).toHaveAccessibleName(/Open Milo care profile/);
   await expect(links.nth(0)).not.toContainText('Open profile');
-  await expect(page.locator('.v10-agenda-care-link')).toHaveText('Medication and intake checks are in Care profiles');
+  await expect(page.locator('.v10-agenda-care-link')).toHaveCount(0);
   await expect(page.locator('#v10TodayAgenda')).not.toContainText('Medication due');
 });
 
@@ -139,11 +139,11 @@ test('potential and unconfirmed visits never expose operational actions; complet
   await expect(page.locator('#v10TodayAgenda .v10-agenda-operation')).toHaveCount(0);
 });
 
-test('Today queue has a clear empty state and the Care profiles destination', async ({ page }) => {
+test('Today queue has a clear empty state without a Care profiles footer link', async ({ page }) => {
   await loadQueue(page);
   await page.evaluate(() => renderV10OperationsHome([]));
   await expect(page.locator('.v10-all-clear')).toContainText('No arrivals, departures or Meet & Greets today');
-  await expect(page.locator('.v10-agenda-care-link')).toHaveAttribute('href', 'directory.html');
+  await expect(page.locator('.v10-agenda-care-link')).toHaveCount(0);
   await expect(page.locator('#v10TodayAgenda > a.v10-agenda-item')).toHaveCount(0);
 });
 
