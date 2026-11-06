@@ -33,6 +33,7 @@
     book:'<path d="M3 4h6l3 2 3-2h6v16h-6l-3 2-3-2H3zm9 2v16"/>',
     chat:'<path d="M4 4h16v13H9l-5 4zM8 9h8m-8 4h5"/>',
     bed:'<path d="M3 5v16m18-9v9M3 17h18M6 12V8h6v4m-9 0h18v5"/>',
+    luggage:'<rect x="5" y="7" width="14" height="14" rx="2"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M9 11v6m6-6v6"/>',
     storage:'<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 10h18M3 16h18M10 7h4m-4 6h4m-4 6h4"/>',
     alert:'<path d="m12 3 10 18H2zM12 9v5m0 3h.01"/>',
     heart:'<path d="M12 21 3 12a5.5 5.5 0 0 1 9-7 5.5 5.5 0 0 1 9 7z"/>',
@@ -114,6 +115,8 @@
   }
   let scheduled=false;const pending=new Set();
   function semanticControls(){
+    document.querySelectorAll('.wh-home-departure-flag > span').forEach(icon => hostIcon(icon, 'luggage'));
+    document.querySelectorAll('[data-v108-boarding-icon]').forEach(icon => hostIcon(icon, 'home'));
     document.querySelectorAll('.directory-guest-tile-open .v1118-care-status.is-at-home').forEach(chip => {
       if (!chip.querySelector('[data-palz-icon="home"]')) chip.insertAdjacentHTML('beforeend', svg('home'));
     });

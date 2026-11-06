@@ -125,3 +125,38 @@ body.dark-theme .v108-copy{border-color:#1d4ed8;background:#172554;color:#bfdbfe
 .v108-history-error button { min-height:44px; width:max-content; max-width:100%; border:1px solid var(--wh75-accent,#5142a8); border-radius:9px; padding:8px 14px; background:var(--wh75-accent,#5142a8); color:#fff; font:inherit; font-weight:700; cursor:pointer; }
 .v108-history-error button:focus-visible,.v108-stay-history summary:focus-visible,.v108-owner a:focus-visible,.v108-stay-history a:focus-visible { outline:3px solid #f59e0b; outline-offset:2px; }
 @media(max-width:600px){.v108-history-summary{padding:12px}.v108-owner-list,.v108-stay-list{grid-template-columns:1fr}.v108-owner,.v108-stay-history{padding:13px}.v108-history-section{margin:14px 0}}
+
+#v108BoardingModal .v108-modal-head h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+#v108BoardingModal [data-v108-boarding-icon],
+#v108BoardingModal .v108-modal-head small {
+  color: var(--v10-accent, var(--v10-primary));
+}
+#v108BoardingModal [data-v108-identity-note] {
+  background: var(--v10-card-soft);
+  border-color: var(--v10-line, var(--v10-border));
+  color: var(--v10-text);
+}
+#v108BoardingModal [data-v108-form-grid] label {
+  font-size: 12px !important;
+}
+#v108BoardingModal [data-v108-form-grid] :is(input, select, textarea) {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  box-sizing: border-box;
+  font-size: 16px;
+}
+#v108BoardingModal [data-v108-form-grid] select {
+  padding: 8px 10px;
+  border: 1px solid var(--v10-line, var(--v10-border));
+  border-radius: 10px;
+  background: var(--v10-card-soft);
+  color: var(--v10-text);
+}
+#v108BoardingModal [data-v108-manual-breed][hidden] {
+  display: none;
+}

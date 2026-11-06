@@ -38,7 +38,7 @@ async function openHarness(page, baseURL, saveHandler) {
   await page.addStyleTag({ url: `${baseURL}/waffle-runtime.css` });
   await page.addScriptTag({ path: ownerHandoff });
   await page.locator('[data-v108-board="dogName"]').fill('Milo');
-  await page.locator('[data-v108-board="breed"]').fill('Kelpie');
+  await page.locator('[data-v108-breed-choice]').selectOption('Australian Kelpie');
   await page.locator('[data-v108-board="startDate"]').fill('2026-10-20');
   await page.locator('[data-v108-board="endDate"]').fill('2026-10-22');
   await page.locator('[data-v108-board="ownerName"]').fill('Alex Owner');
@@ -47,7 +47,7 @@ async function openHarness(page, baseURL, saveHandler) {
 
 test('successful booking locks its intent, renders the owner handoff, and Add another dog resets the form', async ({ page, baseURL, browserName }, testInfo) => {
   await openHarness(page, baseURL, async () => ({ intake: { link: 'https://care.example/form/123' } }));
-  await page.getByRole('button', { name: '🏡 Create Booking' }).click();
+  await page.getByRole('button', { name: 'Create booking' }).click();
   await expect(page.locator('[data-owner-handoff] [aria-label="Owner care link"]')).toHaveValue('https://care.example/form/123');
   await expect(page.getByRole('button', { name: 'Copy owner care link', exact: true })).toHaveText('Copy owner care link');
   await expect(page.locator('[data-owner-handoff] button:visible')).toHaveCount(1);
@@ -64,24 +64,24 @@ test('successful booking locks its intent, renders the owner handoff, and Add an
   }
   await expect(page.locator('[data-v108-board="dogName"]')).toBeDisabled();
   await expect(page.locator('[data-v108-choose-returning]')).toBeDisabled();
-  await expect(page.getByRole('button', { name: '＋ Add another dog' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Add another pet' })).toBeVisible();
   await page.evaluate(() => window.boardingHarness.save());
   expect(await page.evaluate(() => window.savedPayloads)).toHaveLength(1);
 
-  await page.getByRole('button', { name: '＋ Add another dog' }).click();
+  await page.getByRole('button', { name: 'Add another pet' }).click();
   await expect(page.locator('[data-v108-board="dogName"]')).toHaveValue('');
   await expect(page.locator('[data-v108-board="dogName"]')).toBeEnabled();
   await expect(page.locator('[data-v108-choose-returning]')).toBeEnabled();
   await expect(page.locator('[data-v108-board-status]')).not.toHaveAttribute('data-mode', 'success');
-  await expect(page.getByRole('button', { name: '🏡 Create Booking' })).toBeEnabled();
+  await expect(page.getByRole('button', { name: 'Create booking' })).toBeEnabled();
 });
 
 test('queued saves remain locked across close and reopen without offering another save', async ({ page, baseURL }) => {
   await openHarness(page, baseURL, async () => ({ queued: true }));
   await page.evaluate(() => { window.WAFFLE_PAGE = 'directory'; window.rosterRefreshCalls = []; window.loadGuestDirectoryConsolidated = options => { window.rosterRefreshCalls.push(options); }; });
-  await page.getByRole('button', { name: '🏡 Create Booking' }).click();
+  await page.getByRole('button', { name: 'Create booking' }).click();
   expect(await page.evaluate(() => window.rosterRefreshCalls)).toHaveLength(0);
-  await expect(page.getByRole('button', { name: 'Add dog for same owner' })).toBeHidden();
+  await expect(page.getByRole('button', { name: 'Add pet for same owner' })).toBeHidden();
   await expect(page.locator('[data-v108-board-status]')).toContainText('Check sync status, then find the guest in Care.');
   await expect(page.locator('[data-v108-board="dogName"]')).toBeDisabled();
   await expect(page.getByRole('button', { name: /awaiting sync/ })).toBeDisabled();
@@ -92,7 +92,7 @@ test('queued saves remain locked across close and reopen without offering anothe
   await expect(page.locator('[data-v108-board="dogName"]')).toBeDisabled();
   await page.evaluate(() => window.boardingHarness.save());
   expect(await page.evaluate(() => window.savedPayloads)).toHaveLength(1);
-  await page.getByRole('button', { name: '＋ Add another dog' }).click();
+  await page.getByRole('button', { name: 'Add another pet' }).click();
   await expect(page.locator('[data-v108-board="dogName"]')).toHaveValue('');
   await expect(page.locator('[data-v108-save-board]')).toBeEnabled();
   expect(await page.evaluate(() => window.savedPayloads)).toHaveLength(1);
@@ -101,13 +101,13 @@ test('queued saves remain locked across close and reopen without offering anothe
 test('failed booking keeps the entered values and allows retry', async ({ page, baseURL }) => {
   await openHarness(page, baseURL, async () => { throw new Error('Temporary connection failure'); });
   await page.evaluate(() => { window.WAFFLE_PAGE = 'directory'; window.rosterRefreshCalls = []; window.loadGuestDirectoryConsolidated = options => { window.rosterRefreshCalls.push(options); }; });
-  await page.getByRole('button', { name: '🏡 Create Booking' }).click();
+  await page.getByRole('button', { name: 'Create booking' }).click();
   await expect(page.locator('[data-v108-board-status]')).toContainText('Temporary connection failure');
   expect(await page.evaluate(() => window.rosterRefreshCalls)).toHaveLength(0);
   await expect(page.locator('[data-v108-board="dogName"]')).toHaveValue('Milo');
   await expect(page.locator('[data-v108-board="dogName"]')).toBeEnabled();
   await page.evaluate(() => { window.saveHandler = async () => ({ intake: { link: 'https://care.example/form/again' } }); });
-  await page.getByRole('button', { name: '🏡 Create Booking' }).click();
+  await page.getByRole('button', { name: 'Create booking' }).click();
   await expect(page.locator('[data-owner-handoff] [aria-label="Owner care link"]')).toHaveValue('https://care.example/form/again');
   await expect(page.getByRole('button', { name: 'Copy owner care link', exact: true })).toHaveText('Copy owner care link');
   await expect(page.locator('[data-secondary-options]')).not.toHaveAttribute('open', '');
@@ -117,7 +117,7 @@ test('failed booking keeps the entered values and allows retry', async ({ page, 
 
 test('unsaved drafts survive close and reopen, while explicit Start over clears only that draft', async ({ page, baseURL }) => {
   await openHarness(page, baseURL, async () => { throw new Error('Temporary connection failure'); });
-  await page.getByRole('button', { name: '🏡 Create Booking' }).click();
+  await page.getByRole('button', { name: 'Create booking' }).click();
   await page.locator('[data-v108-close]').first().click();
   await page.evaluate(() => window.boardingHarness.open());
   await expect(page.locator('[data-v108-board="dogName"]')).toHaveValue('Milo');
@@ -127,19 +127,19 @@ test('unsaved drafts survive close and reopen, while explicit Start over clears 
   await expect(page.locator('[data-v108-board="dogName"]')).toHaveValue('');
   await expect(page.locator('[data-v108-board="ownerName"]')).toHaveValue('');
   await expect(page.locator('[data-v108-board="startDate"]')).toHaveValue('2026-10-18');
-  await expect(page.getByRole('button', { name: '🏡 Create Booking' })).toBeEnabled();
+  await expect(page.getByRole('button', { name: 'Create booking' })).toBeEnabled();
 });
 
 test('same-owner shortcut copies only the frozen completed contact and dates', async ({ page, baseURL }) => {
   await openHarness(page, baseURL, async () => ({ result: 'success', intake: { link: 'https://care.example/form/first-dog' } }));
-  await page.getByRole('button', { name: '🏡 Create Booking' }).click();
-  await expect(page.getByRole('button', { name: 'Add dog for same owner' })).toBeVisible();
+  await page.getByRole('button', { name: 'Create booking' }).click();
+  await expect(page.getByRole('button', { name: 'Add pet for same owner' })).toBeVisible();
   await page.evaluate(() => { document.querySelector('[data-v108-board="ownerName"]').value = 'Mutated after save'; });
-  await page.getByRole('button', { name: 'Add dog for same owner' }).click();
-  await expect(page.getByRole('button', { name: 'Add dog for same owner' })).toBeHidden();
+  await page.getByRole('button', { name: 'Add pet for same owner' }).click();
+  await expect(page.getByRole('button', { name: 'Add pet for same owner' })).toBeHidden();
   await expect(page.locator('[data-v108-same-owner-hint]')).toBeVisible();
   await expect(page.locator('[data-v108-board="dogName"]')).toHaveValue('');
-  await expect(page.locator('[data-v108-board="breed"]')).toHaveValue('');
+  await expect(page.locator('[data-v108-breed-choice]')).toHaveValue('');
   await expect(page.locator('[data-v108-board="notes"]')).toHaveValue('');
   await expect(page.locator('[data-v108-board="ownerName"]')).toHaveValue('Alex Owner');
   await expect(page.locator('[data-v108-board="phone"]')).toHaveValue('0400000000');
@@ -149,12 +149,13 @@ test('same-owner shortcut copies only the frozen completed contact and dates', a
   expect(await page.locator('#v108BoardingModal').getAttribute('data-intake-link')).toBe('');
   await page.evaluate(() => { window.saveHandler = async () => ({ result: 'success' }); });
   await page.locator('[data-v108-board="dogName"]').fill('Pip');
+  await page.locator('[data-v108-breed-choice]').selectOption('other');
   await page.locator('[data-v108-board="breed"]').fill('Terrier');
   await page.locator('[data-v108-board="ownerName"]').fill('New Owner');
   await page.locator('[data-v108-board="phone"]').fill('0411111111');
   await page.locator('[data-v108-board="startDate"]').fill('2026-10-25');
   await page.locator('[data-v108-board="endDate"]').fill('2026-10-27');
-  await page.getByRole('button', { name: '🏡 Create Booking' }).click();
+  await page.getByRole('button', { name: 'Create booking' }).click();
   await expect.poll(() => page.evaluate(() => window.savedPayloads.length)).toBe(2);
   expect(await page.evaluate(() => window.savedPayloads[1])).toMatchObject({
     dogName: 'Pip', breed: 'Terrier', ownerName: 'New Owner', phone: '0411111111',
@@ -162,7 +163,7 @@ test('same-owner shortcut copies only the frozen completed contact and dates', a
   });
   await expect(page.locator('[data-v108-same-owner-hint]')).toBeHidden();
   await expect(page.locator('[data-v108-save-board]')).toBeHidden();
-  await page.getByRole('button', { name: '＋ Add another dog' }).click();
+  await page.getByRole('button', { name: 'Add another pet' }).click();
   await expect(page.locator('[data-v108-board="dogName"]')).toHaveValue('');
   await expect(page.locator('[data-v108-board="ownerName"]')).toHaveValue('');
   await expect(page.locator('[data-v108-board="phone"]')).toHaveValue('');
@@ -183,7 +184,7 @@ test('Care roster refresh failure does not unlock or repeat a confirmed booking'
     window.rosterRefreshCalls = [];
     window.loadGuestDirectoryConsolidated = options => { window.rosterRefreshCalls.push(options); return Promise.reject(new Error('Care refresh failed')); };
   });
-  await page.getByRole('button', { name: '🏡 Create Booking' }).click();
+  await page.getByRole('button', { name: 'Create booking' }).click();
   await expect.poll(() => page.evaluate(() => window.rosterRefreshCalls.length)).toBe(1);
   await expect(page.locator('[data-v108-board-status]')).toContainText('Stay added');
   await expect(page.locator('[data-v108-board="dogName"]')).toBeDisabled();
@@ -209,7 +210,7 @@ test('quick Add Boarding opens in place on a non-calendar page', async ({ page, 
 
 test('closing and reopening during an in-flight save preserves the pending intent and blocks duplicates', async ({ page, baseURL }) => {
   await openHarness(page, baseURL, async () => new Promise(resolve => { window.resolveSave = resolve; }));
-  await page.getByRole('button', { name: '🏡 Create Booking' }).click();
+  await page.getByRole('button', { name: 'Create booking' }).click();
   await expect(page.locator('[data-v108-board="dogName"]')).toBeDisabled();
   await page.locator('[data-v108-close]').first().click();
   await page.evaluate(() => window.boardingHarness.open());
