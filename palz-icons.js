@@ -82,6 +82,7 @@
   function hostIcon(host,name){if(!host)return;if(host.dataset.palzGlyph===name&&host.querySelector(':scope > [data-palz-icon]'))return;host.dataset.palzGlyph=name;host.classList.add('palz-icon-host');if(!host.matches('button,a,summary'))host.setAttribute('aria-hidden','true');host.querySelectorAll(':scope > [data-palz-icon]').forEach(n=>n.remove());host.insertAdjacentHTML('beforeend',svg(name));}
   function navigation(){
     hostIcon(document.getElementById('aw37launch'),'chat');
+    hostIcon(document.querySelector('[data-wh-sitter-calendar-notifications] > span'),'bell');
     hostIcon(document.querySelector('#whSitterDesktopTools .waffle-notification-button-icon'),'bell');
     document.querySelectorAll('#wh80MobileHeaderRail [data-wh80-role="notification"]').forEach(control=>hostIcon(control,'bell'));
     document.querySelectorAll('#wh80MobileHeaderRail [data-wh80-role="search"]').forEach(control=>hostIcon(control,'search'));

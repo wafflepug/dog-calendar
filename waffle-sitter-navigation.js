@@ -66,6 +66,14 @@
       @media(max-width:820px){
         html,body{scroll-padding-top:calc(64px + env(safe-area-inset-top,0px))}
         #wh75MobileTopbar{position:sticky;top:0;z-index:2147481800;display:block;width:100%;height:calc(64px + env(safe-area-inset-top,0px));box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);background:var(--wh75-shell,#fff);border-bottom:1px solid var(--wh75-line,#e2e8f0);isolation:isolate}
+        #wh75MobileTopbar [data-wh-sitter-calendar-notifications]{display:none}
+        body[data-waffle-page="calendar"][data-wh75-mobile-view="calendar"] #wh75MobileTopbar [data-wh-sitter-calendar-notifications]{
+          position:absolute;top:calc(10px + env(safe-area-inset-top,0px));right:calc(12px + env(safe-area-inset-right,0px));
+          z-index:1;display:grid;place-items:center;width:44px;height:44px;box-sizing:border-box;
+          padding:0;border:1px solid var(--wh75-line,#e2e8f0);border-radius:14px;
+          background:var(--wh75-shell,#fff);color:var(--wh75-text,#172033);cursor:pointer;
+        }
+        #wh75MobileTopbar [data-wh-sitter-calendar-notifications] > span{display:grid;place-items:center}
         #wh75MobileTopbar #wh75MenuButton{position:absolute!important;top:calc(env(safe-area-inset-top,0px) + 10px)!important;left:calc(12px + env(safe-area-inset-left,0px))!important;right:auto!important;z-index:1!important}
         #wh75MobileTopbar #whPalzStayMobileShellBrand,#wh75MobileTopbar #whPalzStayMobileBrand{position:absolute!important;top:calc(env(safe-area-inset-top,0px) + 8px)!important;left:calc(50% + (env(safe-area-inset-left,0px) - env(safe-area-inset-right,0px))/2)!important;z-index:0!important;transform:translateX(-50%)!important;width:min(176px,calc(100vw - 144px - env(safe-area-inset-left,0px) - env(safe-area-inset-right,0px)))!important;height:48px!important;margin:0!important;display:flex!important;align-items:center!important;justify-content:center!important;overflow:visible!important}
         body[data-waffle-page].wh75-mobile-topbar-ready .calendar-header-branding{min-height:0!important;height:0!important;margin:0!important;padding:0!important;border:0!important;overflow:hidden!important}
@@ -102,8 +110,8 @@
         body[data-waffle-page="calendar"][data-wh75-mobile-view="today"] .v108-outlook-wrap{display:flex!important;flex-direction:column!important;align-items:stretch!important;width:100%!important;gap:14px!important;overflow:visible!important}
         body[data-waffle-page="calendar"][data-wh75-mobile-view="today"] .v108-outlook-wrap>.v10-ops-card{position:relative!important;display:block!important;width:100%!important;height:auto!important;min-height:0!important;margin:0!important;box-sizing:border-box!important;padding:18px 16px 12px!important;border:1px solid var(--v10-border,#dce3eb)!important;border-radius:20px!important;background:var(--v10-card,var(--wh75-shell,#fff))!important;box-shadow:none!important}
         body[data-waffle-page="calendar"][data-wh75-mobile-view="today"] .v108-outlook-wrap>.v10-ops-card>.v10-card-heading{margin-bottom:10px!important;padding:0!important;border:0!important}
-        body[data-waffle-page="calendar"][data-wh75-mobile-view="calendar"] .calendar-header-branding,
-        body[data-waffle-page="directory"] .calendar-header-branding{position:relative!important;min-height:76px!important}
+        body[data-waffle-page="calendar"][data-wh75-mobile-view="calendar"]:not(.wh75-mobile-topbar-ready) .calendar-header-branding,
+        body[data-waffle-page="directory"]:not(.wh75-mobile-topbar-ready) .calendar-header-branding{position:relative!important;min-height:76px!important}
         #whPalzStayMobileBrand,.calendar-header-branding #whPalzStayMobileShellBrand{align-items:center;justify-content:center;width:min(226px,calc(100vw - 164px));height:52px;margin:0 auto;overflow:visible}
         .calendar-header-branding #whPalzStayMobileShellBrand{position:absolute;top:8px;left:50%;z-index:2;transform:translateX(-50%)}
       }
@@ -224,6 +232,19 @@
     }
     if (!topbar) return;
     if (!document.body.classList.contains('wh75-mobile-topbar-ready')) document.body.classList.add('wh75-mobile-topbar-ready');
+
+    if (pageName() === 'calendar' && !topbar.querySelector('[data-wh-sitter-calendar-notifications]')) {
+      const notifications = document.createElement('button');
+      notifications.type = 'button';
+      notifications.dataset.whSitterCalendarNotifications = '';
+      notifications.setAttribute('aria-label', 'Notifications');
+      notifications.innerHTML = '<span aria-hidden="true"></span>';
+      notifications.addEventListener('click', () => {
+        const source = document.getElementById('waffleNotificationButton') || mobileHeaderAction('notification');
+        source?.click();
+      });
+      topbar.appendChild(notifications);
+    }
 
     const menu = document.getElementById('wh75MenuButton');
     const brands = [document.getElementById('whPalzStayMobileShellBrand'), document.getElementById('whPalzStayMobileBrand')].filter(Boolean);
