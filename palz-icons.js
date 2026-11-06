@@ -52,6 +52,8 @@
   const style=document.createElement('style');style.id='palzIconStyle';style.textContent=`
     .palz-icon{display:inline-block;width:20px;height:20px;flex:0 0 20px;vertical-align:-4px;pointer-events:none}
     .palz-inline-icon{display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;margin-right:.28em;line-height:1}
+    #whSitterDesktopTools > button .waffle-notification-button-icon.palz-icon-host { font-size:0!important; }
+    #whSitterDesktopTools .waffle-notification-button-icon.palz-icon-host > :not([data-palz-icon]) { display:none!important; }
     .palz-icon-host{font-size:0!important;line-height:1!important;color:var(--wh-text,#162044)}
     #wh75MobileBottomNav .palz-icon-host>img,.wh75-nav-item .palz-icon-host>img,.palz-icon-host>img{display:none!important}.palz-icon-host>.palz-icon{width:22px;height:22px}
     html body #wh75MobileBottomNav .wh75-bottom-item .wh75-bottom-icon.palz-icon-host{display:inline-flex!important;align-items:center;justify-content:center;width:40px!important;height:40px!important;min-width:40px!important;min-height:40px!important;padding:8px!important;border:0!important;border-radius:12px!important;background:transparent!important;color:#162044!important;box-shadow:none!important;transform:none!important;box-sizing:border-box}
