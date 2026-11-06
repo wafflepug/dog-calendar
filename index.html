@@ -8,15 +8,15 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Palz Stay">
-    <link rel="manifest" href="manifest.webmanifest?v=2026.11.06.15">
-    <link rel="icon" type="image/png" sizes="192x192" href="palz-favicon.png?v=2026.11.06.15">
-    <link rel="apple-touch-icon" sizes="180x180" href="pwa-apple-touch-icon.png?v=2026.11.06.15">
+    <link rel="manifest" href="manifest.webmanifest?v=2026.11.06.16">
+    <link rel="icon" type="image/png" sizes="192x192" href="palz-favicon.png?v=2026.11.06.16">
+    <link rel="apple-touch-icon" sizes="180x180" href="pwa-apple-touch-icon.png?v=2026.11.06.16">
     <title>Palz Stay — Calendar & Dashboard</title>
     <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="palz-loading.css?rev=2026.11.06.15">
-    <script src="palz-loading.js?rev=2026.11.06.15"></script>
-    <link rel="stylesheet" href="waffle-runtime.css?v=2026.08.28.01&amp;rev=2026.11.06.15">
-    <link rel="stylesheet" href="desktop-home-layout.css?rev=2026.11.06.15">
+    <link rel="stylesheet" href="palz-loading.css?rev=2026.11.06.16">
+    <script src="palz-loading.js?rev=2026.11.06.16"></script>
+    <link rel="stylesheet" href="waffle-runtime.css?v=2026.08.28.01&amp;rev=2026.11.06.16">
+    <link rel="stylesheet" href="desktop-home-layout.css?rev=2026.11.06.16">
     </head>
 <body data-waffle-page="calendar">
 <div id="palzLoadingScreen" role="status" aria-live="polite" aria-label="Loading Palz Stay">
@@ -498,7 +498,7 @@
 </div>
 
 <!-- Modal: Add / Manage Potential Stay -->
-<div id="potentialStayModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 10001; align-items: center; justify-content: center;">
+<div id="potentialStayModal" role="dialog" aria-modal="true" aria-labelledby="potentialModalTitle" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 10001; align-items: center; justify-content: center;">
     <div style="background: white; padding: 25px; border-radius: 12px; max-width: 420px; width: 90%; box-shadow: 0 10px 25px rgba(0,0,0,0.2); font-family: inherit; box-sizing: border-box;" class="modal-content-panel">
         <h3 style="margin-top: 0; color: #d35400; font-size: 18px; display: flex; align-items: center; gap: 8px;" id="potentialModalTitle">❓ Potential Stay Request</h3>
         
@@ -529,11 +529,11 @@
         <input type="text" id="potNotes" style="width: 100%; padding: 10px; margin-bottom: 20px; border: 2px solid #e2e8f0; border-radius: 6px; box-sizing: border-box;" placeholder="e.g. Awaiting owner confirmation">
 
         <div style="display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap;" id="potentialActionControls">
-            <button id="deletePotentialBtn" style="background: #e74c3c; color: white; border: none; padding: 10px 14px; border-radius: 6px; cursor: pointer; font-weight: bold; margin-right: auto; display: none;">🗑️ Cancel potential stay</button>
-            <button id="confirmStayBtn" style="background: #27ae60; color: white; border: none; padding: 10px 14px; border-radius: 6px; cursor: pointer; font-weight: bold; display: none;">✅ Confirm Stay</button>
             <button id="potentialIntakeLinkBtn" style="background: #1f3a5f; color: white; border: none; padding: 10px 14px; border-radius: 6px; cursor: pointer; font-weight: bold; display: none;">📝 Copy Intake Link</button>
-            <button id="closePotentialModalBtn" style="background: #94a3b8; color: white; border: none; padding: 10px 14px; border-radius: 6px; cursor: pointer; font-weight: bold;">Cancel</button>
             <button id="savePotentialBtn" style="background: #e67e22; color: white; border: none; padding: 10px 14px; border-radius: 6px; cursor: pointer; font-weight: bold;">Submit Potential</button>
+            <button id="confirmStayBtn" style="background: #27ae60; color: white; border: none; padding: 10px 14px; border-radius: 6px; cursor: pointer; font-weight: bold; display: none;">✅ Confirm Stay</button>
+            <button id="closePotentialModalBtn" style="background: #94a3b8; color: white; border: none; padding: 10px 14px; border-radius: 6px; cursor: pointer; font-weight: bold;">Cancel</button>
+            <button id="deletePotentialBtn" style="background: #e74c3c; color: white; border: none; padding: 10px 14px; border-radius: 6px; cursor: pointer; font-weight: bold; margin-right: auto; display: none;">🗑️ Cancel potential stay</button>
         </div>
     </div>
 </div>
@@ -575,6 +575,6 @@
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
-<script src="waffle-bootstrap.js?v=2026.08.28.01&amp;rev=2026.11.06.15"></script>
+<script src="waffle-bootstrap.js?v=2026.08.28.01&amp;rev=2026.11.06.16"></script>
     </html>
 

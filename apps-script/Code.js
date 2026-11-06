@@ -11973,18 +11973,31 @@ function createIntakeLinkForBooking_(mainSheet, rows, data) {
     );
   }
 
-  var bookingRow = findIntakeBookingRow_(
-    rows,
-    dogName,
-    startDate,
-    endDate,
-    data
-  );
-
-  if (bookingRow === -1) {
-    throw new Error(
-      "The booking could not be found. Sync the spreadsheet and try again."
-    );
+  var bookingRow;
+  if (data.potentialStay === true) {
+    bookingRow = data.stayId
+      ? findStayRowByIdV11225_(mainSheet, data.stayId)
+      : findIntakeBookingRow_(rows, dogName, startDate, endDate);
+    if (bookingRow < 2) throw new Error("The potential stay could not be found. Refresh and try again.");
+    var selected = intakeBookingSnapshotFromValues_(rows, bookingRow - 1);
+    var selectedType = String(selected.bookingType || "").trim().toLowerCase();
+    if (["potential stay", "potential"].indexOf(selectedType) < 0 ||
+        String(selected.dogName || "").trim().toLowerCase() !== dogName.toLowerCase() ||
+        selected.startDate !== startDate || selected.endDate !== endDate) {
+      throw new Error("The potential stay changed. Refresh before preparing its intake link.");
+    }
+    var selectedDogId = v108DogIdentityAt_(rows, bookingRow - 1).dogId;
+    if (data.dogId && String(data.dogId).toLowerCase() !== String(selectedDogId).toLowerCase()) {
+      throw new Error("The pet identity changed. Refresh before preparing its intake link.");
+    }
+    ensureStableStayIdV11225_(mainSheet, bookingRow);
+    if (!selectedDogId) assignV108DogIdentity_(mainSheet, bookingRow, "");
+    rows = mainSheet.getDataRange().getValues();
+  } else {
+    bookingRow = findIntakeBookingRow_(rows, dogName, startDate, endDate, data);
+    if (bookingRow === -1) {
+      throw new Error("The booking could not be found. Sync the spreadsheet and try again.");
+    }
   }
 
   var booking = auditBookingSnapshotFromSheetRow_(
