@@ -212,7 +212,7 @@
         const validDogId = /^#?\d{1,5}$/.test(dogNumber) && Number(dogNumber.replace('#', '')) > 0 ? '#' + dogNumber.replace('#', '').padStart(5, '0') : '';
         const showDogId = validDogId && dogNameCounts.get(name.replace(/\s+/g, ' ').toLocaleLowerCase()) > 1;
         link.setAttribute('aria-label', `Open ${name} stay and care details${showDogId ? `, Dog ID ${validDogId}` : ''}, ${label.toLowerCase()}`);
-        link.querySelector('.wh-home-initials').textContent = name.split(/\s+/).map(part => Array.from(part).find(char => /[\p{L}\p{N}]/u.test(char))).filter(Boolean).slice(0, 2).join('').toUpperCase() || '?';
+        link.dataset.petSpecies = event.extendedProps?.species === 'cat' ? 'cat' : 'dog';
         link.querySelector('.wh-home-guest-name').textContent = name;
         link.querySelector('.wh-home-guest-label').textContent = label;
         const identityLabel = link.querySelector('.wh-home-guest-identity');

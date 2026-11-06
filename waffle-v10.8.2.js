@@ -85,7 +85,7 @@ function v1082PastCardHtml(booking) {
         <div
             class="directory-card directory-card-fused belongings-pet-card v1082-past-card"
             data-directory-stay-key="${v1082Escape(stayKey)}"
-            data-directory-dog-name="${v1082Escape(dogName)}"
+            data-pet-species="${booking.species === 'cat' ? 'cat' : 'dog'}" data-directory-dog-name="${v1082Escape(dogName)}"
             data-directory-dog-id="${v1082Escape(dogId)}"
             data-directory-stay-id="${v1082Escape(stayId)}"
             data-directory-dog-number="${v1082Escape(dogNumber)}"
@@ -106,7 +106,7 @@ function v1082PastCardHtml(booking) {
                     class="directory-guest-tile-photo"
                     data-directory-tile-photo="${v1082Escape(stayKey)}"
                     aria-hidden="true"></span>
-                <span class="directory-roster-avatar" aria-hidden="true">${v1082Escape(dogName.split(/\s+/).slice(0, 2).map(part => part.charAt(0)).join('') || '🐾')}</span>
+                <span class="directory-roster-avatar" aria-hidden="true"></span>
                 <span class="directory-roster-copy">
                     <span class="directory-guest-tile-name">${v1082Escape(dogName)}</span>
                     <span class="directory-roster-context">${v1082Escape(breed)}${dogIdentityLabel ? ` · ${v1082Escape(dogIdentityLabel)}` : ''} · stayed ${v1082Escape(dateLabel)}</span>
@@ -122,7 +122,7 @@ function v1082PastCardHtml(booking) {
                         <div class="directory-photo-media">
                             <div
                                 class="directory-photo-placeholder"
-                                aria-label="No dog profile photo">🐶</div>
+                                aria-label="No pet profile photo"></div>
                         </div>
                         <button
                             type="button"

@@ -1960,7 +1960,7 @@ function renderV10PotentialPipeline(events) {
         const props = event.extendedProps || {}, dates = v10EventRawDates(event), key = v10PotentialKeyFromEvent(event);
         const photo = v10HomeThumbnailUrl(props.dogPhoto?.previewUrl || props.dogPhoto?.url || props.photoUrl || '');
         const initials = String(props.dogName || 'Potential guest').trim().split(/\s+/).map(part => part[0]).join('').slice(0, 2).toUpperCase();
-        return `<article class="v10-potential-item wh-home-potential-item" data-v10-potential-key="${escapeDashboardHtml(key)}"><button type="button" class="wh-home-potential-open" data-v10-potential-action="edit" aria-label="Open ${escapeDashboardHtml(props.dogName || 'Potential guest')} potential stay"><span class="wh-home-portrait">${photo ? `<img src="${escapeDashboardHtml(photo)}" alt="" loading="lazy" decoding="async">` : `<span class="wh-home-initials">${escapeDashboardHtml(initials)}</span>`}</span><span class="wh-home-potential-copy"><strong>${escapeDashboardHtml(props.dogName || 'Potential guest')}</strong><span>${escapeDashboardHtml(v10FormatDateLabel(dates.start))} → ${escapeDashboardHtml(v10FormatDateLabel(dates.end))}</span></span></button><div class="v10-potential-main"><div>${props.owner ? `<small>${escapeDashboardHtml(props.owner)}</small>` : ''}</div></div><div class="v10-potential-actions"><button type="button" data-v10-potential-action="edit">Edit stay details</button><button type="button" class="is-primary" data-v10-potential-action="confirm">Confirm stay</button></div></article>`;
+        return `<article class="v10-potential-item wh-home-potential-item" data-v10-potential-key="${escapeDashboardHtml(key)}"><button type="button" class="wh-home-potential-open" data-v10-potential-action="edit" aria-label="Open ${escapeDashboardHtml(props.dogName || 'Potential guest')} potential stay"><span class="wh-home-portrait" data-pet-species="${props.species === 'cat' ? 'cat' : 'dog'}">${photo ? `<img src="${escapeDashboardHtml(photo)}" alt="" loading="lazy" decoding="async">` : `<span class="wh-home-initials">${escapeDashboardHtml(initials)}</span>`}</span><span class="wh-home-potential-copy"><strong>${escapeDashboardHtml(props.dogName || 'Potential guest')}</strong><span>${escapeDashboardHtml(v10FormatDateLabel(dates.start))} → ${escapeDashboardHtml(v10FormatDateLabel(dates.end))}</span></span></button><div class="v10-potential-main"><div>${props.owner ? `<small>${escapeDashboardHtml(props.owner)}</small>` : ''}</div></div><div class="v10-potential-actions"><button type="button" data-v10-potential-action="edit">Edit stay details</button><button type="button" class="is-primary" data-v10-potential-action="confirm">Confirm stay</button></div></article>`;
     }).join('');
     hosts.forEach(host => { host.innerHTML = markup; host.setAttribute('aria-busy','false'); });
     const status = document.getElementById('whHomePotentialsStatus');
@@ -7147,7 +7147,7 @@ registerWaffleServiceWorker();
                 const type = record.bookingType.toLowerCase();
                 if (type !== 'boarding' && type !== 'confirmed boarding') return false;
                 const authoritative = { title: record.dogName, start: record.startDate, end: record.endDate, extendedProps: {
-                    dogName: record.dogName, stayId: record.stayId, dogId: record.dogId, breed: record.breed,
+                    dogName: record.dogName, stayId: record.stayId, dogId: record.dogId, species: record.species, breed: record.breed,
                     owner: record.ownerName, ownerName: record.ownerName, phone: record.phone,
                     rawStartDate: record.startDate, rawEndDate: record.endDate
                 } };
@@ -7190,7 +7190,7 @@ registerWaffleServiceWorker();
                 record.endDate === String(props.rawEndDate || '').slice(0, 10) &&
                 typeof v1105StableStayCompatible === 'function' && v1105StableStayCompatible(event, {
                     title: record.dogName, start: record.startDate, end: record.endDate,
-                    extendedProps: { dogName: record.dogName, stayId: record.stayId, dogId: record.dogId, breed: record.breed, owner: record.ownerName, ownerName: record.ownerName, phone: record.phone, rawStartDate: record.startDate, rawEndDate: record.endDate }
+                    extendedProps: { dogName: record.dogName, stayId: record.stayId, dogId: record.dogId, species: record.species, breed: record.breed, owner: record.ownerName, ownerName: record.ownerName, phone: record.phone, rawStartDate: record.startDate, rawEndDate: record.endDate }
                 }, false));
             if (!match) return event;
             const next = { ...event, extendedProps: { ...props, dateUpdatePending: false } };
@@ -10111,7 +10111,8 @@ registerWaffleServiceWorker();
             'Booking Type',
             'Dog ID',
             'Dog Number',
-            'Stay ID'
+            'Stay ID',
+            'Species'
         ];
 
         const rows = [
@@ -10137,7 +10138,8 @@ registerWaffleServiceWorker();
                 booking.bookingType || 'Boarding',
                 booking.dogId || '',
                 booking.dogNumber || '',
-                booking.stayId || ''
+                booking.stayId || '',
+                booking.species || 'dog'
             ]);
         });
 
@@ -10180,7 +10182,8 @@ registerWaffleServiceWorker();
                 booking.editLink || '',
                 booking.bookingType || 'Boarding',
                 booking.dogId || '',
-                booking.dogNumber || ''
+                booking.dogNumber || '',
+                booking.species || 'dog'
             ])]);
     }
 
@@ -17668,8 +17671,7 @@ registerWaffleServiceWorker();
                 }
                 const placeholder = document.createElement('div');
                 placeholder.className = 'directory-photo-placeholder';
-                placeholder.setAttribute('aria-label', 'No dog profile photo');
-                placeholder.textContent = '🐶';
+                placeholder.setAttribute('aria-label', 'No pet profile photo');
                 existing.replaceWith(placeholder);
             }
             return;
@@ -17980,6 +17982,7 @@ registerWaffleServiceWorker();
         const dogIdColumn = headerColumns.indexOf('dog id');
         const stayIdColumn = headerColumns.indexOf('stay id');
         const dogNumberColumn = headerColumns.indexOf('dog number');
+        const speciesColumn = headerColumns.indexOf('species');
         const localTodayStr = getLocalTodayDateString(); const today = new Date(localTodayStr + 'T00:00:00');
         const sevenDaysFromNow = new Date(today.getTime()); sevenDaysFromNow.setDate(today.getDate() + 7); sevenDaysFromNow.setHours(23,59,59,999);
 
@@ -18008,6 +18011,7 @@ registerWaffleServiceWorker();
                 ? rawDogId : '';
             const stayId = stayIdColumn >= 0 ? String(columns[stayIdColumn] || '').trim() : '';
             if (stayId && typeof v1105IsStableStayTombstoned === 'function' && v1105IsStableStayTombstoned(stayId, { dogName, dogId, ownerName, phone })) continue;
+            const species = String(columns[speciesColumn] || '').trim().toLowerCase() === 'cat' ? 'cat' : 'dog';
             const rawDogNumber = dogNumberColumn >= 0 && columns[dogNumberColumn]
                 ? String(columns[dogNumberColumn] || '').trim() : '';
             const dogNumber = dogId && /^#?\d{1,5}$/.test(rawDogNumber)
@@ -18073,7 +18077,7 @@ registerWaffleServiceWorker();
                                 title: `❓ Potential: ${dogName.trim()}`, start: startParsed, end: forcedDisplayEnd, allDay: true,
                                 classNames: ['fc-event-potential'],
                                 extendedProps: {
-                                    isPotential: true, dogName: dogName.trim(), breed: breedTxt,
+                                    isPotential: true, dogName: dogName.trim(), species, breed: breedTxt,
                                     dogId, stayId,
                                     owner: ownerName ? ownerName.trim() : "", ownerName: ownerName ? ownerName.trim() : "",
                                     phone: phone ? phone.trim() : "",
@@ -18117,7 +18121,6 @@ registerWaffleServiceWorker();
                                 const rosterStatus = hasBeenPickedUp
                                     ? 'Checked out'
                                     : (isCurrentlyAtHome ? 'Staying' : 'Arriving');
-                                const rosterInitials = dogName.trim().split(/\s+/).slice(0, 2).map(part => part.charAt(0)).join('');
                                 const cleanOwnerName = String(ownerName || '').trim();
                                 const cleanPhone = String(phone || '').trim();
                                 const cleanHandoverNote = String(notes || '').trim();
@@ -18127,6 +18130,7 @@ registerWaffleServiceWorker();
                                         class="directory-card directory-card-fused belongings-pet-card"
                                         data-directory-stay-key="${escapeDashboardHtml(directoryStayKey)}"
                                         data-directory-dog-name="${escapeDashboardHtml(dogName.trim())}"
+                                        data-pet-species="${species}"
                                         data-directory-dog-id="${escapeDashboardHtml(dogId)}"
                                         data-directory-stay-id="${escapeDashboardHtml(stayId)}"
                                         data-directory-dog-number="${escapeDashboardHtml(dogNumber)}"
@@ -18151,10 +18155,10 @@ registerWaffleServiceWorker();
                                                 class="directory-guest-tile-photo"
                                                 data-directory-tile-photo="${escapeDashboardHtml(directoryStayKey)}"
                                                 aria-hidden="true"></span>
-                                            <span class="directory-roster-avatar" aria-hidden="true">${escapeDashboardHtml(rosterInitials || '🐾')}</span>
+                                            <span class="directory-roster-avatar" aria-hidden="true"></span>
                                             <span class="directory-roster-copy">
                                                 <span class="directory-guest-tile-name">${escapeDashboardHtml(dogName.trim())}</span>
-                                                ${dogNumber ? `<span class="directory-dog-id">Dog ID ${escapeDashboardHtml(dogNumber)}</span>` : ''}
+                                                ${dogNumber ? `<span class="directory-dog-id">${species === 'cat' ? 'Pet ID' : 'Dog ID'} ${escapeDashboardHtml(dogNumber)}</span>` : ''}
                                                 <span class="directory-roster-context">${escapeDashboardHtml(rosterContext)}</span>
                                                 ${startParsed >= localTodayStr && cleanOwnerName && !/^(n\/a|unknown)$/i.test(cleanOwnerName) ? `<span class="directory-roster-owner">Owner: ${escapeDashboardHtml(cleanOwnerName)}</span>` : ''}
                                             </span>
@@ -18169,7 +18173,7 @@ registerWaffleServiceWorker();
                                                 <div class="directory-photo-media">
                                                     <div
                                                         class="directory-photo-placeholder"
-                                                        aria-label="No dog profile photo">🐶</div>
+                                                        aria-label="No pet profile photo"></div>
                                                 </div>
                                             </div>
 
@@ -18183,7 +18187,7 @@ registerWaffleServiceWorker();
                                                         title="Tap to edit Dog Name">
                                                         ${escapeDashboardHtml(dogName.trim())}
                                                     </button>
-                                                    ${dogNumber ? `<span class="directory-dog-id">Dog ID ${escapeDashboardHtml(dogNumber)}</span>` : ''}
+                                                    ${dogNumber ? `<span class="directory-dog-id">${species === 'cat' ? 'Pet ID' : 'Dog ID'} ${escapeDashboardHtml(dogNumber)}</span>` : ''}
                                                     ${statusTag}
                                                 </div>
 
@@ -18533,7 +18537,7 @@ registerWaffleServiceWorker();
 
                         events.push({
                             title: dogName.trim(), start: startParsed, end: forcedDisplayEnd, allDay: true, backgroundColor: stringToColor(dogName.trim()), textColor: '#ffffff',
-                            extendedProps: { isMeetGreet: false, isPotential: false, stayId, sourceRow: i + 1, dogId, dogNumber, breed: breedTxt, dogName: dogName.trim(), owner: ownerName ? ownerName.trim() : "N/A", ownerName: ownerName ? ownerName.trim() : "N/A", phone: phone ? phone.trim() : "N/A", notes: notes ? notes.trim() : "None", rawStartDate: startParsed, rawEndDate: endParsed, bookingType: bookingType || "Boarding", editLink: editLink.trim() }
+                            extendedProps: { isMeetGreet: false, isPotential: false, stayId, sourceRow: i + 1, dogId, dogNumber, species, breed: breedTxt, dogName: dogName.trim(), owner: ownerName ? ownerName.trim() : "N/A", ownerName: ownerName ? ownerName.trim() : "N/A", phone: phone ? phone.trim() : "N/A", notes: notes ? notes.trim() : "None", rawStartDate: startParsed, rawEndDate: endParsed, bookingType: bookingType || "Boarding", editLink: editLink.trim() }
                         });
                     }
                 }

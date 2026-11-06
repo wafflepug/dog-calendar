@@ -149,7 +149,77 @@
   });
 
   function mountToday(){const agenda=$('#v10TodayAgenda');if(!agenda || agenda.querySelector('[data-sitter-day-handovers]'))return;const host=document.createElement('section');host.className='sitter-planning';host.dataset.sitterDayHandovers='';host.innerHTML='<button type="button" aria-expanded="false">Handover times</button><div hidden><p>Scheduled today, in local sitter time.</p><div data-sitter-day-list></div><p role="status"></p></div>';agenda.prepend(host);const button=host.querySelector('button'),panel=host.querySelector('div'),status=host.querySelector('[role=status]');let loading=false;button.onclick=async()=>{if(loading)return;if(!panel.hidden){panel.hidden=true;button.setAttribute('aria-expanded','false');return;}panel.hidden=false;button.setAttribute('aria-expanded','true');loading=true;status.textContent='Loading scheduled times...';try{const r=await read({action:'get_sitter_day_handovers'});if(!host.isConnected)return;host.querySelector('[data-sitter-day-list]').innerHTML=r.entries.length?r.entries.map(x=>`<p><strong>${esc(x.time || 'Time not confirmed')}</strong> - ${esc(x.type)} - ${esc(x.dogName)}</p>`).join(''):'No arrivals or pickups scheduled today.';status.textContent='';}catch(e){status.textContent=e.message;}finally{loading=false;}};}
-  function scan(){refreshCheckoutButtons();mountToday();const panel=$('#wh75SettingsPanel');if(panel && !panel.querySelector('[data-sitter-planning-settings]')){const section=document.createElement('section');section.className='wh75-settings-section sitter-planning';section.innerHTML='<h3>Availability</h3><button type="button" data-sitter-planning-settings>Availability & handover windows</button>';section.querySelector('button').onclick=openSettings;panel.append(section);}document.querySelectorAll('.directory-card.is-profile-active').forEach(mountCard);}
+  const businessNameCache = 'palz.business-name.v1';
+  let businessName = 'Waffle House';
+  let businessNameChanged = false;
+  try { businessName = localStorage.getItem(businessNameCache) || businessName; } catch (_) {}
+
+  function showBusinessName() {
+    const sidebar = $('.wh-sitter-sidebar-brand small');
+    if (sidebar && sidebar.textContent !== businessName + ' workspace') sidebar.textContent = businessName + ' workspace';
+    const todayTitle = $('#v10OperationsTitle');
+    if (todayTitle && todayTitle.textContent !== 'Today at ' + businessName) todayTitle.textContent = 'Today at ' + businessName;
+    for (const branding of document.querySelectorAll('#whPalzStayMobileShellBrand, #whPalzStayMobileBrand')) {
+      let label = branding.querySelector('[data-palz-business-name]');
+      if (!label) {
+        label = document.createElement('small');
+        label.dataset.palzBusinessName = '';
+        branding.append(label);
+      }
+      if (label.textContent !== businessName) label.textContent = businessName;
+    }
+  }
+
+  function mountBusinessSettings() {
+    const panel = $('#wh75SettingsPanel');
+    if (!panel || panel.querySelector('[data-palz-business-settings]')) return;
+    const form = document.createElement('form');
+    form.dataset.palzBusinessSettings = '';
+    form.className = 'wh75-settings-section sitter-planning';
+    form.innerHTML = '<label>Business name<input name="businessName" type="text" maxlength="60" required></label><div class="sitter-planning-actions"><button type="submit">Save business name</button></div><p role="status"></p>';
+    const input = form.elements.businessName;
+    const button = form.querySelector('button');
+    const status = form.querySelector('[role=status]');
+    input.value = businessName;
+    form.onsubmit = async event => {
+      event.preventDefault();
+      if (button.disabled) return;
+      const name = input.value.trim();
+      if (!name) { status.textContent = 'Enter a business name.'; return; }
+      button.disabled = input.disabled = true;
+      status.textContent = 'Saving...';
+      try {
+        const result = await write({action:'save_business_name', name});
+        if (result.name !== name) throw Error('The business name could not be confirmed.');
+        businessNameChanged = true;
+        applyBusinessName(name);
+        input.value = name;
+        status.textContent = 'Business name saved.';
+      } catch (error) {
+        status.textContent = error.message;
+      } finally {
+        button.disabled = input.disabled = false;
+      }
+    };
+    panel.querySelector('.wh75-settings-head')?.after(form);
+    if (!form.isConnected) panel.prepend(form);
+  }
+
+  function applyBusinessName(name) {
+    const input = $('[data-palz-business-settings] input');
+    if (input && input.value === businessName) input.value = name;
+    businessName = name;
+    try { localStorage.setItem(businessNameCache, name); } catch (_) {}
+    showBusinessName();
+  }
+
+  if (typeof window.queryAppsScript === 'function') {
+    void read({action:'get_business_name'}).then(result => {
+      if (!businessNameChanged && typeof result.name === 'string' && result.name) applyBusinessName(result.name);
+    }).catch(() => {});
+  }
+
+  function scan(){showBusinessName();mountBusinessSettings();refreshCheckoutButtons();mountToday();const panel=$('#wh75SettingsPanel');if(panel && !panel.querySelector('[data-sitter-planning-settings]')){const section=document.createElement('section');section.className='wh75-settings-section sitter-planning';section.innerHTML='<h3>Availability</h3><button type="button" data-sitter-planning-settings>Availability & handover windows</button>';section.querySelector('button').onclick=openSettings;panel.append(section);}document.querySelectorAll('.directory-card.is-profile-active').forEach(mountCard);}
   let queued=false;new MutationObserver(()=>{if(!queued){queued=true;requestAnimationFrame(()=>{queued=false;scan();});}}).observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['class','data-directory-stay-id','data-directory-dog-id','data-directory-stay-key']});scan();
   window.PALZ_SITTER_PLANNING=Object.freeze({openSettings});
 })();

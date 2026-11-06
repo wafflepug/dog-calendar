@@ -2141,6 +2141,7 @@ function getGuestDirectoryPayload_() {
         v108DogIdentityAt_(rows,i).dogNumber,
       dogName:
         dogName,
+      species: v108DogIdentityAt_(rows,i).species,
       breed:
         String(
           row[2] || ""
@@ -2405,6 +2406,7 @@ function getPastGuestDirectoryPayload_(data) {
         dogIdentity.dogNumber,
       dogName:
         dogName,
+      species: v108DogIdentityAt_(rows,i).species,
       breed:
         String(
           row[2] ||
@@ -3088,6 +3090,7 @@ var READ_ONLY_SHEET_ACTIONS_ = {
   get_belongings: true,
   get_care_routine_log: true,
   get_sitter_planning: true,
+  get_business_name: true,
   get_sitter_handover: true,
   get_sitter_roster_pickups: true,
   get_sitter_day_handovers: true
@@ -3208,6 +3211,7 @@ function readPotentialStayRecords_() {
         timestamp,
       dogName:
         dogName,
+      species: v108DogIdentityAt_(rows,i).species,
       breed:
         String(
           row[2] ||
@@ -3431,7 +3435,7 @@ function processReadOnlySheetAction_(data) {
         var rank = (end || start || "") + "|" + String(i).padStart(8, "0");
         if (!current || rank > current.rank) {
           var digits = String(rows[i][6] || "").replace(/\D/g, "");
-          byId[dogId] = {rank:rank, dogId:dogId, dogNumber:identity.dogNumber, dogName:String(rows[i][1] || "").trim(), breed:String(rows[i][2] || "").trim(), ownerName:String(rows[i][5] || "").trim(), maskedPhoneTail:digits ? "•••• " + digits.slice(-4) : ""};
+          byId[dogId] = {rank:rank, dogId:dogId, dogNumber:identity.dogNumber, species:identity.species, dogName:String(rows[i][1] || "").trim(), breed:String(rows[i][2] || "").trim(), ownerName:String(rows[i][5] || "").trim(), maskedPhoneTail:digits ? "•••• " + digits.slice(-4) : ""};
         }
       }
       return {result:"success", action:action, identities:Object.keys(byId).map(function(id) { var item=byId[id]; delete item.rank; return item; })};
@@ -3526,6 +3530,7 @@ function processReadOnlySheetAction_(data) {
     );
   }
 
+  if (action === "get_business_name") return {result:"success",name:readPalzBusinessName_()};
   if (action === "get_sitter_planning") return {result:"success",rules:sitterPlanningRules_()};
   if (action === "get_sitter_day_handovers") return getSitterDayHandovers_();
   if (action === "get_sitter_roster_pickups") return getSitterRosterPickups_();
@@ -3717,11 +3722,11 @@ function v108DogIdentityColumns_(sheet, create) {
 }
 function ensureV108DogIdColumn_(sheet) { return v108DogIdentityColumns_(sheet, true); }
 function v108DogIdentityAt_(rows, rowIndex) {
-  var headers=rows[0]||[], id=-1, number=-1;
-  for(var i=0;i<headers.length;i++){var h=String(headers[i]||"").trim().toLowerCase();if(h==="dog id")id=i;if(h==="dog number")number=i;}
+  var headers=rows[0]||[], id=-1, number=-1, species=-1;
+  for(var i=0;i<headers.length;i++){var h=String(headers[i]||"").trim().toLowerCase();if(h==="dog id")id=i;if(h==="dog number")number=i;if(h==="species")species=i;}
   var value=id<0?"":String((rows[rowIndex]||[])[id]||"").trim();
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)) value="";
-  return {dogId:value,dogNumber:number<0?"":String((rows[rowIndex]||[])[number]||"").trim()};
+  return {dogId:value,species:species>=0 && String((rows[rowIndex]||[])[species]).toLowerCase()==="cat" ? "cat" : "dog",dogNumber:number<0?"":String((rows[rowIndex]||[])[number]||"").trim()};
 }
 function formatV108DogNumber_(n) { return "#"+String(Number(n)||0).padStart(5,"0"); }
 function v108DogNumberWatermark_() {
@@ -4436,6 +4441,7 @@ function createV108Boarding_(data) {
   var rows=sheet.getDataRange().getValues();
   sitterPlanningAssert_(rows,start,end,dogName,0);
   sitterHandoverValidate_(data,start,end);
+  var species = bookingPetSpecies_(data.species);
   var selectedDogId=String(data.dogId||"").trim();
   var copyRequested=!!(data.inheritCareReview && data.inheritCareReview.confirmed === true);
   var photoRequested=data.inheritDogPhoto === true;
@@ -4446,6 +4452,9 @@ function createV108Boarding_(data) {
     var selected=resolveV108DogRows_(rows,{dogId:selectedDogId,dogName:dogName},"creating this booking");
     if(!selected.rows.length) throw dogIdError_("DOG_ID_NOT_FOUND","Selected dog record is no longer available.");
     assertV108DogNameMatchesId_(rows, selectedDogId, dogName);
+    var savedSpecies = v108DogIdentityAt_(rows, selected.rows[0]).species || "dog";
+    if (data.species && species !== savedSpecies) throw new Error('The selected pet has a different saved species.');
+    species = savedSpecies;
   }
   if (copyRequested) validateReviewedCareInheritanceV11225_(data.inheritCareReview, dogId);
   if (copyRequested || photoRequested) {
@@ -4460,6 +4469,7 @@ function createV108Boarding_(data) {
   if(copyRequested && selectedDogId) validateV108DogProfileCopy_(dogName, dogId, rows);
   var dogColumns=ensureV108DogIdColumn_(sheet);
   var appendData=[new Date(),dogName,breed,start,end,owner,phone,"","",String(data.notes||"").trim(),"","Confirmed Boarding"];
+  setBookingPetSpecies_(sheet, appendData, species);
   var headerCols=stableStayHeadersV11225_(sheet,true);
   while(appendData.length<headerCols.width)appendData.push("");
   appendData[dogColumns.id] = dogId;
@@ -4984,6 +4994,7 @@ function processSheetAction_(data) {
     if (data.action === "backfill_dog_ids") return backfillV108DogIds_();
     if (data.action === "link_stay_to_dog") return linkV108StayToDog_(data);
 
+    if (data.action === "save_business_name") return savePalzBusinessName_(data);
     if (data.action === "save_sitter_planning") return saveSitterPlanningRules_(data);
     if (data.action === "save_sitter_handover") return saveSitterHandover_(data);
 
@@ -5113,7 +5124,7 @@ function processSheetAction_(data) {
     else if (data.action === "create_potential") {
       validatePotentialPayload_(data);
 
-      var potentialAppend = appendStableStayRowV11225_(sheet, [
+      var potentialRow = [
         new Date(),
         data.dogName || "",                    // B Dog Name
         data.breed || "",                      // C Breed
@@ -5126,7 +5137,9 @@ function processSheetAction_(data) {
         data.notes || "",                      // J Notes
         "",                                    // K Edit Link
         "Potential Stay"                       // L Booking Type
-      ], String(data.stayId || ""), String(data.clientMutationId || ""));
+      ];
+      setBookingPetSpecies_(sheet, potentialRow, data.species);
+      var potentialAppend = appendStableStayRowV11225_(sheet, potentialRow, String(data.stayId || ""), String(data.clientMutationId || ""));
 
       result.row = potentialAppend.row;
       result.stayId = potentialAppend.stayId;

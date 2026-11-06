@@ -101,6 +101,16 @@ function makeHarness(initialRows, priorProfiles = []) {
 const header = ['Timestamp', 'Dog Name', 'Breed', 'Start Date', 'End Date', 'Owner', 'Phone', '', '', 'Notes', 'Edit', 'Booking Type', 'Dog ID'];
 const booking = (name, owner, id = '') => ['', name, 'Cavoodle', '2026-10-01', '2026-10-02', owner, '0400000000', '', '', '', '', 'Confirmed Boarding', id];
 
+// Cat species survives a confirmed booking and cannot be changed by a conflicting identity.
+{
+  const h = makeHarness([header]);
+  const stay = {dogName:'Mittens', species:'cat', breed:'Domestic Shorthair', ownerName:'Owner', phone:'0400000000', startDate:'2026-10-03', endDate:'2026-10-04'};
+  const created = h.api.create(stay);
+  assert.equal(h.api.identityAt(h.rows, created.row - 1).species, 'cat');
+  assert.throws(() => h.api.create({...stay, dogId:created.dogId, species:'dog'}), /different saved species/);
+  assert.throws(() => h.api.create({...stay, species:'bird'}), /Choose Dog or Cat/);
+}
+
 // Same-name dogs remain separate; a client with no selection gets a fresh ID.
 {
   const h = makeHarness([header, booking('Coco', 'A', uuid(101)), booking('Coco', 'B', uuid(102))]);
