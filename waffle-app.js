@@ -7351,7 +7351,7 @@ registerWaffleServiceWorker();
                         'save_belongings',
                         'delete_belongings_photo',
                         // These update the operations sheet, not calendar dates.
-                        'checkin_stay', 'checkout_stay', 'early_checkout_stay'
+                        'checkin_stay', 'checkout_stay', 'early_checkout_stay', 'save_business_name'
                     ]);
 
                     if (!belongingsOnlyActions.has(String(payload.action || ''))) {
