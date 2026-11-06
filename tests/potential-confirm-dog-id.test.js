@@ -22,12 +22,13 @@ function harness() {
   let script = '';
   const document = {
     getElementById(id) {
-      if (!fields.has(id)) fields.set(id, { value:'', innerText:'', style:{} });
+      if (!fields.has(id)) fields.set(id, { value:'', innerText:'', style:{}, lastChild:{} });
       return fields.get(id);
     }
   };
   const context = {
     document,
+    showPotentialStayModal(){}, v108SetBoardingBreedChoices(){},
     stringToColor: () => '#123456',
     buildDisplayEndDate: date => date,
     Date, String, Number, Math, Array, Object
@@ -62,7 +63,7 @@ function confirmationHarness(existing = []) {
   const document = {
     getElementById(id) {
       if (id === 'confirmStayBtn') return confirmButton;
-      if (!fields.has(id)) fields.set(id, { value:'', innerText:'', style:{} });
+      if (!fields.has(id)) fields.set(id, { value:'', innerText:'', style:{}, lastChild:{} });
       return fields.get(id);
     }
   };
@@ -76,6 +77,8 @@ function confirmationHarness(existing = []) {
     makePotentialKey:(dog,start,end)=>`${String(dog||'').trim().toLowerCase()}|${start}|${end||start}`,
     addPendingPotentialRemoval(key){const pending=JSON.parse(values.get('pendingPotentialRemovals')||'[]');if(!pending.includes(key))pending.push(key);values.set('pendingPotentialRemovals',JSON.stringify(pending));},
     refreshCalendarData(){}, confirm:()=>true, alert(message){throw new Error(message);},
+    potentialModal: document.getElementById('potentialStayModal'), showPotentialStayModal(){},
+    v108ReadBoardingBreed:()=>document.getElementById('potBreed').value.trim(), v108SetBoardingBreedChoices(){},
     sendPayloadToAppsScript:async payload=>{sentPayload=payload;return {result:'success',payload};},
     stringToColor:()=>'#123456',buildDisplayEndDate:date=>date,
     Date,String,Number,Math,Array,Object,Set,Map,JSON,console

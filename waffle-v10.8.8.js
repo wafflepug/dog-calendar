@@ -904,7 +904,7 @@ function v1088StyleLegacyBookingModal(
 
     if (
         !panel.querySelector(
-            '.v1088-modal-x'
+            '.v1088-modal-x, [data-potential-close-x]'
         )
     ) {
         const close =

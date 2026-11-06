@@ -100,7 +100,8 @@ function v1104PotentialEventFromRecord(
             record?.notes ||
             ''
         ).trim(),
-        String(record?.stayId || '').trim()
+        String(record?.stayId || '').trim(),
+        record?.species
     );
 }
 

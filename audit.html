@@ -8,13 +8,13 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Palz Stay">
-    <link rel="manifest" href="manifest.webmanifest?v=2026.11.07.10">
-    <link rel="icon" type="image/png" sizes="192x192" href="palz-favicon.png?v=2026.11.07.10">
-    <link rel="apple-touch-icon" sizes="180x180" href="pwa-apple-touch-icon.png?v=2026.11.07.10">
+    <link rel="manifest" href="manifest.webmanifest?v=2026.11.07.11">
+    <link rel="icon" type="image/png" sizes="192x192" href="palz-favicon.png?v=2026.11.07.11">
+    <link rel="apple-touch-icon" sizes="180x180" href="pwa-apple-touch-icon.png?v=2026.11.07.11">
     <title>Palz Stay — Audit Log</title>
-<link rel="stylesheet" href="palz-loading.css?rev=2026.11.07.10">
-<script src="palz-loading.js?rev=2026.11.07.10"></script>
-<link rel="stylesheet" href="waffle-runtime.css?v=2026.08.28.01&amp;rev=2026.11.07.10">
+<link rel="stylesheet" href="palz-loading.css?rev=2026.11.07.11">
+<script src="palz-loading.js?rev=2026.11.07.11"></script>
+<link rel="stylesheet" href="waffle-runtime.css?v=2026.08.28.01&amp;rev=2026.11.07.11">
     </head>
 <body data-waffle-page="audit">
 <div id="palzLoadingScreen" role="status" aria-live="polite" aria-label="Loading Palz Stay">
@@ -466,42 +466,26 @@
 </div>
 
 <!-- Modal: Add / Manage Potential Stay -->
-<div id="potentialStayModal" role="dialog" aria-modal="true" aria-labelledby="potentialModalTitle" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 10001; align-items: center; justify-content: center;">
-    <div style="background: white; padding: 25px; border-radius: 12px; max-width: 420px; width: 90%; box-shadow: 0 10px 25px rgba(0,0,0,0.2); font-family: inherit; box-sizing: border-box;" class="modal-content-panel">
-        <h3 style="margin-top: 0; color: #d35400; font-size: 18px; display: flex; align-items: center; gap: 8px;" id="potentialModalTitle">❓ Potential Stay Request</h3>
-        
-        <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 5px; color: #475569;">🐾 Dog Name *</label>
-        <input type="text" id="potDogName" style="width: 100%; padding: 10px; margin-bottom: 12px; border: 2px solid #e2e8f0; border-radius: 6px; box-sizing: border-box;" placeholder="e.g. Rocky" required>
-
-        <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 5px; color: #475569;">📋 Breed *</label>
-        <input type="text" id="potBreed" style="width: 100%; padding: 10px; margin-bottom: 12px; border: 2px solid #e2e8f0; border-radius: 6px; box-sizing: border-box;" placeholder="e.g. Golden Retriever" required>
-
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-            <div>
-                <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 5px; color: #475569;">📅 Check-In Date *</label>
-                <input type="date" id="potStartDate" style="width: 100%; padding: 10px; margin-bottom: 12px; border: 2px solid #e2e8f0; border-radius: 6px; box-sizing: border-box;" required>
-            </div>
-            <div>
-                <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 5px; color: #475569;">📅 Check-Out Date *</label>
-                <input type="date" id="potEndDate" style="width: 100%; padding: 10px; margin-bottom: 12px; border: 2px solid #e2e8f0; border-radius: 6px; box-sizing: border-box;" required>
-            </div>
+<div id="potentialStayModal" class="v108-modal" role="dialog" aria-modal="true" aria-labelledby="potentialModalTitle" hidden>
+    <div class="v108-modal-card modal-content-panel" style="max-width: 650px;">
+        <div class="v108-modal-head"><div><small class="v1088-modal-kicker">POTENTIAL STAY</small><h3 id="potentialModalTitle"><span data-v108-boarding-icon aria-hidden="true"></span> Potential stay request</h3><p>Record the requested dates and owner details.</p></div><button type="button" data-potential-close-x aria-label="Close potential stay">×</button></div>
+        <div class="v108-form-grid" data-potential-form-grid>
+          <label>Pet name *<input type="text" id="potDogName" autocomplete="off" placeholder="e.g. Rocky" required></label>
+          <label>Species<select id="potSpecies" data-v108-board="species"><option value="dog">Dog</option><option value="cat">Cat</option></select></label>
+          <label>Breed *<select id="potBreedChoice" data-v108-breed-choice required></select></label>
+          <label class="wide" data-v108-manual-breed hidden>Enter breed or mix *<input type="text" id="potBreed" data-v108-board="breed" autocomplete="off" placeholder="Enter breed or mix" required></label>
+          <label>Check-in date *<input type="date" id="potStartDate" required></label>
+          <label>Check-out date *<input type="date" id="potEndDate" required></label>
+          <label>Owner name *<input type="text" id="potOwnerName" autocomplete="name" placeholder="e.g. Sarah Smith" required></label>
+          <label>Contact number *<input type="tel" id="potPhone" autocomplete="tel" placeholder="e.g. 0412 345 678" required></label>
+          <label class="wide">Notes / status details (optional)<textarea id="potNotes" rows="2" placeholder="e.g. Awaiting owner confirmation"></textarea></label>
         </div>
-
-        <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 5px; color: #475569;">👤 Owner Name *</label>
-        <input type="text" id="potOwnerName" style="width: 100%; padding: 10px; margin-bottom: 12px; border: 2px solid #e2e8f0; border-radius: 6px; box-sizing: border-box;" placeholder="e.g. Sarah Smith" required>
-
-        <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 5px; color: #475569;">📞 Contact Number *</label>
-        <input type="tel" id="potPhone" style="width: 100%; padding: 10px; margin-bottom: 12px; border: 2px solid #e2e8f0; border-radius: 6px; box-sizing: border-box;" placeholder="e.g. 0412 345 678" required>
-
-        <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 5px; color: #475569;">📝 Notes / Status Details (Optional)</label>
-        <input type="text" id="potNotes" style="width: 100%; padding: 10px; margin-bottom: 20px; border: 2px solid #e2e8f0; border-radius: 6px; box-sizing: border-box;" placeholder="e.g. Awaiting owner confirmation">
-
-        <div style="display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap;" id="potentialActionControls">
-            <button id="potentialIntakeLinkBtn" style="background: #1f3a5f; color: white; border: none; padding: 10px 14px; border-radius: 6px; cursor: pointer; font-weight: bold; display: none;">📝 Copy Intake Link</button>
-            <button id="savePotentialBtn" style="background: #e67e22; color: white; border: none; padding: 10px 14px; border-radius: 6px; cursor: pointer; font-weight: bold;">Submit Potential</button>
-            <button id="confirmStayBtn" style="background: #27ae60; color: white; border: none; padding: 10px 14px; border-radius: 6px; cursor: pointer; font-weight: bold; display: none;">✅ Confirm Stay</button>
-            <button id="closePotentialModalBtn" style="background: #94a3b8; color: white; border: none; padding: 10px 14px; border-radius: 6px; cursor: pointer; font-weight: bold;">Cancel</button>
-            <button id="deletePotentialBtn" style="background: #e74c3c; color: white; border: none; padding: 10px 14px; border-radius: 6px; cursor: pointer; font-weight: bold; margin-right: auto; display: none;">🗑️ Delete Request</button>
+        <div class="v108-modal-actions" id="potentialActionControls">
+            <button id="potentialIntakeLinkBtn" type="button" style="display:none">Copy Intake Link</button>
+            <button id="savePotentialBtn" type="button" class="primary">Submit Potential</button>
+            <button id="confirmStayBtn" type="button" class="primary" style="display:none">Confirm Stay</button>
+            <button id="closePotentialModalBtn" type="button">Cancel</button>
+            <button id="deletePotentialBtn" type="button" style="display:none">Cancel potential stay</button>
         </div>
     </div>
 </div>
@@ -542,6 +526,6 @@
     body.dark-theme .modal-content-panel input { background: #334155; border-color: #475569; color: white; }
 </style>
 
-<script src="waffle-bootstrap.js?v=2026.08.28.01&amp;rev=2026.11.07.10"></script>
+<script src="waffle-bootstrap.js?v=2026.08.28.01&amp;rev=2026.11.07.11"></script>
     </html>
 
