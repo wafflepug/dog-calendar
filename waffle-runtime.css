@@ -2,8 +2,8 @@
    Build: 2026.08.27.04
    Historical base styles remain compatibility sources during Phase 3A, but pages no longer
    reference them individually. Preserve this import order until modules are folded in. */
-@import url("waffle-app.css?build=2026.08.27.04&rev=2026.11.07.01");
-@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.11.07.01");
+@import url("waffle-app.css?build=2026.08.27.04&rev=2026.11.07.02");
+@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.11.07.02");
 @import url("waffle-v10.8.2.css?build=2026.08.27.04");
 @import url("waffle-v10.8.3.css?build=2026.08.27.04");
 @import url("waffle-v10.8.5.css?build=2026.08.27.04");
@@ -11,12 +11,12 @@
 @import url("waffle-v10.8.7.css?build=2026.08.27.04");
 @import url("waffle-v10.8.8.css?build=2026.08.27.04");
 @import url("waffle-v10.8.9.css?build=2026.08.27.04");
-@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.11.07.01");
+@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.11.07.02");
 @import url("waffle-v11.0.3.css?build=2026.08.27.04");
 @import url("waffle-v11.0.5.css?build=2026.08.27.04");
-@import url("waffle-v11.1.94.css?build=2026.11.07.01");
-@import url("waffle-v11.1.95.css?build=2026.11.07.01");
-@import url("waffle-v11.1.96.css?build=2026.11.07.01&rev=2026.11.07.01");
+@import url("waffle-v11.1.94.css?build=2026.11.07.02");
+@import url("waffle-v11.1.95.css?build=2026.11.07.02");
+@import url("waffle-v11.1.96.css?build=2026.11.07.02&rev=2026.11.07.02");
 
 /* ============================================================
    MOBILE FIRST-PAINT STABILITY GATE
@@ -3067,8 +3067,8 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-
 body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-more-actions-list > .directory-care-contact-disclosure > summary {min-height:44px;overflow-wrap:anywhere}
 /* Keep roster warnings as a fallback until this profile's safety state is known.
    Reminder due is unique to the roster signals and always remains visible. */
-body[data-waffle-page="directory"] .directory-card.is-profile-active:has([data-care-brief-safety][data-state="attention"], [data-care-brief-safety][data-state="clear"]) [data-directory-profile-roster-badges] [data-v1118-care-signals] .v1118-care-signal:not([data-v1118-signal-label="Reminder due"]) {display:none}
-body[data-waffle-page="directory"] .directory-card.is-profile-active:has([data-care-brief-safety][data-state="attention"], [data-care-brief-safety][data-state="clear"]) [data-directory-profile-roster-badges] [data-v1118-care-signals]:not(:has([data-v1118-signal-label="Reminder due"])) {display:none}
+body[data-waffle-page="directory"] .directory-card.is-profile-active:has([data-care-brief-safety][data-state="attention"], [data-care-brief-safety][data-state="clear"]) [data-directory-profile-roster-badges] [data-v1118-care-signals] .v1118-care-signal:not([data-v1118-safety-signal], [data-v1118-signal-label="Reminder due"]) {display:none}
+body[data-waffle-page="directory"] .directory-card.is-profile-active:has([data-care-brief-safety][data-state="attention"], [data-care-brief-safety][data-state="clear"]) [data-directory-profile-roster-badges] [data-v1118-care-signals]:not(:has([data-v1118-safety-signal], [data-v1118-signal-label="Reminder due"])) {display:none}
 @media(min-width:769px){
   body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-grid > .directory-care-brief-item {display:grid;grid-template-columns:120px minmax(0,1fr);gap:4px 12px;align-items:start}
   body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-grid > .directory-care-brief-item .directory-care-brief-value {margin:0}

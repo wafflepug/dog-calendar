@@ -105,7 +105,7 @@ test('actual Care profile stays compact, keeps exceptions visible and preserves 
     await expect(brief.locator('[data-care-brief-call-owner] a')).toBeVisible();
     await expect(brief.locator('.directory-care-brief-note')).toContainText(booking.notes);
     await expect(page.locator('#directoryProfileBackBar .directory-profile-tools')).toBeHidden();
-    await expect(card.locator('[data-directory-profile-roster-badges] [data-v1118-care-signals]')).toBeHidden();
+    await expect(card.locator('[data-directory-profile-roster-badges] [data-v1118-safety-signal] svg[data-palz-icon]')).toBeVisible();
     await expect(tools).not.toHaveAttribute('open', '');
     for (const selector of ['.directory-care-readiness', '[data-directory-stay-contact]', '.directory-care-records-disclosure']) {
       await expect(tools.locator(selector)).toHaveCount(1);
@@ -251,7 +251,7 @@ test('profile keeps due reminders and falls back to roster warnings while safety
   await expect(card.locator('[data-care-brief-safety]')).toContainText('Food Allergy');
   const header=card.locator('[data-directory-profile-roster-badges]');
   await expect(header.locator('[data-v1118-signal-label="Reminder due"]')).toBeVisible();
-  await expect(header.locator('[data-v1118-signal-label="Food allergy"]')).toBeHidden();
+  await expect(header.locator('[data-v1118-signal-label="Food allergy"] svg[data-palz-icon="alert"]')).toBeVisible();
   const before=reads.filter(x=>x==='get_guest_profile').length;
   await card.locator('[data-care-brief-safety]').evaluate(el=>el.dataset.state='pending');
   await expect(header.locator('[data-v1118-signal-label="Food allergy"]')).toBeVisible();
