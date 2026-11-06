@@ -45,7 +45,7 @@ function v111EnsurePotentialSourceField() {
 
     const label = document.createElement('label');
     label.className = 'v111-request-source-field';
-    label.innerHTML = 'Request came from *<select id="potRequestSource" aria-label="Request came from" required>' + v111RequestSourceOptions() + '</select>';
+    label.innerHTML = '<select id="potRequestSource" aria-label="Request From" required>' + v111RequestSourceOptions() + '</select>';
     anchor.parentElement.insertBefore(label, anchor);
     return label.querySelector('select');
 }

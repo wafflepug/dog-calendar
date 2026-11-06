@@ -2,8 +2,8 @@
    Build: 2026.08.27.04
    Historical base styles remain compatibility sources during Phase 3A, but pages no longer
    reference them individually. Preserve this import order until modules are folded in. */
-@import url("waffle-app.css?build=2026.08.27.04&rev=2026.11.07.10");
-@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.11.07.10");
+@import url("waffle-app.css?build=2026.08.27.04&rev=2026.11.07.11");
+@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.11.07.11");
 @import url("waffle-v10.8.2.css?build=2026.08.27.04");
 @import url("waffle-v10.8.3.css?build=2026.08.27.04");
 @import url("waffle-v10.8.5.css?build=2026.08.27.04");
@@ -11,12 +11,12 @@
 @import url("waffle-v10.8.7.css?build=2026.08.27.04");
 @import url("waffle-v10.8.8.css?build=2026.08.27.04");
 @import url("waffle-v10.8.9.css?build=2026.08.27.04");
-@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.11.07.10");
+@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.11.07.11");
 @import url("waffle-v11.0.3.css?build=2026.08.27.04");
 @import url("waffle-v11.0.5.css?build=2026.08.27.04");
-@import url("waffle-v11.1.94.css?build=2026.11.07.10");
-@import url("waffle-v11.1.95.css?build=2026.11.07.10");
-@import url("waffle-v11.1.96.css?build=2026.11.07.10&rev=2026.11.07.10");
+@import url("waffle-v11.1.94.css?build=2026.11.07.11");
+@import url("waffle-v11.1.95.css?build=2026.11.07.11");
+@import url("waffle-v11.1.96.css?build=2026.11.07.11&rev=2026.11.07.11");
 
 /* ============================================================
    MOBILE FIRST-PAINT STABILITY GATE
@@ -3395,9 +3395,19 @@ html body #potentialStayModal > .modal-content-panel {
   border:1px solid var(--wh-border,#cbd5e1)!important;
   border-radius:10px!important;
 }
-#potentialStayModal #potentialActionControls > :is(#potentialIntakeLinkBtn,#closePotentialModalBtn) {
+#potentialStayModal #potentialActionControls > :is(#potentialIntakeLinkBtn,#closePotentialModalBtn,#savePotentialBtn:not(.primary)) {
   background:var(--wh-surface-soft,#f8fafc)!important;
   color:var(--wh-text,#172033)!important;
+}
+#potentialStayModal #potentialActionControls > .primary {
+  border-color:var(--wh75-accent-strong,#6d28d9)!important;
+  background:var(--wh75-accent-strong,#6d28d9)!important;
+  color:#fff!important;
+}
+body.dark-theme #potentialStayModal #potentialActionControls > .primary {
+  border-color:var(--wh75-accent,#c084fc)!important;
+  background:var(--wh75-accent,#c084fc)!important;
+  color:#0f172a!important;
 }
 #potentialStayModal #potentialActionControls > #deletePotentialBtn {
   background:var(--wh-surface,#fff)!important;
@@ -3436,4 +3446,4 @@ html body.dark-theme .wh-home-potential-item .v10-potential-actions button[data-
   html body #potentialStayModal { align-items:flex-start!important; }
 }
 
-#v108BoardingModal .v1112-source-circle:has(> img) > span { display: none; }
+:is(#v108BoardingModal,#potentialStayModal) .v1112-source-circle:has(> img) > span { display: none; }

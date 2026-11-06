@@ -63,7 +63,8 @@
     const host = select.closest('.v111-request-source-field') || select.parentElement;
     if (host) {
       host.classList.add('v1114-source-field', 'v1114-potential-source-field');
-      if (phone && phone.nextElementSibling !== host) phone.insertAdjacentElement('afterend', host);
+      const phoneAnchor = phone && (phone.closest('label') || phone);
+      if (phoneAnchor && phoneAnchor.nextElementSibling !== host) phoneAnchor.insertAdjacentElement('afterend', host);
     }
 
     polishPicker(select);

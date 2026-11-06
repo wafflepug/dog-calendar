@@ -160,3 +160,15 @@ body.dark-theme .v108-copy{border-color:#1d4ed8;background:#172554;color:#bfdbfe
 #v108BoardingModal [data-v108-manual-breed][hidden] {
   display: none;
 }
+#potentialStayModal .v108-modal-head h3{display:flex;align-items:center;gap:8px}
+#potentialStayModal [data-v108-boarding-icon],#potentialStayModal .v108-modal-head small{color:var(--v10-accent,var(--v10-primary))}
+#potentialStayModal [data-potential-form-grid] :is(input,select,textarea){width:100%;min-width:0;min-height:44px;box-sizing:border-box;font-size:16px}
+#potentialStayModal [data-potential-form-grid] select{padding:8px 10px;border:1px solid var(--v10-line,var(--v10-border));border-radius:10px;background:var(--v10-card-soft);color:var(--v10-text)}
+#potentialStayModal [data-potential-form-grid] label{font-size:12px}
+#potentialStayModal [data-v108-manual-breed][hidden]{display:none}
+#potentialStayModal .v108-modal-actions{flex-wrap:wrap}
+#potentialStayModal .v108-modal-actions button{min-height:44px;padding:9px 13px;font:inherit;font-size:12px;font-weight:800}
+#potentialStayModal #deletePotentialBtn{margin-right:auto;border-color:#fecaca;background:#fff;color:#b42318}
+body.dark-theme #potentialStayModal #deletePotentialBtn{border-color:#7f1d1d;background:#3b1111;color:#fecaca}
+#potentialStayModal .v1112-source-picker{margin:8px 0 10px}
+@media(max-width:600px){#potentialStayModal .v108-modal-actions button{flex:1 1 auto}}

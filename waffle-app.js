@@ -5309,7 +5309,10 @@ registerWaffleServiceWorker();
             document.getElementById('customBookingModal').style.display = "none";
         });
         document.getElementById('closePotentialModalBtn').addEventListener('click', function() {
-            document.getElementById('potentialStayModal').style.display = "none";
+            document.getElementById('potentialStayModal').hidden = true;
+        });
+        document.querySelector('#potentialStayModal [data-potential-close-x]')?.addEventListener('click', function() {
+            document.getElementById('potentialStayModal').hidden = true;
         });
 
         document.getElementById('openPotentialBtn').addEventListener('click', function() {
@@ -6427,10 +6430,22 @@ registerWaffleServiceWorker();
         document.getElementById('potentialIntakeLinkBtn')
             .addEventListener('click', () => void createOrCopyPotentialIntakeLink());
 
+        const potentialModal = document.getElementById('potentialStayModal');
+        const potentialSpecies = document.getElementById('potSpecies');
+        const potentialBreedChoice = document.getElementById('potBreedChoice');
+        potentialSpecies?.addEventListener('change', () => v108SetBoardingBreedChoices(potentialModal));
+        potentialBreedChoice?.addEventListener('change', () => {
+            const manual = potentialModal.querySelector('[data-v108-manual-breed]');
+            manual.hidden = potentialBreedChoice.value !== 'other';
+            if (!manual.hidden) manual.querySelector('input').focus();
+        });
+        v108SetBoardingBreedChoices(potentialModal);
+
         document.getElementById('savePotentialBtn').addEventListener('click', async function() {
             const button = this;
             const dogName = document.getElementById('potDogName').value.trim();
-            const breed = document.getElementById('potBreed').value.trim();
+            const breed = v108ReadBoardingBreed(potentialModal);
+            const species = potentialSpecies.value;
             const startDate = document.getElementById('potStartDate').value;
             const endDate = document.getElementById('potEndDate').value;
             const ownerName = document.getElementById('potOwnerName').value.trim();
@@ -6472,6 +6487,7 @@ registerWaffleServiceWorker();
                 ownerName: ownerName,
                 phone: phone,
                 notes: notes,
+                species: species,
                 bookingType: "Potential Stay"
             } : {
                 action: "create_potential",
@@ -6484,6 +6500,7 @@ registerWaffleServiceWorker();
                 ownerName: ownerName,
                 phone: phone,
                 notes: notes,
+                species: species,
                 bookingType: "Potential Stay"
             };
 
@@ -6518,12 +6535,13 @@ registerWaffleServiceWorker();
                         ownerName,
                         phone,
                         notes,
-                        savedStayId
+                        savedStayId,
+                        species
                     )
                 );
                 setLocalArray('temporaryPotentialStays', localPotentials);
 
-                document.getElementById('potentialStayModal').style.display = "none";
+                document.getElementById('potentialStayModal').hidden = true;
                 refreshCalendarData();
 
                 activeEditingPotential = null;
@@ -6547,7 +6565,7 @@ registerWaffleServiceWorker();
 
             const button = this;
             const dogName = document.getElementById('potDogName').value.trim();
-            const breed = document.getElementById('potBreed').value.trim();
+            const breed = v108ReadBoardingBreed(potentialModal);
             const startDate = document.getElementById('potStartDate').value;
             const endDate = document.getElementById('potEndDate').value;
             const ownerName = document.getElementById('potOwnerName').value.trim();
@@ -6571,7 +6589,8 @@ registerWaffleServiceWorker();
                 startDate: activeEditingPotential.rawStartDate,
                 endDate: activeEditingPotential.rawEndDate,
                 dogId: activeEditingPotential.dogId || '',
-                stayId: String(activeEditingPotential.stayId || '').trim()
+                stayId: String(activeEditingPotential.stayId || '').trim(),
+                species: activeEditingPotential.species || 'dog'
             };
 
             const payload = {
@@ -6600,7 +6619,7 @@ registerWaffleServiceWorker();
                 const confirmResponse = await sendPayloadToAppsScript(payload);
                 const confirmedStayId = String(confirmResponse?.stayId || confirmResponse?.booking?.stayId || original.stayId || '').trim();
 
-                document.getElementById('potentialStayModal').style.display = "none";
+                document.getElementById('potentialStayModal').hidden = true;
 
                 addPendingPotentialRemoval(
                     makePotentialKey(original.dogName, original.startDate, original.endDate)
@@ -6622,7 +6641,8 @@ registerWaffleServiceWorker();
                     phone,
                     notes,
                     original.dogId,
-                    confirmedStayId
+                    confirmedStayId,
+                    original.species
                 );
                 localConfirmed.push(confirmedEvent);
                 if (typeof v1105DedupeConfirmedStays === 'function') {
@@ -6678,7 +6698,7 @@ registerWaffleServiceWorker();
             try {
                 await sendPayloadToAppsScript(payload);
 
-                document.getElementById('potentialStayModal').style.display = "none";
+                document.getElementById('potentialStayModal').hidden = true;
 
                 addPendingPotentialRemoval(
                     makePotentialKey(original.dogName, original.startDate, original.endDate)
@@ -6806,9 +6826,12 @@ registerWaffleServiceWorker();
         activeEditingPotentialId = null;
         activeEditingPotential = null;
 
-        document.getElementById('potentialModalTitle').innerText = "❓ Add Potential Stay Request";
+        document.getElementById('potentialModalTitle').lastChild.textContent = ' Potential stay request';
         document.getElementById('potDogName').value = "";
         document.getElementById('potBreed').value = "";
+        document.getElementById('potSpecies').value = 'dog';
+        document.getElementById('potSpecies').disabled = false;
+        v108SetBoardingBreedChoices(document.getElementById('potentialStayModal'));
         document.getElementById('potStartDate').value = getLocalTodayDateString();
         document.getElementById('potEndDate').value = getLocalTodayDateString();
         document.getElementById('potOwnerName').value = "";
@@ -6819,6 +6842,7 @@ registerWaffleServiceWorker();
         document.getElementById('confirmStayBtn').style.display = "none";
         document.getElementById('potentialIntakeLinkBtn').style.display = "none";
         document.getElementById('savePotentialBtn').innerText = "Submit Potential";
+        document.getElementById('savePotentialBtn').className = 'primary';
 
         showPotentialStayModal();
         document.getElementById('potDogName').focus({ preventScroll: true });
@@ -6832,6 +6856,7 @@ registerWaffleServiceWorker();
             id: event.id,
             dogName: props.dogName || "",
             breed: props.breed || "N/A",
+            species: props.species === 'cat' ? 'cat' : 'dog',
             rawStartDate: props.rawStartDate || event.startStr,
             rawEndDate: props.rawEndDate || props.rawStartDate || event.startStr,
             ownerName: props.owner || props.ownerName || "",
@@ -6841,9 +6866,11 @@ registerWaffleServiceWorker();
             notes: props.notes || ""
         };
 
-        document.getElementById('potentialModalTitle').innerText = "❓ Manage Potential Stay";
+        document.getElementById('potentialModalTitle').lastChild.textContent = ' Manage potential stay';
+        document.getElementById('potSpecies').value = activeEditingPotential.species === 'cat' ? 'cat' : 'dog';
+        document.getElementById('potSpecies').disabled = true;
+        v108SetBoardingBreedChoices(document.getElementById('potentialStayModal'), activeEditingPotential.breed === 'N/A' ? '' : activeEditingPotential.breed);
         document.getElementById('potDogName').value = activeEditingPotential.dogName;
-        document.getElementById('potBreed').value = activeEditingPotential.breed === "N/A" ? "" : activeEditingPotential.breed;
         document.getElementById('potStartDate').value = activeEditingPotential.rawStartDate;
         document.getElementById('potEndDate').value = activeEditingPotential.rawEndDate;
         document.getElementById('potOwnerName').value = activeEditingPotential.ownerName;
@@ -6854,6 +6881,7 @@ registerWaffleServiceWorker();
         document.getElementById('confirmStayBtn').style.display = "inline-block";
         document.getElementById('potentialIntakeLinkBtn').style.display = "inline-block";
         document.getElementById('savePotentialBtn').innerText = "Update Details";
+        document.getElementById('savePotentialBtn').className = '';
 
         showPotentialStayModal();
     }
@@ -6905,7 +6933,7 @@ registerWaffleServiceWorker();
             String(dateObj.getDate()).padStart(2, '0');
     }
 
-    function buildPotentialEvent(id, dogName, breed, startDate, endDate, ownerName, phone, notes, stayId = '') {
+    function buildPotentialEvent(id, dogName, breed, startDate, endDate, ownerName, phone, notes, stayId = '', species = 'dog') {
         return {
             id: id,
             title: `❓ Potential: ${dogName}`,
@@ -6919,6 +6947,7 @@ registerWaffleServiceWorker();
                 stayId: String(stayId || ''),
                 dogName: dogName,
                 breed: breed,
+                species: species === 'cat' ? 'cat' : 'dog',
                 owner: ownerName,
                 ownerName: ownerName,
                 phone: phone,
@@ -6931,7 +6960,7 @@ registerWaffleServiceWorker();
         };
     }
 
-    function buildConfirmedEvent(id, dogName, breed, startDate, endDate, ownerName, phone, notes, dogId = '', stayId = '') {
+    function buildConfirmedEvent(id, dogName, breed, startDate, endDate, ownerName, phone, notes, dogId = '', stayId = '', species = 'dog') {
         return {
             id: id,
             title: dogName,
@@ -6945,6 +6974,7 @@ registerWaffleServiceWorker();
                 isMeetGreet: false,
                 dogName: dogName,
                 breed: breed,
+                species: species === 'cat' ? 'cat' : 'dog',
                 owner: ownerName,
                 ownerName: ownerName,
                 phone: phone,
@@ -17144,7 +17174,7 @@ registerWaffleServiceWorker();
         const modal = document.getElementById('potentialStayModal');
         modal.querySelector('[data-potential-intake-result]')?.remove();
         document.getElementById('potentialIntakeLinkBtn').disabled = false;
-        modal.style.display = 'flex';
+        modal.hidden = false;
         modal.scrollTop = 0;
         modal.querySelector('.modal-content-panel').scrollTop = 0;
     }
