@@ -102,7 +102,7 @@ test('actual Care profile stays compact, keeps exceptions visible and preserves 
     const tools = brief.locator('.directory-care-more-actions');
     await expect(brief.locator('[data-care-readiness-action="safety"], [data-care-readiness-action="feeding"], [data-care-readiness-action="medication"]')).toHaveCount(0);
     await expect(brief.locator('.directory-care-brief-actions > [data-care-owner-link-group] > [data-p4-dir="owner"]')).toBeVisible();
-    await expect(brief.locator('[data-care-brief-call-owner] a')).toBeVisible();
+    await expect(card.locator('[data-care-header-tools] [data-care-header-call-owner]')).toBeVisible();
     await expect(brief.locator('.directory-care-brief-note')).toContainText(booking.notes);
     await expect(page.locator('#directoryProfileBackBar .directory-profile-tools')).toBeHidden();
     await expect(card.locator('[data-directory-profile-roster-badges] [data-v1118-safety-signal] svg[data-palz-icon]')).toBeVisible();
@@ -479,7 +479,7 @@ test('saved Care contact actions are readable and Emergency details focuses the 
  const before=reads.filter(action=>action==='get_guest_profile').length;
  const owner=card.locator('[data-care-brief-call-owner]');
  await expect(owner.locator('.directory-care-owner-phone')).toHaveText(booking.phone);
- await expect(owner.getByRole('link',{name:'Call owner',exact:true})).toHaveAttribute('href',`tel:${booking.phone}`);
+ await expect(card.locator('[data-care-header-call-owner]')).toHaveAttribute('href',`tel:${booking.phone}`);
  await card.locator('[data-care-brief-action="emergency-contact"]').click();
  const contact=card.locator('[data-intake-read-attribute="emergencyContact"]');
  await expect(contact).toBeFocused();

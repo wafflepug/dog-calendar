@@ -2141,6 +2141,30 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active [data-care-
   width: 100%;
   min-width: 0;
 }
+body[data-waffle-page="directory"] .directory-card.is-profile-active .care-header-call-owner {
+  display: grid;
+  place-items: center;
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--care-card-line, #d8deea);
+  border-radius: 50%;
+  color: var(--wh-text, var(--care-card-text, #25314a));
+  background: var(--care-card-space, #fff);
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .care-header-call-owner svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .care-header-call-owner:focus-visible {
+  outline: 3px solid var(--care-focus, #2459d3);
+  outline-offset: 2px;
+}
 body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-photo-shell {
   order: 0;
   grid-column: auto;
