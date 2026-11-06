@@ -64,7 +64,7 @@ function v111EnsureBoardingSourceField(modal) {
     const notesLabel = notes.closest('label');
     const label = document.createElement('label');
     label.className = 'v111-request-source-field';
-    label.innerHTML = 'Request came from *<select data-v111-request-source="boarding" aria-label="Request came from" required>' + v111RequestSourceOptions() + '</select>';
+    label.innerHTML = '<select data-v111-request-source="boarding" aria-label="Request From" required>' + v111RequestSourceOptions() + '</select>';
     grid.insertBefore(label, notesLabel || null);
     return label.querySelector('select');
 }

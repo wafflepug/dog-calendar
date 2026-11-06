@@ -59,6 +59,7 @@
           <button type="button"
             class="v1112-source-tile${active ? ' is-selected' : ''}${value === 'Other' ? ' v1116-source-other' : ''}"
             data-v1112-source-value="${escapeHtml(value)}"
+            aria-label="${escapeHtml(label)}"
             aria-pressed="${active ? 'true' : 'false'}">
             <span class="v1112-source-circle">
               ${image ? `<img src="${image}" alt="">` : ''}
