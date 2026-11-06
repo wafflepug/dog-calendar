@@ -275,6 +275,12 @@
     };
     panel.querySelector('.wh75-settings-head')?.after(form);
     if (!form.isConnected) panel.prepend(form);
+    if (!panel.querySelector('[data-palz-crm-link]')) {
+      const section = document.createElement('section');
+      section.className = 'wh75-settings-section sitter-planning';
+      section.innerHTML = '<h3>Customer records</h3><a data-palz-crm-link href="crm.html">Open CRM</a>';
+      form.after(section);
+    }
   }
 
   function applyBusinessName(brand) {

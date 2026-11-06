@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex">
+  <meta name="referrer" content="no-referrer">
+  <title>CRM | Palz Stay</title>
+  <link rel="icon" href="palz-favicon.png?v=2026.11.06.17" type="image/png">
+  <link rel="stylesheet" href="crm.css?v=2026.11.06.17">
+  <script src="crm.js?v=2026.11.06.17" defer></script>
+</head>
+<body>
+  <main>
+    <header class="crm-header">
+      <div>
+        <a href="index.html?view=today">← Palz Stay</a>
+        <h1>CRM</h1>
+        <p>Find pets, owner contacts and booking history. Upcoming covers the next seven days.</p>
+      </div>
+      <button id="refresh" type="button">Refresh</button>
+    </header>
+    <section class="crm-filters" aria-label="CRM filters">
+      <label>Search<input id="search" type="search" placeholder="Pet, owner, phone or Pet ID" autocomplete="off"></label>
+      <label>Stay status<select id="stay-status">
+        <option value="all">All records</option><option value="current">Staying</option>
+        <option value="upcoming">Upcoming</option><option value="potential">Potential</option><option value="past">Past</option>
+      </select></label>
+      <label>Species<select id="species">
+        <option value="all">All pets</option><option value="dog">Dogs</option><option value="cat">Cats</option>
+      </select></label>
+    </section>
+    <p id="status" role="status">Loading CRM records…</p>
+    <section id="records" class="crm-records" aria-label="Pet records" aria-busy="true"></section>
+    <template id="record-template">
+      <article class="crm-record">
+        <div class="crm-record-head"><h2></h2><span class="crm-badge"></span></div>
+        <p class="crm-pet-meta"></p>
+        <p class="crm-owner"></p>
+        <div class="crm-actions"></div>
+        <details><summary></summary><ul></ul></details>
+      </article>
+    </template>
+  </main>
+</body>
+</html>
