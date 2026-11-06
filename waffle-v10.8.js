@@ -436,11 +436,125 @@ function v108RenderMeetOutlook(events) {
 renderV10OperationsHome=function(events){v108BaseRenderOperationsHome(events);v108RenderMeetOutlook(events);};
 
 /* ---------------- New Boarding popup / V10.7 returning guests ---------------- */
+// Registry choices from Dogs Victoria and The International Cat Association.
+const v108BoardingBreeds = {
+    dog: [
+        "Affenpinscher", "Afghan Hound", "Airedale Terrier", "Akita",
+        "Akita (Japanese)", "Alaskan Malamute", "American Hairless Terrier", "American Staffordshire Terrier",
+        "Anatolian Shepherd Dog", "Australasian Bosdog", "Australian Cattle Dog", "Australian Kelpie",
+        "Australian Shepherd", "Australian Silky Terrier", "Australian Stumpy Tail Cattle Dog", "Australian Terrier",
+        "Azawakh", "Basenji", "Basset Fauve de Bretagne", "Basset Hound",
+        "Beagle", "Bearded Collie", "Beauceron (Berger de Beauce)", "Bedlington Terrier",
+        "Belgian Shepherd Dog (Groenendael)", "Belgian Shepherd Dog (Laekenois)", "Belgian Shepherd Dog (Malinois)", "Belgian Shepherd Dog (Tervueren)",
+        "Bergamasco Shepherd Dog", "Bernese Mountain Dog", "Bichon Frise", "Biewer Terrier",
+        "Black and Tan Coonhound", "Bloodhound", "Bluetick Coonhound", "Bolognese",
+        "Border Collie", "Border Terrier", "Borzoi", "Boston Terrier",
+        "Bouvier des Flandres", "Boxer", "Bracco Italiano", "Briard",
+        "British Bulldog", "Brittany", "Bull Terrier", "Bull Terrier (Miniature)",
+        "Bullmastiff", "Cairn Terrier", "Canaan Dog", "Canadian Eskimo Dog",
+        "Cane Corso", "Caucasian Shepherd Dog", "Cavalier King Charles Spaniel", "Central Asian Shepherd Dog",
+        "Cesky Terrier", "Chesapeake Bay Retriever", "Chihuahua (Long Coat)", "Chihuahua (Smooth Coat)",
+        "Chinese Crested Dog", "Chow Chow", "Cirneco Dell 'Etna", "Clumber Spaniel",
+        "Cocker Spaniel", "Cocker Spaniel (American)", "Collie (Rough)", "Collie (Smooth)",
+        "Coton De Tulear", "Curly Coated Retriever", "Dachshund (Long Haired)", "Dachshund (Miniature Long Haired)",
+        "Dachshund (Miniature Smooth Haired)", "Dachshund (Miniature Wire Haired)", "Dachshund (Rabbit Long Haired)", "Dachshund (Rabbit Smooth Haired)",
+        "Dachshund (Rabbit Wire Haired)", "Dachshund (Smooth Haired)", "Dachshund (Wire Haired)", "Dalmatian",
+        "Dandie Dinmont Terrier", "Deerhound", "Dobermann", "Dogue de Bordeaux",
+        "Dutch Shepherd", "English Setter", "English Springer Spaniel", "English Toy Terrier (Black & Tan)",
+        "Estrela Mountain Dog", "Eurasier", "Field Spaniel", "Finnish Lapphund",
+        "Finnish Spitz", "Flat Coated Retriever", "Fox Terrier (Smooth)", "Fox Terrier (Wire)",
+        "Foxhound", "French Bulldog", "German Hunting Terrier", "German Pinscher",
+        "German Shepherd Dog", "German Shepherd Dog (Long Stock Coat)", "German Shorthaired Pointer", "German Spitz - (Klein) (Mittel)",
+        "German Wirehaired Pointer", "Glen of Imaal Terrier", "Golden Retriever", "Gordon Setter",
+        "Grand Basset Griffon Vendeen", "Great Dane", "Great Swiss Mountain Dog", "Greyhound",
+        "Griffon Bruxellois", "Hamiltonstovare", "Harrier", "Havanese",
+        "Hungarian Vizsla", "Hungarian Wirehaired Vizsla", "Ibizan Hound", "Icelandic Sheepdog",
+        "Irish Red and White Setter", "Irish Setter", "Irish Terrier", "Irish Water Spaniel",
+        "Irish Wolfhound", "Italian Greyhound", "Italian Spinone", "Jack Russell Terrier",
+        "Japanese Chin", "Japanese Spitz", "Kangal Shepherd Dog", "Karelian Bear Dog",
+        "Keeshond", "Kerry Blue Terrier", "King Charles Spaniel", "Komondor",
+        "Kuvasz", "Labrador Retriever", "Lagotto Romagnolo", "Lakeland Terrier",
+        "Landseer (European Continental Type)", "Large Munsterlander", "Leonberger", "Lhasa Apso",
+        "Lowchen (Little Lion Dog)", "Maltese", "Manchester Terrier", "Maremma Sheepdog",
+        "Mastiff", "Miniature American Shepherd", "Miniature Pinscher", "Mudi",
+        "Murray River Retriever", "Neapolitan Mastiff", "Newfoundland", "Norfolk Terrier",
+        "Norwegian Buhund", "Norwegian Elkhound", "Norwich Terrier", "Nova Scotia Duck Tolling Retriever",
+        "Old English Sheepdog", "Otterhound", "Papillon", "Parson Russell Terrier",
+        "Pekingese", "Peruvian Hairless Dog (Small, Medium, Large)", "Petit Basset Griffon Vendeen", "Pharaoh Hound",
+        "Pointer", "Polish Lowland Sheepdog", "Pomeranian", "Poodle (Miniature)",
+        "Poodle (Standard)", "Poodle (Toy)", "Porcelaine", "Portuguese Podengo",
+        "Portuguese Water Dog", "Prague Ratter", "Pug", "Puli",
+        "Pumi", "Pyrenean Mastiff", "Pyrenean Mountain Dog", "Pyrenean Sheepdog Longhaired",
+        "Rhodesian Ridgeback", "Rottweiler", "Russian Black Terrier", "Russian Toy (Long Haired)",
+        "Russian Toy (Smooth Haired)", "Saluki", "Samoyed", "Schipperke",
+        "Schnauzer", "Schnauzer (Giant)", "Schnauzer (Miniature)", "Scottish Terrier",
+        "Sealyham Terrier", "Shar Pei", "Shetland Sheepdog", "Shiba Inu",
+        "Shih Tzu", "Shikoku", "Siberian Husky", "Skye Terrier",
+        "Sloughi", "Soft Coated Wheaten Terrier", "Spanish Mastiff", "Spanish Water Dog",
+        "St Bernard", "Staffordshire Bull Terrier", "Sussex Spaniel", "Swedish Lapphund",
+        "Swedish Vallhund", "Tatra Shepherd Dog", "Tenterfield Terrier", "Tibetan Mastiff",
+        "Tibetan Spaniel", "Tibetan Terrier", "Tornjak", "Weimaraner",
+        "Weimaraner (Long Hair)", "Welsh Corgi (Cardigan)", "Welsh Corgi (Pembroke)", "Welsh Springer Spaniel",
+        "Welsh Terrier", "West Highland White Terrier", "Whippet", "White Swiss Shepherd Dog",
+        "Wirehaired Slovakian Pointer", "Xoloitzcuintle - (Miniature) (Intermediate) (Standard)", "Yakutian Laika", "Yorkshire Terrier"
+    ],
+    cat: [
+        "Abyssinian", "American Bobtail", "American Bobtail Shorthair", "American Curl",
+        "American Curl Longhair", "American Shorthair", "American Wirehair", "Australian Mist",
+        "Balinese", "Bengal", "Bengal Longhair", "Birman",
+        "Bombay", "British Longhair", "British Shorthair", "Burmese",
+        "Burmilla", "Burmilla Longhair", "Chartreux", "Chausie",
+        "Cherubim", "Cornish Rex", "Cymric", "Cymric Tailed",
+        "Devon Rex", "Domestic Longhair", "Domestic Medium Hair", "Domestic Shorthair",
+        "Donskoy", "Egyptian Mau", "Exotic Shorthair",
+        "Havana", "Highlander", "Highlander Shorthair", "Himalayan",
+        "Japanese Bobtail", "Japanese Bobtail Longhair", "Khaomanee", "Korat",
+        "Kurilian Bobtail", "Kurilian Bobtail Longhair", "LaPerm", "LaPerm Shorthair",
+        "Lykoi", "Maine Coon", "Maine Coon Polydactyl", "Manx",
+        "Manx Tailed", "Minuet", "Minuet Longhair", "Minuet Talls",
+        "Minuet Talls Longhair", "Munchkin", "Munchkin Longhair", "Nebelung",
+        "Norwegian Forest", "Ocicat", "Oriental Longhair", "Oriental Shorthair",
+        "Persian", "Peterbald", "Pixiebob", "Pixiebob Longhair",
+        "Ragdoll", "Russian Blue", "Savannah", "Scottish Fold",
+        "Scottish Fold Longhair", "Scottish Straight", "Scottish Straight Longhair", "Selkirk Rex",
+        "Selkirk Rex Longhair", "Siamese", "Siberian", "Singapura",
+        "Snowshoe", "Somali", "Sphynx", "Tennessee Rex",
+        "Thai",
+        "Tonkinese", "Toyger", "Turkish Angora", "Turkish Van"
+    ]
+};
+
+function v108SetBoardingBreedChoices(modal, breed = '') {
+    const species = modal.querySelector('[data-v108-board="species"]').value;
+    const select = modal.querySelector('[data-v108-breed-choice]');
+    const breeds = v108BoardingBreeds[species] || v108BoardingBreeds.dog;
+    select.replaceChildren(
+        new Option('Select breed', ''),
+        new Option('Other / mixed breed', 'other'),
+        ...breeds.map(name => new Option(name, name))
+    );
+    select.value = breeds.includes(breed) ? breed : breed ? 'other' : '';
+    modal.querySelector('[data-v108-manual-breed]').hidden = select.value !== 'other';
+    modal.querySelector('[data-v108-board="breed"]').value = select.value === 'other' ? breed : '';
+}
+
+function v108ReadBoardingBreed(modal) {
+    const choice = modal.querySelector('[data-v108-breed-choice]').value;
+    return choice === 'other' ? modal.querySelector('[data-v108-board="breed"]').value.trim() : choice;
+}
+
 function v108EnsureBoardingModal(){
     let m=document.getElementById('v108BoardingModal');if(m)return m;
     m=document.createElement('div');m.id='v108BoardingModal';m.className='v108-modal';m.hidden=true;
-    m.innerHTML=`<div class="v108-modal-card"><div class="v108-modal-head"><div><small>CONFIRMED STAY</small><h3>🏡 New Boarding</h3><p>1. Add stay · 2. Share care form</p></div><button type="button" data-v108-close>×</button></div><div class="v108-returning" data-v108-returning hidden></div><div class="v108-returning" data-v108-board-summary hidden><div><strong data-v108-summary-title tabindex="-1"></strong><small data-v108-summary-detail></small></div></div><div class="v108-returning" data-v108-identity-note><div><strong>Stayed before? Choose their existing Dog ID.</strong><small>Review saved care before adding this stay.</small><button type="button" data-v108-choose-returning>Choose returning dog</button></div></div><div class="v108-form-grid" data-v108-form-grid><label>Dog name *<input data-v108-board="dogName" autocomplete="off"></label><label>Species<select data-v108-board="species"><option value="dog">Dog</option><option value="cat">Cat</option></select></label><label>Breed *<input data-v108-board="breed" autocomplete="off"></label><label>Check-in *<input type="date" data-v108-board="startDate"></label><label>Check-out *<input type="date" data-v108-board="endDate"></label><label>Owner name *<input data-v108-board="ownerName" autocomplete="off"></label><label>Contact number *<input type="tel" data-v108-board="phone" autocomplete="tel"></label><label class="wide">Booking note<textarea rows="2" data-v108-board="notes"></textarea></label></div><div class="v108-returning" data-v108-same-owner-hint hidden>Owner, contact and dates copied from the completed stay. Review or edit them before saving.</div><div class="v108-status" data-v108-board-status></div><div class="v108-intake-result" data-v108-intake-result hidden></div><div class="v108-modal-actions"><button type="button" data-v108-close>Cancel</button><button type="button" data-v108-start-over hidden>Start over</button><button type="button" data-v108-add-same-owner hidden>Add dog for same owner</button><button type="button" data-v108-add-another hidden>＋ Add another dog</button><button type="button" class="primary" data-v108-save-board>🏡 Create Booking</button></div></div>`;
+    m.innerHTML=`<div class="v108-modal-card"><div class="v108-modal-head"><div><small>CONFIRMED STAY</small><h3><span data-v108-boarding-icon></span> New boarding</h3><p>Add the stay, then share the care form.</p></div><button type="button" data-v108-close aria-label="Close confirmed stay">×</button></div><div class="v108-returning" data-v108-returning hidden></div><div class="v108-returning" data-v108-board-summary hidden><div><strong data-v108-summary-title tabindex="-1"></strong><small data-v108-summary-detail></small></div></div><div class="v108-returning" data-v108-identity-note><div><strong>Stayed before? Choose their existing pet profile.</strong><small>Review saved care before adding this stay.</small><button type="button" data-v108-choose-returning>Choose returning pet</button></div></div><div class="v108-form-grid" data-v108-form-grid><label>Pet name *<input data-v108-board="dogName" autocomplete="off"></label><label>Species<select data-v108-board="species"><option value="dog">Dog</option><option value="cat">Cat</option></select></label><label>Breed *<select data-v108-breed-choice required></select></label><label class="wide" data-v108-manual-breed hidden>Enter breed or mix *<input data-v108-board="breed" autocomplete="off"></label><label>Check-in *<input type="date" data-v108-board="startDate"></label><label>Check-out *<input type="date" data-v108-board="endDate"></label><label>Owner name *<input data-v108-board="ownerName" autocomplete="off"></label><label>Contact number *<input type="tel" data-v108-board="phone" autocomplete="tel"></label><label class="wide">Booking note<textarea rows="2" data-v108-board="notes"></textarea></label></div><div class="v108-returning" data-v108-same-owner-hint hidden>Owner, contact and dates copied from the completed stay. Review or edit them before saving.</div><div class="v108-status" data-v108-board-status></div><div class="v108-intake-result" data-v108-intake-result hidden></div><div class="v108-modal-actions"><button type="button" data-v108-close>Cancel</button><button type="button" data-v108-start-over hidden>Start over</button><button type="button" data-v108-add-same-owner hidden>Add pet for same owner</button><button type="button" data-v108-add-another hidden>Add another pet</button><button type="button" class="primary" data-v108-save-board>Create booking</button></div></div>`;
     document.body.appendChild(m);
+    const breedChoice = m.querySelector('[data-v108-breed-choice]');
+    const manualBreed = m.querySelector('[data-v108-manual-breed]');
+    m.querySelector('[data-v108-board="species"]').addEventListener('change', () => v108SetBoardingBreedChoices(m));
+    breedChoice.addEventListener('change', () => {
+        manualBreed.hidden = breedChoice.value !== 'other';
+        if (!manualBreed.hidden) manualBreed.querySelector('input').focus();
+    });
     const invalidateLookup=()=>{m.dataset.lookupVersion=String(Number(m.dataset.lookupVersion||0)+1);clearTimeout(v108ReturningTimer);};
     m.querySelector('[data-v108-board="dogName"]').addEventListener('input',invalidateLookup);m.querySelector('[data-v108-board="phone"]').addEventListener('input',invalidateLookup);
     m.addEventListener('click',async event=>{
@@ -448,10 +562,11 @@ function v108EnsureBoardingModal(){
         if(event.target.closest('[data-v108-choose-returning]')){
             const openReturning=window.WAFFLE_PHASE4_BOOKING?.openReturningBooking;
             const status=m.querySelector('[data-v108-board-status]');
-            if(typeof openReturning!=='function'){status.textContent='Returning-dog selection is still loading. Try again shortly.';return;}
+            if(typeof openReturning!=='function'){status.textContent='Returning pet selection is still loading. Try again shortly.';return;}
             const draft={source:'Direct'};
             m.querySelectorAll('[data-v108-board]').forEach(input=>{draft[input.dataset.v108Board]=input.value;});
-            try{const opened=await openReturning(draft);if(opened!==false){m.hidden=true;m.dataset.initialized='false';}}catch(error){status.textContent=error?.message||'Returning-dog records could not be loaded. Your booking details are still here.';}
+            draft.breed = v108ReadBoardingBreed(m);
+            try{const opened=await openReturning(draft);if(opened!==false){m.hidden=true;m.dataset.initialized='false';}}catch(error){status.textContent=error?.message||'Returning pet records could not be loaded. Your booking details are still here.';}
             return;
         }
         if(event.target.closest('[data-v108-save-board]'))await v108SaveBoarding();
@@ -464,7 +579,7 @@ function v108EnsureBoardingModal(){
     });return m;
 }
 
-function v108ResetBoarding(m,context={}){if(m.dataset.saveState==='saving')return;const today=getLocalTodayDateString(),values={dogName:'',species:'dog',breed:'',startDate:today,endDate:today,ownerName:'',phone:'',notes:'',...(context||{})};m.querySelectorAll('[data-v108-board]').forEach(input=>{input.value=values[input.dataset.v108Board]??'';input.disabled=false;});m.querySelector('[data-v108-choose-returning]').disabled=false;const saveButton=m.querySelector('[data-v108-save-board]');saveButton.disabled=false;saveButton.hidden=false;saveButton.textContent='🏡 Create Booking';m.querySelector('.v108-modal-actions [data-v108-close]').textContent='Cancel';m.querySelector('[data-v108-start-over]').hidden=false;m.querySelector('[data-v108-add-same-owner]').hidden=true;m.querySelector('[data-v108-add-another]').hidden=true;m.querySelector('[data-v108-same-owner-hint]').hidden=!context.sameOwner;m.querySelector('[data-v108-returning]').hidden=true;m.querySelector('[data-v108-board-summary]').hidden=true;const form=m.querySelector('[data-v108-form-grid]');form.hidden=false;form.style.removeProperty('display');m.querySelector('[data-v108-identity-note]').hidden=false;m.querySelector('[data-v108-intake-result]').hidden=true;m.querySelector('[data-v108-intake-result]').replaceChildren();const status=m.querySelector('[data-v108-board-status]');status.textContent='';delete status.dataset.mode;m.dataset.intakeLink='';m.dataset.saveState='';m.dataset.initialized='true';m.dataset.nextActionUsed='false';m.dataset.lookupVersion=String(Number(m.dataset.lookupVersion||0)+1);m._completedPayload=null;m.hidden=false;m.querySelector('[data-v108-board="dogName"]').focus();}
+function v108ResetBoarding(m,context={}){if(m.dataset.saveState==='saving')return;const today=getLocalTodayDateString(),values={dogName:'',species:'dog',breed:'',startDate:today,endDate:today,ownerName:'',phone:'',notes:'',...(context||{})};m.querySelectorAll('[data-v108-board]').forEach(input=>{input.value=values[input.dataset.v108Board]??'';input.disabled=false;});v108SetBoardingBreedChoices(m, values.breed);m.querySelector('[data-v108-breed-choice]').disabled=false;m.querySelector('[data-v108-choose-returning]').disabled=false;const saveButton=m.querySelector('[data-v108-save-board]');saveButton.disabled=false;saveButton.hidden=false;saveButton.textContent='Create booking';m.querySelector('.v108-modal-actions [data-v108-close]').textContent='Cancel';m.querySelector('[data-v108-start-over]').hidden=false;m.querySelector('[data-v108-add-same-owner]').hidden=true;m.querySelector('[data-v108-add-another]').hidden=true;m.querySelector('[data-v108-same-owner-hint]').hidden=!context.sameOwner;m.querySelector('[data-v108-returning]').hidden=true;m.querySelector('[data-v108-board-summary]').hidden=true;const form=m.querySelector('[data-v108-form-grid]');form.hidden=false;form.style.removeProperty('display');m.querySelector('[data-v108-identity-note]').hidden=false;m.querySelector('[data-v108-intake-result]').hidden=true;m.querySelector('[data-v108-intake-result]').replaceChildren();const status=m.querySelector('[data-v108-board-status]');status.textContent='';delete status.dataset.mode;m.dataset.intakeLink='';m.dataset.saveState='';m.dataset.initialized='true';m.dataset.nextActionUsed='false';m.dataset.lookupVersion=String(Number(m.dataset.lookupVersion||0)+1);m._completedPayload=null;m.hidden=false;m.querySelector('[data-v108-board="dogName"]').focus();}
 
 function v108OpenBoarding(forceReset=false){const m=v108EnsureBoardingModal();m.hidden=false;m.dataset.lookupVersion=String(Number(m.dataset.lookupVersion||0)+1);if(m.dataset.saveState==='saving'||['queued','success'].includes(m.dataset.saveState)&&!forceReset)return;if(forceReset||m.dataset.initialized!=='true'){v108ResetBoarding(m);return;}if(m.dataset.saveState===''){m.querySelector('[data-v108-start-over]').hidden=false;}m.querySelector('[data-v108-board="dogName"]').focus();}
 
@@ -474,13 +589,13 @@ async function v108LookupReturning(){
 }
 
 async function v108SaveBoarding(){
-    const m=v108EnsureBoardingModal(), get=k=>m.querySelector(`[data-v108-board="${k}"]`).value.trim();const payload={action:'create_boarding',dogName:get('dogName'),species:m.querySelector('[data-v108-board=species]')?.value||'dog',breed:get('breed'),startDate:get('startDate'),endDate:get('endDate'),ownerName:get('ownerName'),phone:get('phone'),notes:get('notes')};const status=m.querySelector('[data-v108-board-status]'),btn=m.querySelector('[data-v108-save-board]');if(m.dataset.saveState==='queued'||m.dataset.saveState==='success'||btn.disabled)return;
-    if(!payload.dogName||!payload.breed||!payload.startDate||!payload.endDate||!payload.ownerName||!payload.phone){status.textContent='Complete Dog Name, Breed, dates, Owner and Contact Number.';status.dataset.mode='error';return;}if(payload.endDate<payload.startDate){status.textContent='Check-Out cannot be earlier than Check-In.';status.dataset.mode='error';return;}
-    btn.disabled=true;btn.textContent='⏳ Saving…';m.dataset.saveState='saving';m.querySelector('[data-v108-start-over]').hidden=true;m.querySelectorAll('[data-v108-board]').forEach(input=>input.disabled=true);m.querySelector('[data-v108-choose-returning]').disabled=true;let r;
-    try{r=await sendPayloadToAppsScript(payload);if(!r||!r?.queued&&r?.result!=='queued'&&(r?.error||r?.result&&r.result!=='success'||r?.ok===false||r?.success===false))throw new Error(typeof r?.error==='string'?r.error:(r?.message||'The stay could not be added. Please try again.'));}catch(e){m.dataset.saveState='';m.querySelector('[data-v108-start-over]').hidden=false;m.querySelectorAll('[data-v108-board]').forEach(input=>input.disabled=false);m.querySelector('[data-v108-choose-returning]').disabled=false;status.textContent=e?.message||String(e);status.dataset.mode='error';btn.disabled=false;btn.textContent='🏡 Create Booking';return;}
+    const m=v108EnsureBoardingModal(), get=k=>m.querySelector(`[data-v108-board="${k}"]`).value.trim();const payload={action:'create_boarding',dogName:get('dogName'),species:m.querySelector('[data-v108-board=species]')?.value||'dog',breed:v108ReadBoardingBreed(m),startDate:get('startDate'),endDate:get('endDate'),ownerName:get('ownerName'),phone:get('phone'),notes:get('notes')};const status=m.querySelector('[data-v108-board-status]'),btn=m.querySelector('[data-v108-save-board]');if(m.dataset.saveState==='queued'||m.dataset.saveState==='success'||btn.disabled)return;
+    if(!payload.dogName||!payload.breed||!payload.startDate||!payload.endDate||!payload.ownerName||!payload.phone){status.textContent='Enter the pet name, breed, stay dates, owner name and contact number.';status.dataset.mode='error';return;}if(payload.endDate<payload.startDate){status.textContent='Check-Out cannot be earlier than Check-In.';status.dataset.mode='error';return;}
+    btn.disabled=true;btn.textContent='⏳ Saving…';m.dataset.saveState='saving';m.querySelector('[data-v108-start-over]').hidden=true;m.querySelectorAll('[data-v108-board], [data-v108-breed-choice]').forEach(input=>input.disabled=true);m.querySelector('[data-v108-choose-returning]').disabled=true;let r;
+    try{r=await sendPayloadToAppsScript(payload);if(!r||!r?.queued&&r?.result!=='queued'&&(r?.error||r?.result&&r.result!=='success'||r?.ok===false||r?.success===false))throw new Error(typeof r?.error==='string'?r.error:(r?.message||'The stay could not be added. Please try again.'));}catch(e){m.dataset.saveState='';m.querySelector('[data-v108-start-over]').hidden=false;m.querySelectorAll('[data-v108-board], [data-v108-breed-choice]').forEach(input=>input.disabled=false);m.querySelector('[data-v108-choose-returning]').disabled=false;status.textContent=e?.message||String(e);status.dataset.mode='error';btn.disabled=false;btn.textContent='Create booking';return;}
     const summary=m.querySelector('[data-v108-board-summary]'),summaryTitle=m.querySelector('[data-v108-summary-title]'),summaryDetail=m.querySelector('[data-v108-summary-detail]'),form=m.querySelector('[data-v108-form-grid]'),displayDate=value=>{const [year,month,day]=value.split('-').map(Number);return new Date(year,month-1,day).toLocaleDateString('en-AU',{day:'numeric',month:'short'});};summaryTitle.textContent=`${payload.dogName} · ${displayDate(payload.startDate)}–${displayDate(payload.endDate)}`;summaryDetail.textContent=r?.queued||r?.result==='queued'?'Saved on this device. Check sync status, then find the guest in Care.':r?.intake?.link?'Stay added. Share the care form with the owner.':'Stay added.';summary.hidden=false;form.hidden=true;form.style.display='none';m.querySelector('[data-v108-identity-note]').hidden=true;m.querySelector('[data-v108-returning]').hidden=true;
-    if(r?.queued||r?.result==='queued'){m.dataset.saveState='queued';m.querySelector('[data-v108-same-owner-hint]').hidden=true;m.querySelectorAll('[data-v108-board]').forEach(input=>input.disabled=true);m.querySelector('[data-v108-choose-returning]').disabled=true;status.textContent='↻ Saved on this device. Check sync status, then find the guest in Care.';status.dataset.mode='queued';btn.textContent='Saved · awaiting sync';m.querySelector('[data-v108-add-another]').hidden=false;return;}
-    m.dataset.saveState='success';const completedPayload=Object.freeze({...payload});m._completedPayload=completedPayload;m.querySelector('[data-v108-same-owner-hint]').hidden=true;m.querySelector('.v108-modal-actions [data-v108-close]').textContent='Done';m.dataset.intakeLink=String(r?.intake?.link||'');m.querySelectorAll('[data-v108-board]').forEach(input=>input.disabled=true);m.querySelector('[data-v108-choose-returning]').disabled=true;const result=m.querySelector('[data-v108-intake-result]');result.replaceChildren();result.hidden=false;
+    if(r?.queued||r?.result==='queued'){m.dataset.saveState='queued';m.querySelector('[data-v108-same-owner-hint]').hidden=true;m.querySelectorAll('[data-v108-board], [data-v108-breed-choice]').forEach(input=>input.disabled=true);m.querySelector('[data-v108-choose-returning]').disabled=true;status.textContent='↻ Saved on this device. Check sync status, then find the guest in Care.';status.dataset.mode='queued';btn.textContent='Saved · awaiting sync';m.querySelector('[data-v108-add-another]').hidden=false;return;}
+    m.dataset.saveState='success';const completedPayload=Object.freeze({...payload});m._completedPayload=completedPayload;m.querySelector('[data-v108-same-owner-hint]').hidden=true;m.querySelector('.v108-modal-actions [data-v108-close]').textContent='Done';m.dataset.intakeLink=String(r?.intake?.link||'');m.querySelectorAll('[data-v108-board], [data-v108-breed-choice]').forEach(input=>input.disabled=true);m.querySelector('[data-v108-choose-returning]').disabled=true;const result=m.querySelector('[data-v108-intake-result]');result.replaceChildren();result.hidden=false;
     if(m.dataset.intakeLink){const handoff={link:m.dataset.intakeLink,dogName:payload.dogName,startDate:payload.startDate,endDate:payload.endDate};try{const rendered=window.WAFFLE_OWNER_HANDOFF?.render?.(result,handoff,{compact:true});if(rendered instanceof Node&&rendered!==result&&!rendered.parentNode)result.appendChild(rendered);if(!rendered)throw new Error('Owner care link is unavailable.');}catch(error){console.warn('Owner care handoff could not render.',error);result.textContent='Stay added. The care link could not be displayed. Find the guest in Care to continue.';}}
     else{const msg=document.createElement('span');msg.textContent='Stay added. No care link was returned. Find the guest in Care to continue.';result.appendChild(msg);}
     m.querySelector('[data-v108-add-another]').hidden=false;m.querySelector('[data-v108-add-same-owner]').hidden=false;status.textContent=r?.copiedPreviousProfile?.copied?'✅ Stay added and saved care details copied.':'✅ Stay added.';status.dataset.mode='success';btn.textContent='Stay added';btn.hidden=true;requestAnimationFrame(()=>{if(m.dataset.saveState!=='success'||m._completedPayload!==completedPayload)return;result.scrollIntoView({block:'nearest'});summaryTitle.focus({preventScroll:true});});window.dispatchEvent(new CustomEvent('waffle:phase4-data-changed',{detail:{source:'boarding-create'}}));if(WAFFLE_PAGE==='calendar')try{await syncSpreadsheetData({silent:true});}catch(error){console.warn('Boarding was created, but the calendar refresh failed.',error);}if(WAFFLE_PAGE==='directory'&&typeof loadGuestDirectoryConsolidated==='function')try{await loadGuestDirectoryConsolidated({force:true,quiet:true});}catch(error){console.warn('Boarding was created, but the Care roster refresh failed.',error);}

@@ -202,7 +202,7 @@
           link.className = 'wh-home-guest';
           link.dataset.homeStay = key;
           link.dataset.homeIdentity = identity;
-          link.innerHTML = '<span class="wh-home-portrait" aria-hidden="true"><span class="wh-home-initials"></span></span><span class="wh-home-departure-flag" aria-hidden="true"><span>🧳</span></span><strong class="wh-home-guest-name"></strong><span class="wh-home-guest-identity"></span><span class="wh-home-guest-label"></span>';
+          link.innerHTML = '<span class="wh-home-portrait" aria-hidden="true"><span class="wh-home-initials"></span></span><span class="wh-home-departure-flag" aria-hidden="true"><span></span></span><strong class="wh-home-guest-name"></strong><span class="wh-home-guest-identity"></span><span class="wh-home-guest-label"></span>';
         }
         link.dataset.homeStayId = stayId;
         link.href = 'directory.html?stayKey=' + encodeURIComponent(key) + (typeof v110ValidStayId === 'function' && v110ValidStayId(stayId) ? '&stayId=' + encodeURIComponent(stayId) : '');
