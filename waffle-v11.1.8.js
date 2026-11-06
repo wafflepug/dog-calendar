@@ -403,11 +403,11 @@
     const risk = (typeof careRiskRecordsCache !== 'undefined' ? careRiskRecordsCache?.[stayKey]?.riskFlags : null) || summary.riskFlags || {};
     const phone = String(card?.dataset?.v1088Phone || card?.dataset?.phone || '').trim();
     const signals = [];
-    if (risk.medicated === true) signals.push({ icon: '💊', label: 'Medication', weight: 90 });
-    if (risk.foodAllergy === true) signals.push({ icon: '⚠️', label: 'Food allergy', weight: 95 });
-    if (risk.escapeRisk === true) signals.push({ icon: '🚪', label: 'Escape risk', weight: 92 });
-    if (risk.separationAnxiety === true) signals.push({ icon: '😟', label: 'Separation anxiety', weight: 88 });
-    if (risk.weightManagement === true) signals.push({ icon: '⚖️', label: 'Weight management', weight: 60 });
+    if (risk.medicated === true) signals.push({ icon: '💊', label: 'Medication', safety: true, weight: 90 });
+    if (risk.foodAllergy === true) signals.push({ icon: '⚠️', label: 'Food allergy', safety: true, weight: 95 });
+    if (risk.escapeRisk === true) signals.push({ icon: '🚪', label: 'Escape risk', safety: true, weight: 92 });
+    if (risk.separationAnxiety === true) signals.push({ icon: '😟', label: 'Separation anxiety', safety: true, weight: 88 });
+    if (risk.weightManagement === true) signals.push({ icon: '⚖️', label: 'Weight management', safety: true, weight: 60 });
     if (reminderMatchesDog(dogName)) signals.push({ icon: '📌', label: 'Reminder due', weight: 98 });
     let intakeState = null;
     if (typeof window.WAFFLE_INTAKE_STATUS?.getState === 'function') {
@@ -452,7 +452,7 @@
       button.removeAttribute('aria-description');
     }
     const signalsMarkup = signals.map(signal => `
-      <span class="v1118-care-signal" data-v1118-signal-label="${esc(signal.label)}" title="${esc(signal.label)}">
+      <span class="v1118-care-signal" data-v1118-signal-label="${esc(signal.label)}" title="${esc(signal.label)}"${signal.safety ? ' data-v1118-safety-signal' : ''}>
         <span class="v1118-care-signal-icon" aria-hidden="true">${esc(signal.icon)}</span>
         <span>${esc(signal.label)}</span>
       </span>`).join('');
