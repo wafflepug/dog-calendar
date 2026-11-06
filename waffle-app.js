@@ -11817,7 +11817,9 @@ registerWaffleServiceWorker();
         if (!button || !host) return;
         Array.from(host.children).reverse().forEach(badge => {
             const next = badge.__directoryRosterBadgeNextSibling;
-            if (next?.parentNode === button) button.insertBefore(badge, next);
+            const nameLine = badge.matches('[data-v1118-care-signals]') && button.querySelector('.directory-roster-name-line');
+            if (nameLine) nameLine.appendChild(badge);
+            else if (next?.parentNode === button) button.insertBefore(badge, next);
             else button.appendChild(badge);
             delete badge.__directoryRosterBadgeNextSibling;
         });

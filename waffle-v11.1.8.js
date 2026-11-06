@@ -431,7 +431,25 @@
       signalsHost = document.createElement('span');
       signalsHost.dataset.v1118CareSignals = '';
       signalsHost.className = 'v1118-care-signals';
-      host.appendChild(signalsHost);
+    }
+    const name = host === button ? button.querySelector('.directory-guest-tile-name') : null;
+    let destination = host;
+    if (name) {
+      if (!name.parentElement.classList.contains('directory-roster-name-line')) {
+        const line = document.createElement('span');
+        line.className = 'directory-roster-name-line';
+        name.before(line);
+        line.append(name);
+      }
+      destination = name.parentElement;
+    }
+    if (signalsHost.parentElement !== destination) destination.append(signalsHost);
+    const atHome = button.querySelector('.v1118-care-status.is-at-home');
+    const description = [...(atHome ? ['At Home'] : []), ...signals.map(signal => signal.label)].join(', ');
+    if (description && button.getAttribute('aria-description') !== description) {
+      button.setAttribute('aria-description', description);
+    } else if (!description && button.hasAttribute('aria-description')) {
+      button.removeAttribute('aria-description');
     }
     const signalsMarkup = signals.map(signal => `
       <span class="v1118-care-signal" data-v1118-signal-label="${esc(signal.label)}" title="${esc(signal.label)}">
@@ -474,6 +492,8 @@
     const chipClass = 'v1118-status-chip v1118-care-status ' + statusClass(status);
     if (chip.className !== chipClass) chip.className = chipClass;
     if (chip.textContent !== status) chip.textContent = status;
+    if (status === 'AT HOME' && chip.title !== 'At Home') chip.title = 'At Home';
+    else if (status !== 'AT HOME' && chip.hasAttribute('title')) chip.removeAttribute('title');
     const profileStatus = card.classList.contains('is-profile-active') && card.dataset.v1082PastStay !== 'true'
       ? card.querySelector('.directory-card-header .directory-status-tag')
       : null;
