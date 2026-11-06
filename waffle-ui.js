@@ -1530,7 +1530,7 @@
 
   function excluded(node) {
     return !node || node.id === 'wh75MenuButton' ||
-      !!node.closest('#wh75MobileDrawer,#wh75MobileBottomNav,#wh75SettingsPanel,#wh80MobileHeaderRail,#wh81MobileInstallSlot');
+      !!node.closest('#wh75MobileDrawer,#wh75MobileBottomNav,#wh75SettingsPanel,#wh80MobileHeaderRail,#wh81MobileInstallSlot,#wh75MobileTopbar');
   }
 
   function visible(node) {
