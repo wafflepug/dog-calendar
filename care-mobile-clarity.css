@@ -2458,3 +2458,26 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-
     align-self:stretch !important; justify-self:stretch; width:100%; min-width:0; height:auto !important; box-sizing:border-box;
   }
 }
+
+
+/* Keep the roster compact while the profile retains the full warning labels. */
+.directory-roster-name-line {
+  display:flex; flex-wrap:wrap; align-items:center; gap:4px 8px; min-width:0;
+}
+.directory-roster-name-line > .v1118-care-signals {
+  display:inline-flex; flex-wrap:wrap; align-items:center; gap:5px; min-width:0; max-width:100%;
+}
+body[data-waffle-page="directory"] #directoryTabPanel .directory-roster-name-line .v1118-care-signal {
+  padding:0!important; border:0!important; background:none!important; gap:0!important;
+  min-width:0; min-height:0; box-shadow:none!important;
+}
+.directory-roster-name-line .v1118-care-signal > span:last-child { display:none; }
+.directory-roster-name-line .v1118-care-signal-icon { display:inline-flex; }
+.directory-roster-name-line .v1118-care-signal-icon .palz-inline-icon { margin:0; }
+.directory-roster-name-line .v1118-care-signal-icon .palz-icon { width:16px; height:16px; }
+body[data-waffle-page="directory"] #directoryTabPanel .directory-guest-tile-open .v1118-care-status.is-at-home:has([data-palz-icon="home"]) {
+  display:inline-flex!important; align-items:center; justify-content:center;
+  font-size:0!important; padding:0!important; min-height:0!important;
+  border:0!important; background:none!important; box-shadow:none!important; gap:0!important;
+}
+.directory-guest-tile-open .v1118-care-status.is-at-home .palz-icon { width:18px; height:18px; }
