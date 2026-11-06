@@ -2,8 +2,8 @@
    Build: 2026.08.27.04
    Historical base styles remain compatibility sources during Phase 3A, but pages no longer
    reference them individually. Preserve this import order until modules are folded in. */
-@import url("waffle-app.css?build=2026.08.27.04&rev=2026.11.06.19");
-@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.11.06.19");
+@import url("waffle-app.css?build=2026.08.27.04&rev=2026.11.07.01");
+@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.11.07.01");
 @import url("waffle-v10.8.2.css?build=2026.08.27.04");
 @import url("waffle-v10.8.3.css?build=2026.08.27.04");
 @import url("waffle-v10.8.5.css?build=2026.08.27.04");
@@ -11,12 +11,12 @@
 @import url("waffle-v10.8.7.css?build=2026.08.27.04");
 @import url("waffle-v10.8.8.css?build=2026.08.27.04");
 @import url("waffle-v10.8.9.css?build=2026.08.27.04");
-@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.11.06.19");
+@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.11.07.01");
 @import url("waffle-v11.0.3.css?build=2026.08.27.04");
 @import url("waffle-v11.0.5.css?build=2026.08.27.04");
-@import url("waffle-v11.1.94.css?build=2026.11.06.19");
-@import url("waffle-v11.1.95.css?build=2026.11.06.19");
-@import url("waffle-v11.1.96.css?build=2026.11.06.19&rev=2026.11.06.19");
+@import url("waffle-v11.1.94.css?build=2026.11.07.01");
+@import url("waffle-v11.1.95.css?build=2026.11.07.01");
+@import url("waffle-v11.1.96.css?build=2026.11.07.01&rev=2026.11.07.01");
 
 /* ============================================================
    MOBILE FIRST-PAINT STABILITY GATE
@@ -236,6 +236,7 @@ body[data-waffle-page="calendar"] .wh-home-guests {
 .wh-home-departure-flag { position: absolute; top: 0; right: 2px; z-index: 2; width: 27px; height: 27px; display: grid; place-items: center; border: 2px solid var(--v10-card, #fff); border-radius: 50%; background: #e5e7eb; color: #374151; font-size: 14px; line-height: 1; box-shadow: 0 2px 5px rgb(15 23 42 / 18%); }
 .wh-home-departure-flag[data-tone="urgent"] { background: #dc2626; color: #fff; }
 .wh-home-departure-flag[data-tone="urgent"]::after { content: ''; position: absolute; top: 1px; right: 1px; width: 6px; height: 6px; border-radius: 50%; background: #fecaca; }
+body .wh-home-departure-flag > span.palz-icon-host { color: inherit; }
 .wh-home-departure-flag .palz-icon-host > .palz-icon { width: 16px; height: 16px; }
 .wh-home-departure-flag[hidden] { display: none; }
 .wh-home-guest.is-leaving .wh-home-guest-label { font-weight: 750; color: var(--wh75-accent-ink, #4338ca); }
