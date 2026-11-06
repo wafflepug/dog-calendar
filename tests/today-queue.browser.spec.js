@@ -132,7 +132,8 @@ test('potential and unconfirmed visits never expose operational actions; complet
     renderV10OperationsHome([confirmed, potential, unconfirmed]);
   });
   await expect(page.getByRole('button', { name: 'Check in Coco' })).toHaveCount(0);
-  await expect(page.locator('#v10TodayAgenda')).toContainText('Checked in');
+  await expect(page.locator('#v10TodayAgenda')).not.toContainText('Coco');
+  await expect(page.locator('#v10TodayStatus')).toHaveText('1 item today');
   await expect(page.getByRole('button', { name: /Nori|Biscuit/ })).toHaveCount(0);
   await expect(page.locator('#v10TodayAgenda .v10-agenda-operation')).toHaveCount(0);
 });

@@ -68,7 +68,7 @@
       if (host && link.isConnected) {
         host.dataset.homePhotoError = 'true';
         const status = document.getElementById(host.id + 'Status');
-        if (status && !status.textContent.includes('Profile photos could not load')) status.textContent += ' Profile photos could not load. You can still open every guest’s care details.';
+        if (host.id === 'whHomeGuests' && status && !status.textContent.includes('Profile photos could not load')) status.textContent += ' Profile photos could not load. You can still open every guest’s care details.';
       }
     }, { once: true });
     image.addEventListener('load', () => { if (shell.querySelector('img') === image) shell.title = ''; }, { once: true });
@@ -230,7 +230,7 @@
       if (focused && host.contains(focused) && document.activeElement !== focused) focused.focus({ preventScroll: true });
       host.setAttribute('aria-busy', 'false');
       status.textContent = upcoming
-        ? events.length ? `${events.length} upcoming ${events.length === 1 ? 'stay' : 'stays'} · Today through ${new Date(windowEnd(today) + 'T12:00:00').toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })}` : 'No arrivals in the next 30 days.'
+        ? events.length ? '' : 'No arrivals in the next 30 days.'
         : events.length ? `${events.length} current ${events.length === 1 ? 'stay' : 'stays'} · Your home, at a glance` : 'No guests staying right now.';
       let photoError = false;
       try {
@@ -245,7 +245,7 @@
       const failedInRow = events.some(event => failedPhotoUrls.has(homeThumbnailUrl(photos.get(v110StayKeyForEvent(event)) || '')));
       if (photoError || failedInRow) {
         host.dataset.homePhotoError = 'true';
-        if (!status.textContent.includes('Profile photos could not load')) status.textContent += ' Profile photos could not load. You can still open every guest’s care details.';
+        if (!upcoming && !status.textContent.includes('Profile photos could not load')) status.textContent += ' Profile photos could not load. You can still open every guest’s care details.';
       } else {
         delete host.dataset.homePhotoError;
       }

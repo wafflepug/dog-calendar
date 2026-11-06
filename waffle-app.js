@@ -1418,6 +1418,7 @@ function todayQueueItem(event, type, icon, title, meta, sort) {
     const hasActionIdentity = !!stayKey && !!dogId && typeof v110ValidStayId === 'function' && v110ValidStayId(stayId);
     const operation = confirmed && typeof v110OperationForStay === 'function' ? v110OperationForStay(event) : null;
     const operationStatus = String(operation?.status || '').toLowerCase();
+    if (type === 'arrival' && ['checked_in', 'checked_out'].includes(operationStatus)) return null;
     const today = getLocalTodayDateString();
     const isSameDayVisit = type !== 'meet' && dates.start === today && dates.end === today;
     const actionType = isSameDayVisit && ['checked_in', 'checked_out'].includes(operationStatus) ? 'departure' : type;
@@ -1750,6 +1751,15 @@ function renderV10OperationsHome(events) {
             }
         });
 
+    const uniqueAgenda = new Map();
+    agenda.forEach(item => {
+        if (!item) return;
+        const existing = uniqueAgenda.get(item.identity);
+        if (!existing) uniqueAgenda.set(item.identity, item);
+        else if (!existing.meta.split(' · ').includes(item.meta)) existing.meta += ' · ' + item.meta;
+    });
+    const queue = Array.from(uniqueAgenda.values()).sort((a, b) => a.sort - b.sort || a.title.localeCompare(b.title) || a.identity.localeCompare(b.identity));
+
     const todayStatus =
         document.getElementById(
             'v10TodayStatus'
@@ -1757,9 +1767,7 @@ function renderV10OperationsHome(events) {
 
     if (todayStatus) {
         const attentionCount =
-            arrivals +
-            departures +
-            meets;
+            queue.length;
 
         todayStatus.textContent =
             attentionCount
@@ -1779,14 +1787,6 @@ function renderV10OperationsHome(events) {
 
     if (agendaHost) {
         wireTodayQueueActions();
-        const uniqueAgenda = new Map();
-        agenda.forEach(item => {
-            if (!item) return;
-            const existing = uniqueAgenda.get(item.identity);
-            if (!existing) uniqueAgenda.set(item.identity, item);
-            else if (!existing.meta.split(' · ').includes(item.meta)) existing.meta += ' · ' + item.meta;
-        });
-        const queue = Array.from(uniqueAgenda.values()).sort((a, b) => a.sort - b.sort || a.title.localeCompare(b.title) || a.identity.localeCompare(b.identity));
         agendaHost.innerHTML = queue.length
             ? queue.map(item => item.isMeet ? '<button type="button" class="v10-agenda-item type-meet" data-today-open-meet="' + escapeDashboardHtml(item.identity) + '" aria-label="Open ' + escapeDashboardHtml(item.title) + ' Meet & Greet in calendar"><span class="v10-agenda-icon" aria-hidden="true">' + item.icon + '</span><span class="v10-agenda-copy"><strong>' + escapeDashboardHtml(item.title) + '</strong><span>' + escapeDashboardHtml(item.meta) + '</span></span><span class="v10-agenda-action">Open event <span aria-hidden="true">↗</span></span></button>' : '<div class="v10-agenda-row"><div class="v10-agenda-row-main"><a class="v10-agenda-item type-' + escapeDashboardHtml(item.type) + '" href="' + escapeDashboardHtml(item.href) + '" aria-label="Open ' + escapeDashboardHtml(item.title) + ' care profile, ' + escapeDashboardHtml(item.meta) + '"><span class="v10-agenda-icon" aria-hidden="true">' + item.icon + '</span><span class="v10-agenda-copy"><strong>' + escapeDashboardHtml(item.title) + '</strong><span>' + escapeDashboardHtml(item.meta) + '</span></span><span class="v10-agenda-action">Open profile <span aria-hidden="true">↗</span></span></a>' + (item.action ? '<button type="button" class="v10-agenda-operation" data-today-action="' + item.action + '" data-today-identity="' + escapeDashboardHtml(item.identity) + '" data-today-stay-id="' + escapeDashboardHtml(item.stayId) + '" data-today-dog-id="' + escapeDashboardHtml(item.dogId) + '" data-today-stay-key="' + escapeDashboardHtml(item.stayKey) + '" aria-label="' + item.actionLabel + ' ' + escapeDashboardHtml(item.title) + '"' + (item.actionPending ? ' disabled aria-busy="true"' : '') + '>' + item.actionLabel + '</button>' : '') + '</div>' + (item.action ? '<span class="v10-agenda-action-status" data-today-action-status role="status" hidden></span>' : '') + '</div>').join('')
             : '<div class="v10-empty v10-all-clear" role="status"><span aria-hidden="true">✓</span><div><strong>No arrivals, departures or Meet & Greets today</strong><small>The Today queue has no scheduled actions.</small></div></div>';
