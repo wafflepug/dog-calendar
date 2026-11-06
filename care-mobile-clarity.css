@@ -2435,9 +2435,10 @@ body[data-waffle-page="directory"] #directoryTabPanel .directory-card .v11217-ro
 .care-roster-handover-actions {
   display:flex; flex:1 0 100%; flex-wrap:wrap; align-items:flex-start; gap:8px; min-width:0;
 }
-body[data-waffle-page="directory"] #directoryTabPanel .directory-card .care-roster-handover-actions .care-roster-checkout-estimate {
+body[data-waffle-page="directory"] #directoryTabPanel .directory-card .care-roster-handover-actions > :is(button, a) {
   flex:0 0 auto; max-width:100%;
 }
+.care-roster-handover-actions + .care-roster-contact-detail { flex-basis:100%; }
 .care-roster-contact-detail { color:var(--wh-text-muted,#526174); font-size:12px; font-weight:600; line-height:1.4; overflow-wrap:anywhere; font-variant-numeric:tabular-nums; }
 .care-roster-direct-call:focus-visible { outline:3px solid var(--wh75-accent,#7c3aed); outline-offset:2px; }
 /* Status is a single centred label, including when it wraps on narrow screens. */
