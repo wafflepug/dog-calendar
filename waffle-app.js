@@ -1960,7 +1960,7 @@ function renderV10PotentialPipeline(events) {
         const props = event.extendedProps || {}, dates = v10EventRawDates(event), key = v10PotentialKeyFromEvent(event);
         const photo = v10HomeThumbnailUrl(props.dogPhoto?.previewUrl || props.dogPhoto?.url || props.photoUrl || '');
         const initials = String(props.dogName || 'Potential guest').trim().split(/\s+/).map(part => part[0]).join('').slice(0, 2).toUpperCase();
-        return `<article class="v10-potential-item wh-home-potential-item" data-v10-potential-key="${escapeDashboardHtml(key)}"><button type="button" class="wh-home-potential-open" data-v10-potential-action="edit" aria-label="Open ${escapeDashboardHtml(props.dogName || 'Potential guest')} potential stay"><span class="wh-home-portrait" data-pet-species="${props.species === 'cat' ? 'cat' : 'dog'}">${photo ? `<img src="${escapeDashboardHtml(photo)}" alt="" loading="lazy" decoding="async">` : `<span class="wh-home-initials">${escapeDashboardHtml(initials)}</span>`}</span><span class="wh-home-potential-copy"><strong>${escapeDashboardHtml(props.dogName || 'Potential guest')}</strong><span>${escapeDashboardHtml(v10FormatDateLabel(dates.start))} → ${escapeDashboardHtml(v10FormatDateLabel(dates.end))}</span></span></button><div class="v10-potential-main"><div>${props.owner ? `<small>${escapeDashboardHtml(props.owner)}</small>` : ''}</div></div><div class="v10-potential-actions"><button type="button" data-v10-potential-action="edit">Edit stay details</button><button type="button" class="is-primary" data-v10-potential-action="confirm">Confirm stay</button></div></article>`;
+        return `<article class="v10-potential-item wh-home-potential-item" data-v10-potential-key="${escapeDashboardHtml(key)}"><div class="wh-home-potential-open"><span class="wh-home-portrait" data-pet-species="${props.species === 'cat' ? 'cat' : 'dog'}">${photo ? `<img src="${escapeDashboardHtml(photo)}" alt="" loading="lazy" decoding="async">` : `<span class="wh-home-initials">${escapeDashboardHtml(initials)}</span>`}</span><span class="wh-home-potential-copy"><strong>${escapeDashboardHtml(props.dogName || 'Potential guest')}</strong><span>${escapeDashboardHtml(v10FormatDateLabel(dates.start))} → ${escapeDashboardHtml(v10FormatDateLabel(dates.end))}</span></span></div><div class="v10-potential-main"><div>${props.owner ? `<small>${escapeDashboardHtml(props.owner)}</small>` : ''}</div></div><div class="v10-potential-actions"><button type="button" data-v10-potential-action="edit" aria-label="Details for ${escapeDashboardHtml(props.dogName || 'Potential guest')}">Details</button></div></article>`;
     }).join('');
     hosts.forEach(host => { host.innerHTML = markup; host.setAttribute('aria-busy','false'); });
     const status = document.getElementById('whHomePotentialsStatus');
@@ -6430,16 +6430,7 @@ registerWaffleServiceWorker();
 
         // Potential Stay Event Handlers
         document.getElementById('potentialIntakeLinkBtn')
-            .addEventListener('click', function() {
-                createOrCopyPotentialIntakeLink()
-                    .catch(error => {
-                        console.error(error);
-                        alert(
-                            '❌ INTAKE LINK COULD NOT BE CREATED\n\n' +
-                            error.message
-                        );
-                    });
-            });
+            .addEventListener('click', () => void createOrCopyPotentialIntakeLink());
 
         document.getElementById('savePotentialBtn').addEventListener('click', async function() {
             const button = this;
@@ -6834,8 +6825,8 @@ registerWaffleServiceWorker();
         document.getElementById('potentialIntakeLinkBtn').style.display = "none";
         document.getElementById('savePotentialBtn').innerText = "Submit Potential";
 
-        document.getElementById('potentialStayModal').style.display = "flex";
-        document.getElementById('potDogName').focus();
+        showPotentialStayModal();
+        document.getElementById('potDogName').focus({ preventScroll: true });
     }
 
     function openEditPotentialModal(event) {
@@ -6869,7 +6860,7 @@ registerWaffleServiceWorker();
         document.getElementById('potentialIntakeLinkBtn').style.display = "inline-block";
         document.getElementById('savePotentialBtn').innerText = "Update Details";
 
-        document.getElementById('potentialStayModal').style.display = "flex";
+        showPotentialStayModal();
     }
 
     function getLocalArray(key) {
@@ -17131,36 +17122,64 @@ registerWaffleServiceWorker();
         );
     }
 
+    function showPotentialStayModal() {
+        const modal = document.getElementById('potentialStayModal');
+        modal.querySelector('[data-potential-intake-result]')?.remove();
+        document.getElementById('potentialIntakeLinkBtn').disabled = false;
+        modal.style.display = 'flex';
+        modal.scrollTop = 0;
+        modal.querySelector('.modal-content-panel').scrollTop = 0;
+    }
+
     async function createOrCopyPotentialIntakeLink() {
-        if (!activeEditingPotential) {
-            alert(
-                'Save the Potential Stay first, then reopen it to create an intake link.'
-            );
-            return;
+        const selected = activeEditingPotential;
+        if (!selected) return;
+        const modal = document.getElementById('potentialStayModal');
+        const button = document.getElementById('potentialIntakeLinkBtn');
+        let result = modal.querySelector('[data-potential-intake-result]');
+        if (!result) {
+            result = document.createElement('div');
+            result.dataset.potentialIntakeResult = '';
+            result.innerHTML = '<p role="status"></p><input type="url" readonly aria-label="Owner intake link" hidden>';
+            document.getElementById('potentialActionControls').before(result);
         }
-
-        const response = await sendPayloadToAppsScript({
-            action: 'create_intake_link',
-            dogName: activeEditingPotential.dogName,
-            startDate: activeEditingPotential.rawStartDate,
-            endDate: activeEditingPotential.rawEndDate,
-            intakeBaseUrl: getExternalIntakeBaseUrl()
-        });
-
-        const intake = response.intake;
-
-        if (!intake || !intake.link) {
-            throw new Error(
-                'The intake link was not returned by Apps Script.'
-            );
+        const status = result.querySelector('[role=status]');
+        const field = result.querySelector('input');
+        const isCurrent = () => selected === activeEditingPotential && result.isConnected && modal.style.display !== 'none';
+        button.disabled = true;
+        try {
+            if (!field.value) {
+                status.textContent = 'Preparing the intake link for the saved stay…';
+                const response = await sendPayloadToAppsScript({
+                    action: 'create_intake_link',
+                    potentialStay: true,
+                    stayId: selected.stayId,
+                    dogId: selected.dogId,
+                    dogName: selected.dogName,
+                    startDate: selected.rawStartDate,
+                    endDate: selected.rawEndDate,
+                    intakeBaseUrl: getExternalIntakeBaseUrl()
+                });
+                if (!isCurrent()) return;
+                const link = response?.intake?.link;
+                if (!link || new URL(link).protocol !== 'https:') throw new Error('No valid intake link was returned.');
+                field.value = link;
+                field.hidden = false;
+            }
+            try {
+                await navigator.clipboard.writeText(field.value);
+                if (isCurrent()) status.textContent = 'Intake link copied.';
+            } catch (_) {
+                if (!isCurrent()) return;
+                status.textContent = 'Intake link ready. Copy the selected link below or tap Copy Intake Link again.';
+                field.focus();
+                field.select();
+            }
+        } catch (error) {
+            if (isCurrent()) status.textContent = error.message;
+        } finally {
+            if (isCurrent()) button.disabled = false;
         }
-
-        await copyIntakeLinkToClipboard(intake.link);
-
-        alert(
-            `✅ Digital intake link ready for ${activeEditingPotential.dogName}.\n\n` +
-            `Send the copied link to the owner.`
-        );
     }
 
 

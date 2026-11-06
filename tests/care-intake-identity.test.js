@@ -255,6 +255,32 @@ test('createIntakeLinkForBooking_ repairs the verified old token and keeps submi
   assert.deepEqual(JSON.parse(intake.rows[1][13]), answers);
 });
 
+test('potential intake copy enrolls the exact saved request and reuses its token', () => {
+  const h = fixture({end:'2026-11-11', bookingType:'Potential Stay'});
+  const intake = sheet('Dog_Intake_Records', [h.context.INTAKE_HEADERS_.slice()], h.bookings.getParent());
+  h.context.getIntakeSheet_ = () => intake;
+  h.context.getHostedIntakeBaseUrl_ = () => 'https://script.google.com/macros/s/test/exec';
+  h.context.makeIntakeToken_ = () => 'potential-owner-token';
+  h.context.logAuditEvent_ = () => {};
+  h.bookings.rows[1][12] = '';
+  h.context.findStayRowByIdV11225_ = (_, id) => id === stayIdA ? 2 : -1;
+  h.context.ensureStableStayIdV11225_ = () => stayIdA;
+  let assignments = 0;
+  h.context.assignV108DogIdentity_ = (target, row) => {
+    assignments++;
+    target.rows[row - 1][12] = dogIdA;
+  };
+  const payload = {potentialStay:true, dogName:'Cino', startDate:'2026-11-01', endDate:'2026-11-11', stayId:stayIdA};
+  const create = data => h.context.createIntakeLinkForBooking_(h.bookings, h.bookings.getDataRange().getValues(), data);
+  assert.throws(() => create({...payload, endDate:'2026-11-10'}), /potential stay changed/i);
+  assert.equal(assignments, 0);
+  assert.equal(create(payload).token, 'potential-owner-token');
+  assert.equal(create(payload).token, 'potential-owner-token');
+  assert.equal(assignments, 1);
+  assert.equal(intake.rows.length, 2);
+  assert.equal(intake.rows[1][19], dogIdA);
+});
+
 function setupIntakeSubmissionHarness(options = {}) {
   const h = fixture({ end: '2026-11-11', bookingType: 'Confirmed Boarding' });
   const token = 'cino-migrated-owner-token';
