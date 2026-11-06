@@ -53,7 +53,8 @@ test('Today queue deduplicates stable event identity and opens the exact stay pr
   expect(commaSeparators).toBe(0);
   await expect(links.nth(0)).toHaveAttribute('href', /stayKey=milo%7C2026-10-16%7C2026-10-20&stayId=stay-1/);
   await expect(links.nth(1)).toHaveAttribute('href', /stayKey=milo%7C2026-10-16%7C2026-10-22&stayId=stay-2/);
-  await expect(links.nth(0)).toContainText('Open profile');
+  await expect(links.nth(0)).toHaveAccessibleName(/Open Milo care profile/);
+  await expect(links.nth(0)).not.toContainText('Open profile');
   await expect(page.locator('.v10-agenda-care-link')).toHaveText('Medication and intake checks are in Care profiles');
   await expect(page.locator('#v10TodayAgenda')).not.toContainText('Medication due');
 });
