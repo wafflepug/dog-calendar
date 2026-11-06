@@ -110,7 +110,7 @@ test('stay contact and handover is readable, editable and tied to the selected d
   await expect(card.locator('[data-care-brief-feeding]')).toBeVisible();
   await expect(card.locator('[data-care-brief-walks]')).toBeVisible();
   await expect(card.locator('.directory-care-owner-line')).toBeVisible();
-  await expect(card.locator('[data-care-brief-call-owner] a')).toBeVisible();
+  await expect(card.locator('[data-care-header-call-owner]')).toBeVisible();
   await expect(handoverHost).toBeVisible();
   await expect(handoverDetails).toHaveCount(1);
   await expect(handoverDetails).not.toHaveAttribute('open', '');

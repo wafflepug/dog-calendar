@@ -17,6 +17,7 @@ for (const productionMarker of ['data-care-brief-walks', 'directory-care-brief-f
 
 const briefHtml = `
 <article class="directory-card is-profile-active" data-stay-key="milo|stay" data-directory-stay-key="milo|stay" data-v1088-phone="0400000000">
+  <div class="directory-card-header"></div>
   <section class="directory-care-brief" data-directory-care-brief aria-label="Care essentials">
     <div class="directory-care-brief-heading"><h3>Care essentials</h3><span data-care-brief-freshness></span></div>
     <details class="directory-care-readiness"><summary><span>Booking setup</span><strong data-care-readiness-summary></strong></summary><div data-care-readiness-list><div data-care-readiness-item="intake"><span data-care-readiness-status></span><span data-care-readiness-detail></span></div><div data-care-readiness-item="handover"><span data-care-readiness-status></span><span data-care-readiness-detail></span></div></div></details>
@@ -204,7 +205,7 @@ test('owner contact uses quiet missing text and restores the real phone action w
     expect(await host.evaluate(node => node.scrollWidth <= node.clientWidth + 1)).toBe(true);
   }
   await page.locator('.directory-card').evaluate(card => { card.dataset.v1088Phone = '+61 400 123 456'; window.renderBrief(card); });
-  await expect(host.getByRole('link', { name: 'Call owner', exact: true })).toHaveAttribute('href', 'tel:+61400123456');
+  await expect(host.locator('[data-care-header-call-owner]')).toHaveAttribute('href', 'tel:+61400123456');
   await page.locator('.directory-card').evaluate(card => { card.dataset.v1088Phone = ''; window.renderBrief(card); });
   await expect(host).toHaveText('Phone unavailable');
   await expect(host.getByRole('link')).toHaveCount(0);

@@ -9700,8 +9700,31 @@ registerWaffleServiceWorker();
                 ? '<button type="button" class="directory-care-brief-action directory-care-owner-add-number" data-care-brief-action="edit-phone">Add number</button>'
                 : '';
             setDirectorySummaryHtml(callActionHost, phone
-                ? `<a class="directory-care-brief-action" href="tel:${escapeDashboardHtml(phone)}" aria-label="Call owner">Call owner</a><span class="directory-care-owner-phone">${escapeDashboardHtml(readablePhone)}</span>`
+                ? `<span class="directory-care-owner-phone">${escapeDashboardHtml(readablePhone)}</span>`
                 : `<span class="directory-owner-contact-missing">Phone unavailable</span>${addNumber}`, 'careBriefGeneratedHtml');
+
+            const header = card.querySelector('.directory-card-header');
+            let tools = header?.querySelector('[data-care-header-tools]');
+            if (header && !tools) {
+                tools = document.createElement('div');
+                tools.className = 'care-header-tools';
+                tools.dataset.careHeaderTools = '';
+                header.append(tools);
+            }
+            if (tools) {
+                let call = tools.querySelector('[data-care-header-call-owner]');
+                if (phone) {
+                    if (!call) {
+                        call = document.createElement('a');
+                        call.className = 'care-header-call-owner';
+                        call.dataset.careHeaderCallOwner = '';
+                        call.setAttribute('aria-label', 'Call owner');
+                        call.innerHTML = window.PALZ_ICONS?.svg('phone') || '<svg class="palz-icon" aria-hidden="true" data-palz-icon="phone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="m5 3 4 1 1 5-3 2a14 14 0 0 0 6 6l2-3 5 1 1 4c-7 6-23-10-16-16Z"/></svg>';
+                        tools.append(call);
+                    }
+                    call.href = `tel:${phone}`;
+                } else call?.remove();
+            }
         }
 
         window.WAFFLE_CARE_SITTER_SUMMARY?.syncCard?.(card);
