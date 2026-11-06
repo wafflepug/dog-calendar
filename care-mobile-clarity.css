@@ -1759,6 +1759,11 @@ body[data-waffle-page="directory"] #directoryTabPanel .directory-roster-filters 
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--wh75-accent, #7562db) 14%, transparent) !important;
 }
 body[data-waffle-page="directory"] #directoryTabPanel .directory-roster-filters .v1082-stay-tab > span:first-child {
+  width: max-content !important;
+  min-width: max-content !important;
+  max-width: none !important;
+  padding-inline: 8px !important;
+  white-space: nowrap !important;
   font-weight: 800 !important;
 }
 body[data-waffle-page="directory"] #directoryTabPanel .directory-roster-filters .v1082-stay-tab > strong {

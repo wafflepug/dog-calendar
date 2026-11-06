@@ -373,7 +373,6 @@
       ? `Same-day care · ${formatStayDate(dates.start)}`
       : `${formatStayDate(dates.start)} – ${formatStayDate(dates.end)}`;
     const rosterContext = `${breed} ${String.fromCharCode(183)} ${dateLabel}`;
-    const rosterInitials = dogName.trim().split(/\s+/).slice(0, 2).map(part => part.charAt(0)).join('') || '\u{1F43E}';
     const rosterStatus = 'Arriving';
     const identifier = dogNumber ? `Dog Number ${dogNumber.replace(/^#/, "")}. ` : dogId ? `ID ${dogId}. ` : stayId ? `ID ${stayId}. ` : '';
     const ariaLabel = `Open ${dogName} care profile. ${identifier}${owner !== 'N/A' ? `${owner}. ` : ''}${rosterContext}. ${rosterStatus}.`;
@@ -382,7 +381,7 @@
       <div
         class="directory-card directory-card-fused belongings-pet-card ${SYNTHETIC_CLASS} v11195-future-stay"
         data-directory-stay-key="${escapeHtml(stayKey)}"
-        data-directory-dog-name="${escapeHtml(dogName)}"
+        data-pet-species="${props.species === 'cat' ? 'cat' : 'dog'}" data-directory-dog-name="${escapeHtml(dogName)}"
         data-directory-start-date="${escapeHtml(dates.start)}"
         data-directory-end-date="${escapeHtml(dates.end)}"
         data-directory-source-row="${escapeHtml(props.sourceRow || '')}"
@@ -411,7 +410,7 @@
             class="directory-guest-tile-photo"
             data-directory-tile-photo="${escapeHtml(stayKey)}"
             aria-hidden="true"></span>
-          <span class="directory-roster-avatar" aria-hidden="true">${escapeHtml(rosterInitials)}</span>
+          <span class="directory-roster-avatar" aria-hidden="true"></span>
           <span class="directory-roster-copy">
             <span class="directory-guest-tile-name">${escapeHtml(dogName)}</span>
             ${dogNumber ? `<span class="directory-dog-id">Dog ID ${escapeHtml(dogNumber)}</span>` : ''}
@@ -425,7 +424,7 @@
           <div class="directory-card-header">
             <div class="directory-photo-shell" data-directory-photo="${escapeHtml(stayKey)}">
               <div class="directory-photo-media">
-                <div class="directory-photo-placeholder" aria-label="No dog profile photo">🐶</div>
+                <div class="directory-photo-placeholder" aria-label="No pet profile photo"></div>
               </div>
               <button
                 type="button"

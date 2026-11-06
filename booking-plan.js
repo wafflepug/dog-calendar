@@ -208,6 +208,7 @@
         clientMutationId: uuid(),
         dogName: String(dog.dogName || '').trim(),
         breed: String(dog.breed || '').trim(),
+        ...(dog.species === 'cat' ? { species:'cat' } : {}),
         startDate: visit.startDate,
         endDate: visit.endDate,
         ownerName: String(source.ownerName || '').trim(),

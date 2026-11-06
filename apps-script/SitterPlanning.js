@@ -111,3 +111,36 @@ function getSitterRosterPickups_() {
   });
   return {result:'success', pickups:pickups.filter(function(entry) { return entry.time && counts[entry.stayId] === 1; })};
 }
+
+function readPalzBusinessName_() {
+  return PropertiesService.getScriptProperties().getProperty('PALZ_BUSINESS_NAME') || 'Waffle House';
+}
+
+function savePalzBusinessName_(data) {
+  var name = typeof data.name === 'string' ? data.name.trim() : '';
+  if (!name || name.length > 60 || /[\x00-\x1f\x7f]/.test(name)) {
+    throw new Error('Enter a business name between 1 and 60 characters.');
+  }
+  PropertiesService.getScriptProperties().setProperty('PALZ_BUSINESS_NAME', name);
+  return {result:'success', name:name};
+}
+
+function bookingPetSpecies_(value) {
+  var species = String(value || 'dog').trim().toLowerCase();
+  if (species !== 'dog' && species !== 'cat') throw new Error('Choose Dog or Cat.');
+  return species;
+}
+function setBookingPetSpecies_(sheet, row, value) {
+  if (bookingPetSpecies_(value) === 'dog') return row;
+  var width = sheet.getLastColumn();
+  var headers = sheet.getRange(1, 1, 1, width).getValues()[0];
+  var column = headers.findIndex(function(header) {return String(header).trim().toLowerCase() === 'species';});
+  if (column < 0) {
+    column = width;
+    if (sheet.getMaxColumns && column >= sheet.getMaxColumns()) sheet.insertColumnsAfter(sheet.getMaxColumns(), 1);
+    sheet.getRange(1, column + 1).setValue('Species');
+  }
+  while (row.length <= column) row.push('');
+  row[column] = 'Cat';
+  return row;
+}
