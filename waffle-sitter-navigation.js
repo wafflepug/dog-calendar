@@ -66,8 +66,7 @@
       @media(max-width:820px){
         html,body{scroll-padding-top:calc(64px + env(safe-area-inset-top,0px))}
         #wh75MobileTopbar{position:sticky;top:0;z-index:2147481800;display:block;width:100%;height:calc(64px + env(safe-area-inset-top,0px));box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);background:var(--wh75-shell,#fff);border-bottom:1px solid var(--wh75-line,#e2e8f0);isolation:isolate}
-        #wh75MobileTopbar [data-wh-sitter-calendar-notifications]{display:none}
-        body[data-waffle-page="calendar"][data-wh75-mobile-view="calendar"] #wh75MobileTopbar [data-wh-sitter-calendar-notifications]{
+        #wh75MobileTopbar [data-wh-sitter-calendar-notifications]{
           position:absolute;top:calc(10px + env(safe-area-inset-top,0px));right:calc(12px + env(safe-area-inset-right,0px));
           z-index:1;display:grid;place-items:center;width:44px;height:44px;box-sizing:border-box;
           padding:0;border:1px solid var(--wh75-line,#e2e8f0);border-radius:14px;
@@ -233,7 +232,7 @@
     if (!topbar) return;
     if (!document.body.classList.contains('wh75-mobile-topbar-ready')) document.body.classList.add('wh75-mobile-topbar-ready');
 
-    if (pageName() === 'calendar' && !topbar.querySelector('[data-wh-sitter-calendar-notifications]')) {
+    if (!topbar.querySelector('[data-wh-sitter-calendar-notifications]')) {
       const notifications = document.createElement('button');
       notifications.type = 'button';
       notifications.dataset.whSitterCalendarNotifications = '';

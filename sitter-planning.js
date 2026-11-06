@@ -4,6 +4,7 @@
   const $ = s => document.querySelector(s), esc = s => String(s ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const idFor = card => ({stayId:card.dataset.directoryStayId || '',dogId:card.dataset.directoryDogId || '',stayKey:card.dataset.directoryStayKey || ''});
   const key = id => JSON.stringify([id.stayId,id.dogId,id.stayKey]);
+  let todayHandoversDate = '', todayHandovers = null, todayHandoversRequestedFor = '';
   const current = (card,id) => card.isConnected && card.classList.contains('is-profile-active') && key(idFor(card))===key(id);
   async function read(payload) {if(navigator.onLine===false)throw Error('You are offline. Reconnect and retry.');const r=await window.queryAppsScript(payload,{maxAttempts:1,timeoutMs:25000});if(r?.result!=='success')throw Error(r?.error || 'Planning service unavailable. Retry once connected.');return r;}
   async function write(payload) {if(navigator.onLine===false)throw Error('You are offline. Nothing was saved.');const r=await window.sendPayloadToAppsScript(payload);if(r?.result!=='success' || r.queued)throw Error(r?.error || 'Save was not confirmed. Reload to check before retrying.');return r;}
@@ -148,7 +149,68 @@
     if (button) void editCheckoutTime(button);
   });
 
-  function mountToday(){const agenda=$('#v10TodayAgenda');if(!agenda || agenda.querySelector('[data-sitter-day-handovers]'))return;const host=document.createElement('section');host.className='sitter-planning';host.dataset.sitterDayHandovers='';host.innerHTML='<button type="button" aria-expanded="false">Handover times</button><div hidden><p>Scheduled today, in local sitter time.</p><div data-sitter-day-list></div><p role="status"></p></div>';agenda.prepend(host);const button=host.querySelector('button'),panel=host.querySelector('div'),status=host.querySelector('[role=status]');let loading=false;button.onclick=async()=>{if(loading)return;if(!panel.hidden){panel.hidden=true;button.setAttribute('aria-expanded','false');return;}panel.hidden=false;button.setAttribute('aria-expanded','true');loading=true;status.textContent='Loading scheduled times...';try{const r=await read({action:'get_sitter_day_handovers'});if(!host.isConnected)return;host.querySelector('[data-sitter-day-list]').innerHTML=r.entries.length?r.entries.map(x=>`<p><strong>${esc(x.time || 'Time not confirmed')}</strong> - ${esc(x.type)} - ${esc(x.dogName)}</p>`).join(''):'No arrivals or pickups scheduled today.';status.textContent='';}catch(e){status.textContent=e.message;}finally{loading=false;}};}
+  function mountToday() {
+    const agenda = $('#v10TodayAgenda');
+    if (!agenda) return;
+    const today = typeof getLocalTodayDateString === 'function'
+      ? getLocalTodayDateString()
+      : new Date().toISOString().slice(0, 10);
+    if (todayHandoversDate && todayHandoversDate !== today) {
+      agenda.querySelectorAll('[data-today-meta]').forEach(meta => {
+        meta.textContent = meta.textContent.replace(/ @ \d{2}:\d{2}(?:am|pm)$/, '');
+        const link = meta.closest('a[data-today-identity]');
+        if (link) link.setAttribute('aria-label', 'Open ' + (link.querySelector('strong')?.textContent || 'Guest') + ' care profile, ' + meta.textContent.trim());
+      });
+      todayHandoversDate = '';
+      todayHandovers = null;
+    }
+    const formatTime = value => {
+      const match = /^(\d{2}):(\d{2})$/.exec(String(value || ''));
+      if (!match) return '';
+      const hour = Number(match[1]), minute = Number(match[2]);
+      if (hour > 23 || minute > 59) return '';
+      return String(hour % 12 || 12).padStart(2, '0') + ':' + match[2] + (hour < 12 ? 'am' : 'pm');
+    };
+    const apply = entries => {
+      const groups = new Map();
+      (entries || []).forEach(entry => {
+        const id = String(entry.stayId || '').toLowerCase() + '|' + String(entry.dogId || '').toLowerCase();
+        if (!id || id === '|') return;
+        if (!groups.has(id)) groups.set(id, []);
+        groups.get(id).push(entry);
+      });
+      agenda.querySelectorAll('a[data-today-identity]').forEach(link => {
+        const meta = link.querySelector('[data-today-meta]');
+        if (!meta) return;
+        const label = meta.textContent.trim();
+        const type = label === 'Arriving today' ? 'Drop-off' : label === 'Leaving today' ? 'Pickup' : '';
+        if (!type) return;
+        const id = String(link.dataset.todayStayId || '').toLowerCase() + '|' + String(link.dataset.todayDogId || '').toLowerCase();
+        const matches = (groups.get(id) || []).filter(entry => entry.type === type);
+        if (matches.length !== 1 || !matches[0].time) return;
+        const time = formatTime(matches[0].time);
+        if (!time) return;
+        meta.textContent = label + ' @ ' + time;
+        link.setAttribute('aria-label', 'Open ' + (link.querySelector('strong')?.textContent || 'Guest') + ' care profile, ' + meta.textContent);
+      });
+    };
+    if (todayHandoversDate === today && Array.isArray(todayHandovers)) {
+      apply(todayHandovers);
+      return;
+    }
+    if (todayHandoversRequestedFor === today) return;
+    if (!agenda.querySelector('.type-arrival [data-today-meta], .type-departure [data-today-meta]')) return;
+    todayHandoversRequestedFor = today;
+    void read({ action: 'get_sitter_day_handovers' }).then(result => {
+      const currentToday = typeof getLocalTodayDateString === 'function'
+        ? getLocalTodayDateString()
+        : new Date().toISOString().slice(0, 10);
+      if (String(result.date || '') !== today || currentToday !== today) return;
+      todayHandoversDate = today;
+      todayHandovers = Array.isArray(result.entries) ? result.entries : [];
+      if (agenda.isConnected) apply(todayHandovers);
+    }).catch(() => {});
+  }
   const businessNameCache = 'palz.business-name.v1';
   let businessName = 'Waffle House';
   let businessTagline = 'Dog sitting, organised.';
@@ -306,6 +368,7 @@
   }
 
   function scan(){showBusinessName();mountBusinessSettings();refreshCheckoutButtons();mountToday();const panel=$('#wh75SettingsPanel');if(panel && !panel.querySelector('[data-sitter-planning-settings]')){const section=document.createElement('section');section.className='wh75-settings-section sitter-planning';section.innerHTML='<h3>Availability</h3><button type="button" data-sitter-planning-settings>Availability & handover windows</button>';section.querySelector('button').onclick=openSettings;panel.append(section);}document.querySelectorAll('.directory-card.is-profile-active').forEach(mountCard);}
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)mountToday();});
   let queued=false;new MutationObserver(()=>{if(!queued){queued=true;requestAnimationFrame(()=>{queued=false;scan();});}}).observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['class','data-directory-stay-id','data-directory-dog-id','data-directory-stay-key']});scan();
   window.PALZ_SITTER_PLANNING=Object.freeze({openSettings});
 })();
