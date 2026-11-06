@@ -2700,3 +2700,88 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-
   width: 16px;
   height: 16px;
 }
+
+/* Compact profile header: keep the photo, identity and actions in one top row. */
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-card-header {
+  display: grid !important;
+  grid-template-columns: 84px minmax(0, 1fr) 44px !important;
+  grid-template-rows: auto auto;
+  align-items: start;
+  gap: 8px 12px;
+  justify-content: start;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-card-header > .directory-photo-shell {
+  grid-column: 1;
+  grid-row: 1 / span 2;
+  width: 84px !important;
+  height: 84px !important;
+  min-width: 84px;
+  min-height: 84px;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-card-header > .directory-card-identity {
+  grid-column: 2;
+  grid-row: 1;
+  width: auto;
+  min-width: 0;
+  margin: 0;
+  padding: 0 !important;
+  align-items: flex-start;
+  text-align: left;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-dog-name-btn {
+  min-width: 0;
+  max-width: 100%;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-primary-breed,
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-profile-stay-dates {
+  max-width: 100%;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-card-header > [data-care-header-tools] {
+  grid-column: 3;
+  grid-row: 1;
+  width: 44px;
+  min-width: 0;
+  flex-direction: column;
+  justify-content: flex-start;
+  margin: 0;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-card-header > .directory-profile-roster-badges {
+  grid-column: 2 / 4;
+  grid-row: 2;
+  min-width: 0;
+  margin: 0;
+  justify-self: start;
+}
+@media (min-width: 901px) {
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-card-header > [data-care-header-tools] {
+    flex-direction: row;
+    width: auto;
+  }
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-card-header {
+    grid-template-columns: 112px minmax(0, 1fr) auto !important;
+    gap: 8px 16px;
+  }
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-card-header > .directory-photo-shell {
+    grid-row: 1 / span 2;
+    width: 112px !important;
+    height: 112px !important;
+    min-width: 112px;
+    min-height: 112px;
+  }
+}
+@media (max-width: 360px) {
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-card-header {
+    grid-template-columns: 76px minmax(0, 1fr) 44px !important;
+    column-gap: 8px;
+  }
+  body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-card-header > .directory-photo-shell {
+    width: 76px !important;
+    height: 76px !important;
+    min-width: 76px;
+    min-height: 76px;
+  }
+}
