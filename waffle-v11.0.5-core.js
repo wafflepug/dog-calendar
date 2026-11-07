@@ -438,6 +438,7 @@ v1104ComposeCalendarEvents =
              * Startup/offline fallback only.
              * The old tombstone behaviour remains appropriate for stale CSV.
              */
+            baseSheet = sheet.filter(event => event?.extendedProps?.isPotential !== true);
             sheet
                 .filter(
                     event =>
@@ -490,8 +491,27 @@ v1104ComposeCalendarEvents =
                             )
                         )
                     ) {
+                        const stayId = String(event?.extendedProps?.stayId || '').trim().toLowerCase();
+                        const stableId = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(stayId);
+                        // Potential keys include editable fields for legacy mutation receipts.
+                        // For presentation only, reconcile one unambiguous authoritative row
+                        // with the same stable stay ID, while retaining conflicting identities.
+                        const matches = stableId
+                            ? Array.from(potentialMap.entries()).filter(([, candidate]) =>
+                                String(candidate?.extendedProps?.stayId || '').trim().toLowerCase() === stayId)
+                            : [];
+                        const sourceDogId = String(matches[0]?.[1]?.extendedProps?.dogId || '').trim().toLowerCase();
+                        const localDogId = String(event?.extendedProps?.dogId || '').trim().toLowerCase();
+                        const compatibleMatch = matches.length === 1 &&
+                            (!sourceDogId || !localDogId || sourceDogId === localDogId)
+                            ? matches[0]
+                            : null;
+                        if (compatibleMatch) potentialMap.delete(compatibleMatch[0]);
+                        const mapKey = stableId && matches.length > 1 && potentialMap.has(key)
+                            ? `${key}|ambiguous-local:${potentialMap.size}`
+                            : key;
                         potentialMap.set(
-                            key,
+                            mapKey,
                             event
                         );
                     }
