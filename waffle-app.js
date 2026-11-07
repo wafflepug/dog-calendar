@@ -6441,6 +6441,37 @@ registerWaffleServiceWorker();
         });
         v108SetBoardingBreedChoices(potentialModal);
 
+        const potentialValidationFields = [
+            ['#potDogName', 'Pet name is required.'], ['#potBreedChoice', 'Breed is required.'], ['#potBreed', 'Enter the breed or mix.'],
+            ['#potStartDate', 'Check-in date is required.'], ['#potEndDate', 'Check-out date is required.'],
+            ['#potOwnerName', 'Owner name is required.'], ['#potPhone', 'Contact number is required.']
+        ];
+        let potentialValidationActive = false;
+        function resetPotentialValidation() {
+            potentialValidationActive = false;
+            potentialValidationFields.forEach(([selector], i) => window.v108ValidateInlineFields?.(potentialModal, [{ selector, errorId: `potValidation${i}`, message: '' }]));
+            document.getElementById('potBreed')?.removeAttribute('aria-invalid');
+        }
+        potentialModal.resetValidation = resetPotentialValidation;
+        function validatePotentialModal(focusFirst = false) {
+            const start = potentialModal.querySelector('#potStartDate').value;
+            const end = potentialModal.querySelector('#potEndDate').value;
+            const manualBreed = potentialBreedChoice.value === 'other';
+            const rules = potentialValidationFields.map(([selector, required], i) => {
+                const missing = (selector !== '#potBreed' || manualBreed) && !potentialModal.querySelector(selector).value.trim();
+                const reversed = selector === '#potEndDate' && start && end && end < start;
+                return { selector, errorId: 'potValidation' + i, message: reversed
+                    ? 'Check-out date cannot be before check-in date.' : missing ? required : '' };
+            });
+            return window.v108ValidateInlineFields(potentialModal, rules, focusFirst);
+        }
+        for (const [selector] of potentialValidationFields) {
+            const field = potentialModal.querySelector(selector);
+            for (const type of ['input', 'change']) field.addEventListener(type, () => {
+                if (potentialValidationActive) validatePotentialModal();
+            });
+        }
+
         document.getElementById('savePotentialBtn').addEventListener('click', async function() {
             const button = this;
             const dogName = document.getElementById('potDogName').value.trim();
@@ -6452,15 +6483,8 @@ registerWaffleServiceWorker();
             const phone = document.getElementById('potPhone').value.trim();
             const notes = document.getElementById('potNotes').value.trim();
 
-            if (!dogName || !breed || !startDate || !endDate || !ownerName || !phone) {
-                alert("Please complete all required fields: Dog Name, Breed, Check-In Date, Check-Out Date, Owner Name and Contact Number.");
-                return;
-            }
-
-            if (endDate < startDate) {
-                alert("Check-Out Date cannot be earlier than Check-In Date.");
-                return;
-            }
+            potentialValidationActive = true;
+            if (!validatePotentialModal(true)) return;
 
             const isEditing = !!activeEditingPotential;
             const original = activeEditingPotential ? {
@@ -6572,15 +6596,8 @@ registerWaffleServiceWorker();
             const phone = document.getElementById('potPhone').value.trim();
             const notes = document.getElementById('potNotes').value.trim();
 
-            if (!dogName || !breed || !startDate || !endDate || !ownerName || !phone) {
-                alert("Please complete all required fields before confirming: Dog Name, Breed, Check-In Date, Check-Out Date, Owner Name and Contact Number.");
-                return;
-            }
-
-            if (endDate < startDate) {
-                alert("Check-Out Date cannot be earlier than Check-In Date.");
-                return;
-            }
+            potentialValidationActive = true;
+            if (!validatePotentialModal(true)) return;
 
             if (!confirm(`Confirm stay for ${dogName}? The Google Sheet Booking Type will change from "Potential Stay" to "Confirmed Boarding".`)) return;
 
@@ -6823,6 +6840,7 @@ registerWaffleServiceWorker();
     });
 
     function openNewPotentialModal() {
+        document.getElementById('potentialStayModal')?.resetValidation?.();
         activeEditingPotentialId = null;
         activeEditingPotential = null;
 
@@ -6849,6 +6867,7 @@ registerWaffleServiceWorker();
     }
 
     function openEditPotentialModal(event) {
+        document.getElementById('potentialStayModal')?.resetValidation?.();
         activeEditingPotentialId = event.id;
         const props = event.extendedProps;
 

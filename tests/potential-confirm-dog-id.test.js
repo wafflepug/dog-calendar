@@ -76,7 +76,7 @@ function confirmationHarness(existing = []) {
     setLocalArray(key,value){values.set(key,JSON.stringify(value));},
     makePotentialKey:(dog,start,end)=>`${String(dog||'').trim().toLowerCase()}|${start}|${end||start}`,
     addPendingPotentialRemoval(key){const pending=JSON.parse(values.get('pendingPotentialRemovals')||'[]');if(!pending.includes(key))pending.push(key);values.set('pendingPotentialRemovals',JSON.stringify(pending));},
-    refreshCalendarData(){}, confirm:()=>true, alert(message){throw new Error(message);},
+    validatePotentialModal:()=>true, refreshCalendarData(){}, confirm:()=>true, alert(message){throw new Error(message);},
     potentialModal: document.getElementById('potentialStayModal'), showPotentialStayModal(){},
     v108ReadBoardingBreed:()=>document.getElementById('potBreed').value.trim(), v108SetBoardingBreedChoices(){},
     sendPayloadToAppsScript:async payload=>{sentPayload=payload;return {result:'success',payload};},

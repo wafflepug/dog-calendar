@@ -1,5 +1,36 @@
 /* Waffle House V10.8 — integrated enhancements */
 
+window.v108ValidateInlineFields = function(modal, rules, focusFirst = false) {
+    let firstInvalid = null;
+    for (const {selector, errorId, message} of rules) {
+        const field = modal.querySelector(selector);
+        if (!field) continue;
+        const invalid = Boolean(message);
+        let error = modal.querySelector('#' + errorId);
+        if (!error && invalid) {
+            error = document.createElement('small');
+            error.id = errorId;
+            error.className = 'v108-inline-error';
+            field.closest('label').append(error);
+            const descriptions = field.getAttribute('aria-describedby');
+            field.setAttribute('aria-describedby', descriptions ? descriptions + ' ' + errorId : errorId);
+        }
+        if (invalid) {
+            firstInvalid ||= field;
+            field.setAttribute('aria-invalid', 'true');
+        } else {
+            field.removeAttribute('aria-invalid');
+        }
+        field.classList.toggle('v108-inline-invalid', invalid);
+        if (error) {
+            error.textContent = message;
+            error.hidden = !invalid;
+        }
+    }
+    if (focusFirst) firstInvalid?.focus();
+    return !firstInvalid;
+};
+
 const V108_QUEUE_DB = 'waffle-house-v108-writes';
 const V108_QUEUE_STORE = 'mutations';
 const V108_QUEUE_ACTIONS = new Set([
@@ -554,6 +585,10 @@ function v108EnsureBoardingModal(){
     breedChoice.addEventListener('change', () => {
         manualBreed.hidden = breedChoice.value !== 'other';
         if (!manualBreed.hidden) manualBreed.querySelector('input').focus();
+        if (m.dataset.validationActive === 'true') v108ValidateBoarding(m);
+    });
+    m.querySelectorAll('[data-v108-board="dogName"], [data-v108-board="startDate"], [data-v108-board="endDate"], [data-v108-board="ownerName"], [data-v108-board="phone"], [data-v108-board="breed"]').forEach(field => {
+        for (const type of ['input', 'change']) field.addEventListener(type, () => { if (m.dataset.validationActive === 'true') v108ValidateBoarding(m); });
     });
     const invalidateLookup=()=>{m.dataset.lookupVersion=String(Number(m.dataset.lookupVersion||0)+1);clearTimeout(v108ReturningTimer);};
     m.querySelector('[data-v108-board="dogName"]').addEventListener('input',invalidateLookup);m.querySelector('[data-v108-board="phone"]').addEventListener('input',invalidateLookup);
@@ -579,7 +614,25 @@ function v108EnsureBoardingModal(){
     });return m;
 }
 
-function v108ResetBoarding(m,context={}){if(m.dataset.saveState==='saving')return;const today=getLocalTodayDateString(),values={dogName:'',species:'dog',breed:'',startDate:today,endDate:today,ownerName:'',phone:'',notes:'',...(context||{})};m.querySelectorAll('[data-v108-board]').forEach(input=>{input.value=values[input.dataset.v108Board]??'';input.disabled=false;});v108SetBoardingBreedChoices(m, values.breed);m.querySelector('[data-v108-breed-choice]').disabled=false;m.querySelector('[data-v108-choose-returning]').disabled=false;const saveButton=m.querySelector('[data-v108-save-board]');saveButton.disabled=false;saveButton.hidden=false;saveButton.textContent='Create booking';m.querySelector('.v108-modal-actions [data-v108-close]').textContent='Cancel';m.querySelector('[data-v108-start-over]').hidden=false;m.querySelector('[data-v108-add-same-owner]').hidden=true;m.querySelector('[data-v108-add-another]').hidden=true;m.querySelector('[data-v108-same-owner-hint]').hidden=!context.sameOwner;m.querySelector('[data-v108-returning]').hidden=true;m.querySelector('[data-v108-board-summary]').hidden=true;const form=m.querySelector('[data-v108-form-grid]');form.hidden=false;form.style.removeProperty('display');m.querySelector('[data-v108-identity-note]').hidden=false;m.querySelector('[data-v108-intake-result]').hidden=true;m.querySelector('[data-v108-intake-result]').replaceChildren();const status=m.querySelector('[data-v108-board-status]');status.textContent='';delete status.dataset.mode;m.dataset.intakeLink='';m.dataset.saveState='';m.dataset.initialized='true';m.dataset.nextActionUsed='false';m.dataset.lookupVersion=String(Number(m.dataset.lookupVersion||0)+1);m._completedPayload=null;m.hidden=false;m.querySelector('[data-v108-board="dogName"]').focus();}
+function v108ResetBoarding(m,context={}){if(m.dataset.saveState==='saving')return;const today=getLocalTodayDateString(),values={dogName:'',species:'dog',breed:'',startDate:today,endDate:today,ownerName:'',phone:'',notes:'',...(context||{})};m.querySelectorAll('[data-v108-board]').forEach(input=>{input.value=values[input.dataset.v108Board]??'';input.disabled=false;});v108SetBoardingBreedChoices(m, values.breed);m.querySelector('[data-v108-breed-choice]').disabled=false;m.querySelector('[data-v108-choose-returning]').disabled=false;const saveButton=m.querySelector('[data-v108-save-board]');saveButton.disabled=false;saveButton.hidden=false;saveButton.textContent='Create booking';m.querySelector('.v108-modal-actions [data-v108-close]').textContent='Cancel';m.querySelector('[data-v108-start-over]').hidden=false;m.querySelector('[data-v108-add-same-owner]').hidden=true;m.querySelector('[data-v108-add-another]').hidden=true;m.querySelector('[data-v108-same-owner-hint]').hidden=!context.sameOwner;m.querySelector('[data-v108-returning]').hidden=true;m.querySelector('[data-v108-board-summary]').hidden=true;const form=m.querySelector('[data-v108-form-grid]');form.hidden=false;form.style.removeProperty('display');m.querySelector('[data-v108-identity-note]').hidden=false;m.querySelector('[data-v108-intake-result]').hidden=true;m.querySelector('[data-v108-intake-result]').replaceChildren();const status=m.querySelector('[data-v108-board-status]');status.textContent='';delete status.dataset.mode;m.dataset.intakeLink='';m.dataset.saveState='';m.dataset.validationActive='false';const validationRules=['[data-v108-board="dogName"]','[data-v108-breed-choice]','[data-v108-board="breed"]','[data-v108-board="startDate"]','[data-v108-board="endDate"]','[data-v108-board="ownerName"]','[data-v108-board="phone"]'].map((selector,i)=>({selector,errorId:`v108BoardError${i}`,message:''}));window.v108ValidateInlineFields(m,validationRules);m.dataset.initialized='true';m.dataset.nextActionUsed='false';m.dataset.lookupVersion=String(Number(m.dataset.lookupVersion||0)+1);m._completedPayload=null;m.hidden=false;m.querySelector('[data-v108-board="dogName"]').focus();}
+
+function v108ValidateBoarding(modal, focusFirst = false) {
+    const field = name => '[data-v108-board="' + name + '"]';
+    const value = name => modal.querySelector(field(name)).value.trim();
+    const choice = modal.querySelector('[data-v108-breed-choice]').value;
+    const start = value('startDate');
+    const end = value('endDate');
+    const rules = [
+        [field('dogName'), value('dogName') ? '' : 'Pet name is required.'],
+        ['[data-v108-breed-choice]', choice ? '' : 'Breed is required.'],
+        [field('breed'), choice === 'other' && !value('breed') ? 'Enter the breed or mix.' : ''],
+        [field('startDate'), start ? '' : 'Check-in date is required.'],
+        [field('endDate'), !end ? 'Check-out date is required.' : start && end < start ? 'Check-out date cannot be before check-in date.' : ''],
+        [field('ownerName'), value('ownerName') ? '' : 'Owner name is required.'],
+        [field('phone'), value('phone') ? '' : 'Contact number is required.']
+    ].map(([selector, message], index) => ({selector, message, errorId: 'v108BoardError' + index}));
+    return window.v108ValidateInlineFields(modal, rules, focusFirst);
+}
 
 function v108OpenBoarding(forceReset=false){const m=v108EnsureBoardingModal();m.hidden=false;m.dataset.lookupVersion=String(Number(m.dataset.lookupVersion||0)+1);if(m.dataset.saveState==='saving'||['queued','success'].includes(m.dataset.saveState)&&!forceReset)return;if(forceReset||m.dataset.initialized!=='true'){v108ResetBoarding(m);return;}if(m.dataset.saveState===''){m.querySelector('[data-v108-start-over]').hidden=false;}m.querySelector('[data-v108-board="dogName"]').focus();}
 
@@ -590,7 +643,7 @@ async function v108LookupReturning(){
 
 async function v108SaveBoarding(){
     const m=v108EnsureBoardingModal(), get=k=>m.querySelector(`[data-v108-board="${k}"]`).value.trim();const payload={action:'create_boarding',dogName:get('dogName'),species:m.querySelector('[data-v108-board=species]')?.value||'dog',breed:v108ReadBoardingBreed(m),startDate:get('startDate'),endDate:get('endDate'),ownerName:get('ownerName'),phone:get('phone'),notes:get('notes')};const status=m.querySelector('[data-v108-board-status]'),btn=m.querySelector('[data-v108-save-board]');if(m.dataset.saveState==='queued'||m.dataset.saveState==='success'||btn.disabled)return;
-    if(!payload.dogName||!payload.breed||!payload.startDate||!payload.endDate||!payload.ownerName||!payload.phone){status.textContent='Enter the pet name, breed, stay dates, owner name and contact number.';status.dataset.mode='error';return;}if(payload.endDate<payload.startDate){status.textContent='Check-Out cannot be earlier than Check-In.';status.dataset.mode='error';return;}
+    m.dataset.validationActive='true';if(!v108ValidateBoarding(m,true))return;
     btn.disabled=true;btn.textContent='⏳ Saving…';m.dataset.saveState='saving';m.querySelector('[data-v108-start-over]').hidden=true;m.querySelectorAll('[data-v108-board], [data-v108-breed-choice]').forEach(input=>input.disabled=true);m.querySelector('[data-v108-choose-returning]').disabled=true;let r;
     try{r=await sendPayloadToAppsScript(payload);if(!r||!r?.queued&&r?.result!=='queued'&&(r?.error||r?.result&&r.result!=='success'||r?.ok===false||r?.success===false))throw new Error(typeof r?.error==='string'?r.error:(r?.message||'The stay could not be added. Please try again.'));}catch(e){m.dataset.saveState='';m.querySelector('[data-v108-start-over]').hidden=false;m.querySelectorAll('[data-v108-board], [data-v108-breed-choice]').forEach(input=>input.disabled=false);m.querySelector('[data-v108-choose-returning]').disabled=false;status.textContent=e?.message||String(e);status.dataset.mode='error';btn.disabled=false;btn.textContent='Create booking';return;}
     const summary=m.querySelector('[data-v108-board-summary]'),summaryTitle=m.querySelector('[data-v108-summary-title]'),summaryDetail=m.querySelector('[data-v108-summary-detail]'),form=m.querySelector('[data-v108-form-grid]'),displayDate=value=>{const [year,month,day]=value.split('-').map(Number);return new Date(year,month-1,day).toLocaleDateString('en-AU',{day:'numeric',month:'short'});};summaryTitle.textContent=`${payload.dogName} · ${displayDate(payload.startDate)}–${displayDate(payload.endDate)}`;summaryDetail.textContent=r?.queued||r?.result==='queued'?'Saved on this device. Check sync status, then find the guest in Care.':r?.intake?.link?'Stay added. Share the care form with the owner.':'Stay added.';summary.hidden=false;form.hidden=true;form.style.display='none';m.querySelector('[data-v108-identity-note]').hidden=true;m.querySelector('[data-v108-returning]').hidden=true;
