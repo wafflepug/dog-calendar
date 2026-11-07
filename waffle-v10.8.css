@@ -168,6 +168,11 @@ body.dark-theme .v108-copy{border-color:#1d4ed8;background:#172554;color:#bfdbfe
 #potentialStayModal [data-v108-manual-breed][hidden]{display:none}
 #potentialStayModal .v108-modal-actions{flex-wrap:wrap}
 #potentialStayModal .v108-modal-actions button{min-height:44px;padding:9px 13px;font:inherit;font-size:12px;font-weight:800}
+.v108-inline-error{display:block;color:#b42318;font-size:.82rem;line-height:1.35;margin-top:.2rem}
+.v108-inline-error[hidden]{display:none!important}
+.v108-inline-invalid{outline:2px solid #b42318;outline-offset:1px}
+body.dark-theme .v108-inline-error{color:#fecaca}
+body.dark-theme .v108-inline-invalid{outline-color:#f87171}
 #potentialStayModal #deletePotentialBtn{margin-right:auto;border-color:#fecaca;background:#fff;color:#b42318}
 body.dark-theme #potentialStayModal #deletePotentialBtn{border-color:#7f1d1d;background:#3b1111;color:#fecaca}
 #potentialStayModal .v1112-source-picker{margin:8px 0 10px}
