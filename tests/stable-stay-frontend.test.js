@@ -53,6 +53,36 @@ test('different stable IDs preserve same-name/date Potential bookings in actual 
   assert.deepEqual(result.map(item => item.extendedProps.stayId).sort(), [first.extendedProps.stayId, second.extendedProps.stayId].sort());
 });
 
+test('local refresh overlays one compatible shared Potential stay by stable ID despite changed details', () => {
+  const sandbox = createCalendarSandbox();
+  const shared = event({ isPotential: true, notes: 'server snapshot' });
+  const refreshed = event({ isPotential: true, breed: 'Cavalier King Charles Spaniel', notes: 'queued edit', rawStartDate: '2026-10-20', rawEndDate: '2026-10-22', start: '2026-10-20', end: '2026-10-23' });
+  sandbox.v1104SharedPotentialEvents = [shared];
+  const result = sandbox.v1104ComposeCalendarEvents([], [], [refreshed], []);
+  assert.deepEqual(result, [refreshed]);
+});
+
+test('startup CSV Potential copies enter composition once and accept a local refresh', () => {
+  const sandbox = createCalendarSandbox();
+  sandbox.v1104SharedPotentialLoaded = false;
+  const cached = event({ isPotential: true });
+  const refreshed = event({ isPotential: true, notes: 'queued edit' });
+  const result = sandbox.v1104ComposeCalendarEvents([cached], [], [refreshed], []);
+  assert.deepEqual(result, [refreshed]);
+});
+
+test('local refresh does not merge conflicting or ambiguous shared identities by stable ID', () => {
+  const sandbox = createCalendarSandbox();
+  const shared = event({ isPotential: true });
+  const conflicting = event({ isPotential: true, dogId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', ownerName: 'Jordan Smith' });
+  sandbox.v1104SharedPotentialEvents = [shared];
+  const conflictResult = sandbox.v1104ComposeCalendarEvents([], [], [conflicting], []);
+  assert.equal(conflictResult.length, 2);
+  sandbox.v1104SharedPotentialEvents = [shared, { ...shared, extendedProps: { ...shared.extendedProps, dogId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', ownerName: 'Taylor Smith' } }];
+  const ambiguousResult = sandbox.v1104ComposeCalendarEvents([], [], [event({ isPotential: true, notes: 'queued' })], []);
+  assert.equal(ambiguousResult.length, 3);
+});
+
 test('same stable ID only dedupes when dates and identity agree; changed dates remain separate copies', () => {
   const sandbox = createCalendarSandbox();
   const source = event();
