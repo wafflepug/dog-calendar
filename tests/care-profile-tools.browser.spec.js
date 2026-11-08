@@ -194,7 +194,7 @@ for (const [name, width, colorScheme] of [['320-light', 320, 'light'], ['320-dar
     const list = tools.locator(':scope > .directory-care-more-actions-list');
     const ownerLink = card.locator('.directory-care-brief-actions > [data-care-owner-link-group] > [data-p4-dir="owner"]');
     await expect(ownerLink).toBeVisible();
-    await expect(ownerLink).toHaveAccessibleName('Prepare owner form for Milo');
+    await expect(ownerLink).toHaveAccessibleName('Prepare new form for Milo');
     await expect(card.locator('[data-p4-dir="owner"]')).toHaveCount(1);
     await expect(tools.locator('[data-p4-dir="owner"]')).toHaveCount(0);
     await expect(tools.locator(':scope > summary')).toHaveCount(0);

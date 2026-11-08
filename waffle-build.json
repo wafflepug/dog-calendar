@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.11.07.14",
-  "releaseName": "Dog and cat workspace settings",
+  "assetRevision": "2026.11.09.01",
+  "releaseName": "Repeat bookings and owner forms",
   "careIteration": {
     "returningDogSuggestions": true,
     "reviewedCareInheritance": true,
