@@ -316,6 +316,8 @@ async function v110SaveOperationalStatus(payload,status,target){
   if(status==='checked_out')v110AuthoritativeCheckouts[returned]=record;else delete v110AuthoritativeCheckouts[returned];
   if(record.stayKey){const rest=v110OperationRecords.filter(old=>{const id=String(old.stayId||old.identityStayId||old.sourceStayId||'').toLowerCase();return id?id!==returned:old.identityConflict===true||old.stayKey!==record.stayKey;});v110IndexOperations([...rest,record]);}
   try{await invalidateWaffleClientCaches(['directory','audit']);}catch(_){ }
+  window.dispatchEvent(new Event('waffle:stay-operation-updated'));
+  try { localStorage.setItem('waffle:stay-operation-updated', String(Date.now())); } catch (_) { /* Storage can be disabled. */ }
   return r;
 }
 

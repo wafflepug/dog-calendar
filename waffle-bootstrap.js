@@ -13,7 +13,7 @@
 
   const BUILD = '2026.08.28.01';
   // Increment with coordinated shell releases so entry pages and SW stay aligned.
-  const ASSET_REVISION = '2026.11.09.01';
+  const ASSET_REVISION = '2026.11.09.02';
   window.WAFFLE_ASSET_REVISION = ASSET_REVISION;
   const ENDPOINT = 'https://script.google.com/macros/s/AKfycbwn4HL49K9c3AZbXJRUjPw3UYWxJt8DmqXwMnTytyqdSstj3ZIJwWdDEC2IsBjetOf3pw/exec';
   const RUNTIME = [
@@ -100,6 +100,7 @@
     if (page === 'calendar') {
       const view = String(document.body.dataset?.wh75MobileView || '');
       if (!view) return false;
+      if (view === 'calendar' && document.documentElement.dataset.wh65CalendarReady !== 'true') return false;
     }
 
     return true;
@@ -144,7 +145,7 @@
       childList: true,
       subtree: true,
       attributes: true,
-      attributeFilter: ['data-wh75-mobile-view', 'data-waffle-page']
+      attributeFilter: ['data-wh75-mobile-view', 'data-waffle-page', 'data-wh65-calendar-ready']
     });
 
     firstPaintTimer = window.setTimeout(() => {

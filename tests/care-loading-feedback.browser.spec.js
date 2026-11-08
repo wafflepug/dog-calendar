@@ -149,6 +149,11 @@ for (const colorScheme of ['light', 'dark']) {
     const fixture = installReadOnlyRuntimeFixture(page, { holdProfile: true, profileBehavior: () => ({ kind: 'success' }) });
     await openDirectory(page, baseURL, fixture, colorScheme);
     const card = await openProfile(page);
+    const dashboard = page.locator('.directory-dashboard-fused');
+    const loadingScreen = dashboard.locator('[data-care-profile-loading-screen]');
+    await expect(dashboard).toHaveAttribute('data-care-profile-loading', 'true');
+    await expect(loadingScreen).toContainText('Getting Milo’s profile ready');
+    await expect(page.locator('.v1082-stay-panels')).toBeHidden();
     const details = card.locator('[data-directory-detail="profile"]');
     const status = details.locator('[data-directory-profile-read-status]');
     await expect(status).toHaveAttribute('data-state', 'loading');
@@ -161,8 +166,25 @@ for (const colorScheme of ['light', 'dark']) {
     await expect(status).toHaveAttribute('data-state', 'fresh', { timeout: 2_000 });
     await expect(host).toHaveAttribute('aria-busy', 'false');
     await expect(details.locator('[data-intake-attribute="medicationInstructions"]')).toHaveValue('Fresh medication');
+    await expect(dashboard).toHaveAttribute('data-care-profile-loading', 'false');
+    await expect(page.locator('.v1082-stay-panels')).toBeVisible();
   });
 }
+
+test('Back closes the loading screen and a late profile read cannot restore the closed guest', async ({ page, baseURL }) => {
+  const fixture = installReadOnlyRuntimeFixture(page, { holdProfile: true, profileBehavior: () => ({ kind: 'success' }) });
+  await openDirectory(page, baseURL, fixture);
+  const card = await openProfile(page);
+  const key = await card.getAttribute('data-directory-stay-key');
+  await expect(page.locator('.directory-dashboard-fused')).toHaveAttribute('data-care-profile-loading', 'true');
+  await page.locator('#directoryBackToGuestsBtn').click();
+  await expect(page.locator('.directory-dashboard-fused')).toHaveAttribute('data-care-profile-loading', 'false');
+  await expect(page.locator('.directory-dashboard-fused')).not.toHaveClass(/is-profile-mode/);
+  fixture.release(key);
+  await expect(card.locator('[data-directory-detail="profile"] [data-directory-profile-read-status]')).toHaveAttribute('data-state', 'fresh', { timeout: 2_000 });
+  await expect(page.locator('.directory-dashboard-fused')).not.toHaveClass(/is-profile-mode/);
+  await expect(page.locator('[data-care-profile-loading-screen]')).toBeHidden();
+});
 
 test('saved cached profile stays visible while delayed fresh data arrives', async ({ page, baseURL }) => {
   const fixture = installReadOnlyRuntimeFixture(page, { holdProfile: true, profileBehavior: () => ({ kind: 'success', label: 'Fresh' }) });

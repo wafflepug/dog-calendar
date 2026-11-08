@@ -124,8 +124,9 @@ test('all four full pages settle with only successful local asset requests and o
   expect(workerSource).toContain("'./organiser.css?build=2026.08.28.01'");
   const scriptUrl = new URL(reminders.organiserScriptUrl, origin);
   expect(scriptUrl.pathname).toBe('/organiser.js');
-  expect(scriptUrl.search).toBe('?build=2026.08.28.01');
-  expect(workerSource).toContain("'./organiser.js?build=2026.08.28.01'");
+  expect(scriptUrl.searchParams.get('build')).toBe('2026.08.28.01');
+  expect(scriptUrl.searchParams.get('rev')).toMatch(/^\d{4}\.\d{2}\.\d{2}\.\d{2}$/);
+  expect(workerSource).toContain("'./organiser.js" + scriptUrl.search + "'");
   expect(reminders.externalActions.filter(action => action === 'get_organiser')).toHaveLength(1);
   expect(reminders.externalActions.filter(action => action === 'get_guest_directory')).toHaveLength(1);
   for (const page of results.filter(result => result.file !== 'reminders.html')) {

@@ -2,8 +2,8 @@
    Build: 2026.08.27.04
    Historical base styles remain compatibility sources during Phase 3A, but pages no longer
    reference them individually. Preserve this import order until modules are folded in. */
-@import url("waffle-app.css?build=2026.08.27.04&rev=2026.11.09.01");
-@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.11.09.01");
+@import url("waffle-app.css?build=2026.08.27.04&rev=2026.11.09.02");
+@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.11.09.02");
 @import url("waffle-v10.8.2.css?build=2026.08.27.04");
 @import url("waffle-v10.8.3.css?build=2026.08.27.04");
 @import url("waffle-v10.8.5.css?build=2026.08.27.04");
@@ -11,12 +11,12 @@
 @import url("waffle-v10.8.7.css?build=2026.08.27.04");
 @import url("waffle-v10.8.8.css?build=2026.08.27.04");
 @import url("waffle-v10.8.9.css?build=2026.08.27.04");
-@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.11.09.01");
+@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.11.09.02");
 @import url("waffle-v11.0.3.css?build=2026.08.27.04");
 @import url("waffle-v11.0.5.css?build=2026.08.27.04");
-@import url("waffle-v11.1.94.css?build=2026.11.09.01");
-@import url("waffle-v11.1.95.css?build=2026.11.09.01");
-@import url("waffle-v11.1.96.css?build=2026.11.09.01&rev=2026.11.09.01");
+@import url("waffle-v11.1.94.css?build=2026.11.09.02");
+@import url("waffle-v11.1.95.css?build=2026.11.09.02");
+@import url("waffle-v11.1.96.css?build=2026.11.09.02&rev=2026.11.09.02");
 
 /* ============================================================
    MOBILE FIRST-PAINT STABILITY GATE
@@ -343,6 +343,57 @@ body[data-waffle-page="directory"] .directory-roster-heading {
 }
 body[data-waffle-page="directory"] .directory-roster-heading > div:first-child {
   display: none !important;
+}
+body[data-waffle-page="directory"] .directory-dashboard-fused[data-care-profile-loading="true"] .directory-roster-heading,
+body[data-waffle-page="directory"] .directory-dashboard-fused[data-care-profile-loading="true"] .directory-roster-filters,
+body[data-waffle-page="directory"] .directory-dashboard-fused[data-care-profile-loading="true"] .directory-empty-state,
+body[data-waffle-page="directory"] .directory-dashboard-fused[data-care-profile-loading="true"] .v1082-stay-panels {
+  display: none !important;
+}
+body[data-waffle-page="directory"] .care-profile-loading-screen {
+  display: none;
+}
+body[data-waffle-page="directory"] .directory-dashboard-fused[data-care-profile-loading="true"] .care-profile-loading-screen {
+  min-height: min(58dvh, 520px);
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 13px;
+  padding: 30px 20px;
+  box-sizing: border-box;
+  border: 1px solid var(--wh75-line, #dce3eb);
+  border-radius: 20px;
+  background: var(--wh75-shell, #fff);
+  color: var(--wh75-text, #172033);
+  text-align: center;
+}
+body[data-waffle-page="directory"] .care-profile-loading-brand {
+  color: var(--wh75-accent-ink, #4338ca);
+  font-size: 21px;
+  font-weight: 850;
+  letter-spacing: -.4px;
+}
+body[data-waffle-page="directory"] .care-profile-loading-indicator {
+  width: 38px;
+  height: 38px;
+  box-sizing: border-box;
+  border: 4px solid color-mix(in srgb, var(--wh75-accent, #7c3aed) 22%, transparent);
+  border-top-color: var(--wh75-accent, #7c3aed);
+  border-radius: 50%;
+  animation: care-profile-spin .8s linear infinite;
+}
+body[data-waffle-page="directory"] .care-profile-loading-screen [data-care-profile-loading-title] {
+  font-size: 16px;
+  line-height: 1.35;
+}
+body[data-waffle-page="directory"] .care-profile-loading-copy {
+  color: var(--wh75-muted, #526174);
+  font-size: 13px;
+  line-height: 1.5;
+}
+@keyframes care-profile-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  body[data-waffle-page="directory"] .care-profile-loading-indicator { animation: none; }
 }
 body[data-waffle-page="directory"] .directory-roster-heading > div:first-child::before {
   display: block;
@@ -3455,4 +3506,56 @@ html body :is(#v108BoardingModal,#potentialStayModal) :is(.v108-form-grid label,
   font-size: 14px !important;
   font-weight: 700 !important;
   line-height: 1.4;
+}
+
+/* Keep the three Guest filters aligned, with one count next to each label. */
+body[data-waffle-page="directory"] nav.directory-roster-filters[role="tablist"] {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  width: min(100%, 32rem);
+  box-sizing: border-box;
+}
+body[data-waffle-page="directory"] nav.directory-roster-filters[role="tablist"] .v1082-stay-tab {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  min-width: 0 !important;
+  min-height: 44px !important;
+  gap: 5px !important;
+  padding: 5px 2px !important;
+}
+body[data-waffle-page="directory"] nav.directory-roster-filters[role="tablist"] .v1082-stay-tab > span:first-child,
+body[data-waffle-page="directory"] nav.directory-roster-filters[role="tablist"] .v1086-stay-tab-copy > strong {
+  padding: 0 !important;
+  margin: 0 !important;
+  width: auto !important;
+  background: none !important;
+  color: inherit !important;
+  line-height: 1.2 !important;
+  white-space: nowrap !important;
+}
+body[data-waffle-page="directory"] nav.directory-roster-filters[role="tablist"] .v1082-stay-tab > :is(strong, .v1086-stay-tab-count) {
+  display: inline-grid !important;
+  place-items: center;
+  flex: 0 0 auto;
+  min-width: 22px !important;
+  min-height: 22px !important;
+  width: auto !important;
+  height: auto !important;
+  margin: 0 !important;
+  padding: 2px 4px !important;
+  border-radius: 999px !important;
+  white-space: nowrap !important;
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 360px) {
+  body[data-waffle-page="directory"] nav.directory-roster-filters[role="tablist"] .v1082-stay-tab {
+    flex-direction: column;
+    gap: 3px !important;
+  }
+}
+
+/* The legacy calendar remains available only if the canonical shell fails to start. */
+html:not([data-waffle-ui-ready-reason="timeout-fallback"]) body[data-waffle-page="calendar"] :is(#calendar, #calendarEventLegend, .search-container:has(#calendarSearch)) {
+  display: none !important;
 }

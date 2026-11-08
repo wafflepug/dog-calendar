@@ -85,6 +85,9 @@
     items: [],
     plans: [],
     bookings: [],
+    operations: [],
+    refreshQueued: false,
+    saving: 0,
     dogPhotos: Object.create(null),
     activePlanId: '',
     selectedDogKey: '',
@@ -164,14 +167,33 @@
     });
   }
 
+  function workspaceOperation(booking) {
+    if (!booking || booking.identityConflict || booking.organiserIdentityConflict) return null;
+    const stayId = String(booking.stayId || '').toLowerCase();
+    const key = String(booking.stayKey || '');
+    const matches = stayId
+      ? state.operations.filter(row => String(row.stayId || row.identityStayId || '').toLowerCase() === stayId)
+      : state.operations.filter(row => String(row.stayKey || '') === key);
+    if (matches.length !== 1) return null;
+    const row = matches[0];
+    if (row.identityConflict || row.identityConflictReason
+      || (row.stayKey && row.stayKey !== key)
+      || (row.dogId && booking.dogId && String(row.dogId).toLowerCase() !== String(booking.dogId).toLowerCase())) return null;
+    return String(row.status || '').toLowerCase();
+  }
+
   function currentDogs() {
-    const today = sod(new Date());
-    return uniqueBookings().filter(booking => {
-      const start = parseDate(booking.startDate);
-      const end = parseDate(booking.endDate);
-      return start && end && sod(start) <= today && sod(end) >= today;
+    const bookings = state.bookings || [];
+    const keyCounts = new Map();
+    bookings.forEach(booking => {
+      const key = String(booking?.stayKey || '');
+      keyCounts.set(key, (keyCounts.get(key) || 0) + 1);
+    });
+    return bookings.filter(booking => {
+      const key = String(booking?.stayKey || '');
+      return key && keyCounts.get(key) === 1 && workspaceOperation(booking) === 'checked_in';
     }).map(booking => {
-      const key = String(booking.stayKey || `${booking.dogName}|${booking.startDate}|${booking.endDate}`);
+      const key = String(booking.stayKey || [booking.dogName, booking.startDate, booking.endDate].join('|'));
       return {
         key,
         name: String(booking.dogName || 'Guest'),
@@ -245,17 +267,22 @@
   }
 
   async function loadData() {
-    if (state.loading) return;
+    if (state.loading || state.saving || document.querySelector('.floorplan-canvas .is-moving, .floorplan-drag-ghost, .floorplan-canvas.is-tool-drop')) { state.refreshQueued = true; return; }
     state.loading = true;
     setBusy(true);
     try {
-      const [organiser, directory] = await Promise.all([
+      const directoryPromise = query({ action:'get_guest_directory' });
+      const [organiser, directory, operations] = await Promise.all([
         query({ action:'get_organiser' }),
-        query({ action:'get_guest_directory' })
+        directoryPromise,
+        directoryPromise.then(response => Array.isArray(response?.operations)
+          ? { records: response.operations }
+          : query({ action:'get_stay_operations' }))
       ]);
       state.items = Array.isArray(organiser?.items) ? organiser.items : [];
       state.plans = state.items.filter(item => item?.type === 'floorplan').map(normalisePlan);
       state.bookings = Array.isArray(directory?.bookings) ? directory.bookings : [];
+      state.operations = Array.isArray(directory?.operations) ? directory.operations : Array.isArray(operations?.records) ? operations.records : [];
       if (!state.activePlanId || !state.plans.some(plan => plan.id === state.activePlanId)) {
         state.activePlanId = (state.plans.find(plan => plan.default) || state.plans[0])?.id || '';
       }
@@ -267,6 +294,7 @@
     } finally {
       state.loading = false;
       setBusy(false);
+      if (state.refreshQueued && !state.saving) { state.refreshQueued = false; void loadData(true); }
     }
   }
 
@@ -280,6 +308,8 @@
   function activePlan() { return state.plans.find(plan => plan.id === state.activePlanId) || null; }
 
   async function savePlan(plan, message) {
+    state.saving += 1;
+    try {
     const payload = {
       version: VERSION,
       name: plan.title,
@@ -308,6 +338,10 @@
     state.activePlanId = saved.id;
     if (message !== false) toast(typeof message === 'string' ? message : 'Floorplan saved ✓');
     return saved;
+    } finally {
+      state.saving -= 1;
+      if (state.refreshQueued && !state.loading && state.saving === 0) { state.refreshQueued = false; void loadData(true); }
+    }
   }
 
   async function createFromTemplate(templateId) {
@@ -996,6 +1030,10 @@
 
   function start() {
     if(String(window.WAFFLE_PAGE||document.body?.dataset?.wafflePage||'')!=='reminders')return;
+    window.addEventListener('waffle:stay-operation-updated', () => void loadData(true));
+    window.addEventListener('storage', event => { if (event.key === 'waffle:stay-operation-updated') void loadData(true); });
+    ['pointerup', 'pointercancel', 'dragend'].forEach(type => document.addEventListener(type, () => { if (state.refreshQueued) setTimeout(() => void loadData(true), 0); }, true));
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) void loadData(true); });
     loadCss();
     if(install())return;
     const observer=new MutationObserver(()=>{if(install())observer.disconnect();});

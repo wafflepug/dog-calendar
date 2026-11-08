@@ -37,7 +37,7 @@
     loading: false,
     lastLoadedAt: 0, operations: [], source: { organiser: 'loading', directory: 'loading', operations: 'loading' },
     loaded: { organiser: false, directory: false, operations: false },
-    organiserReady: false, taskFilter: 'open', locks: new Set(), modalBusy: false, pendingRender: false
+    organiserReady: false, taskFilter: 'open', locks: new Set(), modalBusy: false, pendingRender: false, workspaceRefreshQueued: false
   };
 
   const ARRIVAL_CHECKS = [
@@ -174,7 +174,8 @@
 
   async function saveItem(item, options) {
     if(!canWrite())throw new Error('Refresh tasks successfully before saving. Your draft is still here.');
-    if (['shelf_assignment','sleep_assignment','arrival_checklist','checkout_checklist'].includes(item.type) && (state.source.directory!=='ready' || ambiguousStayKey(item.stayKey))) throw new Error('Review this stay in Care before saving its preparation or assignment.');
+    if (['shelf_assignment','sleep_assignment'].includes(item.type) && (state.source.directory!=='ready' || !workspaceDogs().some(booking => String(booking.stayKey) === String(item.stayKey || '')))) throw new Error('Only a verified pet currently checked in can receive a workspace assignment. Refresh the stay status and try again.');
+    if (['arrival_checklist','checkout_checklist'].includes(item.type) && (state.source.directory!=='ready' || ambiguousStayKey(item.stayKey))) throw new Error('Review this stay in Care before saving its preparation or assignment.');
     const id=item.id||newClientId();if(state.locks.has(id))throw new Error('This item is already being saved.');state.locks.add(id);
     try {
       const response=await query({action:'save_organiser_item',id,type:item.type,title:item.title||'',stayKey:item.stayKey||'',dogName:item.dogName||'',value:item.value||{}},{maxAttempts:1,timeoutMs:15000});
@@ -228,6 +229,12 @@
         if (!start || !end) return false;
         return startOfDay(start) <= today && startOfDay(end) >= today && operationFor(booking).status === 'checked_in';
       })
+      .sort((a, b) => String(a.dogName || '').localeCompare(String(b.dogName || '')));
+  }
+
+  function workspaceDogs() {
+    return uniqueBookings()
+      .filter(booking => !booking.organiserIdentityConflict && !ambiguousStayKey(booking.stayKey) && operationFor(booking).status === 'checked_in')
       .sort((a, b) => String(a.dogName || '').localeCompare(String(b.dogName || '')));
   }
 
@@ -392,8 +399,9 @@
     const itemType = isShelf ? 'shelf' : 'sleep_area';
     const assignmentType = isShelf ? 'shelf_assignment' : 'sleep_assignment';
     const targets = itemsOf(itemType).sort((a, b) => String(a.title).localeCompare(String(b.title), undefined, { numeric: true }));
-    const assignments = itemsOf(assignmentType);
-    const dogs = planningDogs();
+    const dogs = workspaceDogs();
+    const activeStayKeys = new Set(dogs.map(dog => String(dog.stayKey || '')));
+    const assignments = itemsOf(assignmentType).filter(item => activeStayKeys.has(String(item.stayKey || '')));
     const assignedKeys = new Set(assignments.map(item => String(item.stayKey || '')));
     const unassigned = dogs.filter(dog => !assignedKeys.has(String(dog.stayKey || '')));
 
@@ -402,7 +410,7 @@
         <div>
           <span>${isShelf ? 'BELONGINGS ORGANISER' : 'HOUSE SETUP'}</span>
           <h2>${isShelf ? '🧳 Shelves & Belongings' : '🛏️ Sleeping Areas'}</h2>
-          <p>${isShelf ? 'Assign each current or soon-arriving dog to the shelf where their belongings are stored.' : 'Plan where each dog will sleep so the house setup is clear at a glance.'}</p>
+          <p>${isShelf ? 'Assign each dog currently staying to the shelf where their belongings are stored.' : 'Plan where each dog will sleep so the house setup is clear at a glance.'}</p>
         </div>
         <button type="button" data-organiser-add-target>${isShelf ? '＋ Add Shelf' : '＋ Add Area'}</button>
       </div>
@@ -591,6 +599,7 @@
     if(state.pendingRender){state.pendingRender=false;renderActiveTab();}
     const focus=state.modalReturnFocus?.isConnected?state.modalReturnFocus:document.querySelector('.v11115-organiser-tabs .is-active');
     focus?.focus({preventScroll:true});
+    flushWorkspaceRefresh();
   }
 
   function openTargetModal(type, existing) {
@@ -622,7 +631,8 @@
     const item = findItem(id);
     if (!item) return;
     const assignmentType = type === 'shelf' ? 'shelf_assignment' : 'sleep_assignment';
-    const assignedCount = itemsOf(assignmentType).filter(assignment => assignment.value && assignment.value.targetId === id).length;
+    const activeStayKeys = new Set(workspaceDogs().map(dog => String(dog.stayKey || '')));
+    const assignedCount = itemsOf(assignmentType).filter(assignment => activeStayKeys.has(String(assignment.stayKey || '')) && assignment.value && assignment.value.targetId === id).length;
 
     openModal(`
       <div class="v11115-modal-form">
@@ -653,7 +663,7 @@
     const assignmentType = isShelf ? 'shelf_assignment' : 'sleep_assignment';
     const target = findItem(targetId);
     if (!target) return;
-    const dogs = planningDogs();
+    const dogs = workspaceDogs();
 
     openModal(`
       <form class="v11115-modal-form">
@@ -730,9 +740,18 @@
     // deployments get one fallback read; task rendering never waits for stays.
     const operations = track('operations',directory.then(response => Array.isArray(response.operations) ? {result:'success',records:response.operations} : query({action:'get_stay_operations'})),'records',response=>{state.operations=response.records;});
     try { await Promise.allSettled([organiser,directory,operations]); state.lastLoadedAt=Date.now(); }
-    finally {setLoading(false);sync();}
+    finally {setLoading(false);sync();flushWorkspaceRefresh();}
   }
+  function flushWorkspaceRefresh() {
+    if (!state.workspaceRefreshQueued || state.loading || document.getElementById('v11115OrganiserModal')?.hidden === false) return;
+    state.workspaceRefreshQueued = false;
+    void loadOrganiser({ force: true });
+  }
+
   function wireResumeRefresh() {
+    const refreshWorkspace = () => { state.workspaceRefreshQueued = true; flushWorkspaceRefresh(); };
+    window.addEventListener('waffle:stay-operation-updated', refreshWorkspace);
+    window.addEventListener('storage', event => { if (event.key === 'waffle:stay-operation-updated') refreshWorkspace(); });
     document.addEventListener('visibilitychange', () => {
       if (!document.hidden && PAGE === 'reminders' && Date.now() - state.lastLoadedAt > 120000) {
         loadOrganiser({ force: true }).catch(() => {});

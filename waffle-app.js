@@ -12180,6 +12180,53 @@ registerWaffleServiceWorker();
     ) {
         if (!card) return;
 
+        const profileLoadToken = String(Date.now()) + Math.random().toString(36).slice(2);
+        const profileDashboard = card.closest('.directory-dashboard-fused') || document.querySelector('.directory-dashboard-fused');
+        const initialStayKey = String(card.dataset.directoryStayKey || card.dataset.stayKey || '').trim();
+        const initialIdentity = getDirectoryProfileReadIdentity(card);
+        const initialCachedProfile = initialIdentity.valid
+            ? directoryProfileDetailCache[initialIdentity.cacheKey]
+            : null;
+        const profileDetailsBeforeLoad = card.querySelector('[data-directory-detail="profile"]');
+        const profileWasReady = !!initialCachedProfile || (
+            profileDetailsBeforeLoad?.dataset.detailLoaded === 'true' &&
+            !['loading', 'refreshing'].includes(profileDetailsBeforeLoad.dataset.profileReadState)
+        );
+        const sourceHostBeforeLoad = card.querySelector('[data-v11112-care-source-host], [data-v1115-profile-source-host]');
+        const sourceIdentity = initialIdentity.stayId || initialIdentity.dogId
+            ? `stable:${initialIdentity.stayId}::${initialIdentity.dogId}::${initialStayKey}`
+            : initialStayKey;
+        const sourceWasReady = card.dataset.v11112RequestSourceKnown === 'true' &&
+            card.dataset.v11112RequestSourceIdentity === sourceIdentity || (
+                sourceHostBeforeLoad?.dataset.v11112SourceIdentity === sourceIdentity &&
+                !!sourceHostBeforeLoad.querySelector('[data-v11112-care-source-current]') &&
+                !sourceHostBeforeLoad.querySelector('.v11112-care-source-picker.is-loading')
+            );
+        const shouldShowProfileLoader = !(profileWasReady && sourceWasReady);
+        let profileLoadingScreen = null;
+        if (profileDashboard) {
+            let screen = profileDashboard.querySelector('[data-care-profile-loading-screen]');
+            if (shouldShowProfileLoader && !screen) {
+                screen = document.createElement('section');
+                screen.className = 'care-profile-loading-screen';
+                screen.dataset.careProfileLoadingScreen = '';
+                screen.setAttribute('role', 'status');
+                screen.setAttribute('aria-live', 'polite');
+                screen.innerHTML = '<span class="care-profile-loading-brand">Palz Stay</span><span class="care-profile-loading-indicator" aria-hidden="true"></span><strong data-care-profile-loading-title></strong><span class="care-profile-loading-copy">Loading saved care details and booking information</span>';
+                const backBar = profileDashboard.querySelector('#directoryProfileBackBar');
+                if (backBar) backBar.insertAdjacentElement('afterend', screen);
+                else profileDashboard.prepend(screen);
+            }
+            profileLoadingScreen = screen;
+            if (shouldShowProfileLoader) {
+                const name = String(card.dataset.directoryDogName || card.dataset.dogName || 'pet').trim();
+                const title = screen?.querySelector('[data-care-profile-loading-title]');
+                if (title) title.textContent = `Getting ${name}’s profile ready`;
+            }
+            profileDashboard.dataset.careProfileLoading = shouldShowProfileLoader ? 'true' : 'false';
+            profileDashboard.dataset.careProfileLoadToken = profileLoadToken;
+        }
+
         const activeProfile = document.querySelector('.directory-card.is-profile-active');
         if (activeProfile && activeProfile !== card && !options.preserveState) {
             const draftNotice = directoryProfileDraftNotice(activeProfile);
@@ -12193,7 +12240,10 @@ registerWaffleServiceWorker();
                 ''
             ).trim();
 
-        if (!stayKey) return;
+        if (!stayKey) {
+            if (profileDashboard?.dataset.careProfileLoadToken === profileLoadToken) profileDashboard.dataset.careProfileLoading = 'false';
+            return;
+        }
 
         if (typeof captureDirectoryProfileNavigationOrigin === 'function') {
             captureDirectoryProfileNavigationOrigin(card);
@@ -12299,6 +12349,19 @@ registerWaffleServiceWorker();
             if (preserved.rebuiltCards) card.dataset.v11160RestoreLoad = 'true';
         }
 
+        const scrollProfileIntoView = () => {
+            if (options.preserveScroll) return;
+            const prefersReducedMotion = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            const isCompactViewport = Number(window.innerWidth || 0) <= 768;
+            profileDashboard?.scrollIntoView({
+                behavior: options.instant || prefersReducedMotion || isCompactViewport ? 'auto' : 'smooth',
+                block: 'start'
+            });
+        };
+        scrollProfileIntoView();
+        const isCurrentProfile = () => card.isConnected && card.classList.contains('is-profile-active') &&
+            document.querySelector('.directory-card.is-profile-active') === card && directorySelectedProfileStayKey === stayKey;
+
         const profileSection =
             card.querySelector(
                 '[data-directory-detail="profile"]'
@@ -12318,31 +12381,31 @@ registerWaffleServiceWorker();
             );
         }
 
-        if (options.awaitProfileRead && profileLoad) await profileLoad;
+        try {
+            if (profileLoad) await profileLoad;
+            if (isCurrentProfile()) {
+                const sourceDeadline = Date.now() + 1500;
+                while (Date.now() < sourceDeadline && card.isConnected && card.classList.contains('is-profile-active') && !window.WAFFLE_V11112?.hydrateCard) {
+                    await new Promise(resolve => setTimeout(resolve, 50));
+                }
+                const sourceHydrate = window.WAFFLE_V11112?.hydrateCard;
+                if (typeof sourceHydrate === 'function') {
+                    await sourceHydrate(card);
+                }
+            }
+        } finally {
+            if (profileDashboard?.dataset.careProfileLoadToken === profileLoadToken) {
+                profileDashboard.dataset.careProfileLoading = 'false';
+                if (profileLoadingScreen) {
+                    const title = profileLoadingScreen.querySelector('[data-care-profile-loading-title]');
+                    if (title) title.textContent = '';
+                }
+            }
+        }
+
+        if (!isCurrentProfile()) return;
 
         if (preserved?.editor) restoreDirectoryGuestDetailDraft(preserved, card);
-
-        if (!options.preserveScroll) {
-            const prefersReducedMotion =
-                typeof window !== 'undefined' &&
-                typeof window.matchMedia === 'function' &&
-                window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-            const isCompactViewport =
-                typeof window !== 'undefined' &&
-                Number(window.innerWidth || 0) <= 768;
-            document
-                .querySelector(
-                    '.directory-dashboard-fused'
-                )
-                ?.scrollIntoView({
-                    behavior:
-                        options.instant || prefersReducedMotion || isCompactViewport
-                            ? 'auto'
-                            : 'smooth',
-                    block:
-                        'start'
-                });
-        }
     }
 
 
@@ -12356,6 +12419,13 @@ registerWaffleServiceWorker();
             document.querySelector(
                 '.directory-dashboard-fused'
             );
+
+        if (dashboard) {
+            dashboard.dataset.careProfileLoading = 'false';
+            dashboard.dataset.careProfileLoadToken = String(Date.now()) + Math.random().toString(36).slice(2);
+            const title = dashboard.querySelector('[data-care-profile-loading-title]');
+            if (title) title.textContent = '';
+        }
 
         const backBar =
             document.getElementById(
