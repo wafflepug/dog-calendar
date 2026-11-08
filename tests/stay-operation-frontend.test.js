@@ -34,6 +34,9 @@ function harness() {
     queryAppsScript: async () => ({ result: 'success', versions: { stayOperationIdentityVersion: 1 } }),
     sendCalls: [], invalidateWaffleClientCaches: async () => {}, showWaffleForegroundPush() {}, globalCalendar: null
   };
+  h.operationUpdates = [];
+  h.window = { dispatchEvent: event => h.operationUpdates.push(event.type) };
+  h.Event = Event;
   h.sendPayloadToAppsScript = async p => {
     h.sendCalls.push(p);
     return { result: 'success', record: { ...p, stayId: p.stayId || idA, updatedAt: savedAt,
@@ -57,6 +60,7 @@ test('homonymous stays keep separate status and effective Calendar end dates', a
   assert.equal(a.end, '2026-10-07'); assert.equal(a.extendedProps.bookedEndDate, '2026-10-10');
   assert.equal(b.end, '2026-10-11');
   await h.api.save(payload(idB), 'checked_out', b);
+  assert.deepEqual(h.operationUpdates, ['waffle:stay-operation-updated']);
   assert.equal(h.sendCalls.at(-1).stayId, idB);
   assert.equal(h.api.resolve(a).status, 'checked_out');
 });

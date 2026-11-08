@@ -1,7 +1,7 @@
 {
   "build": "2026.08.28.01",
-  "assetRevision": "2026.11.09.01",
-  "releaseName": "Repeat bookings and owner forms",
+  "assetRevision": "2026.11.09.02",
+  "releaseName": "Care, Organiser and Calendar polish",
   "careIteration": {
     "returningDogSuggestions": true,
     "reviewedCareInheritance": true,

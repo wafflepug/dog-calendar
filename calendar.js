@@ -460,8 +460,8 @@
       const style = type === 'confirmed' ? `--wh65-dog-colour:${dogColour(name)};` : '';
       const lead = actualStart ? '<span class="wh65-marker" aria-label="Arrival">↓</span>' : '<span class="wh65-marker" aria-hidden="true">•</span>';
       const tail = actualEnd ? '<span class="wh65-marker wh65-end" aria-label="Departure">↑</span>' : '';
-      const prefix = type === 'potential' ? 'Potential · ' : '';
-      return `<button type="button" class="wh65-bar ${type}" data-wh65-event="${escapeHtml(eventKey(item.event))}" style="grid-column:${startCol}/span ${span};grid-row:${item.lane + 1};${style}" title="${escapeHtml(prefix + name)}">${lead}<span class="wh65-bar-label">${escapeHtml(prefix + name)}</span>${tail}</button>`;
+      const accessibleName = type === 'potential' ? `Potential Stay · ${name}` : name;
+      return `<button type="button" class="wh65-bar ${type}" data-wh65-event="${escapeHtml(eventKey(item.event))}" style="grid-column:${startCol}/span ${span};grid-row:${item.lane + 1};${style}" title="${escapeHtml(accessibleName)}" aria-label="${escapeHtml(accessibleName)}">${lead}<span class="wh65-bar-label">${escapeHtml(name)}</span>${tail}</button>`;
     }).join('');
 
     const meetColumns = week.map(date => {
@@ -490,6 +490,8 @@
     const events = getEvents();
     weeksHost.innerHTML = weekChunks().map(week => renderWeek(week, events)).join('') || '<div class="wh65-empty">No calendar activity.</div>';
     wireHost(host);
+    // Signal only after the canonical toolbar and an activity/empty state exist.
+    document.documentElement.dataset.wh65CalendarReady = 'true';
   }
 
   function scheduleRender() {
@@ -623,6 +625,7 @@
 
   function start() {
     if (!isCalendarPage()) return;
+    document.documentElement.dataset.wh65CalendarReady = 'false';
     ensureStyles();
     hideLegacyCalendarUi();
     let attempts = 0;
