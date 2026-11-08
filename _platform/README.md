@@ -39,3 +39,13 @@ npm audit --omit=dev --audit-level=high
 The last integration command starts its own local Auth emulator and tests actual Firebase SDK sign-in plus Chromium/WebKit at 320, 390 and 1440px. Close `npm run dev` first so port 9199 is free. CI separately tests the `pg` adapter against a disposable PostgreSQL 17 service; its integration script refuses a non-loopback database or any database name other than `palz_ci`.
 
 See [as-built architecture](docs/as-built.md), [launch backlog](docs/launch-backlog.md) and [test matrix](docs/test-matrix.md). The next step is selecting/configuring dedicated free pilot infrastructure; cloud deployment has deliberately not been enabled.
+
+## Android Today widget
+
+The native companion in [`../_android`](../_android/README.md) reads
+`GET /api/businesses/{businessId}/widget/today` using the same Firebase
+identity and workspace membership checks as the web app. The response is
+`no-store` and contains the business-local date and scheduled dog counts.
+The current booking model does not store arrival or departure completion or
+handover times, so the widget shows scheduled counts and the API returns
+`nextHandover: null`. The widget reads this commercial backend only.

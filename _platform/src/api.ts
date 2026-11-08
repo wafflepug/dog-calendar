@@ -75,6 +75,7 @@ export function createHandler({ store, verifyToken, publicConfig }: HandlerOptio
       }
       if (parts.length >= 3 && parts[1] === 'businesses') {
         const businessId = uuid(parts[2], 'businessId');
+        if (parts.length === 5 && parts[3] === 'widget' && parts[4] === 'today' && method === 'GET') return send(200, await store.getWidgetToday(identity.uid, businessId), true);
         if (parts.length === 4 && parts[3] === 'workspace' && method === 'GET') return send(200, await store.getWorkspace(identity.uid, businessId), true);
         if (parts.length === 4 && parts[3] === 'dogs' && method === 'POST') {
           const body = await readBody(req); exactKeys(body, ['name', 'breed', 'ownerId', 'owner']);

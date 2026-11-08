@@ -23,6 +23,7 @@ export interface Store {
   listBusinesses(uid: string): Promise<Business[]>;
   createBusiness(uid: string, input: { name: string; slug: string; timezone: string; capacity: number }): Promise<Business>;
   getWorkspace(uid: string, businessId: string): Promise<any>;
+  getWidgetToday(uid: string, businessId: string): Promise<{ date: string; staying: number; arriving: number; leaving: number; nextHandover: null }>;
   createDog(uid: string, businessId: string, input: { name: string; breed: string; ownerId?: string; owner?: { name: string; email?: string; phone?: string } }): Promise<any>;
   createBooking(uid: string, businessId: string, input: { dogIds: string[]; startDate: string; endDate: string; mutationId: string }): Promise<any>;
   createInvite(uid: string, businessId: string, input: { email: string }): Promise<{ token: string; expiresAt: string }>;
@@ -128,6 +129,26 @@ export async function createStore(options: StoreOptions = {}): Promise<Store> {
       return transaction(uid, null, async c => {
         const r = await c.query('SELECT bootstrap_create_business($1,$2,$3,$4,$5) AS id', [uid, input.name, input.slug, input.timezone, input.capacity]);
         return getBusiness(c, r.rows[0].id, 'owner');
+      });
+    },
+    async getWidgetToday(uid, businessId) {
+      return transaction(uid, businessId, async c => {
+        const role = await member(c, uid, businessId);
+        const business = await getBusiness(c, businessId, role);
+        const { rows: [today] } = await c.query(`
+          WITH day AS (SELECT (CURRENT_TIMESTAMP AT TIME ZONE $2)::date AS date)
+          SELECT to_char(day.date, 'YYYY-MM-DD') AS date,
+                 count(DISTINCT bd.dog_id) AS staying,
+                 count(DISTINCT bd.dog_id) FILTER (WHERE b.start_date=day.date) AS arriving,
+                 count(DISTINCT bd.dog_id) FILTER (WHERE b.end_date=day.date) AS leaving
+          FROM day
+          LEFT JOIN bookings b ON b.business_id=$1 AND b.status='confirmed'
+            AND day.date BETWEEN b.start_date AND b.end_date
+          LEFT JOIN booking_dogs bd ON bd.business_id=b.business_id AND bd.booking_id=b.id
+          GROUP BY day.date
+        `, [businessId, business.timezone]);
+        return { date: today.date, staying: Number(today.staying), arriving: Number(today.arriving),
+          leaving: Number(today.leaving), nextHandover: null };
       });
     },
     async getWorkspace(uid, businessId) {
