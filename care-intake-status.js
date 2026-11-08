@@ -41,6 +41,13 @@
     const date = new Date(value);
     return date.toLocaleString('en-AU', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
   }
+  function formatStayDate(value) {
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value || ''));
+    if (!match) return '';
+    const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+    if (date.getFullYear() !== Number(match[1]) || date.getMonth() !== Number(match[2]) - 1 || date.getDate() !== Number(match[3])) return '';
+    return date.toLocaleDateString('en-AU', { day: 'numeric', month: 'short' });
+  }
   function stateFor(card) {
     const strip = card?.querySelector?.('[data-directory-intake]');
     const currentIdentity = identity(card);
@@ -49,7 +56,7 @@
     const directCopy = hasPreparedLink && prepared.canDirectCopy === true;
     if (strip?.getAttribute('aria-busy') === 'true') {
       return directCopy
-        ? { code: 'link_ready', label: 'Link ready', action: 'Copy care link', detail: 'Copy the current care link, then paste it into the owner’s usual chat.' }
+        ? { code: 'link_ready', label: 'Link ready', action: 'Copy existing link', detail: 'Copy the current care link, then paste it into the owner’s usual chat.' }
         : { code: 'unknown', label: 'Loading', detail: 'Checking owner intake status.' };
     }
     const dot = strip?.querySelector('.directory-intake-dot');
@@ -63,22 +70,22 @@
         return { code: 'unknown', label: 'Status unknown', action: 'Review owner form', detail: 'Status is not available. Check Records & forms for submitted answers.' };
       }
       if (/stored profile/i.test(meta?.textContent || '')) {
-        if (directCopy) return { code: 'link_ready', label: 'Link ready', action: 'Copy care link', detail: 'Copy the current care link, then paste it into the owner’s usual chat.' };
+        if (directCopy) return { code: 'link_ready', label: 'Link ready', action: 'Copy existing link', detail: 'Copy the current care link, then paste it into the owner’s usual chat.' };
         return { code: 'unknown', label: card.dataset.intakeMethod === 'legacy' ? 'Care profile available' : 'Saved care available', action: 'Review owner form', detail: 'Current form completion is not verified. Check Records & forms for submitted answers.' };
       }
       const receivedAt = trustedReceiptTimestamp(meta?.dataset?.intakeReceivedAt);
       const received = receivedAt ? `Owner form received ${formatReceiptTimestamp(receivedAt)}. ` : '';
-      return { code: 'complete', label: 'Form received', action: 'Review owner form', detail: `${received}Review the submitted answers in Records & forms.`, method: 'digital' };
+      return { code: 'complete', label: 'Form received', action: 'Review submission', detail: `${received}Review the submitted answers in Records & forms.`, method: 'digital' };
     }
-    if (directCopy) return { code: 'link_ready', label: 'Link ready', action: 'Copy care link', detail: 'Copy the current care link, then paste it into the owner’s usual chat.' };
-    if (hasPreparedLink) return { code: 'link_ready', label: 'Link ready', action: 'Share care link', detail: 'Review owner sharing options for this prepared care link.' };
+    if (directCopy) return { code: 'link_ready', label: 'Link ready', action: 'Copy existing link', detail: 'Copy the current care link, then paste it into the owner’s usual chat.' };
+    if (hasPreparedLink) return { code: 'link_ready', label: 'Link ready', action: 'Share existing link', detail: 'Review owner sharing options for this prepared care link.' };
     if (!strip) return { code: 'unknown', label: 'Status unknown', action: 'Review owner form', detail: 'Status is not available. Check Records & forms for submitted answers.' };
     if (card.dataset.intakeMethod === 'legacy') return { code: 'unknown', label: 'Care profile available', action: 'Review owner form', detail: 'Current form completion is not verified. Check Records & forms for submitted answers.' };
     if (dot?.classList.contains('is-awaiting')) return { code: 'awaiting', label: 'Awaiting owner', action: 'Review owner form', detail: 'This form has not been received. Review the current owner form status.' };
     if (dot?.classList.contains('is-not-sent') && /no digital intake on file/i.test(text)) {
       const prepared = linked.get(card);
-      if (prepared?.link && prepared.identity === currentIdentity) return { code: 'link_ready', label: 'Link ready', action: 'Share care link', detail: 'Review owner sharing options for this prepared care link.' };
-      return { code: 'not_prepared', label: 'Not prepared', action: 'Prepare owner form', detail: 'No digital intake link is recorded for this stay.' };
+      if (prepared?.link && prepared.identity === currentIdentity) return { code: 'link_ready', label: 'Link ready', action: 'Share existing link', detail: 'Review owner sharing options for this prepared care link.' };
+      return { code: 'not_prepared', label: 'Not prepared', action: 'Prepare new form', detail: 'No digital intake link is recorded for this stay.' };
     }
     return { code: 'unknown', label: 'Status unknown', action: 'Review owner form', detail: 'Status is not available. Check Records & forms for submitted answers.' };
   }
@@ -185,6 +192,23 @@
     }
     if (node.parentElement !== group) group.appendChild(node);
     const state = stateFor(card);
+    const shareDates = ['Prepare new form', 'Copy existing link', 'Share existing link'].includes(state.action);
+    let dateHint = group.querySelector('[data-owner-care-stay-dates]');
+    if (shareDates) {
+      if (!dateHint) {
+        dateHint = document.createElement('span');
+        dateHint.dataset.ownerCareStayDates = '';
+        dateHint.className = 'directory-owner-care-stay-dates';
+        group.appendChild(dateHint);
+      }
+      const startDate = formatStayDate(card.dataset.directoryStartDate || card.dataset.startDate);
+      const endDate = formatStayDate(card.dataset.directoryEndDate || card.dataset.endDate);
+      const dates = startDate && endDate ? `For stay ${startDate} – ${endDate}` : 'Stay dates unavailable';
+      if (dateHint.textContent !== dates) dateHint.textContent = dates;
+      dateHint.setAttribute('aria-label', dates);
+    } else {
+      dateHint?.remove();
+    }
     const signature = JSON.stringify(state);
     const prepared = linked.get(card);
     const renderedLink = state.code === 'link_ready' && prepared?.identity === identity(card) ? `${prepared.identity}\n${prepared.link}` : '';
@@ -324,7 +348,7 @@
     const prepared = linked.get(card);
     const currentIdentity = identity(card);
     const d = prepared && { dogName: card?.dataset.directoryDogName || card?.dataset.dogName, dogId: prepared.dogId, stayId: prepared.stayId, stayKey: prepared.stayKey, startDate: card?.dataset.directoryStartDate || card?.dataset.startDate, endDate: card?.dataset.directoryEndDate || card?.dataset.endDate };
-    if (!card?.classList.contains('is-profile-active') || !prepared || !prepared.canDirectCopy || !prepared.link || prepared.identity !== currentIdentity || !strictSelected(card, d) || stateFor(card).action !== 'Copy care link') return;
+    if (!card?.classList.contains('is-profile-active') || !prepared || !prepared.canDirectCopy || !prepared.link || prepared.identity !== currentIdentity || !strictSelected(card, d) || stateFor(card).action !== 'Copy existing link') return;
     const api = window.WAFFLE_OWNER_HANDOFF;
     if (typeof api?.copyLink !== 'function') return;
     event.preventDefault();
@@ -347,7 +371,7 @@
       isCurrent: () => card.isConnected && owner.isConnected && card.classList.contains('is-profile-active')
         && linked.get(card) === prepared && identity(card) === currentIdentity
         && prepared.identity === identity(card) && prepared.link === validLink(prepared.link)
-        && prepared.canDirectCopy && strictSelected(card, d) && stateFor(card).action === 'Copy care link'
+        && prepared.canDirectCopy && strictSelected(card, d) && stateFor(card).action === 'Copy existing link'
     });
   }, true);
   function findGrids(root) {

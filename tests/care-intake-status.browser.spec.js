@@ -91,7 +91,7 @@ test.describe('compact care intake status', () => {
     expect(await state()).toMatchObject({ code: 'unknown', label: 'Loading' });
     await page.locator('[data-directory-intake]').evaluate(el => { el.removeAttribute('aria-busy'); el.innerHTML = '<span class="directory-intake-dot is-not-sent"></span>No digital intake on file'; });
     await expect.poll(async () => (await state()).code).toBe('not_prepared');
-    await expect(page.locator('#firstlevelOwnerCareLink')).toHaveAccessibleName('Prepare owner form for Milo');
+    await expect(page.locator('#firstlevelOwnerCareLink')).toHaveAccessibleName('Prepare new form for Milo');
     await page.locator('[data-directory-intake]').evaluate(el => { el.innerHTML = '<span class="directory-intake-dot is-awaiting"></span>Awaiting owner'; });
     await expect.poll(async () => (await state()).code).toBe('awaiting');
     await expect(page.locator('[data-compact-intake-status]')).toHaveText('Awaiting owner');
@@ -101,8 +101,8 @@ test.describe('compact care intake status', () => {
     await page.locator('[data-directory-intake]').evaluate(el => { el.removeAttribute('aria-busy'); el.innerHTML = '<span class="directory-intake-dot is-complete"></span><span>Intake complete</span>'; });
     await expect.poll(async () => (await state()).code).toBe('complete');
     expect(await state()).toMatchObject({ label: 'Form received', method: 'digital' });
-    await expect(page.locator('#firstlevelOwnerCareLink span')).toHaveText('Review owner form');
-    await expect(page.locator('#firstlevelOwnerCareLink')).toHaveAccessibleName('Review owner form for Milo');
+    await expect(page.locator('#firstlevelOwnerCareLink span')).toHaveText('Review submission');
+    await expect(page.locator('#firstlevelOwnerCareLink')).toHaveAccessibleName('Review submission for Milo');
     await expect(page.locator('#firstlevelOwnerCareLink')).toHaveAttribute('aria-description', /Records & forms/);
     await page.locator('[data-directory-intake]').evaluate(el => el.setAttribute('aria-busy', 'true'));
     await expect.poll(async () => (await state()).label).toBe('Loading');
@@ -128,7 +128,7 @@ test.describe('compact care intake status', () => {
     expect(await state()).toMatchObject({ code: 'unknown' });
     await page.locator('[data-directory-intake]').evaluate(el => { el.innerHTML = '<span class="directory-intake-dot is-not-sent"></span>No digital intake on file'; });
     await expect.poll(async () => (await state()).code).toBe('not_prepared');
-    await expect(page.locator('.directory-card.is-profile-active #firstlevelOwnerCareLink span')).toHaveText('Prepare owner form');
+    await expect(page.locator('.directory-card.is-profile-active #firstlevelOwnerCareLink span')).toHaveText('Prepare new form');
     expect(await page.locator('[data-compact-intake-status]').textContent()).not.toContain('secret.invalid');
     await expect(page.locator('#firstlevelOwnerCareLink')).toHaveCount(1);
     await expect(page.locator('[data-create-intake-link]')).toBeAttached();
@@ -143,16 +143,19 @@ test.describe('compact care intake status', () => {
     const card = page.locator('.directory-card');
     const owner = page.locator('#firstlevelOwnerCareLink');
     await page.locator('[data-directory-intake]').evaluate(el => { el.innerHTML = '<span class="directory-intake-dot is-not-sent"></span>No digital intake on file'; });
-    await expect(owner.locator('span')).toHaveText('Prepare owner form');
+    await expect(owner.locator('span')).toHaveText('Prepare new form');
+    await expect(card.locator('[data-owner-care-stay-dates]')).toHaveText('For stay 20 Oct – 22 Oct');
     await expect(card.locator('.directory-owner-care-action-group [data-p4-dir="owner"]')).toHaveCount(1);
     await page.locator('[data-directory-intake]').evaluate(el => { el.innerHTML = '<span class="directory-intake-dot is-awaiting"></span>Awaiting owner'; });
     await expect(owner.locator('span')).toHaveText('Review owner form');
     await page.evaluate(() => window.dispatchEvent(new CustomEvent('waffle:owner-care-link-ready', { detail: { dogName: 'Milo', startDate: '2026-10-20', endDate: '2026-10-22', link: 'https://secret.invalid/token', dogId: 'dog-1', stayId: 'stay-1', stayKey: 'milo|2026-10-20|2026-10-22' } })));
     await page.locator('[data-directory-intake]').evaluate(el => { el.innerHTML = '<span class="directory-intake-dot is-not-sent"></span>No digital intake on file'; });
-    await expect(owner.locator('span')).toHaveText('Copy care link');
-    await expect(owner).toHaveAccessibleName('Copy care link for Milo');
+    await expect(owner.locator('span')).toHaveText('Copy existing link');
+    await expect(owner).toHaveAccessibleName('Copy existing link for Milo');
     await expect(owner).toHaveAttribute('aria-description', /Copy the current care link/);
     await expect(page.locator('[data-compact-intake-status]')).toHaveText('Link ready');
+    await card.evaluate(element => { element.dataset.directoryEndDate = '2026-10-23'; });
+    await expect(card.locator('[data-owner-care-stay-dates]')).toHaveText('For stay 20 Oct – 23 Oct');
     expect(await page.evaluate(() => ({ actions: document.querySelectorAll('.directory-owner-care-action-group [data-p4-dir="owner"]').length, statuses: document.querySelectorAll('[data-compact-intake-status]').length, reads: window.__intakeNetworkReads }))).toEqual({ actions: 1, statuses: 1, reads: 0 });
     for (const dark of [false, true]) {
       await page.locator('body').evaluate((node, enabled) => node.classList.toggle('dark-theme', enabled), dark);
@@ -175,7 +178,7 @@ test.describe('compact care intake status', () => {
       window.dispatchEvent(new CustomEvent('waffle:owner-care-link-ready', { detail: { dogName: 'Milo', startDate: '2026-10-20', endDate: '2026-10-22', link: 'https://secret.invalid/token', dogId: 'dog-1', stayId: 'stay-1' } }));
     });
     const owner = page.locator('#firstlevelOwnerCareLink');
-    await expect(owner.locator('span')).toHaveText('Copy care link');
+    await expect(owner.locator('span')).toHaveText('Copy existing link');
     await owner.click();
     await expect(page.locator('[data-compact-intake-status]')).toContainText('Care link copied');
     expect(await page.evaluate(() => ({ copied: window.__copied, fallbackCalls: window.__ownerFallbackCalls, status: document.querySelector('[data-compact-intake-status]').textContent }))).toEqual({ copied: ['https://secret.invalid/token'], fallbackCalls: 0, status: 'Care link copied. Paste it into the owner’s usual chat and send.' });
@@ -189,9 +192,9 @@ test.describe('compact care intake status', () => {
     await page.addScriptTag({ content: source });
     await page.locator('[data-directory-intake]').evaluate(el => { el.innerHTML = '<span class="directory-intake-dot is-not-sent"></span>No digital intake on file'; });
     await page.evaluate(() => window.dispatchEvent(new CustomEvent('waffle:owner-care-link-ready', { detail: { dogName: 'Milo', startDate: '2026-10-20', endDate: '2026-10-22', link: 'https://secret.invalid/legacy-token' } })));
-    await expect(page.locator('#firstlevelOwnerCareLink span')).toHaveText('Share care link');
+    await expect(page.locator('#firstlevelOwnerCareLink span')).toHaveText('Share existing link');
     await expect(page.locator('[data-compact-intake-status]')).toHaveText('Link ready');
-    expect(await page.locator('#firstlevelOwnerCareLink').getAttribute('aria-label')).toBe('Share care link for Milo');
+    expect(await page.locator('#firstlevelOwnerCareLink').getAttribute('aria-label')).toBe('Share existing link for Milo');
   });
 
   test('blocked clipboard exposes a selectable manual fallback with truthful status', async ({ page }) => {
@@ -277,7 +280,7 @@ test.describe('compact care intake status', () => {
       window.__finishCopy = () => finish();
     });
     const owner = page.locator('#firstlevelOwnerCareLink');
-    await expect(owner.locator('span')).toHaveText('Copy care link');
+    await expect(owner.locator('span')).toHaveText('Copy existing link');
     await owner.click();
     await page.evaluate(() => window.__copyStarted);
     await page.locator('[data-directory-intake]').evaluate(el => {
@@ -320,7 +323,7 @@ test.describe('compact care intake status', () => {
     await expect(page.locator('[data-owner-care-link-fallback]')).toHaveValue('https://secret.invalid/current-token');
     await page.evaluate(() => { window.__currentLink = null; WAFFLE_INTAKE_STATUS.refresh(document.querySelector('.directory-card')); });
     await expect(page.locator('[data-owner-care-link-fallback]')).toHaveCount(0);
-    await expect(page.locator('#firstlevelOwnerCareLink span')).toHaveText('Prepare owner form');
+    await expect(page.locator('#firstlevelOwnerCareLink span')).toHaveText('Prepare new form');
     expect(await page.evaluate(() => WAFFLE_INTAKE_STATUS.getState(document.querySelector('.directory-card')).code)).toBe('not_prepared');
   });
 
@@ -330,7 +333,7 @@ test.describe('compact care intake status', () => {
     await page.addScriptTag({ content: source });
     await page.locator('[data-directory-intake]').evaluate(el => { el.innerHTML = '<span class="directory-intake-dot is-not-sent"></span>No digital intake on file'; });
     await page.evaluate(() => window.dispatchEvent(new CustomEvent('waffle:owner-care-link-ready', { detail: { dogName: 'Milo', startDate: '2026-10-20', endDate: '2026-10-22', link: 'https://secret.invalid/token', dogId: 'dog-1', stayId: 'stay-1' } })));
-    await expect(page.locator('.directory-card.is-profile-active #firstlevelOwnerCareLink span')).toHaveText('Copy care link');
+    await expect(page.locator('.directory-card.is-profile-active #firstlevelOwnerCareLink span')).toHaveText('Copy existing link');
     await page.locator('.directory-card').evaluate(card => {
       const second = card.cloneNode(true);
       second.classList.remove('is-profile-active');
@@ -338,7 +341,7 @@ test.describe('compact care intake status', () => {
       second.dataset.directoryStayId = 'stay-2';
       document.querySelector('#directory-grid').appendChild(second);
     });
-    await expect(page.locator('.directory-card.is-profile-active #firstlevelOwnerCareLink span')).toHaveText('Prepare owner form');
+    await expect(page.locator('.directory-card.is-profile-active #firstlevelOwnerCareLink span')).toHaveText('Prepare new form');
   });
 
   test('More tools keeps owner sharing options secondary and reuses the existing owner flow', async ({ page }) => {

@@ -54,19 +54,21 @@ test('Book Again opens a clean new stay immediately and confirms only the exact 
   await setup(page);
   await page.evaluate(() => { window.identityRead = payload => payload.action === 'list_dog_identities' ? window.pendingIdentityRead : Promise.resolve({ history: { previousStays: [] } }); });
   await page.evaluate(() => { window.pendingIdentityRead = new Promise(resolve => { window.resolveIdentityRead = resolve; }); });
-  await page.evaluate(dogA => window.WAFFLE_PHASE4_BOOKING.fillOwner({ dogName: 'Luna', dogId: dogA, dogNumber: '00001', breed: 'Pug', ownerName: 'Alex', requestSource: 'Pawshake', phone: '0400000000', startDate: '2025-01-01', endDate: '2025-01-02' }), dogA);
+  await page.evaluate(dogA => window.WAFFLE_PHASE4_BOOKING.fillOwner({ dogName: 'Luna', dogId: dogA, dogNumber: '00001', species: 'cat', breed: 'Domestic Shorthair', ownerName: 'Alex', requestSource: 'Pawshake', phone: '0400000000', startDate: '2025-01-01', endDate: '2025-01-02' }), dogA);
   await expect(page.locator('#p4OwnerBookingContext')).toContainText('Dog ID #00001');
   await expect(page.locator('#p4OwnerBookingContext')).toContainText('2025-01-01–2025-01-02');
   await page.locator('#p4OwnerOtherOptions summary').click();
   await page.locator('#p4BookAgain').click();
   await expect(page.locator('#p4Dog')).toHaveValue('Luna');
-  await expect(page.locator('#p4Breed')).toHaveValue('Pug');
+  await expect(page.locator('#p4Breed')).toHaveValue('Domestic Shorthair');
+  await expect(page.locator('#p4Species')).toHaveValue('cat');
   await expect(page.locator('#p4Owner')).toHaveValue('Alex');
   await expect(page.locator('#p4Start')).toHaveValue('');
   await expect(page.locator('#p4End')).toHaveValue('');
-  await expect(page.locator('#p4Notes')).toHaveValue('Returning guest — confirm what changed since the last stay.');
+  await expect(page.locator('#p4Notes')).toHaveValue('');
   await expect(page.locator('#p4SaveConfirmed')).toBeDisabled();
-  await expect(page.locator('#p4BookingContext')).toContainText('New stay dates to be selected');
+  await expect(page.locator('#p4BookingContext')).toContainText('Choose new stay dates');
+  await expect(page.locator('#p4BookingContext')).toContainText('Confirm medication and pickup instructions');
   await page.evaluate(rows => window.resolveIdentityRead({ identities: rows }), [
     { dogId: dogA, dogNumber: '00001', dogName: 'Luna', breed: 'Pug', ownerName: 'Alex' },
     { dogId: dogB, dogNumber: '00002', dogName: 'Luna', breed: 'Pug', ownerName: 'Blair' }
