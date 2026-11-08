@@ -183,3 +183,24 @@ test('invite hashes are single use, email bound, and expire in the database', as
   assert.equal((await db.query("SELECT count(*)::int n FROM members WHERE business_id=$1 AND role='staff'",[id])).rows[0].n,1);
   await db.close();
 });
+
+test('Today widget counts scheduled dogs and excludes other workspaces', async () => {
+  const store = await createStore();
+  try {
+    const a = await store.createBusiness('widget-owner', { ...business('Widget A', 'widget-a'), timezone: 'UTC' });
+    const b = await store.createBusiness('other-owner', { ...business('Widget B', 'widget-b'), timezone: 'UTC' });
+    const { date } = await store.getWidgetToday('widget-owner', a.id);
+    const tomorrow = new Date(Date.parse(date) + 86_400_000).toISOString().slice(0, 10);
+    const yesterday = new Date(Date.parse(date) - 86_400_000).toISOString().slice(0, 10);
+    const first = await store.createDog('widget-owner', a.id, { name: 'Milo', breed: '' });
+    const second = await store.createDog('widget-owner', a.id, { name: 'Pip', breed: '' });
+    await store.createBooking('widget-owner', a.id, { dogIds: [first.id], startDate: date, endDate: tomorrow, mutationId: 'widget-arrival' });
+    await store.createBooking('widget-owner', a.id, { dogIds: [second.id], startDate: yesterday, endDate: date, mutationId: 'widget-departure' });
+    const third = await store.createDog('other-owner', b.id, { name: 'Fern', breed: '' });
+    await store.createBooking('other-owner', b.id, { dogIds: [third.id], startDate: date, endDate: date, mutationId: 'other-widget' });
+    assert.deepEqual(await store.getWidgetToday('widget-owner', a.id), { date, staying: 2, arriving: 1, leaving: 1, nextHandover: null });
+    await assert.rejects(store.getWidgetToday('widget-owner', b.id), (error: any) => error.status === 404);
+  } finally {
+    await store.close();
+  }
+});

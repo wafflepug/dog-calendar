@@ -6,7 +6,7 @@ import { createHandler } from '../src/api.js';
 const servers: Server[] = [];
 async function setup(overrides: any = {}) {
   const calls: any[] = [];
-  const store = Object.fromEntries(['listBusinesses', 'createBusiness', 'getWorkspace', 'createDog', 'createBooking', 'createInvite', 'acceptInvite', 'disableMember', 'exportBusiness'].map((key) => [key, async (...args: any[]) => { calls.push([key, ...args]); return { ok: true }; }]));
+  const store = Object.fromEntries(['listBusinesses', 'createBusiness', 'getWorkspace', 'getWidgetToday', 'createDog', 'createBooking', 'createInvite', 'acceptInvite', 'disableMember', 'exportBusiness'].map((key) => [key, async (...args: any[]) => { calls.push([key, ...args]); return { ok: true }; }]));
   const server = createServer(createHandler({ verifyToken: async (token) => {
     if (token !== 'valid') throw new Error('invalid token');
     return { uid: 'firebase-user', email: 'owner@example.com', email_verified: true };
@@ -113,4 +113,15 @@ test('rejects cross-origin requests and does not expose internal errors', async 
   const body = await response.json() as any;
   assert.equal(response.status, 500); assert.equal(body.error.message, 'An unexpected error occurred');
   assert.ok(body.requestId); assert.equal(response.headers.get('cache-control'), 'no-store');
+});
+
+test('Today widget reads only the requested workspace using the verified identity', async () => {
+  const { url, calls } = await setup();
+  const businessId = '00000000-0000-4000-8000-000000000001';
+  const endpoint = `${url}/api/businesses/${businessId}/widget/today`;
+  assert.equal((await fetch(endpoint)).status, 401);
+  const result = await fetch(endpoint, { headers: authHeaders });
+  assert.equal(result.status, 200);
+  assert.equal(result.headers.get('cache-control'), 'no-store');
+  assert.deepEqual(calls, [['getWidgetToday', 'firebase-user', businessId]]);
 });
