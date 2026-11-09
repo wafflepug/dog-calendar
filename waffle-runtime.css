@@ -2,8 +2,8 @@
    Build: 2026.08.27.04
    Historical base styles remain compatibility sources during Phase 3A, but pages no longer
    reference them individually. Preserve this import order until modules are folded in. */
-@import url("waffle-app.css?build=2026.08.27.04&rev=2026.11.09.02");
-@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.11.09.02");
+@import url("waffle-app.css?build=2026.08.27.04&rev=2026.11.09.03");
+@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.11.09.03");
 @import url("waffle-v10.8.2.css?build=2026.08.27.04");
 @import url("waffle-v10.8.3.css?build=2026.08.27.04");
 @import url("waffle-v10.8.5.css?build=2026.08.27.04");
@@ -11,12 +11,12 @@
 @import url("waffle-v10.8.7.css?build=2026.08.27.04");
 @import url("waffle-v10.8.8.css?build=2026.08.27.04");
 @import url("waffle-v10.8.9.css?build=2026.08.27.04");
-@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.11.09.02");
+@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.11.09.03");
 @import url("waffle-v11.0.3.css?build=2026.08.27.04");
 @import url("waffle-v11.0.5.css?build=2026.08.27.04");
-@import url("waffle-v11.1.94.css?build=2026.11.09.02");
-@import url("waffle-v11.1.95.css?build=2026.11.09.02");
-@import url("waffle-v11.1.96.css?build=2026.11.09.02&rev=2026.11.09.02");
+@import url("waffle-v11.1.94.css?build=2026.11.09.03");
+@import url("waffle-v11.1.95.css?build=2026.11.09.03");
+@import url("waffle-v11.1.96.css?build=2026.11.09.03&rev=2026.11.09.03");
 
 /* ============================================================
    MOBILE FIRST-PAINT STABILITY GATE
@@ -356,44 +356,10 @@ body[data-waffle-page="directory"] .care-profile-loading-screen {
 body[data-waffle-page="directory"] .directory-dashboard-fused[data-care-profile-loading="true"] .care-profile-loading-screen {
   min-height: min(58dvh, 520px);
   display: grid;
-  align-content: center;
-  justify-items: center;
-  gap: 13px;
-  padding: 30px 20px;
-  box-sizing: border-box;
-  border: 1px solid var(--wh75-line, #dce3eb);
-  border-radius: 20px;
-  background: var(--wh75-shell, #fff);
-  color: var(--wh75-text, #172033);
+  place-items: center;
+  background: var(--palz-load-bg, #fbfaff);
+  color: var(--palz-load-ink, #111638);
   text-align: center;
-}
-body[data-waffle-page="directory"] .care-profile-loading-brand {
-  color: var(--wh75-accent-ink, #4338ca);
-  font-size: 21px;
-  font-weight: 850;
-  letter-spacing: -.4px;
-}
-body[data-waffle-page="directory"] .care-profile-loading-indicator {
-  width: 38px;
-  height: 38px;
-  box-sizing: border-box;
-  border: 4px solid color-mix(in srgb, var(--wh75-accent, #7c3aed) 22%, transparent);
-  border-top-color: var(--wh75-accent, #7c3aed);
-  border-radius: 50%;
-  animation: care-profile-spin .8s linear infinite;
-}
-body[data-waffle-page="directory"] .care-profile-loading-screen [data-care-profile-loading-title] {
-  font-size: 16px;
-  line-height: 1.35;
-}
-body[data-waffle-page="directory"] .care-profile-loading-copy {
-  color: var(--wh75-muted, #526174);
-  font-size: 13px;
-  line-height: 1.5;
-}
-@keyframes care-profile-spin { to { transform: rotate(360deg); } }
-@media (prefers-reduced-motion: reduce) {
-  body[data-waffle-page="directory"] .care-profile-loading-indicator { animation: none; }
 }
 body[data-waffle-page="directory"] .directory-roster-heading > div:first-child::before {
   display: block;
