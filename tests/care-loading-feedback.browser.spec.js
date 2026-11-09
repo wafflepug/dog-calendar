@@ -170,6 +170,10 @@ for (const colorScheme of ['light', 'dark']) {
     await expect(details.locator('[data-intake-attribute="medicationInstructions"]')).toHaveValue('Fresh medication');
     await expect(dashboard).toHaveAttribute('data-care-profile-loading', 'false');
     await expect(page.locator('.v1082-stay-panels')).toBeVisible();
+    const filters = page.getByRole('tablist', { name: 'Filter guests by stay status', includeHidden: true });
+    await expect(filters).toBeHidden();
+    await page.locator('#directoryProfileBackBar button').first().click();
+    await expect(filters).toBeVisible();
   });
 }
 
