@@ -467,91 +467,17 @@ function v108RenderMeetOutlook(events) {
 renderV10OperationsHome=function(events){v108BaseRenderOperationsHome(events);v108RenderMeetOutlook(events);};
 
 /* ---------------- New Boarding popup / V10.7 returning guests ---------------- */
-// Registry choices from Dogs Victoria and The International Cat Association.
+// PetSure's 2025 Australian policy rankings, with domestic cat coat lengths grouped.
 const v108BoardingBreeds = {
     dog: [
-        "Affenpinscher", "Afghan Hound", "Airedale Terrier", "Akita",
-        "Akita (Japanese)", "Alaskan Malamute", "American Hairless Terrier", "American Staffordshire Terrier",
-        "Anatolian Shepherd Dog", "Australasian Bosdog", "Australian Cattle Dog", "Australian Kelpie",
-        "Australian Shepherd", "Australian Silky Terrier", "Australian Stumpy Tail Cattle Dog", "Australian Terrier",
-        "Azawakh", "Basenji", "Basset Fauve de Bretagne", "Basset Hound",
-        "Beagle", "Bearded Collie", "Beauceron (Berger de Beauce)", "Bedlington Terrier",
-        "Belgian Shepherd Dog (Groenendael)", "Belgian Shepherd Dog (Laekenois)", "Belgian Shepherd Dog (Malinois)", "Belgian Shepherd Dog (Tervueren)",
-        "Bergamasco Shepherd Dog", "Bernese Mountain Dog", "Bichon Frise", "Biewer Terrier",
-        "Black and Tan Coonhound", "Bloodhound", "Bluetick Coonhound", "Bolognese",
-        "Border Collie", "Border Terrier", "Borzoi", "Boston Terrier",
-        "Bouvier des Flandres", "Boxer", "Bracco Italiano", "Briard",
-        "British Bulldog", "Brittany", "Bull Terrier", "Bull Terrier (Miniature)",
-        "Bullmastiff", "Cairn Terrier", "Canaan Dog", "Canadian Eskimo Dog",
-        "Cane Corso", "Caucasian Shepherd Dog", "Cavalier King Charles Spaniel", "Central Asian Shepherd Dog",
-        "Cesky Terrier", "Chesapeake Bay Retriever", "Chihuahua (Long Coat)", "Chihuahua (Smooth Coat)",
-        "Chinese Crested Dog", "Chow Chow", "Cirneco Dell 'Etna", "Clumber Spaniel",
-        "Cocker Spaniel", "Cocker Spaniel (American)", "Collie (Rough)", "Collie (Smooth)",
-        "Coton De Tulear", "Curly Coated Retriever", "Dachshund (Long Haired)", "Dachshund (Miniature Long Haired)",
-        "Dachshund (Miniature Smooth Haired)", "Dachshund (Miniature Wire Haired)", "Dachshund (Rabbit Long Haired)", "Dachshund (Rabbit Smooth Haired)",
-        "Dachshund (Rabbit Wire Haired)", "Dachshund (Smooth Haired)", "Dachshund (Wire Haired)", "Dalmatian",
-        "Dandie Dinmont Terrier", "Deerhound", "Dobermann", "Dogue de Bordeaux",
-        "Dutch Shepherd", "English Setter", "English Springer Spaniel", "English Toy Terrier (Black & Tan)",
-        "Estrela Mountain Dog", "Eurasier", "Field Spaniel", "Finnish Lapphund",
-        "Finnish Spitz", "Flat Coated Retriever", "Fox Terrier (Smooth)", "Fox Terrier (Wire)",
-        "Foxhound", "French Bulldog", "German Hunting Terrier", "German Pinscher",
-        "German Shepherd Dog", "German Shepherd Dog (Long Stock Coat)", "German Shorthaired Pointer", "German Spitz - (Klein) (Mittel)",
-        "German Wirehaired Pointer", "Glen of Imaal Terrier", "Golden Retriever", "Gordon Setter",
-        "Grand Basset Griffon Vendeen", "Great Dane", "Great Swiss Mountain Dog", "Greyhound",
-        "Griffon Bruxellois", "Hamiltonstovare", "Harrier", "Havanese",
-        "Hungarian Vizsla", "Hungarian Wirehaired Vizsla", "Ibizan Hound", "Icelandic Sheepdog",
-        "Irish Red and White Setter", "Irish Setter", "Irish Terrier", "Irish Water Spaniel",
-        "Irish Wolfhound", "Italian Greyhound", "Italian Spinone", "Jack Russell Terrier",
-        "Japanese Chin", "Japanese Spitz", "Kangal Shepherd Dog", "Karelian Bear Dog",
-        "Keeshond", "Kerry Blue Terrier", "King Charles Spaniel", "Komondor",
-        "Kuvasz", "Labrador Retriever", "Lagotto Romagnolo", "Lakeland Terrier",
-        "Landseer (European Continental Type)", "Large Munsterlander", "Leonberger", "Lhasa Apso",
-        "Lowchen (Little Lion Dog)", "Maltese", "Manchester Terrier", "Maremma Sheepdog",
-        "Mastiff", "Miniature American Shepherd", "Miniature Pinscher", "Mudi",
-        "Murray River Retriever", "Neapolitan Mastiff", "Newfoundland", "Norfolk Terrier",
-        "Norwegian Buhund", "Norwegian Elkhound", "Norwich Terrier", "Nova Scotia Duck Tolling Retriever",
-        "Old English Sheepdog", "Otterhound", "Papillon", "Parson Russell Terrier",
-        "Pekingese", "Peruvian Hairless Dog (Small, Medium, Large)", "Petit Basset Griffon Vendeen", "Pharaoh Hound",
-        "Pointer", "Polish Lowland Sheepdog", "Pomeranian", "Poodle (Miniature)",
-        "Poodle (Standard)", "Poodle (Toy)", "Porcelaine", "Portuguese Podengo",
-        "Portuguese Water Dog", "Prague Ratter", "Pug", "Puli",
-        "Pumi", "Pyrenean Mastiff", "Pyrenean Mountain Dog", "Pyrenean Sheepdog Longhaired",
-        "Rhodesian Ridgeback", "Rottweiler", "Russian Black Terrier", "Russian Toy (Long Haired)",
-        "Russian Toy (Smooth Haired)", "Saluki", "Samoyed", "Schipperke",
-        "Schnauzer", "Schnauzer (Giant)", "Schnauzer (Miniature)", "Scottish Terrier",
-        "Sealyham Terrier", "Shar Pei", "Shetland Sheepdog", "Shiba Inu",
-        "Shih Tzu", "Shikoku", "Siberian Husky", "Skye Terrier",
-        "Sloughi", "Soft Coated Wheaten Terrier", "Spanish Mastiff", "Spanish Water Dog",
-        "St Bernard", "Staffordshire Bull Terrier", "Sussex Spaniel", "Swedish Lapphund",
-        "Swedish Vallhund", "Tatra Shepherd Dog", "Tenterfield Terrier", "Tibetan Mastiff",
-        "Tibetan Spaniel", "Tibetan Terrier", "Tornjak", "Weimaraner",
-        "Weimaraner (Long Hair)", "Welsh Corgi (Cardigan)", "Welsh Corgi (Pembroke)", "Welsh Springer Spaniel",
-        "Welsh Terrier", "West Highland White Terrier", "Whippet", "White Swiss Shepherd Dog",
-        "Wirehaired Slovakian Pointer", "Xoloitzcuintle - (Miniature) (Intermediate) (Standard)", "Yakutian Laika", "Yorkshire Terrier"
+        "Cavoodle", "Miniature Dachshund", "Golden Retriever", "Border Collie",
+        "Groodle", "French Bulldog", "Labrador Retriever", "Staffordshire Bull Terrier",
+        "Cocker Spaniel", "German Shepherd"
     ],
     cat: [
-        "Abyssinian", "American Bobtail", "American Bobtail Shorthair", "American Curl",
-        "American Curl Longhair", "American Shorthair", "American Wirehair", "Australian Mist",
-        "Balinese", "Bengal", "Bengal Longhair", "Birman",
-        "Bombay", "British Longhair", "British Shorthair", "Burmese",
-        "Burmilla", "Burmilla Longhair", "Chartreux", "Chausie",
-        "Cherubim", "Cornish Rex", "Cymric", "Cymric Tailed",
-        "Devon Rex", "Domestic Longhair", "Domestic Medium Hair", "Domestic Shorthair",
-        "Donskoy", "Egyptian Mau", "Exotic Shorthair",
-        "Havana", "Highlander", "Highlander Shorthair", "Himalayan",
-        "Japanese Bobtail", "Japanese Bobtail Longhair", "Khaomanee", "Korat",
-        "Kurilian Bobtail", "Kurilian Bobtail Longhair", "LaPerm", "LaPerm Shorthair",
-        "Lykoi", "Maine Coon", "Maine Coon Polydactyl", "Manx",
-        "Manx Tailed", "Minuet", "Minuet Longhair", "Minuet Talls",
-        "Minuet Talls Longhair", "Munchkin", "Munchkin Longhair", "Nebelung",
-        "Norwegian Forest", "Ocicat", "Oriental Longhair", "Oriental Shorthair",
-        "Persian", "Peterbald", "Pixiebob", "Pixiebob Longhair",
-        "Ragdoll", "Russian Blue", "Savannah", "Scottish Fold",
-        "Scottish Fold Longhair", "Scottish Straight", "Scottish Straight Longhair", "Selkirk Rex",
-        "Selkirk Rex Longhair", "Siamese", "Siberian", "Singapura",
-        "Snowshoe", "Somali", "Sphynx", "Tennessee Rex",
-        "Thai",
-        "Tonkinese", "Toyger", "Turkish Angora", "Turkish Van"
+        "Domestic (short, medium or long hair)", "Ragdoll", "British Shorthair",
+        "Maine Coon", "Burmese", "Bengal", "Russian Blue", "Devon Rex",
+        "Sphynx", "Siberian"
     ]
 };
 
@@ -561,8 +487,8 @@ function v108SetBoardingBreedChoices(modal, breed = '') {
     const breeds = v108BoardingBreeds[species] || v108BoardingBreeds.dog;
     select.replaceChildren(
         new Option('Select breed', ''),
-        new Option('Other / mixed breed', 'other'),
-        ...breeds.map(name => new Option(name, name))
+        ...breeds.map(name => new Option(name, name)),
+        new Option('Other / mixed breed', 'other')
     );
     select.value = breeds.includes(breed) ? breed : breed ? 'other' : '';
     modal.querySelector('[data-v108-manual-breed]').hidden = select.value !== 'other';

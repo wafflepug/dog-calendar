@@ -38,7 +38,7 @@ async function openHarness(page, baseURL, saveHandler) {
   await page.addStyleTag({ url: `${baseURL}/waffle-runtime.css` });
   await page.addScriptTag({ path: ownerHandoff });
   await page.locator('[data-v108-board="dogName"]').fill('Milo');
-  await page.locator('[data-v108-breed-choice]').selectOption('Australian Kelpie');
+  await page.locator('[data-v108-breed-choice]').selectOption('Border Collie');
   await page.locator('[data-v108-board="startDate"]').fill('2026-10-20');
   await page.locator('[data-v108-board="endDate"]').fill('2026-10-22');
   await page.locator('[data-v108-board="ownerName"]').fill('Alex Owner');
