@@ -4645,6 +4645,13 @@ function processSheetActionWithV108Receipt_(data) {
     }
 
     var bookingSheet = getTargetSheet_();
+    if (data.action === "confirm_potential" && data.stayId) {
+      var existingRow = findStayRowByIdV11225_(bookingSheet, data.stayId);
+      if (existingRow >= 2 && isConfirmedStayBookingTypeV11225_(bookingSheet.getRange(existingRow, 12).getValue())) {
+        assertStayRowActionCompatibleV11225_(bookingSheet, existingRow, "update_boarding_dates", data);
+        return { result: "success", action: data.action, stayId: data.stayId, alreadyConfirmed: true, duplicate: true };
+      }
+    }
     var createsStay = data.action === "create_boarding" || data.action === "create_potential";
     var row = createsStay ? -1 : resolveStayMutationRowV11225_(bookingSheet, data);
     if (!createsStay && row < 2) throw new Error("The booking could not be uniquely identified. Refresh and try again.");
@@ -20898,8 +20905,15 @@ function sendBookingLifecycleEmailSafely_(data, result) {
   var cacheKey = hasValidatedIdentity ? "bookingLifecycleEmail:" + action + ":" + eventIdentity : "";
 
   try {
-    var cache = CacheService.getScriptCache();
-    if (cacheKey && cache.get(cacheKey)) return;
+    var cache = null;
+    try {
+      cache = CacheService.getScriptCache();
+      if (cacheKey && cache.get(cacheKey)) return;
+    } catch (_) {
+      // Cache is a best-effort burst guard; the durable mutation receipt is
+      // still the primary protection against duplicate retries.
+      cache = null;
+    }
 
     var recipient = String(
       PropertiesService.getScriptProperties().getProperty("DAILY_NOTIFICATION_EMAIL") || ""
@@ -20919,7 +20933,9 @@ function sendBookingLifecycleEmailSafely_(data, result) {
         escapeHtmlEmail_(event.label) + "</strong></p><p>Pet: " + escapeHtmlEmail_(petName) +
         "<br>Dates: " + escapeHtmlEmail_(dateLine) + "</p><p>Waffle House</p></div>"
     });
-    if (cacheKey) cache.put(cacheKey, "sent", 21600);
+    if (cacheKey && cache) {
+      try { cache.put(cacheKey, "sent", 21600); } catch (_) {}
+    }
   } catch (error) {
     // Keep mail service/configuration failures separate from a successful
     // booking save. A subsequent legitimate retry may attempt delivery.

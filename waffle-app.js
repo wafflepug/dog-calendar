@@ -6634,6 +6634,15 @@ registerWaffleServiceWorker();
                 // Do not remove the Potential Stay from the UI until the
                 // database confirms the same row was changed successfully.
                 const confirmResponse = await sendPayloadToAppsScript(payload);
+                if (confirmResponse?.alreadyConfirmed) {
+                    document.getElementById('potentialStayModal').hidden = true;
+                    if (original.stayId && typeof v1105AddPotentialStayRemoval === 'function') v1105AddPotentialStayRemoval(original.stayId, activeEditingPotential);
+                    activeEditingPotential = null;
+                    activeEditingPotentialId = null;
+                    refreshCalendarData();
+                    alert("This stay was already confirmed. Check Calendar for its saved details.");
+                    return;
+                }
                 const confirmedStayId = String(confirmResponse?.stayId || confirmResponse?.booking?.stayId || original.stayId || '').trim();
 
                 document.getElementById('potentialStayModal').hidden = true;
