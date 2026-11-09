@@ -152,7 +152,9 @@ for (const colorScheme of ['light', 'dark']) {
     const dashboard = page.locator('.directory-dashboard-fused');
     const loadingScreen = dashboard.locator('[data-care-profile-loading-screen]');
     await expect(dashboard).toHaveAttribute('data-care-profile-loading', 'true');
-    await expect(loadingScreen).toContainText('Getting Milo’s profile ready');
+    await expect(loadingScreen.locator('.palz-loading-label')).toHaveText('Loading Milo’s Care Profile…');
+    await expect(loadingScreen.getByRole('img', { name: 'Palz Stay' })).toBeVisible();
+    await expect(loadingScreen.locator('.palz-loading-progress')).toBeVisible();
     await expect(page.locator('.v1082-stay-panels')).toBeHidden();
     const details = card.locator('[data-directory-detail="profile"]');
     const status = details.locator('[data-directory-profile-read-status]');

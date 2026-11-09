@@ -12212,7 +12212,11 @@ registerWaffleServiceWorker();
                 screen.dataset.careProfileLoadingScreen = '';
                 screen.setAttribute('role', 'status');
                 screen.setAttribute('aria-live', 'polite');
-                screen.innerHTML = '<span class="care-profile-loading-brand">Palz Stay</span><span class="care-profile-loading-indicator" aria-hidden="true"></span><strong data-care-profile-loading-title></strong><span class="care-profile-loading-copy">Loading saved care details and booking information</span>';
+                const content = document.querySelector('#palzLoadingScreen .palz-loading-content')?.cloneNode(true);
+                const subtitle = content?.querySelector('.palz-loading-label') || document.createElement('p');
+                subtitle.dataset.careProfileLoadingTitle = '';
+                if (content) screen.appendChild(content);
+                else screen.appendChild(subtitle);
                 const backBar = profileDashboard.querySelector('#directoryProfileBackBar');
                 if (backBar) backBar.insertAdjacentElement('afterend', screen);
                 else profileDashboard.prepend(screen);
@@ -12221,7 +12225,7 @@ registerWaffleServiceWorker();
             if (shouldShowProfileLoader) {
                 const name = String(card.dataset.directoryDogName || card.dataset.dogName || 'pet').trim();
                 const title = screen?.querySelector('[data-care-profile-loading-title]');
-                if (title) title.textContent = `Getting ${name}’s profile ready`;
+                if (title) title.textContent = `Loading ${name}’s Care Profile…`;
             }
             profileDashboard.dataset.careProfileLoading = shouldShowProfileLoader ? 'true' : 'false';
             profileDashboard.dataset.careProfileLoadToken = profileLoadToken;
