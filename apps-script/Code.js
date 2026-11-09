@@ -269,6 +269,11 @@ function doPost(e) {
       data.action
     );
 
+    // Booking event emails are deliberately dispatched after the durable
+    // mutation receipt has been written, its ScriptLock released and local
+    // cache invalidation completed. A mail failure must not affect the save.
+    sendBookingLifecycleEmailSafely_(data, result);
+
     if (
       data.action === "upload_belongings_photo" &&
       String(data.uploadToken || "").trim()
@@ -462,6 +467,10 @@ function doGet(e) {
         data.action
       );
     }
+
+    // Keep lifecycle email delivery outside the booking mutation lock and
+    // after cache invalidation so the saved change is visible immediately.
+    sendBookingLifecycleEmailSafely_(data, result);
 
     return callback ? javascriptResponse_(callback, result) : jsonResponse_(result);
 
@@ -20840,6 +20849,82 @@ function sendWaffleNotificationEmail_(recipient, email) {
     htmlBody: email.htmlBody,
     name: "Waffle House"
   });
+}
+
+
+/**
+ * Sends one internal email for a successfully persisted booking lifecycle
+ * event. Called only by the HTTP handlers after the mutation receipt wrapper
+ * has returned, which means the booking write and receipt are durable and its
+ * ScriptLock has been released. The existing DAILY_NOTIFICATION_EMAIL
+ * recipient setting is the sole recipient source; owner contact data is never
+ * included in the message.
+ */
+function sendBookingLifecycleEmailSafely_(data, result) {
+  data = data && typeof data === "object" ? data : {};
+  result = result && typeof result === "object" ? result : {};
+  if (result.result !== "success" || result.duplicate) return;
+
+  var action = String(data.action || "");
+  var event = null;
+  if (action === "create_potential") {
+    event = { label: "Potential stay submitted" };
+  } else if (action === "create_boarding") {
+    event = { label: "Confirmed stay submitted" };
+  } else if (action === "confirm_potential") {
+    // A conversion gets its own event; it must not be reported as a new
+    // confirmed booking as well.
+    event = { label: "Potential stay confirmed" };
+  } else if (action === "create") {
+    event = { label: "Meet & Greet scheduled" };
+  } else if (action === "delete_potential") {
+    event = { label: "Potential stay cancelled" };
+  } else if (action === "delete_confirmed_stay") {
+    event = { label: "Confirmed stay cancelled" };
+  }
+  if (!event) return;
+
+  var booking = result.deletedBooking || result.booking || {};
+  var petName = String(booking.dogName || data.dogName || data.originalDogName || "Pet").trim() || "Pet";
+  var startDate = String(booking.startDate || data.startDate || data.originalStartDate || "").trim();
+  var endDate = String(booking.endDate || data.endDate || data.originalEndDate || startDate).trim();
+  var dateLine = startDate ? (startDate === endDate ? startDate : startDate + " – " + endDate) : "Dates not provided";
+
+  // Use the mutation/stay ID only when it meets the server's accepted ID
+  // shape. The durable receipt wrapper also marks successful retries as
+  // duplicate before reaching this helper.
+  var eventIdentity = String(data.clientMutationId || result.clientMutationId || result.stayId || "").trim();
+  var hasValidatedIdentity = eventIdentity.length > 0 && eventIdentity.length <= 128 && /^[A-Za-z0-9_-]+$/.test(eventIdentity);
+  var cacheKey = hasValidatedIdentity ? "bookingLifecycleEmail:" + action + ":" + eventIdentity : "";
+
+  try {
+    var cache = CacheService.getScriptCache();
+    if (cacheKey && cache.get(cacheKey)) return;
+
+    var recipient = String(
+      PropertiesService.getScriptProperties().getProperty("DAILY_NOTIFICATION_EMAIL") || ""
+    ).replace(/;/g, ",").trim();
+    if (!recipient) throw new Error("DAILY_NOTIFICATION_EMAIL is not configured.");
+    var subject = event.label + " — " + petName;
+    var textBody = [
+      event.label,
+      "Pet: " + petName,
+      "Dates: " + dateLine,
+      "Business: Waffle House"
+    ].join("\n");
+    sendWaffleNotificationEmail_(recipient, {
+      subject: subject,
+      textBody: textBody,
+      htmlBody: "<div style=\"font-family:Arial,sans-serif;color:#172033\"><p><strong>" +
+        escapeHtmlEmail_(event.label) + "</strong></p><p>Pet: " + escapeHtmlEmail_(petName) +
+        "<br>Dates: " + escapeHtmlEmail_(dateLine) + "</p><p>Waffle House</p></div>"
+    });
+    if (cacheKey) cache.put(cacheKey, "sent", 21600);
+  } catch (error) {
+    // Keep mail service/configuration failures separate from a successful
+    // booking save. A subsequent legitimate retry may attempt delivery.
+    try { console.error("Booking lifecycle email failed for " + action + ": " + String(error && error.message || error)); } catch (_) {}
+  }
 }
 
 
