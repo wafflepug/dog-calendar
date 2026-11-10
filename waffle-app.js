@@ -1436,13 +1436,78 @@ function todayQueueItem(event, type, icon, title, meta, sort) {
     const lockKey = stayId.toLowerCase();
     const activeActions = typeof v110ActiveOperationalActions !== 'undefined' ? v110ActiveOperationalActions : window.todayQueueActionLocks;
     const actionPending = !!action && !!activeActions?.has(lockKey);
-    return { identity, href, action, actionLabel, actionPending, stayId, dogId, stayKey, type, icon, title, meta, sort, isMeet: type === 'meet' };
+    return { identity, href, action, actionLabel, actionPending, stayId, dogId, stayKey, type, icon, title, meta, sort, canViewPhotos: confirmed && hasActionIdentity, isMeet: type === 'meet' };
+}
+
+async function openTodayActionPhotos(button) {
+    const stay = button.closest('.v10-agenda-row')?.querySelector('a[data-today-stay-id]');
+    if (!stay) return;
+    const title = stay.querySelector('strong')?.textContent || 'Guest';
+    const identity = { dataset: {
+        directoryStayId: stay.dataset.todayStayId,
+        directoryDogId: stay.dataset.todayDogId,
+        directoryStayKey: button.closest('.v10-agenda-row').dataset.todayPhotoStayKey
+    } };
+    const dialog = document.createElement('dialog');
+    dialog.className = 'today-photos-dialog';
+    dialog.setAttribute('aria-label', title + ' photos');
+    dialog.innerHTML = '<form method="dialog"><h2></h2><button type="submit" autofocus>Close</button></form><div role="status">Loading photos…</div>';
+    dialog.querySelector('h2').textContent = title + ' photos';
+    const content = dialog.querySelector('[role="status"]');
+    dialog.addEventListener('close', () => {
+        dialog.remove();
+        if (button.isConnected) button.focus();
+    }, { once: true });
+    document.body.appendChild(dialog);
+    dialog.showModal();
+    try {
+        const response = await window.WAFFLE_CARE_BELONGINGS_READS.read(identity);
+        if (!dialog.open) return;
+        const record = response?.data?.record;
+        if (!record) throw new Error('Photos could not be verified.');
+        const profilePhotos = [...(record.dogPhotoGallery || [])];
+        if (record.dogPhoto && !profilePhotos.some(photo => v110PhotoUrl(photo) === v110PhotoUrl(record.dogPhoto))) {
+            profilePhotos.unshift(record.dogPhoto);
+        }
+        const groups = [
+            ['Profile photos', profilePhotos],
+            ['Stay photos', record.stayPhotos],
+            ['Belongings photos', record.photos]
+        ];
+        content.removeAttribute('role');
+        content.textContent = '';
+        for (const [label, photos] of groups) {
+            const section = document.createElement('section');
+            for (const photo of Array.isArray(photos) ? photos : []) {
+                const source = v110PhotoUrl(photo);
+                if (!/^https:\/\//i.test(source)) continue;
+                const image = document.createElement('img');
+                image.src = source;
+                image.alt = photo.label || label;
+                image.loading = 'lazy';
+                section.append(image);
+            }
+            if (!section.childElementCount) continue;
+            const heading = document.createElement('h3');
+            heading.textContent = label;
+            section.prepend(heading);
+            content.append(section);
+        }
+        if (!content.childElementCount) content.textContent = 'No photos saved for this stay.';
+    } catch (_) {
+        if (dialog.open) content.textContent = 'Photos could not be loaded. Close this window and try again.';
+    }
 }
 
 function wireTodayQueueActions() {
     if (window.todayQueueActionsWired) return;
     window.todayQueueActionsWired = true;
     document.addEventListener('click', event => {
+        const photosButton = event.target.closest('[data-today-view-photos]');
+        if (photosButton) {
+            void openTodayActionPhotos(photosButton);
+            return;
+        }
         const actionButton = event.target.closest('[data-today-action]');
         if (actionButton) {
             event.preventDefault();
@@ -1788,7 +1853,7 @@ function renderV10OperationsHome(events) {
     if (agendaHost) {
         wireTodayQueueActions();
         agendaHost.innerHTML = queue.length
-            ? queue.map(item => item.isMeet ? '<button type="button" class="v10-agenda-item type-meet" data-today-open-meet="' + escapeDashboardHtml(item.identity) + '" aria-label="Open ' + escapeDashboardHtml(item.title) + ' Meet & Greet in calendar"><span class="v10-agenda-icon" aria-hidden="true">' + item.icon + '</span><span class="v10-agenda-copy"><strong>' + escapeDashboardHtml(item.title) + '</strong><span>' + escapeDashboardHtml(item.meta) + '</span></span><span class="v10-agenda-action">Open event <span aria-hidden="true">↗</span></span></button>' : '<div class="v10-agenda-row"><div class="v10-agenda-row-main"><a class="v10-agenda-item type-' + escapeDashboardHtml(item.type) + '" data-today-identity="' + escapeDashboardHtml(item.identity) + '" data-today-stay-id="' + escapeDashboardHtml(item.stayId) + '" data-today-dog-id="' + escapeDashboardHtml(item.dogId) + '" href="' + escapeDashboardHtml(item.href) + '" aria-label="Open ' + escapeDashboardHtml(item.title) + ' care profile, ' + escapeDashboardHtml(item.meta) + '"><span class="v10-agenda-icon" aria-hidden="true">' + item.icon + '</span><span class="v10-agenda-copy"><strong>' + escapeDashboardHtml(item.title) + '</strong><span data-today-meta>' + escapeDashboardHtml(item.meta) + '</span></span><span class="v10-agenda-action" aria-hidden="true">↗</span></a>' + (item.action ? '<button type="button" class="v10-agenda-operation" data-today-action="' + item.action + '" data-today-identity="' + escapeDashboardHtml(item.identity) + '" data-today-stay-id="' + escapeDashboardHtml(item.stayId) + '" data-today-dog-id="' + escapeDashboardHtml(item.dogId) + '" data-today-stay-key="' + escapeDashboardHtml(item.stayKey) + '" aria-label="' + item.actionLabel + ' ' + escapeDashboardHtml(item.title) + '"' + (item.actionPending ? ' disabled aria-busy="true"' : '') + '>' + item.actionLabel + '</button>' : '') + '</div>' + (item.action ? '<span class="v10-agenda-action-status" data-today-action-status role="status" hidden></span>' : '') + '</div>').join('')
+            ? queue.map(item => item.isMeet ? '<button type="button" class="v10-agenda-item type-meet" data-today-open-meet="' + escapeDashboardHtml(item.identity) + '" aria-label="Open ' + escapeDashboardHtml(item.title) + ' Meet & Greet in calendar"><span class="v10-agenda-icon" aria-hidden="true">' + item.icon + '</span><span class="v10-agenda-copy"><strong>' + escapeDashboardHtml(item.title) + '</strong><span>' + escapeDashboardHtml(item.meta) + '</span></span><span class="v10-agenda-action">Open event <span aria-hidden="true">↗</span></span></button>' : '<div class="v10-agenda-row" data-today-photo-stay-key="' + escapeDashboardHtml(item.stayKey) + '"><div class="v10-agenda-row-main"><a class="v10-agenda-item type-' + escapeDashboardHtml(item.type) + '" data-today-identity="' + escapeDashboardHtml(item.identity) + '" data-today-stay-id="' + escapeDashboardHtml(item.stayId) + '" data-today-dog-id="' + escapeDashboardHtml(item.dogId) + '" href="' + escapeDashboardHtml(item.href) + '" aria-label="Open ' + escapeDashboardHtml(item.title) + ' care profile, ' + escapeDashboardHtml(item.meta) + '"><span class="v10-agenda-icon" aria-hidden="true">' + item.icon + '</span><span class="v10-agenda-copy"><strong>' + escapeDashboardHtml(item.title) + '</strong><span data-today-meta>' + escapeDashboardHtml(item.meta) + '</span></span><span class="v10-agenda-action" aria-hidden="true">↗</span></a>' + (item.action ? '<button type="button" class="v10-agenda-operation" data-today-action="' + item.action + '" data-today-identity="' + escapeDashboardHtml(item.identity) + '" data-today-stay-id="' + escapeDashboardHtml(item.stayId) + '" data-today-dog-id="' + escapeDashboardHtml(item.dogId) + '" data-today-stay-key="' + escapeDashboardHtml(item.stayKey) + '" aria-label="' + item.actionLabel + ' ' + escapeDashboardHtml(item.title) + '"' + (item.actionPending ? ' disabled aria-busy="true"' : '') + '>' + item.actionLabel + '</button>' : '') + (item.canViewPhotos ? '<button type="button" data-today-view-photos aria-haspopup="dialog" aria-label="View photos for ' + escapeDashboardHtml(item.title) + '">View photos</button>' : '') + '</div>' + (item.action ? '<span class="v10-agenda-action-status" data-today-action-status role="status" hidden></span>' : '') + '</div>').join('')
             : '<div class="v10-empty v10-all-clear" role="status"><span aria-hidden="true">✓</span><div><strong>No arrivals, departures or Meet & Greets today</strong><small>The Today queue has no scheduled actions.</small></div></div>';
         const actionFeedback = document.createElement('span');
         actionFeedback.id = 'v10TodayActionFeedback';
