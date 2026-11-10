@@ -20854,12 +20854,32 @@ function sendWaffleNotificationEmail_(recipient, email) {
     );
   }
 
+  var businessName = "Waffle House";
+  try {
+    businessName = String(readPalzBusinessBrand_().name || businessName);
+  } catch (ignoreBrandError) {
+    // Use the default business name if stored branding cannot be read.
+  }
+  var subject = String(email.subject || "");
+  var testPrefix = subject.indexOf("[TEST] ") === 0 ? "[TEST] " : "";
+  var heading = '<span style="color:#6d28d9;">Palz</span> Stay';
+  var html = '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" ' +
+    'style="background:#f5f3ff;font-family:Arial,sans-serif;color:#171633;">' +
+    '<tr><td align="center" style="padding:16px;">' +
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" ' +
+    'style="max-width:640px;background:#ffffff;border:1px solid #e4dcf6;">' +
+    '<tr><td style="padding:18px 20px;border-bottom:1px solid #e4dcf6;">' +
+    '<div style="font-size:26px;font-weight:800;">' + heading + '</div>' +
+    '<div style="padding-top:4px;font-size:13px;color:#51466a;">' + escapeHtmlEmail_(businessName) + '</div></td></tr>' +
+    '<tr><td style="padding:16px 20px;font-size:15px;line-height:1.5;">' + email.htmlBody +
+    '</td></tr></table></td></tr></table>';
+
   MailApp.sendEmail({
     to: recipient,
-    subject: email.subject,
-    body: email.textBody,
-    htmlBody: email.htmlBody,
-    name: "Waffle House"
+    subject: testPrefix + "Palz Stay · " + subject.slice(testPrefix.length),
+    body: "Palz Stay · " + businessName + "\n\n" + email.textBody,
+    htmlBody: html,
+    name: "Palz Stay"
   });
 }
 
@@ -20928,15 +20948,14 @@ function sendBookingLifecycleEmailSafely_(data, result) {
     var textBody = [
       event.label,
       "Pet: " + petName,
-      "Dates: " + dateLine,
-      "Business: Waffle House"
+      "Dates: " + dateLine
     ].join("\n");
     sendWaffleNotificationEmail_(recipient, {
       subject: subject,
       textBody: textBody,
       htmlBody: "<div style=\"font-family:Arial,sans-serif;color:#172033\"><p><strong>" +
         escapeHtmlEmail_(event.label) + "</strong></p><p>Pet: " + escapeHtmlEmail_(petName) +
-        "<br>Dates: " + escapeHtmlEmail_(dateLine) + "</p><p>Waffle House</p></div>"
+        "<br>Dates: " + escapeHtmlEmail_(dateLine) + "</p></div>"
     });
     if (cacheKey && cache) {
       try { cache.put(cacheKey, "sent", 21600); } catch (_) {}
@@ -21365,7 +21384,7 @@ function buildMorningBoardingEmail_(
 
   var subject =
     (isTest ? "[TEST] " : "") +
-    "🐾 Waffle House 7 AM — " +
+    "Morning handover — " +
     subjectParts.join(" • ") +
     " — " +
     Utilities.formatDate(
@@ -21381,7 +21400,7 @@ function buildMorningBoardingEmail_(
   );
 
   html.push(
-    '<h2 style="margin-bottom:4px;">🐾 Waffle House Morning Handover</h2>'
+    '<h2 style="margin-bottom:4px;">Morning handover</h2>'
   );
 
   html.push(
@@ -21453,7 +21472,7 @@ function buildMorningBoardingEmail_(
   var text = [];
 
   text.push(
-    "Waffle House Morning Handover"
+    "Morning handover"
   );
   text.push(displayDate);
   text.push("");
