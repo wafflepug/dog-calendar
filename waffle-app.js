@@ -1436,7 +1436,7 @@ function todayQueueItem(event, type, icon, title, meta, sort) {
     const lockKey = stayId.toLowerCase();
     const activeActions = typeof v110ActiveOperationalActions !== 'undefined' ? v110ActiveOperationalActions : window.todayQueueActionLocks;
     const actionPending = !!action && !!activeActions?.has(lockKey);
-    return { identity, href, action, actionLabel, actionPending, stayId, dogId, stayKey, type, icon, title, meta, sort, canViewPhotos: confirmed && hasActionIdentity, isMeet: type === 'meet' };
+    return { identity, href, action, actionLabel, actionPending, stayId, dogId, stayKey, type, icon, title, meta, sort, isMeet: type === 'meet' };
 }
 
 async function openTodayActionPhotos(button) {
@@ -1450,9 +1450,9 @@ async function openTodayActionPhotos(button) {
     } };
     const dialog = document.createElement('dialog');
     dialog.className = 'today-photos-dialog';
-    dialog.setAttribute('aria-label', title + ' photos');
-    dialog.innerHTML = '<form method="dialog"><h2></h2><button type="submit" autofocus>Close</button></form><div role="status">Loading photos…</div>';
-    dialog.querySelector('h2').textContent = title + ' photos';
+    dialog.setAttribute('aria-label', title + ' belongings');
+    dialog.innerHTML = '<form method="dialog"><h2></h2><button type="submit" autofocus>Close</button></form><div role="status">Loading belongings…</div>';
+    dialog.querySelector('h2').textContent = title + ' belongings';
     const content = dialog.querySelector('[role="status"]');
     dialog.addEventListener('close', () => {
         dialog.remove();
@@ -1465,37 +1465,39 @@ async function openTodayActionPhotos(button) {
         if (!dialog.open) return;
         const record = response?.data?.record;
         if (!record) throw new Error('Photos could not be verified.');
-        const profilePhotos = [...(record.dogPhotoGallery || [])];
-        if (record.dogPhoto && !profilePhotos.some(photo => v110PhotoUrl(photo) === v110PhotoUrl(record.dogPhoto))) {
-            profilePhotos.unshift(record.dogPhoto);
-        }
-        const groups = [
-            ['Profile photos', profilePhotos],
-            ['Stay photos', record.stayPhotos],
-            ['Belongings photos', record.photos]
-        ];
+        const items = BELONGINGS_ITEMS.filter(item =>
+            record.items?.[item.key]?.present || String(record.items?.[item.key]?.description || '').trim()
+        );
         content.removeAttribute('role');
-        content.textContent = '';
-        for (const [label, photos] of groups) {
-            const section = document.createElement('section');
-            for (const photo of Array.isArray(photos) ? photos : []) {
-                const source = v110PhotoUrl(photo);
-                if (!/^https:\/\//i.test(source)) continue;
-                const image = document.createElement('img');
-                image.src = source;
-                image.alt = photo.label || label;
-                image.loading = 'lazy';
-                section.append(image);
+        content.innerHTML = '<h3>Items</h3><p>No items recorded for this stay.</p><h3>Belongings photos</h3>';
+        if (items.length) {
+            const list = document.createElement('ul');
+            for (const item of items) {
+                const saved = record.items[item.key];
+                const row = document.createElement('li');
+                row.textContent = item.label + (saved.present ? '' : ' (not marked present)') +
+                    (saved.description ? ' · ' + saved.description : '');
+                list.append(row);
             }
-            if (!section.childElementCount) continue;
-            const heading = document.createElement('h3');
-            heading.textContent = label;
-            section.prepend(heading);
-            content.append(section);
+            content.querySelector('p').replaceWith(list);
         }
-        if (!content.childElementCount) content.textContent = 'No photos saved for this stay.';
+        const photos = Array.isArray(record.photos) ? record.photos : [];
+        for (const photo of photos) {
+            const source = v110PhotoUrl(photo);
+            if (!/^https:\/\//i.test(source)) continue;
+            const image = document.createElement('img');
+            image.src = source;
+            image.alt = photo.label || 'Belongings photo';
+            image.loading = 'lazy';
+            content.append(image);
+        }
+        if (!content.querySelector('img')) {
+            const empty = document.createElement('p');
+            empty.textContent = 'No belongings photos saved for this stay.';
+            content.append(empty);
+        }
     } catch (_) {
-        if (dialog.open) content.textContent = 'Photos could not be loaded. Close this window and try again.';
+        if (dialog.open) content.textContent = 'Belongings could not be loaded. Close this window and try again.';
     }
 }
 
@@ -1853,7 +1855,7 @@ function renderV10OperationsHome(events) {
     if (agendaHost) {
         wireTodayQueueActions();
         agendaHost.innerHTML = queue.length
-            ? queue.map(item => item.isMeet ? '<button type="button" class="v10-agenda-item type-meet" data-today-open-meet="' + escapeDashboardHtml(item.identity) + '" aria-label="Open ' + escapeDashboardHtml(item.title) + ' Meet & Greet in calendar"><span class="v10-agenda-icon" aria-hidden="true">' + item.icon + '</span><span class="v10-agenda-copy"><strong>' + escapeDashboardHtml(item.title) + '</strong><span>' + escapeDashboardHtml(item.meta) + '</span></span><span class="v10-agenda-action">Open event <span aria-hidden="true">↗</span></span></button>' : '<div class="v10-agenda-row" data-today-photo-stay-key="' + escapeDashboardHtml(item.stayKey) + '"><div class="v10-agenda-row-main"><a class="v10-agenda-item type-' + escapeDashboardHtml(item.type) + '" data-today-identity="' + escapeDashboardHtml(item.identity) + '" data-today-stay-id="' + escapeDashboardHtml(item.stayId) + '" data-today-dog-id="' + escapeDashboardHtml(item.dogId) + '" href="' + escapeDashboardHtml(item.href) + '" aria-label="Open ' + escapeDashboardHtml(item.title) + ' care profile, ' + escapeDashboardHtml(item.meta) + '"><span class="v10-agenda-icon" aria-hidden="true">' + item.icon + '</span><span class="v10-agenda-copy"><strong>' + escapeDashboardHtml(item.title) + '</strong><span data-today-meta>' + escapeDashboardHtml(item.meta) + '</span></span><span class="v10-agenda-action" aria-hidden="true">↗</span></a>' + (item.action ? '<button type="button" class="v10-agenda-operation" data-today-action="' + item.action + '" data-today-identity="' + escapeDashboardHtml(item.identity) + '" data-today-stay-id="' + escapeDashboardHtml(item.stayId) + '" data-today-dog-id="' + escapeDashboardHtml(item.dogId) + '" data-today-stay-key="' + escapeDashboardHtml(item.stayKey) + '" aria-label="' + item.actionLabel + ' ' + escapeDashboardHtml(item.title) + '"' + (item.actionPending ? ' disabled aria-busy="true"' : '') + '>' + item.actionLabel + '</button>' : '') + (item.canViewPhotos ? '<button type="button" data-today-view-photos aria-haspopup="dialog" aria-label="View photos for ' + escapeDashboardHtml(item.title) + '">View photos</button>' : '') + '</div>' + (item.action ? '<span class="v10-agenda-action-status" data-today-action-status role="status" hidden></span>' : '') + '</div>').join('')
+            ? queue.map(item => item.isMeet ? '<button type="button" class="v10-agenda-item type-meet" data-today-open-meet="' + escapeDashboardHtml(item.identity) + '" aria-label="Open ' + escapeDashboardHtml(item.title) + ' Meet & Greet in calendar"><span class="v10-agenda-icon" aria-hidden="true">' + item.icon + '</span><span class="v10-agenda-copy"><strong>' + escapeDashboardHtml(item.title) + '</strong><span>' + escapeDashboardHtml(item.meta) + '</span></span><span class="v10-agenda-action">Open event <span aria-hidden="true">↗</span></span></button>' : '<div class="v10-agenda-row" data-today-photo-stay-key="' + escapeDashboardHtml(item.stayKey) + '"><div class="v10-agenda-row-main"><a class="v10-agenda-item type-' + escapeDashboardHtml(item.type) + '" data-today-identity="' + escapeDashboardHtml(item.identity) + '" data-today-stay-id="' + escapeDashboardHtml(item.stayId) + '" data-today-dog-id="' + escapeDashboardHtml(item.dogId) + '" href="' + escapeDashboardHtml(item.href) + '" aria-label="Open ' + escapeDashboardHtml(item.title) + ' care profile, ' + escapeDashboardHtml(item.meta) + '"><span class="v10-agenda-icon" aria-hidden="true">' + item.icon + '</span><span class="v10-agenda-copy"><strong>' + escapeDashboardHtml(item.title) + '</strong><span data-today-meta>' + escapeDashboardHtml(item.meta) + '</span></span><span class="v10-agenda-action" aria-hidden="true">↗</span></a>' + (item.action ? (item.action === 'checkout' ? '<div class="v10-agenda-checkout-controls">' : '') + '<button type="button" class="v10-agenda-operation" data-today-action="' + item.action + '" data-today-identity="' + escapeDashboardHtml(item.identity) + '" data-today-stay-id="' + escapeDashboardHtml(item.stayId) + '" data-today-dog-id="' + escapeDashboardHtml(item.dogId) + '" data-today-stay-key="' + escapeDashboardHtml(item.stayKey) + '" aria-label="' + item.actionLabel + ' ' + escapeDashboardHtml(item.title) + '"' + (item.actionPending ? ' disabled aria-busy="true"' : '') + '>' + item.actionLabel + '</button>' + (item.action === 'checkout' ? '<button type="button" data-today-view-photos aria-haspopup="dialog" aria-label="View belongings for ' + escapeDashboardHtml(item.title) + '">View belongings</button></div>' : '') : '') + '</div>' + (item.action ? '<span class="v10-agenda-action-status" data-today-action-status role="status" hidden></span>' : '') + '</div>').join('')
             : '<div class="v10-empty v10-all-clear" role="status"><span aria-hidden="true">✓</span><div><strong>No arrivals, departures or Meet & Greets today</strong><small>The Today queue has no scheduled actions.</small></div></div>';
         const actionFeedback = document.createElement('span');
         actionFeedback.id = 'v10TodayActionFeedback';
