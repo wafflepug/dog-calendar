@@ -2,8 +2,8 @@
    Build: 2026.08.27.04
    Historical base styles remain compatibility sources during Phase 3A, but pages no longer
    reference them individually. Preserve this import order until modules are folded in. */
-@import url("waffle-app.css?build=2026.08.27.04&rev=2026.11.09.07");
-@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.11.09.07");
+@import url("waffle-app.css?build=2026.08.27.04&rev=2026.11.11.01");
+@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.11.11.01");
 @import url("waffle-v10.8.2.css?build=2026.08.27.04");
 @import url("waffle-v10.8.3.css?build=2026.08.27.04");
 @import url("waffle-v10.8.5.css?build=2026.08.27.04");
@@ -11,12 +11,12 @@
 @import url("waffle-v10.8.7.css?build=2026.08.27.04");
 @import url("waffle-v10.8.8.css?build=2026.08.27.04");
 @import url("waffle-v10.8.9.css?build=2026.08.27.04");
-@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.11.09.07");
+@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.11.11.01");
 @import url("waffle-v11.0.3.css?build=2026.08.27.04");
 @import url("waffle-v11.0.5.css?build=2026.08.27.04");
-@import url("waffle-v11.1.94.css?build=2026.11.09.07");
-@import url("waffle-v11.1.95.css?build=2026.11.09.07");
-@import url("waffle-v11.1.96.css?build=2026.11.09.07&rev=2026.11.09.07");
+@import url("waffle-v11.1.94.css?build=2026.11.11.01");
+@import url("waffle-v11.1.95.css?build=2026.11.11.01");
+@import url("waffle-v11.1.96.css?build=2026.11.11.01&rev=2026.11.11.01");
 
 /* ============================================================
    MOBILE FIRST-PAINT STABILITY GATE
@@ -3536,4 +3536,49 @@ body[data-waffle-page="directory"] nav.directory-roster-filters[role="tablist"] 
 /* The legacy calendar remains available only if the canonical shell fails to start. */
 html:not([data-waffle-ui-ready-reason="timeout-fallback"]) body[data-waffle-page="calendar"] :is(#calendar, #calendarEventLegend, .search-container:has(#calendarSearch)) {
   display: none !important;
+}
+
+[data-today-view-photos], .today-photos-dialog button {
+  min-height: 44px;
+  padding: 6px 12px;
+  border: 1px solid var(--v10-border, #d9dcea);
+  border-radius: 10px;
+  background: var(--v10-card, #fff);
+  color: var(--v10-text, #171633);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+[data-today-view-photos] {
+  grid-column: 1 / -1;
+  justify-self: start;
+}
+.today-photos-dialog {
+  box-sizing: border-box;
+  width: min(620px, calc(100% - 32px));
+  max-height: 80dvh;
+  overflow: auto;
+  padding: 16px;
+  border: 1px solid var(--v10-border, #d9dcea);
+  border-radius: 16px;
+  background: var(--v10-card, #fff);
+  color: var(--v10-text, #171633);
+}
+.today-photos-dialog::backdrop { background: rgb(17 24 39 / 65%); }
+.today-photos-dialog form {
+  position: sticky;
+  top: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: inherit;
+}
+.today-photos-dialog h2 { margin: 0; font-size: 1.2rem; }
+.today-photos-dialog img {
+  display: block;
+  width: 100%;
+  max-height: 420px;
+  margin-block: 8px;
+  object-fit: contain;
 }
