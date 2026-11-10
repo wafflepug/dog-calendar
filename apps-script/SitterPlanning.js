@@ -112,6 +112,30 @@ function getSitterRosterPickups_() {
   return {result:'success', pickups:pickups.filter(function(entry) { return entry.time && counts[entry.stayId] === 1; })};
 }
 
+// Saved pickup-time reminders use a supplied local date window so the five-minute
+// email checker can include a midnight pickup that falls on the following day.
+function getSitterCheckoutReminderPickups_(startDate, endDate) {
+  var sheet = sitterHandoverSheet_(false);
+  if (!sheet || sheet.getLastRow() < 2) return [];
+  var start = sitterDate_(startDate), end = sitterDate_(endDate);
+  if (end < start || (Date.parse(end + 'T12:00:00Z') - Date.parse(start + 'T12:00:00Z')) / 86400000 > 1) return [];
+  var index = stayOperationBookingIndexV11226_(), counts = Object.create(null), pickups = [];
+  sheet.getRange(2, 1, sheet.getLastRow() - 1, 3).getValues().forEach(function(row) {
+    var stayId = String(row[0] || '').trim().toLowerCase(), dogId = String(row[1] || '').trim();
+    if (!stayId) return;
+    counts[stayId] = (counts[stayId] || 0) + 1;
+    var booking = index.byId[stayId];
+    if (!booking || index.idCounts[stayId] !== 1 || booking.dogId !== dogId ||
+        booking.endDate < start || booking.endDate > end) return;
+    var times;
+    try { times = JSON.parse(String(row[2] || '{}')); } catch (ignore) { return; }
+    var time = String(times && times.pickupTime || '');
+    if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) return;
+    pickups.push({stayId:stayId, dogId:dogId, dogName:booking.dogName, stayKey:booking.stayKey, date:booking.endDate, time:time});
+  });
+  return pickups.filter(function(pickup) { return counts[pickup.stayId] === 1; });
+}
+
 function readPalzBusinessBrand_() {
   var props = PropertiesService.getScriptProperties();
   var stored = props.getProperty('PALZ_BUSINESS_BRAND');
