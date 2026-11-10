@@ -20538,6 +20538,11 @@ function sendMorningBoardingEmailNotification_(options) {
  * booking was created less than 30 minutes beforehand.
  */
 function checkMeetGreetEmailReminders() {
+  try {
+    sendCheckoutTimeReminderEmails_(new Date());
+  } catch (_) {
+    console.error("Checkout reminder email check failed.");
+  }
   return checkMeetGreetEmailReminders_({
     force: false,
     isTest: false
