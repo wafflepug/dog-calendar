@@ -2,8 +2,8 @@
    Build: 2026.08.27.04
    Historical base styles remain compatibility sources during Phase 3A, but pages no longer
    reference them individually. Preserve this import order until modules are folded in. */
-@import url("waffle-app.css?build=2026.08.27.04&rev=2026.11.11.03");
-@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.11.11.03");
+@import url("waffle-app.css?build=2026.08.27.04&rev=2026.11.11.04");
+@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.11.11.04");
 @import url("waffle-v10.8.2.css?build=2026.08.27.04");
 @import url("waffle-v10.8.3.css?build=2026.08.27.04");
 @import url("waffle-v10.8.5.css?build=2026.08.27.04");
@@ -11,12 +11,12 @@
 @import url("waffle-v10.8.7.css?build=2026.08.27.04");
 @import url("waffle-v10.8.8.css?build=2026.08.27.04");
 @import url("waffle-v10.8.9.css?build=2026.08.27.04");
-@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.11.11.03");
+@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.11.11.04");
 @import url("waffle-v11.0.3.css?build=2026.08.27.04");
 @import url("waffle-v11.0.5.css?build=2026.08.27.04");
-@import url("waffle-v11.1.94.css?build=2026.11.11.03");
-@import url("waffle-v11.1.95.css?build=2026.11.11.03");
-@import url("waffle-v11.1.96.css?build=2026.11.11.03&rev=2026.11.11.03");
+@import url("waffle-v11.1.94.css?build=2026.11.11.04");
+@import url("waffle-v11.1.95.css?build=2026.11.11.04");
+@import url("waffle-v11.1.96.css?build=2026.11.11.04&rev=2026.11.11.04");
 
 /* ============================================================
    MOBILE FIRST-PAINT STABILITY GATE
@@ -3549,9 +3549,22 @@ html:not([data-waffle-ui-ready-reason="timeout-fallback"]) body[data-waffle-page
   font-weight: 700;
   cursor: pointer;
 }
-.v10-agenda-row:has(.v10-agenda-checkout-controls) .v10-agenda-item,
-.v10-agenda-checkout-controls {
+.v10-agenda-row-main:has(.v10-agenda-operation) {
   grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid var(--v10-border, #d9dcea);
+  border-radius: 12px;
+  background: var(--v10-card, #fff);
+}
+.v10-agenda-row-main:has(.v10-agenda-operation) > .v10-agenda-item {
+  border-color: transparent;
+  background: transparent;
+}
+.v10-agenda-row-main > .v10-agenda-operation {
+  min-height: 48px;
 }
 .v10-agenda-checkout-controls {
   display: grid;
