@@ -2,8 +2,8 @@
    Build: 2026.08.27.04
    Historical base styles remain compatibility sources during Phase 3A, but pages no longer
    reference them individually. Preserve this import order until modules are folded in. */
-@import url("waffle-app.css?build=2026.08.27.04&rev=2026.11.11.09");
-@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.11.11.09");
+@import url("waffle-app.css?build=2026.08.27.04&rev=2026.11.11.10");
+@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.11.11.10");
 @import url("waffle-v10.8.2.css?build=2026.08.27.04");
 @import url("waffle-v10.8.3.css?build=2026.08.27.04");
 @import url("waffle-v10.8.5.css?build=2026.08.27.04");
@@ -11,12 +11,12 @@
 @import url("waffle-v10.8.7.css?build=2026.08.27.04");
 @import url("waffle-v10.8.8.css?build=2026.08.27.04");
 @import url("waffle-v10.8.9.css?build=2026.08.27.04");
-@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.11.11.09");
+@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.11.11.10");
 @import url("waffle-v11.0.3.css?build=2026.08.27.04");
 @import url("waffle-v11.0.5.css?build=2026.08.27.04");
-@import url("waffle-v11.1.94.css?build=2026.11.11.09");
-@import url("waffle-v11.1.95.css?build=2026.11.11.09");
-@import url("waffle-v11.1.96.css?build=2026.11.11.09&rev=2026.11.11.09");
+@import url("waffle-v11.1.94.css?build=2026.11.11.10");
+@import url("waffle-v11.1.95.css?build=2026.11.11.10");
+@import url("waffle-v11.1.96.css?build=2026.11.11.10&rev=2026.11.11.10");
 
 /* ============================================================
    MOBILE FIRST-PAINT STABILITY GATE
@@ -3663,4 +3663,24 @@ body:has(#v10QuickAddSheet:not([hidden])) :is(#v10QuickAddButton, #aw37launch, #
 }
 @media (max-width: 360px) {
   #v10QuickAddSheet .v10-quick-actions { grid-template-columns: minmax(0, 1fr); }
+}
+
+#waffleNotificationModal {
+  inset: auto;
+  top: var(--notification-top, 64px);
+  left: var(--notification-left, 12px);
+  z-index: 2147481840;
+  display: block;
+  width: min(400px, calc(100% - 24px));
+  padding: 0;
+  background: transparent;
+  backdrop-filter: none;
+}
+#waffleNotificationModal .waffle-notification-card {
+  box-sizing: border-box;
+  width: 100%;
+  max-height: var(--notification-height, calc(100dvh - 76px));
+  overscroll-behavior: contain;
+  border-radius: 16px;
+  box-shadow: 0 12px 32px rgb(15 23 42 / 25%);
 }
