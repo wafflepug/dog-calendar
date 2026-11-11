@@ -513,6 +513,10 @@
       const profileClass = 'directory-status-tag ' + tagClass;
       if (profileStatus.className !== profileClass) profileStatus.className = profileClass;
       if (profileStatus.textContent !== label) profileStatus.textContent = label;
+      const statusHost = card.querySelector(status === 'AT HOME' ? '.directory-profile-name-line' : '.directory-name-row');
+      if (statusHost && profileStatus.parentElement !== statusHost) statusHost.append(profileStatus);
+      if (status === 'AT HOME' && profileStatus.title !== label) profileStatus.title = label;
+      else if (status !== 'AT HOME' && profileStatus.hasAttribute('title')) profileStatus.removeAttribute('title');
     }
     renderCareSignals(card);
   }

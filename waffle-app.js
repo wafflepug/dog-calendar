@@ -18261,7 +18261,7 @@ registerWaffleServiceWorker();
     }
 
     function renderDirectoryStayCardMarkup({directoryStayKey, dogName, breed, breedTxt, ownerName, phone, notes, dogId, stayId, dogNumber, species, startParsed, endParsed, sourceRow, isCurrentlyAtHome = false, hasBeenPickedUp = false, localTodayStr = getLocalTodayDateString()}) {
-        const statusTag = (isCurrentlyAtHome && !hasBeenPickedUp) ? '<span class="directory-status-tag tag-at-home">At Home</span>' : (hasBeenPickedUp ? '<span class="directory-status-tag tag-checked-out">Checked Out</span>' : '<span class="directory-status-tag tag-upcoming">Upcoming</span>');
+        const statusTag = (isCurrentlyAtHome && !hasBeenPickedUp) ? '<span class="directory-status-tag tag-at-home" title="At Home">At Home</span>' : (hasBeenPickedUp ? '<span class="directory-status-tag tag-checked-out">Checked Out</span>' : '<span class="directory-status-tag tag-upcoming">Upcoming</span>');
 
         const stayDateLabel =
             `${formatStayDateShort(startParsed)} – ${formatStayDateShort(endParsed)}`;
@@ -18338,9 +18338,10 @@ registerWaffleServiceWorker();
                                                         title="Tap to edit Dog Name">
                                                         ${escapeDashboardHtml(dogName.trim())}
                                                     </button>
+                                                    ${isCurrentlyAtHome && !hasBeenPickedUp ? statusTag : ''}
                                                   </div>
                                                     ${dogNumber ? `<span class="directory-dog-id">${species === 'cat' ? 'Pet ID' : 'Dog ID'} ${escapeDashboardHtml(dogNumber)}</span>` : ''}
-                                                    ${statusTag}
+                                                    ${isCurrentlyAtHome && !hasBeenPickedUp ? '' : statusTag}
                                                 </div>
 
                                                 <button

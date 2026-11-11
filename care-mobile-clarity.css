@@ -2844,3 +2844,15 @@ body[data-waffle-page="directory"] .directory-profile-name-line .directory-profi
 body[data-waffle-page="directory"] .directory-profile-name-line .directory-dog-name-btn {
   width: auto;
 }
+
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-profile-name-line .directory-status-tag.tag-at-home:has([data-palz-icon="home"]) {
+  display: inline-flex;
+  align-items: center;
+  order: 1;
+  padding: 0 !important;
+  min-height: 0;
+  border: 0;
+  background: transparent;
+  font-size: 0 !important;
+}
+.directory-profile-name-line .directory-status-tag.tag-at-home .palz-icon { width: 18px; height: 18px; }
