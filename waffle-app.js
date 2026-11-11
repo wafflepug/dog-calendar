@@ -1052,11 +1052,6 @@ function isWaffleNotificationFocusTargetVisible(element) {
     return style.display !== 'none' && style.visibility !== 'hidden' && element.getClientRects().length > 0;
 }
 
-function getWaffleNotificationDialogFocusTargets(dialog) {
-    const selector = ['a[href]', 'button:not([disabled])', 'input:not([disabled]):not([type="hidden"])', 'select:not([disabled])', 'textarea:not([disabled])', '[tabindex]:not([tabindex="-1"])'].join(',');
-    return Array.from(dialog.querySelectorAll(selector)).filter(element => element.tabIndex >= 0 && isWaffleNotificationFocusTargetVisible(element));
-}
-
 function focusWaffleNotificationCentreOpener() {
     const candidates = [waffleNotificationCentreOpener, document.getElementById('wh75MenuButton'), document.getElementById('waffleNotificationButton'), document.querySelector('#wh80MobileHeaderRail [data-wh80-role="notification"]'), document.querySelector('[data-wh-sitter-mobile-action="notification"]')];
     const target = candidates.find(isWaffleNotificationFocusTargetVisible);
@@ -1065,11 +1060,12 @@ function focusWaffleNotificationCentreOpener() {
     document.body.focus();
 }
 
-function closeWaffleNotificationCentre() {
+function closeWaffleNotificationCentre(restoreFocus = true) {
     const modal = document.getElementById('waffleNotificationModal');
     if (!modal || modal.hidden) return;
     modal.hidden = true;
-    focusWaffleNotificationCentreOpener();
+    waffleNotificationCentreOpener?.setAttribute("aria-expanded", "false");
+    if (restoreFocus) focusWaffleNotificationCentreOpener();
 }
 
 
@@ -1156,18 +1152,41 @@ function markWaffleNotificationCentreRead() {
 }
 
 
+function positionWaffleNotificationCentre(modal) {
+    if (modal.hidden) return;
+    const bounds = waffleNotificationCentreOpener?.getBoundingClientRect();
+    const viewportWidth = document.documentElement.clientWidth;
+    const viewportHeight = document.documentElement.clientHeight;
+    const width = Math.min(400, viewportWidth - 24);
+    const sidebar = waffleNotificationCentreOpener?.closest('#whSitterDesktopSidebar');
+    const preferredLeft = sidebar ? sidebar.getBoundingClientRect().right + 10 : (bounds?.right || viewportWidth) - width;
+    const preferredTop = sidebar ? bounds.top : (bounds?.bottom || 56) + 8;
+    const top = Math.max(12, Math.min(preferredTop, viewportHeight - Math.min(420, viewportHeight - 24) - 12));
+    modal.style.setProperty('--notification-left', Math.max(12, Math.min(preferredLeft, viewportWidth - width - 12)) + 'px');
+    modal.style.setProperty('--notification-top', top + 'px');
+    modal.style.setProperty('--notification-height', Math.max(0, viewportHeight - top - 12) + 'px');
+}
+
 function openWaffleNotificationCentre(tabName = 'inbox', opener = null) {
     const triggerEvent = tabName instanceof Event ? tabName : null;
     if (triggerEvent) tabName = 'inbox';
     const modal = ensureWaffleNotificationModal();
-    const activeElement = document.activeElement;
-    const trigger = triggerEvent?.currentTarget || opener || activeElement;
-    if (trigger instanceof HTMLElement && !modal.contains(trigger)) waffleNotificationCentreOpener = trigger;
+    const trigger = [opener, triggerEvent?.currentTarget, document.activeElement].find(node =>
+        node instanceof HTMLElement && node !== document.body && !modal.contains(node) && isWaffleNotificationFocusTargetVisible(node)
+    );
+    if (!modal.hidden && trigger && trigger === waffleNotificationCentreOpener && tabName === 'inbox') {
+        closeWaffleNotificationCentre();
+        return;
+    }
+    waffleNotificationCentreOpener?.setAttribute('aria-expanded', 'false');
+    waffleNotificationCentreOpener = trigger || null;
+    trigger?.setAttribute('aria-expanded', 'true');
+    trigger?.setAttribute('aria-controls', modal.id);
     modal.hidden = false;
+    positionWaffleNotificationCentre(modal);
     activateWaffleNotificationCentreTab(tabName);
-    modal.querySelector('[data-notification-centre-tab][aria-selected="true"]')?.focus();
+    modal.querySelector('[data-notification-centre-tab][aria-selected="true"]')?.focus({ preventScroll: true });
 }
-
 
 function refreshWaffleNotificationCentreBadge() {
     return loadWaffleNotificationCentre({ quiet: true }).catch(() => {});
@@ -3210,14 +3229,10 @@ function ensureWaffleNotificationModal() {
         <div
             class="waffle-notification-card v101-notification-centre"
             role="dialog"
-            aria-modal="true"
             aria-labelledby="waffleNotificationTitle">
 
             <div class="waffle-notification-heading">
                 <div>
-                    <span class="waffle-notification-kicker">
-                        Waffle House Centre
-                    </span>
                     <h3 id="waffleNotificationTitle">
                         🔔 Notifications
                     </h3>
@@ -3405,22 +3420,17 @@ function ensureWaffleNotificationModal() {
     modal.querySelector('[data-push-state-retry]')?.addEventListener('click', () => hydrateWaffleNotificationSettings({ retry: true }));
 
     modal.addEventListener('keydown', event => {
-        const dialog = modal.querySelector('[role="dialog"]');
-        if (!dialog || modal.hidden) return;
-        const nested = event.target?.closest?.('[role="dialog"][aria-modal="true"]');
-        if (nested && nested !== dialog) return;
-        if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); closeWaffleNotificationCentre(); return; }
-        if (event.key !== 'Tab') return;
-        const targets = getWaffleNotificationDialogFocusTargets(dialog);
-        if (!targets.length) { event.preventDefault(); dialog.tabIndex = -1; dialog.focus(); return; }
-        const first = targets[0], last = targets[targets.length - 1];
-        if (event.shiftKey && (document.activeElement === first || !dialog.contains(document.activeElement))) { event.preventDefault(); last.focus(); }
-        else if (!event.shiftKey && (document.activeElement === last || !dialog.contains(document.activeElement))) { event.preventDefault(); first.focus(); }
+        if (event.key !== 'Escape') return;
+        event.preventDefault();
+        event.stopPropagation();
+        closeWaffleNotificationCentre();
     });
-
-    modal.addEventListener('click', event => {
-        if (event.target === modal) closeWaffleNotificationCentre();
-    });
+    document.addEventListener('click', event => {
+        if (!modal.hidden && !modal.contains(event.target) && !waffleNotificationCentreOpener?.contains(event.target)) {
+            closeWaffleNotificationCentre(false);
+        }
+    }, true);
+    window.addEventListener('resize', () => positionWaffleNotificationCentre(modal));
 
     modal.querySelectorAll('[data-notification-centre-tab]').forEach(button => {
         button.addEventListener('click', () => activateWaffleNotificationCentreTab(button.dataset.notificationCentreTab));
