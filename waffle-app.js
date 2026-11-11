@@ -663,8 +663,7 @@ const WAFFLE_NOTIFICATION_SEEN_IDS_KEY =
 let waffleNotificationCentreItems =
     [];
 
-let waffleNotificationCentreActiveTab =
-    'inbox';
+let waffleNotificationUnreadOnly = false;
 
 let waffleNotificationCentreOpener = null;
 
@@ -677,7 +676,6 @@ function setWaffleNotificationCentreLoadState(state, message = '') {
     waffleNotificationCentreLoadState = state;
     const status = document.querySelector('[data-notification-load-status]');
     const refresh = document.querySelector('[data-notification-refresh]');
-    const count = document.querySelector('[data-notification-centre-count]');
     if (status) {
         status.dataset.state = state;
         status.textContent = message;
@@ -685,17 +683,12 @@ function setWaffleNotificationCentreLoadState(state, message = '') {
     }
     if (refresh) {
         const loading = state === 'loading';
+        refresh.hidden = !state.endsWith('failure');
         refresh.disabled = loading;
         refresh.setAttribute('aria-busy', loading ? 'true' : 'false');
         refresh.textContent = loading ? 'Refreshing…' : (state.endsWith('failure') ? 'Retry' : 'Refresh');
     }
-    if (count) {
-        const unread = getWaffleNotificationUnreadCount();
-        count.textContent = state.endsWith('failure')
-            ? 'Refresh failed'
-            : (state === 'loading' ? 'Refreshing…' : (unread ? `${unread} unread` : 'Up to date'));
-        count.dataset.mode = state.endsWith('failure') ? 'error' : (unread ? 'unread' : 'clear');
-    }
+
 }
 
 
@@ -900,25 +893,23 @@ function renderWaffleNotificationCentre() {
             '[data-notification-feed]'
         );
 
-    const count =
-        document.querySelector(
-            '[data-notification-centre-count]'
-        );
-
     if (!host) return;
 
     const seen =
         getWaffleSeenNotificationIds();
 
+    const visibleItems = waffleNotificationUnreadOnly
+        ? waffleNotificationCentreItems.filter(item => item.id && !seen.has(item.id))
+        : waffleNotificationCentreItems;
     const attention =
-        waffleNotificationCentreItems
+        visibleItems
             .filter(item =>
                 item.kind ===
                 'attention'
             );
 
     const activity =
-        waffleNotificationCentreItems
+        visibleItems
             .filter(item =>
                 item.kind !==
                 'attention'
@@ -927,23 +918,6 @@ function renderWaffleNotificationCentre() {
                 0,
                 40
             );
-
-    if (count) {
-        const unread =
-            getWaffleNotificationUnreadCount();
-
-        count.textContent =
-            waffleNotificationCentreLoadState.endsWith('failure')
-                ? 'Refresh failed'
-                : (waffleNotificationCentreLoadState === 'loading'
-                    ? 'Refreshing…'
-                    : (unread ? `${unread} unread` : 'Up to date'));
-
-        count.dataset.mode =
-            waffleNotificationCentreLoadState.endsWith('failure')
-                ? 'error'
-                : (unread ? 'unread' : 'clear');
-    }
 
     const itemHtml =
         item => {
@@ -982,10 +956,6 @@ function renderWaffleNotificationCentre() {
     if (attention.length) {
         html += `
             <section class="v101-notification-section">
-                <div class="v101-notification-section-heading">
-                    <strong>Needs attention</strong>
-                    <span>${attention.length}</span>
-                </div>
                 <div class="v101-notification-list">
                     ${attention.map(itemHtml).join('')}
                 </div>
@@ -996,10 +966,6 @@ function renderWaffleNotificationCentre() {
     if (activity.length) {
         html += `
             <section class="v101-notification-section">
-                <div class="v101-notification-section-heading">
-                    <strong>Recent activity</strong>
-                    <span>${activity.length}</span>
-                </div>
                 <div class="v101-notification-list">
                     ${activity.map(itemHtml).join('')}
                 </div>
@@ -1011,8 +977,7 @@ function renderWaffleNotificationCentre() {
         html = `
             <div class="v101-notification-empty">
                 <span>✓</span>
-                <strong>Nothing needs your attention</strong>
-                <small>Recent Waffle House activity will appear here.</small>
+                ${waffleNotificationUnreadOnly ? 'No unread notifications' : 'No notifications'}
             </div>
         `;
     }
@@ -1023,27 +988,6 @@ function renderWaffleNotificationCentre() {
     updateWaffleNotificationUnreadBadge();
 }
 
-
-function switchWaffleNotificationCentreTab(tabName) {
-    tabName = tabName === 'settings' ? 'settings' : 'inbox';
-    waffleNotificationCentreActiveTab = tabName;
-    const modal = ensureWaffleNotificationModal();
-    modal.querySelectorAll('[data-notification-centre-tab]').forEach(button => {
-        const active = button.dataset.notificationCentreTab === tabName;
-        button.classList.toggle('is-active', active);
-        button.setAttribute('aria-selected', active ? 'true' : 'false');
-        button.tabIndex = active ? 0 : -1;
-    });
-    modal.querySelectorAll('[data-notification-centre-panel]').forEach(panel => {
-        panel.hidden = panel.dataset.notificationCentrePanel !== tabName;
-    });
-    if (tabName === 'inbox') loadWaffleNotificationCentre().catch(error => console.warn('Notification Centre refresh failed:', error));
-}
-
-function activateWaffleNotificationCentreTab(tabName) {
-    switchWaffleNotificationCentreTab(tabName);
-    if (tabName === 'settings') hydrateWaffleNotificationSettings().catch(error => console.warn(error));
-}
 
 function isWaffleNotificationFocusTargetVisible(element) {
     if (!(element instanceof HTMLElement) || !element.isConnected || element.disabled) return false;
@@ -1170,6 +1114,7 @@ function positionWaffleNotificationCentre(modal) {
 function openWaffleNotificationCentre(tabName = 'inbox', opener = null) {
     const triggerEvent = tabName instanceof Event ? tabName : null;
     if (triggerEvent) tabName = 'inbox';
+    if (tabName === 'settings') return openWaffleNotificationSettings();
     const modal = ensureWaffleNotificationModal();
     const trigger = [opener, triggerEvent?.currentTarget, document.activeElement].find(node =>
         node instanceof HTMLElement && node !== document.body && !modal.contains(node) && isWaffleNotificationFocusTargetVisible(node)
@@ -1184,8 +1129,8 @@ function openWaffleNotificationCentre(tabName = 'inbox', opener = null) {
     trigger?.setAttribute('aria-controls', modal.id);
     modal.hidden = false;
     positionWaffleNotificationCentre(modal);
-    activateWaffleNotificationCentreTab(tabName);
-    modal.querySelector('[data-notification-centre-tab][aria-selected="true"]')?.focus({ preventScroll: true });
+    loadWaffleNotificationCentre().catch(() => {});
+    modal.querySelector('[data-notification-filter][aria-pressed="true"]')?.focus({ preventScroll: true });
 }
 
 function refreshWaffleNotificationCentreBadge() {
@@ -3229,67 +3174,14 @@ function ensureWaffleNotificationModal() {
         <div
             class="waffle-notification-card v101-notification-centre"
             role="dialog"
-            aria-labelledby="waffleNotificationTitle">
-
-            <div class="waffle-notification-heading">
-                <div>
-                    <h3 id="waffleNotificationTitle">
-                        🔔 Notifications
-                    </h3>
-                    <p>
-                        Operational attention and device notification settings.
-                    </p>
-                </div>
-
-                <button
-                    type="button"
-                    class="waffle-notification-close"
-                    aria-label="Close notifications">
-                    ×
-                </button>
-            </div>
-
-            <nav
-                class="v101-notification-tabs"
-                role="tablist"
-                aria-label="Notification Centre">
-                <button
-                    type="button"
-                    class="v101-notification-tab is-active"
-                    id="waffleNotificationInboxTab"
-                    role="tab"
-                    aria-selected="true"
-                    aria-controls="waffleNotificationInboxPanel"
-                    tabindex="0"
-                    data-notification-centre-tab="inbox">
-                    Inbox
-                    <span data-notification-centre-count>Up to date</span>
-                </button>
-                <button
-                    type="button"
-                    class="v101-notification-tab"
-                    id="waffleNotificationSettingsTab"
-                    role="tab"
-                    aria-selected="false"
-                    aria-controls="waffleNotificationSettingsPanel"
-                    tabindex="-1"
-                    data-notification-centre-tab="settings">
-                    Settings
-                </button>
-            </nav>
-
-            <section
-                id="waffleNotificationInboxPanel"
-                class="v101-notification-panel"
-                role="tabpanel"
-                aria-labelledby="waffleNotificationInboxTab"
-                tabindex="0"
-                data-notification-centre-panel="inbox">
+            aria-label="Notifications">
+            <section class="v101-notification-panel">
                 <div class="v101-notification-panel-actions">
-                    <span>Recent operations and activity</span>
-                    <span data-notification-load-status role="status" aria-live="polite" hidden></span>
-                    <button type="button" data-notification-refresh>Refresh</button>
+                    <button type="button" data-notification-filter="all" aria-pressed="true">All</button>
+                    <button type="button" data-notification-filter="unread" aria-pressed="false">Unread</button>
                     <button type="button" data-notification-mark-read>Mark all read</button>
+                    <span data-notification-load-status role="status" aria-live="polite" hidden></span>
+                    <button type="button" data-notification-refresh hidden>Retry</button>
                 </div>
 
                 <div
@@ -3302,10 +3194,6 @@ function ensureWaffleNotificationModal() {
             <section
                 id="waffleNotificationSettingsPanel"
                 class="v101-notification-panel"
-                role="tabpanel"
-                aria-labelledby="waffleNotificationSettingsTab"
-                tabindex="0"
-                data-notification-centre-panel="settings"
                 hidden>
 
                 <div
@@ -3411,7 +3299,6 @@ function ensureWaffleNotificationModal() {
         modal
     );
 
-    modal.querySelector('.waffle-notification-close')?.addEventListener('click', closeWaffleNotificationCentre);
     modal.querySelectorAll('[data-push-device-label], [data-push-pref]').forEach(input => {
         const markEdited = () => { wafflePushSettingsEditGeneration += 1; wafflePushSettingsHasLocalEdits = true; updateWafflePushSaveButton(); };
         input.addEventListener('input', markEdited);
@@ -3432,22 +3319,14 @@ function ensureWaffleNotificationModal() {
     }, true);
     window.addEventListener('resize', () => positionWaffleNotificationCentre(modal));
 
-    modal.querySelectorAll('[data-notification-centre-tab]').forEach(button => {
-        button.addEventListener('click', () => activateWaffleNotificationCentreTab(button.dataset.notificationCentreTab));
-    });
-    modal.querySelector('.v101-notification-tabs')?.addEventListener('keydown', event => {
-        if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
-        const tabs = Array.from(modal.querySelectorAll('[data-notification-centre-tab]'));
-        const currentIndex = tabs.indexOf(event.target.closest('[data-notification-centre-tab]'));
-        if (currentIndex < 0 || !tabs.length) return;
-        let nextIndex = currentIndex;
-        if (event.key === 'Home') nextIndex = 0;
-        else if (event.key === 'End') nextIndex = tabs.length - 1;
-        else if (event.key === 'ArrowRight') nextIndex = (currentIndex + 1) % tabs.length;
-        else nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
-        event.preventDefault();
-        activateWaffleNotificationCentreTab(tabs[nextIndex].dataset.notificationCentreTab);
-        tabs[nextIndex].focus();
+    modal.querySelectorAll('[data-notification-filter]').forEach(button => {
+        button.addEventListener('click', () => {
+            waffleNotificationUnreadOnly = button.dataset.notificationFilter === 'unread';
+            modal.querySelectorAll('[data-notification-filter]').forEach(option =>
+                option.setAttribute('aria-pressed', String(option === button))
+            );
+            renderWaffleNotificationCentre();
+        });
     });
 
     modal.querySelector('[data-notification-refresh]')
@@ -3549,12 +3428,32 @@ function ensureWaffleNotificationModal() {
 }
 
 
+function getWafflePushSettingsPanel() {
+    ensureWaffleNotificationModal();
+    return document.getElementById('waffleNotificationSettingsPanel');
+}
+
+function mountWaffleNotificationSettings(settings) {
+    if (settings.querySelector('[data-notification-settings-section]')) return;
+    const details = document.createElement('details');
+    details.className = 'wh75-settings-section';
+    details.dataset.notificationSettingsSection = '';
+    details.innerHTML = '<summary>Notifications</summary>';
+    const controls = getWafflePushSettingsPanel();
+    controls.hidden = false;
+    details.append(controls);
+    settings.append(details);
+    details.addEventListener('toggle', () => {
+        if (details.open) hydrateWaffleNotificationSettings().catch(() => {});
+    });
+}
+
 function setWafflePushMessage(
     text,
     mode = ''
 ) {
     const modal =
-        ensureWaffleNotificationModal();
+        getWafflePushSettingsPanel();
 
     const message =
         modal.querySelector(
@@ -3573,7 +3472,7 @@ function setWafflePushMessage(
 
 function getPushPreferencesFromModal() {
     const modal =
-        ensureWaffleNotificationModal();
+        getWafflePushSettingsPanel();
 
     const preferences =
         {};
@@ -3597,7 +3496,7 @@ function applyPushPreferencesToModal(
     preferences
 ) {
     const modal =
-        ensureWaffleNotificationModal();
+        getWafflePushSettingsPanel();
 
     preferences = {
         ...defaultWafflePushPreferences(),
@@ -3621,7 +3520,7 @@ function applyPushPreferencesToModal(
 
 
 function updateWafflePushSaveButton() {
-    const modal = document.getElementById('waffleNotificationModal');
+    const modal = document.getElementById('waffleNotificationSettingsPanel');
     const button = modal?.querySelector('[data-push-save]');
     if (!button || wafflePushSettingsSaving) return;
     const baseline = wafflePushConfirmedSettings;
@@ -3719,7 +3618,7 @@ function getWafflePushReadiness(state) {
 
 async function hydrateWaffleNotificationSettings(options = {}) {
     const modal =
-        ensureWaffleNotificationModal();
+        getWafflePushSettingsPanel();
     const hydrationGeneration = ++wafflePushSettingsHydrationGeneration;
     const saveGenerationAtStart = wafflePushSettingsSaveGeneration;
     const savingAtStart = wafflePushSettingsSaving;
@@ -3744,7 +3643,7 @@ async function hydrateWaffleNotificationSettings(options = {}) {
     const state =
         await loadWafflePushDeviceState();
 
-    if (hydrationGeneration !== wafflePushSettingsHydrationGeneration || modal !== document.getElementById('waffleNotificationModal') || subscriptionIdAtStart !== getWafflePushSubscriptionId()) return;
+    if (hydrationGeneration !== wafflePushSettingsHydrationGeneration || modal !== document.getElementById('waffleNotificationSettingsPanel') || subscriptionIdAtStart !== getWafflePushSubscriptionId()) return;
     if (savingAtStart || wafflePushSettingsSaving || saveGenerationAtStart !== wafflePushSettingsSaveGeneration) return;
 
     const retryButton = modal.querySelector('[data-push-state-retry]');
@@ -3754,7 +3653,6 @@ async function hydrateWaffleNotificationSettings(options = {}) {
         return;
     }
     const retryHadFocus = !modal.hidden &&
-        !modal.querySelector('[data-notification-centre-panel="settings"]')?.hidden &&
         document.activeElement === retryButton;
     if (retryButton) retryButton.hidden = true;
 
@@ -3845,11 +3743,11 @@ async function hydrateWaffleNotificationSettings(options = {}) {
 
 
 async function openWaffleNotificationSettings() {
-    openWaffleNotificationCentre(
-        'settings'
-    );
-
-    return hydrateWaffleNotificationSettings();
+    const panel = document.getElementById('wh75SettingsPanel');
+    if (!panel) return;
+    mountWaffleNotificationSettings(panel);
+    if (!panel.classList.contains('is-open')) document.querySelector('[data-wh-sitter-settings], [data-wh75-settings]')?.click();
+    panel.querySelector('[data-notification-settings-section]').open = true;
 }
 
 
@@ -4175,7 +4073,7 @@ async function requestWaffleFirebaseFid() {
 
 async function enableWafflePushNotifications() {
     const modal =
-        ensureWaffleNotificationModal();
+        getWafflePushSettingsPanel();
 
     const button =
         modal.querySelector(
@@ -4310,7 +4208,7 @@ async function enableWafflePushNotifications() {
 
 async function saveWafflePushPreferences() {
     const modal =
-        ensureWaffleNotificationModal();
+        getWafflePushSettingsPanel();
 
     const subscriptionId =
         getWafflePushSubscriptionId();
@@ -4358,7 +4256,7 @@ async function saveWafflePushPreferences() {
             }
         );
 
-        if (submittedModal !== document.getElementById('waffleNotificationModal') || submittedSubscriptionId !== getWafflePushSubscriptionId()) return;
+        if (submittedModal !== document.getElementById('waffleNotificationSettingsPanel') || submittedSubscriptionId !== getWafflePushSubscriptionId()) return;
         if (response?.result !== 'success') throw new Error(response?.error || 'The server did not confirm the preference save.');
         wafflePushConfirmedSettings = { deviceLabel: payload.deviceLabel, preferences: { ...payload.preferences } };
 
@@ -4369,7 +4267,7 @@ async function saveWafflePushPreferences() {
         else setWafflePushMessage('Saved the submitted preferences. Newer edits are still unsaved.', 'info');
 
     } catch (error) {
-        if (submittedModal !== document.getElementById('waffleNotificationModal') || submittedSubscriptionId !== getWafflePushSubscriptionId()) return;
+        if (submittedModal !== document.getElementById('waffleNotificationSettingsPanel') || submittedSubscriptionId !== getWafflePushSubscriptionId()) return;
         setWafflePushMessage(
             error.message ||
             String(error),
