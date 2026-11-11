@@ -17228,7 +17228,7 @@ function getNotificationCentreResponse_(
     );
 
   var variant =
-    "notification-centre-v101";
+    "notification-centre-v102";
 
   if (
     String(
@@ -17259,7 +17259,7 @@ function getNotificationCentreResponse_(
   }
 
   var cacheKey =
-    "waffle_v101_notification:" +
+    "waffle_v102_notification:" +
     version;
 
   var cache =
@@ -17284,7 +17284,7 @@ function getNotificationCentreResponse_(
 
   if (!payload) {
     payload =
-      buildNotificationCentrePayload_();
+      waffleAiPrivacySafeRecord_(buildNotificationCentrePayload_());
 
     safePutWaffleCache_(
       cacheKey,

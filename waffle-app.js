@@ -934,11 +934,11 @@ function renderWaffleNotificationCentre() {
                     data-notification-item-id="${escapeDashboardHtml(item.id || '')}"
                     data-notification-item-link="${escapeDashboardHtml(item.link || '')}">
                     <span class="v101-notification-icon" aria-hidden="true">
-                        ${escapeDashboardHtml(item.icon || '🔔')}
+                        ${window.PALZ_ICONS?.svg(item.kind === 'attention' ? 'tasks' : 'bell') || ''}
                     </span>
                     <span class="v101-notification-copy">
                         <span class="v101-notification-title-row">
-                            <strong>${escapeDashboardHtml(item.title || 'Waffle House update')}</strong>
+                            <strong>${escapeDashboardHtml(item.title || 'Palz Stay update')}</strong>
                             ${unread ? '<i class="v101-unread-dot" aria-label="Unread"></i>' : ''}
                         </span>
                         <span>${escapeDashboardHtml(item.body || '')}</span>
@@ -1039,6 +1039,7 @@ function loadWaffleNotificationCentre(options = {}) {
                     maxAttempts: options.quiet ? 1 : 2,
                     timeoutMs: 30000,
                     maxStaleMs: 2 * 60 * 60 * 1000,
+                    shouldCacheResponse: response => Array.isArray(response?.items),
                     onCached: cachedResponse => {
                         cachedRendered = true;
                         applyResponse(cachedResponse);
@@ -1052,7 +1053,7 @@ function loadWaffleNotificationCentre(options = {}) {
             } else if (swr.offlineFallback) {
                 setWaffleNotificationCentreLoadState('cached-refresh-failure', 'Showing saved notifications. Reconnect to refresh.');
             } else {
-                setWaffleNotificationCentreLoadState('fresh', 'Notifications are up to date.');
+                setWaffleNotificationCentreLoadState('fresh', '');
             }
         } catch (error) {
             setWaffleNotificationCentreLoadState(
@@ -1062,7 +1063,7 @@ function loadWaffleNotificationCentre(options = {}) {
                     : 'Notifications could not be loaded. Try again.'
             );
             if (host && !waffleNotificationCentreItems.length && !host.querySelector('[data-notification-item-id], .v101-notification-empty')) {
-                host.innerHTML = '<div class="v101-notification-empty is-error"><span>⚠️</span><strong>Activity could not be loaded</strong></div>';
+                host.replaceChildren();
             }
             throw error;
         }
@@ -9297,7 +9298,10 @@ registerWaffleServiceWorker();
                     }
                     cleanup();
 
-                    if (response && response.result === 'success') {
+                    if (payload.action === 'get_notification_centre' && response && response.result == null &&
+                        !response.error && Array.isArray(response.items) && typeof response.generatedAt === 'string') {
+                        resolve({ ...response, result: 'success' });
+                    } else if (response && response.result === 'success') {
                         resolve(response);
                     } else {
                         reject(new Error(
