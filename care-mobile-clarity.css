@@ -284,18 +284,11 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-
   position: relative;
   min-height: 48px;
   margin: 2px 0 0 !important;
-  padding: 4px 22px 4px 8px !important;
+  padding: 4px 8px !important;
   font-size: 14px;
   line-height: 1.4;
   text-align: left;
   overflow: visible;
-}
-body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-profile-stay-dates.v11113-editable-stay-dates::after {
-  position: absolute;
-  top: 50%;
-  right: 5px;
-  margin: 0;
-  transform: translateY(-50%);
 }
 body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-profile-stay-dates > span {
   flex: 1 1 4.75em;
@@ -2391,10 +2384,6 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active .v11112-car
   body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-card-header .directory-profile-stay-dates {
     justify-content:flex-start; text-align:left;
   }
-  body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-card-header > .directory-profile-roster-badges {
-    grid-column:1 / -1; grid-row:3; order:2; position:static; display:flex; flex-wrap:wrap;
-    justify-content:flex-start; align-items:center; gap:8px; width:100%; margin:0;
-  }
   body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-card-header > [data-care-header-tools] {
     grid-column:2; grid-row:1; order:3; width:auto; justify-self:end;
   }
@@ -2653,10 +2642,6 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active .v11112-sou
     grid-column: 1 / -1;
     grid-row: 2;
   }
-  body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-card-header > .directory-profile-roster-badges {
-    grid-column: 1 / -1;
-    grid-row: 3;
-  }
   body[data-waffle-page="directory"] .directory-card.is-profile-active [data-care-header-tools] {
     grid-column: 3;
     grid-row: 1;
@@ -2680,10 +2665,6 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active .v11112-sou
 @media (max-width: 600px) {
   body[data-waffle-page="directory"] .directory-card.is-profile-active.is-profile-active .directory-card-header {
     grid-template-columns: 84px minmax(0, 1fr) !important;
-  }
-  body[data-waffle-page="directory"] .directory-card.is-profile-active.is-profile-active .directory-profile-roster-badges {
-    grid-column: 1 / -1;
-    grid-row: 3;
   }
 }
 @media (max-width: 360px) {
@@ -2786,13 +2767,6 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-
   justify-content: flex-start;
   margin: 0;
 }
-body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-card-header > .directory-profile-roster-badges {
-  grid-column: 2 / 4;
-  grid-row: 2;
-  min-width: 0;
-  margin: 0;
-  justify-self: start;
-}
 @media (min-width: 901px) {
   body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-card-header > [data-care-header-tools] {
     flex-direction: row;
@@ -2821,4 +2795,21 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-
     min-width: 76px;
     min-height: 76px;
   }
+}
+
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-profile-name-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  grid-column: 1 / -1;
+  gap: 4px 8px;
+  min-width: 0;
+}
+body[data-waffle-page="directory"] .directory-profile-name-line .directory-profile-roster-badges {
+  align-items: center;
+  margin: 0;
+}
+
+body[data-waffle-page="directory"] .directory-profile-name-line .directory-dog-name-btn {
+  width: auto;
 }

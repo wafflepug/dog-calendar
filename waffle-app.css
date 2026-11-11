@@ -2934,13 +2934,6 @@
             font-size: .9em;
         }
 
-        .directory-dog-name-btn::after,
-        .directory-primary-breed::after {
-            content: " ✎";
-            opacity: .38;
-            font-size: .8em;
-        }
-
         .guest-detail-edit-modal {
             display: none;
             position: fixed;

@@ -11947,6 +11947,7 @@ registerWaffleServiceWorker();
         const button = card?.querySelector('.directory-guest-tile-open');
         const header = card?.querySelector('.directory-card-header');
         if (!button || !header) return;
+        const nameLine = header.querySelector('.directory-profile-name-line') || header;
         let host = header.querySelector('[data-directory-profile-roster-badges]');
         if (!host) {
             host = document.createElement('div');
@@ -11954,7 +11955,7 @@ registerWaffleServiceWorker();
             host.dataset.directoryProfileRosterBadges = '';
             host.setAttribute('role', 'group');
             host.setAttribute('aria-label', 'Booking source and care warnings');
-            header.appendChild(host);
+            nameLine.appendChild(host);
         }
         button.querySelectorAll('.v1117-care-source-badge, [data-v1118-status-chip], [data-v1118-care-signals]').forEach(badge => {
             if (badge.parentElement === host) return;
@@ -18442,6 +18443,7 @@ registerWaffleServiceWorker();
 
                                             <div class="directory-card-identity">
                                                 <div class="directory-name-row">
+                                                  <div class="directory-profile-name-line">
                                                     <button
                                                         type="button"
                                                         class="directory-dog-name-btn"
@@ -18450,6 +18452,7 @@ registerWaffleServiceWorker();
                                                         title="Tap to edit Dog Name">
                                                         ${escapeDashboardHtml(dogName.trim())}
                                                     </button>
+                                                  </div>
                                                     ${dogNumber ? `<span class="directory-dog-id">${species === 'cat' ? 'Pet ID' : 'Dog ID'} ${escapeDashboardHtml(dogNumber)}</span>` : ''}
                                                     ${statusTag}
                                                 </div>
