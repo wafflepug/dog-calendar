@@ -275,7 +275,7 @@
 
   function fixSearchButton() {
     document.querySelectorAll('.v1118-global-search-button').forEach(button => {
-      button.querySelector('.v1118-search-button-label')?.remove();
+      if (!button.closest('#whSitterDesktopTools')) button.querySelector('.v1118-search-button-label')?.remove();
       button.classList.add('v11111-search-icon-only');
       button.setAttribute('aria-label', 'Search');
       button.title = 'Search';
