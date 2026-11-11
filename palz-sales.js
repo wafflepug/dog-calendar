@@ -13,7 +13,7 @@
   const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[char]);
   const recent = new Map();
   let dialog, opener, chosenId = '', month = today().slice(0, 7), mode = 'price';
-  let showing = 'due';
+  let showing = 'due', calendarMonth = '';
 
   function read() {
     const records = JSON.parse(localStorage.getItem(storageKey) || '{}');
@@ -49,29 +49,93 @@
       '<div class="palz-sales-body"><p class="palz-sales-local">Sales records are saved in this browser.</p>' +
       '<label class="palz-sales-month">Reporting month <input type="month" aria-label="Reporting month"></label>' +
       '<div data-sales-totals class="palz-sales-totals"></div>' +
-      '<div class="palz-sales-list-head"><h2>Stays</h2><button type="button" data-sales-filter>Show all priced stays</button></div>' +
+      '<div class="palz-sales-list-head"><h2>Stays</h2><button type="button" data-sales-filter>Sales history</button></div>' +
       '<div data-sales-list></div>' +
       '<form data-sales-form><h2>Manage a stay</h2><label>Confirmed stay<select name="stay"></select></label>' +
-      '<div data-sales-editor></div><p data-sales-status role="status"></p></form></div>';
+      '<details data-sales-calendar hidden><summary>Stay calendar</summary><div data-sales-calendar-content></div></details><div data-sales-editor></div><p data-sales-status role="status"></p></form></div>';
     document.body.append(dialog);
     dialog.querySelector('[data-sales-close]').onclick = () => dialog.close();
     dialog.addEventListener('close', () => opener?.focus());
     dialog.querySelector('input[type=month]').addEventListener('change', event => { month = event.target.value || today().slice(0, 7); render(); });
     dialog.querySelector('[data-sales-filter]').onclick = () => { showing = showing === 'due' ? 'all' : 'due'; render(); };
-    dialog.querySelector('[name=stay]').onchange = event => { chosenId = event.target.value; mode = 'price'; renderEditor(); };
+    dialog.querySelector('[name=stay]').onchange = event => {
+      chosenId = event.target.value;
+      calendarMonth = '';
+      mode = 'price';
+      renderEditor();
+    };
     dialog.addEventListener('click', event => {
+      const step = event.target.closest('[data-sales-calendar-step]');
+      if (step) {
+        const [year, currentMonth] = calendarMonth.split('-').map(Number);
+        calendarMonth = new Date(Date.UTC(year, currentMonth - 1 + Number(step.dataset.salesCalendarStep), 1)).toISOString().slice(0, 7);
+        renderStayCalendar(stays().get(chosenId) || read()[chosenId]);
+        const sameDirection = dialog.querySelector('[data-sales-calendar-step="' + step.dataset.salesCalendarStep + '"]');
+        (sameDirection.disabled ? dialog.querySelector('[data-sales-calendar-step]:enabled') : sameDirection)?.focus();
+        return;
+      }
       const action = event.target.closest('[data-sales-select], [data-sales-mode], [data-sales-reminder]');
       if (!action) return;
       if (action.hasAttribute('data-sales-reminder')) { void copyReminder(action.dataset.salesReminder); return; }
       if (action.dataset.salesSelect) {
+        if (chosenId !== action.dataset.salesSelect) calendarMonth = '';
         chosenId = action.dataset.salesSelect;
         dialog.querySelector('[name=stay]').value = chosenId;
       }
       mode = action.dataset.salesMode || 'payment';
       renderEditor();
-      dialog.querySelector('[data-sales-editor] input')?.focus();
+      if (action.hasAttribute('data-sales-show-calendar')) {
+        const calendar = dialog.querySelector('[data-sales-calendar]');
+        calendar.open = true;
+        calendar.querySelector('summary').focus();
+      } else {
+        dialog.querySelector('[data-sales-editor] input')?.focus();
+      }
     });
     dialog.querySelector('form').addEventListener('submit', save);
+  }
+
+  function renderHistory(entries, bookings) {
+    if (!entries.length) return '<p class="palz-sales-empty">No priced stays yet.</p>';
+    const rows = entries.map(([id, record]) => ({id, record, stay: bookings.get(id) || record}))
+      .sort((a, b) => b.stay.startDate.localeCompare(a.stay.startDate) || a.stay.dogName.localeCompare(b.stay.dogName));
+    return '<div class="palz-sales-table" role="region" aria-label="Sales history table" tabindex="0"><table>' +
+      '<thead><tr><th scope="col">Stay</th><th scope="col">Total</th><th scope="col">Received</th><th scope="col">Balance</th><th scope="col">Actions</th></tr></thead><tbody>' +
+      rows.map(({id, record, stay}) => {
+        const received = paid(record);
+        return '<tr><th scope="row">'+esc(stay.dogName)+'<small>'+esc(stayDates(stay))+'</small></th>' +
+          '<td>'+money(record.total)+'</td><td>'+money(received)+'</td><td>'+money(record.total - received)+'</td><td>' +
+          '<button type="button" data-sales-select="'+esc(id)+'" data-sales-mode="price" aria-label="Edit sale for '+esc(stay.dogName)+'">Edit</button> ' +
+          '<button type="button" data-sales-select="'+esc(id)+'" data-sales-show-calendar aria-label="View stay calendar for '+esc(stay.dogName)+'">Calendar</button></td></tr>';
+      }).join('')+'</tbody></table></div>';
+  }
+
+  function renderStayCalendar(stay) {
+    const host = dialog.querySelector('[data-sales-calendar]');
+    host.hidden = !stay;
+    if (!stay) { host.open = false; return; }
+    const first = stay.startDate.slice(0, 7), last = stay.endDate.slice(0, 7);
+    if (!calendarMonth || calendarMonth < first || calendarMonth > last) calendarMonth = first;
+    const [year, monthNumber] = calendarMonth.split('-').map(Number);
+    const date = new Date(Date.UTC(year, monthNumber - 1, 1));
+    const caption = new Intl.DateTimeFormat('en-AU', {month:'long', year:'numeric', timeZone:'UTC'}).format(date);
+    const leading = (date.getUTCDay() + 6) % 7;
+    const days = new Date(Date.UTC(year, monthNumber, 0)).getUTCDate();
+    const cells = Array.from({length: leading + days}, (_, index) => {
+      const day = index - leading + 1;
+      if (day < 1) return '<span aria-hidden="true"></span>';
+      const key = calendarMonth + '-' + String(day).padStart(2, '0');
+      const start = key === stay.startDate, end = key === stay.endDate;
+      const label = start && end ? 'Check-in and check-out' : start ? 'Check-in' : end ? 'Check-out' : '';
+      const inStay = key >= stay.startDate && key <= stay.endDate;
+      return '<time datetime="'+key+'"'+(inStay ? ' class="is-stay'+(label ? ' is-endpoint' : '')+'"' : '')+
+        (label ? ' aria-label="'+label+' '+dates.format(new Date(key))+'"' : '')+'>'+day+'</time>';
+    }).join('');
+    host.querySelector('[data-sales-calendar-content]').innerHTML =
+      '<div class="palz-sales-calendar-nav"><button type="button" data-sales-calendar-step="-1" aria-label="Previous stay month"'+(calendarMonth === first ? ' disabled' : '')+'>‹</button>' +
+      '<strong aria-live="polite">'+caption+'</strong><button type="button" data-sales-calendar-step="1" aria-label="Next stay month"'+(calendarMonth === last ? ' disabled' : '')+'>›</button></div>' +
+      '<div class="palz-sales-calendar-days" aria-label="'+caption+'">'+['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(day=>'<span class="palz-sales-weekday">'+day+'</span>').join('')+cells+'</div>' +
+      '<small>Check-in '+dates.format(new Date(stay.startDate))+' · Check-out '+dates.format(new Date(stay.endDate))+'</small>';
   }
 
   function render() {
@@ -85,16 +149,17 @@
     dialog.querySelector('[data-sales-totals]').innerHTML = [
       ['Confirmed sales', booked], ['Payments received', received], ['Outstanding · all stays', outstanding]
     ].map(([label, amount]) => '<div><span>'+label+'</span><strong>'+money(amount)+'</strong></div>').join('');
-    dialog.querySelector('[data-sales-filter]').textContent = showing === 'due' ? 'Show all priced stays' : 'Show balances due';
-    const list = entries.filter(([, record]) => showing === 'all' || record.total > paid(record))
+    dialog.querySelector('[data-sales-filter]').textContent = showing === 'due' ? 'Sales history' : 'Back to balances';
+    dialog.querySelector('.palz-sales-list-head h2').textContent = showing === 'due' ? 'Balances due' : 'Sales history';
+    const list = entries.filter(([, record]) => record.total > paid(record))
       .sort(([, a], [, b]) => a.dueDate.localeCompare(b.dueDate));
-    dialog.querySelector('[data-sales-list]').innerHTML = list.length ? list.map(([id, record]) => {
+    dialog.querySelector('[data-sales-list]').innerHTML = showing === 'all' ? renderHistory(entries, bookings) : list.length ? list.map(([id, record]) => {
       const stay = bookings.get(id) || record;
       const balance = record.total - paid(record);
       const status = !balance ? 'Paid' : record.channel === 'marketplace' ? 'Payout pending' : record.dueDate < today() ? 'Overdue' : paid(record) ? 'Part paid' : 'Payment due';
       return '<article class="palz-sales-row"><div><strong>'+esc(stay.dogName)+'</strong><small>'+esc(stayDates(stay))+'</small></div><div><strong>'+money(balance)+'</strong><small>'+status+'</small></div><div class="palz-sales-row-actions"><button type="button" data-sales-select="'+esc(id)+'" data-sales-mode="'+(balance ? 'payment' : 'price')+'">'+(balance ? record.channel === 'marketplace' ? 'Record payout' : 'Record payment' : 'View')+'</button>' +
         (balance && record.channel === 'direct' ? '<button type="button" data-sales-reminder="'+esc(id)+'">Copy reminder</button>' : '')+'</div></article>';
-    }).join('') : '<p class="palz-sales-empty">'+(showing === 'due' ? 'No outstanding balances.' : 'No priced stays yet.')+'</p>';
+    }).join('') : '<p class="palz-sales-empty">No outstanding balances.</p>';
     const choices = new Map([...entries.map(([id, record]) => [id, record]), ...bookings]);
     dialog.querySelector('[name=stay]').innerHTML = '<option value="">Choose a stay</option>' +
       [...choices].sort(([, a], [, b]) => b.startDate.localeCompare(a.startDate)).map(([id, stay]) =>
@@ -109,6 +174,7 @@
     const record = read()[chosenId];
     const stay = stays().get(chosenId) || record;
     dialog.querySelector('[data-sales-status]').textContent = '';
+    renderStayCalendar(stay);
     if (!stay) { host.innerHTML = ''; return; }
     const summary = record ? '<p><strong>'+money(record.total - paid(record))+' outstanding</strong> · '+money(paid(record))+' received</p>' : '';
     const history = record?.payments.length ? '<details><summary>Payment history</summary><ul>'+record.payments.map(item => '<li>'+money(item.cents)+' · '+esc(item.method)+' · '+esc(item.date)+'</li>').join('')+'</ul></details>' : '';
@@ -180,6 +246,8 @@
       recent.set(stay.stayId.toLowerCase(), {...stay, stayId: stay.stayId.toLowerCase()});
     }
     chosenId = String(stay?.stayId || '').toLowerCase();
+    calendarMonth = '';
+    dialog.querySelector('[data-sales-calendar]').open = false;
     mode = 'payment';
     try { render(); } catch (_) { status('Sales records could not be read in this browser.'); }
     if (!dialog.open) dialog.showModal();
