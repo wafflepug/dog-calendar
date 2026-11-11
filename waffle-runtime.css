@@ -2,8 +2,8 @@
    Build: 2026.08.27.04
    Historical base styles remain compatibility sources during Phase 3A, but pages no longer
    reference them individually. Preserve this import order until modules are folded in. */
-@import url("waffle-app.css?build=2026.08.27.04&rev=2026.11.11.11");
-@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.11.11.11");
+@import url("waffle-app.css?build=2026.08.27.04&rev=2026.11.11.12");
+@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.11.11.12");
 @import url("waffle-v10.8.2.css?build=2026.08.27.04");
 @import url("waffle-v10.8.3.css?build=2026.08.27.04");
 @import url("waffle-v10.8.5.css?build=2026.08.27.04");
@@ -11,12 +11,12 @@
 @import url("waffle-v10.8.7.css?build=2026.08.27.04");
 @import url("waffle-v10.8.8.css?build=2026.08.27.04");
 @import url("waffle-v10.8.9.css?build=2026.08.27.04");
-@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.11.11.11");
+@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.11.11.12");
 @import url("waffle-v11.0.3.css?build=2026.08.27.04");
 @import url("waffle-v11.0.5.css?build=2026.08.27.04");
-@import url("waffle-v11.1.94.css?build=2026.11.11.11");
-@import url("waffle-v11.1.95.css?build=2026.11.11.11");
-@import url("waffle-v11.1.96.css?build=2026.11.11.11&rev=2026.11.11.11");
+@import url("waffle-v11.1.94.css?build=2026.11.11.12");
+@import url("waffle-v11.1.95.css?build=2026.11.11.12");
+@import url("waffle-v11.1.96.css?build=2026.11.11.12&rev=2026.11.11.12");
 
 /* ============================================================
    MOBILE FIRST-PAINT STABILITY GATE
@@ -3716,3 +3716,19 @@ body:has(#v10QuickAddSheet:not([hidden])) :is(#v10QuickAddButton, #aw37launch, #
   font-weight: 800;
 }
 #wh75SettingsPanel #waffleNotificationSettingsPanel { margin-top: 12px; }
+
+#waffleNotificationModal .v101-notification-item {
+  background: var(--wh75-shell, #fff);
+  color: var(--wh75-text, #172033);
+}
+#waffleNotificationModal .v101-notification-item.is-unread {
+  background: var(--wh75-accent-soft, #f3e8ff);
+}
+#waffleNotificationModal .v101-notification-icon {
+  border-radius: 12px;
+  background: var(--wh75-shell-2, #f5f3ff);
+  color: var(--wh75-accent-ink, #5b21b6);
+}
+#waffleNotificationModal .v101-unread-dot {
+  background: var(--wh75-accent, #7c3aed);
+}

@@ -108,7 +108,7 @@ function getAuditLogResponse_(data) {
   };
 }
 
-function getNotificationCentreResponse_() {
+function getWaffleAiNotificationCentreResponse_() {
   var payload = buildNotificationCentrePayload_();
   if (payload && typeof payload === 'object') {
     return waffleAiPrivacySafeRecord_(payload);

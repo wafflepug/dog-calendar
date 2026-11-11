@@ -400,7 +400,7 @@ function waffleAiRunTool_(name, args) {
     }
 
     if (name === 'get_notifications') {
-      return getNotificationCentreResponse_();
+      return getWaffleAiNotificationCentreResponse_();
     }
 
     return {
