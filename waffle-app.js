@@ -1439,6 +1439,8 @@ function todayQueueItem(event, type, icon, title, meta, sort) {
     return { identity, href, action, actionLabel, actionPending, stayId, dogId, stayKey, type, icon, title, meta, sort, isMeet: type === 'meet' };
 }
 
+const todayBelongingsUploads = new Map();
+
 async function openTodayActionPhotos(button) {
     const stay = button.closest('.v10-agenda-row')?.querySelector('a[data-today-stay-id]');
     if (!stay) return;
@@ -1451,9 +1453,107 @@ async function openTodayActionPhotos(button) {
     const dialog = document.createElement('dialog');
     dialog.className = 'today-photos-dialog';
     dialog.setAttribute('aria-label', title + ' belongings');
-    dialog.innerHTML = '<form method="dialog"><h2></h2><button type="submit" autofocus>Close</button></form><div role="status">Loading belongings…</div>';
+    dialog.innerHTML = '<form method="dialog"><h2></h2><button type="submit" autofocus>Close</button></form><div data-today-belongings-content>Loading belongings…</div><div class="today-belongings-upload"><button type="button" data-today-add-photo disabled>Add belongings photo</button><input type="file" accept="image/*" hidden><p role="status"></p></div>';
     dialog.querySelector('h2').textContent = title + ' belongings';
-    const content = dialog.querySelector('[role="status"]');
+    const content = dialog.querySelector('[data-today-belongings-content]');
+    const uploadButton = dialog.querySelector('[data-today-add-photo]');
+    const fileInput = dialog.querySelector('input[type="file"]');
+    const uploadStatus = dialog.querySelector('[role="status"]');
+    const uploadKey = identity.dataset.directoryStayId;
+    let photos = [];
+    const renderPhotos = () => {
+        content.querySelector('[data-belongings-photo-list]')?.remove();
+        const list = document.createElement('div');
+        list.dataset.belongingsPhotoList = '';
+        for (const photo of photos) {
+            const source = v110PhotoUrl(photo);
+            if (!/^https:\/\//i.test(source)) continue;
+            const image = document.createElement('img');
+            image.src = source;
+            image.alt = photo.label || 'Belongings photo';
+            image.loading = 'lazy';
+            list.append(image);
+        }
+        if (!list.childElementCount) list.textContent = 'No belongings photos saved for this stay.';
+        content.append(list);
+    };
+    const updateUploadButton = () => {
+        const pending = todayBelongingsUploads.get(uploadKey);
+        uploadButton.disabled = !!pending?.busy;
+        dialog.querySelector('button[type=submit]').disabled = !!pending?.busy;
+        uploadButton.textContent = pending ? 'Check upload status' : 'Add belongings photo';
+    };
+    const savePhoto = async file => {
+        let pending = todayBelongingsUploads.get(uploadKey);
+        if (pending?.busy || (!pending && !file)) return;
+        if (!pending) {
+            pending = { token: '', busy: true };
+            todayBelongingsUploads.set(uploadKey, pending);
+        }
+        pending.busy = true;
+        updateUploadButton();
+        uploadStatus.textContent = file ? 'Uploading photo…' : 'Checking upload status…';
+        try {
+            if (!pending.token) {
+                const events = globalCalendar?.getEvents?.() || (typeof v110LatestCalendarEvents !== 'undefined' ? v110LatestCalendarEvents : []);
+                const matches = events.filter(event => todayQueueIdentity(event) === stay.dataset.todayIdentity);
+                const current = matches[0];
+                const props = current?.extendedProps;
+                if (matches.length !== 1 || props?.stayId !== uploadKey ||
+                    props.dogId !== identity.dataset.directoryDogId ||
+                    v110StayKeyForEvent(current) !== identity.dataset.directoryStayKey) {
+                    throw new Error('This stay changed. Reopen its belongings before adding a photo.');
+                }
+                const photoData = await compressBelongingsPhoto(file);
+                const token = makeBelongingsPhotoUploadToken();
+                await queryAppsScript({ action: 'begin_belongings_photo_upload', uploadToken: token });
+                await submitBelongingsPhotoViaForm({
+                    action: 'upload_belongings_photo_only',
+                    uploadToken: token,
+                    stayId: uploadKey,
+                    dogId: props.dogId,
+                    stayKey: identity.dataset.directoryStayKey,
+                    dogName: title,
+                    startDate: v10EventRawDates(current).start,
+                    endDate: v10EventRawDates(current).end,
+                    photoLabel: 'Belongings photo',
+                    photoData
+                });
+                pending.token = token;
+            }
+            const result = await waitForBelongingsPhotoUploadStatus(pending.token);
+            todayBelongingsUploads.delete(uploadKey);
+            window.WAFFLE_CARE_BELONGINGS_READS.invalidate(identity);
+            if (result.photo) {
+                photos = [...photos.filter(photo => !result.photo.id || photo.id !== result.photo.id), result.photo];
+            } else {
+                const refreshed = await window.WAFFLE_CARE_BELONGINGS_READS.read(identity, { force: true });
+                photos = refreshed?.data?.record?.photos || photos;
+            }
+            renderPhotos();
+            uploadStatus.textContent = 'Photo saved.';
+        } catch (error) {
+            let failed = !pending.token;
+            if (pending.token) {
+                const status = await queryAppsScript({ action: 'get_belongings_photo_upload_status', uploadToken: pending.token }, { maxAttempts: 1, timeoutMs: 6000, dedupe: false }).catch(() => null);
+                failed = status?.uploadStatus?.state === 'error';
+            }
+            if (failed) todayBelongingsUploads.delete(uploadKey);
+            uploadStatus.textContent = failed ? error.message : 'Upload confirmation is pending. Check its status before trying another photo.';
+        } finally {
+            pending.busy = false;
+            fileInput.value = '';
+            updateUploadButton();
+        }
+    };
+    dialog.addEventListener('cancel', event => {
+        if (todayBelongingsUploads.get(uploadKey)?.busy) event.preventDefault();
+    });
+    uploadButton.addEventListener('click', () => {
+        if (todayBelongingsUploads.has(uploadKey)) void savePhoto();
+        else fileInput.click();
+    });
+    fileInput.addEventListener('change', () => void savePhoto(fileInput.files[0]));
     dialog.addEventListener('close', () => {
         dialog.remove();
         if (button.isConnected) button.focus();
@@ -1481,21 +1581,9 @@ async function openTodayActionPhotos(button) {
             }
             content.querySelector('p').replaceWith(list);
         }
-        const photos = Array.isArray(record.photos) ? record.photos : [];
-        for (const photo of photos) {
-            const source = v110PhotoUrl(photo);
-            if (!/^https:\/\//i.test(source)) continue;
-            const image = document.createElement('img');
-            image.src = source;
-            image.alt = photo.label || 'Belongings photo';
-            image.loading = 'lazy';
-            content.append(image);
-        }
-        if (!content.querySelector('img')) {
-            const empty = document.createElement('p');
-            empty.textContent = 'No belongings photos saved for this stay.';
-            content.append(empty);
-        }
+        photos = Array.isArray(record.photos) ? record.photos : [];
+        renderPhotos();
+        updateUploadButton();
     } catch (_) {
         if (dialog.open) content.textContent = 'Belongings could not be loaded. Close this window and try again.';
     }
@@ -15055,6 +15143,8 @@ registerWaffleServiceWorker();
             ).replace(/[^A-Za-z0-9_-]/g, '');
 
             const frameName = 'wafflePhotoUploadFrame_' + uploadToken;
+            const appendOnly = payload.action === 'upload_belongings_photo_only';
+            const action = appendOnly ? payload.action : 'upload_belongings_photo';
 
             const iframe = document.createElement('iframe');
             iframe.name = frameName;
@@ -15071,7 +15161,7 @@ registerWaffleServiceWorker();
             form.action =
                 APPS_SCRIPT_WEBAPP_URL +
                 urlSeparator +
-                'action=upload_belongings_photo' +
+                'action=' + action +
                 '&uploadToken=' + encodeURIComponent(uploadToken);
 
             form.target = frameName;
@@ -15095,14 +15185,19 @@ registerWaffleServiceWorker();
             };
 
             // Send separate form fields rather than one very large JSON field.
-            addField('action', 'upload_belongings_photo');
+            addField('action', action);
             addField('uploadToken', uploadToken);
             addField('stayKey', payload.stayKey || '');
             addField('dogName', payload.dogName || '');
             addField('startDate', payload.startDate || '');
             addField('endDate', payload.endDate || '');
             addField('photoLabel', payload.photoLabel || '');
-            addField('itemsJson', JSON.stringify(payload.items || {}), true);
+            if (appendOnly) {
+                addField('stayId', payload.stayId);
+                addField('dogId', payload.dogId);
+            } else {
+                addField('itemsJson', JSON.stringify(payload.items || {}), true);
+            }
             addField('photoData', payload.photoData || '', true);
 
             document.body.appendChild(iframe);
