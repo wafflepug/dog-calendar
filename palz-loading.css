@@ -7,7 +7,7 @@ html[data-palz-navigating="true"] body > #palzLoadingScreen { display:grid; anim
 .palz-loading-content { display:grid; justify-items:center; gap:24px; padding:24px; }
 .palz-loading-logo { display:flex; align-items:center; width:min(240px,70vw); height:64px; }
 .palz-loading-word { flex:1 1 50%; height:64px; background:var(--palz-load-accent,#7c3aed); mask:url('assets/palz-word-mask.png') right center / contain no-repeat; -webkit-mask:url('assets/palz-word-mask.png') right center / contain no-repeat; }
-.palz-loading-stay { margin-left:-6px; background:var(--palz-load-ink,#111638); mask-image:url('assets/stay-word-mask.png'); -webkit-mask-image:url('assets/stay-word-mask.png'); mask-position:left center; -webkit-mask-position:left center; }
+.palz-loading-stay { margin-left:-6px; background:var(--palz-load-ink,#111638); mask-image:url('assets/stay-word-mask.png?v=2'); -webkit-mask-image:url('assets/stay-word-mask.png?v=2'); mask-position:left center; -webkit-mask-position:left center; }
 .palz-loading-progress { width:96px; height:4px; border-radius:8px; overflow:hidden; background:color-mix(in srgb,var(--palz-load-accent,#7c3aed) 15%,transparent); }
 .palz-loading-progress::after { content:''; display:block; width:38%; height:100%; border-radius:inherit; background:var(--palz-load-accent,#7c3aed); animation:palzLoadingSlide 1.2s ease-in-out infinite; }
 .palz-loading-label { margin:0; font:500 13px/1.4 system-ui,sans-serif; color:var(--palz-load-muted,#64748b); }
