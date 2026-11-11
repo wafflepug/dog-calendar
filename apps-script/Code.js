@@ -113,6 +113,8 @@ function doPost(e) {
 
     earlyUploadToken = String(params.uploadToken || "").trim();
     earlyAction = String(params.action || "").trim();
+    var appendBelongingsPhoto = earlyAction === "upload_belongings_photo_only";
+    if (appendBelongingsPhoto) earlyAction = "upload_belongings_photo";
 
     // Put action/uploadToken in the URL query string as well as the POST form.
     // This lets us report a useful status even if a large form body fails to
@@ -173,6 +175,14 @@ function doPost(e) {
         photoData: String(params.photoData || ""),
         items: items
       };
+      if (appendBelongingsPhoto) {
+        data.stayId = String(params.stayId || "");
+        data.dogId = String(params.dogId || "");
+        if (!validStayIdV11225_(data.stayId) || !validStayIdV11225_(data.dogId)) {
+          throw new Error("A verified Stay ID and Pet ID are required to add a belongings photo.");
+        }
+        delete data.items;
+      }
     } else {
       // Backward compatibility for existing JSON/form requests.
       var rawPostBody = "";
