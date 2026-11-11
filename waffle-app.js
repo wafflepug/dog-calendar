@@ -2233,14 +2233,17 @@ function ensureV10QuickAdd() {
             <div class="v10-quick-add-handle"></div>
             <div class="v10-quick-add-heading">
                 <div>
-                    <span class="v10-eyebrow">Quick action</span>
-                    <h3 id="v10QuickAddTitle">What would you like to add?</h3>
+                    <div class="palz-loading-logo v10-quick-add-brand" role="img" aria-label="Palz Stay">
+                        <span class="palz-loading-word" aria-hidden="true"></span>
+                        <span class="palz-loading-word palz-loading-stay" aria-hidden="true"></span>
+                    </div>
+                    <h3 id="v10QuickAddTitle">Quick actions</h3>
                 </div>
                 <button type="button" data-v10-quick-close aria-label="Close">×</button>
             </div>
             <div class="v10-quick-actions">
                 <button type="button" data-v10-quick-action="boarding"><span>🏡</span><strong>Boarding</strong><small>Confirmed booking form</small></button>
-                <button type="button" data-v10-quick-action="visit-plan"><span>🗓️</span><strong>Multiple visits</strong><small>Several dogs or dates</small></button>
+                <button type="button" data-v10-quick-action="visit-plan"><span>🗓️</span><strong>Multiple visits</strong><small>Several pets or dates</small></button>
                 <button type="button" data-v10-quick-action="potential"><span>❓</span><strong>Potential</strong><small>Pending stay request</small></button>
                 <button type="button" data-v10-quick-action="meet"><span>🤝</span><strong>Meet & Greet</strong><small>Schedule a visit</small></button>
                 <button type="button" data-v10-quick-action="reminder"><span>📌</span><strong>Reminder</strong><small>Shared team note</small></button>
