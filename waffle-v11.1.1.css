@@ -6,7 +6,7 @@
    scrolling calendar container. The body top padding replaces its normal
    layout space so content never sits underneath it. */
 @media (min-width: 769px) {
-    body[data-waffle-page="calendar"] {
+    body[data-waffle-page="calendar"]:not(.wh-sitter-desktop-sidebar-ready) {
         padding-top: 76px !important;
     }
 
