@@ -235,7 +235,7 @@
     if (drawerIcon && drawerIcon.alt !== businessName) drawerIcon.alt = businessName;
 
     const sidebar = $('.wh-sitter-sidebar-brand small');
-    if (sidebar && sidebar.textContent !== businessName + ' workspace') sidebar.textContent = businessName + ' workspace';
+    if (sidebar && sidebar.textContent !== businessName) sidebar.textContent = businessName;
     const todayTitle = $('#v10OperationsTitle');
     if (todayTitle && todayTitle.textContent !== 'Today at ' + businessName) todayTitle.textContent = 'Today at ' + businessName;
     for (const branding of document.querySelectorAll('#whPalzStayMobileShellBrand, #whPalzStayMobileBrand')) {
