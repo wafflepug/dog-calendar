@@ -318,17 +318,6 @@
     return uniqueArrivals(arrivals).length;
   }
 
-  function formatStayDate(value) {
-    try {
-      if (typeof formatStayDateShort === 'function') return formatStayDateShort(value);
-    } catch (_) {}
-
-    const match = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
-    if (!match) return String(value || '');
-    const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
-    return date.toLocaleDateString('en-AU', { day: 'numeric', month: 'short' });
-  }
-
   function formatArrivalStartRange(events) {
     const validDateKey = value => {
       const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
@@ -353,175 +342,38 @@
     return first === last ? `Arrival date ${formatFull(first)}` : `Arrival dates ${formatFull(first)}–${formatFull(last)}`;
   }
 
-  function futureCardMarkup(event) {
+  function createFutureCard(event) {
     const props = event?.extendedProps || {};
     const dates = eventDates(event);
-    const stayKey = stayKeyFor(event);
-    const dogName = eventDogName(event);
-    const breed = String(props.breed || 'Unknown').trim() || 'Unknown';
-    const owner = String(props.ownerName || props.owner || 'N/A').trim() || 'N/A';
-    const rawDogNumber = String(props.dogNumber || props.dogNo || '').trim();
-    const dogNumber = /^#?\d{1,5}$/.test(rawDogNumber) ? '#' + rawDogNumber.replace(/^#/, '').padStart(5, '0') : '';
+    const breed = String(props.breed || '').trim();
     const dogId = String(props.dogId || '').trim();
-    const stayId = String(props.stayId || '').trim();
-    const bookingId = String(props.bookingId || props.bookingID || props.sourceBookingId || '').trim();
-    const eventToken = eventTokenFor(event);
-    const eventId = String(event?.id || props.eventId || '').trim();
-    const phone = String(props.phone || 'N/A').trim() || 'N/A';
-    const notes = String(props.notes || 'None').trim() || 'None';
-    const dateLabel = dates.start === dates.end
-      ? `Same-day care · ${formatStayDate(dates.start)}`
-      : `${formatStayDate(dates.start)} – ${formatStayDate(dates.end)}`;
-    const rosterContext = `${breed} ${String.fromCharCode(183)} ${dateLabel}`;
-    const rosterStatus = 'Arriving';
-    const identifier = dogNumber ? `Dog Number ${dogNumber.replace(/^#/, "")}. ` : dogId ? `ID ${dogId}. ` : stayId ? `ID ${stayId}. ` : '';
-    const ariaLabel = `Open ${dogName} care profile. ${identifier}${owner !== 'N/A' ? `${owner}. ` : ''}${rosterContext}. ${rosterStatus}.`;
-
-    return `
-      <div
-        class="directory-card directory-card-fused belongings-pet-card ${SYNTHETIC_CLASS} v11195-future-stay"
-        data-directory-stay-key="${escapeHtml(stayKey)}"
-        data-pet-species="${props.species === 'cat' ? 'cat' : 'dog'}" data-directory-dog-name="${escapeHtml(dogName)}"
-        data-directory-start-date="${escapeHtml(dates.start)}"
-        data-directory-end-date="${escapeHtml(dates.end)}"
-        data-directory-source-row="${escapeHtml(props.sourceRow || '')}"
-        data-directory-dog-id="${escapeHtml(dogId)}"
-        data-directory-stay-id="${escapeHtml(stayId)}"
-        data-directory-booking-id="${escapeHtml(bookingId)}"
-        data-v11196-event-token="${escapeHtml(eventToken)}"
-        data-v11196-source-event-id="${escapeHtml(eventId)}"
-        data-directory-dog-number="${escapeHtml(dogNumber)}"
-        data-v1088-breed="${escapeHtml(breed)}"
-        data-v1088-owner-name="${escapeHtml(owner)}"
-        data-v1088-phone="${escapeHtml(phone)}"
-        data-stay-key="${escapeHtml(stayKey)}"
-        data-dog-name="${escapeHtml(dogName)}"
-        data-start-date="${escapeHtml(dates.start)}"
-        data-end-date="${escapeHtml(dates.end)}"
-        data-v1082-stay-kind="future"
-        data-v11196-synthetic-future="true">
-
-        <button
-          type="button"
-          class="directory-guest-tile-open directory-roster-row"
-          data-open-directory-profile
-          aria-label="${escapeHtml(ariaLabel)}">
-          <span
-            class="directory-guest-tile-photo"
-            data-directory-tile-photo="${escapeHtml(stayKey)}"
-            aria-hidden="true"></span>
-          <span class="directory-roster-avatar" aria-hidden="true"></span>
-          <span class="directory-roster-copy">
-            <span class="directory-guest-tile-name">${escapeHtml(dogName)}</span>
-            ${dogNumber ? `<span class="directory-dog-id">Dog ID ${escapeHtml(dogNumber)}</span>` : ''}
-            <span class="directory-roster-context">${escapeHtml(rosterContext)}</span>
-            ${owner !== 'N/A' && !/^unknown$/i.test(owner) ? `<span class="directory-roster-owner">Owner: ${escapeHtml(owner)}</span>` : ''}
-          </span>
-          <span class="directory-roster-status">${rosterStatus}</span>
-        </button>
-
-        <div class="directory-profile-content">
-          <div class="directory-card-header">
-            <div class="directory-photo-shell" data-directory-photo="${escapeHtml(stayKey)}">
-              <div class="directory-photo-media">
-                <div class="directory-photo-placeholder" aria-label="No pet profile photo"></div>
-              </div>
-              <button
-                type="button"
-                class="directory-photo-edit-button"
-                data-upload-dog-photo
-                title="Add or change dog profile photo"
-                aria-label="Add or change ${escapeHtml(dogName)} profile photo">✎</button>
-            </div>
-
-            <div class="directory-card-identity">
-              <div class="directory-name-row">
-                <span class="directory-dog-name-btn">${escapeHtml(dogName)}</span>
-                <span class="directory-status-tag tag-upcoming">Upcoming</span>
-              </div>
-              <span class="directory-primary-breed">${escapeHtml(breed)}</span>
-              <div class="directory-stay-dates">📅 ${escapeHtml(dateLabel)}</div>
-            </div>
-          </div>
-
-          <nav class="directory-main-profile-tabs" role="tablist" aria-label="${escapeHtml(dogName)} future stay profile sections">
-            <button type="button" class="directory-main-profile-tab is-active" role="tab" aria-selected="true" data-directory-main-tab="profile">
-              <span aria-hidden="true">🐶</span><span>Profile</span>
-            </button>
-            <button type="button" class="directory-main-profile-tab" role="tab" aria-selected="false" data-directory-main-tab="belongings">
-              <span aria-hidden="true">🧳</span><span>Belongings</span>
-            </button>
-          </nav>
-
-          <section class="directory-main-profile-panel is-active" role="tabpanel" data-directory-main-panel="profile">
-            <div class="directory-care-strip" data-directory-care="${escapeHtml(stayKey)}">
-              <span class="directory-care-unset">🛡️ No saved care alerts</span>
-            </div>
-
-            <div class="directory-intake-strip" data-directory-intake="${escapeHtml(stayKey)}">
-              <div class="directory-intake-state">
-                <span class="directory-intake-dot is-not-sent"></span>
-                <span>Intake not sent</span>
-              </div>
-            </div>
-
-            <div class="directory-legacy-strip" data-directory-legacy="${escapeHtml(stayKey)}">
-              <div class="directory-legacy-state"><span>📚 Legacy Intake not uploaded</span></div>
-            </div>
-
-            <div class="directory-attributes-grid directory-core-attributes">
-              <div class="directory-attribute">
-                <span class="directory-field-label">Owner</span>
-                <span class="directory-field-value">${escapeHtml(owner)}</span>
-              </div>
-              <div class="directory-attribute">
-                <span class="directory-field-label">Contact</span>
-                <span class="directory-field-value">${escapeHtml(phone)}</span>
-              </div>
-              <div class="directory-attribute directory-attribute-wide">
-                <span class="directory-field-label">Notes</span>
-                <span class="directory-field-value">${escapeHtml(notes)}</span>
-              </div>
-            </div>
-
-            <section class="directory-profile-section directory-profile-intake-section" data-directory-detail="profile" data-detail-loaded="false">
-              <div class="directory-profile-section-heading">
-                <div>
-                  <span class="directory-profile-section-kicker">Future stay profile</span>
-                  <h4>📋 Profile &amp; Care</h4>
-                </div>
-                <div class="directory-profile-section-tools">
-                  <span class="intake-profile-source" data-intake-profile-summary>Open profile to load care details</span>
-                </div>
-              </div>
-              <div class="directory-fused-details-body" data-directory-intake-attributes>
-                <div class="intake-profile-empty">Open this profile to load saved intake attributes.</div>
-              </div>
-            </section>
-          </section>
-
-          <section class="directory-main-profile-panel" role="tabpanel" data-directory-main-panel="belongings" hidden>
-            <section class="directory-profile-section directory-belongings-only-section" data-directory-detail="belongings" data-detail-loaded="false">
-              <div class="directory-profile-section-heading">
-                <div>
-                  <span class="directory-profile-section-kicker">Future stay belongings</span>
-                  <h4>🧳 Items &amp; Photos</h4>
-                </div>
-              </div>
-              <div class="directory-fused-details-body" data-directory-belongings>
-                <div class="intake-profile-empty">Open Belongings to prepare the stay record.</div>
-              </div>
-            </section>
-          </section>
-        </div>
-      </div>`;
-  }
-
-  function createFutureCard(event) {
+    const rawDogNumber = String(props.dogNumber || props.dogNo || '').trim();
     const template = document.createElement('template');
-    template.innerHTML = futureCardMarkup(event).trim();
+    template.innerHTML = renderDirectoryStayCardMarkup({
+      directoryStayKey: stayKeyFor(event),
+      dogName: eventDogName(event),
+      species: props.species === 'cat' ? 'cat' : 'dog',
+      breed,
+      breedTxt: breed || 'Unknown',
+      ownerName: String(props.ownerName || props.owner || '').trim(),
+      phone: String(props.phone || '').trim(),
+      notes: String(props.notes || '').trim(),
+      dogId,
+      dogNumber: dogId && /^#?\d{1,5}$/.test(rawDogNumber)
+        ? '#' + rawDogNumber.replace(/^#/, '').padStart(5, '0') : '',
+      stayId: String(props.stayId || '').trim(),
+      startParsed: dates.start,
+      endParsed: dates.end,
+      sourceRow: props.sourceRow || ''
+    }).trim();
     const card = template.content.firstElementChild;
     if (!card) return null;
+    card.classList.add(SYNTHETIC_CLASS, 'v11195-future-stay');
+    card.dataset.v1082StayKind = 'future';
+    card.dataset.v11196SyntheticFuture = 'true';
+    card.dataset.directoryBookingId = String(props.bookingId || props.bookingID || props.sourceBookingId || '').trim();
+    card.dataset.v11196EventToken = eventTokenFor(event);
+    card.dataset.v11196SourceEventId = String(event?.id || props.eventId || '').trim();
 
     try {
       if (typeof v108EnhanceCard === 'function') v108EnhanceCard(card);

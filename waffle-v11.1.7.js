@@ -275,7 +275,7 @@
         data-v1117-care-source-badge="${escapeHtml(source.value)}"
         title="Requested via ${escapeHtml(source.label)}"
         aria-label="Requested via ${escapeHtml(source.label)}">
-        ${source.image ? `<img src="${escapeHtml(source.image)}" alt="">` : ''}
+        ${isOther ? '<span data-palz-source-paw aria-hidden="true"></span>' : source.image ? `<img src="${escapeHtml(source.image)}" alt="">` : ''}
         <span class="v1117-care-source-label">${escapeHtml(source.label)}</span>
       </span>`;
   }

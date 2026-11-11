@@ -243,3 +243,7 @@ body[data-waffle-page="calendar"] .v108-meet-day.busy > div span {
 body[data-waffle-page="calendar"] .v108-meet-day.busy strong {
   color: #fef08a !important;
 }
+
+.directory-dashboard-fused.is-profile-mode :is(#v11196FutureRangeControl, .v11196-month-heading) {
+  display: none !important;
+}

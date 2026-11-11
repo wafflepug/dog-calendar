@@ -752,30 +752,11 @@ function getWaffleNotificationUnreadCount() {
 
 
 function updateWaffleNotificationUnreadBadge() {
-    const badge =
-        document.querySelector(
-            '[data-notification-unread-badge]'
-        );
-
-    if (!badge) return;
-
-    const count =
-        getWaffleNotificationUnreadCount();
-
-    badge.hidden =
-        count < 1;
-
-    badge.textContent =
-        count > 9
-            ? '9+'
-            : String(count);
-
-    badge.setAttribute(
-        'aria-label',
-        count
-            ? `${count} unread notification${count === 1 ? '' : 's'}`
-            : 'No unread notifications'
-    );
+    const count = getWaffleNotificationUnreadCount();
+    document.querySelectorAll('[data-notification-unread-badge]').forEach(badge => {
+        badge.hidden = count === 0;
+        badge.parentElement?.setAttribute('aria-label', count ? 'Notifications, unread items' : 'Notifications');
+    });
 }
 
 
@@ -887,6 +868,52 @@ function formatNotificationCentreTime(
 }
 
 
+let notificationAvatarDirectories = [];
+let notificationAvatarRead;
+
+function notificationPetPortrait(item) {
+    const name = String(item.dogName || '').trim().toLowerCase();
+    const dogId = String(item.dogId || '').toLowerCase();
+    const stayId = String(item.stayId || '').toLowerCase();
+    const candidates = notificationAvatarDirectories.flatMap(({bookings, photos}) => bookings.filter(booking => {
+        if (dogId) return String(booking.dogId || '').toLowerCase() === dogId;
+        if (stayId) return String(booking.stayId || '').toLowerCase() === stayId;
+        if (item.stayKey) return booking.stayKey === item.stayKey;
+        return name && String(booking.dogName || '').trim().toLowerCase() === name;
+    }).map(booking => ({ booking, photo: photos.get(booking.stayKey) })));
+    const identities = new Set(candidates.map(({booking}) => String(booking.dogId || booking.stayId || booking.stayKey).toLowerCase()));
+    const matches = identities.size === 1 ? candidates : [];
+    const photo = matches.find(({photo}) => photo?.previewUrl || photo?.url)?.photo;
+    const url = v10HomeThumbnailUrl(photo?.previewUrl || photo?.url || '');
+    const species = (item.species || matches[0]?.booking.species) === 'cat' ? 'cat' : 'dog';
+    return `<span class="v101-notification-icon wh-home-portrait" data-pet-species="${species}" aria-hidden="true">${url
+        ? `<img src="${escapeDashboardHtml(url)}" alt="" loading="lazy" decoding="async">`
+        : ''}</span>`;
+}
+
+function loadNotificationAvatars() {
+    if (notificationAvatarRead || !waffleNotificationCentreItems.some(item => item.dogName || item.dogId || item.stayId || item.stayKey)) return;
+    const reads = [
+        [{ action: 'get_guest_directory' }, 'directory:summary'],
+        [{ action: 'get_past_guest_directory', limit: 250 }, 'directory:past-stays']
+    ];
+    notificationAvatarRead = Promise.all(reads.map(async ([payload, cacheKey]) => {
+        const {data} = await queryAppsScriptSWR(payload, {cacheKey, maxAttempts: 1, timeoutMs: 12000});
+        if (!Array.isArray(data?.bookings)) throw new Error('Guest photos unavailable');
+        return { bookings: data.bookings, photos: new Map((data.summaries || []).map(record => [record.stayKey, record.dogPhoto])) };
+    })).then(directories => {
+        notificationAvatarDirectories = directories;
+        const items = new Map(waffleNotificationCentreItems.map(item => [String(item.id), item]));
+        document.querySelectorAll('[data-notification-feed] [data-notification-item-id]').forEach(row => {
+            const item = items.get(row.dataset.notificationItemId);
+            const portrait = row.querySelector('.v101-notification-icon');
+            if (item && portrait) portrait.outerHTML = notificationPetPortrait(item);
+        });
+    }).catch(() => {
+        notificationAvatarRead = null;
+    });
+}
+
 function renderWaffleNotificationCentre() {
     const host =
         document.querySelector(
@@ -933,9 +960,7 @@ function renderWaffleNotificationCentre() {
                     class="v101-notification-item ${unread ? 'is-unread' : ''} ${item.priority === 'urgent' ? 'is-urgent' : ''}"
                     data-notification-item-id="${escapeDashboardHtml(item.id || '')}"
                     data-notification-item-link="${escapeDashboardHtml(item.link || '')}">
-                    <span class="v101-notification-icon" aria-hidden="true">
-                        ${window.PALZ_ICONS?.svg(item.kind === 'attention' ? 'tasks' : 'bell') || ''}
-                    </span>
+                    ${notificationPetPortrait(item)}
                     <span class="v101-notification-copy">
                         <span class="v101-notification-title-row">
                             <strong>${escapeDashboardHtml(item.title || 'Palz Stay update')}</strong>
@@ -1130,7 +1155,8 @@ function openWaffleNotificationCentre(tabName = 'inbox', opener = null) {
     trigger?.setAttribute('aria-controls', modal.id);
     modal.hidden = false;
     positionWaffleNotificationCentre(modal);
-    loadWaffleNotificationCentre().catch(() => {});
+    loadNotificationAvatars();
+    loadWaffleNotificationCentre().then(loadNotificationAvatars).catch(() => {});
     modal.querySelector('[data-notification-filter][aria-pressed="true"]')?.focus({ preventScroll: true });
 }
 
@@ -1892,8 +1918,9 @@ function renderV10OperationsHome(events) {
         todayStatus.textContent =
             attentionCount
                 ? `${attentionCount} item${attentionCount === 1 ? '' : 's'} today`
-                : 'All clear';
+                : '';
 
+        todayStatus.hidden = attentionCount === 0;
         todayStatus.dataset.mode =
             attentionCount
                 ? 'active'
@@ -1909,7 +1936,7 @@ function renderV10OperationsHome(events) {
         wireTodayQueueActions();
         agendaHost.innerHTML = queue.length
             ? queue.map(item => item.isMeet ? '<button type="button" class="v10-agenda-item type-meet" data-today-open-meet="' + escapeDashboardHtml(item.identity) + '" aria-label="Open ' + escapeDashboardHtml(item.title) + ' Meet & Greet in calendar"><span class="v10-agenda-icon" aria-hidden="true">' + item.icon + '</span><span class="v10-agenda-copy"><strong>' + escapeDashboardHtml(item.title) + '</strong><span>' + escapeDashboardHtml(item.meta) + '</span></span><span class="v10-agenda-action">Open event <span aria-hidden="true">↗</span></span></button>' : '<div class="v10-agenda-row" data-today-photo-stay-key="' + escapeDashboardHtml(item.stayKey) + '"><div class="v10-agenda-row-main"><a class="v10-agenda-item type-' + escapeDashboardHtml(item.type) + '" data-today-identity="' + escapeDashboardHtml(item.identity) + '" data-today-stay-id="' + escapeDashboardHtml(item.stayId) + '" data-today-dog-id="' + escapeDashboardHtml(item.dogId) + '" href="' + escapeDashboardHtml(item.href) + '" aria-label="Open ' + escapeDashboardHtml(item.title) + ' care profile, ' + escapeDashboardHtml(item.meta) + '"><span class="v10-agenda-icon" aria-hidden="true">' + item.icon + '</span><span class="v10-agenda-copy"><strong>' + escapeDashboardHtml(item.title) + '</strong><span data-today-meta>' + escapeDashboardHtml(item.meta) + '</span></span><span class="v10-agenda-action" aria-hidden="true">↗</span></a>' + (item.action ? (item.action === 'checkout' ? '<div class="v10-agenda-checkout-controls">' : '') + '<button type="button" class="v10-agenda-operation" data-today-action="' + item.action + '" data-today-identity="' + escapeDashboardHtml(item.identity) + '" data-today-stay-id="' + escapeDashboardHtml(item.stayId) + '" data-today-dog-id="' + escapeDashboardHtml(item.dogId) + '" data-today-stay-key="' + escapeDashboardHtml(item.stayKey) + '" aria-label="' + item.actionLabel + ' ' + escapeDashboardHtml(item.title) + '"' + (item.actionPending ? ' disabled aria-busy="true"' : '') + '>' + item.actionLabel + '</button>' + (item.action === 'checkout' ? '<button type="button" data-today-view-photos aria-haspopup="dialog" aria-label="View belongings for ' + escapeDashboardHtml(item.title) + '">View belongings</button></div>' : '') : '') + '</div>' + (item.action ? '<span class="v10-agenda-action-status" data-today-action-status role="status" hidden></span>' : '') + '</div>').join('')
-            : '<div class="v10-empty v10-all-clear" role="status"><span aria-hidden="true">✓</span><div><strong>No arrivals, departures or Meet & Greets today</strong><small>The Today queue has no scheduled actions.</small></div></div>';
+            : '<div class="v10-empty v10-all-clear" role="status"><span aria-hidden="true">✓</span><div><strong>You’re all caught up</strong><small>There are no scheduled actions for today.</small></div></div>';
         const actionFeedback = document.createElement('span');
         actionFeedback.id = 'v10TodayActionFeedback';
         actionFeedback.className = 'v10-agenda-action-feedback';
@@ -3064,7 +3091,7 @@ function ensureWaffleNotificationButton() {
         <span
             class="v101-notification-unread-badge"
             data-notification-unread-badge
-            hidden>0</span>
+            aria-hidden="true" hidden></span>
     `;
 
     button.addEventListener(
@@ -3322,6 +3349,9 @@ function ensureWaffleNotificationModal() {
         }
     }, true);
     window.addEventListener('resize', () => positionWaffleNotificationCentre(modal));
+    modal.addEventListener('error', event => {
+        if (event.target.matches?.('.v101-notification-icon img')) event.target.remove();
+    }, true);
 
     modal.querySelectorAll('[data-notification-filter]').forEach(button => {
         button.addEventListener('click', () => {
@@ -18230,166 +18260,22 @@ registerWaffleServiceWorker();
         });
     }
 
-    function parseCSVToEvents(csvText, options = {}) {
-        const preservedProfileState = options.preserveDirectoryProfileState !== false && WAFFLE_PAGE === 'directory' && !directoryConsolidatedLoadInProgress
-            ? captureDirectoryProfileUiState()
-            : null;
-        const previouslyActiveCard = preservedProfileState
-            ? document.querySelector('.directory-card.is-profile-active')
-            : null;
-        if (!csvText) return [];
-        const parsedCsv = window.WaffleCsv?.parse(csvText);
-        if (!parsedCsv?.ok || !parsedCsv.records.length) return [];
-        const csvRows = parsedCsv.records; const events = [];
-        const headerColumns = csvRows[0].cells
-            .map(value => String(value || '').trim().toLowerCase());
-        const dogIdColumn = headerColumns.indexOf('dog id');
-        const stayIdColumn = headerColumns.indexOf('stay id');
-        const dogNumberColumn = headerColumns.indexOf('dog number');
-        const speciesColumn = headerColumns.indexOf('species');
-        const localTodayStr = getLocalTodayDateString(); const today = new Date(localTodayStr + 'T00:00:00');
-        const sevenDaysFromNow = new Date(today.getTime()); sevenDaysFromNow.setDate(today.getDate() + 7); sevenDaysFromNow.setHours(23,59,59,999);
+    function renderDirectoryStayCardMarkup({directoryStayKey, dogName, breed, breedTxt, ownerName, phone, notes, dogId, stayId, dogNumber, species, startParsed, endParsed, sourceRow, isCurrentlyAtHome = false, hasBeenPickedUp = false, localTodayStr = getLocalTodayDateString()}) {
+        const statusTag = (isCurrentlyAtHome && !hasBeenPickedUp) ? '<span class="directory-status-tag tag-at-home">At Home</span>' : (hasBeenPickedUp ? '<span class="directory-status-tag tag-checked-out">Checked Out</span>' : '<span class="directory-status-tag tag-upcoming">Upcoming</span>');
 
-        const pickedUpDogs = JSON.parse(localStorage.getItem('pickedUpDogs_' + localTodayStr) || '[]');
-        const atHomeDogs = []; const leavingDogs = []; const upcomingDogs = []; const directoryCardsHTML = [];
+        const stayDateLabel =
+            `${formatStayDateShort(startParsed)} – ${formatStayDateShort(endParsed)}`;
+        const rosterContext = startParsed === endParsed
+            ? `Same-day care · ${formatStayDateShort(startParsed)}`
+            : `Check-in ${formatStayDateShort(startParsed)} · Check-out ${formatStayDateShort(endParsed)}`;
+        const rosterStatus = hasBeenPickedUp
+            ? 'Checked out'
+            : (isCurrentlyAtHome ? 'Staying' : 'Arriving');
+        const cleanOwnerName = String(ownerName || '').trim();
+        const cleanPhone = String(phone || '').trim();
+        const cleanHandoverNote = String(notes || '').trim();
 
-        dailyCapacityCounts = {};
-
-        for (let i = 1; i < csvRows.length; i++) {
-            if (!csvRows[i].raw.trim()) continue;
-            const columns = csvRows[i].cells;
-            
-            const dogName = String(columns[1] || '');
-            const breed = String(columns[2] || '');
-            const startDate = columns[3]; const endDate = columns[4];
-            const ownerName = String(columns[5] || '');
-            const phone = String(columns[6] || '');
-            // Columns 8 and 9 (Likes / Dislikes) are retained only for historical sheet compatibility.
-            // The Web App no longer reads or writes them.
-            const notes = String(columns[9] || '');
-            const editLink = String(columns[10] || '');
-            const bookingType = String(columns[11] || '').trim();
-            const rawDogId = dogIdColumn >= 0 && columns[dogIdColumn]
-                ? String(columns[dogIdColumn] || '').trim() : '';
-            const dogId = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rawDogId)
-                ? rawDogId : '';
-            const stayId = stayIdColumn >= 0 ? String(columns[stayIdColumn] || '').trim() : '';
-            if (stayId && typeof v1105IsStableStayTombstoned === 'function' && v1105IsStableStayTombstoned(stayId, { dogName, dogId, ownerName, phone })) continue;
-            const species = String(columns[speciesColumn] || '').trim().toLowerCase() === 'cat' ? 'cat' : 'dog';
-            const rawDogNumber = dogNumberColumn >= 0 && columns[dogNumberColumn]
-                ? String(columns[dogNumberColumn] || '').trim() : '';
-            const dogNumber = dogId && /^#?\d{1,5}$/.test(rawDogNumber)
-                ? `#${rawDogNumber.replace('#', '').padStart(5, '0')}` : '';
-            
-            const isMeetGreetType = (bookingType.toLowerCase() === 'meet & greet');
-            const isPotentialType = (bookingType.toLowerCase() === 'potential stay');
-            if (isPotentialType && stayId && typeof v1105IsPotentialStayTombstoned === 'function' && v1105IsPotentialStayTombstoned(stayId)) continue;
-
-            if (dogName && startDate) {
-                let startParsed = "", endParsed = "";
-                if (startDate.includes('/')) {
-                    const sParts = startDate.trim().split('/'); if (sParts[2]) startParsed = sParts[2] + '-' + sParts[1].padStart(2, '0') + '-' + sParts[0].padStart(2, '0');
-                } else if (startDate.includes('-')) { startParsed = startDate.trim().split('T')[0]; }
-                
-                if (endDate && endDate.includes('/')) {
-                    const eParts = endDate.trim().split('/'); if (eParts[2]) endParsed = eParts[2] + '-' + eParts[1].padStart(2, '0') + '-' + eParts[0].padStart(2, '0');
-                } else if (endDate && endDate.includes('-')) { endParsed = endDate.trim().split('T')[0]; } 
-                else { endParsed = startParsed; }
-
-                if (startParsed && endParsed) {
-                    const checkStart = new Date(startParsed + 'T00:00:00'); const checkEnd = new Date(endParsed + 'T00:00:00');
-
-                    if (!isNaN(checkStart.getTime()) && !isNaN(checkEnd.getTime())) {
-                        const breedTxt = breed ? breed.trim() : 'Unknown';
-                        const displayDate = checkEnd.getDate() + '/' + (checkEnd.getMonth() + 1);
-                        
-                        const potentialKey = makePotentialKey(dogName.trim(), startParsed, endParsed);
-                        if (isPotentialType && getPendingPotentialRemovals().includes(potentialKey)) {
-                            continue;
-                        }
-
-                        let dogsInBooking = 1;
-                        if (dogName.includes('&') || dogName.toLowerCase().includes(' and ')) {
-                            dogsInBooking = dogName.split(/&|\s+and\s+/i).map(s => s.trim()).filter(Boolean).length || 1;
-                        }
-
-                        if (!isMeetGreetType) {
-                            let tempLoopDate = new Date(checkStart.getTime());
-
-                            while (tempLoopDate <= checkEnd) {
-                                const tempStr =
-                                    tempLoopDate
-                                        .toISOString()
-                                        .split('T')[0];
-
-                                dailyCapacityCounts[tempStr] =
-                                    (dailyCapacityCounts[tempStr] || 0) +
-                                    dogsInBooking;
-
-                                tempLoopDate.setDate(
-                                    tempLoopDate.getDate() + 1
-                                );
-                            }
-                        }
-
-                        if (isPotentialType) {
-                            const parts = endParsed.split('-'); const dateObject = new Date(parts[0], parts[1] - 1, parts[2]); dateObject.setDate(dateObject.getDate() + 1);
-                            const forcedDisplayEnd = dateObject.getFullYear() + '-' + String(dateObject.getMonth() + 1).padStart(2, '0') + '-' + String(dateObject.getDate()).padStart(2, '0');
-
-                            events.push({
-                                id: 'sheet_pot_' + i,
-                                title: `❓ Potential: ${dogName.trim()}`, start: startParsed, end: forcedDisplayEnd, allDay: true,
-                                classNames: ['fc-event-potential'],
-                                extendedProps: {
-                                    isPotential: true, dogName: dogName.trim(), species, breed: breedTxt,
-                                    dogId, stayId,
-                                    owner: ownerName ? ownerName.trim() : "", ownerName: ownerName ? ownerName.trim() : "",
-                                    phone: phone ? phone.trim() : "",
-                                    rawStartDate: startParsed, rawEndDate: endParsed, notes: notes.trim(), bookingType: "Potential Stay", editLink: editLink.trim()
-                                }
-                            });
-                            continue;
-                        }
-
-                        if (!isMeetGreetType) {
-                            const listLabel = dogsInBooking > 1 ? '👥 ' + dogName.trim() : '🐾 ' + dogName.trim();
-                            let isTodayTheEndDate = (endParsed === localTodayStr);
-                            let isCurrentlyAtHome = (today >= checkStart && today <= checkEnd);
-                            let isUpcoming = (checkStart > today && checkStart <= sevenDaysFromNow);
-
-                            const localizedStayId = dogName.trim() + '_' + startParsed + '_' + endParsed;
-                            const hasBeenPickedUp = pickedUpDogs.includes(localizedStayId);
-
-                            if (!hasBeenPickedUp) {
-                                if (isCurrentlyAtHome) atHomeDogs.push('<li><span>' + listLabel + ' (' + breedTxt + ')</span></li>');
-                                if (isTodayTheEndDate) {
-                                    const cleanDogName = dogName.trim().replace(/'/g, "\\'");
-                                    leavingDogs.push('<li><span>' + listLabel + ' (' + breedTxt + ')</span> <span class="date-badge today-badge" style="cursor: pointer;" onclick="triggerCheckoutFlow(\'' + localizedStayId + '\', \'' + cleanDogName + '\')">TODAY</span></li>');
-                                } else if (checkEnd > today && checkEnd <= sevenDaysFromNow) {
-                                    leavingDogs.push('<li><span>' + listLabel + ' (' + breedTxt + ')</span> <span class="date-badge">' + displayDate + '</span></li>');
-                                }
-                            }
-
-                            if (isUpcoming) upcomingDogs.push('<li><span>⏳ ' + dogName.trim() + '</span> <span class="date-badge">' + (checkStart.getDate() + '/' + (checkStart.getMonth() + 1)) + '</span></li>');
-
-                            if ((isCurrentlyAtHome || isUpcoming) && WAFFLE_PAGE === 'directory') {
-                                const statusTag = (isCurrentlyAtHome && !hasBeenPickedUp) ? '<span class="directory-status-tag tag-at-home">At Home</span>' : (hasBeenPickedUp ? '<span class="directory-status-tag tag-checked-out">Checked Out</span>' : '<span class="directory-status-tag tag-upcoming">Upcoming</span>');
-                                const cleanName = dogName.trim().replace(/'/g, "\\'"); const cleanLnk = editLink.trim();
-
-                                const directoryStayKey = potentialKey;
-                                const stayDateLabel =
-                                    `${formatStayDateShort(startParsed)} – ${formatStayDateShort(endParsed)}`;
-                                const rosterContext = startParsed === endParsed
-                                    ? `Same-day care · ${formatStayDateShort(startParsed)}`
-                                    : `Check-in ${formatStayDateShort(startParsed)} · Check-out ${formatStayDateShort(endParsed)}`;
-                                const rosterStatus = hasBeenPickedUp
-                                    ? 'Checked out'
-                                    : (isCurrentlyAtHome ? 'Staying' : 'Arriving');
-                                const cleanOwnerName = String(ownerName || '').trim();
-                                const cleanPhone = String(phone || '').trim();
-                                const cleanHandoverNote = String(notes || '').trim();
-
-                                directoryCardsHTML.push(`
+        return `
                                     <div
                                         class="directory-card directory-card-fused belongings-pet-card"
                                         data-directory-stay-key="${escapeDashboardHtml(directoryStayKey)}"
@@ -18400,7 +18286,7 @@ registerWaffleServiceWorker();
                                         data-directory-dog-number="${escapeDashboardHtml(dogNumber)}"
                                         data-directory-start-date="${escapeDashboardHtml(startParsed)}"
                                         data-directory-end-date="${escapeDashboardHtml(endParsed)}"
-                                        data-directory-source-row="${i + 1}"
+                                        data-directory-source-row="${escapeDashboardHtml(sourceRow)}"
                                         data-v1088-breed="${escapeDashboardHtml(breedTxt)}"
                                         data-v1088-owner-name="${escapeDashboardHtml(ownerName ? ownerName.trim() : '')}"
                                         data-v1088-phone="${escapeDashboardHtml(phone ? phone.trim() : '')}"
@@ -18785,7 +18671,157 @@ registerWaffleServiceWorker();
                                         </section>
                                         </div>
                                     </div>
-                                `);
+                                `;
+    }
+
+    function parseCSVToEvents(csvText, options = {}) {
+        const preservedProfileState = options.preserveDirectoryProfileState !== false && WAFFLE_PAGE === 'directory' && !directoryConsolidatedLoadInProgress
+            ? captureDirectoryProfileUiState()
+            : null;
+        const previouslyActiveCard = preservedProfileState
+            ? document.querySelector('.directory-card.is-profile-active')
+            : null;
+        if (!csvText) return [];
+        const parsedCsv = window.WaffleCsv?.parse(csvText);
+        if (!parsedCsv?.ok || !parsedCsv.records.length) return [];
+        const csvRows = parsedCsv.records; const events = [];
+        const headerColumns = csvRows[0].cells
+            .map(value => String(value || '').trim().toLowerCase());
+        const dogIdColumn = headerColumns.indexOf('dog id');
+        const stayIdColumn = headerColumns.indexOf('stay id');
+        const dogNumberColumn = headerColumns.indexOf('dog number');
+        const speciesColumn = headerColumns.indexOf('species');
+        const localTodayStr = getLocalTodayDateString(); const today = new Date(localTodayStr + 'T00:00:00');
+        const sevenDaysFromNow = new Date(today.getTime()); sevenDaysFromNow.setDate(today.getDate() + 7); sevenDaysFromNow.setHours(23,59,59,999);
+
+        const pickedUpDogs = JSON.parse(localStorage.getItem('pickedUpDogs_' + localTodayStr) || '[]');
+        const atHomeDogs = []; const leavingDogs = []; const upcomingDogs = []; const directoryCardsHTML = [];
+
+        dailyCapacityCounts = {};
+
+        for (let i = 1; i < csvRows.length; i++) {
+            if (!csvRows[i].raw.trim()) continue;
+            const columns = csvRows[i].cells;
+
+            const dogName = String(columns[1] || '');
+            const breed = String(columns[2] || '');
+            const startDate = columns[3]; const endDate = columns[4];
+            const ownerName = String(columns[5] || '');
+            const phone = String(columns[6] || '');
+            // Columns 8 and 9 (Likes / Dislikes) are retained only for historical sheet compatibility.
+            // The Web App no longer reads or writes them.
+            const notes = String(columns[9] || '');
+            const editLink = String(columns[10] || '');
+            const bookingType = String(columns[11] || '').trim();
+            const rawDogId = dogIdColumn >= 0 && columns[dogIdColumn]
+                ? String(columns[dogIdColumn] || '').trim() : '';
+            const dogId = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rawDogId)
+                ? rawDogId : '';
+            const stayId = stayIdColumn >= 0 ? String(columns[stayIdColumn] || '').trim() : '';
+            if (stayId && typeof v1105IsStableStayTombstoned === 'function' && v1105IsStableStayTombstoned(stayId, { dogName, dogId, ownerName, phone })) continue;
+            const species = String(columns[speciesColumn] || '').trim().toLowerCase() === 'cat' ? 'cat' : 'dog';
+            const rawDogNumber = dogNumberColumn >= 0 && columns[dogNumberColumn]
+                ? String(columns[dogNumberColumn] || '').trim() : '';
+            const dogNumber = dogId && /^#?\d{1,5}$/.test(rawDogNumber)
+                ? `#${rawDogNumber.replace('#', '').padStart(5, '0')}` : '';
+
+            const isMeetGreetType = (bookingType.toLowerCase() === 'meet & greet');
+            const isPotentialType = (bookingType.toLowerCase() === 'potential stay');
+            if (isPotentialType && stayId && typeof v1105IsPotentialStayTombstoned === 'function' && v1105IsPotentialStayTombstoned(stayId)) continue;
+
+            if (dogName && startDate) {
+                let startParsed = "", endParsed = "";
+                if (startDate.includes('/')) {
+                    const sParts = startDate.trim().split('/'); if (sParts[2]) startParsed = sParts[2] + '-' + sParts[1].padStart(2, '0') + '-' + sParts[0].padStart(2, '0');
+                } else if (startDate.includes('-')) { startParsed = startDate.trim().split('T')[0]; }
+
+                if (endDate && endDate.includes('/')) {
+                    const eParts = endDate.trim().split('/'); if (eParts[2]) endParsed = eParts[2] + '-' + eParts[1].padStart(2, '0') + '-' + eParts[0].padStart(2, '0');
+                } else if (endDate && endDate.includes('-')) { endParsed = endDate.trim().split('T')[0]; }
+                else { endParsed = startParsed; }
+
+                if (startParsed && endParsed) {
+                    const checkStart = new Date(startParsed + 'T00:00:00'); const checkEnd = new Date(endParsed + 'T00:00:00');
+
+                    if (!isNaN(checkStart.getTime()) && !isNaN(checkEnd.getTime())) {
+                        const breedTxt = breed ? breed.trim() : 'Unknown';
+                        const displayDate = checkEnd.getDate() + '/' + (checkEnd.getMonth() + 1);
+
+                        const potentialKey = makePotentialKey(dogName.trim(), startParsed, endParsed);
+                        if (isPotentialType && getPendingPotentialRemovals().includes(potentialKey)) {
+                            continue;
+                        }
+
+                        let dogsInBooking = 1;
+                        if (dogName.includes('&') || dogName.toLowerCase().includes(' and ')) {
+                            dogsInBooking = dogName.split(/&|\s+and\s+/i).map(s => s.trim()).filter(Boolean).length || 1;
+                        }
+
+                        if (!isMeetGreetType) {
+                            let tempLoopDate = new Date(checkStart.getTime());
+
+                            while (tempLoopDate <= checkEnd) {
+                                const tempStr =
+                                    tempLoopDate
+                                        .toISOString()
+                                        .split('T')[0];
+
+                                dailyCapacityCounts[tempStr] =
+                                    (dailyCapacityCounts[tempStr] || 0) +
+                                    dogsInBooking;
+
+                                tempLoopDate.setDate(
+                                    tempLoopDate.getDate() + 1
+                                );
+                            }
+                        }
+
+                        if (isPotentialType) {
+                            const parts = endParsed.split('-'); const dateObject = new Date(parts[0], parts[1] - 1, parts[2]); dateObject.setDate(dateObject.getDate() + 1);
+                            const forcedDisplayEnd = dateObject.getFullYear() + '-' + String(dateObject.getMonth() + 1).padStart(2, '0') + '-' + String(dateObject.getDate()).padStart(2, '0');
+
+                            events.push({
+                                id: 'sheet_pot_' + i,
+                                title: `❓ Potential: ${dogName.trim()}`, start: startParsed, end: forcedDisplayEnd, allDay: true,
+                                classNames: ['fc-event-potential'],
+                                extendedProps: {
+                                    isPotential: true, dogName: dogName.trim(), species, breed: breedTxt,
+                                    dogId, stayId,
+                                    owner: ownerName ? ownerName.trim() : "", ownerName: ownerName ? ownerName.trim() : "",
+                                    phone: phone ? phone.trim() : "",
+                                    rawStartDate: startParsed, rawEndDate: endParsed, notes: notes.trim(), bookingType: "Potential Stay", editLink: editLink.trim()
+                                }
+                            });
+                            continue;
+                        }
+
+                        if (!isMeetGreetType) {
+                            const listLabel = dogsInBooking > 1 ? '👥 ' + dogName.trim() : '🐾 ' + dogName.trim();
+                            let isTodayTheEndDate = (endParsed === localTodayStr);
+                            let isCurrentlyAtHome = (today >= checkStart && today <= checkEnd);
+                            let isUpcoming = (checkStart > today && checkStart <= sevenDaysFromNow);
+
+                            const localizedStayId = dogName.trim() + '_' + startParsed + '_' + endParsed;
+                            const hasBeenPickedUp = pickedUpDogs.includes(localizedStayId);
+
+                            if (!hasBeenPickedUp) {
+                                if (isCurrentlyAtHome) atHomeDogs.push('<li><span>' + listLabel + ' (' + breedTxt + ')</span></li>');
+                                if (isTodayTheEndDate) {
+                                    const cleanDogName = dogName.trim().replace(/'/g, "\\'");
+                                    leavingDogs.push('<li><span>' + listLabel + ' (' + breedTxt + ')</span> <span class="date-badge today-badge" style="cursor: pointer;" onclick="triggerCheckoutFlow(\'' + localizedStayId + '\', \'' + cleanDogName + '\')">TODAY</span></li>');
+                                } else if (checkEnd > today && checkEnd <= sevenDaysFromNow) {
+                                    leavingDogs.push('<li><span>' + listLabel + ' (' + breedTxt + ')</span> <span class="date-badge">' + displayDate + '</span></li>');
+                                }
+                            }
+
+                            if (isUpcoming) upcomingDogs.push('<li><span>⏳ ' + dogName.trim() + '</span> <span class="date-badge">' + (checkStart.getDate() + '/' + (checkStart.getMonth() + 1)) + '</span></li>');
+
+                            if ((isCurrentlyAtHome || isUpcoming) && WAFFLE_PAGE === 'directory') {
+                                directoryCardsHTML.push(renderDirectoryStayCardMarkup({
+                                    directoryStayKey: potentialKey, dogName, breed, breedTxt, ownerName, phone, notes,
+                                    dogId, stayId, dogNumber, species, startParsed, endParsed, sourceRow: i + 1,
+                                    isCurrentlyAtHome, hasBeenPickedUp, localTodayStr
+                                }));
                             }
                         } else {
                             const timeParts = notes.match(/(\d{1,2}:\d{2})/);

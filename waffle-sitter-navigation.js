@@ -237,11 +237,12 @@
       notifications.type = 'button';
       notifications.dataset.whSitterCalendarNotifications = '';
       notifications.setAttribute('aria-label', 'Notifications');
-      notifications.innerHTML = '<span aria-hidden="true"></span>';
+      notifications.innerHTML = '<span aria-hidden="true"></span><span class="v101-notification-unread-badge" data-notification-unread-badge aria-hidden="true" hidden></span>';
       notifications.addEventListener('click', event => {
         window.openWaffleNotificationCentre?.('inbox', event.currentTarget);
       });
       topbar.appendChild(notifications);
+      window.updateWaffleNotificationUnreadBadge?.();
     }
 
     const menu = document.getElementById('wh75MenuButton');

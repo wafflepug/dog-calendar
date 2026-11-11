@@ -37,6 +37,8 @@
     display: none !important;
 }
 
+.directory-dashboard-fused:not([data-directory-roster-load-state="success"])
+#directory-grid > .v11195-stay-empty,
 .v11195-stay-empty[hidden] {
     display: none !important;
 }

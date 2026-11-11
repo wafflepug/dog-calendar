@@ -381,10 +381,30 @@ body[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused > .d
   align-self: start;
 }
 body[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused > .directory-guest-tile-open .v1117-care-source-badge {
-  grid-column: 2;
-  grid-row: 3;
-  justify-self: start;
-  justify-content: flex-start;
+  position: absolute;
+  grid-area: auto !important;
+  top: 16px;
+  right: 62px;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  box-sizing: border-box;
+  padding: 0;
+  border-radius: 50%;
+}
+body[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused:not(.is-profile-active).has-request-source > .directory-guest-tile-open {
+  padding-right: 104px !important;
+}
+body[data-waffle-page="directory"] #directoryTabPanel .directory-guest-tile-open .v1117-care-source-label {
+  display: none;
+}
+body[data-waffle-page="directory"] #directoryTabPanel .directory-guest-tile-open .v1117-care-source-badge img {
+  width: 26px;
+  height: 26px;
+}
+body[data-waffle-page="directory"] #directoryTabPanel .directory-guest-tile-open .v1117-care-source-badge [data-palz-source-paw] {
+  color: inherit;
 }
 body[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused > .directory-guest-tile-open .v1118-care-signals {
   grid-column: 1 / -1;

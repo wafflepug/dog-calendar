@@ -142,7 +142,7 @@ test('potential and unconfirmed visits never expose operational actions; complet
 test('Today queue has a clear empty state without a Care profiles footer link', async ({ page }) => {
   await loadQueue(page);
   await page.evaluate(() => renderV10OperationsHome([]));
-  await expect(page.locator('.v10-all-clear')).toContainText('No arrivals, departures or Meet & Greets today');
+  await expect(page.locator('.v10-all-clear')).toContainText('You’re all caught up');
   await expect(page.locator('.v10-agenda-care-link')).toHaveCount(0);
   await expect(page.locator('#v10TodayAgenda > a.v10-agenda-item')).toHaveCount(0);
 });
