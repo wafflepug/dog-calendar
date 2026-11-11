@@ -3653,7 +3653,6 @@ async function hydrateWaffleNotificationSettings(options = {}) {
         return;
     }
     const retryHadFocus = !modal.hidden &&
-        !modal.querySelector('[data-notification-centre-panel="settings"]')?.hidden &&
         document.activeElement === retryButton;
     if (retryButton) retryButton.hidden = true;
 
