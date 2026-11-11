@@ -411,6 +411,7 @@
     const introCopy = 'Manage appearance, colour and sitter tools.';
     if (intro && intro.textContent !== introCopy) intro.textContent = introCopy;
 
+    window.mountWaffleNotificationSettings?.(panel);
     if (document.getElementById('whSitterToolsSettingsSection')) return;
     const section = document.createElement('div');
     section.id = 'whSitterToolsSettingsSection';
