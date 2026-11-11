@@ -445,6 +445,7 @@
     }
     if (signalsHost.parentElement !== destination) destination.append(signalsHost);
     const atHome = button.querySelector('.v1118-care-status.is-at-home');
+    if (name && atHome && atHome.parentElement !== destination) destination.append(atHome);
     const description = [...(atHome ? ['At Home'] : []), ...signals.map(signal => signal.label)].join(', ');
     if (description && button.getAttribute('aria-description') !== description) {
       button.setAttribute('aria-description', description);
@@ -491,6 +492,7 @@
     }
     const chipClass = 'v1118-status-chip v1118-care-status ' + statusClass(status);
     if (chip.className !== chipClass) chip.className = chipClass;
+    if (status !== 'AT HOME' && chip.parentElement !== host) host.append(chip);
     if (chip.textContent !== status) chip.textContent = status;
     if (status === 'AT HOME' && chip.title !== 'At Home') chip.title = 'At Home';
     else if (status !== 'AT HOME' && chip.hasAttribute('title')) chip.removeAttribute('title');

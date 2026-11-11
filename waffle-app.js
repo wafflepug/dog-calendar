@@ -12000,7 +12000,7 @@ registerWaffleServiceWorker();
         if (!button || !host) return;
         Array.from(host.children).reverse().forEach(badge => {
             const next = badge.__directoryRosterBadgeNextSibling;
-            const nameLine = badge.matches('[data-v1118-care-signals]') && button.querySelector('.directory-roster-name-line');
+            const nameLine = badge.matches('[data-v1118-care-signals], [data-v1118-status-chip].is-at-home') && button.querySelector('.directory-roster-name-line');
             if (nameLine) nameLine.appendChild(badge);
             else if (next?.parentNode === button) button.insertBefore(badge, next);
             else button.appendChild(badge);
