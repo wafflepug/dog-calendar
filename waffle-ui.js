@@ -1898,7 +1898,7 @@
 
     organiserScriptRequested = true;
     const script = document.createElement('script');
-    script.src = 'organiser.js?build=2026.08.28.01&rev=' + encodeURIComponent(window.WAFFLE_ASSET_REVISION || '2026.11.11.18');
+    script.src = 'organiser.js?build=2026.08.28.01&rev=' + encodeURIComponent(window.WAFFLE_ASSET_REVISION || '2026.11.11.19');
     script.async = false;
     script.dataset.wh89Organiser = 'true';
     script.addEventListener('load', () => {
