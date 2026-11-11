@@ -238,9 +238,8 @@
       notifications.dataset.whSitterCalendarNotifications = '';
       notifications.setAttribute('aria-label', 'Notifications');
       notifications.innerHTML = '<span aria-hidden="true"></span>';
-      notifications.addEventListener('click', () => {
-        const source = document.getElementById('waffleNotificationButton') || mobileHeaderAction('notification');
-        source?.click();
+      notifications.addEventListener('click', event => {
+        window.openWaffleNotificationCentre?.('inbox', event.currentTarget);
       });
       topbar.appendChild(notifications);
     }
