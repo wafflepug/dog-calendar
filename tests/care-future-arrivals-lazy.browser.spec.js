@@ -64,6 +64,16 @@ async function mountCareRange(page) {
       { title: 'Possible Visit', start: distantStart, end: distantEnd, allDay: true, extendedProps: { dogName: 'Possible Visit', isPotential: true, rawStartDate: distantStart, rawEndDate: distantEnd } }
     ];
   }, { nearStart, nearEnd, distantStart, distantEnd });
+  const renderStart = app.indexOf('function renderDirectoryStayCardMarkup(');
+  const renderEnd = app.indexOf('function parseCSVToEvents(', renderStart);
+  await page.addScriptTag({ content: [
+    'const getLocalTodayDateString = () => new Date().toISOString().slice(0, 10);',
+    'const formatStayDateShort = value => value;',
+    'const escapeDashboardHtml = value => String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(String.fromCharCode(34), "&quot;");',
+    app.slice(app.indexOf('function directoryProfileAccessibleLabel('), app.indexOf('function updateDirectoryRosterStatus(')),
+    'const formatWaffleContactPhone = value => value;',
+    app.slice(renderStart, renderEnd)
+  ].join('\n') });
   await page.addScriptTag({ content: futureRange });
   await page.evaluate(() => window.WAFFLE_V11196_FUTURE_RANGE.updateEvents(window.fixtureEvents));
 }
@@ -140,8 +150,8 @@ test('Care defers later arrivals until requested, keeps total count, and leaves 
   expect(twinLabels[0]).toContain('Ada Owner');
   expect(twinLabels[1]).toContain('Ada Owner');
   expect(twinLabels[0]).not.toBe(twinLabels[1]);
-  expect(twinLabels[0]).toContain('Dog Number 00007');
-  expect(twinLabels[1]).toContain('Dog Number 00008');
+  expect(twinLabels[0]).toContain('Dog Number #00007');
+  expect(twinLabels[1]).toContain('Dog Number #00008');
   for (const button of await twinButtons.all()) {
     await expect(button.locator('.directory-roster-owner')).toHaveText('Owner: Ada Owner');
     await expect(button.locator('.directory-roster-owner')).toHaveCount(1);

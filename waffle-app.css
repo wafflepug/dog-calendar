@@ -9178,20 +9178,15 @@ textarea.intake-profile-control:disabled {
 
 .v101-notification-unread-badge {
     position: absolute;
-    top: -5px;
-    left: -5px;
+    top: 2px;
+    right: 2px;
     z-index: 5;
-    min-width: 19px;
-    height: 19px;
-    padding: 0 5px;
-    border: 2px solid var(--wh-surface, #ffffff);
-    border-radius: 999px;
+    width: 10px;
+    height: 10px;
+    box-sizing: border-box;
+    border: 1px solid var(--wh-surface, #ffffff);
+    border-radius: 50%;
     background: #dc2626;
-    color: #ffffff;
-    font-size: 9px;
-    line-height: 15px;
-    font-weight: 900;
-    text-align: center;
 }
 
 .v101-notification-unread-badge[hidden] {
