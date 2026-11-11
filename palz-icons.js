@@ -91,7 +91,7 @@
     document.querySelectorAll('#wh80MobileHeaderRail [data-wh80-role="notification"]').forEach(control=>hostIcon(control,'bell'));
     document.querySelectorAll('#wh80MobileHeaderRail [data-wh80-role="search"]').forEach(control=>hostIcon(control,'search'));
     document.querySelectorAll('.directory-photo-placeholder').forEach(placeholder=>{if(placeholder.textContent.trim()==='🐶'||placeholder.dataset.palzGlyph)hostIcon(placeholder,'paw');});
-    const routeIcons={today:'home',calendar:'calendar',directory:'paw',reminders:'tasks',audit:'document'};
+    const routeIcons={today:'home',calendar:'calendar',directory:'paw',reminders:'tasks',audit:'document',sales:'payment'};
     document.querySelectorAll('[data-wh75-route],[data-wh-sitter-route]').forEach(control=>hostIcon(control.querySelector('.wh75-nav-icon,.wh75-bottom-icon,.wh-sitter-sidebar-icon'),routeIcons[control.dataset.wh75Route||control.dataset.whSitterRoute]||'home'));
     document.querySelectorAll('[data-wh-sitter-settings]').forEach(control=>hostIcon(control.querySelector('.wh-sitter-sidebar-icon'),'settings'));
     const controls={'[data-wh78-quick-add], [data-wh75-quick-add]':'plus','[data-wh78-ai], [data-wh75-ask]':'chat','[data-wh75-settings]':'settings','[data-wh75-theme-quick]':'moon','[data-wh-sitter-mobile-action="notification"]':'bell','[data-wh-sitter-mobile-action="search"]':'search'};

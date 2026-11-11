@@ -597,6 +597,7 @@
         <div class="wh75-nav-list">
           ${navItem('index.html?view=calendar','▦','Calendar','calendar')}
           ${navItem('directory.html','🐾','Care','directory')}
+          ${navItem('#sales','▤','Sales','sales')}
           ${navItem('reminders.html','✓','Organiser','reminders')}
           ${navItem('audit.html','≡','Logs','audit')}
         </div>
@@ -1898,7 +1899,7 @@
 
     organiserScriptRequested = true;
     const script = document.createElement('script');
-    script.src = 'organiser.js?build=2026.08.28.01&rev=' + encodeURIComponent(window.WAFFLE_ASSET_REVISION || '2026.11.12.01');
+    script.src = 'organiser.js?build=2026.08.28.01&rev=' + encodeURIComponent(window.WAFFLE_ASSET_REVISION || '2026.11.12.02');
     script.async = false;
     script.dataset.wh89Organiser = 'true';
     script.addEventListener('load', () => {
