@@ -72,9 +72,10 @@ function v1112CandidateSourceSelects(root = document) {
 }
 
 function v1112EnsureMeetGreetSource(root = document) {
-  root.querySelectorAll?.('[role="dialog"], .modal, .v108-modal, form').forEach(container => {
-    const text = String(container.textContent || '');
-    if (!/meet\s*&\s*greet|meet\s+and\s+greet/i.test(text)) return;
+  const containers = root.matches?.('#customBookingModal')
+    ? [root]
+    : root.querySelectorAll?.('#customBookingModal');
+  containers?.forEach(container => {
     if (container.querySelector('.v1112-source-picker, [data-v1112-meet-source]')) return;
 
     const select = document.createElement('select');
