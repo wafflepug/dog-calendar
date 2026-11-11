@@ -198,14 +198,17 @@
       <button type="button"
         class="v1117-profile-source-tile${active ? ' is-selected' : ''}${isOther ? ' is-other' : ''}"
         data-v1117-profile-source-value="${escapeHtml(source.value)}"
+        aria-label="${escapeHtml(source.label)}"
         aria-pressed="${active ? 'true' : 'false'}"
         title="Set Request From to ${escapeHtml(source.label)}">
         <span class="v1117-profile-source-circle">
-          ${source.image
+          ${isOther
+            ? '<span data-palz-source-paw aria-hidden="true"></span>'
+            : source.image
             ? `<img src="${escapeHtml(source.image)}" alt="">`
-            : `<span class="v1117-profile-source-other-label">Other</span>`}
+            : ''}
         </span>
-        <span class="v1117-profile-source-caption">${escapeHtml(source.label)}</span>
+        ${isOther ? '' : `<span class="v1117-profile-source-caption">${escapeHtml(source.label)}</span>`}
       </button>`;
   }
 
@@ -221,7 +224,7 @@
     const source = sourceDefinitions().find(item => item.value.toLowerCase() === selected.toLowerCase());
     const isOther = source?.value.toLowerCase() === 'other';
     const sourceMark = isOther
-      ? '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>'
+      ? '<span data-palz-source-paw aria-hidden="true"></span>'
       : source?.image
         ? `<img src="${escapeHtml(source.image)}" alt="">`
         : '<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.07 0l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.72"/><path d="M14 11a5 5 0 0 0-7.07 0l-3 3A5 5 0 0 0 11 21.07l1.72-1.72"/></svg>';

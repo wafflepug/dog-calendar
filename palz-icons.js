@@ -85,6 +85,7 @@
   function hostIcon(host,name){if(!host)return;if(host.dataset.palzGlyph===name&&host.querySelector(':scope > [data-palz-icon]'))return;host.dataset.palzGlyph=name;host.classList.add('palz-icon-host');if(!host.matches('button,a,summary'))host.setAttribute('aria-hidden','true');host.querySelectorAll(':scope > [data-palz-icon]').forEach(n=>n.remove());host.insertAdjacentHTML('beforeend',svg(name));}
   function navigation(){
     hostIcon(document.getElementById('aw37launch'),'chat');
+    document.querySelectorAll('[data-palz-source-paw]').forEach(mark=>hostIcon(mark,'paw'));
     hostIcon(document.querySelector('[data-wh-sitter-calendar-notifications] > span'),'bell');
     hostIcon(document.querySelector('#whSitterDesktopTools .waffle-notification-button-icon'),'bell');
     document.querySelectorAll('#wh80MobileHeaderRail [data-wh80-role="notification"]').forEach(control=>hostIcon(control,'bell'));
@@ -122,7 +123,7 @@
     });
     document.querySelectorAll('[data-v10-quick-action="potential"] > span:first-child').forEach(icon => hostIcon(icon, 'document'));
     document.querySelectorAll('[data-wh75-mode]').forEach(control=>{control.classList.add('palz-mode-choice');if(!control.querySelector('[data-palz-icon]')){const span=document.createElement('span');span.className='palz-mode-icon';span.innerHTML=svg(control.dataset.wh75Mode==='light'?'sun':'moon');control.prepend(span);}});
-    const items={'[data-v11217-roster-owner-call]':'phone','[data-v110-checkin],[data-v11217-roster-checkin],[data-today-action="checkin"]':'checkin','[data-v110-checkout],[data-v11217-roster-checkout],[data-today-action="checkout"],[data-v11217-early-checkout]':'checkout','[data-care-upload-belongings-photo],[data-upload-belongings-photo]':'upload','[data-care-change-profile-photo],[data-upload-dog-photo],[data-take-belongings-photo]':'camera','[data-care-view-photos],[data-v108-gallery]':'image','[data-care-brief-action="refresh"]':'refresh','[data-organiser-add-task]':'plus'};
+    const items={'[data-care-header-book-again]':'refresh','[data-v11217-roster-owner-call]':'phone','[data-v110-checkin],[data-v11217-roster-checkin],[data-today-action="checkin"]':'checkin','[data-v110-checkout],[data-v11217-roster-checkout],[data-today-action="checkout"],[data-v11217-early-checkout]':'checkout','[data-care-upload-belongings-photo],[data-upload-belongings-photo]':'upload','[data-care-change-profile-photo],[data-upload-dog-photo],[data-take-belongings-photo]':'camera','[data-care-view-photos],[data-v108-gallery]':'image','[data-care-brief-action="refresh"]':'refresh','[data-organiser-add-task]':'plus'};
     Object.entries(items).forEach(([selector,name])=>document.querySelectorAll(selector).forEach(control=>{if(!control.querySelector('[data-palz-icon]')){const span=document.createElement('span');span.className='palz-inline-icon';span.setAttribute('aria-hidden','true');span.innerHTML=svg(name);control.prepend(span);}}));
   }
   function flush(){scheduled=false;navigation();const roots=[...pending];pending.clear();roots.filter(root=>root.isConnected&&!roots.some(other=>other!==root&&other.contains(root))).forEach(convert);semanticControls();}
