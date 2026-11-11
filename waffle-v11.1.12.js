@@ -208,7 +208,7 @@
             ? `<img src="${escapeHtml(source.image)}" alt="">`
             : ''}
         </span>
-        ${isOther ? '' : `<span class="v1117-profile-source-caption">${escapeHtml(source.label)}</span>`}
+        <span class="v1117-profile-source-caption">${escapeHtml(source.label)}</span>
       </button>`;
   }
 
