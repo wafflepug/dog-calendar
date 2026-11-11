@@ -205,7 +205,12 @@
           link.innerHTML = '<span class="wh-home-portrait" aria-hidden="true"><span class="wh-home-initials"></span></span><span class="wh-home-departure-flag" aria-hidden="true"><span></span></span><strong class="wh-home-guest-name"></strong><span class="wh-home-guest-identity"></span><span class="wh-home-guest-label"></span>';
         }
         link.dataset.homeStayId = stayId;
-        link.href = 'directory.html?stayKey=' + encodeURIComponent(key) + (typeof v110ValidStayId === 'function' && v110ValidStayId(stayId) ? '&stayId=' + encodeURIComponent(stayId) : '');
+        const dogId = String(event.extendedProps?.dogId || '').trim();
+        const profileLink = new URLSearchParams({ stayKey: key });
+        if (typeof v110ValidStayId === 'function' && v110ValidStayId(stayId)) profileLink.set('stayId', stayId);
+        if (typeof v110ValidStayId === 'function' && v110ValidStayId(dogId)) profileLink.set('dogId', dogId);
+        if (!upcoming) profileLink.set('pet', name);
+        link.href = 'directory.html?' + profileLink.toString();
         const departure = !upcoming && departureMeta(event, today);
         const label = upcoming ? arrivalLabel(event, today) : departure?.label || 'At home';
         const dogNumber = String(event.extendedProps?.dogNumber || '').trim();
@@ -1893,7 +1898,7 @@
 
     organiserScriptRequested = true;
     const script = document.createElement('script');
-    script.src = 'organiser.js?build=2026.08.28.01&rev=' + encodeURIComponent(window.WAFFLE_ASSET_REVISION || '2026.11.11.05');
+    script.src = 'organiser.js?build=2026.08.28.01&rev=' + encodeURIComponent(window.WAFFLE_ASSET_REVISION || '2026.11.11.06');
     script.async = false;
     script.dataset.wh89Organiser = 'true';
     script.addEventListener('load', () => {

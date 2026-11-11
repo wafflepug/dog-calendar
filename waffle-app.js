@@ -4545,6 +4545,15 @@ function maybeOpenDirectoryPushDeepLink() {
     const dogId = String(params.get('dogId') || '').trim();
     if (!stayKey) return;
     const selectionVersion = directoryProfileStartupSelectionVersion;
+    if (params.has('pet')) {
+        const identity = document.createElement('div');
+        Object.assign(identity.dataset, { directoryStayKey: stayKey, directoryStayId: stayId, directoryDogId: dogId });
+        const exact = getDirectoryProfileReadIdentity(identity);
+        if (exact.valid && exact.stayId && exact.dogId) {
+            void window.WAFFLE_CARE_PROFILE_READS?.read(identity).catch(() => {});
+        }
+    }
+    const finishNavigationLoader = () => window.dispatchEvent(new Event('waffle:pet-link-settled'));
 
     const clearLinkMessage = () => document.querySelector('[data-directory-push-link-status]')?.remove();
     const showLinkMessage = () => {
@@ -4565,23 +4574,26 @@ function maybeOpenDirectoryPushDeepLink() {
         return true;
     };
 
-    if (attemptOpen()) return;
-    let attempts = 0;
-    const timer = setInterval(() => {
-        if (!window.WAFFLE_DIRECTORY_PROFILE_NAV.isCurrent(selectionVersion)) {
-            clearInterval(timer);
-            return;
-        }
-        attempts++;
-        if (attemptOpen()) {
-            clearInterval(timer);
-            return;
-        }
-        if (attempts >= 20) {
-            clearInterval(timer);
-            showLinkMessage();
-        }
-    }, 500);
+    if (attemptOpen()) {
+        finishNavigationLoader();
+        return;
+    }
+    const observer = new MutationObserver(() => {
+        const selectionChanged = !window.WAFFLE_DIRECTORY_PROFILE_NAV.isCurrent(selectionVersion);
+        if (selectionChanged || attemptOpen()) finish();
+    });
+    const timer = setTimeout(() => {
+        finish();
+        if (window.WAFFLE_DIRECTORY_PROFILE_NAV.isCurrent(selectionVersion) && !attemptOpen()) showLinkMessage();
+    }, 10000);
+    function finish() {
+        observer.disconnect();
+        clearTimeout(timer);
+        finishNavigationLoader();
+    }
+    observer.observe(document.querySelector('.directory-dashboard-fused') || document.body, {
+        childList: true, subtree: true
+    });
 }
 
 let waffleDeferredInstallPrompt = null;
