@@ -2155,8 +2155,18 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active [data-care-
 [data-care-header-book-again] > .palz-inline-icon {
   margin: 0;
 }
+.v11112-care-source-grid .v1117-profile-source-tile {
+  display: grid;
+  align-content: start;
+  justify-items: center;
+}
 .v1117-profile-source-circle > [data-palz-source-paw] {
   color: #fff;
+}
+.v1117-profile-source-circle > [data-palz-source-paw] > .palz-icon {
+  width: 32px;
+  height: 32px;
+  vertical-align: middle;
 }
 body[data-waffle-page="directory"] .directory-card.is-profile-active .care-header-call-owner svg {
   width: 20px;
