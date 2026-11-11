@@ -2,8 +2,8 @@
    Build: 2026.08.27.04
    Historical base styles remain compatibility sources during Phase 3A, but pages no longer
    reference them individually. Preserve this import order until modules are folded in. */
-@import url("waffle-app.css?build=2026.08.27.04&rev=2026.11.11.14");
-@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.11.11.14");
+@import url("waffle-app.css?build=2026.08.27.04&rev=2026.11.11.15");
+@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.11.11.15");
 @import url("waffle-v10.8.2.css?build=2026.08.27.04");
 @import url("waffle-v10.8.3.css?build=2026.08.27.04");
 @import url("waffle-v10.8.5.css?build=2026.08.27.04");
@@ -11,12 +11,12 @@
 @import url("waffle-v10.8.7.css?build=2026.08.27.04");
 @import url("waffle-v10.8.8.css?build=2026.08.27.04");
 @import url("waffle-v10.8.9.css?build=2026.08.27.04");
-@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.11.11.14");
+@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.11.11.15");
 @import url("waffle-v11.0.3.css?build=2026.08.27.04");
 @import url("waffle-v11.0.5.css?build=2026.08.27.04");
-@import url("waffle-v11.1.94.css?build=2026.11.11.14");
-@import url("waffle-v11.1.95.css?build=2026.11.11.14");
-@import url("waffle-v11.1.96.css?build=2026.11.11.14&rev=2026.11.11.14");
+@import url("waffle-v11.1.94.css?build=2026.11.11.15");
+@import url("waffle-v11.1.95.css?build=2026.11.11.15");
+@import url("waffle-v11.1.96.css?build=2026.11.11.15&rev=2026.11.11.15");
 
 /* ============================================================
    MOBILE FIRST-PAINT STABILITY GATE
@@ -3732,4 +3732,12 @@ body:has(#v10QuickAddSheet:not([hidden])) :is(#v10QuickAddButton, #aw37launch, #
 }
 #waffleNotificationModal .v101-unread-dot {
   background: var(--wh75-accent, #7c3aed);
+}
+
+/* Book Again uses the saved guest details and shows only the new dates. */
+#p4Modal[data-p4-dates-only] :is(.p4-tabs, .p4-head p, #p4SavePotential,
+  #p4EnquiryTools, #p4PanelBooking .p4-section:has(> #p4EnquiryTools),
+  #p4PanelBooking .p4-grid > :not(label:has(#p4Start, #p4End)),
+  #p4ReturningMini, #p4PlanDisclosure) {
+  display: none !important;
 }

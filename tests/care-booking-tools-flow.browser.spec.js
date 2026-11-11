@@ -12,16 +12,16 @@ const styleEnd = core.indexOf('\nlet active=', styleStart);
 
 async function setup(page, readHandler) {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.setContent('<div id="p4Modal" class="p4-modal"><section class="p4-card" role="dialog"><header class="p4-head"><h2>Booking</h2><button data-p4-close type="button">Close</button></header><nav class="p4-tabs"></nav><div class="p4-body"><section class="p4-panel" data-p4-panel="booking"></section><section data-p4-panel="capacity"></section><section data-p4-panel="owner"></section></div></section></div>');
+  await page.setContent('<div id="p4Modal" class="p4-modal"><section class="p4-card" role="dialog"><header class="p4-head"><h2 id="p4Title">Booking</h2><button data-p4-close type="button">Close</button></header><nav class="p4-tabs"></nav><div class="p4-body"><section class="p4-panel" id="p4PanelBooking" data-p4-panel="booking"></section><section data-p4-panel="capacity"></section><section data-p4-panel="owner"></section></div></section></div>');
   await page.evaluate(({ dogA, dogB }) => {
     window.fixtureWrites = [];
     window.fixtureReads = [];
     window.WAFFLE_PHASE4_CORE = {
-      modal: () => document.getElementById('p4Modal'), page: () => window.fixturePage || 'booking', open: () => {},
+      modal: () => document.getElementById('p4Modal'), page: () => window.fixturePage || 'booking', open: () => {}, close: () => { document.getElementById('p4Modal').hidden = true; window.dispatchEvent(new Event('waffle:phase4-close')); },
       settings: () => ({ preferred: 4, absolute: 6 }),
       esc: value => String(value ?? '').replace(/[&<>"']/g, ch => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' })[ch]),
       norm: value => String(value ?? '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim(),
-      fmt: value => String(value ?? ''), today: () => '2026-10-06', rows: () => [], visits: () => [],
+      fmt: value => String(value ?? ''), today: () => '2026-10-06', addDays: (date, days) => new Date(Date.parse(date) + days * 86400000).toISOString().slice(0, 10), rows: () => [], visits: () => [],
       read: payload => { window.fixtureReads.push(payload); return window.identityRead(payload); },
       write: async payload => { window.fixtureWrites.push(structuredClone(payload)); if (['create_boarding', 'create_potential'].includes(payload.action) && !['MadPaws', 'Pawshake', 'Facebook', 'Other'].includes(payload.requestSource)) throw Error('Choose where the Boarding request came from.'); return { result: 'success' }; },
       duplicate: () => null, capacity: () => ({ band: 'green' }), renderDecision: () => {}, toast: message => { window.lastToast = message; },
@@ -167,57 +167,16 @@ test('directory Booking tools labels are guest-specific and direct Book Again ga
   await expect(again).toHaveCount(1);
   expect(await page.evaluate(() => window.againNode === document.querySelector('[data-p4-dir="again"]'))).toBe(true);
   await expect(bookingTools).toBeHidden();
-  await page.evaluate(() => { window.identityRows = []; let tries = 0; window.identityRead = payload => payload.action === 'list_dog_identities' && tries++ === 0 ? Promise.reject(new Error('offline')) : payload.action === 'list_dog_identities' ? Promise.resolve({ identities: [] }) : Promise.resolve({ history: { previousStays: [] } }); });
   await tools.locator(':scope > summary').click();
   await again.click();
-  await expect(page.locator('#p4Dog')).toHaveValue('Luna <Guest>');
-  await expect(page.locator('#p4DogIdentity')).toBeFocused();
-  await expect(page.locator('#p4Start')).toHaveValue('');
-  await expect(page.locator('#p4End')).toHaveValue('');
-  await expect(page.locator('#p4BookingContext')).toContainText('Dog ID #00017');
-  await expect(page.locator('#p4SaveConfirmed')).toBeDisabled();
-  await page.evaluate(() => window.WAFFLE_PHASE4_BOOKING.save('confirmed'));
-  expect(await page.evaluate(() => window.fixtureWrites.length)).toBe(0);
-  await expect(page.locator('#p4DogIdentity')).toHaveValue('__review__');
-  await page.locator('#p4LoadDogIdentities').click();
-  await expect(page.locator('#p4DogIdentity')).toHaveValue('__review__');
-  await expect(page.locator('#p4SaveConfirmed')).toBeDisabled();
-  await page.locator('#p4DogIdentity').selectOption('');
-  await expect(page.locator('#p4SaveConfirmed')).toBeEnabled();
-});
-
-test('directory Book Again preserves a deliberate field focus through delayed exact-ID confirmation', async ({ page }) => {
-  await setup(page);
-  await page.evaluate(() => {
-    window.fixturePage = 'directory';
-    document.getElementById('p4Modal').hidden = true;
-    window.WAFFLE_PHASE4_CORE.open = () => { document.getElementById('p4Modal').hidden = false; };
-    window.identityRead = payload => payload.action === 'list_dog_identities'
-      ? new Promise(resolve => { window.pendingDirectoryIdentity = resolve; })
-      : Promise.resolve({ history: { previousStays: [] } });
-    const card = document.createElement('article');
-    card.className = 'directory-card';
-    Object.assign(card.dataset, { directoryStayKey: 'luna|2026-01-01|2026-01-03', directoryDogName: 'Luna', directoryDogId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', directoryDogNumber: '00001', directoryStartDate: '2026-01-01', directoryEndDate: '2026-01-03' });
-    card.innerHTML = '<header class="directory-card-header"></header><section class="directory-care-brief"><div class="directory-care-brief-actions"><details class="directory-care-more-actions"><summary>More tools</summary><div class="directory-care-more-actions-list"></div></details></div></section><span class="directory-primary-breed" data-directory-current-value="Pug"></span><span data-directory-edit-field="ownerName" data-directory-current-value="Alex"></span>';
-    document.body.appendChild(card);
-    window.WAFFLE_PHASE4_BOOKING.enhanceDirectory();
-  });
-  await page.locator('.directory-care-more-actions > summary').click();
-  await page.locator('[data-p4-dir="again"]').click();
-  await expect(page.locator('#p4Start')).toBeFocused();
-  await page.locator('#p4Owner').focus();
-  await page.evaluate(rows => window.pendingDirectoryIdentity({ identities: rows }), [
-    { dogId: dogA, dogNumber: '00001', dogName: 'Luna', breed: 'Pug', ownerName: 'Alex' },
-    { dogId: dogB, dogNumber: '00002', dogName: 'Luna', breed: 'Pug', ownerName: 'Blair' }
-  ]);
-  await expect(page.locator('#p4DogIdentity')).toHaveValue(dogA);
-  await expect(page.locator('#p4Owner')).toBeFocused();
-  await expect(page.locator('#p4SaveConfirmed')).toBeEnabled();
+  await expect(page.locator('#p4Modal')).toBeHidden();
+  expect(await page.evaluate(() => window.lastToast)).toContain('saved ID');
   expect(await page.evaluate(() => window.fixtureWrites.length)).toBe(0);
 });
 
 test('directory Book Again carries the selected stay request source from its profile card', async ({ page }) => {
   await setup(page);
+  await page.addStyleTag({ path: path.join(root, 'waffle-runtime.css') });
   await page.evaluate(() => {
     window.fixturePage = 'directory';
     document.getElementById('p4Modal').hidden = true;
@@ -225,19 +184,31 @@ test('directory Book Again carries the selected stay request source from its pro
     const card = document.createElement('article');
     card.className = 'directory-card';
     Object.assign(card.dataset, { directoryStayKey: 'luna|2026-01-01|2026-01-03', directoryDogName: 'Luna', directoryDogId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', directoryDogNumber: '00001', directoryStartDate: '2026-01-01', directoryEndDate: '2026-01-03' });
-    card.innerHTML = '<header class="directory-card-header"></header><section class="directory-care-brief"><div class="directory-care-brief-actions"><details class="directory-care-more-actions"><summary>More tools</summary><div class="directory-care-more-actions-list"></div></details></div></section><span class="directory-primary-breed" data-directory-current-value="Pug"></span><span data-directory-edit-field="ownerName" data-directory-current-value="Alex"></span><span data-v1117-care-source-badge="MadPaws">MadPaws</span>';
+    card.innerHTML = '<header class="directory-card-header"></header><section class="directory-care-brief"><div class="directory-care-brief-actions"><details class="directory-care-more-actions"><summary>More tools</summary><div class="directory-care-more-actions-list"></div></details></div></section><span class="directory-primary-breed" data-directory-current-value="Pug"></span><span data-directory-edit-field="ownerName" data-directory-current-value="Alex"></span><span data-directory-edit-field="phone" data-directory-current-value="0400123456"></span><span data-v1117-care-source-badge="MadPaws">MadPaws</span>';
     document.body.appendChild(card);
     window.WAFFLE_PHASE4_BOOKING.enhanceDirectory();
   });
   await page.locator('.directory-care-more-actions > summary').click();
   await page.locator('[data-p4-dir="again"]').click();
-  await expect(page.locator('#p4DogIdentity')).toHaveValue(dogA);
+  await expect(page.locator('#p4Title')).toHaveText('Book Again for Luna');
+  await expect(page.locator('#p4DogIdentity')).toBeHidden();
+  await expect(page.locator('#p4Owner')).toBeHidden();
+  await expect(page.locator('#p4Start')).toBeFocused();
+  await page.locator('#p4Start').fill('2026-10-06');
+  await page.locator('#p4End').fill('2026-10-07');
+  await page.locator('#p4SaveConfirmed').click();
+  await expect(page.locator('#p4StartError')).toHaveText('Choose a future check-in date.');
+  expect(await page.evaluate(() => window.fixtureWrites.length)).toBe(0);
   await expect(page.locator('#p4Source')).toHaveValue('MadPaws');
   await page.locator('#p4Start').fill('2026-12-10');
   await page.locator('#p4End').fill('2026-12-11');
   await page.locator('#p4SaveConfirmed').click();
   await expect.poll(() => page.evaluate(() => window.fixtureWrites.length)).toBe(1);
-  expect(await page.evaluate(() => window.fixtureWrites[0].requestSource)).toBe('MadPaws');
+  expect(await page.evaluate(() => window.fixtureWrites[0])).toMatchObject({
+    dogId: dogA, dogName: 'Luna', requestSource: 'MadPaws', ownerName: 'Alex', phone: '0400123456',
+    startDate: '2026-12-10', endDate: '2026-12-11'
+  });
+  await expect(page.locator('#p4Modal')).toBeHidden();
   expect(await page.evaluate(() => window.lastToast)).not.toMatch(/Choose where the Boarding request came from/);
 });
 
