@@ -1120,7 +1120,7 @@ function openWaffleNotificationCentre(tabName = 'inbox', opener = null) {
     const trigger = [opener, triggerEvent?.currentTarget, document.activeElement].find(node =>
         node instanceof HTMLElement && node !== document.body && !modal.contains(node) && isWaffleNotificationFocusTargetVisible(node)
     );
-    if (!modal.hidden && trigger && trigger === waffleNotificationCentreOpener && tabName === 'inbox') {
+    if (!modal.hidden && (opener || triggerEvent) && tabName === 'inbox') {
         closeWaffleNotificationCentre();
         return;
     }
@@ -3314,7 +3314,10 @@ function ensureWaffleNotificationModal() {
         closeWaffleNotificationCentre();
     });
     document.addEventListener('click', event => {
-        if (!modal.hidden && !modal.contains(event.target) && !waffleNotificationCentreOpener?.contains(event.target)) {
+        const notificationButton = event.target instanceof Element && event.target.closest(
+            '#waffleNotificationButton, [data-wh-sitter-calendar-notifications], [data-wh-sitter-mobile-action="notification"]'
+        );
+        if (!modal.hidden && !modal.contains(event.target) && !notificationButton && !waffleNotificationCentreOpener?.contains(event.target)) {
             closeWaffleNotificationCentre(false);
         }
     }, true);
