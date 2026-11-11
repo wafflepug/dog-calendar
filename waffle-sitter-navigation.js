@@ -60,7 +60,7 @@
       #wh75MobileTopbar{display:none}
         .wh-palz-stay-brand .wh-palz-word,.wh-palz-stay-brand .wh-stay-word{display:block;height:48px;flex:1 1 50%;background:var(--wh75-accent,#7c3aed);-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:center;mask-position:center;-webkit-mask-size:contain;mask-size:contain}
         .wh-palz-stay-brand .wh-palz-word{-webkit-mask-position:right center;mask-position:right center;-webkit-mask-image:url('assets/palz-word-mask.png');mask-image:url('assets/palz-word-mask.png')}
-        .wh-palz-stay-brand .wh-stay-word{margin-left:-5px;background:#111638;-webkit-mask-position:left center;mask-position:left center;-webkit-mask-image:url('assets/stay-word-mask.png');mask-image:url('assets/stay-word-mask.png')}
+        .wh-palz-stay-brand .wh-stay-word{margin-left:-5px;background:#111638;-webkit-mask-position:left center;mask-position:left center;-webkit-mask-image:url('assets/stay-word-mask.png?v=2');mask-image:url('assets/stay-word-mask.png?v=2')}
         body.dark-theme .wh-palz-stay-brand .wh-stay-word{background:#fff}
         .wh-palz-stay-brand{display:none}
       @media(max-width:820px){

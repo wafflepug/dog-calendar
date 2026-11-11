@@ -20872,7 +20872,7 @@ function sendWaffleNotificationEmail_(recipient, email) {
   }
   var subject = String(email.subject || "");
   var testPrefix = subject.indexOf("[TEST] ") === 0 ? "[TEST] " : "";
-  var heading = '<img src="https://wafflepug.github.io/dog-calendar/assets/palz-email-logo.png" ' +
+  var heading = '<img src="https://wafflepug.github.io/dog-calendar/assets/palz-email-logo.png?v=2" ' +
     'alt="Palz Stay" width="160" height="41" style="display:block;width:160px;max-width:100%;height:auto;border:0;">';
   var html = '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" ' +
     'style="background:#f5f3ff;font-family:Arial,sans-serif;color:#171633;">' +
