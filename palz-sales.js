@@ -13,7 +13,7 @@
   const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[char]);
   const recent = new Map();
   let dialog, opener, chosenId = '', month = today().slice(0, 7), mode = 'price';
-  let showing = 'due', calendarMonth = '';
+  let showing = 'due', calendarMonth = '', isMaster = false, masterCsv;
 
   function read() {
     const records = JSON.parse(localStorage.getItem(storageKey) || '{}');
@@ -21,9 +21,13 @@
     return records;
   }
 
-  function stays() {
+  function confirmedRows() {
     const core = window.WAFFLE_PHASE4_CORE;
-    const rows = (core?.rows() || []).filter(row => core.confirmed(row) && validId(row.stayId));
+    return (core?.rows(isMaster ? masterCsv : undefined) || []).filter(row => core.confirmed(row) && Number.isFinite(Date.parse(row.startDate)) && Number.isFinite(Date.parse(row.endDate)));
+  }
+
+  function stays() {
+    const rows = confirmedRows().filter(row => validId(row.stayId));
     const counts = new Map();
     rows.forEach(row => {
       const id = row.stayId.toLowerCase();
@@ -50,13 +54,16 @@
       '<label class="palz-sales-month">Reporting month <input type="month" aria-label="Reporting month"></label>' +
       '<div data-sales-totals class="palz-sales-totals"></div>' +
       '<div class="palz-sales-list-head"><h2>Stays</h2><button type="button" data-sales-filter>Sales history</button></div>' +
-      '<div data-sales-list></div>' +
+      '<div data-sales-master-filters class="palz-sales-fields" hidden><label>Find a stay<input type="search" data-sales-master-search placeholder="Pet, owner or Pet ID"></label><label>Stay period<select data-sales-master-period><option value="">All stays</option><option>Past</option><option>Current</option><option>Future</option></select></label></div>' +
+      '<p data-sales-master-status role="status" hidden></p><div data-sales-list></div>' +
       '<form data-sales-form><h2>Manage a stay</h2><label>Confirmed stay<select name="stay"></select></label>' +
       '<details data-sales-calendar hidden><summary>Stay calendar</summary><div data-sales-calendar-content></div></details><div data-sales-editor></div><p data-sales-status role="status"></p></form></div>';
     document.body.append(dialog);
     dialog.querySelector('[data-sales-close]').onclick = () => dialog.close();
     dialog.addEventListener('close', () => opener?.focus());
     dialog.querySelector('input[type=month]').addEventListener('change', event => { month = event.target.value || today().slice(0, 7); render(); });
+    dialog.querySelector('[data-sales-master-search]').oninput = () => renderMaster(read());
+    dialog.querySelector('[data-sales-master-period]').onchange = () => renderMaster(read());
     dialog.querySelector('[data-sales-filter]').onclick = () => { showing = showing === 'due' ? 'all' : 'due'; render(); };
     dialog.querySelector('[name=stay]').onchange = event => {
       chosenId = event.target.value;
@@ -138,6 +145,48 @@
       '<small>Check-in '+dates.format(new Date(stay.startDate))+' · Check-out '+dates.format(new Date(stay.endDate))+'</small>';
   }
 
+  function renderMaster(records) {
+    const query = dialog.querySelector('[data-sales-master-search]').value.trim().toLowerCase();
+    const filter = dialog.querySelector('[data-sales-master-period]').value;
+    const now = today();
+    const rows = confirmedRows().map(stay => {
+      const id = String(stay.stayId || '').toLowerCase();
+      const period = stay.endDate < now ? 'Past' : stay.startDate > now ? 'Future' : 'Current';
+      return {stay, id, period, record: records[id]};
+    }).filter(({stay, period}) => (!filter || period === filter) &&
+      [stay.dogName, stay.ownerName, stay.dogNumber].some(value => String(value || '').toLowerCase().includes(query)));
+    const editable = stays();
+    const output = dialog.querySelector('[data-sales-list]');
+    if (!rows.length) {
+      output.innerHTML = '<p class="palz-sales-empty">No matching confirmed stays.</p>';
+      return;
+    }
+    rows.sort((a, b) => b.stay.startDate.localeCompare(a.stay.startDate));
+    output.innerHTML = '<div class="palz-sales-table" role="region" aria-label="Sales Master Table" tabindex="0"><table>' +
+      '<thead><tr><th scope="col">Stay</th><th scope="col">Action</th><th scope="col">Period</th><th scope="col">Price</th><th scope="col">Expenses</th><th scope="col">Received</th><th scope="col">Balance</th></tr></thead><tbody>' +
+      rows.map(({stay, id, period, record}) => {
+        const received = paid(record);
+        return '<tr><th scope="row">'+esc(stay.dogName)+'<small>'+esc(stayDates(stay))+(stay.ownerName ? ' · '+esc(stay.ownerName) : '')+'</small></th>' +
+          '<td>'+(editable.has(id) ? '<button type="button" data-sales-select="'+esc(id)+'" data-sales-mode="price" aria-label="'+(record ? 'Edit costs for ' : 'Set costs for ')+esc(stay.dogName)+'">'+(record ? 'Edit costs' : 'Set costs')+'</button>' : '<small>Stay ID required</small>')+'</td>' +
+          '<td>'+period+'</td><td>'+(record?.total ? money(record.total) : 'Unpriced')+'</td><td>'+(record ? money(record.expenses || 0) : '—')+'</td><td>'+(record ? money(received) : '—')+'</td><td>'+(record ? money(record.total - received) : '—')+'</td></tr>';
+      }).join('')+'</tbody></table></div>';
+  }
+
+  async function refreshMaster() {
+    const notice = dialog.querySelector('[data-sales-master-status]');
+    notice.textContent = 'Refreshing confirmed stays…';
+    try {
+      masterCsv = await fetchSpreadsheetCsv();
+      if (isMaster && dialog.open) {
+        if (chosenId) renderMaster(read());
+        else render();
+      }
+      notice.textContent = '';
+    } catch (_) {
+      notice.textContent = 'Could not refresh stays. Showing the saved booking list.';
+    }
+  }
+
   function render() {
     const records = read();
     const bookings = stays();
@@ -151,9 +200,10 @@
     ].map(([label, amount]) => '<div><span>'+label+'</span><strong>'+money(amount)+'</strong></div>').join('');
     dialog.querySelector('[data-sales-filter]').textContent = showing === 'due' ? 'Sales history' : 'Back to balances';
     dialog.querySelector('.palz-sales-list-head h2').textContent = showing === 'due' ? 'Balances due' : 'Sales history';
+    if (isMaster) renderMaster(records);
     const list = entries.filter(([, record]) => record.total > paid(record))
       .sort(([, a], [, b]) => a.dueDate.localeCompare(b.dueDate));
-    dialog.querySelector('[data-sales-list]').innerHTML = showing === 'all' ? renderHistory(entries, bookings) : list.length ? list.map(([id, record]) => {
+    if (!isMaster) dialog.querySelector('[data-sales-list]').innerHTML = showing === 'all' ? renderHistory(entries.filter(([, record]) => record.total > 0), bookings) : list.length ? list.map(([id, record]) => {
       const stay = bookings.get(id) || record;
       const balance = record.total - paid(record);
       const status = !balance ? 'Paid' : record.channel === 'marketplace' ? 'Payout pending' : record.dueDate < today() ? 'Overdue' : paid(record) ? 'Part paid' : 'Payment due';
@@ -183,7 +233,11 @@
       return;
     }
     mode = 'price';
-    host.innerHTML = summary + '<div class="palz-sales-fields"><label>Payment source<select name="channel"><option value="direct">Direct from owner</option><option value="marketplace"'+(record?.channel === 'marketplace' ? ' selected' : '')+'>Marketplace payout</option></select></label><label>Price type<select name="priceType"><option value="fixed">Fixed total</option><option value="nightly"'+(record?.priceType === 'nightly' ? ' selected' : '')+'>Nightly rate</option></select></label><label>Price (AUD)<input name="amount" inputmode="decimal" required value="'+(record ? (record.rate/100).toFixed(2) : '')+'"></label><label>Due date<input name="date" type="date" required value="'+esc(record?.dueDate || stay.endDate)+'"></label></div><p data-sales-preview></p><div class="palz-sales-actions"><button type="submit" class="palz-sales-primary">Save price</button>'+(record && record.total > paid(record) ? '<button type="button" data-sales-mode="payment">Record '+(record.channel === 'marketplace' ? 'payout' : 'payment')+'</button>' : '')+'</div>'+history;
+    host.innerHTML = summary + '<div class="palz-sales-fields"><label>Payment source<select name="channel"><option value="direct">Direct from owner</option><option value="marketplace"'+(record?.channel === 'marketplace' ? ' selected' : '')+'>Marketplace payout</option></select></label><label>Price type<select name="priceType"><option value="fixed">Fixed total</option><option value="nightly"'+(record?.priceType === 'nightly' ? ' selected' : '')+'>Nightly rate</option></select></label><label>Price (AUD)<input name="amount" inputmode="decimal" required value="'+(record?.rate ? (record.rate/100).toFixed(2) : '')+'"></label><label>Due date<input name="date" type="date" required value="'+esc(record?.dueDate || stay.endDate)+'"></label></div><p data-sales-preview></p><div data-sales-expenses></div><div class="palz-sales-actions"><button type="submit" class="palz-sales-primary">Save price</button>'+(record && record.total > paid(record) ? '<button type="button" data-sales-mode="payment">Record '+(record.channel === 'marketplace' ? 'payout' : 'payment')+'</button>' : '')+'</div>'+history;
+    if (isMaster) {
+      host.querySelector('[name=amount]').required = false;
+      host.querySelector('[data-sales-expenses]').innerHTML = '<div class="palz-sales-fields"><label>Stay expenses (AUD)<input name="expenses" inputmode="decimal" value="'+(record?.expenses ? (record.expenses/100).toFixed(2) : '')+'"></label><label>Bookkeeping note<input name="bookkeepingNote" maxlength="240" value="'+esc(record?.bookkeepingNote || '')+'"></label></div>';
+    }
     const form = dialog.querySelector('form');
     const preview = () => {
       const count = form.elements.priceType.value === 'nightly' ? stayNights(stay) : 1;
@@ -200,7 +254,12 @@
     const values = new FormData(event.currentTarget);
     const id = chosenId, action = mode, amount = cents(String(values.get('amount') || '').trim()), date = String(values.get('date') || '');
     const submit = event.submitter;
-    if (!validId(id) || !amount || !/^\d{4}-\d{2}-\d{2}$/.test(date)) { status('Enter a valid amount and date.'); return; }
+    const expenseInput = values.get('expenses');
+    const expenseText = String(expenseInput || '').trim();
+    if (expenseText && !/^\d{1,6}(?:\.\d{1,2})?$/.test(expenseText)) { status('Enter a valid expense amount in AUD.'); return; }
+    const priceText = String(values.get('amount') || '').trim();
+    const expensesOnly = isMaster && action === 'price' && !priceText && cents(expenseText) > 0;
+    if (!validId(id) || (!amount && !expensesOnly) || !/^\d{4}-\d{2}-\d{2}$/.test(date)) { status('Enter a valid amount and date.'); return; }
     if (submit) submit.disabled = true;
     const write = () => {
       const records = read();
@@ -216,7 +275,9 @@
         if (total < paid(previous)) throw Error('The total cannot be below payments already recorded.');
         records[id] = {dogName: stay.dogName, startDate: stay.startDate, endDate: stay.endDate,
           channel: values.get('channel') === 'marketplace' ? 'marketplace' : 'direct',
-          priceType, rate: amount, total, dueDate: date, payments: previous?.payments || []};
+          priceType, rate: amount, total, dueDate: date, payments: previous?.payments || [],
+          expenses: expenseInput === null ? previous?.expenses || 0 : cents(expenseText),
+          bookkeepingNote: values.has('bookkeepingNote') ? String(values.get('bookkeepingNote')).trim().slice(0, 240) : previous?.bookkeepingNote || ''};
       }
       localStorage.setItem(storageKey, JSON.stringify(records));
     };
@@ -224,7 +285,7 @@
       if (navigator.locks) await navigator.locks.request(storageKey, write);
       else write();
       render();
-      status(action === 'payment' ? 'Payment recorded.' : 'Price saved.');
+      status(action === 'payment' ? 'Payment recorded.' : expensesOnly ? 'Expenses saved.' : 'Price saved.');
       updateLinks();
     } catch (error) { status(error.message || 'Sales record could not be saved.'); }
     finally { if (submit) submit.disabled = false; }
@@ -239,8 +300,13 @@
     catch (_) { status(text); }
   }
 
-  function open(stay, trigger) {
+  function open(stay, trigger, master = false) {
     mount();
+    isMaster = master;
+    dialog.dataset.salesView = master ? 'master' : 'standard';
+    dialog.querySelector('#palz-sales-title').textContent = master ? 'Sales Master Table' : 'Sales';
+    dialog.querySelector('[data-sales-master-filters]').hidden = !master;
+    dialog.querySelector('[data-sales-master-status]').hidden = !master;
     opener = trigger;
     if (stay && validId(stay.stayId) && stay.dogName && stay.startDate && stay.endDate) {
       recent.set(stay.stayId.toLowerCase(), {...stay, stayId: stay.stayId.toLowerCase()});
@@ -251,6 +317,7 @@
     mode = 'payment';
     try { render(); } catch (_) { status('Sales records could not be read in this browser.'); }
     if (!dialog.open) dialog.showModal();
+    if (master) void refreshMaster();
   }
 
   function updateLinks() {
@@ -262,7 +329,7 @@
       const id = String(card?.dataset.directoryStayId || checkout?.dataset.todayStayId || '').toLowerCase();
       if (!validId(id)) return;
       const record = records[id];
-      const label = record ? record.total === paid(record) ? 'Paid' : money(record.total-paid(record))+(record.channel === 'marketplace' ? ' payout pending' : ' due') : 'Set price';
+      const label = record?.total ? record.total === paid(record) ? 'Paid' : money(record.total-paid(record))+(record.channel === 'marketplace' ? ' payout pending' : ' due') : 'Set price';
       let button = host.querySelector('[data-sales-stay]');
       if (!button) {
         button = document.createElement('button');
@@ -277,11 +344,11 @@
   }
 
   document.addEventListener('click', event => {
-    const button = event.target.closest('a[href="#sales"], [data-sales-stay]');
+    const button = event.target.closest('a[href="#sales"], [data-sales-stay], [data-sales-master-open]');
     if (!button) return;
     event.preventDefault();
     const id = button.dataset.salesStay;
-    if (!id) { open(null, button); return; }
+    if (!id) { open(null, button, button.hasAttribute('data-sales-master-open')); return; }
     const card = button.closest('.directory-card');
     open(stays().get(id) || (card ? { stayId:id, dogName:card.dataset.directoryDogName, startDate:card.dataset.directoryStartDate, endDate:card.dataset.directoryEndDate } : { stayId:id }), button);
   });

@@ -46,3 +46,9 @@
 .palz-sales-weekday { color:var(--wh75-muted,#59667d); }
 .palz-sales-calendar-days .is-stay { background:var(--wh75-accent-soft,#f2eaff); }
 .palz-sales-calendar-days .is-endpoint { background:var(--wh75-accent-ink,#561bc9); color:var(--wh75-shell,#fff); font-weight:800; }
+
+.palz-sales [data-sales-master-filters][hidden], .palz-sales [data-sales-master-status]:empty, .palz-sales [data-sales-expenses]:empty { display:none; }
+.palz-sales[data-sales-view="master"] { width:min(980px,calc(100% - 24px)); }
+.palz-sales[data-sales-view="master"] :is(.palz-sales-month, [data-sales-totals], .palz-sales-list-head) { display:none; }
+
+.palz-sales[data-sales-view="master"] tbody th { max-width:160px; white-space:normal; overflow-wrap:anywhere; }
