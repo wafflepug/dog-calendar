@@ -646,3 +646,23 @@ test('owner form drafts cannot restore stale booking identity or date fields', (
   assert.match(html, /if\(isIntakeDraftExcludedField\(el\.name\)\)continue/);
   assert.match(html, /if\(preserveBookingIdentity&&isIntakeDraftExcludedField\(k\)\)return/);
 });
+
+test('Palz Stay intake requires each current owner answer and accepts explicit not-applicable text', () => {
+  const h = fixture();
+  vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'apps-script', 'StableStayIdentity.js'), 'utf8'), h.context);
+  const answers = Object.fromEntries(h.context.PALZ_REQUIRED_INTAKE_FIELDS_.map(key => [key, 'Not applicable']));
+  Object.assign(answers, {
+    enhancedIntakeVersion: '2026-11-12', accuracyConfirmed: true, intakeAdditionalRemarks: 'None',
+    ownerEmail: 'owner@example.com', declarationDate: '2026-11-12',
+    preferredContactMethod: ['Message'], walkingEquipment: 'None'
+  });
+  assert.doesNotThrow(() => h.context.assertPalzIntakeAnswers_(answers));
+  assert.doesNotThrow(() => h.context.assertPalzIntakeAnswers_({ ...answers, dropOffTime: '', pickUpTime: '17:00' }));
+  assert.throws(() => h.context.assertPalzIntakeAnswers_({ ...answers, dropOffTime: '25:00' }), /Enter valid drop-off and pick-up times/);
+  for (const key of ['ownerEmail', 'emergencyPhone', 'medicationInstructions', 'preferredContactMethod', 'intakeAdditionalRemarks']) {
+    const incomplete = { ...answers };
+    delete incomplete[key];
+    assert.throws(() => h.context.assertPalzIntakeAnswers_(incomplete), /Complete all intake fields/);
+  }
+  assert.throws(() => h.context.assertPalzIntakeAnswers_({ ...answers, accuracyConfirmed: false }), /confirm the declaration/);
+});
