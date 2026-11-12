@@ -318,6 +318,22 @@ function intakeSubmissionPayload(token, submissionId, dogName = 'Cino') {
   };
 }
 
+test('owner photo is bound to the verified stay and replayed without another write', () => {
+  const { h, token } = setupIntakeSubmissionHarness();
+  const payload = { ...intakeSubmissionPayload(token, 'photo-submission-0001'), profilePhotoData: 'data:image/jpeg;base64,/9j/2Q==' };
+  const calls = [];
+  h.context.saveIntakeProfilePhoto_ = (...args) => calls.push(args);
+  assert.throws(() => h.context.processIntakeSubmission_({ ...payload, profilePhotoData: validSignaturePng }), /valid profile photo/);
+  assert.throws(() => h.context.processIntakeSubmission_({ ...payload, token: 'wrong-token' }), /invalid or has expired/);
+  assert.equal(calls.length, 0);
+  assert.equal(h.context.processIntakeSubmission_(payload).profilePhotoStatus, 'saved');
+  assert.equal(h.context.processIntakeSubmission_(payload).profilePhotoStatus, 'saved');
+  assert.equal(h.context.getIntakeSubmissionStatusForHtml(token, payload.submissionId).profilePhotoStatus, 'saved');
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0][0].dogId, dogIdA);
+  assert.equal(calls[0][0].stayId, stayIdA);
+});
+
 test('prefill and local submission resolve an already-migrated token to current confirmed dates', () => {
   const { h, intake, token, counts } = setupIntakeSubmissionHarness();
   h.context.getIntakeSheet_ = () => intake;
