@@ -220,7 +220,7 @@
   }
 
   function syncPwaMetadata() {
-    const revision = window.WAFFLE_ASSET_REVISION || '2026.11.12.05';
+    const revision = window.WAFFLE_ASSET_REVISION || '2026.11.13.01';
     const manifest = document.querySelector('link[rel="manifest"]');
     if (manifest) manifest.href = `manifest.webmanifest?v=${revision}`;
 

@@ -444,9 +444,9 @@
       destination = name.parentElement;
     }
     if (signalsHost.parentElement !== destination) destination.append(signalsHost);
-    const atHome = button.querySelector('.v1118-care-status.is-at-home');
-    if (name && atHome && atHome.parentElement !== destination) destination.append(atHome);
-    const description = [...(atHome ? ['At Home'] : []), ...signals.map(signal => signal.label)].join(', ');
+    const statusIcon = button.querySelector('.v1118-care-status:is(.is-at-home, .is-leaving-today)');
+    if (name && statusIcon && statusIcon.parentElement !== destination) destination.append(statusIcon);
+    const description = [...(statusIcon ? [statusIcon.title] : []), ...signals.map(signal => signal.label)].join(', ');
     if (description && button.getAttribute('aria-description') !== description) {
       button.setAttribute('aria-description', description);
     } else if (!description && button.hasAttribute('aria-description')) {
@@ -492,10 +492,11 @@
     }
     const chipClass = 'v1118-status-chip v1118-care-status ' + statusClass(status);
     if (chip.className !== chipClass) chip.className = chipClass;
-    if (status !== 'AT HOME' && chip.parentElement !== host) host.append(chip);
+    const iconLabel = status === 'AT HOME' ? 'At Home' : status === 'LEAVING TODAY' && host === button ? 'Leaving Today' : '';
+    if (!iconLabel && chip.parentElement !== host) host.append(chip);
     if (chip.textContent !== status) chip.textContent = status;
-    if (status === 'AT HOME' && chip.title !== 'At Home') chip.title = 'At Home';
-    else if (status !== 'AT HOME' && chip.hasAttribute('title')) chip.removeAttribute('title');
+    if (iconLabel && chip.title !== iconLabel) chip.title = iconLabel;
+    else if (!iconLabel && chip.hasAttribute('title')) chip.removeAttribute('title');
     const profileStatus = card.classList.contains('is-profile-active') && card.dataset.v1082PastStay !== 'true'
       ? card.querySelector('.directory-card-header .directory-status-tag')
       : null;
