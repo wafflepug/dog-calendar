@@ -320,12 +320,19 @@ function appendStableStayRowV11225_(sheet, rowData, stayId, mutationId) {
   return { row: sheet.getLastRow(), stayId: data[cols.stayId - 1] };
 }
 
-function backfillStableStayIdsV11225_() {
+function backfillStableStayIdsV11225_(options) {
   var sheet = getTargetSheet_();
   var cols = stableStayHeadersV11225_(sheet, true);
   var rows = sheet.getDataRange().getValues();
   var assigned = 0;
   var seen = {};
+  var includeLegacyBoarding = options && options.includeLegacyBoarding === true;
+  function isBackfillRow(row) {
+    var type = String(row[11] || '').trim().toLowerCase();
+    if (type === 'confirmed boarding' || type === 'boarding') return true;
+    if (includeLegacyBoarding) return !type && Boolean(String(row[1] || '').trim() && row[3]);
+    return type === 'potential stay' || type === 'potential';
+  }
   for (var check = 1; check < rows.length; check++) {
     var known = String(rows[check][cols.stayId - 1] || '').trim();
     if (!known) continue;
@@ -334,9 +341,7 @@ function backfillStableStayIdsV11225_() {
     seen[knownKey] = true;
   }
   for (var validate = 1; validate < rows.length; validate++) {
-    var typeToValidate = String(rows[validate][11] || '').trim().toLowerCase();
-    var bookingType = typeToValidate === 'confirmed boarding' || typeToValidate === 'boarding' || typeToValidate === 'potential stay' || typeToValidate === 'potential';
-    if (!bookingType) continue;
+    if (!isBackfillRow(rows[validate])) continue;
     var startToValidate = rows[validate][3];
     var endToValidate = rows[validate][4] || startToValidate;
     if (!String(rows[validate][1] || '').trim() || !validStableStayDateV11225_(startToValidate) ||
@@ -345,8 +350,7 @@ function backfillStableStayIdsV11225_() {
     }
   }
   for (var i = 1; i < rows.length; i++) {
-    var type = String(rows[i][11] || '').trim().toLowerCase();
-    if (type !== 'confirmed boarding' && type !== 'boarding' && type !== 'potential stay' && type !== 'potential') continue;
+    if (!isBackfillRow(rows[i])) continue;
     if (!String(rows[i][cols.stayId - 1] || '').trim()) {
       var id = Utilities.getUuid();
       id = String(id).toLowerCase();

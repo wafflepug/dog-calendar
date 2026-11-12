@@ -521,3 +521,15 @@ function potentialRequest(action, id, stayId, values = {}) {
   }
 }
 console.log('Stable stay backend identity and receipt tests passed.');
+
+// Historic boarding rows can be enrolled without assigning IDs to enquiries.
+{
+  const legacy = ['', 'Fern', 'Pug', '2026-07-01', '2026-07-03', 'Sam', '', '', '', '', '', '', '', ''];
+  const potential = ['', 'Pip', 'Kelpie', '2026-10-04', '2026-10-05', 'Sam', '', '', '', '', '', 'Potential Stay', '', ''];
+  const h = makeHarness({ rows: [header, legacy, potential] });
+  assert.equal(h.sandbox.backfillStableStayIdsV11225_({includeLegacyBoarding: true}).assigned, 1);
+  const rows = h.bookings.getDataRange().getValues();
+  assert.match(h.sandbox.stableStayIdAtV11225_(rows, 1), /^[0-9a-f-]{36}$/);
+  assert.equal(h.sandbox.stableStayIdAtV11225_(rows, 2), '');
+  assert.equal(h.sandbox.backfillStableStayIdsV11225_({includeLegacyBoarding: true}).assigned, 0);
+}

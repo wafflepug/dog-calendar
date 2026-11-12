@@ -5002,7 +5002,7 @@ function processSheetAction_(data) {
 
   try {
     if (data.action === "backfill_stay_ids") {
-      return backfillStableStayIdsV11225_();
+      return backfillStableStayIdsV11225_(data);
     }
     var sheet =
       getTargetSheet_();
