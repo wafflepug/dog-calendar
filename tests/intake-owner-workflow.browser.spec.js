@@ -71,6 +71,24 @@ async function succeedPrefill(page, index = 0, dogName = 'Cino', savedAnswers = 
   }), { index, dogName, savedAnswers, status });
 }
 
+test('optional owner profile photo previews and can be removed', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 900 });
+  await openIntake(page);
+  await succeedPrefill(page);
+  const input = page.getByLabel('Profile photo (optional)');
+  await expect(input).not.toHaveAttribute('required');
+  await input.setInputFiles({
+    name: 'profile.png',
+    mimeType: 'image/png',
+    buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/T5cAAAAASUVORK5CYII=', 'base64')
+  });
+  await expect(page.getByAltText('Selected profile photo')).toBeVisible();
+  if (process.env.PALZ_PHOTO_SCREENSHOT) await page.screenshot({ path: process.env.PALZ_PHOTO_SCREENSHOT });
+  await page.getByRole('button', { name: 'Remove photo' }).click();
+  await expect(page.getByAltText('Selected profile photo')).toBeHidden();
+  await expect(input).toHaveValue('');
+});
+
 test('prefill shows progress, then offers one explicit retry and rejects stale results at phone and desktop widths', async ({ page }) => {
   for (const theme of ['', 'dark-theme']) {
     for (const width of [320, 390, 1440]) {

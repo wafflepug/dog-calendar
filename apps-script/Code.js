@@ -6924,7 +6924,9 @@ function getIntakeSubmissionStatusForHtml(token, submissionId) {
     if (!receipt.digest || !receipt.submittedAt || !receipt.pdfFileId || !receipt.pdfUrl || !receipt.signatureFileId) {
       return { result: "success", state: "identity-conflict" };
     }
-    return { result: "success", state: "complete" };
+    var status = { result: "success", state: "complete" };
+    if (receipt.profilePhotoStatus) status.profilePhotoStatus = receipt.profilePhotoStatus;
+    return status;
   }
   return { result: "success", state: receipt.state === "Pending" ? "pending" : "identity-conflict" };
 }
@@ -6939,7 +6941,8 @@ function intakeSubmissionResultFromReceipt_(receipt) {
     stayKey: receipt.stayKey,
     submittedAt: receipt.submittedAt instanceof Date ? receipt.submittedAt.toISOString() : String(receipt.submittedAt || ""),
     pdfFileId: receipt.pdfFileId,
-    pdfUrl: receipt.pdfUrl
+    pdfUrl: receipt.pdfUrl,
+    profilePhotoStatus: receipt.profilePhotoStatus || ""
   };
 }
 
@@ -6964,7 +6967,8 @@ function submitIntakeFromHtml(payload) {
       payload.answers && typeof payload.answers === "object"
         ? payload.answers
         : {},
-    signatureData: String(payload.signatureData || "")
+    signatureData: String(payload.signatureData || ""),
+    profilePhotoData: String(payload.profilePhotoData || "")
   });
 }
 
@@ -11324,7 +11328,8 @@ var INTAKE_SUBMISSION_RECEIPT_HEADERS_ = [
   "PDF File ID",
   "PDF URL",
   "Signature File ID",
-  "Submitted At"
+  "Submitted At",
+  "Profile Photo Status"
 ];
 
 
@@ -11342,6 +11347,12 @@ function getIntakeSubmissionReceiptsSheet_() {
     sheet.setFrozenRows(1);
   } else {
     var headers = sheet.getRange(1, 1, 1, INTAKE_SUBMISSION_RECEIPT_HEADERS_.length).getValues()[0];
+    var photoStatusColumn = INTAKE_SUBMISSION_RECEIPT_HEADERS_.length;
+    if (!headers[photoStatusColumn - 1] &&
+        INTAKE_SUBMISSION_RECEIPT_HEADERS_.slice(0, -1).every(function(header, index) { return headers[index] === header; })) {
+      headers[photoStatusColumn - 1] = "Profile Photo Status";
+      sheet.getRange(1, photoStatusColumn).setValue(headers[photoStatusColumn - 1]);
+    }
     if (INTAKE_SUBMISSION_RECEIPT_HEADERS_.some(function(header, index) { return String(headers[index] || "") !== header; })) {
       throw new Error("The intake submission receipt sheet has an unexpected layout. No submission was saved.");
     }
@@ -11378,7 +11389,8 @@ function findIntakeSubmissionReceiptsForToken_(sheet, tokenHash) {
       pdfFileId: String(row[11] || ""),
       pdfUrl: String(row[12] || ""),
       signatureFileId: String(row[13] || ""),
-      submittedAt: row[14] instanceof Date ? row[14].toISOString() : String(row[14] || "")
+      submittedAt: row[14] instanceof Date ? row[14].toISOString() : String(row[14] || ""),
+      profilePhotoStatus: String(row[15] || "")
     });
   });
   return receipts;
@@ -11410,7 +11422,8 @@ function writeIntakeSubmissionReceipt_(sheet, receipt) {
     receipt.pdfFileId,
     receipt.pdfUrl,
     receipt.signatureFileId,
-    receipt.submittedAt
+    receipt.submittedAt,
+    receipt.profilePhotoStatus || ""
   ];
   if (receipt.row) sheet.getRange(receipt.row, 1, 1, INTAKE_SUBMISSION_RECEIPT_HEADERS_.length).setValues([values]);
   else {
@@ -13333,7 +13346,11 @@ function prepareIntakeSubmission_(data) {
     throw new Error("The electronic signature image could not be decoded.");
   }
   assertPalzIntakeAnswers_(answers);
-  var snapshot = stableIntakeJson_({ token: token, answers: answers, signatureData: signatureData });
+  var profilePhotoData = String(data.profilePhotoData || "");
+  assertIntakeProfilePhoto_(profilePhotoData);
+  var submission = { token: token, answers: answers, signatureData: signatureData };
+  if (profilePhotoData) submission.profilePhotoData = profilePhotoData;
+  var snapshot = stableIntakeJson_(submission);
   var digestBytes = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, snapshot, Utilities.Charset.UTF_8);
   var digest = Utilities.base64EncodeWebSafe(digestBytes).replace(/=+$/, "");
   var submissionId = String(data.submissionId || "").trim();
@@ -13343,10 +13360,44 @@ function prepareIntakeSubmission_(data) {
     token: token,
     answers: answers,
     signatureData: signatureData,
+    profilePhotoData: profilePhotoData,
     signatureBlob: Utilities.newBlob(signatureBytes, "image/png", "Owner-Signature.png"),
     submissionId: submissionId,
     submissionDigest: digest
   };
+}
+
+
+function assertIntakeProfilePhoto_(dataUrl) {
+  if (!dataUrl) return;
+  var match = dataUrl.length <= 700000 && dataUrl.match(/^data:image\/jpeg;base64,([A-Za-z0-9+/]+={0,2})$/);
+  if (!match) throw new Error("Choose a valid profile photo.");
+  var bytes = Utilities.base64Decode(match[1]);
+  if (bytes.length < 4 || (bytes[0] & 255) !== 255 || (bytes[1] & 255) !== 216 ||
+      (bytes[2] & 255) !== 255 || (bytes[bytes.length - 2] & 255) !== 255 ||
+      (bytes[bytes.length - 1] & 255) !== 217) {
+    throw new Error("Choose a valid profile photo.");
+  }
+}
+
+
+function saveIntakeProfilePhoto_(identity, booking, stayKey, photoData, uploadId) {
+  var sheet = getBelongingsSheet_();
+  var row = assertCareRecordWriteIdentity_(sheet, {
+    stayKey: stayKey, dogId: identity.dogId, stayId: identity.stayId
+  }).row;
+  if (row < 2) throw new Error("No matching Care record was found for the profile photo.");
+  var values = sheet.getRange(row, 30, 1, 4).getValues()[0];
+  var gallery = normalizeV108DogPhotoGallery_(parseV108DogPhotoGalleryJson_(values[3]), parseDogPhotoJson_(values[0]));
+  var photo = saveBelongingsPhoto_({
+    dogName: booking.dogName,
+    photoLabel: booking.dogName + " profile photo",
+    photoData: photoData,
+    uploadSuffix: "intake_profile_" + uploadId
+  });
+  values[0] = JSON.stringify(photo);
+  values[3] = JSON.stringify(normalizeV108DogPhotoGallery_(gallery, photo));
+  sheet.getRange(row, 30, 1, 4).setValues([values]);
 }
 
 
@@ -13547,6 +13598,15 @@ function processIntakeSubmissionLocked_(prepared) {
     if (!receipt || receipt.state !== "Pending" || receipt.digest !== submissionDigest ||
         receipt.stayId !== mutationStayId || receipt.dogId !== identity.dogId) {
       throw new Error("The pending intake receipt could not be revalidated. Submission remains pending for manual review.");
+    }
+    if (data.profilePhotoData) {
+      try {
+        saveIntakeProfilePhoto_(current, bookingAfter, newStayKey, data.profilePhotoData, submissionDigest);
+        receipt.profilePhotoStatus = "saved";
+      } catch (error) {
+        console.warn("Intake profile photo could not be saved: " + error.message);
+        receipt.profilePhotoStatus = "failed";
+      }
     }
     var row = currentIntake.row;
     var completedValues = getIntakeSheet_().getRange(row, 1, 1, INTAKE_HEADERS_.length).getValues()[0];
