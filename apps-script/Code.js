@@ -6852,7 +6852,7 @@ function buildDigitalIntakeHtml_(params) {
 
   return template
     .evaluate()
-    .setTitle("Waffle Boarding House — Dog Sitting Intake")
+    .setTitle("Palz Stay — Pet Sitting Intake")
     .addMetaTag(
       "viewport",
       "width=device-width, initial-scale=1, viewport-fit=cover"
@@ -13281,6 +13281,37 @@ function validateIntakeSignaturePngBytes_(bytes) {
 }
 
 
+var PALZ_REQUIRED_INTAKE_FIELDS_ = [
+  "ownerName", "mobile", "ownerAddress", "ownerEmail", "preferredContactMethod", "emergencyContact",
+  "emergencyPhone", "dogName", "breed", "age", "weight", "sex", "desexed", "vaccinated",
+  "microchipped", "vaccinationDetails", "fleaTickTreatment", "fleaTickValidUntil", "friendlyDogs", "friendlyCats", "friendlyChildren", "friendlyStrangers",
+  "separationAnxiety", "aggression", "aggressionDetails", "foodAggression", "possessiveToysFood", "escapeAttempts", "indoorAccidents", "chewingFurniture",
+  "barkingIndoors", "unfamiliarDogsInteraction", "triggersFears", "handlingTips", "foodBrandType", "feedingTimes", "foodAmount", "allowedTreats",
+  "approvedTreats", "foodAllergies", "otherFeedingInstructions", "walksPerDay", "walkDuration", "preferredWalkTiming", "pullsOnLeash", "offLeashAllowed",
+  "walkingEquipment", "outdoorRestrictions", "medicalConditions", "medicationInstructions", "petInsurance", "insuranceDetails", "regularVetClinic", "vetPhone",
+  "emergencyVet", "medicalEmergencyInstructions", "sleepLocation", "crateTrained", "ownBedCrateProvided", "canBeLeftAlone", "aloneDuration", "houseTrained",
+  "toiletBreakFrequency", "couchAllowed", "stairsSafe", "indoorRoutine", "needsBrushing", "brushingInstructions", "needsBathing", "bathingInstructions",
+  "dryingInstructions", "otherGroomingCare", "enjoysCarRides", "transportPermission", "carTravelMethod", "transportRestrictions", "commandComeHere", "commandDropIt",
+  "commandSit", "commandLeaveIt", "commandDown", "commandHeel", "commandStayWait", "commandOther", "favouriteActivities", "additionalHandlingInstructions",
+  "additionalInstructions", "signatureName", "declarationDogName", "declarationDate"
+];
+
+function assertPalzIntakeAnswers_(answers) {
+  if (answers.enhancedIntakeVersion !== "2026-11-12") return;
+  var missing = PALZ_REQUIRED_INTAKE_FIELDS_.some(function(key) {
+    var value = answers[key === "additionalInstructions" ? "intakeAdditionalRemarks" : key];
+    if (Array.isArray(value) && (key === "preferredContactMethod" || key === "walkingEquipment")) {
+      return !value.some(function(item) { return typeof item === "string" && item.trim(); });
+    }
+    return typeof value !== "string" || !value.trim();
+  });
+  if (missing || answers.accuracyConfirmed !== true) throw new Error("Complete all intake fields and confirm the declaration before submitting.");
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(answers.ownerEmail.trim())) throw new Error("Enter a valid email address.");
+  if (![answers.dropOffTime, answers.pickUpTime].every(function(time) { return time == null || time === "" || (typeof time === "string" && /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(time)); })) throw new Error("Enter valid drop-off and pick-up times.");
+  if (!validStableStayDateV11225_(answers.declarationDate)) throw new Error("Enter a valid declaration date.");
+  if (!/^(?:not applicable|none|unknown|n\/a)$/i.test(answers.fleaTickValidUntil.trim()) && !validStableStayDateV11225_(answers.fleaTickValidUntil)) throw new Error("Enter a valid flea/tick expiry date or Not applicable.");
+}
+
 function prepareIntakeSubmission_(data) {
   data = data && typeof data === "object" ? data : {};
   var token = String(data.token || "").trim();
@@ -13301,6 +13332,7 @@ function prepareIntakeSubmission_(data) {
   if (!validateIntakeSignaturePngBytes_(signatureBytes)) {
     throw new Error("The electronic signature image could not be decoded.");
   }
+  assertPalzIntakeAnswers_(answers);
   var snapshot = stableIntakeJson_({ token: token, answers: answers, signatureData: signatureData });
   var digestBytes = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, snapshot, Utilities.Charset.UTF_8);
   var digest = Utilities.base64EncodeWebSafe(digestBytes).replace(/=+$/, "");

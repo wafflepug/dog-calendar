@@ -125,6 +125,8 @@ for (const [width, colorScheme] of [[320, 'light'], [320, 'dark'], [390, 'light'
       owner.closest('.field').append(hint);
       owner.setAttribute('aria-describedby', hint.id);
       owner.value = '';
+      document.getElementById('dropOffTime').value = '09:00';
+      document.getElementById('pickUpTime').value = '17:00';
     });
     await page.locator('#nextBtn').click();
     const ownerName = page.locator('#ownerName');
@@ -139,6 +141,15 @@ for (const [width, colorScheme] of [[320, 'light'], [320, 'dark'], [390, 'light'
     await expect(page.locator('#intake-error-ownerName')).toHaveCount(0);
 
     await page.evaluate(() => {
+      for (const field of document.querySelectorAll('[data-step="6"] [required]')) {
+        if (field.name === 'transportPermission' || field.name === 'accuracyConfirmed' || field.name === 'termsAccepted') continue;
+        if (field.type === 'checkbox') field.checked = true;
+        else if (field.type === 'radio') {
+          if (!field.form.elements[field.name].value) field.checked = true;
+        } else if (!field.value.trim()) {
+          field.value = field.type === 'email' ? 'owner@example.com' : field.type === 'date' ? '2026-11-12' : 'Not applicable';
+        }
+      }
       currentStep = 6;
       updateWizard(false);
     });
@@ -151,13 +162,22 @@ for (const [width, colorScheme] of [[320, 'light'], [320, 'dark'], [390, 'light'
     await page.locator('#nextBtn').click();
     await expect(transportGroup.locator('input[value="Yes"]')).toBeFocused();
     expect(await transportGroup.locator('input[type="radio"]').evaluateAll(radios => radios.every(radio => radio.getAttribute('aria-invalid') === 'true'))).toBeTruthy();
-    await expect(page.locator('#intake-error-transportPermission')).toHaveText('Please choose a response for “Owner permits sitter to transport the dog by car if reasonably required” before continuing.');
+    await expect(page.locator('#intake-error-transportPermission')).toHaveText('Please choose a response for “Owner permits sitter to transport the dog by car if reasonably required”.');
     await expect(page.locator('#intake-error-transportPermission')).toHaveCount(1);
     await transportGroup.locator('input[value="No"]').check();
     await expect(page.locator('#intake-error-transportPermission')).toHaveCount(0);
     expect(await transportGroup.locator('input[type="radio"]').evaluateAll(radios => radios.every(radio => !radio.hasAttribute('aria-invalid')))).toBeTruthy();
 
     await page.evaluate(() => {
+      for (const field of document.querySelectorAll('#intakeForm [required]')) {
+        if (field.name === 'transportPermission' || field.name === 'accuracyConfirmed' || field.name === 'termsAccepted') continue;
+        if (field.type === 'checkbox') field.checked = true;
+        else if (field.type === 'radio') {
+          if (!field.form.elements[field.name].value) field.checked = true;
+        } else if (!field.value.trim()) {
+          field.value = field.type === 'email' ? 'owner@example.com' : field.type === 'date' ? '2026-11-12' : 'Not applicable';
+        }
+      }
       currentStep = 7;
       updateWizard(false);
     });
@@ -420,8 +440,11 @@ test('debounces typing, flushes on change and pagehide, and keeps submit feedbac
 
   await page.evaluate(() => {
     document.querySelectorAll('#intakeForm [required]').forEach(el => {
-      if (el.type === 'checkbox') el.checked = true;
-      else if (el.type !== 'radio') el.value = el.type === 'date' ? '2026-11-01' : 'Completed';
+      if (el.type === 'checkbox' || el.type === 'radio') el.checked = true;
+      else if (el.type === 'date') el.value = '2026-11-01';
+      else if (el.type === 'time') el.value = '09:00';
+      else if (el.type === 'email') el.value = 'owner@example.com';
+      else el.value = 'Not applicable';
     });
     signatureAnswerFingerprint = signatureContentFingerprint();
     signatureDirty = true;
@@ -627,8 +650,11 @@ test('a hung submission exposes status without unlocking or resubmitting, then a
   await succeedPrefill(page);
   await page.evaluate(() => {
     document.querySelectorAll('#intakeForm [required]').forEach(el => {
-      if (el.type === 'checkbox') el.checked = true;
-      else if (el.type !== 'radio') el.value = el.type === 'date' ? '2026-11-01' : 'Completed';
+      if (el.type === 'checkbox' || el.type === 'radio') el.checked = true;
+      else if (el.type === 'date') el.value = '2026-11-01';
+      else if (el.type === 'time') el.value = '09:00';
+      else if (el.type === 'email') el.value = 'owner@example.com';
+      else el.value = 'Not applicable';
     });
     signatureAnswerFingerprint = signatureContentFingerprint();
     signatureDirty = true;
@@ -657,8 +683,11 @@ test('late status responses cannot downgrade or crash an already completed submi
     await succeedPrefill(page);
     await page.evaluate(() => {
       document.querySelectorAll('#intakeForm [required]').forEach(el => {
-        if (el.type === 'checkbox') el.checked = true;
-        else if (el.type !== 'radio') el.value = el.type === 'date' ? '2026-11-01' : 'Completed';
+        if (el.type === 'checkbox' || el.type === 'radio') el.checked = true;
+        else if (el.type === 'date') el.value = '2026-11-01';
+        else if (el.type === 'time') el.value = '09:00';
+        else if (el.type === 'email') el.value = 'owner@example.com';
+        else el.value = 'Not applicable';
       });
       signatureAnswerFingerprint = signatureContentFingerprint();
       signatureDirty = true;
