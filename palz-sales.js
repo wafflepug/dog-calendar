@@ -23,7 +23,11 @@
 
   function confirmedRows() {
     const core = window.WAFFLE_PHASE4_CORE;
-    return (core?.rows(isMaster ? masterCsv : undefined) || []).filter(row => core.confirmed(row) && Number.isFinite(Date.parse(row.startDate)) && Number.isFinite(Date.parse(row.endDate)));
+    return (core?.rows(isMaster ? masterCsv : undefined) || []).filter(row => {
+      // Older confirmed boarding rows predate the Booking Type field.
+      const boarding = !row.bookingType || core.confirmed(row);
+      return boarding && Number.isFinite(Date.parse(row.startDate)) && Number.isFinite(Date.parse(row.endDate));
+    });
   }
 
   function stays() {
