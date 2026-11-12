@@ -121,6 +121,9 @@
     document.querySelectorAll('.directory-guest-tile-open .v1118-care-status.is-at-home, .directory-profile-name-line .directory-status-tag.tag-at-home').forEach(chip => {
       if (!chip.querySelector('[data-palz-icon="home"]')) chip.insertAdjacentHTML('beforeend', svg('home'));
     });
+    document.querySelectorAll('.directory-guest-tile-open .v1118-care-status.is-leaving-today').forEach(chip => {
+      if (!chip.querySelector('[data-palz-icon="checkout"]')) chip.insertAdjacentHTML('beforeend', svg('checkout'));
+    });
     document.querySelectorAll('[data-v10-quick-action="potential"] > span:first-child').forEach(icon => hostIcon(icon, 'document'));
     document.querySelectorAll('[data-wh75-mode]').forEach(control=>{control.classList.add('palz-mode-choice');if(!control.querySelector('[data-palz-icon]')){const span=document.createElement('span');span.className='palz-mode-icon';span.innerHTML=svg(control.dataset.wh75Mode==='light'?'sun':'moon');control.prepend(span);}});
     const items={'[data-care-header-book-again]':'refresh','[data-v11217-roster-owner-call]':'phone','[data-v110-checkin],[data-v11217-roster-checkin],[data-today-action="checkin"]':'checkin','[data-v110-checkout],[data-v11217-roster-checkout],[data-today-action="checkout"],[data-v11217-early-checkout]':'checkout','[data-care-upload-belongings-photo],[data-upload-belongings-photo]':'upload','[data-care-change-profile-photo],[data-upload-dog-photo],[data-take-belongings-photo]':'camera','[data-care-view-photos],[data-v108-gallery]':'image','[data-care-brief-action="refresh"]':'refresh','[data-organiser-add-task]':'plus'};
