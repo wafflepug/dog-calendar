@@ -108,7 +108,7 @@ function v1082PastCardHtml(booking) {
                     aria-hidden="true"></span>
                 <span class="directory-roster-avatar" aria-hidden="true"></span>
                 <span class="directory-roster-copy">
-                    <span class="directory-guest-tile-name">${v1082Escape(dogName)}</span>
+                    <span class="directory-roster-name-line"><span class="directory-guest-tile-name">${v1082Escape(dogName)}</span></span>
                     <span class="directory-roster-context">${v1082Escape(breed)}${dogIdentityLabel ? ` · ${v1082Escape(dogIdentityLabel)}` : ''} · stayed ${v1082Escape(dateLabel)}</span>
                 </span>
                 <span class="directory-roster-status is-past">${isCheckedOut ? 'Checked out' : 'Completed'}</span>
