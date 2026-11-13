@@ -12337,6 +12337,8 @@ registerWaffleServiceWorker();
     ) {
         if (!card) return;
 
+        if (typeof v1082MountPastProfile === 'function') v1082MountPastProfile(card);
+
         const profileLoadToken = String(Date.now()) + Math.random().toString(36).slice(2);
         const profileDashboard = card.closest('.directory-dashboard-fused') || document.querySelector('.directory-dashboard-fused');
         const initialStayKey = String(card.dataset.directoryStayKey || card.dataset.stayKey || '').trim();
@@ -12552,6 +12554,10 @@ registerWaffleServiceWorker();
         const intakeLoad = getDirectoryProfileCard(stayKey, '', '', true) === card
             ? hydrateDirectoryIntakeStatuses({ stayKeys: [stayKey], force: options.force === true })
             : null;
+        if (card.dataset.v1082PastStay === 'true' && profileSection) {
+            void hydrateDirectoryLegacyIntakes({ stayKeys: [stayKey], expectedIdentity: getDirectoryProfileEditIdentity(card) })
+                .catch(error => console.error(error));
+        }
         let profileLoad = null;
         if (profileSection) {
             profileLoad = loadDirectoryProfileDetail(
@@ -12637,6 +12643,7 @@ registerWaffleServiceWorker();
             backBar.hidden = true;
         }
 
+        if (typeof v1082FlushPastRoster === 'function') v1082FlushPastRoster();
         filterGuestDirectoryCards();
 
         let restoringOrigin = false;
@@ -12956,6 +12963,8 @@ registerWaffleServiceWorker();
     function filterGuestDirectoryCards() {
         const input = document.getElementById('guestDirectorySearch');
         const search = String(input && !input.disabled ? input.value : '').toLowerCase().trim();
+
+        if (typeof v1082ExpandPastForSearch === 'function') v1082ExpandPastForSearch(search);
 
         const profileMode =
             document
@@ -18305,7 +18314,7 @@ registerWaffleServiceWorker();
         });
     }
 
-    function renderDirectoryStayCardMarkup({directoryStayKey, dogName, breed, breedTxt, ownerName, phone, notes, dogId, stayId, dogNumber, species, startParsed, endParsed, sourceRow, isCurrentlyAtHome = false, hasBeenPickedUp = false, pastStay = null, localTodayStr = getLocalTodayDateString()}) {
+    function renderDirectoryStayCardMarkup({directoryStayKey, dogName, breed, breedTxt, ownerName, phone, notes, dogId, stayId, dogNumber, species, startParsed, endParsed, sourceRow, isCurrentlyAtHome = false, hasBeenPickedUp = false, pastStay = null, rosterOnly = false, localTodayStr = getLocalTodayDateString()}) {
         const pastStatus = pastStay?.checkedOut ? 'Checked out' : 'Completed';
         const statusTag = pastStay
             ? `<span class="directory-status-tag tag-checked-out v1082-past-status">${pastStatus}</span>`
@@ -18363,7 +18372,7 @@ registerWaffleServiceWorker();
                                             <span class="directory-roster-status${pastStay || hasBeenPickedUp ? ' is-past' : ''}">${rosterStatus}</span>
                                         </button>
 
-                                        <div class="directory-profile-content">
+                                        ${rosterOnly ? '' : `<div class="directory-profile-content">
                                         <div class="directory-card-header">
                                             <div
                                                 class="directory-photo-shell"
@@ -18709,7 +18718,7 @@ registerWaffleServiceWorker();
                                                 </div>
                                             </section>
                                         </section>
-                                        </div>
+                                        </div>`}
                                     </div>
                                 `;
     }

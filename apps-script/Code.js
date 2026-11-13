@@ -2429,7 +2429,7 @@ function getPastGuestDirectoryPayload_(data) {
         dogIdentity.dogNumber,
       dogName:
         dogName,
-      species: v108DogIdentityAt_(rows,i).species,
+      species: dogIdentity.species,
       breed:
         String(
           row[2] ||
@@ -2611,11 +2611,7 @@ function getPastGuestDirectoryPayload_(data) {
   var totalPastStays =
     bookings.length;
 
-  bookings =
-    bookings.slice(
-      0,
-      limit
-    );
+  if (data.rosterOnly !== true) bookings = bookings.slice(0, limit);
 
   var stayKeys =
     bookings.map(
@@ -2630,6 +2626,21 @@ function getPastGuestDirectoryPayload_(data) {
       stayKeys,
       rows
     );
+
+  if (data.rosterOnly === true) {
+    return {
+      bookings: bookings.map(function(booking) {
+        delete booking.timestamp;
+        delete booking.editLink;
+        return booking;
+      }),
+      totalPastStays: totalPastStays,
+      rosterOnly: true,
+      summaries: summaries.map(function(summary) {
+        return { stayKey: summary.stayKey, identity: summary.identity, dogPhoto: summary.dogPhoto, riskFlags: summary.riskFlags };
+      })
+    };
+  }
 
   var digitalIntakes =
     getIntakeStatusRecords_(
@@ -2837,6 +2848,7 @@ function waffleReadVariant_(action, data) {
 
   if (actionName === "get_past_guest_directory") {
     variantPayload.pastDirectorySchemaVersion = 2;
+    if (data.rosterOnly === true) variantPayload.rosterOnly = true;
   }
 
   if (["get_stay_operations", "get_guest_directory", "get_past_guest_directory"].indexOf(actionName) !== -1) {
