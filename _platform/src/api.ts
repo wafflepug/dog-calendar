@@ -4,10 +4,11 @@ import type { Store } from './database.js';
 
 type Identity = { uid: string; email?: string; email_verified: boolean };
 type Config = { mode?: string; origin?: string; [key: string]: unknown };
-type HandlerOptions = { store: Store; verifyToken: (token: string) => Promise<Identity>; publicConfig: Config };
+type HandlerOptions = { store: Store; verifyToken: (token: string) => Promise<Identity>; publicConfig: Config; pilotEmails?: ReadonlySet<string> };
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const RESERVED = new Set(['uid', 'userId', 'role', 'plan', 'businessId', 'business_id', 'owner_id']);
 const SAFE_ERRORS: Record<string, string> = {
+  pilot_invite_required: 'This email has not been invited to the Palz Stay pilot.',
   invalid_request: 'The request is invalid.', invalid_json: 'Request body must be valid JSON.', unsupported_media_type: 'Content-Type must be application/json.',
   payload_too_large: 'Request body is too large.', unauthorized: 'Authentication required.', email_unverified: 'A verified email is required.',
   email_required: 'A verified email is required.', origin_denied: 'Origin is not allowed.', rate_limited: 'Too many requests.', not_found: 'Route not found.',
@@ -20,7 +21,7 @@ const SAFE_ERRORS: Record<string, string> = {
   cannot_disable_self: 'You cannot disable your own account.', member_not_found: 'Active staff member not found.',
 };
 
-export function createHandler({ store, verifyToken, publicConfig }: HandlerOptions) {
+export function createHandler({ store, verifyToken, publicConfig, pilotEmails }: HandlerOptions) {
   // Fixed-size, opportunistically cleaned buckets. The key is the socket peer only;
   // forwarded headers are controlled by clients and are intentionally ignored.
   const limits = new Map<string, { start: number; count: number }>();
@@ -57,6 +58,10 @@ export function createHandler({ store, verifyToken, publicConfig }: HandlerOptio
       try { identity = await verifyToken(authorization.slice(7)); }
       catch { throw httpError(401, 'unauthorized', 'Authentication required'); }
       if (!identity?.uid || identity.email_verified !== true) throw httpError(403, 'email_unverified', 'A verified email is required');
+
+      if (pilotEmails && !pilotEmails.has(String(identity.email || '').toLowerCase())) {
+        throw httpError(403, 'pilot_invite_required', SAFE_ERRORS.pilot_invite_required);
+      }
 
       const parts = url.pathname.split('/').filter(Boolean).map((part) => {
         try { return decodeURIComponent(part); } catch { throw httpError(400, 'invalid_request', 'Invalid path'); }
