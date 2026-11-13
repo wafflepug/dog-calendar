@@ -3102,6 +3102,7 @@ var READ_ONLY_SHEET_ACTIONS_ = {
   get_guest_belongings: true,
   get_stay_operations: true,
   get_dog_master_profile: true,
+  get_dog_host_again: true,
   list_dog_identities: true,
   list_dog_stays_for_linking: true,
   get_dog_history: true,
@@ -3553,6 +3554,7 @@ function processReadOnlySheetAction_(data) {
     );
   }
 
+  if (action === "get_dog_host_again") return dogHostAgain_(data, false);
   if (action === "get_business_name") return Object.assign({result:"success"},readPalzBusinessBrand_());
   if (action === "get_sitter_planning") return {result:"success",rules:sitterPlanningRules_()};
   if (action === "get_sitter_day_handovers") return getSitterDayHandovers_();
@@ -4061,6 +4063,20 @@ function indexV108BookingStayKeys_(rows) {
     index[key][owner] = true;
   }
   return index;
+}
+
+function dogHostAgain_(data, write) {
+  var dogId = String(data.dogId || "").trim().toLowerCase();
+  if (!validStayIdV11225_(dogId)) throw new Error("A valid Dog ID is required.");
+  var properties = PropertiesService.getScriptProperties();
+  var key = "PALZ_HOST_AGAIN_" + dogId;
+  if (write) {
+    if (typeof data.liked !== "boolean") throw new Error("Choose whether you would host this pet again.");
+    resolveV108DogRows_(getTargetSheet_().getDataRange().getValues(), { dogId: dogId }, "saving host preference");
+    if (data.liked) properties.setProperty(key, "true");
+    else properties.deleteProperty(key);
+  }
+  return { result: "success", dogId: dogId, liked: properties.getProperty(key) === "true" };
 }
 
 function resolveV108DogRows_(rows, data, purpose) {
@@ -5024,6 +5040,7 @@ function processSheetAction_(data) {
     if (data.action === "backfill_dog_ids") return backfillV108DogIds_();
     if (data.action === "link_stay_to_dog") return linkV108StayToDog_(data);
 
+    if (data.action === "save_dog_host_again") return dogHostAgain_(data, true);
     if (data.action === "save_business_name") return savePalzBusinessName_(data);
     if (data.action === "save_sitter_planning") return saveSitterPlanningRules_(data);
     if (data.action === "save_sitter_handover") return saveSitterHandover_(data);
