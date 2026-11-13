@@ -145,6 +145,9 @@ function v1088GroupPastBookings(
                                 stay.phone,
                             notes:
                                 stay.notes,
+                            operationalStatus: stay.operationalStatus,
+                            checkoutDate: stay.checkoutDate,
+                            checkoutDateLabel: stay.checkoutDateLabel,
                             bookingType:
                                 stay.bookingType
                         })
@@ -171,12 +174,13 @@ function v1088GroupPastBookings(
 
 v1082PastCardHtml =
     function(
-        booking
+        booking, rosterOnly = false
     ) {
         let html =
             v1088BasePastCardHtml(
-                booking
+                booking, rosterOnly
             );
+        if (rosterOnly) return html;
 
         const stayCount =
             Math.max(

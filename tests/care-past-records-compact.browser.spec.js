@@ -12,7 +12,7 @@ const booking = {
   dogNumber: '#00017', stayKey: 'milo longtail|2026-10-02|2026-10-06', operationalStatus: 'checked_out', checkoutDate: '2026-10-05'
 };
 
-async function fixture(page) {
+async function fixture(page, bookings = [booking]) {
   const reads = [];
   await page.route('**/*', async route => {
     const req = route.request(), url = req.url();
@@ -30,7 +30,7 @@ async function fixture(page) {
       reads.push(resolved.action);
       let response = { result: 'success', bookings: [], records: [], summaries: [] };
       if (resolved.action === 'get_guest_directory') response = { result: 'success', bookings: [], summaries: [] };
-      if (resolved.action === 'get_past_guest_directory') response = { result: 'success', bookings: [booking], totalPastStays: 1 };
+      if (resolved.action === 'get_past_guest_directory') response = { result: 'success', bookings, totalPastStays: bookings.length, rosterOnly: true };
       if (resolved.action === 'get_guest_profile') response = { result: 'success', record: { stayKey: payload.stayKey || booking.stayKey, identity: { stayKey: payload.stayKey || booking.stayKey, stayId: booking.stayId, dogId: booking.dogId }, resolution: { status: 'resolved', method: 'fixture' }, intakeAttributes: {} } };
       if (resolved.action === 'get_guest_belongings') response = { result: 'success', record: { stayKey: payload.stayKey || booking.stayKey, identityResolution: { status: 'resolved', identity: { stayKey: payload.stayKey || booking.stayKey, stayId: booking.stayId, dogId: booking.dogId } }, dogPhotoGallery: [], stayPhotos: [], photos: [] } };
       const body = callback ? `${callback}(${JSON.stringify(response)});` : JSON.stringify(response);
@@ -55,6 +55,7 @@ test.describe('compact past contact and records', () => {
     await page.waitForFunction(() => v1082PastLoaded && !v1082PastLoadPromise);
     const tile = page.locator('#past-directory-grid [data-v1082-past-stay="true"] [data-open-directory-profile]');
     await expect(tile).toBeVisible();
+    await expect(page.locator('#past-directory-grid .directory-profile-content')).toHaveCount(0);
     await tile.click();
     const card = page.locator('#directoryTabPanel .directory-card[data-v1082-past-stay="true"].is-profile-active');
     await expect(card.locator('[data-directory-detail="profile"]')).toHaveAttribute('data-detail-loaded', 'true');
@@ -97,6 +98,26 @@ test.describe('compact past contact and records', () => {
     await expect(card.locator('[data-care-routine-form]')).toBeHidden();
     expect(reads.filter(action => action === 'get_past_guest_directory')).toHaveLength(pastReads);
     expect(await card.evaluate(el => el === window.compactPastOpenedCard)).toBe(true);
+  });
+
+  test('pages unique pets and keeps the roster compact until a profile opens', async ({ page, baseURL }) => {
+    const extra = Array.from({ length: 23 }, (_, index) => ({
+      ...booking, dogName: `Guest ${index}`, dogId: '', stayId: `fixture-${index}`, stayKey: `fixture-${index}`
+    }));
+    const earlier = { ...booking, stayId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+      stayKey: 'milo longtail|2026-09-01|2026-09-02', startDate: '2026-09-01', endDate: '2026-09-02' };
+    await fixture(page, [booking, earlier, ...extra]);
+    await page.goto(`${baseURL}/directory.html`);
+    await page.locator('[data-v1082-stay-tab="past"]').click();
+    const grid = page.locator('#past-directory-grid');
+    await expect(grid.locator('.directory-card')).toHaveCount(20);
+    await expect(grid.locator('.directory-profile-content')).toHaveCount(0);
+    await grid.getByRole('button', { name: 'Load more past pets' }).click();
+    await expect(grid.locator('.directory-card')).toHaveCount(24);
+    await expect(grid.locator('.directory-card[data-directory-dog-name="Milo Longtail"]')).toHaveCount(1);
+    await expect(grid.locator('.directory-profile-content')).toHaveCount(0);
+    const measures = await page.evaluate(() => performance.getEntriesByName('palz-past-roster-load').map(item => item.detail));
+    expect(measures.some(item => item.renderMs >= 0 && item.requestMs >= 0)).toBe(true);
   });
 
   test('does not invent an owner or phone when fields are absent', async ({ page, baseURL }) => {

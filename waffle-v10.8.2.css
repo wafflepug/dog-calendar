@@ -273,3 +273,16 @@ body.dark-theme .v1082-past-status {
     }
 
 }
+
+.v1082-past-more {
+    justify-self: center;
+    min-height: 44px;
+    padding: 8px 16px;
+    border: 1px solid var(--wh-border, #d5dee9);
+    border-radius: 10px;
+    background: var(--wh-surface, #fff);
+    color: var(--wh-text, #17243b);
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+}

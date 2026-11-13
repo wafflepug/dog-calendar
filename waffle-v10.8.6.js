@@ -6,7 +6,7 @@ const V1086_VERSION =
     '10.8.6';
 
 const V1086_PAST_CACHE_KEY =
-    'directory:past-stays:v1086';
+    'directory:past-stays:roster-v1';
 
 const v1086BaseApplyGuestDirectoryResponse =
     applyGuestDirectoryResponse;
@@ -648,6 +648,13 @@ function v1086MoveCheckedOutStayToPast(
 
     v1086UpdateCareStayCounts();
 
+    if (typeof v1082PastRoster !== 'undefined') {
+        v1082PastLoaded = false;
+        const refresh = () => v1082LoadPastStays({ skipCachedRender: true });
+        void (v1082PastLoadPromise ? v1082PastLoadPromise.then(refresh, refresh) : refresh())
+            .catch(error => console.warn('Past refresh failed:', error));
+    }
+
     if (
         typeof filterGuestDirectoryCards ===
             'function'
@@ -702,8 +709,7 @@ v1082LoadPastStays =
         options = {}
     ) {
         if (
-            v1082PastLoadPromise &&
-            !options.force
+            v1082PastLoadPromise
         ) {
             return v1082PastLoadPromise;
         }
@@ -716,8 +722,7 @@ v1082LoadPastStays =
         if (
             grid &&
             (
-                !v1082PastLoaded ||
-                options.force
+                !v1082PastLoaded && !grid.querySelector('.directory-card')
             )
         ) {
             grid.innerHTML =
@@ -729,12 +734,22 @@ v1082LoadPastStays =
 
         v1082PastLoadPromise =
             (async () => {
+                const started = performance.now();
+                let renderMs = 0;
+                const apply = response => {
+                    const renderStarted = performance.now();
+                    v1082ApplyPastResponse(response);
+                    v1086UpdateCareStayCounts();
+                    renderMs += performance.now() - renderStarted;
+                };
                 let cachedRendered =
                     false;
 
                 let response =
                     null;
 
+                let swrRequestMs = null;
+                let serverMs = null;
                 try {
                     const swr =
                         await queryAppsScriptSWR(
@@ -742,7 +757,8 @@ v1082LoadPastStays =
                                 action:
                                     'get_past_guest_directory',
                                 limit:
-                                    V1082_PAST_LIMIT
+                                    V1082_PAST_LIMIT,
+                                rosterOnly: true
                             },
                             {
                                 cacheKey:
@@ -767,32 +783,26 @@ v1082LoadPastStays =
                                         v1082PastResponse =
                                             cached;
 
-                                        v1082ApplyPastResponse(
-                                            cached
-                                        );
-
-                                        v1086UpdateCareStayCounts();
+                                        if (!options.skipCachedRender) apply(cached);
                                     }
                             }
                         );
 
+                    swrRequestMs = swr.transportMs ?? null;
+                    serverMs = swr.serverMs ?? null;
                     response =
                         swr.data ||
                         response;
 
                     if (
                         !swr.unchanged ||
-                        !cachedRendered
+                        !cachedRendered || options.skipCachedRender
                     ) {
-                        if (response) {
+                        if (Array.isArray(response?.bookings)) {
                             v1082PastResponse =
                                 response;
 
-                            v1082ApplyPastResponse(
-                                response
-                            );
-
-                            v1086UpdateCareStayCounts();
+                            apply(response);
                         }
                     }
 
@@ -821,7 +831,7 @@ v1082LoadPastStays =
 
                     if (
                         fallback.bookings.length ||
-                        !response
+                        !Array.isArray(response?.bookings)
                     ) {
                         response =
                             fallback;
@@ -829,16 +839,12 @@ v1082LoadPastStays =
                         v1082PastResponse =
                             fallback;
 
-                        v1082ApplyPastResponse(
-                            fallback
-                        );
-
-                        v1086UpdateCareStayCounts();
+                        apply(fallback);
                     }
                 }
 
-                v1082PastLoaded =
-                    true;
+                performance.measure('palz-past-roster-load', { start: started, end: performance.now(), detail: { renderMs, requestMs: swrRequestMs, serverMs, cacheShown: cachedRendered } });
+                v1082PastLoaded = true;
 
                 return (
                     response ||

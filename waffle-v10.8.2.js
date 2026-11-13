@@ -3,6 +3,11 @@
    ============================================================ */
 
 const V1082_PAST_LIMIT = 250;
+const V1082_PAST_PAGE_SIZE = 20;
+let v1082PastVisibleLimit = V1082_PAST_PAGE_SIZE;
+let v1082PastRoster;
+let v1082PendingPastRoster;
+const v1082PastCardBookings = new WeakMap();
 let v1082ActiveStayView = 'current';
 let v1082PastLoaded = false;
 let v1082PastLoadPromise = null;
@@ -17,7 +22,7 @@ function v1082Escape(value) {
     );
 }
 
-function v1082PastCardHtml(booking) {
+function v1082PastCardHtml(booking, rosterOnly = false) {
     const stayKey =
         String(
             booking.stayKey ||
@@ -79,6 +84,7 @@ function v1082PastCardHtml(booking) {
         directoryStayKey: stayKey, dogName, breed, breedTxt: breed, ownerName, phone, notes,
         dogId, stayId, dogNumber: number, species: booking.species === 'cat' ? 'cat' : 'dog',
         startParsed: startDate, endParsed: endDate, sourceRow: booking.sourceRow || '',
+        rosterOnly,
         pastStay: { checkedOut, checkoutDate, checkoutDateLabel: booking.checkoutDateLabel }
     });
 }
@@ -229,6 +235,61 @@ function v1082ApplyPastReadOnly(card) {
     }
 }
 
+function v1082MountPastProfile(card) {
+    const booking = v1082PastCardBookings.get(card);
+    if (!booking || card.querySelector('.directory-profile-content')) return;
+    const template = document.createElement('template');
+    template.innerHTML = v1082PastCardHtml(booking);
+    const content = template.content.querySelector('.directory-profile-content');
+    card.append(content);
+    card.dataset.v1088StayCount = String(booking.v1088StayCount || 1);
+    card.dataset.v1088AllStays = JSON.stringify(booking.v1088AllStays || []);
+    if (booking.notes) card.dataset.v1088Notes = booking.notes;
+    const stayKey = card.dataset.directoryStayKey;
+    if (booking.rosterSummary) {
+        setDirectoryDogPhoto(stayKey, booking.rosterSummary, card);
+    }
+    if (typeof v108EnhanceCard === 'function') v108EnhanceCard(card);
+    v1082ApplyPastReadOnly(card);
+}
+
+function v1082FlushPastRoster() {
+    document.querySelectorAll('#past-directory-grid [data-past-linked-profile]:not(.is-profile-active)').forEach(card => card.remove());
+    if (!v1082PendingPastRoster) return;
+    const pending = v1082PendingPastRoster;
+    v1082PendingPastRoster = null;
+    v1082ApplyPastResponse(pending);
+}
+
+function v1082RenderPastPage(grid) {
+    const start = grid.querySelectorAll('.directory-card:not([data-past-linked-profile])').length;
+    const page = v1082PastRoster.slice(start, v1082PastVisibleLimit);
+    grid.querySelector('[data-past-load-more]')?.remove();
+    const template = document.createElement('template');
+    template.innerHTML = page.map(booking => v1082PastCardHtml(booking, true)).join('');
+    const cards = [...template.content.children];
+    grid.append(template.content);
+    cards.forEach((card, index) => {
+        const booking = page[index];
+        v1082PastCardBookings.set(card, booking);
+        if (booking.rosterSummary) {
+            setDirectoryDogPhoto(booking.stayKey, booking.rosterSummary, card);
+            if (typeof setDirectoryCareFlags === 'function') setDirectoryCareFlags(booking.stayKey, booking.rosterSummary);
+        }
+    });
+    if (start + page.length < v1082PastRoster.length) {
+        grid.insertAdjacentHTML('beforeend', '<button type="button" class="v1082-past-more" data-past-load-more>Load more past pets</button>');
+    }
+}
+
+function v1082ExpandPastForSearch(search) {
+    if (!search || v1082ActiveStayView !== 'past' || !v1082PastRoster) return;
+    const grid = document.getElementById('past-directory-grid');
+    if (!grid?.querySelector('[data-past-load-more]')) return;
+    v1082PastVisibleLimit = v1082PastRoster.length;
+    v1082RenderPastPage(grid);
+}
+
 function v1082ApplyPastResponse(response) {
     response = response || {};
 
@@ -267,103 +328,30 @@ function v1082ApplyPastResponse(response) {
             String(total);
     }
 
-    if (!bookings.length) {
-        grid.innerHTML = `
+    if (grid.querySelector('.directory-card.is-profile-active')) {
+        v1082PendingPastRoster = response;
+        return;
+    }
+    if (bookings.length) {
+        const summaries = new Map((response.summaries || []).map(summary => [summary.stayKey, summary]));
+        v1082PastRoster = bookings.map(booking => ({
+            ...booking,
+            rosterSummary: summaries.get(booking.stayKey)
+        }));
+        grid.replaceChildren();
+        v1082RenderPastPage(grid);
+        filterGuestDirectoryCards();
+        return;
+    }
+    v1082PastRoster = null;
+
+    grid.innerHTML = `
             <div class="v1082-past-empty">
                 <span>🕘</span>
                 <strong>No past stays yet</strong>
                 <small>Completed boarding stays will appear here automatically.</small>
             </div>
         `;
-        return;
-    }
-
-    grid.innerHTML =
-        bookings
-            .map(v1082PastCardHtml)
-            .join('');
-
-    (response.summaries || [])
-        .forEach(summary => {
-            if (!summary?.stayKey) return;
-
-            directorySummaryRecordsCache[
-                summary.stayKey
-            ] = summary;
-
-            directoryPhotoRecordsCache[
-                summary.stayKey
-            ] = summary;
-
-            careRiskRecordsCache[
-                summary.stayKey
-            ] = summary;
-
-            setDirectoryDogPhoto(
-                summary.stayKey,
-                summary
-            );
-
-            setDirectoryCareFlags(
-                summary.stayKey,
-                summary
-            );
-
-            renderDirectoryLazySummary(
-                summary.stayKey,
-                summary
-            );
-
-            reconcileDirectoryDigitalIntakeFromProfile(
-                summary.stayKey,
-                summary
-            );
-        });
-
-    (response.digitalIntakes || [])
-        .forEach(record => {
-            if (!record?.stayKey) return;
-
-            directoryIntakeStatusCache[
-                record.stayKey
-            ] = record;
-
-            setDirectoryIntakeStatus(
-                record.stayKey,
-                record
-            );
-        });
-
-    (response.legacyIntakes || [])
-        .forEach(group => {
-            if (!group?.stayKey) return;
-
-            directoryLegacyIntakeCache[
-                group.stayKey
-            ] = group;
-
-            setDirectoryLegacyIntakeStatus(
-                group.stayKey,
-                group
-            );
-        });
-
-    grid
-        .querySelectorAll(
-            '.directory-card[data-v1082-past-stay="true"]'
-        )
-        .forEach(card => {
-            if (
-                typeof v108EnhanceCard ===
-                'function'
-            ) {
-                v108EnhanceCard(card);
-            }
-
-            v1082ApplyPastReadOnly(card);
-        });
-
-    filterGuestDirectoryCards();
 }
 
 async function v1082LoadPastStays(options = {}) {
@@ -404,7 +392,7 @@ async function v1082LoadPastStays(options = {}) {
                     },
                     {
                         cacheKey:
-                            'directory:past-stays',
+                            'directory:past-stays:roster-v1',
                         maxStaleMs:
                             12 *
                             60 *
@@ -565,7 +553,7 @@ function v1082SwitchStayView(view, options = {}) {
 
     filterGuestDirectoryCards();
 
-    if (view === 'past' && !(options.reuseLoaded === true && v1082PastLoaded)) {
+    if (view === 'past' && (!v1082PastLoaded || options.force === true)) {
         v1082LoadPastStays({
             force:
                 options.force === true
@@ -595,6 +583,15 @@ function v1082HandlePastGridClick(event) {
         );
 
     if (!grid || !grid.contains(event.target)) {
+        return;
+    }
+
+    if (event.target.closest('[data-past-load-more]')) {
+        const previous = grid.querySelectorAll('.directory-card').length;
+        v1082PastVisibleLimit += V1082_PAST_PAGE_SIZE;
+        v1082RenderPastPage(grid);
+        filterGuestDirectoryCards();
+        grid.querySelectorAll('[data-open-directory-profile]')[previous]?.focus();
         return;
     }
 
@@ -787,6 +784,9 @@ async function v1082TryPastDeepLink() {
         ).trim();
 
     if (!stayKey) return;
+    const params = new URLSearchParams(window.location.search);
+    const stayId = params.get('stayId') || '';
+    const dogId = params.get('dogId') || '';
     const selectionVersion = window.WAFFLE_DIRECTORY_PROFILE_NAV?.startupSelectionVersion ?? 0;
     const selectionStillCurrent = () => typeof window.WAFFLE_DIRECTORY_PROFILE_NAV?.isCurrent !== 'function' || window.WAFFLE_DIRECTORY_PROFILE_NAV.isCurrent(selectionVersion);
 
@@ -795,10 +795,7 @@ async function v1082TryPastDeepLink() {
     );
     if (!selectionStillCurrent()) return;
 
-    let card =
-        getDirectoryProfileCard(
-            stayKey
-        );
+    let card = getDirectoryProfileCard(stayKey, stayId, dogId, true);
 
     if (card) {
         return;
@@ -813,10 +810,20 @@ async function v1082TryPastDeepLink() {
     }
     if (!selectionStillCurrent()) return;
 
-    card =
-        getDirectoryProfileCard(
-            stayKey
-        );
+    card = getDirectoryProfileCard(stayKey, stayId, dogId, true);
+    if (!card && v1082PastRoster) {
+        const matches = v1082PastRoster.flatMap(booking => [booking, ...(booking.v1088AllStays || []).filter(stay => stay.stayKey !== booking.stayKey).map(stay => ({ ...booking, ...stay, rosterSummary: null }))])
+            .filter(booking => booking.stayKey === stayKey && (!stayId || booking.stayId === stayId) && (!dogId || booking.dogId === dogId));
+        if (matches.length === 1) {
+            const grid = document.getElementById('past-directory-grid');
+            const template = document.createElement('template');
+            template.innerHTML = v1082PastCardHtml(matches[0], true);
+            card = template.content.firstElementChild;
+            card.dataset.pastLinkedProfile = '';
+            v1082PastCardBookings.set(card, matches[0]);
+            grid.append(card);
+        }
+    }
 
     if (!card) return;
 
@@ -927,7 +934,7 @@ function initialiseV1082CareStays() {
                 ) {
                     v1082PastLoaded = false;
                     removeWaffleCachedResponse(
-                        'directory:past-stays'
+                        'directory:past-stays:roster-v1'
                     ).catch(() => {});
 
                     setTimeout(
