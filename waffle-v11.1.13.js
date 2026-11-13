@@ -7,6 +7,7 @@
 
   const VERSION = '11.1.13';
   let pendingStayDateCard = null;
+  let pendingExtension = null;
   let recoveryRecords = [];
 
   function pageName() {
@@ -73,6 +74,10 @@
           <label><span>Check-in date</span><input type="date" data-v11113-start-date></label>
           <label><span>Check-out date</span><input type="date" data-v11113-end-date></label>
         </div>
+        <div class="v11113-stay-dates-fields" data-v11113-extension hidden>
+          <label><span>Additional days</span><input type="number" min="1" step="1" inputmode="numeric" data-v11113-extra-days></label>
+          <p data-v11113-extension-preview aria-live="polite"></p>
+        </div>
         <div class="v11113-stay-dates-status" data-v11113-stay-dates-status aria-live="polite"></div>
         <div class="v11113-stay-dates-actions">
           <button type="button" data-v11113-stay-dates-close>Cancel</button>
@@ -84,32 +89,68 @@
       if (event.target === modal || event.target.closest('[data-v11113-stay-dates-close]')) closeStayDatesModal();
     });
     modal.querySelector('[data-v11113-stay-dates-save]')?.addEventListener('click', saveStayDates);
+    modal.querySelector('[data-v11113-extra-days]').addEventListener('input', () => updateExtensionPreview(modal));
+    modal.addEventListener('keydown', event => {
+      if (event.key === 'Escape') closeStayDatesModal();
+      if (event.key === 'Enter' && event.target.matches('[data-v11113-extra-days]')) {
+        event.preventDefault();
+        saveStayDates();
+      }
+    });
     return modal;
   }
 
-  function openStayDatesModal(card) {
-    if (!card || !card.classList.contains('is-profile-active')) return;
+  function updateExtensionPreview(modal) {
+    const days = Number(modal.querySelector('[data-v11113-extra-days]').value);
+    let date = '';
+    if (pendingExtension && Number.isSafeInteger(days) && days > 0) {
+      const end = new Date(pendingExtension.endDate + 'T00:00:00Z');
+      end.setUTCDate(end.getUTCDate() + days);
+      if (Number.isFinite(end.getTime()) && end.getUTCFullYear() <= 9999) date = end.toISOString().slice(0, 10);
+    }
+    modal.querySelector('[data-v11113-end-date]').value = date;
+    const preview = modal.querySelector('[data-v11113-extension-preview]');
+    preview.textContent = date ? 'New checkout date · ' + new Intl.DateTimeFormat('en-AU', {
+      day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC'
+    }).format(new Date(date + 'T00:00:00Z')) : '';
+    return date;
+  }
+
+  function openStayDatesModal(card, trigger) {
+    if (!card || card.dataset.v1082PastStay === 'true' || !card.classList.contains('is-profile-active')) return;
     const startDate = String(card.dataset.directoryStartDate || card.dataset.startDate || '').trim();
     const endDate = String(card.dataset.directoryEndDate || card.dataset.endDate || startDate).trim();
     if (!startDate || !endDate) return;
     pendingStayDateCard = card;
+    pendingExtension = trigger?.matches('[data-v11113-extend-stay]') ? { endDate, trigger } : null;
     const modal = ensureStayDatesModal();
     const dogName = String(card.dataset.directoryDogName || card.dataset.dogName || 'this dog').trim();
-    modal.querySelector('[data-v11113-stay-dates-copy]').textContent =
-      `Update ${dogName}'s boarding dates. Linked Care and intake records will follow the new stay dates.`;
+    modal.querySelector('#v11113StayDatesTitle').textContent = pendingExtension ? 'Extend stay' : 'Edit Stay Dates';
+    modal.querySelector('[data-v11113-extension]').hidden = !pendingExtension;
+    modal.querySelector('[data-v11113-start-date]').closest('.v11113-stay-dates-fields').hidden = Boolean(pendingExtension);
+    modal.querySelector('[data-v11113-stay-dates-copy]').textContent = pendingExtension
+      ? `Add days to ${dogName}'s scheduled checkout.`
+      : `Update ${dogName}'s boarding dates. Linked Care and intake records will follow the new stay dates.`;
     modal.querySelector('[data-v11113-start-date]').value = startDate;
     modal.querySelector('[data-v11113-end-date]').value = endDate;
     modal.querySelector('[data-v11113-stay-dates-status]').textContent = '';
+    if (pendingExtension) {
+      modal.querySelector('[data-v11113-extra-days]').value = '1';
+      updateExtensionPreview(modal);
+    }
     const saveButton = modal.querySelector('[data-v11113-stay-dates-save]');
     saveButton.disabled = false;
-    saveButton.textContent = 'Save Dates';
+    saveButton.textContent = pendingExtension ? 'Extend stay' : 'Save Dates';
     modal.hidden = false;
-    setTimeout(() => modal.querySelector('[data-v11113-start-date]')?.focus(), 40);
+    setTimeout(() => modal.querySelector(pendingExtension ? '[data-v11113-extra-days]' : '[data-v11113-start-date]')?.focus(), 40);
   }
 
   function closeStayDatesModal() {
     const modal = document.getElementById('v11113StayDatesModal');
+    if (modal?.querySelector('[data-v11113-stay-dates-save]').disabled) return;
     if (modal) modal.hidden = true;
+    pendingExtension?.trigger.focus();
+    pendingExtension = null;
     pendingStayDateCard = null;
   }
 
@@ -118,7 +159,7 @@
     const modal = ensureStayDatesModal();
     if (!card || typeof window.sendPayloadToAppsScript !== 'function') return;
     const startDate = String(modal.querySelector('[data-v11113-start-date]')?.value || '').trim();
-    const endDate = String(modal.querySelector('[data-v11113-end-date]')?.value || '').trim();
+    const endDate = pendingExtension ? updateExtensionPreview(modal) : String(modal.querySelector('[data-v11113-end-date]')?.value || '').trim();
     const status = modal.querySelector('[data-v11113-stay-dates-status]');
     const saveButton = modal.querySelector('[data-v11113-stay-dates-save]');
     const dogName = String(card.dataset.directoryDogName || card.dataset.dogName || '').trim();
@@ -143,8 +184,14 @@
       ''
     ).trim();
 
+    if (saveButton.disabled) return;
+    if (pendingExtension && (!pendingExtension.trigger.isConnected || card.dataset.v1082PastStay === 'true' || originalEndDate !== pendingExtension.endDate)) {
+      status.textContent = 'This stay changed. Close and reopen the profile to try again.';
+      status.className = 'v11113-stay-dates-status is-error';
+      return;
+    }
     if (!startDate || !endDate) {
-      status.textContent = 'Choose both dates.';
+      status.textContent = pendingExtension ? 'Enter a valid whole number of additional days.' : 'Choose both dates.';
       status.className = 'v11113-stay-dates-status is-error';
       return;
     }
@@ -176,7 +223,7 @@
         phone,
         startDate,
         endDate,
-        source: 'Dog Profile'
+        source: pendingExtension ? 'Extend stay' : 'Dog Profile'
       });
       if (!response || response.result !== 'success') throw new Error(response?.error || 'Stay dates could not be updated.');
       const savedStayId = String(response?.stayId || response?.booking?.stayId || stayId).trim();
@@ -219,7 +266,7 @@
       status.textContent = error?.message || String(error);
       status.className = 'v11113-stay-dates-status is-error';
       saveButton.disabled = false;
-      saveButton.textContent = 'Save Dates';
+      saveButton.textContent = pendingExtension ? 'Extend stay' : 'Save Dates';
     }
   }
 
@@ -479,13 +526,13 @@
     if (window.v11113ClicksWired) return;
     window.v11113ClicksWired = true;
     document.addEventListener('click', event => {
-      const dates = event.target.closest('.v11113-editable-stay-dates');
+      const dates = event.target.closest('.v11113-editable-stay-dates, [data-v11113-extend-stay]');
       if (!dates) return;
       const card = profileCardFromElement(dates);
       if (!card?.classList.contains('is-profile-active')) return;
       event.preventDefault();
       event.stopPropagation();
-      openStayDatesModal(card);
+      openStayDatesModal(card, dates);
     });
     document.addEventListener('keydown', event => {
       if (event.key !== 'Enter' && event.key !== ' ') return;

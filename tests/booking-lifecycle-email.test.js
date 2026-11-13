@@ -90,6 +90,23 @@ for (const [action, expectedSubject] of lifecycleEvents) {
   assert.equal(sent.length, 0, 'updates and failed writes do not send lifecycle emails');
 }
 
+{
+  const { sandbox, sent } = createHarness();
+  const payload = { action: 'update_boarding_dates', source: 'Extend stay', clientMutationId: 'extend_1' };
+  const result = { result: 'success', previousEndDate: '2026-12-31',
+    booking: { dogName: 'Maple', startDate: '2026-12-25', endDate: '2027-01-02' } };
+  sandbox.sendBookingLifecycleEmailSafely_(payload, result);
+  sandbox.sendBookingLifecycleEmailSafely_(payload, { ...result, duplicate: true });
+  sandbox.sendBookingLifecycleEmailSafely_({ ...payload, source: 'Calendar Drag' }, result);
+  sandbox.sendBookingLifecycleEmailSafely_({ ...payload, clientMutationId: 'unchanged' }, {
+    ...result, previousEndDate: result.booking.endDate
+  });
+  assert.equal(sent.length, 1);
+  assert.match(sent[0].subject, /Palz Stay.*Stay extended.*Maple/);
+  assert.match(sent[0].body, /Previous checkout: 2026-12-31/);
+  assert.match(sent[0].htmlBody, /New checkout: 2027-01-02/);
+}
+
 // Guard the integration boundary: handlers invoke email delivery only after
 // the receipt wrapper has returned and after mutation cache invalidation.
 for (const handlerStart of [source.indexOf('function doPost(e)'), source.indexOf('function doGet(e)')]) {

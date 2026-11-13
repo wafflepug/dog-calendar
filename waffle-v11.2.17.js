@@ -222,7 +222,7 @@
     button.dataset.v11217EarlyCheckout = '';
     button.textContent = '⏱️ Early Checkout';
     button.setAttribute('aria-label', accessibleStayActionLabel('Record owner-requested early checkout for', card, p));
-    actions.appendChild(button);
+    actions.insertBefore(button, actions.querySelector('[data-v11113-extend-stay]'));
   }
 
   function decorateProfileActions(card) {
@@ -418,7 +418,7 @@
         const candidate = payloadForCard(card);
         return key === (candidate.stayId ? candidate.stayId.trim().toLowerCase() :
           `${candidate.stayKey.trim()}|${candidate.dogId.trim().toLowerCase()}|${candidate.dogName.trim().toLowerCase()}`);
-      }).forEach(card => card.querySelectorAll('[data-v110-checkin],[data-v110-checkout],[data-v11217-early-checkout],[data-v11217-roster-checkin],[data-v11217-roster-checkout]').forEach(button => { disabledStates.push([button, button.disabled]); button.disabled = true; }));
+      }).forEach(card => card.querySelectorAll('[data-v110-checkin],[data-v110-checkout],[data-v11217-early-checkout],[data-v11217-roster-checkin],[data-v11217-roster-checkout],[data-v11113-extend-stay]').forEach(button => { disabledStates.push([button, button.disabled]); button.disabled = true; }));
       try { return await canonicalSave(payload, status, target); }
       finally {
         activeStatusSaves.delete(key);
