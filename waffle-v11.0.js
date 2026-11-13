@@ -287,15 +287,25 @@ async function v110SaveOperationalStatus(payload,status,target){
   let r;
   try { r=await sendPayloadToAppsScript({...payload,action,source:'V11 Operations'}); }
   catch(error) {
-    // A lost acknowledgement is not proof of failure. Read the exact stay once;
-    // never replay the mutation automatically or accept another dog's operation.
+    // A lost acknowledgement can arrive while Sheets is still committing the write.
+    // Only reconcile the requested identity. Never replay the mutation automatically.
     if(!payload.stayId||!/did not respond|could not reach|timeout|timed out|network|failed to fetch/i.test(String(error?.message||error)))throw error;
-    try {
-      const verified=await queryAppsScript({action:'get_stay_operations',stayIds:[payload.stayId],stayKeys:[payload.stayKey]},{maxAttempts:1,timeoutMs:15000,dedupe:false});
-      const matches=verified?.result==='success'&&Array.isArray(verified.records)?verified.records.filter(record=>String(record.stayId||'').toLowerCase()===String(payload.stayId).toLowerCase()):[];
-      if(matches.length!==1||matches[0].identityConflict||String(matches[0].status||'')!==status)throw error;
-      r={result:'success',record:matches[0],recovered:true};
-    } catch(_) { throw new Error('The request timed out and the saved status could not be verified. Refresh Today or Care to check this stay before trying again.'); }
+    for (const delay of [0, 800, 1800]) {
+      if (delay) await new Promise(resolve => setTimeout(resolve, delay));
+      try {
+        const verified = await queryAppsScript({
+          action:'get_stay_operations', stayIds:[payload.stayId], stayKeys:[payload.stayKey], verifySavedStatus:true
+        }, {maxAttempts:1,timeoutMs:10000,dedupe:false});
+        const matches = verified?.result === 'success' && Array.isArray(verified.records)
+          ? verified.records.filter(record => String(record.stayId || '').toLowerCase() === String(payload.stayId).toLowerCase()) : [];
+        if (matches.length > 1 || matches.some(record => record.identityConflict)) break;
+        if (matches.length === 1 && matches[0].status === status && matches[0].stayKey === payload.stayKey) {
+          r = {result:'success', record:matches[0], recovered:true};
+          break;
+        }
+      } catch (_) { /* Retry the status read within the bounded recovery window. */ }
+    }
+    if (!r) throw new Error('The saved status could not be verified after several checks. Refresh Today or Care before trying again.');
   }
   if(r?.queued)throw new Error('Stay operations cannot be queued offline. Nothing was saved.');
   const record=r?.record,requested=String(payload.stayId||'').toLowerCase(),returned=String(record?.stayId||'').toLowerCase();
