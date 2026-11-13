@@ -2899,3 +2899,10 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-
   clip-path: inset(50%);
   white-space: nowrap;
 }
+
+.care-header-tools [data-care-host-again] { display:grid; place-items:center; width:44px; height:44px; flex:none; padding:0; border:1px solid var(--wh-border,#d5dee9); border-radius:50%; background:var(--wh-surface,#fff); color:var(--wh-text,#17243b); cursor:pointer; }
+.care-header-tools [data-care-host-again][aria-pressed="true"] { color:#be185d; background:#fce7f3; border-color:#f9a8d4; }
+.care-header-tools [data-care-host-again][aria-pressed="true"] svg { fill:currentColor; }
+.care-header-tools [data-care-host-again]:disabled { opacity:.6; cursor:wait; }
+.care-header-tools [data-care-host-again]:focus-visible { outline:2px solid var(--wh75-accent,#7c3aed); outline-offset:2px; }
+.care-host-again-status { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); }

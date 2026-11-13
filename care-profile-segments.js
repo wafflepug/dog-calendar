@@ -48,6 +48,55 @@
     return tools;
   }
 
+  function mountHostAgain(card) {
+    const dogId = String(card.dataset.directoryDogId || '').trim().toLowerCase();
+    const header = card.querySelector('.directory-card-header');
+    if (!header) return;
+    let button = header.querySelector('[data-care-host-again]');
+    if (!/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/.test(dogId)) {
+      button?.remove();
+      return;
+    }
+    if (button?.dataset.careHostAgain === dogId) return;
+    button?.remove();
+    const tools = ensureHeaderTools(header);
+    button = document.createElement('button');
+    button.type = 'button';
+    button.dataset.careHostAgain = dogId;
+    button.setAttribute('aria-label', 'Would host again');
+    button.title = 'Would host again';
+    button.disabled = true;
+    button.innerHTML = '<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 21 3 12a5.5 5.5 0 0 1 9-7 5.5 5.5 0 0 1 9 7z"/></svg>';
+    const status = document.createElement('span');
+    status.setAttribute('role', 'status');
+    status.className = 'care-host-again-status';
+    tools.prepend(button, status);
+    let liked;
+    const request = async () => {
+      const saving = typeof liked === 'boolean';
+      button.disabled = true;
+      status.textContent = '';
+      try {
+        const data = await window.queryAppsScript({
+          action: saving ? 'save_dog_host_again' : 'get_dog_host_again',
+          dogId,
+          ...(saving ? { liked: !liked } : {})
+        }, { maxAttempts: 1, timeoutMs: 12000 });
+        if (data?.result !== 'success' || data.dogId !== dogId || typeof data.liked !== 'boolean') throw Error();
+        liked = data.liked;
+        button.setAttribute('aria-pressed', String(liked));
+        button.title = liked ? 'Would host again · selected' : 'Would host again';
+        if (saving) status.textContent = liked ? 'Marked as would host again.' : 'Would host again cleared.';
+      } catch (_) {
+        status.textContent = saving ? 'Could not save. Try again.' : 'Could not load preference. Tap to retry.';
+      } finally {
+        button.disabled = false;
+      }
+    };
+    button.onclick = request;
+    void request();
+  }
+
   function mountPhotoMenu(card) {
     const header = card.querySelector('.directory-card-header');
     const upload = card.querySelector('.directory-care-photo-tools [data-upload-dog-photo]');
@@ -161,6 +210,7 @@
       return;
     }
     mountPhotoMenu(card);
+    mountHostAgain(card);
     card.querySelectorAll('[data-care-brief-action="belongings-photo"], [data-care-brief-action="belongings-camera"]').forEach(button=>{button.hidden=card.dataset.v1082PastStay==='true';});
     const brief = card.querySelector('[data-directory-care-brief]');
     if (!brief) return;
