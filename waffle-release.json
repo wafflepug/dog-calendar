@@ -1,6 +1,6 @@
 {
   "release": "phase3d-2026.08.28.01",
-  "currentRelease": "2026.11.13.09",
+  "currentRelease": "2026.11.13.10",
   "currentReleaseName": "Care, Organiser and Calendar polish",
   "currentImprovements": ["Show a dedicated Care Profile loader", "Align the Guests filters", "Limit Organiser workspace assignments to active stays", "Keep Calendar first paint and potential stay labels consistent"],
   "latestMergedSha": "41c7d27",
