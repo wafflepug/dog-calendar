@@ -15,7 +15,7 @@ test('same-day checkout reviews selected identity, opens without writes, and con
   await setup(page);
   const card = page.getByTestId('selected-card');
   await openCheckout(card);
-  const dialog = page.getByRole('dialog', { name: 'Check out Twin' });
+  const dialog = page.getByRole('dialog', { name: 'Check-out for Twin' });
   await expect(dialog).toBeVisible();
   await expect(dialog).toHaveAccessibleDescription(/Dog ID #00017 · booked 18 Oct 2026 to 18 Oct 2026/);
   await expect(dialog).toContainText('Dog ID: #00017');
@@ -26,7 +26,7 @@ test('same-day checkout reviews selected identity, opens without writes, and con
   await expect(dialog.locator('[data-v11217-guided-belongings] li')).toHaveText(['Blue lead', 'Food tub']);
   await expect(dialog).toContainText('Return blue inhaler');
   await expect(dialog.locator('[data-v11217-guided-dates]')).toContainText('18 Oct 2026');
-  await expect(dialog.locator('[data-v11217-guided-checkout-caption]')).toHaveText('Checkout today');
+  await expect(dialog.locator('[data-v11217-guided-checkout-caption]')).toHaveText('Check-out today');
   await expect(dialog.locator('[data-v11217-guided-checkout-today]')).toHaveText('18 Oct 2026');
   await expect.poll(() => page.evaluate(() => window.writes.length)).toBe(0);
   const confirm = dialog.locator('[data-v11217-guided-confirm]');
@@ -46,7 +46,7 @@ test('cancel does not write and stale identity never moves a card to Past', asyn
 
   await openCheckout(card);
   await card.evaluate(el => { el.dataset.directoryStayId = 'stay-reused'; });
-  await page.getByRole('button', { name: 'Confirm checkout' }).click();
+  await page.getByRole('button', { name: 'Confirm check-out' }).click();
   await expect(page.locator('#v11217GuidedCheckout')).toBeVisible();
   await expect(page.locator('#v11217GuidedCheckout')).toContainText('This card changed while saving');
   await expect(page.locator('#v11217GuidedCheckout [data-v11217-guided-confirm]')).toBeDisabled();
@@ -76,7 +76,7 @@ test('transport failure stays retryable in the guided sheet and duplicate confir
   await page.evaluate(() => { window.release(); window.pending = null; });
   await expect(dialog).toBeVisible();
   await expect(dialog).toContainText('Network connection failed');
-  await expect(confirm).toHaveText('Retry checkout');
+  await expect(confirm).toHaveText('Retry check-out');
   await expect(dialog.locator('[data-v11217-guided-note]')).toHaveValue('Keep the blue lead note');
   await confirm.click();
   await expect(dialog).toBeHidden();
@@ -401,7 +401,7 @@ test('a successful checkout resets the sheet for another exact guest and returns
   await expect(page.locator('#v11217GuidedCheckout')).toBeHidden();
   await expect(page.locator('[data-directory-stay-id="stay-b"] .directory-guest-tile-open')).toBeFocused();
   await openCheckout(page.locator('[data-directory-stay-id="stay-c"]'));
-  await expect(page.locator('[data-v11217-guided-confirm]')).toHaveText('Confirm checkout');
+  await expect(page.locator('[data-v11217-guided-confirm]')).toHaveText('Confirm check-out');
   await page.locator('[data-v11217-guided-confirm]').click();
   await expect(page.locator('#v11217GuidedCheckout')).toBeHidden();
   expect(await page.evaluate(() => window.movedIds)).toEqual(['stay-a','stay-c']);

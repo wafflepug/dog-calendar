@@ -1,7 +1,7 @@
 /* ============================================================
    WAFFLE HOUSE V11.2.19 — MOBILE EARLY CHECKOUT REACHABILITY
    ----------------------------------------------------------------
-   Keeps the owner-requested Early Checkout dialog above the fixed sitter
+   Keeps the owner-requested Early check-out dialog above the fixed sitter
    navigation and gives the dialog one reliable, touch-scrollable body with a
    pinned action row. This is intentionally presentation-only: V11.2.17 remains
    authoritative for eligibility, payloads and checkout persistence.

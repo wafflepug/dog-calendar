@@ -1417,10 +1417,10 @@ function todayQueueItem(event, type, icon, title, meta, sort) {
     let actionLabel = '';
     if (actionType === 'arrival' && confirmed && hasActionIdentity && !['checked_in', 'checked_out'].includes(operationStatus)) {
         action = 'checkin';
-        actionLabel = 'Check in';
+        actionLabel = 'Check-in';
     } else if (actionType === 'departure' && confirmed && hasActionIdentity && operationStatus !== 'checked_out') {
         action = 'checkout';
-        actionLabel = 'Check out';
+        actionLabel = 'Check-out';
     }
     if (operationStatus === 'checked_in' && (type === 'arrival' || isSameDayVisit)) meta = 'Checked in';
     if (operationStatus === 'checked_out') meta = 'Checked out';
@@ -1694,7 +1694,7 @@ async function runTodayQueueStayAction(button) {
             ownerName: String(props.ownerName || props.owner || ''),
             phone: String(props.phone || '')
         };
-        if (status === 'checked_out' && !window.confirm(`Check out ${payload.dogName}? The stay will be marked complete if the server confirms it.`)) return;
+        if (status === 'checked_out' && !window.confirm(`Confirm check-out for ${payload.dogName}? The stay will be marked complete if the server confirms it.`)) return;
         if (typeof v110SaveOperationalStatus !== 'function') throw new Error('Stay operations are unavailable. Open Care and review this stay before trying again.');
         button.textContent = status === 'checked_in' ? 'Checking in…' : 'Checking out…';
         if (feedback) { feedback.hidden = true; feedback.textContent = ''; }
@@ -1720,7 +1720,7 @@ async function runTodayQueueStayAction(button) {
         if (activeButton?.isConnected && activeButton.disabled) {
             activeButton.disabled = false;
             activeButton.removeAttribute('aria-busy');
-            activeButton.textContent = activeButton.dataset.todayAction === 'checkin' ? 'Check in' : 'Check out';
+            activeButton.textContent = activeButton.dataset.todayAction === 'checkin' ? 'Check-in' : 'Check-out';
         }
     }
 }

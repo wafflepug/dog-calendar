@@ -74,9 +74,9 @@ test('roster actions are separate from profile open, isolate same-name dogs, ret
   await setup(page);
   const staying = page.locator('[data-directory-stay-id="stay-a"]');
   const checkin = staying.locator('[data-v11217-roster-checkin]');
-  await expect(checkin).toHaveAccessibleName('Check in Twin Pup, owner Owner a, booked 11 Oct 2026 to 11 Oct 2026');
+  await expect(checkin).toHaveAccessibleName('Check-in Twin Pup, owner Owner a, booked 11 Oct 2026 to 11 Oct 2026');
   const checkout = staying.locator('[data-v11217-roster-checkout]');
-  await expect(checkout).toHaveAccessibleName('Check out Twin Pup, owner Owner a, booked 11 Oct 2026 to 11 Oct 2026');
+  await expect(checkout).toHaveAccessibleName('Check-out Twin Pup, owner Owner a, booked 11 Oct 2026 to 11 Oct 2026');
   await expect(staying.locator('[data-v11217-roster-actions] > button')).toHaveCount(2);
   expect(await checkin.evaluate(button => button.closest('.directory-guest-tile-open'))).toBeNull();
 
@@ -87,10 +87,10 @@ test('roster actions are separate from profile open, isolate same-name dogs, ret
 
   await page.evaluate(() => { window.failNextSave = true; });
   await checkin.click();
-  await expect(checkin).toHaveText(/Check In/);
+  await expect(checkin).toHaveText(/Check-in/);
   await expect(checkin).toBeEnabled();
   const feedback = staying.locator(':scope > .v110-action-feedback');
-  await expect(feedback).toContainText('Check In could not be saved');
+  await expect(feedback).toContainText('Check-in could not be saved');
   await feedback.getByRole('button', { name: 'Retry' }).click();
   await expect(staying.locator('[data-v11217-roster-checkin]')).toHaveCount(0);
   await expect(staying.locator(':scope > .v110-action-feedback')).toContainText('Twin Pup checked in successfully');
@@ -161,7 +161,7 @@ test('identity ambiguity and offline failures offer review guidance without a re
   await expect(offline.getByRole('button', { name: 'Retry' })).toHaveCount(0);
 });
 
-test('a checked-in guest keeps Early Checkout as the sole direct action when no primary check-in or checkout is due', async ({ page }) => {
+test('a checked-in guest keeps Early check-out as the sole direct action when no primary check-in or checkout is due', async ({ page }) => {
   await setup(page);
   const early = page.locator('[data-directory-stay-id="stay-b"]');
   await page.evaluate(() => {
@@ -174,7 +174,7 @@ test('a checked-in guest keeps Early Checkout as the sole direct action when no 
   await expect(early.locator('.v11217-roster-more-actions')).toHaveCount(0);
 });
 
-test('Early Checkout stays hidden until the guest checks in', async ({ page }) => {
+test('Early check-out stays hidden until the guest checks in', async ({ page }) => {
   await setup(page);
   const staying = page.locator('[data-directory-stay-id="stay-b"]');
   await expect(staying.locator('[data-v11217-roster-checkin]')).toBeVisible();
@@ -224,20 +224,20 @@ test('early checkout uses its review modal and controls fit on a narrow mobile v
   expect(bounds.height).toBeGreaterThanOrEqual(44);
 
   await button.click();
-  const dialog = page.getByRole('dialog', { name: 'Early Checkout' });
+  const dialog = page.getByRole('dialog', { name: 'Early check-out' });
   await expect(dialog).toBeVisible();
   await expect(dialog.locator('[data-v11217-dog]')).toHaveText('Twin Pup');
   await dialog.locator('[data-v11217-note]').fill('Owner collected early');
   await page.evaluate(() => { window.failNextSave = true; });
   await dialog.locator('[data-v11217-confirm]').click();
-  await expect(dialog.locator('[data-v11217-feedback]')).toContainText('Early checkout could not be saved');
-  const earlyRetry = dialog.getByRole('button', { name: 'Retry Early Checkout' });
+  await expect(dialog.locator('[data-v11217-feedback]')).toContainText('Early check-out could not be saved');
+  const earlyRetry = dialog.getByRole('button', { name: 'Retry early check-out' });
   await expect(earlyRetry).toBeVisible();
   const retrySize = await earlyRetry.evaluate(button => ({ height: button.getBoundingClientRect().height, fontSize: parseFloat(getComputedStyle(button).fontSize) }));
   expect(retrySize.height).toBeGreaterThanOrEqual(44);
   expect(retrySize.fontSize).toBe(13);
   await expect(dialog.locator('[data-v11217-note]')).toHaveValue('Owner collected early');
-  await dialog.getByRole('button', { name: 'Retry Early Checkout' }).click();
+  await dialog.getByRole('button', { name: 'Retry early check-out' }).click();
   await expect(dialog).toBeHidden();
   await expect(early).toHaveAttribute('data-moved-to-past', 'true');
   await expect(early.locator(':scope > .v110-action-feedback')).toContainText('checked out early successfully');
@@ -294,7 +294,7 @@ test('verified early checkout focuses its matching real completion after the mod
   const card=page.locator('[data-directory-stay-id="stay-b"]');
   await card.locator('.v11217-roster-more-actions summary').click();
   await card.locator('[data-v11217-early-checkout]').click();
-  const dialog=page.getByRole('dialog',{name:'Early Checkout'});
+  const dialog=page.getByRole('dialog',{name:'Early check-out'});
   await dialog.locator('[data-v11217-confirm]').click();
   await expect(dialog).toBeHidden();
   await expect(page.locator('[data-v11217-departure-copy]')).toBeFocused();

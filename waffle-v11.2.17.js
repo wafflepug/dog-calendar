@@ -1,8 +1,8 @@
 /* ============================================================
    WAFFLE HOUSE V11.2.17 — OWNER-REQUESTED EARLY CHECKOUT
    ----------------------------------------------------------------
-   Adds a dedicated Early Checkout flow for an active guest whose owner asks
-   to collect them before the scheduled checkout date. The booked dates remain
+   Adds a dedicated Early check-out flow for an active guest whose owner asks
+   to collect them before the scheduled check-out date. The booked dates remain
    untouched; Care stores and displays the actual checkout separately.
    ============================================================ */
 (function () {
@@ -169,7 +169,7 @@
     if (!operation || operation.status !== 'checked_out' || !isEarlyOperation(operation)) return baseState;
     return {
       code: 'checked_out',
-      label: 'Early Checkout',
+      label: 'Early check-out',
       icon: '⏱️',
       meta: `${REASON} · ${formatDateTime(operation.checkedOutAt, operation.actualCheckoutDate)}`
     };
@@ -220,7 +220,7 @@
     button.type = 'button';
     button.className = 'v11217-early-checkout-button';
     button.dataset.v11217EarlyCheckout = '';
-    button.textContent = '⏱️ Early Checkout';
+    button.textContent = '⏱️ Early check-out';
     button.setAttribute('aria-label', accessibleStayActionLabel('Record owner-requested early checkout for', card, p));
     actions.insertBefore(button, actions.querySelector('[data-v11113-extend-stay]'));
   }
@@ -290,10 +290,10 @@
     section.className = 'v11217-profile-summary';
     section.dataset.v11217EarlyProfile = '';
     section.dataset.v11217Signature = signature;
-    section.setAttribute('aria-label', 'Early checkout details');
+    section.setAttribute('aria-label', 'Early check-out details');
     section.innerHTML = `
       <div class="v11217-profile-summary-head">
-        <div><small>STAY OUTCOME</small><h4>⏱️ Early Checkout</h4></div>
+        <div><small>STAY OUTCOME</small><h4>⏱️ Early check-out</h4></div>
         <span class="v11217-profile-badge">Owner requested</span>
       </div>
       <div class="v11217-profile-grid">
@@ -358,13 +358,13 @@
     }
     if (actions.dataset.renderSignature === signature) return;
     actions.dataset.renderSignature = signature;
-    const checkInMarkup = canCheckIn ? `<button type="button" class="v110-checkin-button" data-v11217-roster-checkin aria-label="${esc(accessibleStayActionLabel('Check in', card, p))}">🛬 Check In</button>` : '';
-    const checkOutMarkup = canCheckout ? `<button type="button" class="v110-checkout-button" data-v11217-roster-checkout aria-label="${esc(accessibleStayActionLabel('Check out', card, p))}">👋 Check Out</button>` : '';
-    const earlyButtonMarkup = early ? '<button type="button" class="v11217-early-checkout-button" data-v11217-early-checkout>⏱️ Early Checkout</button>' : '';
+    const checkInMarkup = canCheckIn ? `<button type="button" class="v110-checkin-button" data-v11217-roster-checkin aria-label="${esc(accessibleStayActionLabel('Check-in', card, p))}">🛬 Check-in</button>` : '';
+    const checkOutMarkup = canCheckout ? `<button type="button" class="v110-checkout-button" data-v11217-roster-checkout aria-label="${esc(accessibleStayActionLabel('Check-out', card, p))}">👋 Check-out</button>` : '';
+    const earlyButtonMarkup = early ? '<button type="button" class="v11217-early-checkout-button" data-v11217-early-checkout>⏱️ Early check-out</button>' : '';
     const contactNumber = window.formatWaffleContactPhone ? window.formatWaffleContactPhone(p.phone) : String(p.phone || '').trim();
     const ownerCall = ownerTel ? `<a class="care-roster-direct-call" data-v11217-roster-owner-call href="tel:${esc(ownerTel)}" aria-label="Call ${esc(p.ownerName || 'owner')} about ${esc(p.dogName || 'this dog')} · ${esc(contactNumber)}"><span>Call Owner</span></a>` : '';
     const ownerDetail = ownerTel ? `<span class="care-roster-contact-detail">${esc(p.ownerName || 'Owner')} · ${esc(contactNumber)}</span>` : '';
-    const estimate = canSetEstimate ? '<button type="button" class="care-roster-checkout-estimate" data-roster-checkout-estimate>Set checkout time</button>' : '';
+    const estimate = canSetEstimate ? '<button type="button" class="care-roster-checkout-estimate" data-roster-checkout-estimate>Set check-out time</button>' : '';
     const handoverActions = `<div class="care-roster-handover-actions">${ownerCall}${estimate}${checkOutMarkup}${earlyButtonMarkup}</div>`;
     const contact = ownerCall ? `<div class="care-roster-contact">${ownerCall}${ownerDetail}</div>` : '';
     actions.innerHTML = estimate
@@ -469,7 +469,7 @@
     modal.innerHTML = `
       <div class="v11217-modal-card">
         <div class="v11217-modal-head">
-          <div><small>OWNER REQUEST</small><h3 id="v11217EarlyCheckoutTitle">⏱️ Early Checkout</h3><p>Record an actual departure before the scheduled checkout date.</p></div>
+          <div><small>OWNER REQUEST</small><h3 id="v11217EarlyCheckoutTitle">⏱️ Early check-out</h3><p>Record an actual departure before the scheduled check-out date.</p></div>
           <button type="button" class="v11217-modal-close" data-v11217-close aria-label="Close early checkout">×</button>
         </div>
         <div class="v11217-modal-body">
@@ -482,12 +482,12 @@
           </div>
           <div class="v11217-modal-preserve">The original booking dates will be preserved. This only updates the guest's operational status and early-checkout profile.</div>
           <div class="v11217-field"><label for="v11217EarlyCheckoutNote">Optional checkout note</label><textarea id="v11217EarlyCheckoutNote" data-v11217-note maxlength="1000" placeholder="Add collection details or other context…"></textarea></div>
-          <div class="v11217-action-feedback" data-v11217-feedback role="status" aria-live="polite" hidden><span data-v11217-feedback-message></span><button type="button" data-v11217-retry hidden>Retry Early Checkout</button></div>
+          <div class="v11217-action-feedback" data-v11217-feedback role="status" aria-live="polite" hidden><span data-v11217-feedback-message></span><button type="button" data-v11217-retry hidden>Retry early check-out</button></div>
         </div>
         <div class="v11217-discard-prompt" data-v11217-discard-prompt role="group" aria-label="Unsaved note confirmation" hidden><span>Discard this unsaved checkout note?</span><button type="button" data-v11217-discard-keep>Keep editing</button><button type="button" data-v11217-discard-confirm>Discard note</button></div>
         <div class="v11217-modal-actions">
           <button type="button" class="v11217-cancel" data-v11217-close>Cancel</button>
-          <button type="button" class="v11217-confirm" data-v11217-confirm>Confirm Early Checkout</button>
+          <button type="button" class="v11217-confirm" data-v11217-confirm>Confirm early check-out</button>
         </div>
       </div>
     `;
@@ -556,7 +556,7 @@
     if (!region) return;
     const text = region.querySelector('[data-v11217-feedback-message]');
     const button = region.querySelector('[data-v11217-retry]');
-    text.textContent = String(message || 'Early checkout could not be saved.');
+    text.textContent = String(message || 'Early check-out could not be saved.');
     region.hidden = false;
     region.setAttribute('role', 'alert');
     region.setAttribute('aria-live', 'assertive');
@@ -641,7 +641,7 @@
         throw new Error('Stay operations service is unavailable.');
       }
       const response = await window.v110SaveOperationalStatus(payload, 'checked_out', card);
-      if (response?.queued) throw new Error('Early checkout cannot be queued offline. Nothing was saved.');
+      if (response?.queued) throw new Error('Early check-out cannot be queued offline. Nothing was saved.');
       if (!identityMatchesCard(card, payload, originalStayId)) {
         setEarlyFeedback('The selected booking changed while saving. Review its current identity and refresh Care before taking another action.');
         return;
@@ -690,7 +690,7 @@
       const structural = /conflict|collision|duplicate|ambiguous|several .*match|multiple .*match|operation rows match|invalid stay|changed|reload|does not match|did not confirm|review .*booking/i.test(message);
       const guidance = structural ? ' Review the booking identity and refresh Care before taking another action.' : '';
       const retry = actionCanRetry(error) && identityMatchesCard(card, payload, originalStayId);
-      setEarlyFeedback(`Early checkout could not be saved. ${message}${guidance}`, retry ? () => confirmEarlyCheckout(button) : null);
+      setEarlyFeedback(`Early check-out could not be saved. ${message}${guidance}`, retry ? () => confirmEarlyCheckout(button) : null);
     } finally {
       earlyCheckoutBusy = false;
       modal.querySelector('[data-v11217-note]').readOnly = false;
@@ -719,7 +719,7 @@
     const status = checkinButton ? 'checked_in' : 'checked_out';
     const original = button.textContent;
     const actions = button.closest('[data-v11217-roster-actions]') || button.parentElement;
-    const actionName = status === 'checked_in' ? 'Check In' : 'Check Out';
+    const actionName = status === 'checked_in' ? 'Check-in' : 'Check-out';
     let activeButton = button;
     const attempt = async (checkoutNote = '') => {
       if (!identityMatchesCard(card, payload, originalStayId)) {
@@ -781,7 +781,7 @@
       const retry = actionCanRetry(error);
       if (typeof window.v110ShowActionFeedback === 'function') window.v110ShowActionFeedback(card, `${actionName} could not be saved. ${message}${guidance}`, status === 'checked_in' && retry ? attempt : null);
       return status === 'checked_out'
-        ? { message: `Check Out could not be saved. ${message}${guidance}`, retryable: retry }
+        ? { message: `Check-out could not be saved. ${message}${guidance}`, retryable: retry }
         : false;
     } finally {
       if (status === 'checked_in' && continuity) { try { window.WAFFLE_CARE_ROSTER_FOCUS?.cancelCheckIn?.(continuity); } catch (_) {} }
@@ -819,14 +819,14 @@
     modal.setAttribute('aria-labelledby', 'v11217GuidedCheckoutTitle');
     modal.setAttribute('aria-describedby', 'v11217GuidedCheckoutDescription');
     modal.innerHTML = `<section class="v11217-modal-card">
-      <header class="v11217-modal-head"><div><small>DEPARTURE</small><h3 id="v11217GuidedCheckoutTitle" tabindex="-1">Check out</h3><p id="v11217GuidedCheckoutDescription">Review this stay before confirming departure.</p></div><button type="button" class="v11217-modal-close" data-v11217-guided-close aria-label="Close checkout">×</button></header>
-      <div class="v11217-modal-body"><div class="v11217-modal-dog"><strong data-v11217-guided-dog></strong><span data-v11217-guided-dogid></span><div class="v11217-guided-dates"><span><small>Booked stay</small><span data-v11217-guided-dates></span></span><span><small data-v11217-guided-checkout-caption>Checkout today</small><span data-v11217-guided-checkout-today></span></span></div></div>
+      <header class="v11217-modal-head"><div><small>DEPARTURE</small><h3 id="v11217GuidedCheckoutTitle" tabindex="-1">Check-out</h3><p id="v11217GuidedCheckoutDescription">Review this stay before confirming departure.</p></div><button type="button" class="v11217-modal-close" data-v11217-guided-close aria-label="Close check-out">×</button></header>
+      <div class="v11217-modal-body"><div class="v11217-modal-dog"><strong data-v11217-guided-dog></strong><span data-v11217-guided-dogid></span><div class="v11217-guided-dates"><span><small>Booked stay</small><span data-v11217-guided-dates></span></span><span><small data-v11217-guided-checkout-caption>Check-out today</small><span data-v11217-guided-checkout-today></span></span></div></div>
       <div class="v11217-guided-owner" data-v11217-guided-owner hidden><span data-v11217-guided-owner-name></span><a data-v11217-guided-owner-call hidden>Call owner</a></div><details class="v11217-guided-handover" data-v11217-guided-handover hidden><summary>Saved handover note<span data-v11217-guided-handover-preview hidden></span></summary><div data-v11217-guided-handover-note></div></details>
       <div class="v11217-guided-checklist"><section class="v11217-guided-evidence" data-v11217-guided-belongings-section><strong>Belongings</strong><details data-v11217-guided-belongings-details><summary data-v11217-guided-belongings-summary></summary><div data-v11217-guided-belongings></div></details><div class="v11217-guided-unknown" data-v11217-guided-belongings-unknown hidden>Not available in this summary</div></section><section class="v11217-guided-evidence" data-v11217-guided-medication-section><strong>Medication</strong><div data-v11217-guided-medication></div><div class="v11217-guided-unknown" data-v11217-guided-medication-unknown hidden>Not available in this summary</div></section></div>
       <div class="v11217-guided-missing" data-v11217-guided-missing hidden><span data-v11217-guided-missing-message>Review saved care before handover.</span><button type="button" data-v11217-guided-review-care>Review missing details</button></div>
       <div class="v11217-field"><label for="v11217GuidedCheckoutNote">Departure note (optional)</label><textarea id="v11217GuidedCheckoutNote" data-v11217-guided-note rows="2" maxlength="1000" placeholder="Optional handover details…"></textarea></div>
       <div class="v11217-action-feedback" data-v11217-guided-feedback role="alert" aria-live="assertive" hidden></div></div>
-      <div class="v11217-discard-prompt" data-v11217-discard-prompt role="group" aria-label="Unsaved note confirmation" hidden><span>Discard this unsaved departure note?</span><button type="button" data-v11217-discard-keep>Keep editing</button><button type="button" data-v11217-discard-confirm>Discard note</button></div><footer class="v11217-modal-actions"><button type="button" class="v11217-cancel" data-v11217-guided-close>Cancel</button><button type="button" class="v11217-confirm" data-v11217-guided-confirm>Confirm checkout</button></footer>
+      <div class="v11217-discard-prompt" data-v11217-discard-prompt role="group" aria-label="Unsaved note confirmation" hidden><span>Discard this unsaved departure note?</span><button type="button" data-v11217-discard-keep>Keep editing</button><button type="button" data-v11217-discard-confirm>Discard note</button></div><footer class="v11217-modal-actions"><button type="button" class="v11217-cancel" data-v11217-guided-close>Cancel</button><button type="button" class="v11217-confirm" data-v11217-guided-confirm>Confirm check-out</button></footer>
       </section>`;
     document.body.appendChild(modal);
     modal.querySelector('.v11217-modal-actions').prepend(modal.querySelector('[data-v11217-discard-prompt]'));
@@ -900,7 +900,7 @@
     guidedReviewPromise = null;
     const dogName = String(payload.dogName || '').trim() || 'Guest';
     const title = modal.querySelector('#v11217GuidedCheckoutTitle');
-    title.textContent = `Check out ${dogName}`;
+    title.textContent = `Check-out for ${dogName}`;
     const context = accessibleStayContext(card, payload, true);
     modal.querySelector('#v11217GuidedCheckoutDescription').textContent = context.length
       ? `${context.join(' · ')}. Review this stay before confirming departure.`
@@ -969,7 +969,7 @@
     modal.querySelector('[data-v11217-guided-missing-message]').textContent = 'Review saved care before handover.';
     modal.querySelector('[data-v11217-guided-feedback]').hidden = true;
     modal.querySelector('[data-v11217-guided-confirm]').disabled = false;
-    modal.querySelector('[data-v11217-guided-confirm]').textContent = 'Confirm checkout';
+    modal.querySelector('[data-v11217-guided-confirm]').textContent = 'Confirm check-out';
     modal.querySelectorAll('[data-v11217-guided-close]').forEach(button => { button.disabled = false; });
     modal.hidden = false;
     sizeGuidedNote(modal);
@@ -1114,7 +1114,7 @@
         button.disabled = false;
         const identityStillCurrent = exactGuidedCard(expected) === card && sameGuidedStay(expected, guidedCheckoutPayload);
         if (!identityStillCurrent) confirm.disabled = true;
-        else if (confirm.textContent === 'Confirm checkout') confirm.disabled = false;
+        else if (confirm.textContent === 'Confirm check-out') confirm.disabled = false;
         const discardPrompt = modal.querySelector('[data-v11217-discard-prompt]');
         if (!discardPrompt.hidden) { discardPrompt.dataset.confirmWasDisabled = String(confirm.disabled); confirm.disabled = true; }
       }
@@ -1172,24 +1172,24 @@
       }
       else {
         const feedback = modal.querySelector('[data-v11217-guided-feedback]');
-        const info = saved && typeof saved === 'object' ? saved : { message: 'Checkout was not confirmed. Review the selected stay identity.', retryable: false };
+        const info = saved && typeof saved === 'object' ? saved : { message: 'Check-out was not confirmed. Review the selected stay identity.', retryable: false };
         feedback.textContent = info.message;
         feedback.hidden = false;
-        confirm.textContent = info.retryable ? 'Retry checkout' : 'Checkout needs review';
+        confirm.textContent = info.retryable ? 'Retry check-out' : 'Check-out needs review';
         confirm.disabled = !info.retryable;
       }
     } catch (error) {
       const feedback = modal.querySelector('[data-v11217-guided-feedback]');
-      feedback.textContent = String(error?.message || error || 'Checkout could not be saved.');
+      feedback.textContent = String(error?.message || error || 'Check-out could not be saved.');
       feedback.hidden = false;
-      confirm.textContent = 'Checkout needs review';
+      confirm.textContent = 'Check-out needs review';
       confirm.disabled = true;
     } finally {
       guidedCheckoutBusy = false;
       modal.querySelector('[data-v11217-guided-note]').readOnly = false;
       modal.querySelectorAll('[data-v11217-guided-close]').forEach(button => { button.disabled = false; });
       modal.querySelectorAll('[data-v11217-discard-keep],[data-v11217-discard-confirm]').forEach(button => { button.disabled = false; });
-      if (!confirm.disabled && confirm.textContent !== 'Retry checkout') confirm.textContent = 'Confirm checkout';
+      if (!confirm.disabled && confirm.textContent !== 'Retry check-out') confirm.textContent = 'Confirm check-out';
     }
   }
 

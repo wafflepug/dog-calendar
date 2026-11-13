@@ -190,7 +190,7 @@
           ${today ? `<small>${esc(formatDate(dates.start))} → ${esc(formatDate(dates.end))}</small>` : ''}
         </div>
         ${today
-          ? `<button type="button" class="v110-checkout-button" data-v11128-checkout="${index}">👋 Check Out</button>`
+          ? `<button type="button" class="v110-checkout-button" data-v11128-checkout="${index}">👋 Check-out</button>`
           : `<time class="v11128-departure-date">${esc(formatDate(dates.end))}</time>`}
       </article>`;
   }
@@ -330,7 +330,7 @@
     } catch (error) {
       button.disabled = false;
       button.textContent = original;
-      window.alert('Checkout could not be saved.\n\n' + (error?.message || String(error)));
+      window.alert('Check-out could not be saved.\n\n' + (error?.message || String(error)));
     }
   }
 

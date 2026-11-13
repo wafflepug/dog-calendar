@@ -51,13 +51,13 @@ test('the shipped Today page keeps profile links, exposes direct confirmed-stay 
     const queue = page.locator('#v10TodayAgenda');
     await expect(queue.locator('.v10-agenda-item')).toHaveCount(3);
     await expect(queue).toBeVisible();
-    await expect(queue.getByRole('button', {name:'Check in Milo'})).toBeVisible();
-    await expect(queue.getByRole('button', {name:'Check out Coco'})).toBeVisible();
+    await expect(queue.getByRole('button', {name:'Check-in Milo'})).toBeVisible();
+    await expect(queue.getByRole('button', {name:'Check-out Coco'})).toBeVisible();
     const portrait = queue.getByRole('link', {name:/Open Coco care profile/}).locator('.wh-home-portrait img');
     await expect(queue.getByRole('button', {name:'Set price'})).toHaveCount(0);
     await expect(portrait).toHaveAttribute('src', /fixture-coco\.svg$/);
     await expect.poll(() => portrait.evaluate(image => image.naturalWidth)).toBeGreaterThan(0);
-    const checkin = queue.getByRole('button', {name:'Check in Milo'});
+    const checkin = queue.getByRole('button', {name:'Check-in Milo'});
     await expect.poll(() => checkin.evaluate(button => button.isConnected ? button.getBoundingClientRect().height : 0)).toBeGreaterThanOrEqual(44);
     await expect.poll(() => checkin.evaluate(button => button.isConnected ? parseFloat(getComputedStyle(button).fontSize) : 0)).toBeGreaterThanOrEqual(13);
     const headingFonts = await page.evaluate(() => ['#today-actions-title','#whHomeGuestsTitle'].map(selector => getComputedStyle(document.querySelector(selector)).fontSize));

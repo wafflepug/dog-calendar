@@ -31,13 +31,13 @@ async function addCard(page, { stayId, dogId, name = 'Milo', key, start = '2026-
       directoryStayKey: input.key, directoryStartDate: input.start, directoryEndDate: input.end,
       intake: input.intake, ...(input.past ? { v1082PastStay: 'true' } : {})
     });
-    card.innerHTML = '<button class="directory-guest-tile-open">Open profile</button><button data-v11217-roster-checkin>Check In</button>';
+    card.innerHTML = '<button class="directory-guest-tile-open">Open profile</button><button data-v11217-roster-checkin>Check-in</button>';
     card.querySelector('.directory-guest-tile-open').addEventListener('click', () => { card.dataset.opened = 'true'; });
     document.querySelector('#directory-grid').appendChild(card);
   }, { stayId, dogId, name, key, start, end, intake, past });
 }
 
-test('only unique, current arrivals receive one compact indicator and retain Check In', async ({ page }) => {
+test('only unique, current arrivals receive one compact indicator and retain Check-in', async ({ page }) => {
   await setup(page);
   await addCard(page, { stayId: 's1', dogId: 'd1', key: 'milo|today', intake: 'link_ready' });
   await addCard(page, { stayId: 's2', dogId: 'd2', name: 'Milo', key: 'milo|today', end: '2026-10-18', intake: 'not_prepared' });
@@ -377,7 +377,7 @@ test('Next arrival stays hidden below two eligible check-ins and recovers live',
   await expect(next).toBeVisible();
   await page.locator('[data-directory-stay-id="pending"]').evaluate(card => { card.style.visibility = 'hidden'; });
   await expect(next).toBeHidden();
-  await page.locator('[data-directory-stay-id="pending"]').evaluate(card => { card.style.visibility = ''; card.innerHTML = '<details><summary>Closed</summary><button data-v11217-roster-checkin>Check In</button></details>'; });
+  await page.locator('[data-directory-stay-id="pending"]').evaluate(card => { card.style.visibility = ''; card.innerHTML = '<details><summary>Closed</summary><button data-v11217-roster-checkin>Check-in</button></details>'; });
   await expect(next).toBeHidden();
   await page.locator('[data-directory-stay-id="pending"] > details:not([data-arrival-task-list])').evaluate(node => { node.open = true; });
   await expect(next).toHaveText('Next: Milo · 2 remaining');

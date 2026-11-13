@@ -61,7 +61,7 @@
     for (const button of buttons) {
       const card = button.closest('.directory-card');
       const time = pickupTimes.get(key(idFor(card)));
-      const label = time ? 'Checkout: ' + time : 'Set checkout time';
+      const label = time ? 'Check-out: ' + time : 'Set check-out time';
       if (button.textContent !== label) button.textContent = label;
     }
   }
@@ -75,7 +75,7 @@
     editor.className = 'sitter-planning sitter-planning-dialog';
     editor.dataset.rosterCheckoutDialog = '';
     editor.setAttribute('aria-labelledby', 'rosterCheckoutTitle');
-    editor.innerHTML = `<h3 id="rosterCheckoutTitle">Estimated checkout time</h3>
+    editor.innerHTML = `<h3 id="rosterCheckoutTitle">Estimated check-out time</h3>
       <p data-checkout-dog></p><form>
         <label>Pickup time<input type="time" name="pickupTime" disabled></label>
         <p>Use local time on the scheduled checkout day. Leave blank to clear the estimate.</p>

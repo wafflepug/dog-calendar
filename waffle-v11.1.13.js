@@ -110,7 +110,7 @@
     }
     modal.querySelector('[data-v11113-end-date]').value = date;
     const preview = modal.querySelector('[data-v11113-extension-preview]');
-    preview.textContent = date ? 'New checkout date · ' + new Intl.DateTimeFormat('en-AU', {
+    preview.textContent = date ? 'New check-out date · ' + new Intl.DateTimeFormat('en-AU', {
       day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC'
     }).format(new Date(date + 'T00:00:00Z')) : '';
     return date;
