@@ -121,7 +121,7 @@
     document.querySelectorAll('.directory-guest-tile-open .v1118-care-status.is-at-home, .directory-profile-name-line .directory-status-tag.tag-at-home').forEach(chip => {
       if (!chip.querySelector('[data-palz-icon="home"]')) chip.insertAdjacentHTML('beforeend', svg('home'));
     });
-    document.querySelectorAll('.directory-guest-tile-open .v1118-care-status.is-leaving-today').forEach(chip => {
+    document.querySelectorAll('.directory-guest-tile-open .v1118-care-status.is-leaving-today, .directory-profile-name-line .directory-status-tag.tag-leaving-today').forEach(chip => {
       if (!chip.querySelector('[data-palz-icon="checkout"]')) chip.insertAdjacentHTML('beforeend', svg('checkout'));
     });
     document.querySelectorAll('[data-v10-quick-action="potential"] > span:first-child').forEach(icon => hostIcon(icon, 'document'));
