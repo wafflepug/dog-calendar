@@ -89,7 +89,7 @@ test('the shipped Today page keeps profile links, exposes direct confirmed-stay 
     await expect(page.locator('#modalTitle')).toHaveText(/Edit Meet & Greet/);
     await expect(page.locator('#modalDogName')).toHaveValue('Scout');
     await expect(page.locator('#modalBookingTime')).toHaveValue('10:30');
-    await expect(page.getByLabel('Pet name')).toHaveValue('Scout');
+    await expect(page.locator('#customBookingModal').getByLabel('Pet name')).toHaveValue('Scout');
     await expect(page.locator('#customBookingModal .v1112-source-picker')).toHaveCount(1);
     await info.attach(`meet-greet-${width}`, {body:await page.locator('#customBookingModal .modal-content-panel').screenshot({path:info.outputPath(`meet-greet-${width}.png`)}),contentType:'image/png'});
   }
