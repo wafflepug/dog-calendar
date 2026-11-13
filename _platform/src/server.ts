@@ -16,8 +16,20 @@ export function configuration(env: NodeJS.ProcessEnv = process.env) {
   if (mode === 'local' && (!projectId.startsWith('demo-') || !emulatorHost || !/^(127\.0\.0\.1|localhost):\d{1,5}$/.test(emulatorHost))) {
     throw Error('Local mode requires a demo project and loopback Firebase Auth emulator. Use npm run dev.');
   }
-  if (mode === 'production' && (!projectId || projectId.startsWith('demo-') || emulatorHost || !env.DATABASE_URL || !env.PLATFORM_ORIGIN || !env.FIREBASE_WEB_API_KEY || !env.FIREBASE_APP_ID)) {
+  if (mode === 'production' && (!projectId || (projectId.startsWith('demo-') || projectId.toLowerCase() === 'wafflehouse-86739') || emulatorHost || !env.DATABASE_URL || !env.PLATFORM_ORIGIN || !env.FIREBASE_WEB_API_KEY || !env.FIREBASE_APP_ID)) {
     throw Error('Production requires separate Firebase, PostgreSQL and HTTPS configuration; emulation is forbidden.');
+  }
+  const pilotEmails = new Set((env.PLATFORM_PILOT_EMAILS || '').split(',').map(value => value.trim().toLowerCase()).filter(Boolean));
+  if (mode === 'production') {
+    if (!pilotEmails.size || [...pilotEmails].some(value => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value))) {
+      throw Error('Production requires a valid PLATFORM_PILOT_EMAILS allowlist.');
+    }
+    const database = new URL(env.DATABASE_URL!);
+    if (!['postgres:', 'postgresql:'].includes(database.protocol) || database.username !== 'palz_app' ||
+        [...database.searchParams.keys()].some(key => key !== 'sslmode') ||
+        database.searchParams.getAll('sslmode').length !== 1 || database.searchParams.get('sslmode') !== 'verify-full') {
+      throw Error('Production DATABASE_URL requires palz_app and sslmode=verify-full.');
+    }
   }
   const origin = mode === 'local' ? `http://127.0.0.1:${port}` : String(env.PLATFORM_ORIGIN);
   const parsed = new URL(origin);
@@ -25,6 +37,7 @@ export function configuration(env: NodeJS.ProcessEnv = process.env) {
   const authDomain = env.FIREBASE_AUTH_DOMAIN || `${projectId}.firebaseapp.com`;
   if (!/^[a-z0-9-]+\.firebaseapp\.com$/.test(authDomain)) throw Error('Invalid Firebase auth domain');
   return {
+    pilotEmails: mode === 'production' ? pilotEmails : undefined,
     mode: mode as 'local'|'production', port, projectId, emulatorHost,
     host: mode === 'local' ? '127.0.0.1' : '0.0.0.0',
     databaseUrl: mode === 'production' ? env.DATABASE_URL : undefined,
@@ -38,7 +51,7 @@ export async function startServer(env: NodeJS.ProcessEnv = process.env) {
   const store = await createStore({dataDir:config.dataDir,databaseUrl:config.databaseUrl});
   let verifyToken;
   try { verifyToken = createTokenVerifier({projectId:config.projectId,emulatorHost:config.emulatorHost,mode:config.mode}); } catch(error) {await store.close();throw error;}
-  const handler = createHandler({store,verifyToken,publicConfig:config.publicConfig});
+  const handler = createHandler({store,verifyToken,publicConfig:config.publicConfig,pilotEmails:config.pilotEmails});
   const publicDir = fileURLToPath(new URL('../public/', import.meta.url));
   const assets:Record<string,[string,string]> = {'/':['index.html','text/html'], '/index.html':['index.html','text/html'], '/style.css':['style.css','text/css'], '/app.js':['app.js','text/javascript']};
   const server = createServer(async (req,res)=>{

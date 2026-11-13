@@ -49,3 +49,5 @@ identity and workspace membership checks as the web app. The response is
 The current booking model does not store arrival or departure completion or
 handover times, so the widget shows scheduled counts and the API returns
 `nextHandover: null`. The widget reads this commercial backend only.
+
+For a dedicated, invite-only A$0 rehearsal, see the [free pilot deployment guide](docs/free-pilot-deployment.md).

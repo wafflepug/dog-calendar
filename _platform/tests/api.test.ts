@@ -125,3 +125,13 @@ test('Today widget reads only the requested workspace using the verified identit
   assert.equal(result.headers.get('cache-control'), 'no-store');
   assert.deepEqual(calls, [['getWidgetToday', 'firebase-user', businessId]]);
 });
+
+test('pilot allowlist blocks verified outsiders before any database access', async () => {
+  const denied = await setup({ pilotEmails: new Set(['boarder@example.com']) });
+  const response = await fetch(`${denied.url}/api/businesses`, { headers: authHeaders });
+  assert.equal(response.status, 403);
+  assert.equal(((await response.json()) as any).error.code, 'pilot_invite_required');
+  assert.deepEqual(denied.calls, []);
+  const allowed = await setup({ pilotEmails: new Set(['owner@example.com']) });
+  assert.equal((await fetch(`${allowed.url}/api/businesses`, { headers: authHeaders })).status, 200);
+});
