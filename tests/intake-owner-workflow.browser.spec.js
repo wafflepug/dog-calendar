@@ -84,7 +84,7 @@ test('website intake sends the token in the POST body and reports booking timing
   await expect(page.locator('#bookingDog')).toHaveText('Maple');
   await page.getByText('Form timings', { exact: true }).click();
   await expect(page.locator('#intakeTimingReady')).toHaveText(/Ready in .*Booking request/);
-  await expect(page.getByRole('link', { name: 'Open Google-hosted form' })).toHaveAttribute('href', /action=intake&token=fixture-token$/);
+  await expect(page.locator('#intakeCompareLink')).toBeHidden();
   expect(requests).toHaveLength(1);
   expect(requests[0].method).toBe('POST');
   expect(requests[0].url).not.toContain('fixture-token');

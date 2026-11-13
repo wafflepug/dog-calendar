@@ -293,12 +293,10 @@ function setupIntakeProfilePhoto() {
 document.addEventListener("DOMContentLoaded", () => {
     setupIntakeProfilePhoto();
     document.getElementById("intakeTimingMode").textContent = websiteIntake ? "Palz Stay website" : "Google-hosted form (ready time measured from the form frame)";
-    if (INTAKE_TOKEN) {
+    if (!websiteIntake && INTAKE_TOKEN) {
         const link = document.getElementById("intakeCompareLink");
-        link.href = websiteIntake
-            ? websiteIntakeEndpoint + '?action=intake&token=' + encodeURIComponent(INTAKE_TOKEN)
-            : 'https://wafflepug.github.io/dog-calendar/palz-intake.html#token=' + encodeURIComponent(INTAKE_TOKEN);
-        link.textContent = websiteIntake ? 'Open Google-hosted form' : 'Open Palz Stay website form';
+        link.href = 'https://wafflepug.github.io/dog-calendar/palz-intake.html#token=' + encodeURIComponent(INTAKE_TOKEN);
+        link.textContent = 'Open Palz Stay website form';
         link.target = '_blank';
         link.rel = 'noopener noreferrer';
         link.hidden = false;
