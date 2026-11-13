@@ -2,9 +2,9 @@
    Build: 2026.08.27.04
    Historical base styles remain compatibility sources during Phase 3A, but pages no longer
    reference them individually. Preserve this import order until modules are folded in. */
-@import url("waffle-app.css?build=2026.08.27.04&rev=2026.11.13.01");
-@import url("palz-sales.css?rev=2026.11.13.01");
-@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.11.13.01");
+@import url("waffle-app.css?build=2026.08.27.04&rev=2026.11.13.02");
+@import url("palz-sales.css?rev=2026.11.13.02");
+@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.11.13.02");
 @import url("waffle-v10.8.2.css?build=2026.08.27.04");
 @import url("waffle-v10.8.3.css?build=2026.08.27.04");
 @import url("waffle-v10.8.5.css?build=2026.08.27.04");
@@ -12,12 +12,12 @@
 @import url("waffle-v10.8.7.css?build=2026.08.27.04");
 @import url("waffle-v10.8.8.css?build=2026.08.27.04");
 @import url("waffle-v10.8.9.css?build=2026.08.27.04");
-@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.11.13.01");
+@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.11.13.02");
 @import url("waffle-v11.0.3.css?build=2026.08.27.04");
 @import url("waffle-v11.0.5.css?build=2026.08.27.04");
-@import url("waffle-v11.1.94.css?build=2026.11.13.01");
-@import url("waffle-v11.1.95.css?build=2026.11.13.01");
-@import url("waffle-v11.1.96.css?build=2026.11.13.01&rev=2026.11.13.01");
+@import url("waffle-v11.1.94.css?build=2026.11.13.02");
+@import url("waffle-v11.1.95.css?build=2026.11.13.02");
+@import url("waffle-v11.1.96.css?build=2026.11.13.02&rev=2026.11.13.02");
 
 /* ============================================================
    MOBILE FIRST-PAINT STABILITY GATE
@@ -230,6 +230,13 @@ body[data-waffle-page="calendar"] .wh-home-guests {
 .wh-home-guest-row:empty { padding: 0; }
 .wh-home-guest { flex: 0 0 108px; position: relative; display: flex; flex-direction: column; align-items: center; gap: 7px; text-align: center; text-decoration: none; color: inherit; border-radius: 16px; padding: 4px; scroll-snap-align: start; }
 .wh-home-portrait { width: 90px; height: 90px; border-radius: 50%; position: relative; display: grid; place-items: center; overflow: hidden; border: 3px solid var(--v10-card, #fff); outline: 2px solid var(--wh75-accent, #7562db); background: var(--wh75-accent-soft, #ede9fe); }
+.v10-agenda-item .v10-agenda-icon.wh-home-portrait {
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 50%;
+  outline: none;
+}
 .wh-home-portrait img { width: 100%; height: 100%; position: absolute; inset: 0; object-fit: cover; }
 .wh-home-initials { font-size: 26px; font-weight: 750; color: var(--wh75-accent-ink, #4338ca); }
 .wh-home-guest-name { width: 100%; min-height: 36.4px; display: flex; align-items: flex-start; justify-content: center; font-size: 14px; line-height: 1.3; overflow-wrap: anywhere; }

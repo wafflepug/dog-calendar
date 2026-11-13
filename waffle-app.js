@@ -1427,7 +1427,7 @@ function todayQueueItem(event, type, icon, title, meta, sort) {
     const lockKey = stayId.toLowerCase();
     const activeActions = typeof v110ActiveOperationalActions !== 'undefined' ? v110ActiveOperationalActions : window.todayQueueActionLocks;
     const actionPending = !!action && !!activeActions?.has(lockKey);
-    return { identity, href, action, actionLabel, actionPending, stayId, dogId, stayKey, type, icon, title, meta, sort, isMeet: type === 'meet' };
+    return { identity, href, action, actionLabel, actionPending, stayId, dogId, stayKey, type: actionType, icon, title, meta, sort, species: props.species, isMeet: type === 'meet' };
 }
 
 const todayBelongingsUploads = new Map();
@@ -1726,6 +1726,29 @@ async function runTodayQueueStayAction(button) {
 }
 
 
+function hydrateTodayDeparturePhotos(host) {
+    const portraits = [...host.querySelectorAll('.type-departure .wh-home-portrait')];
+    if (!portraits.length) return;
+    const stayKeys = [...new Set(portraits.map(portrait => portrait.closest('[data-today-photo-stay-key]').dataset.todayPhotoStayKey))];
+    queryAppsScriptSWR({ action: 'get_belongings', stayKeys }, { cacheKey: 'today:departure-photos:' + JSON.stringify(stayKeys), maxAttempts: 1, timeoutMs: 12000 })
+        .then(({data}) => {
+            const photos = new Map((data?.records || []).map(record => [record.stayKey, record.dogPhoto]));
+            portraits.forEach(portrait => {
+                if (!portrait.isConnected) return;
+                const key = portrait.closest('[data-today-photo-stay-key]').dataset.todayPhotoStayKey;
+                const photo = photos.get(key);
+                const url = v10HomeThumbnailUrl(photo?.previewUrl || photo?.url || photo?.driveUrl || '');
+                if (!url) return;
+                const image = document.createElement('img');
+                image.alt = '';
+                image.decoding = 'async';
+                image.addEventListener('error', () => image.remove(), { once: true });
+                image.src = url;
+                portrait.append(image);
+            });
+        }).catch(() => { /* Keep the default portrait when photos are unavailable. */ });
+}
+
 function renderV10OperationsHome(events) {
     if (WAFFLE_PAGE !== 'calendar') {
         return;
@@ -1935,7 +1958,7 @@ function renderV10OperationsHome(events) {
     if (agendaHost) {
         wireTodayQueueActions();
         agendaHost.innerHTML = queue.length
-            ? queue.map(item => item.isMeet ? '<button type="button" class="v10-agenda-item type-meet" data-today-open-meet="' + escapeDashboardHtml(item.identity) + '" aria-label="Open ' + escapeDashboardHtml(item.title) + ' Meet & Greet in calendar"><span class="v10-agenda-icon" aria-hidden="true">' + item.icon + '</span><span class="v10-agenda-copy"><strong>' + escapeDashboardHtml(item.title) + '</strong><span>' + escapeDashboardHtml(item.meta) + '</span></span><span class="v10-agenda-action">Open event <span aria-hidden="true">↗</span></span></button>' : '<div class="v10-agenda-row" data-today-photo-stay-key="' + escapeDashboardHtml(item.stayKey) + '"><div class="v10-agenda-row-main"><a class="v10-agenda-item type-' + escapeDashboardHtml(item.type) + '" data-today-identity="' + escapeDashboardHtml(item.identity) + '" data-today-stay-id="' + escapeDashboardHtml(item.stayId) + '" data-today-dog-id="' + escapeDashboardHtml(item.dogId) + '" href="' + escapeDashboardHtml(item.href) + '" aria-label="Open ' + escapeDashboardHtml(item.title) + ' care profile, ' + escapeDashboardHtml(item.meta) + '"><span class="v10-agenda-icon" aria-hidden="true">' + item.icon + '</span><span class="v10-agenda-copy"><strong>' + escapeDashboardHtml(item.title) + '</strong><span data-today-meta>' + escapeDashboardHtml(item.meta) + '</span></span><span class="v10-agenda-action" aria-hidden="true">↗</span></a>' + (item.action ? (item.action === 'checkout' ? '<div class="v10-agenda-checkout-controls">' : '') + '<button type="button" class="v10-agenda-operation" data-today-action="' + item.action + '" data-today-identity="' + escapeDashboardHtml(item.identity) + '" data-today-stay-id="' + escapeDashboardHtml(item.stayId) + '" data-today-dog-id="' + escapeDashboardHtml(item.dogId) + '" data-today-stay-key="' + escapeDashboardHtml(item.stayKey) + '" aria-label="' + item.actionLabel + ' ' + escapeDashboardHtml(item.title) + '"' + (item.actionPending ? ' disabled aria-busy="true"' : '') + '>' + item.actionLabel + '</button>' + (item.action === 'checkout' ? '<button type="button" data-today-view-photos aria-haspopup="dialog" aria-label="View belongings for ' + escapeDashboardHtml(item.title) + '">View belongings</button></div>' : '') : '') + '</div>' + (item.action ? '<span class="v10-agenda-action-status" data-today-action-status role="status" hidden></span>' : '') + '</div>').join('')
+            ? queue.map(item => item.isMeet ? '<button type="button" class="v10-agenda-item type-meet" data-today-open-meet="' + escapeDashboardHtml(item.identity) + '" aria-label="Open ' + escapeDashboardHtml(item.title) + ' Meet & Greet in calendar"><span class="v10-agenda-icon" aria-hidden="true">' + item.icon + '</span><span class="v10-agenda-copy"><strong>' + escapeDashboardHtml(item.title) + '</strong><span>' + escapeDashboardHtml(item.meta) + '</span></span><span class="v10-agenda-action">Open event <span aria-hidden="true">↗</span></span></button>' : '<div class="v10-agenda-row" data-today-photo-stay-key="' + escapeDashboardHtml(item.stayKey) + '"><div class="v10-agenda-row-main"><a class="v10-agenda-item type-' + escapeDashboardHtml(item.type) + '" data-today-identity="' + escapeDashboardHtml(item.identity) + '" data-today-stay-id="' + escapeDashboardHtml(item.stayId) + '" data-today-dog-id="' + escapeDashboardHtml(item.dogId) + '" href="' + escapeDashboardHtml(item.href) + '" aria-label="Open ' + escapeDashboardHtml(item.title) + ' care profile, ' + escapeDashboardHtml(item.meta) + '">' + (item.type === 'departure' ? '<span class="v10-agenda-icon wh-home-portrait" data-pet-species="' + (item.species === 'cat' ? 'cat' : 'dog') + '" aria-hidden="true"></span>' : '<span class="v10-agenda-icon" aria-hidden="true">' + item.icon + '</span>') + '<span class="v10-agenda-copy"><strong>' + escapeDashboardHtml(item.title) + '</strong><span data-today-meta>' + escapeDashboardHtml(item.meta) + '</span></span><span class="v10-agenda-action" aria-hidden="true">↗</span></a>' + (item.action ? (item.action === 'checkout' ? '<div class="v10-agenda-checkout-controls">' : '') + '<button type="button" class="v10-agenda-operation" data-today-action="' + item.action + '" data-today-identity="' + escapeDashboardHtml(item.identity) + '" data-today-stay-id="' + escapeDashboardHtml(item.stayId) + '" data-today-dog-id="' + escapeDashboardHtml(item.dogId) + '" data-today-stay-key="' + escapeDashboardHtml(item.stayKey) + '" aria-label="' + item.actionLabel + ' ' + escapeDashboardHtml(item.title) + '"' + (item.actionPending ? ' disabled aria-busy="true"' : '') + '>' + item.actionLabel + '</button>' + (item.action === 'checkout' ? '<button type="button" data-today-view-photos aria-haspopup="dialog" aria-label="View belongings for ' + escapeDashboardHtml(item.title) + '">View belongings</button></div>' : '') : '') + '</div>' + (item.action ? '<span class="v10-agenda-action-status" data-today-action-status role="status" hidden></span>' : '') + '</div>').join('')
             : '<div class="v10-empty v10-all-clear" role="status"><span aria-hidden="true">✓</span><div><strong>You’re all caught up</strong><small>There are no scheduled actions for today.</small></div></div>';
         const actionFeedback = document.createElement('span');
         actionFeedback.id = 'v10TodayActionFeedback';
@@ -1943,6 +1966,7 @@ function renderV10OperationsHome(events) {
         actionFeedback.setAttribute('role', 'status');
         actionFeedback.setAttribute('aria-live', 'polite');
         agendaHost.appendChild(actionFeedback);
+        hydrateTodayDeparturePhotos(agendaHost);
     }
 
     const nextHost =
