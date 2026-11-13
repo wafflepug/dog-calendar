@@ -148,6 +148,13 @@ for (const colorScheme of ['light', 'dark']) {
   test(`cold delayed profile success exposes loading and fresh states (${colorScheme})`, async ({ page, baseURL }) => {
     const fixture = installReadOnlyRuntimeFixture(page, { holdProfile: true, profileBehavior: () => ({ kind: 'success' }) });
     await openDirectory(page, baseURL, fixture, colorScheme);
+    if (colorScheme === 'light') {
+      await page.locator('[data-directory-dog-name="Milo"] [data-directory-tile-photo]').evaluate(shell => {
+        const image = document.createElement('img');
+        image.src = 'https://fixture.invalid/milo.svg';
+        shell.appendChild(image);
+      });
+    }
     const card = await openProfile(page);
     const dashboard = page.locator('.directory-dashboard-fused');
     const loadingScreen = dashboard.locator('[data-care-profile-loading-screen]');
@@ -155,6 +162,11 @@ for (const colorScheme of ['light', 'dark']) {
     await expect(loadingScreen.locator('.palz-loading-label')).toHaveText('Loading Milo’s Care Profile…');
     await expect(loadingScreen.getByRole('img', { name: 'Palz Stay' })).toBeVisible();
     await expect(loadingScreen.locator('.palz-loading-progress')).toBeVisible();
+    const portrait = loadingScreen.locator('.care-profile-loading-portrait');
+    await expect(portrait).toBeVisible();
+    if (colorScheme === 'light') await expect(portrait.locator('img')).toHaveAttribute('src', 'https://fixture.invalid/milo.svg');
+    else await expect(portrait.locator('img')).toHaveCount(0);
+    if (process.env.PALZ_LOADER_SCREENSHOT && colorScheme === 'light') await loadingScreen.screenshot({path: process.env.PALZ_LOADER_SCREENSHOT});
     await expect(page.locator('.v1082-stay-panels')).toBeHidden();
     const details = card.locator('[data-directory-detail="profile"]');
     const status = details.locator('[data-directory-profile-read-status]');
