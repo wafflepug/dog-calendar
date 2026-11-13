@@ -49,7 +49,8 @@
   }
 
   const hostAgainByDog = new Map();
-  const hostAgainPending = new Set();
+  const hostAgainPending = new Map();
+  const hostAgainSaving = new Set();
   const dogIdFor = card => String(card.dataset.directoryDogId || '').trim().toLowerCase();
   const validHostAgainId = id => /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/.test(id);
 
@@ -57,6 +58,11 @@
     const missing = new Set();
     document.querySelectorAll('.directory-card[data-directory-dog-id]').forEach(card => {
       const id = dogIdFor(card);
+      const heart = card.querySelector('[data-care-host-again]');
+      if (heart?.dataset.careHostAgain === id) {
+        const pressed = String(hostAgainByDog.get(id) === true);
+        if (heart.getAttribute('aria-pressed') !== pressed) heart.setAttribute('aria-pressed', pressed);
+      }
       const tile = card.querySelector('.directory-guest-tile-open');
       const name = tile?.querySelector('.directory-guest-tile-name');
       if (!name || !validHostAgainId(id)) return;
@@ -77,10 +83,9 @@
     const ids = [...missing];
     for (let offset = 0; offset < ids.length; offset += 40) {
       const dogIds = ids.slice(offset, offset + 40);
-      dogIds.forEach(id => hostAgainPending.add(id));
-      window.queryAppsScript({ action: 'get_dog_host_again', dogIds }, { maxAttempts: 1, timeoutMs: 12000 })
+      const request = window.queryAppsScript({ action: 'get_dog_host_again', dogIds }, { maxAttempts: 1, timeoutMs: 12000 })
         .then(response => {
-          if (response?.result !== 'success') return;
+          if (response?.result !== 'success' || !Array.isArray(response.likedDogIds)) return;
           dogIds.forEach(id => {
             if (!hostAgainByDog.has(id)) hostAgainByDog.set(id, response.likedDogIds.includes(id));
           });
@@ -88,6 +93,7 @@
         })
         .catch(() => {})
         .finally(() => dogIds.forEach(id => hostAgainPending.delete(id)));
+      dogIds.forEach(id => hostAgainPending.set(id, request));
     }
   }
 
@@ -108,38 +114,43 @@
     button.dataset.careHostAgain = dogId;
     button.setAttribute('aria-label', 'Would host again');
     button.title = 'Would host again';
-    button.disabled = true;
+    button.setAttribute('aria-pressed', String(hostAgainByDog.get(dogId) === true));
     button.innerHTML = '<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 21 3 12a5.5 5.5 0 0 1 9-7 5.5 5.5 0 0 1 9 7z"/></svg>';
     const status = document.createElement('span');
     status.setAttribute('role', 'status');
     status.className = 'care-host-again-status';
     tools.prepend(button, status);
-    let liked;
-    const request = async () => {
-      const saving = typeof liked === 'boolean';
-      button.disabled = true;
+    button.onclick = async () => {
+      if (hostAgainSaving.has(dogId)) return;
+      hostAgainSaving.add(dogId);
+      button.setAttribute('aria-busy', 'true');
       status.textContent = '';
+      let previous = hostAgainByDog.get(dogId);
       try {
-        const data = await window.queryAppsScript({
-          action: saving ? 'save_dog_host_again' : 'get_dog_host_again',
-          dogId,
-          ...(saving ? { liked: !liked } : {})
-        }, { maxAttempts: 1, timeoutMs: 12000 });
-        if (data?.result !== 'success' || data.dogId !== dogId || typeof data.liked !== 'boolean') throw Error();
-        liked = data.liked;
+        if (previous === undefined) {
+          await hostAgainPending.get(dogId);
+          previous = hostAgainByDog.get(dogId);
+          if (previous === undefined) {
+            const data = await window.queryAppsScript({ action: 'get_dog_host_again', dogId }, { maxAttempts: 1, timeoutMs: 12000 });
+            if (data?.result !== 'success' || data.dogId !== dogId || typeof data.liked !== 'boolean') throw Error();
+            previous = data.liked;
+          }
+        }
+        const liked = !previous;
         hostAgainByDog.set(dogId, liked);
         renderHostAgainIndicators();
-        button.setAttribute('aria-pressed', String(liked));
-        button.title = liked ? 'Would host again · selected' : 'Would host again';
-        if (saving) status.textContent = liked ? 'Marked as would host again.' : 'Would host again cleared.';
+        const data = await window.queryAppsScript({ action: 'save_dog_host_again', dogId, liked }, { maxAttempts: 1, timeoutMs: 12000 });
+        if (data?.result !== 'success' || data.dogId !== dogId || data.liked !== liked) throw Error();
+        status.textContent = liked ? 'Marked as would host again.' : 'Would host again cleared.';
       } catch (_) {
-        status.textContent = saving ? 'Could not save. Try again.' : 'Could not load preference. Tap to retry.';
+        if (previous !== undefined) hostAgainByDog.set(dogId, previous);
+        renderHostAgainIndicators();
+        status.textContent = 'Could not update preference. Try again.';
       } finally {
-        button.disabled = false;
+        hostAgainSaving.delete(dogId);
+        button.removeAttribute('aria-busy');
       }
     };
-    button.onclick = request;
-    void request();
   }
 
   function mountPhotoMenu(card) {
