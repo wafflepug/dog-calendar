@@ -4571,7 +4571,7 @@ function updateV108BoardingDates_(data) {
   }
   var after=auditBookingSnapshotFromSheetRow_(sheet,row);
   logAuditEvent_({category:"Boarding",action:"Booking Dates Moved",dogName:after.dogName,bookingType:after.bookingType,reference:sheet.getName()+"!A"+row,summary:after.dogName+" moved to "+start+" – "+end+" from the calendar.",changedFields:["Start Date","End Date"],before:before,after:after,source:"Calendar Drag"});
-  return {result:"success",action:"update_boarding_dates",row:row,stayId:stayId,booking:after};
+  return {result:"success",action:"update_boarding_dates",row:row,stayId:stayId,booking:after,previousEndDate:before.endDate};
 }
 
 function updateV108MeetGreetSchedule_(data) {
@@ -21077,6 +21077,13 @@ function sendBookingLifecycleEmailSafely_(data, result) {
   } else if (action === "delete_confirmed_stay") {
     event = { label: "Confirmed stay cancelled" };
   }
+  if (action === "update_boarding_dates" && data.source === "Extend stay") {
+    var previousEnd = String(result.previousEndDate || "").trim();
+    var newEnd = String(result.booking && result.booking.endDate || "").trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(previousEnd) && /^\d{4}-\d{2}-\d{2}$/.test(newEnd) && newEnd > previousEnd) {
+      event = { label: "Stay extended", previousEndDate: previousEnd };
+    }
+  }
   if (!event) return;
 
   var booking = result.deletedBooking || result.booking || {};
@@ -21108,17 +21115,19 @@ function sendBookingLifecycleEmailSafely_(data, result) {
     ).replace(/;/g, ",").trim();
     if (!recipient) throw new Error("DAILY_NOTIFICATION_EMAIL is not configured.");
     var subject = event.label + " — " + petName;
-    var textBody = [
-      event.label,
+    var details = [
       "Pet: " + petName,
       "Dates: " + dateLine
-    ].join("\n");
+    ];
+    if (event.previousEndDate) {
+      details.push("Previous checkout: " + event.previousEndDate, "New checkout: " + endDate);
+    }
     sendWaffleNotificationEmail_(recipient, {
       subject: subject,
-      textBody: textBody,
+      textBody: [event.label].concat(details).join("\n"),
       htmlBody: "<div style=\"font-family:Arial,sans-serif;color:#172033\"><p><strong>" +
-        escapeHtmlEmail_(event.label) + "</strong></p><p>Pet: " + escapeHtmlEmail_(petName) +
-        "<br>Dates: " + escapeHtmlEmail_(dateLine) + "</p></div>"
+        escapeHtmlEmail_(event.label) + "</strong></p><p>" +
+        details.map(escapeHtmlEmail_).join("<br>") + "</p></div>"
     });
     if (cacheKey && cache) {
       try { cache.put(cacheKey, "sent", 21600); } catch (_) {}
