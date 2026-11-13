@@ -14,7 +14,7 @@
   const recent = new Map();
   const masterPage = document.querySelector('[data-sales-master-page]');
   const portraits = new Map();
-  let dialog, opener, chosenId = '', month = today().slice(0, 7), mode = 'price';
+  let dialog, editorPopup, opener, chosenId = '', month = today().slice(0, 7), mode = 'price';
   let showing = 'due', calendarMonth = '', isMaster = false, masterCsv;
 
   function read() {
@@ -63,7 +63,22 @@
       '<p data-sales-master-status role="status" hidden></p><div data-sales-list></div><div data-sales-master-totals class="palz-sales-totals" role="group" aria-label="Totals for displayed stays" hidden></div>' +
       '<form data-sales-form><h2>Manage a stay</h2><label>Confirmed stay<select name="stay"></select></label>' +
       '<details data-sales-calendar hidden><summary>Stay calendar</summary><div data-sales-calendar-content></div></details><div data-sales-editor></div><p data-sales-status role="status"></p></form></div>';
-    if (!masterPage) {
+    if (masterPage) {
+      const form = dialog.querySelector('[data-sales-form]');
+      editorPopup = document.createElement('dialog');
+      editorPopup.className = 'palz-sales palz-sales-editor-popup';
+      editorPopup.setAttribute('aria-labelledby', 'palz-sales-editor-title');
+      editorPopup.innerHTML = '<header><h2 id="palz-sales-editor-title">Manage a stay</h2><button type="button" aria-label="Close editor">×</button></header><div class="palz-sales-body"></div>';
+      form.querySelector('h2').remove();
+      editorPopup.querySelector('.palz-sales-body').append(form);
+      dialog.append(editorPopup);
+      editorPopup.querySelector('header button').onclick = () => editorPopup.close();
+      editorPopup.addEventListener('close', () => {
+        const replacement = [...dialog.querySelectorAll('[data-sales-select]')]
+          .find(button => button.dataset.salesSelect === chosenId);
+        (replacement || dialog.querySelector('[data-sales-master-search]'))?.focus();
+      });
+    } else {
       document.body.append(dialog);
       dialog.querySelector('[data-sales-close]').onclick = () => dialog.close();
     }
@@ -98,6 +113,7 @@
       }
       mode = action.dataset.salesMode || 'payment';
       renderEditor();
+      if (editorPopup && !editorPopup.open && action.hasAttribute('data-sales-select')) editorPopup.showModal();
       if (action.hasAttribute('data-sales-show-calendar')) {
         const calendar = dialog.querySelector('[data-sales-calendar]');
         calendar.open = true;
@@ -226,7 +242,7 @@
       rows.map(({stay, id, period, record}) => {
         const received = paid(record);
         return '<tr><th scope="row"><div class="palz-sales-pet">'+masterPortrait(stay)+'<div>'+esc(stay.dogName)+'<small>'+esc(stayDates(stay))+(stay.ownerName ? ' · '+esc(stay.ownerName) : '')+'</small></div></div></th>' +
-          '<td>'+(editable.has(id) ? '<button type="button" data-sales-select="'+esc(id)+'" data-sales-mode="price" aria-label="'+(record ? 'Edit costs for ' : 'Set costs for ')+esc(stay.dogName)+'">'+(record ? 'Edit costs' : 'Set costs')+'</button>' : '<small>Stay ID required</small>')+'</td>' +
+          '<td>'+(editable.has(id) ? '<button type="button" data-sales-select="'+esc(id)+'" data-sales-mode="price" aria-label="Edit '+esc(stay.dogName)+'">Edit</button>' : '<small>Stay ID required</small>')+'</td>' +
           '<td>'+period+'</td><td>'+(record?.total ? money(record.total) : 'Unpriced')+'</td><td>'+(record ? money(record.expenses || 0) : '—')+'</td><td>'+(record ? money(received) : '—')+'</td><td>'+(record ? money(record.total - received) : '—')+'</td></tr>';
       }).join('')+'</tbody></table></div>';
   }
