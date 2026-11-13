@@ -12370,6 +12370,11 @@ registerWaffleServiceWorker();
                 const content = document.querySelector('#palzLoadingScreen .palz-loading-content')?.cloneNode(true);
                 const subtitle = content?.querySelector('.palz-loading-label') || document.createElement('p');
                 subtitle.dataset.careProfileLoadingTitle = '';
+                const portrait = document.createElement('span');
+                portrait.className = 'wh-home-portrait care-profile-loading-portrait';
+                portrait.setAttribute('aria-hidden', 'true');
+                if (content) subtitle.before(portrait);
+                else screen.appendChild(portrait);
                 if (content) screen.appendChild(content);
                 else screen.appendChild(subtitle);
                 const backBar = profileDashboard.querySelector('#directoryProfileBackBar');
@@ -12381,6 +12386,22 @@ registerWaffleServiceWorker();
                 const name = String(card.dataset.directoryDogName || card.dataset.dogName || 'pet').trim();
                 const title = screen?.querySelector('[data-care-profile-loading-title]');
                 if (title) title.textContent = `Loading ${name}’s Care Profile…`;
+                const portrait = screen?.querySelector('.care-profile-loading-portrait');
+                if (portrait) {
+                    portrait.replaceChildren();
+                    portrait.dataset.petSpecies = card.dataset.petSpecies === 'cat' ? 'cat' : 'dog';
+                    const tilePhoto = card.querySelector('[data-directory-tile-photo] img');
+                    const profilePhoto = card.querySelector('[data-directory-photo] .directory-photo-media img');
+                    const url = v10HomeThumbnailUrl(tilePhoto?.currentSrc || tilePhoto?.src || profilePhoto?.src || '');
+                    if (url) {
+                        const image = document.createElement('img');
+                        image.alt = '';
+                        image.decoding = 'async';
+                        image.addEventListener('error', () => image.remove(), { once: true });
+                        image.src = url;
+                        portrait.appendChild(image);
+                    }
+                }
             }
             profileDashboard.dataset.careProfileLoading = shouldShowProfileLoader ? 'true' : 'false';
             profileDashboard.dataset.careProfileLoadToken = profileLoadToken;
