@@ -8,13 +8,13 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Palz Stay">
-    <link rel="manifest" href="manifest.webmanifest?v=2026.11.14.01">
-    <link rel="icon" type="image/png" sizes="192x192" href="palz-favicon.png?v=2026.11.14.01">
-    <link rel="apple-touch-icon" sizes="180x180" href="pwa-apple-touch-icon.png?v=2026.11.14.01">
+    <link rel="manifest" href="manifest.webmanifest?v=2026.11.14.02">
+    <link rel="icon" type="image/png" sizes="192x192" href="palz-favicon.png?v=2026.11.14.02">
+    <link rel="apple-touch-icon" sizes="180x180" href="pwa-apple-touch-icon.png?v=2026.11.14.02">
     <title>Palz Stay — Reminders & Notes</title>
-<link rel="stylesheet" href="palz-loading.css?rev=2026.11.14.01">
-<script src="palz-loading.js?rev=2026.11.14.01"></script>
-<link rel="stylesheet" href="waffle-runtime.css?v=2026.08.28.01&amp;rev=2026.11.14.01">
+<link rel="stylesheet" href="palz-loading.css?rev=2026.11.14.02">
+<script src="palz-loading.js?rev=2026.11.14.02"></script>
+<link rel="stylesheet" href="waffle-runtime.css?v=2026.08.28.01&amp;rev=2026.11.14.02">
     </head>
 <body data-waffle-page="reminders">
 <div id="palzLoadingScreen" role="status" aria-live="polite" aria-label="Loading Palz Stay">
@@ -440,27 +440,21 @@
 </div>
 
 <!-- Modal: Meet & Greet Booking -->
-<div id="customBookingModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 10000; align-items: center; justify-content: center;">
-    <div style="background: white; padding: 25px; border-radius: 12px; max-width: 380px; width: 90%; box-shadow: 0 10px 25px rgba(0,0,0,0.2); font-family: inherit; box-sizing: border-box;" class="modal-content-panel">
-        <h3 style="margin-top: 0; color: #2c3e50; font-size: 18px; display: flex; align-items: center; gap: 8px;" id="modalTitle">🤝 Meet & Greet Booking</h3>
-        
-        <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 5px; color: #475569;">🐾 Dog Name:</label>
-        <input type="text" id="modalDogName" style="width: 100%; padding: 10px; margin-bottom: 15px; border: 2px solid #e2e8f0; border-radius: 6px; box-sizing: border-box;" placeholder="e.g. Buster">
-        
-        <label class="v10-modal-label" for="modalBookingDate">📅 Date:</label>
-        <input type="date" id="modalBookingDate" class="v10-modal-input">
-        
-
-        <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 5px; color: #475569;">⏰ Booking Time:</label>
-        <input type="text" id="modalBookingTime" style="width: 100%; padding: 10px; margin-bottom: 15px; border: 2px solid #e2e8f0; border-radius: 6px; box-sizing: border-box;" value="10:00">
-        
-        <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 5px; color: #475569;">📋 Breed (Optional):</label>
-        <input type="text" id="modalBreed" style="width: 100%; padding: 10px; margin-bottom: 20px; border: 2px solid #e2e8f0; border-radius: 6px; box-sizing: border-box;" placeholder="e.g. Pug">
-        
-        <div style="display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap;">
-            <button id="deleteModalBtn" style="background: #e74c3c; color: white; border: none; padding: 10px 14px; border-radius: 6px; cursor: pointer; font-weight: bold; margin-right: auto; display: none;">Delete</button>
-            <button id="closeModalBtn" style="background: #94a3b8; color: white; border: none; padding: 10px 14px; border-radius: 6px; cursor: pointer; font-weight: bold;">Cancel</button>
-            <button id="saveModalBtn" style="background: #27ae60; color: white; border: none; padding: 10px 14px; border-radius: 6px; cursor: pointer; font-weight: bold;">Save</button>
+<div id="customBookingModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle" style="display: none;">
+    <div class="modal-content-panel">
+        <h3 id="modalTitle">Meet &amp; Greet</h3>
+        <div class="meet-greet-fields">
+            <label for="modalDogName">Pet name <input type="text" id="modalDogName" placeholder="e.g. Buster" required></label>
+            <div class="meet-greet-schedule">
+                <label for="modalBookingDate">Date <input type="date" id="modalBookingDate" class="v10-modal-input" required></label>
+                <label for="modalBookingTime">Time <input type="text" id="modalBookingTime" placeholder="HH:MM" value="10:00" required></label>
+            </div>
+            <label for="modalBreed">Breed (optional) <input type="text" id="modalBreed" placeholder="e.g. Pug"></label>
+        </div>
+        <div class="modal-actions meet-greet-actions">
+            <button type="button" id="deleteModalBtn" style="display: none;">Delete</button>
+            <button type="button" id="closeModalBtn">Cancel</button>
+            <button type="button" id="saveModalBtn">Save</button>
         </div>
     </div>
 </div>
@@ -526,6 +520,6 @@
     body.dark-theme .modal-content-panel input { background: #334155; border-color: #475569; color: white; }
 </style>
 
-<script src="waffle-bootstrap.js?v=2026.08.28.01&amp;rev=2026.11.14.01"></script>
+<script src="waffle-bootstrap.js?v=2026.08.28.01&amp;rev=2026.11.14.02"></script>
     </html>
 

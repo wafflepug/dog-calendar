@@ -110,9 +110,14 @@
     }
 
     host.classList.add('v1114-source-field', 'v1114-meet-source-field');
-    if (breed.nextElementSibling !== host) breed.insertAdjacentElement('afterend', host);
+    const sourceAnchor = breed.closest('.meet-greet-fields') || breed;
+    if (sourceAnchor.nextElementSibling !== host) sourceAnchor.insertAdjacentElement('afterend', host);
 
-    polishPicker(select);
+    const picker = polishPicker(select);
+    picker?.querySelectorAll('[data-v1112-source-value]').forEach(tile => {
+      const label = tile.dataset.v1112SourceValue;
+      if (tile.getAttribute('aria-label') !== label) tile.setAttribute('aria-label', label);
+    });
     return select;
   }
 

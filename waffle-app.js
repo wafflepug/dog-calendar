@@ -5349,7 +5349,7 @@ registerWaffleServiceWorker();
                     activeEditingEvent = info.event;
                     selectedClickDateStr = info.event.startStr;
                     
-                    document.getElementById('modalTitle').innerText = "✏️ Edit Meet & Greet";
+                    document.getElementById('modalTitle').innerText = "🤝 Edit Meet & Greet";
                     document.getElementById('modalDogName').value = info.event.extendedProps.dogName || "";
                     document.getElementById('modalBreed').value = info.event.extendedProps.breed === "N/A" ? "" : info.event.extendedProps.breed;
                     document.getElementById('modalBookingTime').value = info.event.extendedProps.time || "10:00";

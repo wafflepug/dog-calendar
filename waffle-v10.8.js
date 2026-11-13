@@ -323,7 +323,7 @@ function v108EventClasses(arg) {
 
 function v108OpenMeet(event) {
     activeEditingEvent=event; selectedClickDateStr=event.startStr;
-    document.getElementById('modalTitle').innerText='✏️ Edit Meet & Greet';
+    document.getElementById('modalTitle').innerText='🤝 Edit Meet & Greet';
     document.getElementById('modalDogName').value=event.extendedProps.dogName||'';
     document.getElementById('modalBreed').value=event.extendedProps.breed==='N/A'?'':(event.extendedProps.breed||'');
     document.getElementById('modalBookingTime').value=event.extendedProps.time||'10:00';

@@ -2,9 +2,9 @@
    Build: 2026.08.27.04
    Historical base styles remain compatibility sources during Phase 3A, but pages no longer
    reference them individually. Preserve this import order until modules are folded in. */
-@import url("waffle-app.css?build=2026.08.27.04&rev=2026.11.14.01");
-@import url("palz-sales.css?rev=2026.11.14.01");
-@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.11.14.01");
+@import url("waffle-app.css?build=2026.08.27.04&rev=2026.11.14.02");
+@import url("palz-sales.css?rev=2026.11.14.02");
+@import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.11.14.02");
 @import url("waffle-v10.8.2.css?build=2026.08.27.04");
 @import url("waffle-v10.8.3.css?build=2026.08.27.04");
 @import url("waffle-v10.8.5.css?build=2026.08.27.04");
@@ -12,12 +12,12 @@
 @import url("waffle-v10.8.7.css?build=2026.08.27.04");
 @import url("waffle-v10.8.8.css?build=2026.08.27.04");
 @import url("waffle-v10.8.9.css?build=2026.08.27.04");
-@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.11.14.01");
+@import url("waffle-v11.0.css?build=2026.08.27.04&rev=2026.11.14.02");
 @import url("waffle-v11.0.3.css?build=2026.08.27.04");
 @import url("waffle-v11.0.5.css?build=2026.08.27.04");
-@import url("waffle-v11.1.94.css?build=2026.11.14.01");
-@import url("waffle-v11.1.95.css?build=2026.11.14.01");
-@import url("waffle-v11.1.96.css?build=2026.11.14.01&rev=2026.11.14.01");
+@import url("waffle-v11.1.94.css?build=2026.11.14.02");
+@import url("waffle-v11.1.95.css?build=2026.11.14.02");
+@import url("waffle-v11.1.96.css?build=2026.11.14.02&rev=2026.11.14.02");
 
 /* ============================================================
    MOBILE FIRST-PAINT STABILITY GATE
@@ -3758,4 +3758,55 @@ body:has(#v10QuickAddSheet:not([hidden])) :is(#v10QuickAddButton, #aw37launch, #
   #p4PanelBooking .p4-grid > :not(label:has(#p4Start, #p4End)),
   #p4ReturningMini, #p4PlanDisclosure) {
   display: none !important;
+}
+
+/* Meet & Greet uses the same form spacing and action hierarchy as boarding. */
+html body #customBookingModal .meet-greet-fields,
+html body #customBookingModal .meet-greet-schedule {
+  display:grid;
+  gap:12px;
+}
+html body #customBookingModal .meet-greet-schedule {
+  grid-template-columns:repeat(2,minmax(0,1fr));
+}
+html body #customBookingModal :is(.meet-greet-fields label,.v1112-source-title) {
+  display:block;
+  color:var(--wh75-text,#172033)!important;
+  font-size:14px!important;
+  font-weight:700!important;
+  line-height:1.4;
+  min-width:0;
+}
+html body #customBookingModal .meet-greet-fields input {
+  margin:4px 0 0!important;
+  min-width:0;
+  min-height:44px;
+  font-size:16px!important;
+}
+html body #customBookingModal .meet-greet-actions {
+  display:flex;
+  gap:8px;
+  justify-content:flex-end;
+  flex-wrap:wrap;
+}
+html body #customBookingModal .meet-greet-actions button {
+  min-height:44px!important;
+  font-size:14px!important;
+}
+html body #customBookingModal #deleteModalBtn {
+  margin-inline-end:auto;
+}
+html body #customBookingModal #saveModalBtn {
+  background:var(--wh75-accent-ink,#561bc9)!important;
+  border-color:var(--wh75-accent-ink,#561bc9)!important;
+  color:var(--wh75-shell,#fff)!important;
+}
+#customBookingModal .v1112-source-circle:has(> img) > span { display:none; }
+#customBookingModal .v1112-source-circle { width:52px; height:52px; }
+#customBookingModal .v1112-source-grid { grid-template-columns:repeat(4,minmax(0,1fr)); }
+
+#customBookingModal .v1112-source-circle { position:relative; }
+#customBookingModal .v1112-source-tile { min-width:0; padding:0; }
+@media (max-width:340px) {
+  #customBookingModal .v1112-source-circle { width:44px; height:44px; }
 }
