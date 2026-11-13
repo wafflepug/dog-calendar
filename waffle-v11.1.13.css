@@ -203,3 +203,16 @@ body[data-waffle-page="audit"] [data-v1115-recovery-panel] { display: none !impo
   }
   .v11113-recovery-item button { width: 100%; }
 }
+.v11113-stay-dates-fields[hidden] { display:none; }
+[data-v11113-extension-preview] { align-self:end; margin:0; font-weight:700; }
+.v11113-extend-stay-button {
+  min-height:44px;
+  padding:8px 12px;
+  border:1px solid var(--wh-border, #cbd5e1);
+  border-radius:9px;
+  background:var(--v10-card, #fff);
+  color:inherit;
+  font:inherit;
+  font-weight:700;
+  cursor:pointer;
+}

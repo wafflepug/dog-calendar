@@ -366,6 +366,7 @@ function v110EnsureCareOperationBar(card){
   const canCheckout=state.code!=='collision'&&(
     state.code==='checked_in'||
     (state.code==='date_active'&&p.endDate<=today));
+  const canExtend=canCheckout && Boolean(p.endDate);
   const canCheckIn=
     !['checked_in','checked_out','completed'].includes(state.code);
 
@@ -386,7 +387,8 @@ function v110EnsureCareOperationBar(card){
     state.label,
     state.meta,
     canCheckIn,
-    canCheckout
+    canCheckout,
+    canExtend
   ]);
 
   if(bar.dataset.v110RenderSignature===signature){
@@ -401,7 +403,7 @@ function v110EnsureCareOperationBar(card){
   bar.dataset.v110RenderSignature=signature;
   bar.dataset.state=state.code;
 
-  bar.innerHTML=`<div class="v110-operation-state"><span class="v110-operation-icon" aria-hidden="true">${state.icon}</span><div><strong>${v110Escape(state.label)}</strong>${state.meta?`<span>${v110Escape(state.meta)}</span>`:''}</div></div><div class="v110-operation-actions">${canCheckIn?'<button type="button" class="v110-checkin-button" data-v110-checkin>🛬 Check In</button>':''}${canCheckout?'<button type="button" class="v110-checkout-button" data-v110-checkout>👋 Check Out</button>':''}</div>`;
+  bar.innerHTML=`<div class="v110-operation-state"><span class="v110-operation-icon" aria-hidden="true">${state.icon}</span><div><strong>${v110Escape(state.label)}</strong>${state.meta?`<span>${v110Escape(state.meta)}</span>`:''}</div></div><div class="v110-operation-actions">${canCheckIn?'<button type="button" class="v110-checkin-button" data-v110-checkin>🛬 Check In</button>':''}${canCheckout?'<button type="button" class="v110-checkout-button" data-v110-checkout>👋 Check Out</button>':''}${canExtend?'<button type="button" class="v11113-extend-stay-button" data-v11113-extend-stay>Extend stay</button>':''}</div>`;
 }
 
 function v110LeavingEvents(){const today=getLocalTodayDateString();return(Array.isArray(v110LatestCalendarEvents)?v110LatestCalendarEvents:[]).filter(e=>{const p=e?.extendedProps||{};if(p.isPotential===true||p.isMeetGreet===true)return false;return v10EventRawDates(e).end===today&&!v110IsCheckedOutEvent(e);});}
