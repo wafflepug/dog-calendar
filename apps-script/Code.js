@@ -7005,18 +7005,6 @@ function submitIntakeFromHtml(payload) {
 }
 
 
-function getHostedIntakeBaseUrl_() {
-  var serviceUrl = "";
-
-  try {
-    serviceUrl = String(
-      ScriptApp.getService().getUrl() || ""
-    ).trim();
-  } catch (_) {}
-
-  return serviceUrl.replace(/[?#].*$/, "");
-}
-
 
 
 
@@ -12139,16 +12127,6 @@ function createIntakeLinkForBooking_(mainSheet, rows, data) {
     );
   }
 
-  var baseUrl =
-    getHostedIntakeBaseUrl_() ||
-    String(data.intakeBaseUrl || "").trim();
-
-  if (!/^https?:\/\//i.test(baseUrl)) {
-    throw new Error(
-      "The deployed Apps Script Web App URL could not be determined."
-    );
-  }
-
   var record = findIntakeRecordByToken_(intakeSheet, token);
 
   logAuditEvent_({
@@ -12182,10 +12160,7 @@ function createIntakeLinkForBooking_(mainSheet, rows, data) {
     dogId: bookingDogId,
     submittedAt: record.submittedAt || "",
     pdfUrl: record.pdfUrl || "",
-    link:
-      baseUrl.replace(/[?#].*$/, "") +
-      "?action=intake&token=" +
-      encodeURIComponent(token)
+    link: "https://wafflepug.github.io/dog-calendar/palz-intake.html#token=" + encodeURIComponent(token)
   };
 }
 
@@ -13055,6 +13030,22 @@ function appendPdfKeyValueTable_(body, entries) {
 }
 
 
+function appendFittedIntakeLogo_(cell, blob, maxWidth, maxHeight, alignment) {
+  if (!blob) return false;
+  try {
+    var paragraph = cell.getChild(0).asParagraph();
+    paragraph.setAlignment(alignment).setSpacingBefore(0).setSpacingAfter(0);
+    var image = paragraph.appendInlineImage(blob);
+    var width = image.getWidth();
+    var height = image.getHeight();
+    var scale = Math.min(maxWidth / width, maxHeight / height, 1);
+    image.setWidth(Math.max(1, Math.round(width * scale)));
+    image.setHeight(Math.max(1, Math.round(height * scale)));
+    return true;
+  } catch (_) { return false; }
+}
+
+
 function buildIntakePdf_(
   booking,
   answers,
@@ -13087,15 +13078,23 @@ function buildIntakePdf_(
   var body = doc.getBody();
   body.clear();
 
-  var logoBlob = intakeLogoBlob_();
-  if (logoBlob) {
-    try {
-      var logoImage = body.appendImage(logoBlob);
-      logoImage.setWidth(110);
-    } catch (_) {}
+  var brand = readPalzBusinessBrand_();
+  var customIcon = String(brand.icon || "").match(/^data:(image\/(?:webp|jpeg));base64,(.+)$/);
+  var businessLogo = customIcon
+    ? Utilities.newBlob(Utilities.base64Decode(customIcon[2]), customIcon[1], "Business-logo.jpg")
+    : intakeLogoBlob_();
+  var palzLogo = Utilities.newBlob(
+    Utilities.base64Decode("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"),
+    "image/png",
+    "Palz-Stay.png"
+  );
+  var logoRow = body.appendTable([["", ""]]).setBorderWidth(0).getRow(0);
+  if (!appendFittedIntakeLogo_(logoRow.getCell(0), businessLogo, 76, 58, DocumentApp.HorizontalAlignment.LEFT) && customIcon) {
+    appendFittedIntakeLogo_(logoRow.getCell(0), intakeLogoBlob_(), 76, 58, DocumentApp.HorizontalAlignment.LEFT);
   }
+  appendFittedIntakeLogo_(logoRow.getCell(1), palzLogo, 112, 36, DocumentApp.HorizontalAlignment.RIGHT);
 
-  body.appendParagraph("WAFFLE BOARDING HOUSE")
+  body.appendParagraph(brand.name || "Waffle House")
     .setHeading(DocumentApp.ParagraphHeading.TITLE)
     .setForegroundColor("#0d3550");
 

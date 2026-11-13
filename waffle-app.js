@@ -16841,22 +16841,11 @@ registerWaffleServiceWorker();
         }
     }
 
-    function getExternalIntakeBaseUrl() {
-        return String(APPS_SCRIPT_WEBAPP_URL || '')
-            .replace(/[?#].*$/, '');
-    }
-
     function buildExternalIntakeLink(token) {
         if (!token) return '';
-
-        const baseUrl = getExternalIntakeBaseUrl();
-        if (!baseUrl) return '';
-
-        return (
-            baseUrl +
-            '?action=intake&token=' +
-            encodeURIComponent(token)
-        );
+        const url = new URL('palz-intake.html', window.location.href);
+        url.hash = new URLSearchParams({ token }).toString();
+        return url.href;
     }
 
     function getCurrentDirectoryOwnerCareLink(card) {
@@ -17432,8 +17421,7 @@ registerWaffleServiceWorker();
             action: 'create_intake_link',
             dogName,
             startDate,
-            endDate,
-            intakeBaseUrl: getExternalIntakeBaseUrl()
+            endDate
         });
 
         const intake = response.intake;
@@ -17493,8 +17481,7 @@ registerWaffleServiceWorker();
                     dogId: selected.dogId,
                     dogName: selected.dogName,
                     startDate: selected.rawStartDate,
-                    endDate: selected.rawEndDate,
-                    intakeBaseUrl: getExternalIntakeBaseUrl()
+                    endDate: selected.rawEndDate
                 });
                 if (!isCurrent()) return;
                 const link = response?.intake?.link;
