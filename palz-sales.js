@@ -103,6 +103,13 @@
         (sameDirection.disabled ? dialog.querySelector('[data-sales-calendar-step]:enabled') : sameDirection)?.focus();
         return;
       }
+      const clear = event.target.closest('[data-sales-clear-price]');
+      if (clear) {
+        const form = clear.form;
+        form.elements.amount.value = '0.00';
+        form.requestSubmit();
+        return;
+      }
       const action = event.target.closest('[data-sales-select], [data-sales-mode], [data-sales-reminder]');
       if (!action) return;
       if (action.hasAttribute('data-sales-reminder')) { void copyReminder(action.dataset.salesReminder); return; }
@@ -243,7 +250,7 @@
         const received = paid(record);
         return '<tr><th scope="row"><div class="palz-sales-pet">'+masterPortrait(stay)+'<div>'+esc(stay.dogName)+'<small>'+esc(stayDates(stay))+(stay.ownerName ? ' · '+esc(stay.ownerName) : '')+'</small></div></div></th>' +
           '<td>'+(editable.has(id) ? '<button type="button" data-sales-select="'+esc(id)+'" data-sales-mode="price" aria-label="Edit '+esc(stay.dogName)+'">Edit</button>' : '<small>Stay ID required</small>')+'</td>' +
-          '<td>'+period+'</td><td>'+(record?.total ? money(record.total) : 'Unpriced')+'</td><td>'+(record ? money(record.expenses || 0) : '—')+'</td><td>'+(record ? money(received) : '—')+'</td><td>'+(record ? money(record.total - received) : '—')+'</td></tr>';
+          '<td>'+period+'</td><td>'+(record ? money(record.total) : 'Unpriced')+'</td><td>'+(record ? money(record.expenses || 0) : '—')+'</td><td>'+(record ? money(received) : '—')+'</td><td>'+(record ? money(record.total - received) : '—')+'</td></tr>';
       }).join('')+'</tbody></table></div>';
   }
 
@@ -313,7 +320,7 @@
       return;
     }
     mode = 'price';
-    host.innerHTML = summary + '<div class="palz-sales-fields"><label>Payment source<select name="channel"><option value="direct">Direct from owner</option><option value="marketplace"'+(record?.channel === 'marketplace' ? ' selected' : '')+'>Marketplace payout</option></select></label><label>Price type<select name="priceType"><option value="fixed">Fixed total</option><option value="nightly"'+(record?.priceType === 'nightly' ? ' selected' : '')+'>Nightly rate</option></select></label><label>Price (AUD)<input name="amount" inputmode="decimal" required value="'+(record?.rate ? (record.rate/100).toFixed(2) : '')+'"></label><label>Due date<input name="date" type="date" required value="'+esc(record?.dueDate || stay.endDate)+'"></label></div><p data-sales-preview></p><div data-sales-expenses></div><div class="palz-sales-actions"><button type="submit" class="palz-sales-primary">Save price</button>'+(record && record.total > paid(record) ? '<button type="button" data-sales-mode="payment">Record '+(record.channel === 'marketplace' ? 'payout' : 'payment')+'</button>' : '')+'</div>'+history;
+    host.innerHTML = summary + '<div class="palz-sales-fields"><label>Payment source<select name="channel"><option value="direct">Direct from owner</option><option value="marketplace"'+(record?.channel === 'marketplace' ? ' selected' : '')+'>Marketplace payout</option></select></label><label>Price type<select name="priceType"><option value="fixed">Fixed total</option><option value="nightly"'+(record?.priceType === 'nightly' ? ' selected' : '')+'>Nightly rate</option></select></label><label>Price (AUD)<input name="amount" inputmode="decimal" required value="'+(record ? (record.rate/100).toFixed(2) : '')+'"></label><label>Due date<input name="date" type="date" required value="'+esc(record?.dueDate || stay.endDate)+'"></label></div><p data-sales-preview></p><div data-sales-expenses></div><div class="palz-sales-actions"><button type="submit" class="palz-sales-primary">Save price</button>'+(record?.total > 0 && !paid(record) ? '<button type="button" data-sales-clear-price>Clear price</button>' : '')+(record && record.total > paid(record) ? '<button type="button" data-sales-mode="payment">Record '+(record.channel === 'marketplace' ? 'payout' : 'payment')+'</button>' : '')+'</div>'+history;
     if (isMaster) {
       host.querySelector('[name=amount]').required = false;
       host.querySelector('[data-sales-expenses]').innerHTML = '<div class="palz-sales-fields"><label>Stay expenses (AUD)<input name="expenses" inputmode="decimal" value="'+(record?.expenses ? (record.expenses/100).toFixed(2) : '')+'"></label><label>Bookkeeping note<input name="bookkeepingNote" maxlength="240" value="'+esc(record?.bookkeepingNote || '')+'"></label></div>';
@@ -339,7 +346,8 @@
     if (expenseText && !/^\d{1,6}(?:\.\d{1,2})?$/.test(expenseText)) { status('Enter a valid expense amount in AUD.'); return; }
     const priceText = String(values.get('amount') || '').trim();
     const expensesOnly = isMaster && action === 'price' && !priceText && cents(expenseText) > 0;
-    if (!validId(id) || (!amount && !expensesOnly) || !/^\d{4}-\d{2}-\d{2}$/.test(date)) { status('Enter a valid amount and date.'); return; }
+    const zeroPrice = action === 'price' && /^0{1,6}(?:\.0{1,2})?$/.test(priceText);
+    if (!validId(id) || (!amount && !expensesOnly && !zeroPrice) || !/^\d{4}-\d{2}-\d{2}$/.test(date)) { status('Enter a valid amount and date.'); return; }
     if (submit) submit.disabled = true;
     const write = () => {
       const records = read();
@@ -365,7 +373,7 @@
       if (navigator.locks) await navigator.locks.request(storageKey, write);
       else write();
       render();
-      status(action === 'payment' ? 'Payment recorded.' : expensesOnly ? 'Expenses saved.' : 'Price saved.');
+      status(action === 'payment' ? 'Payment recorded.' : expensesOnly ? 'Expenses saved.' : zeroPrice ? 'Price reset to $0.00.' : 'Price saved.');
       updateLinks();
     } catch (error) { status(error.message || 'Sales record could not be saved.'); }
     finally { if (submit) submit.disabled = false; }
