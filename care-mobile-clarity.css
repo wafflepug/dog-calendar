@@ -2859,3 +2859,41 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-
 
 .directory-profile-name-line .directory-status-tag.tag-leaving-today { color: #9a3412; }
 body.dark-theme .directory-profile-name-line .directory-status-tag.tag-leaving-today { color: #fed7aa; }
+
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-heading:has(> .directory-care-brief-refresh) {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+}
+
+.directory-care-brief-heading > .directory-care-brief-refresh {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  margin-inline-start: auto;
+  padding: 0;
+  border: 1px solid var(--v10-border, #ced5e1);
+  border-radius: 12px;
+  background: var(--v10-card-soft, #f5f4fa);
+  color: var(--wh75-accent-ink, var(--wh-text, #172033));
+  cursor: pointer;
+}
+
+.directory-care-brief-refresh .palz-inline-icon { margin: 0; }
+.directory-care-brief-refresh:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+.directory-care-brief-refresh[aria-busy="true"] .palz-icon { animation: care-brief-refresh-spin 1s linear infinite; }
+@keyframes care-brief-refresh-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .directory-care-brief-refresh[aria-busy="true"] .palz-icon { animation: none; }
+}
+
+.directory-care-brief-announcement {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

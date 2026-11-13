@@ -9859,6 +9859,12 @@ registerWaffleServiceWorker();
                 // Keep extracted legacy render harnesses and older simple hosts compatible.
                 setDirectorySummaryText(freshnessHost, freshness.text);
             }
+            const refreshButton = brief.querySelector('[data-care-brief-refresh]');
+            if (refreshButton) {
+                setDirectorySummaryData(refreshButton, 'state', freshness.state);
+                setDirectorySummaryAttribute(refreshButton, 'title', 'Refresh care records · ' + freshness.text);
+                setDirectorySummaryAttribute(refreshButton, 'aria-busy', String(['loading', 'refreshing'].includes(freshness.state)));
+            }
             setDirectorySummaryData(freshnessHost, 'state', freshness.state);
             setDirectorySummaryAttribute(freshnessHost, 'role', 'status');
             setDirectorySummaryAttribute(freshnessHost, 'aria-live', 'polite');
@@ -18392,18 +18398,8 @@ registerWaffleServiceWorker();
                                                 <div>
                                                     <h3>Care essentials</h3>
                                                 </div>
-                                                <div
-                                                    class="directory-care-brief-freshness"
-                                                    data-care-brief-freshness
-                                                    role="status"
-                                                    aria-live="polite"
-                                                    data-state="loading">
-                                                    <details class="directory-care-freshness-details">
-                                                        <summary><span data-care-brief-freshness-summary>Loading care record… · Details</span></summary>
-                                                        <span data-care-brief-freshness-detail data-care-brief-freshness-full>Loading care record…</span>
-                                                        <small>Update time is for the shared saved record, including intake, photo and booking changes; it does not confirm care instructions were reviewed.</small>
-                                                    </details>
-                                                </div>
+                                                <button type="button" class="directory-care-brief-refresh" data-care-brief-action="refresh" data-care-brief-refresh aria-label="Refresh care records" title="Refresh care records"></button>
+                                                <span class="directory-care-brief-announcement" data-care-brief-freshness role="status" aria-live="polite">Loading care record…</span>
                                             </div>
 
                                             <div class="directory-care-brief-grid">
