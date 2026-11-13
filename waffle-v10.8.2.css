@@ -95,10 +95,6 @@
     border-color: color-mix(in srgb, #64748b 45%, var(--wh-border, #dbe3ea));
 }
 
-.v1082-past-tile {
-    min-height: 155px;
-}
-
 .v1082-past-tile-date {
     position: absolute;
     right: 10px;
@@ -269,13 +265,6 @@ body.dark-theme .v1082-past-status {
         gap: 3px;
     }
 
-    .v1082-past-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-    }
-
-    .v1082-past-tile {
-        min-height: 138px;
-    }
 }
 
 @media (max-width: 390px) {
@@ -283,8 +272,4 @@ body.dark-theme .v1082-past-status {
         font-size: 11px;
     }
 
-    .v1082-past-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-        gap: 8px !important;
-    }
 }

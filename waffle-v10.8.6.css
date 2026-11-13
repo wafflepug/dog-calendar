@@ -136,18 +136,8 @@
 }
 
 
-/* Past tiles should feel like the current dog tiles, not administrative records. */
-.v1082-past-grid {
-    align-items: start;
-}
-
 .v1082-past-card {
     border-color: var(--v10-border, var(--wh-border, #dbe3ea)) !important;
-}
-
-.v1082-past-tile {
-    min-height: 155px;
-    border-radius: inherit;
 }
 
 .v1082-past-tile::after {
