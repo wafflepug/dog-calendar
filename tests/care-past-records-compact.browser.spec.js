@@ -9,7 +9,7 @@ const booking = {
   startDate: '2026-10-02', endDate: '2026-10-06', ownerName: 'Alex Owner', phone: '+61 400 111 222',
   notes: 'First line of handover\n'.concat('Important detail '.repeat(30)), bookingType: 'Boarding',
   dogId: '11111111-1111-4111-8111-111111111111', stayId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
-  dogNumber: '#00017', stayKey: 'milo longtail|2026-10-02|2026-10-06', operationalStatus: 'checked_out'
+  dogNumber: '#00017', stayKey: 'milo longtail|2026-10-02|2026-10-06', operationalStatus: 'checked_out', checkoutDate: '2026-10-05'
 };
 
 async function fixture(page) {
@@ -65,58 +65,55 @@ test.describe('compact past contact and records', () => {
       v1086BackgroundPastRequested = false;
       v1086BackgroundLoadPastStays();
     });
-    await expect(card.locator('[data-v1082-past-owner]')).toHaveText('Alex Owner');
-    const call = card.locator('[data-v1082-past-phone]');
-    await expect(call).toHaveAttribute('href', 'tel:+61400111222');
-    await expect(call).toContainText('+61 400 111 222');
-    await expect(call).toHaveAttribute('aria-label', /Call owner Alex Owner/);
-    const note = card.locator('.v1082-past-notes');
-    const noteDisclosure = card.locator('.v1082-past-note-details');
-    await expect(noteDisclosure).toBeVisible();
-    await expect(noteDisclosure.locator('summary')).toContainText('Handover note');
-    await expect(noteDisclosure).not.toHaveAttribute('open', '');
-    await noteDisclosure.locator('summary').click();
-    await expect(note).toContainText('First line of handover');
-    expect(await note.evaluate(el => getComputedStyle(el).whiteSpace)).toMatch(/normal|pre-wrap|pre-line/);
+    const sections = card.locator('[data-care-profile-segments]');
+    await expect(sections.getByRole('button')).toHaveText(['Overview', 'Activity', 'Records', 'Tools']);
+    await expect(card.locator('[data-care-brief-owner-name]')).toHaveText('Alex Owner');
+    await expect(card.locator('a[href="tel:+61400111222"]').first()).toBeVisible();
+    await expect(card.locator('[data-care-brief-handover-note]')).toContainText('First line of handover');
+    await expect(card.locator('.v1082-past-status')).toHaveText('Checked out');
+    await expect(card.locator('.v1082-past-checkout-date')).toHaveText('Checked out 5 Oct');
+    await expect(card.locator('[data-care-photo-options] > summary')).toBeVisible();
+    await expect(card.locator('[data-v110-operation-bar]')).toHaveCount(0);
+    await expect(card.locator('.v11160-desktop-tabs')).toBeHidden();
+    await expect(card.locator('[data-care-brief-action="edit-routine"]')).toBeHidden();
 
+    if (process.env.PALZ_PAST_SCREENSHOTS) {
+      await page.screenshot({ path: path.join(process.env.PALZ_PAST_SCREENSHOTS, `after-${width}.png`) });
+    }
+    await sections.getByRole('button', { name: 'Records' }).click();
     const records = card.locator('[data-v1082-past-records]');
     await expect(records).toBeVisible();
-    await expect(records).not.toHaveAttribute('open', '');
-    await expect(records.locator('summary')).toContainText('Records & forms');
-    await expect(records.locator('[data-v1082-records-status]')).toHaveText(/^(No digital intake|Digital intake status unknown) · (No legacy record|Legacy status unknown)$/);
-    await expect(card.locator('[data-directory-care]')).toBeVisible();
-    await expect(card.locator('[data-directory-care]')).not.toBeEmpty();
-    await expect(records.locator('[data-directory-care]')).toHaveCount(0);
-    await expect(card.locator('[data-directory-detail="profile"]')).toBeVisible();
-    await expect(card.locator('[data-directory-intake]')).toBeAttached();
-    await expect(card.locator('[data-directory-legacy]')).toBeAttached();
-    const detailReads = () => reads.filter(action => ['get_guest_profile', 'get_guest_belongings', 'get_dog_history', 'get_dog_master_profile'].includes(action));
-    const before = detailReads().length;
-    // Click the stable disclosure marker area, away from asynchronously refreshed status text.
-    await records.locator('summary').click({ position: { x: 12, y: 12 } });
     await expect(records).toHaveAttribute('open', '');
-    expect(detailReads()).toHaveLength(before);
-    await page.emulateMedia({ colorScheme: 'dark' });
-    await expect(records.locator('summary')).toBeVisible();
-    await page.emulateMedia({ colorScheme: 'light' });
-    // Verify native keyboard closing after the theme reflow; pointer opening is checked above.
-    await records.locator('summary').focus();
-    await expect(records.locator('summary')).toBeFocused();
-    await page.keyboard.press('Enter');
-    await expect(card).toBeVisible();
-    await expect(records).not.toHaveAttribute('open', '');
+    await expect(records.locator('[data-directory-intake]')).toBeVisible();
+    await expect(records.locator('[data-directory-legacy]')).toBeVisible();
+    await expect(records.locator('[data-create-intake-link]')).toBeHidden();
+
+    await sections.getByRole('button', { name: 'Tools' }).click();
+    await expect(card.locator('[data-v11160-tab="history"]')).toBeVisible();
+    await expect(card.locator('[data-directory-detail="profile"]')).toBeVisible();
+    await expect(card.locator('[data-save-belongings]').first()).toBeHidden();
+    await sections.getByRole('button', { name: 'Activity' }).click();
+    await expect(card.locator('[data-care-routine-log]')).toBeVisible();
+    await expect(card.locator('[data-care-routine-form]')).toBeHidden();
     expect(reads.filter(action => action === 'get_past_guest_directory')).toHaveLength(pastReads);
     expect(await card.evaluate(el => el === window.compactPastOpenedCard)).toBe(true);
   });
 
   test('does not invent an owner or phone when fields are absent', async ({ page, baseURL }) => {
     await page.setContent('<div id="host"></div>');
-    await page.evaluate(() => { window.escapeDashboardHtml = value => String(value); window.formatStayDateShort = () => '1 Jan'; });
+    await page.evaluate(() => {
+      window.escapeDashboardHtml = value => String(value);
+      window.formatStayDateShort = () => '1 Jan';
+      window.getLocalTodayDateString = () => '2026-10-10';
+      window.directoryProfileAccessibleLabel = () => 'Open Guest profile';
+      window.formatWaffleContactPhone = value => value;
+    });
+    const app = fs.readFileSync(path.join(__dirname, '..', 'waffle-app.js'), 'utf8');
+    await page.addScriptTag({ content: app.slice(app.indexOf('    function renderDirectoryStayCardMarkup('), app.indexOf('    function parseCSVToEvents(')) });
     await page.addScriptTag({ url: `${baseURL}/waffle-v10.8.2.js` });
     await page.evaluate(() => { document.querySelector('#host').innerHTML = v1082PastCardHtml({ stayKey: 'unknown', dogName: 'Guest', phone: 'unknown' }); });
-    await expect(page.locator('[data-v1082-past-owner]')).toHaveText('Not recorded');
-    await expect(page.locator('[data-v1082-past-phone]')).toHaveText('unknown');
-    await expect(page.locator('[data-v1082-past-phone]')).not.toHaveAttribute('href');
+    await expect(page.locator('[data-care-brief-owner-name]')).toHaveText('Not provided');
+    await expect(page.locator('[data-care-brief-call-owner] a')).toHaveCount(0);
     await page.evaluate(() => {
       const card = document.querySelector('.v1082-past-card');
       card.querySelector('[data-directory-care]').textContent = '2 saved safety alerts';
