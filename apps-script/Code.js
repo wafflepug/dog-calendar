@@ -6869,7 +6869,12 @@ function buildDigitalIntakeHtml_(params) {
  * google.script.run cannot call private helper names ending in "_".
  */
 function getIntakePrefillForHtml(token) {
-  return getIntakePrefill_(String(token || "").trim());
+  var intake = getIntakePrefill_(String(token || "").trim());
+  try {
+    var brand = readPalzBusinessBrand_();
+    intake.businessBrand = { name: brand.name, icon: brand.icon };
+  } catch (_) { /* The form already includes the default business logo. */ }
+  return intake;
 }
 
 
