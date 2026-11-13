@@ -11,10 +11,12 @@
   const stayDates = stay => dates.format(new Date(stay.startDate)) + ' – ' + dates.format(new Date(stay.endDate));
   const cents = value => /^\d{1,6}(?:\.\d{1,2})?$/.test(value) ? Math.round(Number(value) * 100) : 0;
   const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[char]);
+  const paymentMethods = ['Bank transfer', 'Cash', 'Other', 'Marketplace payout'];
   const recent = new Map();
   const masterPage = document.querySelector('[data-sales-master-page]');
   const portraits = new Map();
   let dialog, editorPopup, opener, chosenId = '', month = today().slice(0, 7), mode = 'price';
+  let paymentEdit = null;
   let showing = 'due', calendarMonth = '', isMaster = false, masterCsv;
 
   function read() {
@@ -88,6 +90,7 @@
     dialog.querySelector('[data-sales-master-period]').onchange = () => renderMaster(read());
     dialog.querySelector('[data-sales-filter]').onclick = () => { showing = showing === 'due' ? 'all' : 'due'; render(); };
     dialog.querySelector('[name=stay]').onchange = event => {
+      paymentEdit = null;
       chosenId = event.target.value;
       calendarMonth = '';
       mode = 'price';
@@ -107,10 +110,11 @@
       if (clear) {
         const form = clear.form;
         form.elements.amount.value = '0.00';
+        form.elements.markPaid.checked = false;
         form.requestSubmit();
         return;
       }
-      const action = event.target.closest('[data-sales-select], [data-sales-mode], [data-sales-reminder]');
+      const action = event.target.closest('[data-sales-select], [data-sales-mode], [data-sales-reminder], [data-sales-edit-payment]');
       if (!action) return;
       if (action.hasAttribute('data-sales-reminder')) { void copyReminder(action.dataset.salesReminder); return; }
       if (action.dataset.salesSelect) {
@@ -118,7 +122,14 @@
         chosenId = action.dataset.salesSelect;
         dialog.querySelector('[name=stay]').value = chosenId;
       }
-      mode = action.dataset.salesMode || 'payment';
+      paymentEdit = null;
+      if (action.hasAttribute('data-sales-edit-payment')) {
+        const index = Number(action.dataset.salesEditPayment);
+        const item = read()[chosenId]?.payments[index];
+        if (!item) { renderEditor(); status('This payment changed. Select it again.'); return; }
+        paymentEdit = { index, snapshot: JSON.stringify(item) };
+      }
+      mode = paymentEdit ? 'payment' : action.dataset.salesMode || 'payment';
       renderEditor();
       if (editorPopup && !editorPopup.open && action.hasAttribute('data-sales-select')) editorPopup.showModal();
       if (action.hasAttribute('data-sales-show-calendar')) {
@@ -314,13 +325,24 @@
     renderStayCalendar(stay);
     if (!stay) { host.innerHTML = ''; return; }
     const summary = record ? '<p><strong>'+money(record.total - paid(record))+' outstanding</strong> · '+money(paid(record))+' received</p>' : '';
-    const history = record?.payments.length ? '<details><summary>Payment history</summary><ul>'+record.payments.map(item => '<li>'+money(item.cents)+' · '+esc(item.method)+' · '+esc(item.date)+'</li>').join('')+'</ul></details>' : '';
-    if (mode === 'payment' && record && record.total > paid(record)) {
-      host.innerHTML = summary + '<div class="palz-sales-fields"><label>Amount (AUD)<input name="amount" inputmode="decimal" required value="'+((record.total-paid(record))/100).toFixed(2)+'"></label><label>Payment date<input name="date" type="date" required max="'+today()+'" value="'+today()+'"></label><label>Method<select name="method">'+(record.channel === 'marketplace' ? '<option>Marketplace payout</option>' : '<option>Bank transfer</option><option>Cash</option><option>Other</option>')+'</select></label></div><div class="palz-sales-actions"><button type="submit" class="palz-sales-primary">Save '+(record.channel === 'marketplace' ? 'payout' : 'payment')+'</button><button type="button" data-sales-mode="price">Edit price</button></div>'+history;
+    const history = record?.payments.length ? '<details'+(paymentEdit ? ' open' : '')+'><summary>Payment history</summary><ul class="palz-sales-payments">'+record.payments.map((item, index) =>
+      '<li><span>'+money(item.cents)+' · '+esc(item.method)+' · '+esc(item.date)+'</span><button type="button" data-sales-edit-payment="'+index+'" aria-label="Edit payment '+(index + 1)+'">Edit</button></li>'
+    ).join('')+'</ul></details>' : '';
+    const editing = paymentEdit ? JSON.parse(paymentEdit.snapshot) : null;
+    if (mode === 'payment' && record && (editing || record.total > paid(record))) {
+      const payout = record.channel === 'marketplace';
+      const methods = editing ? [...new Set([...paymentMethods, editing.method].filter(Boolean))] : payout ? ['Marketplace payout'] : paymentMethods.slice(0, 3);
+      const amount = editing?.cents ?? record.total - paid(record);
+      host.innerHTML = summary +
+        '<div class="palz-sales-fields"><label>Amount (AUD)<input name="amount" inputmode="decimal" required value="'+(amount / 100).toFixed(2)+'"></label>'+
+        '<label>Payment date<input name="date" type="date" required max="'+today()+'" value="'+esc(editing?.date || today())+'"></label>'+
+        '<label>Method<select name="method">'+methods.map(method => '<option'+(method === editing?.method ? ' selected' : '')+'>'+esc(method)+'</option>').join('')+'</select></label></div>'+
+        '<div class="palz-sales-actions"><button type="submit" class="palz-sales-primary">'+(editing ? 'Save payment changes' : payout ? 'Save payout' : 'Save payment')+'</button>'+
+        '<button type="button" data-sales-mode="'+(editing ? 'payment' : 'price')+'">'+(editing ? 'Cancel edit' : 'Edit price')+'</button></div>'+history;
       return;
     }
     mode = 'price';
-    host.innerHTML = summary + '<div class="palz-sales-fields"><label>Payment source<select name="channel"><option value="direct">Direct from owner</option><option value="marketplace"'+(record?.channel === 'marketplace' ? ' selected' : '')+'>Marketplace payout</option></select></label><label>Price type<select name="priceType"><option value="fixed">Fixed total</option><option value="nightly"'+(record?.priceType === 'nightly' ? ' selected' : '')+'>Nightly rate</option></select></label><label>Price (AUD)<input name="amount" inputmode="decimal" required value="'+(record ? (record.rate/100).toFixed(2) : '')+'"></label><label>Due date<input name="date" type="date" required value="'+esc(record?.dueDate || stay.endDate)+'"></label></div><p data-sales-preview></p><div data-sales-expenses></div><div class="palz-sales-actions"><button type="submit" class="palz-sales-primary">Save price</button>'+(record?.total > 0 && !paid(record) ? '<button type="button" data-sales-clear-price>Clear price</button>' : '')+(record && record.total > paid(record) ? '<button type="button" data-sales-mode="payment">Record '+(record.channel === 'marketplace' ? 'payout' : 'payment')+'</button>' : '')+'</div>'+history;
+    host.innerHTML = summary + '<div class="palz-sales-fields"><label>Payment source<select name="channel"><option value="direct">Direct from owner</option><option value="marketplace"'+(record?.channel === 'marketplace' ? ' selected' : '')+'>Marketplace payout</option></select></label><label>Price type<select name="priceType"><option value="fixed">Fixed total</option><option value="nightly"'+(record?.priceType === 'nightly' ? ' selected' : '')+'>Nightly rate</option></select></label><label>Price (AUD)<input name="amount" inputmode="decimal" required value="'+(record ? (record.rate/100).toFixed(2) : '')+'"></label><label>Due date<input name="date" type="date" required value="'+esc(record?.dueDate || stay.endDate)+'"></label></div><p data-sales-preview></p><label class="palz-sales-paid"><input type="checkbox" name="markPaid"> Paid <small data-sales-paid-hint></small></label><div data-sales-expenses></div><div class="palz-sales-actions"><button type="submit" class="palz-sales-primary">Save price</button>'+(record?.total > 0 && !paid(record) ? '<button type="button" data-sales-clear-price>Clear price</button>' : '')+(record && record.total > paid(record) ? '<button type="button" data-sales-mode="payment">Record '+(record.channel === 'marketplace' ? 'payout' : 'payment')+'</button>' : '')+'</div>'+history;
     if (isMaster) {
       host.querySelector('[name=amount]').required = false;
       host.querySelector('[data-sales-expenses]').innerHTML = '<div class="palz-sales-fields"><label>Stay expenses (AUD)<input name="expenses" inputmode="decimal" value="'+(record?.expenses ? (record.expenses/100).toFixed(2) : '')+'"></label><label>Bookkeeping note<input name="bookkeepingNote" maxlength="240" value="'+esc(record?.bookkeepingNote || '')+'"></label></div>';
@@ -328,7 +350,13 @@
     const form = dialog.querySelector('form');
     const preview = () => {
       const count = form.elements.priceType.value === 'nightly' ? stayNights(stay) : 1;
-      host.querySelector('[data-sales-preview]').textContent = 'Total '+money(cents(form.elements.amount.value.trim()) * count)+(count > 1 ? ' · '+count+' nights' : '');
+      const total = cents(form.elements.amount.value.trim()) * count;
+      const balance = Math.max(0, total - paid(record));
+      host.querySelector('[data-sales-preview]').textContent = 'Total '+money(total)+(count > 1 ? ' · '+count+' nights' : '');
+      const checkbox = form.elements.markPaid;
+      if (checkbox.disabled || !balance) checkbox.checked = !balance && total > 0 && total === paid(record);
+      checkbox.disabled = !balance;
+      host.querySelector('[data-sales-paid-hint]').textContent = balance ? 'Record '+money(balance)+' received today' : '';
     };
     host.oninput = preview;
     preview();
@@ -341,6 +369,8 @@
     const values = new FormData(event.currentTarget);
     const id = chosenId, action = mode, amount = cents(String(values.get('amount') || '').trim()), date = String(values.get('date') || '');
     const submit = event.submitter;
+    const edit = paymentEdit;
+    const markPaid = values.has('markPaid');
     const expenseInput = values.get('expenses');
     const expenseText = String(expenseInput || '').trim();
     if (expenseText && !/^\d{1,6}(?:\.\d{1,2})?$/.test(expenseText)) { status('Enter a valid expense amount in AUD.'); return; }
@@ -355,15 +385,22 @@
       const stay = stays().get(id) || previous;
       if (!stay) throw Error('This confirmed stay could not be found.');
       if (action === 'payment') {
-        if (!previous || date > today() || amount > previous.total - paid(previous)) throw Error('Check the payment date and outstanding balance.');
-        previous.payments.push({cents: amount, date, method: String(values.get('method'))});
+        const existing = edit ? previous?.payments[edit.index] : null;
+        if (edit && JSON.stringify(existing) !== edit.snapshot) throw Error('This payment changed. Cancel the edit and select it again.');
+        if (!previous || date > today() || amount > previous.total - paid(previous) + (existing?.cents || 0)) throw Error('Check the payment date and outstanding balance.');
+        const payment = {cents: amount, date, method: String(values.get('method'))};
+        if (edit) previous.payments[edit.index] = payment;
+        else previous.payments.push(payment);
       } else {
         const priceType = values.get('priceType') === 'nightly' ? 'nightly' : 'fixed';
         const total = amount * (priceType === 'nightly' ? stayNights(stay) : 1);
         if (total < paid(previous)) throw Error('The total cannot be below payments already recorded.');
+        const channel = values.get('channel') === 'marketplace' ? 'marketplace' : 'direct';
+        const payments = previous?.payments || [];
+        const balance = total - paid(previous);
+        if (markPaid && balance > 0) payments.push({ cents: balance, date: today(), method: channel === 'marketplace' ? 'Marketplace payout' : 'Other' });
         records[id] = {dogName: stay.dogName, startDate: stay.startDate, endDate: stay.endDate,
-          channel: values.get('channel') === 'marketplace' ? 'marketplace' : 'direct',
-          priceType, rate: amount, total, dueDate: date, payments: previous?.payments || [],
+          channel, priceType, rate: amount, total, dueDate: date, payments,
           expenses: expenseInput === null ? previous?.expenses || 0 : cents(expenseText),
           bookkeepingNote: values.has('bookkeepingNote') ? String(values.get('bookkeepingNote')).trim().slice(0, 240) : previous?.bookkeepingNote || ''};
       }
@@ -372,8 +409,9 @@
     try {
       if (navigator.locks) await navigator.locks.request(storageKey, write);
       else write();
+      paymentEdit = null;
       render();
-      status(action === 'payment' ? 'Payment recorded.' : expensesOnly ? 'Expenses saved.' : zeroPrice ? 'Price reset to $0.00.' : 'Price saved.');
+      status(action === 'payment' ? (edit ? 'Payment updated.' : 'Payment recorded.') : markPaid ? 'Price saved and payment recorded.' : expensesOnly ? 'Expenses saved.' : zeroPrice ? 'Price reset to $0.00.' : 'Price saved.');
       updateLinks();
     } catch (error) { status(error.message || 'Sales record could not be saved.'); }
     finally { if (submit) submit.disabled = false; }
@@ -403,6 +441,7 @@
     calendarMonth = '';
     dialog.querySelector('[data-sales-calendar]').open = false;
     mode = 'payment';
+    paymentEdit = null;
     try { render(); } catch (_) { status('Sales records could not be read in this browser.'); }
     if (!masterPage && !dialog.open) dialog.showModal();
     if (master) void refreshMaster();
