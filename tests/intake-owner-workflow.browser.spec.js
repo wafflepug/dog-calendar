@@ -71,7 +71,7 @@ async function succeedPrefill(page, index = 0, dogName = 'Cino', savedAnswers = 
   }), { index, dogName, savedAnswers, status });
 }
 
-test('website intake sends the token in the POST body and reports booking timing', async ({ page }) => {
+test('website intake sends the token in the POST body and shows the business logo', async ({ page }) => {
   const website = fs.readFileSync(path.join(__dirname, '..', 'palz-intake.html'), 'utf8');
   await page.route('https://palz.test/palz-intake.html', route => route.fulfill({ contentType: 'text/html', body: website }));
   const requests = [];
@@ -82,9 +82,8 @@ test('website intake sends the token in the POST body and reports booking timing
   });
   await page.goto('https://palz.test/palz-intake.html#token=fixture-token');
   await expect(page.locator('#bookingDog')).toHaveText('Maple');
-  await page.getByText('Form timings', { exact: true }).click();
-  await expect(page.locator('#intakeTimingReady')).toHaveText(/Ready in .*Booking request/);
-  await expect(page.locator('#intakeCompareLink')).toBeHidden();
+  await expect(page.getByText('Form timings', { exact: true })).toHaveCount(0);
+  await expect(page.getByRole('img', { name: 'Waffle House' })).toBeVisible();
   expect(requests).toHaveLength(1);
   expect(requests[0].method).toBe('POST');
   expect(requests[0].url).not.toContain('fixture-token');
