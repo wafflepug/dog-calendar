@@ -13,6 +13,9 @@ function createHarness(options = {}) {
   const cached = new Map();
   const sandbox = {
     String, Object, Array, RegExp,
+    readPalzBusinessBrand_: () => options.brand || { name: 'Waffle House' },
+    intakeLogoBlob_: () => ({ type: 'image/png' }),
+    Utilities: { base64Decode: value => value, newBlob: (bytes, type) => ({ bytes, type }) },
     console: { error() {} },
     CacheService: { getScriptCache: () => ({
       get(key) { return cached.get(key) || null; },
@@ -30,6 +33,14 @@ function createHarness(options = {}) {
   vm.createContext(sandbox);
   vm.runInContext(source.slice(start, end) + '\n' + source.slice(source.indexOf('function sendWaffleNotificationEmail_('), source.indexOf('function buildTodayBoardingNotificationSummary_(')), sandbox);
   return { sandbox, sent, cached };
+}
+
+{
+  const { sandbox, sent } = createHarness({ brand: { name: 'Test & Co', icon: 'data:image/jpeg;base64,YQ==' } });
+  sandbox.sendWaffleNotificationEmail_('internal@example.test', { subject: 'Preview', textBody: 'Example', htmlBody: 'Example' });
+  assert.match(sent[0].htmlBody, /align="right" valign="top"[^>]*><img src="cid:businessLogo" alt="Test &amp; Co" width="52"/);
+  assert.match(sent[0].htmlBody, /width:52px;max-width:100%;height:auto/);
+  assert.equal(sent[0].inlineImages.businessLogo.type, 'image/jpeg');
 }
 
 const lifecycleEvents = [

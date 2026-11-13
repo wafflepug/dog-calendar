@@ -3580,6 +3580,11 @@ function processReadOnlySheetAction_(data) {
   }
 
   if (action === "get_stay_operations") {
+    // Resolve lost write acknowledgements from the operation sheet.
+    if (data.verifySavedStatus === true && Array.isArray(data.stayIds) && data.stayIds.length === 1 &&
+        /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(String(data.stayIds[0]))) {
+      return {result:"success", action:action, records:readStayOperations_({stayIds:data.stayIds,stayKeys:[]})};
+    }
     return getVersionedWaffleRead_("directory",action,data,20,function(){return {records:readStayOperations_({stayKeys:data.stayKeys,stayIds:data.stayIds})};});
   }
 
@@ -21029,11 +21034,26 @@ function sendWaffleNotificationEmail_(recipient, email) {
   }
 
   var businessName = "Waffle House";
+  var businessLogo = null;
   try {
-    businessName = String(readPalzBusinessBrand_().name || businessName);
-  } catch (ignoreBrandError) {
-    // Use the default business name if stored branding cannot be read.
+    var brand = readPalzBusinessBrand_();
+    businessName = String(brand.name || businessName);
+    var icon = String(brand.icon || "").match(/^data:(image\/(?:webp|jpeg));base64,([A-Za-z0-9+/=]+)$/);
+    if (icon) {
+      businessLogo = Utilities.newBlob(Utilities.base64Decode(icon[2]), icon[1],
+        icon[1] === "image/webp" ? "business-logo.webp" : "business-logo.jpg");
+    }
+  } catch (_) {
+    // Stored branding is optional.
   }
+  if (!businessLogo && businessName === "Waffle House" && typeof intakeLogoBlob_ === "function") {
+    businessLogo = intakeLogoBlob_();
+  }
+  var businessLogoCell = businessLogo
+    ? '<td width="64" align="right" valign="top" style="width:64px;padding-left:12px;">' +
+      '<img src="cid:businessLogo" alt="' + escapeHtmlEmail_(businessName) +
+      '" width="52" style="display:block;width:52px;max-width:100%;height:auto;border:0;"></td>'
+    : '';
   var subject = String(email.subject || "");
   var testPrefix = subject.indexOf("[TEST] ") === 0 ? "[TEST] " : "";
   var heading = '<img src="https://wafflepug.github.io/dog-calendar/assets/palz-email-logo.png?v=2" ' +
@@ -21044,18 +21064,22 @@ function sendWaffleNotificationEmail_(recipient, email) {
     '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" ' +
     'style="max-width:640px;background:#ffffff;border:1px solid #e4dcf6;">' +
     '<tr><td style="padding:18px 20px;border-bottom:1px solid #e4dcf6;">' +
-    '<div style="font-size:26px;font-weight:800;">' + heading + '</div>' +
-    '<div style="padding-top:4px;font-size:13px;color:#51466a;">' + escapeHtmlEmail_(businessName) + '</div></td></tr>' +
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td valign="middle">' +
+    heading +
+    '<div style="padding-top:4px;font-size:13px;color:#51466a;">' + escapeHtmlEmail_(businessName) + '</div></td>' +
+    businessLogoCell + '</tr></table></td></tr>' +
     '<tr><td style="padding:16px 20px;font-size:15px;line-height:1.5;">' + email.htmlBody +
     '</td></tr></table></td></tr></table>';
 
-  MailApp.sendEmail({
+  var message = {
     to: recipient,
     subject: testPrefix + "Palz Stay · " + subject.slice(testPrefix.length),
     body: "Palz Stay · " + businessName + "\n\n" + email.textBody,
     htmlBody: html,
     name: "Palz Stay"
-  });
+  };
+  if (businessLogo) message.inlineImages = { businessLogo: businessLogo };
+  MailApp.sendEmail(message);
 }
 
 
