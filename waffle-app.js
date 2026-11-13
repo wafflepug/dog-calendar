@@ -17161,6 +17161,10 @@ registerWaffleServiceWorker();
         setDirectorySummaryAttribute(strip, 'aria-busy', 'false');
         const dogName = strip.closest('.directory-card')?.dataset.directoryDogName || 'this dog';
 
+        const websiteLink = record?.token ? new URL('palz-intake.html', window.location.href) : null;
+        if (websiteLink) websiteLink.hash = new URLSearchParams({ token: record.token }).toString();
+        const websiteAction = websiteLink ? `<a class="directory-intake-action" href="${escapeDashboardHtml(websiteLink.href)}" target="_blank" rel="noopener noreferrer">Open website intake</a>` : '';
+
         if (!record) {
             setDirectorySummaryHtml(strip, `
                 <div class="directory-intake-state">
@@ -17239,6 +17243,7 @@ registerWaffleServiceWorker();
                             ✓ Saved
                         </span>
                     `}
+                    ${websiteAction}
                 </div>
             `, 'digitalIntakeGeneratedHtml');
 
@@ -17262,6 +17267,7 @@ registerWaffleServiceWorker();
                 aria-label="Copy ${escapeDashboardHtml(dogName)} intake link">
                 🔗 Copy Link
             </button>
+            ${websiteAction}
         `, 'digitalIntakeGeneratedHtml');
 
         applyDirectoryIntakeMethodVisibility(

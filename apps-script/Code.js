@@ -116,6 +116,10 @@ function doPost(e) {
     var appendBelongingsPhoto = earlyAction === "upload_belongings_photo_only";
     if (appendBelongingsPhoto) earlyAction = "upload_belongings_photo";
 
+    if (earlyAction === "website_intake") {
+      return websiteIntakeResponse_(params.payloadJson);
+    }
+
     // Put action/uploadToken in the URL query string as well as the POST form.
     // This lets us report a useful status even if a large form body fails to
     // parse before Apps Script can read the photoData field.
@@ -6954,6 +6958,34 @@ function intakeSubmissionResultFromReceipt_(receipt) {
  * signature image are sent through google.script.run on the same Apps Script
  * origin, which avoids the form-urlencoded/JSON parsing path entirely.
  */
+function websiteIntakeResponse_(rawPayload) {
+  try {
+    var payload = JSON.parse(String(rawPayload || ""));
+    var token = String(payload.token || "").trim();
+    if (!token) throw new Error("This intake link is missing its secure booking token.");
+    assertWaffleActionAllowedDuringMaintenance_("submitIntakeFromHtml");
+
+    var value;
+    switch (payload.operation) {
+      case "prefill":
+        value = getIntakePrefillForHtml(token);
+        break;
+      case "status":
+        value = getIntakeSubmissionStatusForHtml(token, payload.submissionId);
+        break;
+      case "submit":
+        value = submitIntakeFromHtml(payload);
+        break;
+      default:
+        throw new Error("Unsupported intake request.");
+    }
+    return jsonResponse_({ result: "success", value: value });
+  } catch (error) {
+    return jsonResponse_({ result: "error", error: error.message || "The intake request failed." });
+  }
+}
+
+
 function submitIntakeFromHtml(payload) {
   assertWaffleActionAllowedDuringMaintenance_("submitIntakeFromHtml");
 

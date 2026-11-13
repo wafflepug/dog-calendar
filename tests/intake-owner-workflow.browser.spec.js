@@ -71,6 +71,27 @@ async function succeedPrefill(page, index = 0, dogName = 'Cino', savedAnswers = 
   }), { index, dogName, savedAnswers, status });
 }
 
+test('website intake sends the token in the POST body and reports booking timing', async ({ page }) => {
+  const website = fs.readFileSync(path.join(__dirname, '..', 'palz-intake.html'), 'utf8');
+  await page.route('https://palz.test/palz-intake.html', route => route.fulfill({ contentType: 'text/html', body: website }));
+  const requests = [];
+  await page.route('https://script.google.com/**', async route => {
+    const request = route.request();
+    requests.push({ method: request.method(), url: request.url(), body: Object.fromEntries(new URLSearchParams(request.postData())) });
+    await route.fulfill({ json: { result: 'success', value: { booking: { dogName: 'Maple' } } }, headers: { 'access-control-allow-origin': '*' } });
+  });
+  await page.goto('https://palz.test/palz-intake.html#token=fixture-token');
+  await expect(page.locator('#bookingDog')).toHaveText('Maple');
+  await page.getByText('Form timings', { exact: true }).click();
+  await expect(page.locator('#intakeTimingReady')).toHaveText(/Ready in .*Booking request/);
+  await expect(page.getByRole('link', { name: 'Open Google-hosted form' })).toHaveAttribute('href', /action=intake&token=fixture-token$/);
+  expect(requests).toHaveLength(1);
+  expect(requests[0].method).toBe('POST');
+  expect(requests[0].url).not.toContain('fixture-token');
+  expect(requests[0].body.action).toBe('website_intake');
+  expect(JSON.parse(requests[0].body.payloadJson)).toEqual({ operation: 'prefill', token: 'fixture-token' });
+});
+
 test('optional owner profile photo previews and can be removed', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 900 });
   await openIntake(page);
