@@ -456,7 +456,7 @@
       const id = String(card?.dataset.directoryStayId || checkout?.dataset.todayStayId || '').toLowerCase();
       if (!validId(id)) return;
       const record = records[id];
-      if (checkout && !record?.total) {
+      if (!record?.total) {
         host.querySelector('[data-sales-stay]')?.remove();
         return;
       }

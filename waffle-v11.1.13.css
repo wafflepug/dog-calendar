@@ -208,10 +208,10 @@ body[data-waffle-page="audit"] [data-v1115-recovery-panel] { display: none !impo
 .v11113-extend-stay-button {
   min-height:44px;
   padding:8px 12px;
-  border:1px solid var(--wh-border, #cbd5e1);
+  border:1px solid var(--wh75-accent-ink, #561bc9);
   border-radius:9px;
-  background:var(--v10-card, #fff);
-  color:inherit;
+  background:var(--wh75-accent-ink, #561bc9);
+  color:var(--wh75-shell, #fff);
   font:inherit;
   font-weight:700;
   cursor:pointer;
