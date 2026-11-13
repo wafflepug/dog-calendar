@@ -317,6 +317,7 @@
       if (duplicateEdit) duplicateEdit.toggleAttribute('data-care-duplicate-edit', Boolean(card.querySelector('[data-toggle-profile-edit]')));
       const records = card.querySelector('.directory-care-records-disclosure');
       const readiness = card.querySelector('.directory-care-readiness, .directory-care-readiness-disclosure');
+      if (card.dataset.v1082PastStay === 'true' && records && records.parentElement !== brief) brief.append(records);
       mark(records, 'records');
       mark(readiness, 'tools');
       // The owner form action is part of Records, including while the form

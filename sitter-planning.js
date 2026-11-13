@@ -27,6 +27,7 @@
     if(!dialog.open){dialog.showModal();void loadRules();}
   }
   function mountCard(card) {
+    if (card.dataset.v1082PastStay === 'true') return;
     const brief=card.querySelector('[data-directory-care-brief]');if(!brief)return;const id=idFor(card);if(!id.stayId || !id.dogId || !id.stayKey)return;
     let section=card.querySelector('[data-sitter-handover]');
     if(section && section.dataset.identity!==key(id)){section.remove();section=null;}

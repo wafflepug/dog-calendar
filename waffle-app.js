@@ -6337,7 +6337,7 @@ registerWaffleServiceWorker();
                 '[data-directory-edit-field]'
             );
 
-            if (!editTrigger) return;
+            if (!editTrigger || editTrigger.closest('.directory-card')?.dataset.v1082PastStay === 'true') return;
 
             event.preventDefault();
             event.stopPropagation();
@@ -18305,15 +18305,18 @@ registerWaffleServiceWorker();
         });
     }
 
-    function renderDirectoryStayCardMarkup({directoryStayKey, dogName, breed, breedTxt, ownerName, phone, notes, dogId, stayId, dogNumber, species, startParsed, endParsed, sourceRow, isCurrentlyAtHome = false, hasBeenPickedUp = false, localTodayStr = getLocalTodayDateString()}) {
-        const statusTag = (isCurrentlyAtHome && !hasBeenPickedUp) ? '<span class="directory-status-tag tag-at-home" title="At Home">At Home</span>' : (hasBeenPickedUp ? '<span class="directory-status-tag tag-checked-out">Checked Out</span>' : '<span class="directory-status-tag tag-upcoming">Upcoming</span>');
+    function renderDirectoryStayCardMarkup({directoryStayKey, dogName, breed, breedTxt, ownerName, phone, notes, dogId, stayId, dogNumber, species, startParsed, endParsed, sourceRow, isCurrentlyAtHome = false, hasBeenPickedUp = false, pastStay = null, localTodayStr = getLocalTodayDateString()}) {
+        const pastStatus = pastStay?.checkedOut ? 'Checked out' : 'Completed';
+        const statusTag = pastStay
+            ? `<span class="directory-status-tag tag-checked-out v1082-past-status">${pastStatus}</span>`
+            : (isCurrentlyAtHome && !hasBeenPickedUp) ? '<span class="directory-status-tag tag-at-home" title="At Home">At Home</span>' : (hasBeenPickedUp ? '<span class="directory-status-tag tag-checked-out">Checked Out</span>' : '<span class="directory-status-tag tag-upcoming">Upcoming</span>');
 
         const stayDateLabel =
             `${formatStayDateShort(startParsed)} – ${formatStayDateShort(endParsed)}`;
         const rosterContext = startParsed === endParsed
             ? `Same-day care · ${formatStayDateShort(startParsed)}`
             : `Check-in ${formatStayDateShort(startParsed)} · Check-out ${formatStayDateShort(endParsed)}`;
-        const rosterStatus = hasBeenPickedUp
+        const rosterStatus = pastStay ? pastStatus : hasBeenPickedUp
             ? 'Checked out'
             : (isCurrentlyAtHome ? 'Staying' : 'Arriving');
         const cleanOwnerName = String(ownerName || '').trim();
@@ -18322,7 +18325,7 @@ registerWaffleServiceWorker();
 
         return `
                                     <div
-                                        class="directory-card directory-card-fused belongings-pet-card"
+                                        class="directory-card directory-card-fused belongings-pet-card${pastStay ? ' v1082-past-card' : ''}"
                                         data-directory-stay-key="${escapeDashboardHtml(directoryStayKey)}"
                                         data-directory-dog-name="${escapeDashboardHtml(dogName.trim())}"
                                         data-pet-species="${species}"
@@ -18339,11 +18342,11 @@ registerWaffleServiceWorker();
                                         data-dog-name="${escapeDashboardHtml(dogName.trim())}"
                                         data-start-date="${escapeDashboardHtml(startParsed)}"
                                         data-end-date="${escapeDashboardHtml(endParsed)}"
-                                        style="${hasBeenPickedUp ? 'opacity: 0.6;' : ''}">
+                                        style="${hasBeenPickedUp ? 'opacity: 0.6;' : ''}"${pastStay ? ' data-v1082-past-stay="true"' : ''}>
 
                                         <button
                                             type="button"
-                                            class="directory-guest-tile-open"
+                                            class="directory-guest-tile-open${pastStay ? ' v1082-past-tile' : ''}"
                                             data-open-directory-profile
                                             aria-label="${escapeDashboardHtml(directoryProfileAccessibleLabel({ dogName: dogName.trim(), dogNumber, dogId, stayId, owner: ownerName, context: isCurrentlyAtHome ? rosterContext : breedTxt, stayDates: stayDateLabel, statusLabel: rosterStatus }))}">
                                             <span
@@ -18357,7 +18360,7 @@ registerWaffleServiceWorker();
                                                 <span class="directory-roster-context">${escapeDashboardHtml(rosterContext)}</span>
                                                 ${startParsed >= localTodayStr && cleanOwnerName && !/^(n\/a|unknown)$/i.test(cleanOwnerName) ? `<span class="directory-roster-owner">Owner: ${escapeDashboardHtml(cleanOwnerName)}</span>` : ''}
                                             </span>
-                                            <span class="directory-roster-status${hasBeenPickedUp ? ' is-past' : ''}">${rosterStatus}</span>
+                                            <span class="directory-roster-status${pastStay || hasBeenPickedUp ? ' is-past' : ''}">${rosterStatus}</span>
                                         </button>
 
                                         <div class="directory-profile-content">
@@ -18402,6 +18405,7 @@ registerWaffleServiceWorker();
                                                     <span><strong>Check-in</strong> ${escapeDashboardHtml(startParsed ? formatStayDateShort(startParsed) : 'Not recorded')}</span>
                                                     <span><strong>Check-out</strong> ${escapeDashboardHtml(endParsed ? formatStayDateShort(endParsed) : 'Not recorded')}</span>
                                                 </div>
+                                                ${pastStay?.checkoutDate ? `<div class="v1082-past-checkout-date">${escapeDashboardHtml(pastStay.checkoutDateLabel || (pastStay.checkedOut ? 'Checked out' : 'Scheduled checkout'))} ${escapeDashboardHtml(formatStayDateShort(pastStay.checkoutDate))}</div>` : ''}
                                             </div>
                                         </div>
 
@@ -18587,11 +18591,11 @@ registerWaffleServiceWorker();
                                             role="tabpanel"
                                             data-directory-main-panel="profile">
 
-                                        <details class="directory-care-records-disclosure">
+                                        <details class="directory-care-records-disclosure"${pastStay ? ' data-v1082-past-records' : ''}>
                                             <summary>
                                                 <span>
                                                     <strong>Records &amp; forms</strong>
-                                                    <small>Safety record, intake link and legacy documents</small>
+                                                    ${pastStay ? '<small data-v1082-records-status></small>' : '<small>Safety record, intake link and legacy documents</small>'}
                                                 </span>
                                                 <span class="directory-care-records-chevron" aria-hidden="true">⌄</span>
                                             </summary>

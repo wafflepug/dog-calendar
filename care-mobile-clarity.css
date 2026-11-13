@@ -2908,3 +2908,10 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-
 [data-roster-host-again] { display:inline-flex; align-items:center; flex:none; color:#be185d; vertical-align:middle; }
 body.dark-theme [data-roster-host-again] { color:#f9a8d4; }
 .care-host-again-status { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); }
+
+body[data-waffle-page="directory"] .directory-card.is-v1082-readonly [data-directory-edit-field][aria-disabled="true"] {
+  cursor: default;
+}
+body[data-waffle-page="directory"] .directory-card.is-v1082-readonly [data-directory-edit-field] .directory-contact-edit-hint {
+  display: none;
+}

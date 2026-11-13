@@ -240,61 +240,6 @@ v1082PastCardHtml =
             ${extraData}>`
             );
 
-        if (
-            stayCount >
-            1
-        ) {
-            html =
-                html.replace(
-                    '</button>\n\n            <div class="directory-profile-content">',
-                    `<span class="v1088-past-stay-count">
-                        ${stayCount} stays
-                    </span>
-                </button>
-
-            <div class="directory-profile-content">`
-                );
-        }
-
-        html =
-            html.replace(
-                `<span class="directory-status-tag v1082-past-status">
-                                Past Stay
-                            </span>`,
-                `<span class="directory-status-tag v1082-past-status">
-                                Past Stay
-                            </span>
-                            <button
-                                type="button"
-                                class="v1088-rebook-button"
-                                data-v1088-rebook
-                                title="Create a new confirmed stay for ${v1082Escape(booking?.dogName || 'this dog')}">
-                                ↻ Re-book
-                            </button>`
-            );
-
-        if (
-            stayCount >
-            1
-        ) {
-            html =
-                html.replace(
-                    `<div class="directory-stay-dates">
-                            📅 ${v1082Escape(
-                                `${formatStayDateShort(booking.startDate)} – ${formatStayDateShort(booking.endDate || booking.startDate)}`
-                            )}
-                        </div>`,
-                    `<div class="directory-stay-dates">
-                            📅 Latest stay: ${v1082Escape(
-                                `${formatStayDateShort(booking.startDate)} – ${formatStayDateShort(booking.endDate || booking.startDate)}`
-                            )}
-                            <span class="v1088-profile-stay-summary">
-                                ${stayCount} completed stays are consolidated in this profile.
-                            </span>
-                        </div>`
-                );
-        }
-
         return html;
     };
 
