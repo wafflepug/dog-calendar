@@ -365,10 +365,10 @@
     const ownerCall = ownerTel ? `<a class="care-roster-direct-call" data-v11217-roster-owner-call href="tel:${esc(ownerTel)}" aria-label="Call ${esc(p.ownerName || 'owner')} about ${esc(p.dogName || 'this dog')} · ${esc(contactNumber)}"><span>Call Owner</span></a>` : '';
     const ownerDetail = ownerTel ? `<span class="care-roster-contact-detail">${esc(p.ownerName || 'Owner')} · ${esc(contactNumber)}</span>` : '';
     const estimate = canSetEstimate ? '<button type="button" class="care-roster-checkout-estimate" data-roster-checkout-estimate>Set checkout time</button>' : '';
-    const handoverActions = `<div class="care-roster-handover-actions">${ownerCall}${estimate}${earlyButtonMarkup}</div>`;
+    const handoverActions = `<div class="care-roster-handover-actions">${ownerCall}${estimate}${checkOutMarkup}${earlyButtonMarkup}</div>`;
     const contact = ownerCall ? `<div class="care-roster-contact">${ownerCall}${ownerDetail}</div>` : '';
     actions.innerHTML = estimate
-      ? `${checkOutMarkup}${handoverActions}${ownerDetail}`
+      ? `${handoverActions}${ownerDetail}`
       : `${checkInMarkup}${checkOutMarkup}${earlyButtonMarkup}${contact}`;
     const earlyButton = actions.querySelector('[data-v11217-early-checkout]');
     if (earlyButton) earlyButton.setAttribute('aria-label', accessibleStayActionLabel('Record early checkout for', card, p));

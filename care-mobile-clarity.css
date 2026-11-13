@@ -1232,14 +1232,14 @@ body[data-waffle-page="directory"].dark-theme{--care-primary-fill:var(--wh75-acc
 body[data-waffle-page="directory"] #directoryTabPanel .directory-card .v110-operation-actions [data-v110-checkin],
 body[data-waffle-page="directory"] #directoryTabPanel .directory-card .v110-operation-actions [data-v110-checkout]:not([data-v11217-early-checkout]),
 body[data-waffle-page="directory"] #directoryTabPanel .directory-card .v11217-roster-actions>[data-v11217-roster-checkin],
-body[data-waffle-page="directory"] #directoryTabPanel .directory-card .v11217-roster-actions>[data-v11217-roster-checkout],
+body[data-waffle-page="directory"] #directoryTabPanel .directory-card .v11217-roster-actions [data-v11217-roster-checkout],
 body[data-waffle-page="directory"] #directoryTabPanel .directory-card .directory-care-brief-action.is-primary{
  border-color:var(--care-primary-fill)!important;background:var(--care-primary-fill)!important;color:var(--care-primary-ink)!important;box-shadow:none;
 }
 body[data-waffle-page="directory"] #directoryTabPanel .directory-card .v110-operation-actions [data-v110-checkin]:hover,
 body[data-waffle-page="directory"] #directoryTabPanel .directory-card .v110-operation-actions [data-v110-checkout]:not([data-v11217-early-checkout]):hover,
 body[data-waffle-page="directory"] #directoryTabPanel .directory-card .v11217-roster-actions>[data-v11217-roster-checkin]:hover,
-body[data-waffle-page="directory"] #directoryTabPanel .directory-card .v11217-roster-actions>[data-v11217-roster-checkout]:hover,
+body[data-waffle-page="directory"] #directoryTabPanel .directory-card .v11217-roster-actions [data-v11217-roster-checkout]:hover,
 body[data-waffle-page="directory"] #directoryTabPanel .directory-card .directory-care-brief-action.is-primary:hover{
  border-color:var(--care-primary-hover)!important;background:var(--care-primary-hover)!important;color:var(--care-primary-ink)!important;
 }
@@ -2489,11 +2489,12 @@ body[data-waffle-page="directory"] .directory-card:not(.is-profile-active) .dire
 body[data-waffle-page="directory"] #directoryTabPanel .directory-card .v11217-roster-actions .care-roster-contact {
   display:flex; flex-direction:column; align-items:flex-start; align-self:flex-start; gap:5px; flex:0 1 auto; min-width:0; max-width:100%;
 }
-body[data-waffle-page="directory"] #directoryTabPanel .directory-card .v11217-roster-actions :is(.care-roster-direct-call,.v11217-early-checkout-button,.care-roster-checkout-estimate) {
+body[data-waffle-page="directory"] #directoryTabPanel .directory-card .v11217-roster-actions :is(.care-roster-direct-call,.v11217-early-checkout-button,.care-roster-checkout-estimate,.care-roster-handover-actions > [data-v11217-roster-checkout]) {
   display:inline-flex; align-items:center; justify-content:center; gap:6px; min-height:44px; box-sizing:border-box; padding:9px 12px;
   border:1px solid var(--wh-border,#d5dee9); border-radius:10px; background:var(--wh-surface-soft,#f8fafc);
   color:var(--wh-text,#17243b); font:inherit; font-size:12px; font-weight:850; line-height:1.25; text-decoration:none;
 }
+body[data-waffle-page="directory"] #directoryTabPanel .v11217-roster-actions:has(.care-roster-handover-actions > [data-v11217-roster-checkout]) { max-width: none; }
 .care-roster-handover-actions {
   display:flex; flex:1 0 100%; flex-wrap:wrap; align-items:flex-start; gap:8px; min-width:0;
 }
@@ -2529,6 +2530,7 @@ body[data-waffle-page="directory"] #directoryTabPanel .directory-roster-name-lin
   min-width:0; min-height:0; box-shadow:none!important;
 }
 .directory-roster-name-line .v1118-care-signal > span:last-child { display:none; }
+body[data-waffle-page="directory"] #past-directory-grid .v1082-past-tile:has(.directory-roster-name-line [data-v1118-safety-signal]) > .directory-roster-status.is-alert { display:none !important; }
 .directory-roster-name-line .v1118-care-signal-icon { display:inline-flex; }
 .directory-roster-name-line .v1118-care-signal-icon .palz-inline-icon { margin:0; }
 .directory-roster-name-line .v1118-care-signal-icon .palz-icon { width:16px; height:16px; }
