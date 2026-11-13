@@ -12,6 +12,8 @@
   const cents = value => /^\d{1,6}(?:\.\d{1,2})?$/.test(value) ? Math.round(Number(value) * 100) : 0;
   const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[char]);
   const recent = new Map();
+  const masterPage = document.querySelector('[data-sales-master-page]');
+  const portraits = new Map();
   let dialog, opener, chosenId = '', month = today().slice(0, 7), mode = 'price';
   let showing = 'due', calendarMonth = '', isMaster = false, masterCsv;
 
@@ -48,22 +50,23 @@
 
   function mount() {
     if (dialog) return;
-    dialog = document.createElement('dialog');
+    dialog = masterPage || document.createElement('dialog');
     dialog.className = 'palz-sales';
     dialog.setAttribute('aria-labelledby', 'palz-sales-title');
-    dialog.setAttribute('role', 'dialog');
-    dialog.setAttribute('aria-modal', 'true');
-    dialog.innerHTML = '<header><h1 id="palz-sales-title">Sales</h1><button type="button" data-sales-close aria-label="Close Sales">×</button></header>' +
+    if (!masterPage) dialog.setAttribute('aria-modal', 'true');
+    dialog.innerHTML = '<header><h1 id="palz-sales-title">Sales</h1>' + (masterPage ? '<a href="index.html?view=today">Back to Palz Stay</a>' : '<button type="button" data-sales-close aria-label="Close Sales">×</button>') + '</header>' +
       '<div class="palz-sales-body"><p class="palz-sales-local">Sales records are saved in this browser.</p>' +
       '<label class="palz-sales-month">Reporting month <input type="month" aria-label="Reporting month"></label>' +
       '<div data-sales-totals class="palz-sales-totals"></div>' +
       '<div class="palz-sales-list-head"><h2>Stays</h2><button type="button" data-sales-filter>Sales history</button></div>' +
       '<div data-sales-master-filters class="palz-sales-fields" hidden><label>Find a stay<input type="search" data-sales-master-search placeholder="Pet, owner or Pet ID"></label><label>Stay period<select data-sales-master-period><option value="">All stays</option><option>Past</option><option>Current</option><option>Future</option></select></label></div>' +
-      '<p data-sales-master-status role="status" hidden></p><div data-sales-list></div>' +
+      '<p data-sales-master-status role="status" hidden></p><div data-sales-list></div><div data-sales-master-totals class="palz-sales-totals" role="group" aria-label="Totals for displayed stays" hidden></div>' +
       '<form data-sales-form><h2>Manage a stay</h2><label>Confirmed stay<select name="stay"></select></label>' +
       '<details data-sales-calendar hidden><summary>Stay calendar</summary><div data-sales-calendar-content></div></details><div data-sales-editor></div><p data-sales-status role="status"></p></form></div>';
-    document.body.append(dialog);
-    dialog.querySelector('[data-sales-close]').onclick = () => dialog.close();
+    if (!masterPage) {
+      document.body.append(dialog);
+      dialog.querySelector('[data-sales-close]').onclick = () => dialog.close();
+    }
     dialog.addEventListener('close', () => opener?.focus());
     dialog.querySelector('input[type=month]').addEventListener('change', event => { month = event.target.value || today().slice(0, 7); render(); });
     dialog.querySelector('[data-sales-master-search]').oninput = () => renderMaster(read());
@@ -103,6 +106,9 @@
         dialog.querySelector('[data-sales-editor] input')?.focus();
       }
     });
+    dialog.addEventListener('error', event => {
+      if (event.target.matches?.('.palz-sales-portrait img')) event.target.remove();
+    }, true);
     dialog.querySelector('form').addEventListener('submit', save);
   }
 
@@ -149,6 +155,44 @@
       '<small>Check-in '+dates.format(new Date(stay.startDate))+' · Check-out '+dates.format(new Date(stay.endDate))+'</small>';
   }
 
+  function salesStayKey(stay) {
+    return [stay.dogName.trim().toLowerCase(), stay.startDate, stay.endDate].join('|');
+  }
+
+  function masterPortrait(stay) {
+    const key = salesStayKey(stay);
+    const url = portraits.get(key);
+    return '<span class="palz-sales-portrait" data-sales-portrait="'+esc(key)+'" aria-hidden="true">'+
+      (url ? '<img src="'+esc(url)+'" alt="" loading="lazy" decoding="async">' : '')+'</span>';
+  }
+
+  async function loadMasterPortraits() {
+    const rows = confirmedRows();
+    const counts = new Map();
+    rows.forEach(stay => {
+      const key = salesStayKey(stay);
+      counts.set(key, (counts.get(key) || 0) + 1);
+    });
+    const keys = [...counts].filter(([, count]) => count === 1).map(([key]) => key);
+    for (let index = 0; index < keys.length; index += 35) {
+      const endpoint = new URL(masterPage.dataset.photoEndpoint);
+      endpoint.searchParams.set('payload', JSON.stringify({action:'get_belongings', stayKeys:keys.slice(index,index+35)}));
+      try {
+        const response = await fetch(endpoint, {credentials:'omit'});
+        const data = await response.json();
+        for (const record of data.records || []) {
+          const source = record.dogPhoto?.previewUrl;
+          if (!source) continue;
+          const url = new URL(source);
+          if (url.protocol !== 'https:') continue;
+          if (url.hostname === 'drive.google.com' && url.pathname === '/thumbnail') url.searchParams.set('sz','w96');
+          portraits.set(record.stayKey, url.href);
+        }
+      } catch (_) { /* The default portrait stays visible. */ }
+    }
+    renderMaster(read());
+  }
+
   function renderMaster(records) {
     const query = dialog.querySelector('[data-sales-master-search]').value.trim().toLowerCase();
     const filter = dialog.querySelector('[data-sales-master-period]').value;
@@ -160,6 +204,17 @@
     }).filter(({stay, period}) => (!filter || period === filter) &&
       [stay.dogName, stay.ownerName, stay.dogNumber].some(value => String(value || '').toLowerCase().includes(query)));
     const editable = stays();
+    const totals = rows.reduce((sum, {id, record}) => {
+      if (record && editable.has(id)) {
+        sum.expenses += record.expenses || 0;
+        sum.received += paid(record);
+        sum.balance += record.total - paid(record);
+      }
+      return sum;
+    }, {expenses:0, received:0, balance:0});
+    const summary = dialog.querySelector('[data-sales-master-totals]');
+    summary.hidden = !rows.length;
+    summary.innerHTML = [['Total expenses', totals.expenses], ['Total received', totals.received], ['Total balance', totals.balance]].map(([label, amount]) => '<div><span>'+label+'</span><strong>'+money(amount)+'</strong></div>').join('');
     const output = dialog.querySelector('[data-sales-list]');
     if (!rows.length) {
       output.innerHTML = '<p class="palz-sales-empty">No matching confirmed stays.</p>';
@@ -170,7 +225,7 @@
       '<thead><tr><th scope="col">Stay</th><th scope="col">Action</th><th scope="col">Period</th><th scope="col">Price</th><th scope="col">Expenses</th><th scope="col">Received</th><th scope="col">Balance</th></tr></thead><tbody>' +
       rows.map(({stay, id, period, record}) => {
         const received = paid(record);
-        return '<tr><th scope="row">'+esc(stay.dogName)+'<small>'+esc(stayDates(stay))+(stay.ownerName ? ' · '+esc(stay.ownerName) : '')+'</small></th>' +
+        return '<tr><th scope="row"><div class="palz-sales-pet">'+masterPortrait(stay)+'<div>'+esc(stay.dogName)+'<small>'+esc(stayDates(stay))+(stay.ownerName ? ' · '+esc(stay.ownerName) : '')+'</small></div></div></th>' +
           '<td>'+(editable.has(id) ? '<button type="button" data-sales-select="'+esc(id)+'" data-sales-mode="price" aria-label="'+(record ? 'Edit costs for ' : 'Set costs for ')+esc(stay.dogName)+'">'+(record ? 'Edit costs' : 'Set costs')+'</button>' : '<small>Stay ID required</small>')+'</td>' +
           '<td>'+period+'</td><td>'+(record?.total ? money(record.total) : 'Unpriced')+'</td><td>'+(record ? money(record.expenses || 0) : '—')+'</td><td>'+(record ? money(received) : '—')+'</td><td>'+(record ? money(record.total - received) : '—')+'</td></tr>';
       }).join('')+'</tbody></table></div>';
@@ -180,12 +235,17 @@
     const notice = dialog.querySelector('[data-sales-master-status]');
     notice.textContent = 'Refreshing confirmed stays…';
     try {
-      masterCsv = await fetchSpreadsheetCsv();
-      if (isMaster && dialog.open) {
+      const response = await fetch(masterPage.dataset.bookingsUrl, {cache:'no-store'});
+      if (!response.ok) throw Error('Booking list unavailable');
+      const csv = await response.text();
+      if (!window.WaffleCsv.parse(csv).ok || !csv.includes(',')) throw Error('Booking list unavailable');
+      masterCsv = csv;
+      if (isMaster) {
         if (chosenId) renderMaster(read());
         else render();
       }
       notice.textContent = '';
+      void loadMasterPortraits().catch(() => {});
     } catch (_) {
       notice.textContent = 'Could not refresh stays. Showing the saved booking list.';
     }
@@ -320,7 +380,7 @@
     dialog.querySelector('[data-sales-calendar]').open = false;
     mode = 'payment';
     try { render(); } catch (_) { status('Sales records could not be read in this browser.'); }
-    if (!dialog.open) dialog.showModal();
+    if (!masterPage && !dialog.open) dialog.showModal();
     if (master) void refreshMaster();
   }
 
@@ -352,11 +412,11 @@
   }
 
   document.addEventListener('click', event => {
-    const button = event.target.closest('a[href="#sales"], [data-sales-stay], [data-sales-master-open]');
+    const button = event.target.closest('a[href="#sales"], [data-sales-stay]');
     if (!button) return;
     event.preventDefault();
     const id = button.dataset.salesStay;
-    if (!id) { open(null, button, button.hasAttribute('data-sales-master-open')); return; }
+    if (!id) { open(null, button); return; }
     const card = button.closest('.directory-card');
     open(stays().get(id) || (card ? { stayId:id, dogName:card.dataset.directoryDogName, startDate:card.dataset.directoryStartDate, endDate:card.dataset.directoryEndDate } : { stayId:id }), button);
   });
@@ -385,5 +445,8 @@
   }
 
   window.PALZ_SALES = Object.freeze({attachPrice});
-  updateLinks();
+  if (masterPage) {
+    try { document.documentElement.dataset.theme = localStorage.getItem('theme') || 'light'; } catch (_) {}
+    open(null, null, true);
+  } else updateLinks();
 })();

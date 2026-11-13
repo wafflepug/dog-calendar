@@ -340,7 +340,7 @@
     if (!panel.querySelector('[data-palz-crm-link]')) {
       const section = document.createElement('section');
       section.className = 'wh75-settings-section sitter-planning';
-      section.innerHTML = '<h3>Customer records</h3><a data-palz-crm-link href="crm.html">Open CRM</a><h3>Bookkeeping</h3><button type="button" data-sales-master-open>Sales Master Table</button>';
+      section.innerHTML = '<h3>Customer records</h3><a data-palz-crm-link href="crm.html">Open CRM</a><h3>Bookkeeping</h3><a href="sales-master.html">Sales Master Table</a>';
       form.after(section);
     }
   }
