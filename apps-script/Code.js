@@ -4066,6 +4066,13 @@ function indexV108BookingStayKeys_(rows) {
 }
 
 function dogHostAgain_(data, write) {
+  if (!write && Array.isArray(data.dogIds)) {
+    var ids = data.dogIds.slice(0, 40).map(function(id) { return String(id).toLowerCase(); });
+    var stored = PropertiesService.getScriptProperties().getProperties();
+    return { result: "success", likedDogIds: ids.filter(function(id) {
+      return validStayIdV11225_(id) && stored["PALZ_HOST_AGAIN_" + id] === "true";
+    }) };
+  }
   var dogId = String(data.dogId || "").trim().toLowerCase();
   if (!validStayIdV11225_(dogId)) throw new Error("A valid Dog ID is required.");
   var properties = PropertiesService.getScriptProperties();

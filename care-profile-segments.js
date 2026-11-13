@@ -48,6 +48,49 @@
     return tools;
   }
 
+  const hostAgainByDog = new Map();
+  const hostAgainPending = new Set();
+  const dogIdFor = card => String(card.dataset.directoryDogId || '').trim().toLowerCase();
+  const validHostAgainId = id => /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/.test(id);
+
+  function renderHostAgainIndicators() {
+    const missing = new Set();
+    document.querySelectorAll('.directory-card[data-directory-dog-id]').forEach(card => {
+      const id = dogIdFor(card);
+      const tile = card.querySelector('.directory-guest-tile-open');
+      const name = tile?.querySelector('.directory-guest-tile-name');
+      if (!name || !validHostAgainId(id)) return;
+      const badge = tile.querySelector('[data-roster-host-again]');
+      if (!hostAgainByDog.has(id) && !hostAgainPending.has(id)) missing.add(id);
+      if (!hostAgainByDog.get(id)) {
+        badge?.remove();
+        return;
+      }
+      if (badge) return;
+      const indicator = document.createElement('span');
+      indicator.dataset.rosterHostAgain = '';
+      indicator.title = 'Would host again';
+      indicator.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M12 21 3 12a5.5 5.5 0 0 1 9-7 5.5 5.5 0 0 1 9 7z"/></svg><span class="care-host-again-status">Would host again</span>';
+      name.after(indicator);
+    });
+    if (typeof window.queryAppsScript !== 'function') return;
+    const ids = [...missing];
+    for (let offset = 0; offset < ids.length; offset += 40) {
+      const dogIds = ids.slice(offset, offset + 40);
+      dogIds.forEach(id => hostAgainPending.add(id));
+      window.queryAppsScript({ action: 'get_dog_host_again', dogIds }, { maxAttempts: 1, timeoutMs: 12000 })
+        .then(response => {
+          if (response?.result !== 'success') return;
+          dogIds.forEach(id => {
+            if (!hostAgainByDog.has(id)) hostAgainByDog.set(id, response.likedDogIds.includes(id));
+          });
+          renderHostAgainIndicators();
+        })
+        .catch(() => {})
+        .finally(() => dogIds.forEach(id => hostAgainPending.delete(id)));
+    }
+  }
+
   function mountHostAgain(card) {
     const dogId = String(card.dataset.directoryDogId || '').trim().toLowerCase();
     const header = card.querySelector('.directory-card-header');
@@ -84,6 +127,8 @@
         }, { maxAttempts: 1, timeoutMs: 12000 });
         if (data?.result !== 'success' || data.dogId !== dogId || typeof data.liked !== 'boolean') throw Error();
         liked = data.liked;
+        hostAgainByDog.set(dogId, liked);
+        renderHostAgainIndicators();
         button.setAttribute('aria-pressed', String(liked));
         button.title = liked ? 'Would host again · selected' : 'Would host again';
         if (saving) status.textContent = liked ? 'Marked as would host again.' : 'Would host again cleared.';
@@ -377,6 +422,7 @@
       document.querySelectorAll('.directory-card[data-care-photo-options-mounted]:not(.is-profile-active)').forEach(mount);
       document.querySelectorAll('.directory-card.is-profile-active').forEach(mount);
       document.querySelectorAll('.directory-card:not(.is-profile-active)').forEach(mountRosterPhotoMenu);
+      renderHostAgainIndicators();
     }
   }
 
