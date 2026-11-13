@@ -510,14 +510,15 @@
         'UPCOMING': 'Upcoming'
       };
       const label = labels[status] || status;
-      const tagClass = status === 'AT HOME' ? 'tag-at-home' : status === 'CHECKED OUT' || status === 'PAST STAY' ? 'tag-checked-out' : 'tag-upcoming';
+      const tagClass = status === 'AT HOME' ? 'tag-at-home' : status === 'LEAVING TODAY' ? 'tag-leaving-today' : status === 'CHECKED OUT' || status === 'PAST STAY' ? 'tag-checked-out' : 'tag-upcoming';
       const profileClass = 'directory-status-tag ' + tagClass;
       if (profileStatus.className !== profileClass) profileStatus.className = profileClass;
       if (profileStatus.textContent !== label) profileStatus.textContent = label;
-      const statusHost = card.querySelector(status === 'AT HOME' ? '.directory-profile-name-line' : '.directory-name-row');
+      const hasStatusIcon = status === 'AT HOME' || status === 'LEAVING TODAY';
+      const statusHost = card.querySelector(hasStatusIcon ? '.directory-profile-name-line' : '.directory-name-row');
       if (statusHost && profileStatus.parentElement !== statusHost) statusHost.append(profileStatus);
-      if (status === 'AT HOME' && profileStatus.title !== label) profileStatus.title = label;
-      else if (status !== 'AT HOME' && profileStatus.hasAttribute('title')) profileStatus.removeAttribute('title');
+      if (hasStatusIcon && profileStatus.title !== label) profileStatus.title = label;
+      else if (!hasStatusIcon && profileStatus.hasAttribute('title')) profileStatus.removeAttribute('title');
     }
     renderCareSignals(card);
   }

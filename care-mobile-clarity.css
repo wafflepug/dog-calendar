@@ -2845,7 +2845,7 @@ body[data-waffle-page="directory"] .directory-profile-name-line .directory-dog-n
   width: auto;
 }
 
-body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-profile-name-line .directory-status-tag.tag-at-home:has([data-palz-icon="home"]) {
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-profile-name-line .directory-status-tag:is(.tag-at-home:has([data-palz-icon="home"]), .tag-leaving-today:has([data-palz-icon="checkout"])) {
   display: inline-flex;
   align-items: center;
   order: 1;
@@ -2855,4 +2855,7 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-
   background: transparent;
   font-size: 0 !important;
 }
-.directory-profile-name-line .directory-status-tag.tag-at-home .palz-icon { width: 18px; height: 18px; }
+.directory-profile-name-line .directory-status-tag:is(.tag-at-home, .tag-leaving-today) .palz-icon { width: 18px; height: 18px; }
+
+.directory-profile-name-line .directory-status-tag.tag-leaving-today { color: #9a3412; }
+body.dark-theme .directory-profile-name-line .directory-status-tag.tag-leaving-today { color: #fed7aa; }
