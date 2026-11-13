@@ -49,7 +49,7 @@ async function addStay(page, { stay, dog, name = 'Milo', key = stay, start = '20
       directoryDogName: input.name, directoryStartDate: input.start, directoryEndDate: input.end,
       operationState: input.op
     });
-    card.innerHTML = '<button class="directory-guest-tile-open">Open profile</button><span data-directory-intake aria-busy="false">Intake complete</span><button data-v11217-roster-checkin>Check In</button>';
+    card.innerHTML = '<button class="directory-guest-tile-open">Open profile</button><span data-directory-intake aria-busy="false">Intake complete</span><button data-v11217-roster-checkin>Check-in</button>';
     const host = input.start > '2026-10-18' && !input.currentGrid ? document.getElementById('future-directory-grid') : document.getElementById('directory-grid');
     host.appendChild(card);
     window.WAFFLE_REAPPLY_DIRECTORY_FILTER();

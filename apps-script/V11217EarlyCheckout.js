@@ -3,7 +3,7 @@
  * ------------------------------------------------------------
  * Records an early checkout as an operational event without changing the
  * original booking dates. The original scheduled checkout remains available
- * for history/audit while the actual checkout date/time is recorded separately.
+ * for history/audit while the actual check-out date/time is recorded separately.
  * ============================================================ */
 
 var EARLY_CHECKOUT_VERSION_V11217_ = '11.2.17';
@@ -145,10 +145,10 @@ setStayOperationalStatus_ = function(data, status) {
 
     if (earlyCheckout) {
       if (actualCheckoutDate < startDate) {
-        throw new Error('Early checkout cannot be recorded before the stay start date.');
+        throw new Error('Early check-out cannot be recorded before the stay start date.');
       }
       if (actualCheckoutDate > originalEndDate) {
-        throw new Error('Early checkout must be on or before the originally scheduled checkout date.');
+        throw new Error('Early check-out must be on or before the originally scheduled check-out date.');
       }
       checkoutType = 'early';
       checkoutReasonCode = EARLY_CHECKOUT_REASON_CODE_V11217_;
@@ -497,7 +497,7 @@ function setStayOperationalStatusV11226_(data, status) {
     var originalEndDate = early ? (existing && existing.originalEndDate || target.booking.endDate) : (existing && existing.originalEndDate || '');
     var actualCheckoutDate = early ? (existing && existing.actualCheckoutDate || normalizeDateValue_(data.actualCheckoutDate || todayKeyV11217_())) : (existing && existing.actualCheckoutDate || '');
     var requestedBy = early ? (existing && existing.checkoutRequestedBy || data.checkoutRequestedBy || data.ownerName || 'Owner') : '';
-    if (earlyIntent && (actualCheckoutDate < target.booking.startDate || actualCheckoutDate > originalEndDate)) throw new Error('Early checkout date is outside the originally scheduled stay.');
+    if (earlyIntent && (actualCheckoutDate < target.booking.startDate || actualCheckoutDate > originalEndDate)) throw new Error('Early check-out date is outside the originally scheduled stay.');
     var values = [now, target.stayKey, target.booking.dogName, target.booking.startDate, target.booking.endDate, status, checkedInAt, checkedOutAt, String(data.note || '').trim(),
       early ? 'early' : (status === 'checked_out' ? 'standard' : ''), early ? EARLY_CHECKOUT_REASON_CODE_V11217_ : '', early ? EARLY_CHECKOUT_REASON_V11217_ : '', originalEndDate, actualCheckoutDate,
       String(requestedBy || '').trim()];

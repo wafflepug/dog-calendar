@@ -9,8 +9,8 @@ test('same-name roster operations expose the exact public guest context without 
   await page.waitForFunction(()=>document.documentElement.dataset.waffleUiReady==='true'&&window.WAFFLE_CARE_ROSTER_FOCUS);
   const first=page.locator(`#directory-grid [data-directory-stay-id="${bookings[0].stayId}"]`);
   const second=page.locator(`#directory-grid [data-directory-stay-id="${bookings[1].stayId}"]`);
-  await expect(first.locator('[data-v11217-roster-checkin]')).toHaveAccessibleName('Check in Milo, Dog ID #00017, owner Alex, booked 18 Oct 2026 to 20 Oct 2026');
-  await expect(second.locator('[data-v11217-roster-checkin]')).toHaveAccessibleName('Check in Milo, Dog ID #00018, owner Bea, booked 18 Oct 2026 to 18 Oct 2026');
+  await expect(first.locator('[data-v11217-roster-checkin]')).toHaveAccessibleName('Check-in Milo, Dog ID #00017, owner Alex, booked 18 Oct 2026 to 20 Oct 2026');
+  await expect(second.locator('[data-v11217-roster-checkin]')).toHaveAccessibleName('Check-in Milo, Dog ID #00018, owner Bea, booked 18 Oct 2026 to 18 Oct 2026');
   await first.locator('.v11217-roster-more-actions summary').click();
   await expect(first.locator('.v11217-roster-more-actions [data-v11217-early-checkout]')).toHaveAccessibleName('Record early checkout for Milo, Dog ID #00017, owner Alex, booked 18 Oct 2026 to 20 Oct 2026');
   expect(fixture.reads.filter(action=>action==='get_guest_profile')).toHaveLength(0);
@@ -25,8 +25,8 @@ test('same-owner stays without a public Dog Number use their booked dates to dis
   await page.waitForFunction(()=>document.documentElement.dataset.waffleUiReady==='true'&&window.WAFFLE_CARE_ROSTER_FOCUS);
   const first=page.locator(`#directory-grid [data-directory-stay-id="${bookings[0].stayId}"] [data-v11217-roster-checkin]`);
   const second=page.locator(`#directory-grid [data-directory-stay-id="${bookings[1].stayId}"] [data-v11217-roster-checkin]`);
-  await expect(first).toHaveAccessibleName('Check in Milo, owner Alex, booked 18 Oct 2026 to 18 Oct 2026');
-  await expect(second).toHaveAccessibleName('Check in Milo, owner Alex, booked 17 Oct 2026 to 18 Oct 2026');
+  await expect(first).toHaveAccessibleName('Check-in Milo, owner Alex, booked 18 Oct 2026 to 18 Oct 2026');
+  await expect(second).toHaveAccessibleName('Check-in Milo, owner Alex, booked 17 Oct 2026 to 18 Oct 2026');
   expect(await first.getAttribute('aria-label')).not.toContain('Dog ID');
   expect(await second.getAttribute('aria-label')).not.toContain('Dog ID');
   await page.evaluate(()=>{window.__identityWrites=[];window.sendPayloadToAppsScript=async payload=>{window.__identityWrites.push(payload);return{result:'success'};};});
@@ -52,7 +52,7 @@ test('a rendered public Dog Number is used only when its whole label parses as a
     card.appendChild(rendered);
     window.v110EnsureCareOperationBar(card);
   });
-  await expect(second.locator('[data-v11217-roster-checkin]')).toHaveAccessibleName('Check in Milo, Dog ID #00018, owner Bea, booked 18 Oct 2026 to 18 Oct 2026');
+  await expect(second.locator('[data-v11217-roster-checkin]')).toHaveAccessibleName('Check-in Milo, Dog ID #00018, owner Bea, booked 18 Oct 2026 to 18 Oct 2026');
   expect(fixture.reads.filter(action=>action==='get_guest_profile')).toHaveLength(0);
 });
 
@@ -62,17 +62,17 @@ test('same-name checkout dialog refreshes its public identity context for each s
   await page.waitForFunction(()=>document.documentElement.dataset.waffleUiReady==='true'&&window.WAFFLE_CARE_ROSTER_FOCUS);
   const first=page.locator(`#directory-grid [data-directory-stay-id="${bookings[0].stayId}"]`);
   const second=page.locator(`#directory-grid [data-directory-stay-id="${bookings[1].stayId}"]`);
-  await expect(first.locator('[data-v11217-roster-checkout]')).toHaveAccessibleName('Check out Milo, Dog ID #00017, owner Alex, booked 18 Oct 2026 to 18 Oct 2026');
-  await expect(second.locator('[data-v11217-roster-checkout]')).toHaveAccessibleName('Check out Milo, Dog ID #00018, owner Bea, booked 18 Oct 2026 to 18 Oct 2026');
+  await expect(first.locator('[data-v11217-roster-checkout]')).toHaveAccessibleName('Check-out Milo, Dog ID #00017, owner Alex, booked 18 Oct 2026 to 18 Oct 2026');
+  await expect(second.locator('[data-v11217-roster-checkout]')).toHaveAccessibleName('Check-out Milo, Dog ID #00018, owner Bea, booked 18 Oct 2026 to 18 Oct 2026');
   await page.evaluate(()=>{window.__identityWrites=[];window.sendPayloadToAppsScript=async payload=>{window.__identityWrites.push(payload);return{result:'success'};};});
   const modal=page.locator('#v11217GuidedCheckout');
   await first.locator('[data-v11217-roster-checkout]').click();
-  await expect(modal).toHaveAccessibleName('Check out Milo');
+  await expect(modal).toHaveAccessibleName('Check-out for Milo');
   await expect(modal).toHaveAccessibleDescription(/Dog ID #00017 · owner Alex · booked 18 Oct 2026 to 18 Oct 2026/);
   await modal.locator('[data-v11217-guided-close]').last().click();
   await expect(modal).toBeHidden();
   await second.locator('[data-v11217-roster-checkout]').click();
-  await expect(modal).toHaveAccessibleName('Check out Milo');
+  await expect(modal).toHaveAccessibleName('Check-out for Milo');
   await expect(modal).toHaveAccessibleDescription(/Dog ID #00018 · owner Bea · booked 18 Oct 2026 to 18 Oct 2026/);
   await modal.locator('[data-v11217-guided-close]').last().click();
   await expect(modal).toBeHidden();
@@ -479,7 +479,7 @@ test('Care visual cleanup keeps one status, compact filters and themed readable 
   await expect(row.locator('.v1118-care-status')).toHaveText('ARRIVING TODAY');
   await expect(row.locator('.v1118-care-signal',{hasText:'Arrival today'})).toHaveCount(0);
   await expect(row.locator('.v1118-care-signal',{hasText:'Medication'})).toBeVisible();
-  await expect(last.locator('.v1118-care-signal',{hasText:'Checkout today'})).toHaveCount(0);
+  await expect(last.locator('.v1118-care-signal',{hasText:'Check-out today'})).toHaveCount(0);
   const next=page.locator('[data-waffle-arrival-next]');await expect(next).toBeVisible();
   const readsBefore=fixture.reads.filter(x=>x==='get_guest_profile').length;
   for(const dark of [false,true])for(const accent of ['waffle-purple','coastal-blue','eucalyptus','sunset-coral','warm-honey']){

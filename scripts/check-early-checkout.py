@@ -45,7 +45,7 @@ require(frontend, "VERSION = '11.2.17'")
 require(frontend, "REASON_CODE = 'owner_request'")
 require(frontend, "REASON = 'Owner requested early checkout'")
 require(frontend, 'data-v11217-early-checkout')
-require(frontend, 'Confirm Early Checkout')
+require(frontend, 'Confirm early check-out')
 require(frontend, "action: 'early_checkout_stay'")
 require(frontend, "checkoutType: 'early'")
 require(frontend, 'originalEndDate: p.endDate')
@@ -124,4 +124,4 @@ if not bootstrap_revision or bootstrap_revision.group(1) != asset_revision:
 if errors:
     raise SystemExit('\n'.join(errors))
 
-print('Early checkout contract passed.')
+print('Early check-out contract passed.')

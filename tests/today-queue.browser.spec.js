@@ -78,13 +78,13 @@ test('confirmed same-day arrivals expose one direct Check-in action and transiti
     window.globalCalendar = { getEvents: () => [stay] };
     renderV10OperationsHome([stay]);
   });
-  const action = page.getByRole('button', { name: 'Check in Pip' });
+  const action = page.getByRole('button', { name: 'Check-in Pip' });
   await expect(action).toHaveCount(1);
   await expect(action).toHaveAttribute('data-today-action', 'checkin');
   await action.dblclick();
   await expect.poll(() => page.evaluate(() => window.todayWrites.length)).toBe(1);
-  await expect(page.getByRole('button', { name: 'Check out Pip' })).toHaveAttribute('data-today-action', 'checkout');
-  await page.getByRole('button', { name: 'Check out Pip' }).click();
+  await expect(page.getByRole('button', { name: 'Check-out Pip' })).toHaveAttribute('data-today-action', 'checkout');
+  await page.getByRole('button', { name: 'Check-out Pip' }).click();
   await expect.poll(() => page.evaluate(() => window.todayWrites.length)).toBe(2);
   const writes = await page.evaluate(() => window.todayWrites.map(write => ({
     status: write.status,
@@ -111,14 +111,14 @@ test('Today action failures stay visible and stale event identity is rejected wi
     window.globalCalendar = { getEvents: () => [stay] };
     renderV10OperationsHome([stay]);
   });
-  await page.getByRole('button', { name: 'Check in Milo' }).click();
+  await page.getByRole('button', { name: 'Check-in Milo' }).click();
   await expect(page.locator('[data-today-action-status]')).toContainText('could not be confirmed');
   await expect(page.locator('[data-today-action-status]')).toContainText('Server did not confirm the stay');
-  await expect(page.getByRole('button', { name: 'Check in Milo' })).toBeEnabled();
+  await expect(page.getByRole('button', { name: 'Check-in Milo' })).toBeEnabled();
   await page.evaluate(() => {
     window.todayStay.extendedProps.start = '2026-10-18';
   });
-  await page.getByRole('button', { name: 'Check in Milo' }).click();
+  await page.getByRole('button', { name: 'Check-in Milo' }).click();
   await expect(page.locator('[data-today-action-status]')).toContainText('changed or is not eligible');
   await expect.poll(() => page.evaluate(() => window.todayWrites)).toBe(1);
 });
@@ -132,7 +132,7 @@ test('potential and unconfirmed visits never expose operational actions; complet
     window.v110OperationForStay = event => event.extendedProps.stayId === '33333333-3333-4333-8333-333333333333' ? { status: 'checked_in' } : null;
     renderV10OperationsHome([confirmed, potential, unconfirmed]);
   });
-  await expect(page.getByRole('button', { name: 'Check in Coco' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Check-in Coco' })).toHaveCount(0);
   await expect(page.locator('#v10TodayAgenda')).not.toContainText('Coco');
   await expect(page.locator('#v10TodayStatus')).toHaveText('1 item today');
   await expect(page.getByRole('button', { name: /Nori|Biscuit/ })).toHaveCount(0);

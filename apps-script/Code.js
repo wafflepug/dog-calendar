@@ -2495,7 +2495,7 @@ function getPastGuestDirectoryPayload_(data) {
   );
 
   /* Past includes date-completed stays and any stay explicitly checked out.
-   * Operational checkout wins immediately, including on the checkout date or
+   * Operational checkout wins immediately, including on the check-out date or
    * before the original booking end date. */
   var candidateStayKeys =
     bookings.map(
@@ -4482,7 +4482,7 @@ function createV108Boarding_(data) {
   var dogName=String(data.dogName||"").trim(), breed=String(data.breed||"").trim(), owner=String(data.ownerName||"").trim(), phone=String(data.phone||"").trim();
   var start=normalizeDateValue_(data.startDate), end=normalizeDateValue_(data.endDate||data.startDate);
   if (!dogName || !breed || !owner || !phone || !start || !end) throw new Error("Dog Name, Breed, dates, Owner and Contact Number are required.");
-  if (end < start) throw new Error("Check-Out cannot be earlier than Check-In.");
+  if (end < start) throw new Error("Check-out cannot be earlier than Check-in.");
   var sheet=getTargetSheet_();
   var rows=sheet.getDataRange().getValues();
   sitterPlanningAssert_(rows,start,end,dogName,0);
@@ -16692,15 +16692,15 @@ function pad2_(value) {
 function validatePotentialPayload_(data) {
   if (!String(data.dogName || "").trim()) throw new Error("Dog Name is required.");
   if (!String(data.breed || "").trim()) throw new Error("Breed is required.");
-  if (!String(data.startDate || "").trim()) throw new Error("Check-In Date is required.");
-  if (!String(data.endDate || "").trim()) throw new Error("Check-Out Date is required.");
+  if (!String(data.startDate || "").trim()) throw new Error("Check-in date is required.");
+  if (!String(data.endDate || "").trim()) throw new Error("Check-out date is required.");
   if (!String(data.ownerName || "").trim()) throw new Error("Owner Name is required.");
   if (!String(data.phone || "").trim()) throw new Error("Contact Number is required.");
 
   var start = normalizeDateValue_(data.startDate);
   var end = normalizeDateValue_(data.endDate);
   if (start && end && end < start) {
-    throw new Error("Check-Out Date cannot be earlier than Check-In Date.");
+    throw new Error("Check-out date cannot be earlier than Check-in date.");
   }
 }
 
@@ -21904,7 +21904,7 @@ function buildBoardingEmailList_(
             item.endDate
           )
           : (
-            "Checkout date: " +
+            "Check-out date: " +
             item.endDate
           );
 

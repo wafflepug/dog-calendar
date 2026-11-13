@@ -250,9 +250,9 @@ function v111EnsureArrivalModal() {
                 renderV10OperationsHome(globalCalendar?.getEvents()?.slice() || current);
             }
         } catch (error) {
-            alert('Check In could not be saved.\n\n' + (error?.message || String(error)));
+            alert('Check-in could not be saved.\n\n' + (error?.message || String(error)));
             button.disabled = false;
-            button.textContent = '🛬 Check In';
+            button.textContent = '🛬 Check-in';
         }
     });
 
@@ -280,7 +280,7 @@ async function v111RenderArrivalModal() {
                 <span>${v110Escape(props.breed || 'Breed not recorded')}</span>
                 <small>${v110Escape(formatStayDateShort(dates.start))} → ${v110Escape(formatStayDateShort(dates.end))}</small>
             </div>
-            <button type="button" class="v110-checkin-button" data-v111-arrival-checkin="${index}">🛬 Check In</button>
+            <button type="button" class="v110-checkin-button" data-v111-arrival-checkin="${index}">🛬 Check-in</button>
         </article>`;
     }).join('');
 

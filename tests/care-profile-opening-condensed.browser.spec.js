@@ -52,7 +52,7 @@ async function setup(page, theme, width) {
   await expect(page.locator('[data-v110-operation-bar]')).toHaveCount(3);
 }
 
-test('selected Care profile keeps Check In primary and groups secondary checkout actions without changing their targets', async ({ browser, browserName }) => {
+test('selected Care profile keeps Check-in primary and groups secondary checkout actions without changing their targets', async ({ browser, browserName }) => {
   test.setTimeout(45000);
   for (const theme of ['', 'dark-theme']) {
     for (const width of [320, 390, 1440]) {

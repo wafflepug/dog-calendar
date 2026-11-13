@@ -19,8 +19,8 @@ test('busy day: check in the correct Milo, review that stay’s care, then compl
   const sameName=page.locator(`#directory-grid [data-directory-stay-id="${bookings[1].stayId}"]`);
   await expect(first).toHaveAttribute('data-directory-dog-id',bookings[0].dogId);
   await expect(sameName).toHaveAttribute('data-directory-dog-id',bookings[1].dogId);
-  await expect(first.locator('[data-v11217-roster-checkin]')).toHaveAccessibleName('Check in Milo, Dog ID #00017, owner Alex, booked 18 Oct 2026 to 20 Oct 2026');
-  await expect(sameName.locator('[data-v11217-roster-checkin]')).toHaveAccessibleName('Check in Milo, Dog ID #00018, owner Bea, booked 18 Oct 2026 to 18 Oct 2026');
+  await expect(first.locator('[data-v11217-roster-checkin]')).toHaveAccessibleName('Check-in Milo, Dog ID #00017, owner Alex, booked 18 Oct 2026 to 20 Oct 2026');
+  await expect(sameName.locator('[data-v11217-roster-checkin]')).toHaveAccessibleName('Check-in Milo, Dog ID #00018, owner Bea, booked 18 Oct 2026 to 18 Oct 2026');
 
   await page.exposeFunction('__recordBusyDayCheckIn',payload=>fixture.recordCheckIn(payload));
   await page.exposeFunction('__recordBusyDayCheckout',payload=>fixture.recordCheckout(payload));

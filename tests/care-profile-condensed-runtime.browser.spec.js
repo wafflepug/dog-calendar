@@ -218,7 +218,7 @@ for (const [task, expectedAction, destination] of [
   });
 }
 
-test('arrival review keyboard Check In stays available after a failed save and is removed after the confirmed retry', async ({ page, baseURL }) => {
+test('arrival review keyboard Check-in stays available after a failed save and is removed after the confirmed retry', async ({ page, baseURL }) => {
   const reads = await fixture(page, { checkinMode: 'fail-first' });
   await page.setViewportSize({ width: 390, height: 900 });
   await page.goto(`${baseURL}/directory.html?arrivalTaskFixture=1`, { waitUntil: 'domcontentloaded' });
