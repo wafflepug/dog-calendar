@@ -333,6 +333,10 @@
       const id = String(card?.dataset.directoryStayId || checkout?.dataset.todayStayId || '').toLowerCase();
       if (!validId(id)) return;
       const record = records[id];
+      if (checkout && !record?.total) {
+        host.querySelector('[data-sales-stay]')?.remove();
+        return;
+      }
       const label = record?.total ? record.total === paid(record) ? 'Paid' : money(record.total-paid(record))+(record.channel === 'marketplace' ? ' payout pending' : ' due') : 'Set price';
       let button = host.querySelector('[data-sales-stay]');
       if (!button) {

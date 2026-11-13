@@ -32,11 +32,13 @@ test('the shipped Today page keeps profile links, exposes direct confirmed-stay 
     if (!['GET','HEAD'].includes(req.method())) { writes.push(req.method()); return route.fulfill({status:405,body:'Read-only fixture'}); }
     if (url.includes('docs.google.com/spreadsheets') && url.includes('output=csv')) return route.fulfill({contentType:'text/csv',body:csv});
     if (url.includes('cdn.jsdelivr.net') && url.includes('fullcalendar')) return route.fulfill({contentType:'application/javascript',body:calendar});
+    if (url.endsWith('/fixture-coco.svg')) return route.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><circle cx="32" cy="32" r="30" fill="teal"/></svg>'});
     if (url.includes('script.google')) {
       const resolved = resolveLocalBackendAction({method:req.method(),url});
-      if (!resolved.policy.allowed) { writes.push(resolved.action); return route.fulfill({status:403,body:'Read-only fixture'}); }
+      if (!resolved.policy.allowed && !['get_business_name','get_sitter_day_handovers'].includes(resolved.action)) { writes.push(resolved.action); return route.fulfill({status:403,body:'Read-only fixture'}); }
       const callback = new URL(url).searchParams.get('callback');
       const response = {result:'success',bookings:[],records:[],summaries:[],identities:[],totalPastStays:0};
+      if (resolved.action === 'get_belongings') response.records.push({stayKey:'coco|2026-10-12|2026-10-16',dogPhoto:{previewUrl:new URL('/fixture-coco.svg',baseURL).href}});
       return route.fulfill({contentType:'application/javascript',body:callback?`${callback}(${JSON.stringify(response)});`:JSON.stringify(response)});
     }
     if (/^https?:/.test(url) && new URL(url).hostname !== '127.0.0.1') return route.fulfill({body:'',contentType:req.resourceType()==='script'?'application/javascript':'text/css'});
@@ -51,6 +53,10 @@ test('the shipped Today page keeps profile links, exposes direct confirmed-stay 
     await expect(queue).toBeVisible();
     await expect(queue.getByRole('button', {name:'Check in Milo'})).toBeVisible();
     await expect(queue.getByRole('button', {name:'Check out Coco'})).toBeVisible();
+    const portrait = queue.getByRole('link', {name:/Open Coco care profile/}).locator('.wh-home-portrait img');
+    await expect(queue.getByRole('button', {name:'Set price'})).toHaveCount(0);
+    await expect(portrait).toHaveAttribute('src', /fixture-coco\.svg$/);
+    await expect.poll(() => portrait.evaluate(image => image.naturalWidth)).toBeGreaterThan(0);
     const checkin = queue.getByRole('button', {name:'Check in Milo'});
     await expect.poll(() => checkin.evaluate(button => button.isConnected ? button.getBoundingClientRect().height : 0)).toBeGreaterThanOrEqual(44);
     await expect.poll(() => checkin.evaluate(button => button.isConnected ? parseFloat(getComputedStyle(button).fontSize) : 0)).toBeGreaterThanOrEqual(13);
