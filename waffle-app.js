@@ -11188,6 +11188,8 @@ registerWaffleServiceWorker();
 
                 if (!readIsCurrent()) return true;
 
+                if (record.dogPhoto?.previewUrl) setDirectoryDogPhoto(stayKey, record, card);
+
                 if (hasDirtyProfileDraft()) {
                     updateDirectoryIntakeMetadata(card, record);
                     details.dataset.detailLoaded = 'true';
@@ -12547,6 +12549,9 @@ registerWaffleServiceWorker();
                 '[data-directory-detail="profile"]'
             );
 
+        const intakeLoad = getDirectoryProfileCard(stayKey, '', '', true) === card
+            ? hydrateDirectoryIntakeStatuses({ stayKeys: [stayKey], force: options.force === true })
+            : null;
         let profileLoad = null;
         if (profileSection) {
             profileLoad = loadDirectoryProfileDetail(
@@ -12562,7 +12567,7 @@ registerWaffleServiceWorker();
         }
 
         try {
-            if (profileLoad) await profileLoad;
+            await Promise.all([profileLoad, intakeLoad]);
             if (isCurrentProfile()) {
                 const sourceDeadline = Date.now() + 1500;
                 while (Date.now() < sourceDeadline && card.isConnected && card.classList.contains('is-profile-active') && !window.WAFFLE_V11112?.hydrateCard) {
@@ -17324,6 +17329,7 @@ registerWaffleServiceWorker();
                         directoryIntakeStatusCache,
                         key
                     ) ||
+                    directoryIntakeStatusCache[key]?.storedProfileFallback ||
                     !cacheFresh
                 );
 
@@ -18068,12 +18074,7 @@ registerWaffleServiceWorker();
         }
     }
 
-    function setDirectoryDogPhoto(stayKey, record) {
-        const card =
-            getDirectoryProfileCard(
-                stayKey
-            );
-
+    function setDirectoryDogPhoto(stayKey, record, card = getDirectoryProfileCard(stayKey)) {
         if (!card) return;
 
         const shell =
