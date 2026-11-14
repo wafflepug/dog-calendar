@@ -64,7 +64,7 @@ test('the shipped Today page keeps profile links, exposes direct confirmed-stay 
     expect(headingFonts[0]).toBe(headingFonts[1]);
     await expect(queue.getByRole('link', {name:/Open Milo care profile/})).toHaveAttribute('href', /stayId=11111111-1111-4111-8111-111111111111.*dogId=aaaaaaaa/);
     await page.evaluate(dark => document.body.classList.toggle('dark-theme', dark), width === 1440);
-    await expect.poll(() => queue.locator('.v10-agenda-action:visible').first().evaluate(element => {
+    await expect.poll(() => queue.locator('[data-today-meet-done]:visible').first().evaluate(element => {
       // A scheduled render can replace a row between locator resolution and
       // evaluation. Unknown/detached colours remain below the threshold.
       const rgb = value => {
@@ -72,7 +72,7 @@ test('the shipped Today page keeps profile links, exposes direct confirmed-stay 
         return channels?.length >= 3 ? channels.slice(0,3).map(Number).map(value => value/255) : null;
       };
       const lum = values => values.map(v => v <= .04045 ? v/12.92 : ((v+.055)/1.055)**2.4).reduce((sum,v,i) => sum+v*[.2126,.7152,.0722][i],0);
-      const row = element.closest('.v10-agenda-item');
+      const row = element;
       if (!element.isConnected || !row) return 0;
       const foregroundRgb = rgb(getComputedStyle(element).color);
       const backgroundRgb = rgb(getComputedStyle(row).backgroundColor);
@@ -84,7 +84,7 @@ test('the shipped Today page keeps profile links, exposes direct confirmed-stay 
     await queue.scrollIntoViewIfNeeded();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBeTruthy();
     await info.attach(`today-${width}`, {body:await page.screenshot({path:info.outputPath(`today-${width}.png`)}),contentType:'image/png'});
-    await queue.getByRole('button', {name:/Scout Meet & Greet/}).click();
+    await queue.getByRole('button', {name:/^Open Scout Meet & Greet/}).click();
     await expect(page.locator('#customBookingModal')).toBeVisible();
     await expect(page.locator('#modalTitle')).toHaveText(/Edit Meet & Greet/);
     await expect(page.locator('#modalDogName')).toHaveValue('Scout');
@@ -93,6 +93,16 @@ test('the shipped Today page keeps profile links, exposes direct confirmed-stay 
     await expect(page.locator('#customBookingModal .v1112-source-picker')).toHaveCount(1);
     await info.attach(`meet-greet-${width}`, {body:await page.locator('#customBookingModal .modal-content-panel').screenshot({path:info.outputPath(`meet-greet-${width}.png`)}),contentType:'image/png'});
   }
+  await page.locator('#closeModalBtn').click();
+  const done = page.getByRole('button', { name: 'Mark Scout Meet & Greet done' });
+  await expect(done).toBeVisible();
+  await info.attach('meet-greet-done', { body: await done.locator('..').screenshot(), contentType: 'image/png' });
+  await done.click();
+  await expect(page.locator('#v10TodayActionFeedback')).toHaveText('Meet & Greet marked done.');
+  await expect(page.locator('[data-today-open-meet]')).toHaveCount(0);
+  await page.reload();
+  await expect(page.locator('#v10TodayAgenda .v10-agenda-item')).toHaveCount(2);
+  await expect(page.locator('[data-today-meet-done]')).toHaveCount(0);
   expect(writes).toEqual([]);
   expect(errors).toEqual([]);
 });
