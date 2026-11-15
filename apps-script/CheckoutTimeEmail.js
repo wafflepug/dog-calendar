@@ -17,6 +17,7 @@ function sendCheckoutTimeReminderEmails_(now) {
   var recipient = getBoardingNotificationRecipient_();
   var cache = CacheService.getScriptCache();
   var sent = 0;
+  var packingLists;
   due.forEach(function(pickup) {
     if (operations.some(function(operation) {
       var id = String(operation.stayId || operation.identityStayId || '').trim().toLowerCase();
@@ -36,13 +37,15 @@ function sendCheckoutTimeReminderEmails_(now) {
       lock.releaseLock();
     }
 
+    if (!packingLists) packingLists = departureEmailPackingLists_(due);
+    var items = packingLists[pickup.stayKey];
     var message = pickup.dogName + ' is scheduled to check out at ' + pickup.time + ' on ' + pickup.date + '.';
     try {
       sendWaffleNotificationEmail_(recipient, {
         pet: pickup,
         subject: 'Checkout reminder — ' + pickup.dogName,
-        textBody: message,
-        htmlBody: '<p>' + escapeHtmlEmail_(message) + '</p>'
+        textBody: message + departureEmailPackingText_(items),
+        htmlBody: '<p>' + escapeHtmlEmail_(message) + '</p>' + departureEmailPackingHtml_(items)
       });
     } catch (_) {
       cache.remove(key);
