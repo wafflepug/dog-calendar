@@ -18,7 +18,7 @@ function createHarness(options = {}) {
     readPersistedDogMaster_: key => options.profiles?.[key] || null,
     DriveApp: { getFileById(id) {
       if (id === 'unavailable') throw new Error('missing photo');
-      return { getBlob: () => ({ id, getContentType: () => 'image/jpeg', getBytes: () => [1, 2, 3] }) };
+      return { getSize: () => 3, getBlob: () => ({ id, getContentType: () => 'image/jpeg', getBytes: () => [1, 2, 3] }) };
     } },
     readPalzBusinessBrand_: () => options.brand || { name: 'Waffle House' },
     intakeLogoBlob_: () => ({ type: 'image/png' }),
@@ -38,7 +38,7 @@ function createHarness(options = {}) {
     escapeHtmlEmail_(value) { return String(value).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch])); }
   };
   vm.createContext(sandbox);
-  vm.runInContext(source.slice(source.indexOf('function departureEmailPackingLists_('), end), sandbox);
+  vm.runInContext(source.slice(source.indexOf('function departureEmailBelongingsPhotos_('), end), sandbox);
   return { sandbox, sent, cached };
 }
 
@@ -166,28 +166,27 @@ for (const handlerStart of [source.indexOf('function doPost(e)'), source.indexOf
 
 {
   const { sandbox } = createHarness();
-  sandbox.BELONGINGS_ITEM_CONFIG_ = [
-    { key: 'beds', label: 'Beds' },
-    { key: 'toys', label: 'Toys' }
-  ];
   sandbox.getBelongingsSheetReadOnly_ = () => ({});
   sandbox.readBelongingsRecords_ = () => [
-    { stayKey: 'coco-january', stayId: 'january', dogId: 'coco', items: {
-      beds: { present: true, description: 'Blue <travel> bed' },
-      toys: { present: false, description: 'Do not pack' }
-    } },
-    { stayKey: 'coco-february', stayId: 'february', dogId: 'coco', items: {
-      beds: { present: true, description: 'Wrong booking' }
-    } }
+    { stayKey: 'coco-january', stayId: 'january', dogId: 'coco', photos: [
+      { id: 'travel-bed', label: 'Blue <travel> bed' },
+      { id: 'unavailable', label: 'Missing image' }
+    ], dogPhoto: { id: 'portrait' } },
+    { stayKey: 'coco-february', stayId: 'february', dogId: 'coco', photos: [{ id: 'wrong-booking' }] }
   ];
-  const lists = sandbox.departureEmailPackingLists_([
+  const photos = sandbox.departureEmailBelongingsPhotos_([
     { stayKey: 'coco-january', stayId: 'january', dogId: 'coco' },
     { stayKey: 'coco-february', stayId: 'different-booking', dogId: 'coco' }
   ]);
-  assert.deepEqual(Array.from(lists['coco-january']), ['Beds — Blue <travel> bed']);
-  assert.equal(lists['coco-february'], undefined);
-  assert.match(sandbox.departureEmailPackingHtml_(lists['coco-january']), /Blue &lt;travel&gt; bed/);
-  assert.match(sandbox.departureEmailPackingText_(lists['coco-january']), /Belongings to pack:\n- Beds — Blue <travel> bed/);
+  assert.equal(photos['coco-february'], undefined);
+  const media = { images: {}, bytesRemaining: 8 };
+  const section = sandbox.departureEmailPhotoSection_(photos['coco-january'], media);
+  assert.deepEqual(Object.keys(media.images), ['belongings_travel-bed']);
+  assert.equal(media.bytesRemaining, 5);
+  assert.match(section.html, /cid:belongings_travel-bed/);
+  assert.match(section.html, /Blue &lt;travel&gt; bed/);
+  assert.match(section.text, /Blue <travel> bed/);
+  assert.doesNotMatch(section.html, /Missing image|portrait/);
 }
 
 console.log('Booking notification email tests passed.');

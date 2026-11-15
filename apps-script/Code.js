@@ -21036,12 +21036,12 @@ function getBoardingNotificationRecipient_() {
 }
 
 
-function departureEmailPackingLists_(departures) {
-  var packingLists = Object.create(null);
-  if (!departures.length) return packingLists;
+function departureEmailBelongingsPhotos_(departures) {
+  var belongingsPhotos = Object.create(null);
+  if (!departures.length) return belongingsPhotos;
   try {
     var keys = departures.map(function(stay) { return stay.stayKey; }).filter(Boolean);
-    if (!keys.length) return packingLists;
+    if (!keys.length) return belongingsPhotos;
     var records = readBelongingsRecords_(getBelongingsSheetReadOnly_(), keys);
     var expected = Object.create(null);
     departures.forEach(function(stay) { expected[stay.stayKey] = stay; });
@@ -21049,31 +21049,46 @@ function departureEmailPackingLists_(departures) {
       var stay = expected[record.stayKey];
       if (!stay || (stay.stayId && stay.stayId !== record.stayId) ||
           (stay.dogId && stay.dogId.toLowerCase() !== record.dogId)) return;
-      packingLists[record.stayKey] = BELONGINGS_ITEM_CONFIG_.flatMap(function(item) {
-        var saved = record.items[item.key];
-        if (!saved || !saved.present) return [];
-        var description = String(saved.description || "").trim();
-        return [item.label + (description ? " — " + description : "")];
-      });
+      belongingsPhotos[record.stayKey] = record.photos;
     });
   } catch (_) {
     // Continue delivering departure reminders if the Care records are unavailable.
   }
-  return packingLists;
+  return belongingsPhotos;
 }
 
 
-function departureEmailPackingHtml_(items) {
-  if (!items || !items.length) return "";
-  return '<div style="margin-top:12px;padding:10px 12px;background:#f5f3ff;border-radius:8px;">' +
-    '<strong>Belongings to pack</strong><ul style="margin:4px 0 0;padding-left:20px;">' +
-    items.map(function(item) { return "<li>" + escapeHtmlEmail_(item) + "</li>"; }).join("") +
-    "</ul></div>";
-}
-
-
-function departureEmailPackingText_(items) {
-  return items && items.length ? "\nBelongings to pack:\n- " + items.join("\n- ") : "";
+function departureEmailPhotoSection_(photos, media) {
+  var html = [], labels = [];
+  (photos || []).forEach(function(photo) {
+    if (!photo || !/^[A-Za-z0-9_-]+$/.test(photo.id || "")) return;
+    var cid = "belongings_" + photo.id;
+    try {
+      if (!media.images[cid]) {
+        var file = DriveApp.getFileById(photo.id);
+        var size = file.getSize();
+        var blob = size <= media.bytesRemaining ? file.getBlob() : file.getThumbnail();
+        if (!blob || !/^image\/(?:jpeg|png|gif|webp)$/i.test(blob.getContentType())) return;
+        var bytes = size <= media.bytesRemaining ? size : blob.getBytes().length;
+        if (bytes > media.bytesRemaining) return;
+        media.images[cid] = blob;
+        media.bytesRemaining -= bytes;
+      }
+      var label = String(photo.label || "Belongings photo");
+      labels.push(label);
+      var safeLabel = escapeHtmlEmail_(label);
+      html.push('<div style="margin-top:10px;"><img src="cid:' + cid + '" alt="' + safeLabel +
+        '" width="280" style="display:block;width:280px;max-width:100%;height:auto;border:0;border-radius:8px;">' +
+        '<div style="font-size:13px;margin-top:4px;">' + safeLabel + '</div></div>');
+    } catch (_) {
+      // A missing or inaccessible file should not prevent the reminder from going out.
+    }
+  });
+  return {
+    html: html.length ? '<div style="margin-top:12px;padding:10px 12px;background:#f5f3ff;border-radius:8px;">' +
+      '<strong>Belongings photos</strong>' + html.join("") + "</div>" : "",
+    text: labels.length ? "\nBelongings photos included in the HTML email:\n- " + labels.join("\n- ") : ""
+  };
 }
 
 
@@ -21705,8 +21720,13 @@ function buildMorningBoardingEmail_(
       "d MMM"
     );
 
-  var packingLists = departureEmailPackingLists_(summary.departures);
+  var belongingsPhotos = departureEmailBelongingsPhotos_(summary.departures);
   var images = {};
+  var media = { images: images, bytesRemaining: 8 * 1024 * 1024 };
+  var departurePhotos = Object.create(null);
+  summary.departures.forEach(function(item) {
+    departurePhotos[item.stayKey] = departureEmailPhotoSection_(belongingsPhotos[item.stayKey], media);
+  });
   var html = [];
 
   html.push(
@@ -21755,7 +21775,7 @@ function buildMorningBoardingEmail_(
         summary.departures,
         "departure",
         images,
-        packingLists
+        departurePhotos
       )
     );
   }
@@ -21850,7 +21870,7 @@ function buildMorningBoardingEmail_(
           (
             item.phone ||
             "N/A"
-          ) + departureEmailPackingText_(packingLists[item.stayKey])
+          ) + departurePhotos[item.stayKey].text
         );
       }
     );
@@ -22036,7 +22056,7 @@ function buildBoardingEmailList_(
   items,
   mode,
   images,
-  packingLists
+  departurePhotos
 ) {
   var html = [
     '<div style="display:block;">'
@@ -22088,7 +22108,7 @@ function buildBoardingEmailList_(
           dateText
         ) +
         "</div>" +
-        (packingLists ? departureEmailPackingHtml_(packingLists[item.stayKey]) : "") +
+        (departurePhotos ? departurePhotos[item.stayKey].html : "") +
         "</div>"
       );
     }
