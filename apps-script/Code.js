@@ -21036,6 +21036,47 @@ function getBoardingNotificationRecipient_() {
 }
 
 
+function departureEmailPackingLists_(departures) {
+  var packingLists = Object.create(null);
+  if (!departures.length) return packingLists;
+  try {
+    var keys = departures.map(function(stay) { return stay.stayKey; }).filter(Boolean);
+    if (!keys.length) return packingLists;
+    var records = readBelongingsRecords_(getBelongingsSheetReadOnly_(), keys);
+    var expected = Object.create(null);
+    departures.forEach(function(stay) { expected[stay.stayKey] = stay; });
+    records.forEach(function(record) {
+      var stay = expected[record.stayKey];
+      if (!stay || (stay.stayId && stay.stayId !== record.stayId) ||
+          (stay.dogId && stay.dogId.toLowerCase() !== record.dogId)) return;
+      packingLists[record.stayKey] = BELONGINGS_ITEM_CONFIG_.flatMap(function(item) {
+        var saved = record.items[item.key];
+        if (!saved || !saved.present) return [];
+        var description = String(saved.description || "").trim();
+        return [item.label + (description ? " — " + description : "")];
+      });
+    });
+  } catch (_) {
+    // Continue delivering departure reminders if the Care records are unavailable.
+  }
+  return packingLists;
+}
+
+
+function departureEmailPackingHtml_(items) {
+  if (!items || !items.length) return "";
+  return '<div style="margin-top:12px;padding:10px 12px;background:#f5f3ff;border-radius:8px;">' +
+    '<strong>Belongings to pack</strong><ul style="margin:4px 0 0;padding-left:20px;">' +
+    items.map(function(item) { return "<li>" + escapeHtmlEmail_(item) + "</li>"; }).join("") +
+    "</ul></div>";
+}
+
+
+function departureEmailPackingText_(items) {
+  return items && items.length ? "\nBelongings to pack:\n- " + items.join("\n- ") : "";
+}
+
+
 function notificationPetPhotoHtml_(pet, images, rows) {
   try {
     var dogId = String(pet.dogId || "").trim();
@@ -21345,6 +21386,7 @@ function buildTodayBoardingNotificationSummary_(
 
     if (endDate === today) {
       summary.departures.push({
+        stayKey: makeGuestStayKey_(dogName, startDate, endDate),
         dogId: dogId,
         dogName: dogName,
         breed: breed,
@@ -21663,6 +21705,7 @@ function buildMorningBoardingEmail_(
       "d MMM"
     );
 
+  var packingLists = departureEmailPackingLists_(summary.departures);
   var images = {};
   var html = [];
 
@@ -21711,7 +21754,8 @@ function buildMorningBoardingEmail_(
       buildBoardingEmailList_(
         summary.departures,
         "departure",
-        images
+        images,
+        packingLists
       )
     );
   }
@@ -21806,7 +21850,7 @@ function buildMorningBoardingEmail_(
           (
             item.phone ||
             "N/A"
-          )
+          ) + departureEmailPackingText_(packingLists[item.stayKey])
         );
       }
     );
@@ -21991,7 +22035,8 @@ function buildMeetGreetReminderEmail_(
 function buildBoardingEmailList_(
   items,
   mode,
-  images
+  images,
+  packingLists
 ) {
   var html = [
     '<div style="display:block;">'
@@ -22043,6 +22088,7 @@ function buildBoardingEmailList_(
           dateText
         ) +
         "</div>" +
+        (packingLists ? departureEmailPackingHtml_(packingLists[item.stayKey]) : "") +
         "</div>"
       );
     }
