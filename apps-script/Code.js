@@ -4932,8 +4932,16 @@ function getDogMasterSheet_(){
 }
 function findDogMasterRow_(sh,key){key=String(key||"").trim();if(!key||sh.getLastRow()<2)return -1;var v=sh.getRange(2,2,sh.getLastRow()-1,1).getDisplayValues();for(var i=0;i<v.length;i++)if(String(v[i][0]||"").trim()===key)return i+2;return -1;}
 function parseJsonObjectV11_(v,f){f=f===undefined?{}:f;if(!v)return f;try{var p=typeof v==="string"?JSON.parse(v):v;return p&&typeof p==="object"?p:f;}catch(_){return f;}}
-function readPersistedDogMaster_(key){
-  var sh=getDogMasterSheet_(), row=findDogMasterRow_(sh,key); if(row===-1)return null; var v=sh.getRange(row,1,1,getDogMasterHeaders_().length).getValues()[0];
+function readPersistedDogMaster_(key, readOnly){
+  var sh;
+  if (readOnly) {
+    var name = String(PropertiesService.getScriptProperties().getProperty("DOG_MASTER_SHEET_NAME") || "Dog_Master_Profiles").trim();
+    sh = getTargetSheet_().getParent().getSheetByName(name);
+    if (!sh) return null;
+  } else {
+    sh = getDogMasterSheet_();
+  }
+  var row=findDogMasterRow_(sh,key); if(row===-1)return null; var v=sh.getRange(row,1,1,getDogMasterHeaders_().length).getValues()[0];
   return {persisted:true,updatedAt:v[0] instanceof Date?v[0].toISOString():String(v[0]||""),masterKey:String(v[1]||""),dogName:String(v[2]||""),breed:String(v[3]||""),ownerName:String(v[4]||""),phone:String(v[5]||""),notes:String(v[6]||""),profile:parseJsonObjectV11_(v[7],{}),riskFlags:parseJsonObjectV11_(v[8],{}),primaryPhoto:parseJsonObjectV11_(v[9],null),photoGallery:parseV108DogPhotoGalleryJson_(v[10]),lastStayKey:String(v[11]||""),stayCount:Number(v[12]||0)};
 }
 function dogMasterKeyForIdentity_(dogName, breed, dogId) { return dogId ? "dog|" + String(dogId).trim() : makeDogMasterKey_(dogName, breed); }
@@ -6288,6 +6296,8 @@ function auditBookingSnapshotFromSheetRow_(sheet, rowNumber) {
   var snapshot = auditBookingSnapshotFromValues_(sheet.getRange(rowNumber, 1, 1, 12).getValues()[0]);
   var cols = stableStayHeadersV11225_(sheet, false);
   snapshot.stayId = cols.stayId ? String(sheet.getRange(rowNumber, cols.stayId).getValue() || "").trim() : "";
+  var dogColumns = v108DogIdentityColumns_(sheet, false);
+  if (dogColumns.id >= 0) snapshot.dogId = String(sheet.getRange(rowNumber, dogColumns.id + 1).getValue() || "").trim();
   return snapshot;
 }
 
@@ -21026,6 +21036,49 @@ function getBoardingNotificationRecipient_() {
 }
 
 
+function notificationPetPhotoHtml_(pet, images, rows) {
+  try {
+    var dogId = String(pet.dogId || "").trim();
+    var phone = pet.dogId ? "" : legacyPhoneDigits_(pet.phone);
+    if (!dogId && phone.length >= 9 && pet.dogName) {
+      rows = rows || getTargetSheet_().getDataRange().getValues();
+      var matches = rows.slice(1).reduce(function(ids, row, index) {
+        if (v108LinkableBoardingType_(row[11]) &&
+            normalizeV108Identity_(row[1]) === normalizeV108Identity_(pet.dogName) &&
+            (!pet.breed || normalizeV108Identity_(row[2]) === normalizeV108Identity_(pet.breed)) &&
+            legacyPhoneDigits_(row[6]) === phone) {
+          ids.add(v108DogIdentityAt_(rows, index + 1).dogId);
+        }
+        return ids;
+      }, new Set());
+      if (matches.size === 1) dogId = matches.values().next().value;
+    }
+    if (!validStayIdV11225_(dogId)) return "";
+
+    var cid = "petPhoto" + dogId.replace(/-/g, "");
+    if (!images[cid]) {
+      var master = readPersistedDogMaster_(dogMasterKeyForIdentity_("", "", dogId), true);
+      var photo = master && master.primaryPhoto;
+      if (!photo || !photo.id) {
+        var derived = deriveDogMasterProfile_(pet.dogName, pet.breed, dogId, rows);
+        photo = derived.primaryPhoto;
+      }
+      if (!photo || !photo.id) return "";
+
+      var blob = DriveApp.getFileById(String(photo.id)).getBlob();
+      if (!/^image\/(?:jpeg|png|gif|webp)$/i.test(blob.getContentType()) ||
+          blob.getBytes().length > 512 * 1024) return "";
+      images[cid] = blob;
+    }
+    return '<img src="cid:' + cid + '" alt="' + escapeHtmlEmail_(pet.dogName) +
+      '" width="64" style="display:block;width:64px;max-height:80px;height:auto;object-fit:contain;border:0;border-radius:12px;margin:0 0 8px;">';
+  } catch (_) {
+    // Keep the notification deliverable if the profile or Drive image is unavailable.
+    return "";
+  }
+}
+
+
 function sendWaffleNotificationEmail_(recipient, email) {
   if (MailApp.getRemainingDailyQuota() < 1) {
     throw new Error(
@@ -21058,6 +21111,9 @@ function sendWaffleNotificationEmail_(recipient, email) {
   var testPrefix = subject.indexOf("[TEST] ") === 0 ? "[TEST] " : "";
   var heading = '<img src="https://wafflepug.github.io/dog-calendar/assets/palz-email-logo.png?v=2" ' +
     'alt="Palz Stay" width="160" height="41" style="display:block;width:160px;max-width:100%;height:auto;border:0;">';
+  var images = Object.assign({}, email.inlineImages);
+  if (businessLogo) images.businessLogo = businessLogo;
+  var petPhoto = email.pet ? notificationPetPhotoHtml_(email.pet, images) : "";
   var html = '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" ' +
     'style="background:#f5f3ff;font-family:Arial,sans-serif;color:#171633;">' +
     '<tr><td align="center" style="padding:16px;">' +
@@ -21068,7 +21124,7 @@ function sendWaffleNotificationEmail_(recipient, email) {
     heading +
     '<div style="padding-top:4px;font-size:13px;color:#51466a;">' + escapeHtmlEmail_(businessName) + '</div></td>' +
     businessLogoCell + '</tr></table></td></tr>' +
-    '<tr><td style="padding:16px 20px;font-size:15px;line-height:1.5;">' + email.htmlBody +
+    '<tr><td style="padding:16px 20px;font-size:15px;line-height:1.5;">' + petPhoto + email.htmlBody +
     '</td></tr></table></td></tr></table>';
 
   var message = {
@@ -21078,7 +21134,7 @@ function sendWaffleNotificationEmail_(recipient, email) {
     htmlBody: html,
     name: "Palz Stay"
   };
-  if (businessLogo) message.inlineImages = { businessLogo: businessLogo };
+  if (Object.keys(images).length) message.inlineImages = images;
   MailApp.sendEmail(message);
 }
 
@@ -21160,6 +21216,7 @@ function sendBookingLifecycleEmailSafely_(data, result) {
     }
     sendWaffleNotificationEmail_(recipient, {
       subject: subject,
+      pet: { dogId: booking.dogId || result.dogId, dogName: petName, breed: booking.breed || data.breed, phone: booking.phone || data.phone },
       textBody: [event.label].concat(details).join("\n"),
       htmlBody: "<div style=\"font-family:Arial,sans-serif;color:#172033\"><p><strong>" +
         escapeHtmlEmail_(event.label) + "</strong></p><p>" +
@@ -21196,6 +21253,7 @@ function buildTodayBoardingNotificationSummary_(
     var dogName = String(row[1] || "").trim();
     if (!dogName) continue;
 
+    var dogId = v108DogIdentityAt_(values, i).dogId;
     var breed =
       String(row[2] || "").trim() ||
       "Unknown";
@@ -21240,8 +21298,10 @@ function buildTodayBoardingNotificationSummary_(
           extractMeetGreetTime_(notes);
 
         summary.meetGreets.push({
+          dogId: dogId,
           dogName: dogName,
           breed: breed,
+          phone: phone,
           time: parsedMeetTime.display,
           timeMinutes: parsedMeetTime.minutes,
           notes: notes
@@ -21271,6 +21331,7 @@ function buildTodayBoardingNotificationSummary_(
 
     if (startDate === today) {
       summary.arrivals.push({
+        dogId: dogId,
         dogName: dogName,
         breed: breed,
         ownerName: ownerName,
@@ -21284,6 +21345,7 @@ function buildTodayBoardingNotificationSummary_(
 
     if (endDate === today) {
       summary.departures.push({
+        dogId: dogId,
         dogName: dogName,
         breed: breed,
         ownerName: ownerName,
@@ -21601,6 +21663,7 @@ function buildMorningBoardingEmail_(
       "d MMM"
     );
 
+  var images = {};
   var html = [];
 
   html.push(
@@ -21633,7 +21696,8 @@ function buildMorningBoardingEmail_(
     html.push(
       buildBoardingEmailList_(
         summary.arrivals,
-        "arrival"
+        "arrival",
+        images
       )
     );
   }
@@ -21646,7 +21710,8 @@ function buildMorningBoardingEmail_(
     html.push(
       buildBoardingEmailList_(
         summary.departures,
-        "departure"
+        "departure",
+        images
       )
     );
   }
@@ -21766,6 +21831,7 @@ function buildMorningBoardingEmail_(
 
   return {
     subject: subject,
+    inlineImages: images,
     htmlBody: html.join(""),
     textBody: text.join("\n")
   };
@@ -21915,6 +21981,7 @@ function buildMeetGreetReminderEmail_(
 
   return {
     subject: subject,
+    pet: meet,
     htmlBody: html.join(""),
     textBody: text.join("\n")
   };
@@ -21923,7 +21990,8 @@ function buildMeetGreetReminderEmail_(
 
 function buildBoardingEmailList_(
   items,
-  mode
+  mode,
+  images
 ) {
   var html = [
     '<div style="display:block;">'
@@ -21946,6 +22014,7 @@ function buildBoardingEmailList_(
 
       html.push(
         '<div style="border:1px solid #e2e8f0;border-radius:8px;padding:11px 12px;margin-bottom:9px;">' +
+        notificationPetPhotoHtml_(item, images) +
         '<div style="font-size:16px;font-weight:700;">🐾 ' +
         escapeHtmlEmail_(
           item.dogName

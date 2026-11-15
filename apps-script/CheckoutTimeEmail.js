@@ -39,6 +39,7 @@ function sendCheckoutTimeReminderEmails_(now) {
     var message = pickup.dogName + ' is scheduled to check out at ' + pickup.time + ' on ' + pickup.date + '.';
     try {
       sendWaffleNotificationEmail_(recipient, {
+        pet: pickup,
         subject: 'Checkout reminder — ' + pickup.dogName,
         textBody: message,
         htmlBody: '<p>' + escapeHtmlEmail_(message) + '</p>'

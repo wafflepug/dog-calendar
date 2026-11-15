@@ -13,6 +13,13 @@ function createHarness(options = {}) {
   const cached = new Map();
   const sandbox = {
     String, Object, Array, RegExp,
+    validStayIdV11225_: id => /^[0-9a-f-]{36}$/.test(id || ''),
+    dogMasterKeyForIdentity_: (_name, _breed, id) => 'dog|' + id,
+    readPersistedDogMaster_: key => options.profiles?.[key] || null,
+    DriveApp: { getFileById(id) {
+      if (id === 'unavailable') throw new Error('missing photo');
+      return { getBlob: () => ({ id, getContentType: () => 'image/jpeg', getBytes: () => [1, 2, 3] }) };
+    } },
     readPalzBusinessBrand_: () => options.brand || { name: 'Waffle House' },
     intakeLogoBlob_: () => ({ type: 'image/png' }),
     Utilities: { base64Decode: value => value, newBlob: (bytes, type) => ({ bytes, type }) },
@@ -31,7 +38,7 @@ function createHarness(options = {}) {
     escapeHtmlEmail_(value) { return String(value).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch])); }
   };
   vm.createContext(sandbox);
-  vm.runInContext(source.slice(start, end) + '\n' + source.slice(source.indexOf('function sendWaffleNotificationEmail_('), source.indexOf('function buildTodayBoardingNotificationSummary_(')), sandbox);
+  vm.runInContext(source.slice(source.indexOf('function notificationPetPhotoHtml_('), end), sandbox);
   return { sandbox, sent, cached };
 }
 
@@ -132,3 +139,27 @@ for (const handlerStart of [source.indexOf('function doPost(e)'), source.indexOf
 }
 
 console.log('Booking lifecycle email tests passed.');
+
+
+{
+  const firstId = '12345678-1234-4234-8234-123456789001';
+  const secondId = '12345678-1234-4234-8234-123456789002';
+  const { sandbox, sent } = createHarness({
+    profiles: {
+      ['dog|' + firstId]: { primaryPhoto: { id: 'unavailable' } },
+      ['dog|' + secondId]: { primaryPhoto: { id: 'correct-portrait' } }
+    }
+  });
+  for (const dogId of [firstId, secondId]) {
+    sandbox.sendBookingLifecycleEmailSafely_(
+      { action: 'delete_confirmed_stay', clientMutationId: dogId },
+      { result: 'success', deletedBooking: { dogName: 'Coco', dogId } }
+    );
+  }
+  const cid = 'petPhoto' + secondId.replace(/-/g, '');
+  assert.equal(sent.length, 2);
+  assert.doesNotMatch(sent[0].htmlBody, /cid:petPhoto/);
+  assert.match(sent[1].htmlBody, new RegExp('cid:' + cid + '" alt="Coco"'));
+  assert.equal(sent[1].inlineImages[cid].id, 'correct-portrait');
+  assert.ok(sent[1].inlineImages.businessLogo);
+}
