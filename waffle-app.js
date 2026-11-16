@@ -666,6 +666,8 @@ let waffleNotificationCentreItems =
 let waffleNotificationUnreadOnly = false;
 
 let waffleNotificationCentreOpener = null;
+let waffleNotificationAutoReadDeadline = 0;
+let waffleNotificationAutoReadTimer;
 
 let waffleNotificationCentreLoadPromise = null;
 
@@ -1032,6 +1034,8 @@ function focusWaffleNotificationCentreOpener() {
 function closeWaffleNotificationCentre(restoreFocus = true) {
     const modal = document.getElementById('waffleNotificationModal');
     if (!modal || modal.hidden) return;
+    clearTimeout(waffleNotificationAutoReadTimer);
+    waffleNotificationAutoReadDeadline = 0;
     modal.hidden = true;
     waffleNotificationCentreOpener?.setAttribute("aria-expanded", "false");
     if (restoreFocus) focusWaffleNotificationCentreOpener();
@@ -1052,7 +1056,11 @@ function loadWaffleNotificationCentre(options = {}) {
 
         const applyResponse = response => {
             waffleNotificationCentreItems = Array.isArray(response.items) ? response.items : [];
-            renderWaffleNotificationCentre();
+            if (waffleNotificationAutoReadDeadline && Date.now() >= waffleNotificationAutoReadDeadline) {
+                markWaffleNotificationCentreRead();
+            } else {
+                renderWaffleNotificationCentre();
+            }
         };
 
         try {
@@ -1153,6 +1161,11 @@ function openWaffleNotificationCentre(tabName = 'inbox', opener = null) {
     waffleNotificationCentreOpener = trigger || null;
     trigger?.setAttribute('aria-expanded', 'true');
     trigger?.setAttribute('aria-controls', modal.id);
+    if (modal.hidden) {
+        const autoReadDelay = 10000;
+        waffleNotificationAutoReadDeadline = Date.now() + autoReadDelay;
+        waffleNotificationAutoReadTimer = setTimeout(markWaffleNotificationCentreRead, autoReadDelay);
+    }
     modal.hidden = false;
     positionWaffleNotificationCentre(modal);
     loadNotificationAvatars();
