@@ -458,3 +458,48 @@ test('advance reminder schedule stays readable in device settings on phones and 
     }
   }
 });
+
+
+test('notification inbox marks all items read after ten continuous seconds open', async ({ page, baseURL }) => {
+  await openReadOnlyRuntime(page, baseURL);
+  await page.clock.install();
+  await page.goto(baseURL + '/directory.html', { waitUntil: 'domcontentloaded' });
+  await page.waitForFunction(() => typeof openWaffleNotificationCentre === 'function');
+  await page.evaluate(items => {
+    waffleNotificationCentreItems = items;
+    queryAppsScriptSWR = payload => payload.action === 'get_notification_centre'
+      ? Promise.resolve({ data: { items } })
+      : Promise.resolve({ data: { records: [] } });
+  }, longItems);
+  await page.clock.pauseAt((await page.evaluate(() => Date.now())) + 1000);
+
+  const toggle = () => page.evaluate(() => {
+    let opener = document.getElementById('notificationAutoReadTestOpener');
+    if (!opener) {
+      opener = document.createElement('button');
+      opener.id = 'notificationAutoReadTestOpener';
+      document.body.appendChild(opener);
+      opener.addEventListener('click', openWaffleNotificationCentre);
+    }
+    opener.click();
+  });
+  const modal = page.locator('#waffleNotificationModal');
+  const unread = modal.locator('[data-notification-item-id].is-unread');
+  const seenIds = () => page.evaluate(() => [...getWaffleSeenNotificationIds()]);
+
+  await toggle();
+  await expect(unread).toHaveCount(2);
+  await page.clock.fastForward(5000);
+  await toggle();
+  await expect(modal).toBeHidden();
+  await page.clock.fastForward(10000);
+  expect(await seenIds()).toEqual([]);
+
+  await toggle();
+  await page.clock.fastForward(9999);
+  await expect(unread).toHaveCount(2);
+  await page.clock.fastForward(1);
+  await expect(unread).toHaveCount(0);
+  expect(await seenIds()).toEqual(expect.arrayContaining(['fixture-unread', 'fixture-read']));
+  await expect(modal).toBeVisible();
+});

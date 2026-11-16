@@ -1,6 +1,6 @@
 /* Waffle House Boarding — recovery service worker */
 
-const WAFFLE_SW_VERSION = 'v11.4.236-potential-and-profile-2026.11.16.01';
+const WAFFLE_SW_VERSION = 'v11.4.237-notification-auto-read-2026.11.16.02';
 const WAFFLE_CACHE_PREFIX = 'waffle-house-';
 const APP_SHELL_CACHE = `${WAFFLE_CACHE_PREFIX}shell-${WAFFLE_SW_VERSION}`;
 const RUNTIME_CACHE = `${WAFFLE_CACHE_PREFIX}runtime-${WAFFLE_SW_VERSION}`;
@@ -27,7 +27,7 @@ const APP_SHELL = [
   './palz-sales.css?rev=2026.11.15.01',
   './sitter-planning.js?build=2026.08.28.01&rev=2026.11.15.01',
   './waffle-release.json',
-'./waffle-bootstrap.js?v=2026.08.28.01&rev=2026.11.15.01',
+'./waffle-bootstrap.js?v=2026.08.28.01&rev=2026.11.16.02',
   './waffle-diagnostics.js?build=2026.08.28.01',
   './waffle-csv.js?build=2026.08.28.01&rev=2026.11.15.01',
   './care-profile-performance.js?build=2026.08.28.01&rev=2026.11.15.01',
