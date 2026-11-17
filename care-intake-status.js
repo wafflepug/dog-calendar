@@ -75,7 +75,7 @@
       }
       const receivedAt = trustedReceiptTimestamp(meta?.dataset?.intakeReceivedAt);
       const received = receivedAt ? `Owner form received ${formatReceiptTimestamp(receivedAt)}. ` : '';
-      return { code: 'complete', label: 'Form received', action: 'Review submission', detail: `${received}Review the submitted answers in Records & forms.`, method: 'digital' };
+      return { code: 'complete', label: 'Form received', detail: `${received}Review the submitted answers in Records & forms.`, method: 'digital' };
     }
     if (directCopy) return { code: 'link_ready', label: 'Link ready', action: 'Copy existing link', detail: 'Copy the current care link, then paste it into the owner’s usual chat.' };
     if (hasPreparedLink) return { code: 'link_ready', label: 'Link ready', action: 'Share existing link', detail: 'Review owner sharing options for this prepared care link.' };
@@ -192,6 +192,27 @@
     }
     if (node.parentElement !== group) group.appendChild(node);
     const state = stateFor(card);
+    const complete = state.code === 'complete';
+    if (group.hidden !== complete) group.hidden = complete;
+    const nameLine = card.querySelector('.directory-profile-name-line');
+    let receiptIcon = nameLine?.querySelector('[data-care-intake-received]');
+    if (complete && nameLine) {
+      if (!receiptIcon) {
+        receiptIcon = document.createElement('span');
+        receiptIcon.dataset.careIntakeReceived = '';
+        receiptIcon.setAttribute('role', 'img');
+        receiptIcon.setAttribute('aria-label', state.label);
+        nameLine.appendChild(receiptIcon);
+      }
+      if (!receiptIcon.querySelector('svg')) {
+        const svg = window.PALZ_ICONS?.svg('tasks');
+        if (svg) receiptIcon.innerHTML = svg;
+        else if (!receiptIcon.firstChild) receiptIcon.textContent = '\u{1f4cb}';
+      }
+      if (receiptIcon.title !== state.detail) receiptIcon.title = state.detail;
+    } else {
+      receiptIcon?.remove();
+    }
     const shareDates = ['Prepare new form', 'Copy existing link', 'Share existing link'].includes(state.action);
     let dateHint = group.querySelector('[data-owner-care-stay-dates]');
     if (shareDates) {
@@ -205,7 +226,7 @@
       const endDate = formatStayDate(card.dataset.directoryEndDate || card.dataset.endDate);
       const dates = startDate && endDate ? `For stay ${startDate} – ${endDate}` : 'Stay dates unavailable';
       if (dateHint.textContent !== dates) dateHint.textContent = dates;
-      dateHint.setAttribute('aria-label', dates);
+      if (dateHint.getAttribute('aria-label') !== dates) dateHint.setAttribute('aria-label', dates);
     } else {
       dateHint?.remove();
     }

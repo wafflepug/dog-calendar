@@ -1,6 +1,6 @@
 /* Waffle House Boarding — recovery service worker */
 
-const WAFFLE_SW_VERSION = 'v11.4.237-notification-auto-read-2026.11.16.02';
+const WAFFLE_SW_VERSION = 'v11.4.238-guest-portraits-intake-icon-2026.11.17.01';
 const WAFFLE_CACHE_PREFIX = 'waffle-house-';
 const APP_SHELL_CACHE = `${WAFFLE_CACHE_PREFIX}shell-${WAFFLE_SW_VERSION}`;
 const RUNTIME_CACHE = `${WAFFLE_CACHE_PREFIX}runtime-${WAFFLE_SW_VERSION}`;
@@ -27,13 +27,13 @@ const APP_SHELL = [
   './palz-sales.css?rev=2026.11.15.01',
   './sitter-planning.js?build=2026.08.28.01&rev=2026.11.15.01',
   './waffle-release.json',
-'./waffle-bootstrap.js?v=2026.08.28.01&rev=2026.11.16.02',
+'./waffle-bootstrap.js?v=2026.08.28.01&rev=2026.11.17.01',
   './waffle-diagnostics.js?build=2026.08.28.01',
   './waffle-csv.js?build=2026.08.28.01&rev=2026.11.15.01',
   './care-profile-performance.js?build=2026.08.28.01&rev=2026.11.15.01',
   './care-startup-priority.js?build=2026.08.28.01&rev=2026.11.15.01',
   './owner-handoff.js?build=2026.08.28.01&rev=2026.11.15.01',
-  './care-intake-status.js?build=2026.08.28.01&rev=2026.11.15.01',
+  './care-intake-status.js?build=2026.08.28.01&rev=2026.11.17.01',
   './care-arrival-ready.js?build=2026.08.28.01&rev=2026.11.15.01',
   './care-roster-focus.js?build=2026.08.28.01&rev=2026.11.15.01',
   './care-departure-message.js?build=2026.08.28.01&rev=2026.11.15.01',
@@ -41,7 +41,7 @@ const APP_SHELL = [
   './desktop-home-layout.css?rev=2026.11.15.01',
   './calendar.js?build=2026.08.28.01&rev=2026.11.15.01',
   './care.js?build=2026.08.28.01',
-  './care-mobile-clarity.css?rev=2026.11.16.01',
+  './care-mobile-clarity.css?rev=2026.11.17.01',
   './care-sitter-summary.js?build=2026.08.28.01&rev=2026.11.15.01',
   './care-routine-log.js?build=2026.08.28.01&rev=2026.11.15.01',
   './care-profile-segments.js?build=2026.08.28.01&rev=2026.11.15.01',

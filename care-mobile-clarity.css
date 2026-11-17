@@ -207,7 +207,7 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-
   grid-column: 1;
   grid-row: 1;
   overflow: hidden;
-  border-radius: 12px;
+  border-radius: 50%;
 }
 body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-photo-shell .directory-photo-media,
 body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-photo-shell img,
@@ -329,7 +329,7 @@ body[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused > .d
   min-height: 64px;
   flex: 0 0 64px;
   overflow: hidden;
-  border-radius: 10px;
+  border-radius: 50%;
   grid-column: 1;
   grid-row: 1 / span 3;
 }
@@ -1682,7 +1682,7 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-
   min-width: 60px;
   min-height: 60px;
   flex-basis: 60px;
-  border-radius: 10px;
+  border-radius: 50%;
 }
 body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-card-identity {
   gap: 3px;
@@ -2403,7 +2403,7 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active .v11112-car
   }
   body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-card-header > .directory-photo-shell {
     grid-column:1; grid-row:1; order:0; width:104px !important; height:104px !important;
-    min-width:104px; min-height:104px; flex-basis:104px; border-radius:16px; margin:0;
+    min-width:104px; min-height:104px; flex-basis:104px; border-radius:50%; margin:0;
   }
   body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-card-header > .directory-card-identity {
     grid-column:1 / -1; grid-row:2; order:1; width:100%; margin:0; align-items:flex-start; text-align:left;
@@ -2557,7 +2557,7 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-
   min-width: 84px;
   min-height: 84px;
   flex: 0 0 84px;
-  border-radius: 14px;
+  border-radius: 50%;
 }
 body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-card-header > .directory-card-identity {
   grid-column: 2;
@@ -2916,3 +2916,16 @@ body[data-waffle-page="directory"] .directory-card.is-v1082-readonly [data-direc
 body[data-waffle-page="directory"] .directory-card.is-v1082-readonly [data-directory-edit-field] .directory-contact-edit-hint {
   display: none;
 }
+
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-owner-care-action-group[hidden] {
+  display: none;
+}
+.directory-profile-name-line [data-care-intake-received] {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  order: 1;
+  color: #166534;
+}
+body.dark-theme .directory-profile-name-line [data-care-intake-received] { color: #86efac; }
+.directory-profile-name-line [data-care-intake-received] .palz-icon { width: 18px; height: 18px; }
