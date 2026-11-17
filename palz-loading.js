@@ -23,7 +23,7 @@ function syncLoadingTheme() {
 }
 syncLoadingTheme();
 function chooseLoadingAnimation() {
-  const animations = ['cat-leads', 'dog-leads', 'ball', 'tumble'];
+  const animations = ['cat-leads', 'dog-leads', 'ball', 'tumble', 'sleep'];
   root.dataset.palzLoadingAnimation = animations[Math.floor(Math.random() * animations.length)];
   root.dataset.palzLoadingDirection = Math.random() < 0.5 ? 'original' : 'mirrored';
 }

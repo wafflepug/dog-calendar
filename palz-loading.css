@@ -21,4 +21,16 @@ html[data-palz-loading-animation="dog-leads"] .palz-loading-animation { content:
 html[data-palz-loading-animation="ball"] .palz-loading-animation { content:url("assets/palz-loading-ball.gif?v=2"); }
 html[data-palz-loading-animation="tumble"] .palz-loading-animation { content:url("assets/palz-loading-tumble.gif?v=2"); }
 html[data-palz-loading-direction="mirrored"][data-palz-loading-animation$="-leads"] .palz-loading-animation { transform:scaleX(-1); }
-@media(prefers-reduced-motion:reduce) { .palz-loading-animation { display:none; } }
+html[data-palz-loading-animation="sleep"] .palz-loading-animation {
+  content: url("assets/palz-loading-sleep.png");
+  transform-origin: center 85%;
+  animation: palzSleepBreathing 3.6s ease-in-out infinite;
+}
+@keyframes palzSleepBreathing {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.025, 1.055); }
+}
+@media(prefers-reduced-motion:reduce) {
+  .palz-loading-animation { display:none; }
+  html[data-palz-loading-animation="sleep"] .palz-loading-animation { animation:none; }
+}
