@@ -341,12 +341,19 @@
   const VERSION = '11.1.75';
   const MOBILE_QUERY = '(max-width: 820px)';
   const COLOUR_KEY = 'waffleColourStyle';
+  const CUSTOM_ACCENT_KEY = 'waffleCustomAccent';
+  let customAccent = '#7c3aed';
+  try {
+    const stored = localStorage.getItem(CUSTOM_ACCENT_KEY);
+    if (/^#[0-9a-f]{6}$/i.test(stored || '')) customAccent = stored;
+  } catch (_) {}
   const ALLOWED_COLOURS = new Set([
     'waffle-purple',
     'coastal-blue',
     'eucalyptus',
     'sunset-coral',
-    'warm-honey'
+    'warm-honey',
+    'custom'
   ]);
   let bottomNavResizeObserver = null;
   let observer = null;
@@ -375,9 +382,30 @@
     return ALLOWED_COLOURS.has(value) ? value : 'waffle-purple';
   }
 
+  function readableAccent(hex, dark) {
+    const channels = hex.slice(1).match(/../g).map(value => parseInt(value, 16));
+    const backdropLuminance = dark ? 0.018 : 1;
+    const target = dark ? 255 : 0;
+    for (let step = 0; step <= 20; step += 1) {
+      const mixed = channels.map(channel => Math.round(channel + (target - channel) * step / 20));
+      const linear = mixed.map(channel => {
+        const value = channel / 255;
+        return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+      });
+      const luminance = 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2];
+      const contrast = (Math.max(luminance, backdropLuminance) + 0.05) / (Math.min(luminance, backdropLuminance) + 0.05);
+      if (contrast >= 4.5) return `rgb(${mixed.join(', ')})`;
+    }
+  }
+
   function applyColourStyle(value, persist) {
     const selected = ALLOWED_COLOURS.has(String(value || '')) ? String(value) : 'waffle-purple';
-    document.documentElement.setAttribute('data-waffle-colour-style', selected);
+    const root = document.documentElement;
+    root.setAttribute('data-waffle-colour-style', selected);
+    if (selected === 'custom') {
+      root.style.setProperty('--wh75-custom-light', readableAccent(customAccent, false));
+      root.style.setProperty('--wh75-custom-dark', readableAccent(customAccent, true));
+    }
     if (document.body) document.body.setAttribute('data-waffle-colour-style', selected);
     if (persist) {
       try { localStorage.setItem(COLOUR_KEY, selected); } catch (_) {}
@@ -430,6 +458,23 @@
         --wh75-accent:#fbbf24;--wh75-accent-strong:#f59e0b;--wh75-accent-soft:#451a03;--wh75-accent-ink:#fef3c7;--wh75-ring:rgba(251,191,36,.28);
       }
 
+      :root[data-waffle-colour-style="custom"] {
+        --wh75-accent:var(--wh75-custom-light);
+        --wh75-accent-strong:color-mix(in srgb,var(--wh75-accent) 88%,black);
+        --wh75-accent-soft:color-mix(in srgb,var(--wh75-accent) 12%,white);
+        --wh75-accent-ink:color-mix(in srgb,var(--wh75-accent) 68%,black);
+        --wh75-ring:color-mix(in srgb,var(--wh75-accent) 22%,transparent);
+      }
+      :root[data-waffle-colour-style="custom"] body.dark-theme {
+        --wh75-accent:var(--wh75-custom-dark);
+        --wh75-accent-strong:color-mix(in srgb,var(--wh75-accent) 88%,#111b2d);
+        --wh75-accent-soft:color-mix(in srgb,var(--wh75-accent) 18%,#111b2d);
+        --wh75-accent-ink:color-mix(in srgb,var(--wh75-accent) 48%,white);
+        --wh75-ring:color-mix(in srgb,var(--wh75-accent) 28%,transparent);
+      }
+      .wh75-custom-accent-picker { display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:10px;color:var(--wh75-text);font:inherit; }
+      .wh75-custom-accent-picker input { width:52px;height:44px;padding:4px;border:1px solid var(--wh75-line);border-radius:10px;background:var(--wh75-shell-2);cursor:pointer; }
+      .wh75-custom-accent-picker input:focus-visible { outline:2px solid var(--wh75-accent);outline-offset:2px; }
       body { accent-color:var(--wh75-accent); }
       body .app-tab-button.active { background:var(--wh75-accent-strong)!important;color:#fff!important; }
       body[data-waffle-page="calendar"] { --wh65-accent:var(--wh75-accent)!important; }
@@ -654,14 +699,16 @@
       </div>
       <div class="wh75-settings-section">
         <h3 class="wh75-settings-title">Colour Style</h3>
-        <p class="wh75-settings-help">Pick one accent family. Waffle automatically uses its matching Light or Dark palette.</p>
+        <p class="wh75-settings-help">Choose a preset or pick your own accent colour.</p>
         <div class="wh75-colour-grid">
           ${colourOption('waffle-purple','Waffle Purple','Classic Waffle accent','#7c3aed','#c084fc','#4c1d95')}
           ${colourOption('coastal-blue','Coastal Blue','Cool and clear','#0284c7','#38bdf8','#075985')}
           ${colourOption('eucalyptus','Eucalyptus','Calm and natural','#15803d','#4ade80','#14532d')}
           ${colourOption('sunset-coral','Sunset Coral','Warm and lively','#e11d48','#fb7185','#9f1239')}
           ${colourOption('warm-honey','Warm Honey','Soft and welcoming','#d97706','#fbbf24','#92400e')}
+          ${colourOption('custom','Custom','Your saved accent colour',customAccent,customAccent,customAccent)}
         </div>
+        <label class="wh75-custom-accent-picker">Accent colour <input type="color" data-wh75-custom-accent value="${customAccent}"></label>
       </div>
     `;
 
@@ -781,7 +828,10 @@
     document.querySelectorAll('[data-wh75-mode]').forEach(button => {
       button.setAttribute('aria-pressed', String(button.dataset.wh75Mode === (dark ? 'dark' : 'light')));
     });
-    const selected = savedColourStyle();
+    const selected = document.documentElement.dataset.waffleColourStyle;
+    document.querySelectorAll('[data-wh75-colour="custom"] .wh75-swatch i').forEach(swatch => {
+      swatch.style.background = customAccent;
+    });
     document.querySelectorAll('[data-wh75-colour]').forEach(button => {
       button.setAttribute('aria-pressed', String(button.dataset.wh75Colour === selected));
     });
@@ -823,6 +873,13 @@
     document.querySelectorAll('[data-wh75-theme-quick]').forEach(button => button.addEventListener('click', toggleThemeQuick));
     document.querySelectorAll('[data-wh75-mode]').forEach(button => button.addEventListener('click', () => setThemeMode(button.dataset.wh75Mode)));
     document.querySelectorAll('[data-wh75-colour]').forEach(button => button.addEventListener('click', () => applyColourStyle(button.dataset.wh75Colour, true)));
+    document.querySelector('[data-wh75-custom-accent]')?.addEventListener('input', event => {
+      const colour = event.currentTarget.value;
+      if (!/^#[0-9a-f]{6}$/i.test(colour)) return;
+      customAccent = colour;
+      try { localStorage.setItem(CUSTOM_ACCENT_KEY, colour); } catch (_) {}
+      applyColourStyle('custom', true);
+    });
     document.querySelectorAll('#wh75MobileDrawer a').forEach(link => link.addEventListener('click', () => closeDrawer(false)));
     window.addEventListener('keydown', event => {
       if (event.key !== 'Escape' || event.defaultPrevented) return;

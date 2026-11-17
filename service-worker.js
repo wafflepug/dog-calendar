@@ -1,6 +1,6 @@
 /* Waffle House Boarding — recovery service worker */
 
-const WAFFLE_SW_VERSION = 'v11.4.238-guest-portraits-intake-icon-2026.11.17.01';
+const WAFFLE_SW_VERSION = 'v11.4.239-custom-accent-loading-2026.11.17.02';
 const WAFFLE_CACHE_PREFIX = 'waffle-house-';
 const APP_SHELL_CACHE = `${WAFFLE_CACHE_PREFIX}shell-${WAFFLE_SW_VERSION}`;
 const RUNTIME_CACHE = `${WAFFLE_CACHE_PREFIX}runtime-${WAFFLE_SW_VERSION}`;
@@ -19,15 +19,15 @@ const APP_SHELL = [
   './system-status-sync.js?build=2026.08.28.01&rev=2026.11.15.01',
   './system-status-release.js?build=2026.08.28.01&rev=2026.11.15.01',
   './waffle-build.json',
-  './palz-loading.css?rev=2026.11.15.01',
-  './palz-loading.js?rev=2026.11.15.01',
+  './palz-loading.css?rev=2026.11.17.02',
+  './palz-loading.js?rev=2026.11.17.02',
   './assets/palz-loading-dogs.gif',
   './palz-icons.js?build=2026.08.28.01&rev=2026.11.15.01',
   './palz-sales.js?build=2026.08.28.01&rev=2026.11.15.01',
   './palz-sales.css?rev=2026.11.15.01',
   './sitter-planning.js?build=2026.08.28.01&rev=2026.11.15.01',
   './waffle-release.json',
-'./waffle-bootstrap.js?v=2026.08.28.01&rev=2026.11.17.01',
+'./waffle-bootstrap.js?v=2026.08.28.01&rev=2026.11.17.02',
   './waffle-diagnostics.js?build=2026.08.28.01',
   './waffle-csv.js?build=2026.08.28.01&rev=2026.11.15.01',
   './care-profile-performance.js?build=2026.08.28.01&rev=2026.11.15.01',
@@ -51,7 +51,7 @@ const APP_SHELL = [
   './floorplan.css?build=2026.08.28.01',
   './floorplan-area-labels.js?build=2026.08.28.01',
   './logs.js?build=2026.08.28.01',
-  './waffle-ui.js?build=2026.08.28.01&rev=2026.11.15.01',
+  './waffle-ui.js?build=2026.08.28.01&rev=2026.11.17.02',
   './waffle-ai.js?build=2026.08.28.01',
   './phase4.js?build=2026.08.28.01',
   './phase4-core.js?build=2026.08.28.01&rev=2026.11.15.01',
