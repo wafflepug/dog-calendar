@@ -3495,6 +3495,31 @@ html body .wh-home-potential-item .v10-potential-actions button[data-v10-potenti
   html body #potentialStayModal { align-items:flex-start!important; }
 }
 
+/* Keep both boarding forms inside the viewport, including the source picker. */
+html body :is(#v108BoardingModal,#potentialStayModal) {
+  box-sizing: border-box;
+}
+html body :is(#v108BoardingModal,#potentialStayModal) > .v108-modal-card {
+  box-sizing: border-box;
+  min-width: 0;
+  max-height: calc(100dvh - 32px);
+}
+:is(#v108BoardingModal,#potentialStayModal) .v1112-source-grid {
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 4px !important;
+}
+:is(#v108BoardingModal,#potentialStayModal) .v1112-source-tile {
+  width: 100% !important;
+  min-height: 44px;
+  padding: 3px !important;
+}
+:is(#v108BoardingModal,#potentialStayModal) .v1112-source-circle {
+  box-sizing: border-box;
+  width: min(64px, 100%) !important;
+  height: auto !important;
+  aspect-ratio: 1;
+}
 :is(#v108BoardingModal,#potentialStayModal) .v1112-source-circle:has(> img) > span { display: none; }
 
 /* Match readable labels across the Confirmed and Potential Stay forms. */

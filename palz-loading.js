@@ -22,10 +22,11 @@ function syncLoadingTheme() {
   } catch (_) {}
 }
 syncLoadingTheme();
-function chooseLoadingDirection() {
+function chooseLoadingAnimation() {
+  root.dataset.palzLoadingLeader = Math.random() < 0.5 ? 'cat' : 'dog';
   root.dataset.palzLoadingDirection = Math.random() < 0.5 ? 'original' : 'mirrored';
 }
-chooseLoadingDirection();
+chooseLoadingAnimation();
 let parsed=document.readyState!=='loading';
 const linkParams=new URLSearchParams(location.search);
 let pet=location.pathname.endsWith('/directory.html')&&linkParams.has('stayKey')?linkParams.get('pet'):null;
@@ -41,7 +42,7 @@ timer=setTimeout(()=>finish(true),8000);finish();
 document.addEventListener('click',event=>{if(event.defaultPrevented||event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;const link=event.target.closest?.('a[href]');if(!link||link.hasAttribute('download')||(link.target&&link.target!=='_self'))return;let url;try{url=new URL(link.href,location.href);}catch(_){return;}if(url.origin!==location.origin||!url.pathname.endsWith('.html')||(url.pathname===location.pathname&&url.search===location.search))return;setLabel(url.searchParams.get('pet'));
 if (root.dataset.palzNavigating !== 'true') {
   syncLoadingTheme();
-  chooseLoadingDirection();
+  chooseLoadingAnimation();
 }
 root.dataset.palzNavigating='true';clearTimeout(timer);timer=setTimeout(()=>finish(true),8000);});
 })();
