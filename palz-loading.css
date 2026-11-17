@@ -17,4 +17,5 @@ html[data-palz-navigating="true"] body > #palzLoadingScreen { display:grid; anim
 @media(prefers-reduced-motion:reduce){.palz-loading-progress::after{animation:none;width:100%;opacity:.6}}
 
 .palz-loading-animation { display:block; width:136px; max-width:100%; height:auto; }
+html[data-palz-loading-direction="mirrored"] .palz-loading-animation { transform:scaleX(-1); }
 @media(prefers-reduced-motion:reduce) { .palz-loading-animation { display:none; } }
