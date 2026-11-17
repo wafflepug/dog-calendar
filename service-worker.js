@@ -1,6 +1,6 @@
 /* Waffle House Boarding — recovery service worker */
 
-const WAFFLE_SW_VERSION = 'v11.4.239-custom-accent-loading-2026.11.17.02';
+const WAFFLE_SW_VERSION = 'v11.4.240-boarding-fit-loading-leader-2026.11.17.03';
 const WAFFLE_CACHE_PREFIX = 'waffle-house-';
 const APP_SHELL_CACHE = `${WAFFLE_CACHE_PREFIX}shell-${WAFFLE_SW_VERSION}`;
 const RUNTIME_CACHE = `${WAFFLE_CACHE_PREFIX}runtime-${WAFFLE_SW_VERSION}`;
@@ -19,9 +19,10 @@ const APP_SHELL = [
   './system-status-sync.js?build=2026.08.28.01&rev=2026.11.15.01',
   './system-status-release.js?build=2026.08.28.01&rev=2026.11.15.01',
   './waffle-build.json',
-  './palz-loading.css?rev=2026.11.17.02',
-  './palz-loading.js?rev=2026.11.17.02',
+  './palz-loading.css?rev=2026.11.17.03',
+  './palz-loading.js?rev=2026.11.17.03',
   './assets/palz-loading-dogs.gif',
+  './assets/palz-loading-dog-leads.gif',
   './palz-icons.js?build=2026.08.28.01&rev=2026.11.15.01',
   './palz-sales.js?build=2026.08.28.01&rev=2026.11.15.01',
   './palz-sales.css?rev=2026.11.15.01',
@@ -59,7 +60,7 @@ const APP_SHELL = [
   './phase4-booking.js?build=2026.08.28.01&rev=2026.11.15.01',
   './phase4-operations.js?build=2026.08.28.01',
   './phase4-ai-actions.js?build=2026.08.28.01',
-'./waffle-runtime.css?v=2026.08.28.01&rev=2026.11.16.01',
+'./waffle-runtime.css?v=2026.08.28.01&rev=2026.11.17.03',
   './waffle-maintenance-v2.webp?v=2026.08.28.02',
   './waffle-logo.png',
   './waffle-logo-dark.png',
