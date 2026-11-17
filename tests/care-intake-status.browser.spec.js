@@ -5,7 +5,7 @@ const path = require('node:path');
 const source = fs.readFileSync(path.join(__dirname, '..', 'care-intake-status.js'), 'utf8');
 const handoffSource = fs.readFileSync(path.join(__dirname, '..', 'owner-handoff.js'), 'utf8');
 const receiptIdentity = 'milo|2026-10-20|2026-10-22|dog-1|stay-1|milo|2026-10-20|2026-10-22';
-const markup = (extra = '') => `<body><main id="directory-grid"><article class="directory-card is-profile-active" data-directory-stay-key="milo|2026-10-20|2026-10-22" data-directory-dog-name="Milo" data-directory-start-date="2026-10-20" data-directory-end-date="2026-10-22" data-directory-stay-id="stay-1" data-directory-dog-id="dog-1"><section data-directory-care-brief><div class="directory-care-brief-actions"><button data-p4-dir="owner" id="firstlevelOwnerCareLink"><span>Owner Care Link</span><small>Send or copy this guest’s care link</small></button></div><details class="directory-care-more-actions"><summary>More tools</summary><div class="directory-care-more-actions-list"></div></details><div data-care-readiness-item="intake"></div></section><div data-directory-intake="milo|2026-10-20|2026-10-22" ${extra}></div><details data-directory-records><summary>Records &amp; forms</summary><button data-create-intake-link>Copy link</button><a href="/intake.pdf">PDF</a></details></article></main></body>`;
+const markup = (extra = '') => `<body><main id="directory-grid"><article class="directory-card is-profile-active" data-directory-stay-key="milo|2026-10-20|2026-10-22" data-directory-dog-name="Milo" data-directory-start-date="2026-10-20" data-directory-end-date="2026-10-22" data-directory-stay-id="stay-1" data-directory-dog-id="dog-1"><div class="directory-profile-name-line"><span class="tag-at-home">At home</span></div><section data-directory-care-brief><div class="directory-care-brief-actions"><button data-p4-dir="owner" id="firstlevelOwnerCareLink"><span>Owner Care Link</span><small>Send or copy this guest’s care link</small></button></div><details class="directory-care-more-actions"><summary>More tools</summary><div class="directory-care-more-actions-list"></div></details><div data-care-readiness-item="intake"></div></section><div data-directory-intake="milo|2026-10-20|2026-10-22" ${extra}></div><details data-directory-records><summary>Records &amp; forms</summary><button data-create-intake-link>Copy link</button><a href="/intake.pdf">PDF</a></details></article></main></body>`;
 
 async function watchNetworkReads(page) {
   await page.evaluate(() => {
@@ -101,8 +101,8 @@ test.describe('compact care intake status', () => {
     await page.locator('[data-directory-intake]').evaluate(el => { el.removeAttribute('aria-busy'); el.innerHTML = '<span class="directory-intake-dot is-complete"></span><span>Intake complete</span>'; });
     await expect.poll(async () => (await state()).code).toBe('complete');
     expect(await state()).toMatchObject({ label: 'Form received', method: 'digital' });
-    await expect(page.locator('#firstlevelOwnerCareLink span')).toHaveText('Review submission');
-    await expect(page.locator('#firstlevelOwnerCareLink')).toHaveAccessibleName('Review submission for Milo');
+    await expect(page.locator('#firstlevelOwnerCareLink')).toBeHidden();
+    await expect(page.locator('.tag-at-home + [data-care-intake-received]')).toHaveAccessibleName('Form received');
     await expect(page.locator('#firstlevelOwnerCareLink')).toHaveAttribute('aria-description', /Records & forms/);
     await page.locator('[data-directory-intake]').evaluate(el => el.setAttribute('aria-busy', 'true'));
     await expect.poll(async () => (await state()).label).toBe('Loading');
