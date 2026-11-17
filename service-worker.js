@@ -1,6 +1,6 @@
 /* Waffle House Boarding — recovery service worker */
 
-const WAFFLE_SW_VERSION = 'v11.4.242-loading-tumble-animation-2026.11.17.05';
+const WAFFLE_SW_VERSION = 'v11.4.243-transparent-loading-gifs-2026.11.17.06';
 const WAFFLE_CACHE_PREFIX = 'waffle-house-';
 const APP_SHELL_CACHE = `${WAFFLE_CACHE_PREFIX}shell-${WAFFLE_SW_VERSION}`;
 const RUNTIME_CACHE = `${WAFFLE_CACHE_PREFIX}runtime-${WAFFLE_SW_VERSION}`;
@@ -19,12 +19,12 @@ const APP_SHELL = [
   './system-status-sync.js?build=2026.08.28.01&rev=2026.11.15.01',
   './system-status-release.js?build=2026.08.28.01&rev=2026.11.15.01',
   './waffle-build.json',
-  './palz-loading.css?rev=2026.11.17.05',
-  './palz-loading.js?rev=2026.11.17.05',
+  './palz-loading.css?rev=2026.11.17.06',
+  './palz-loading.js?rev=2026.11.17.06',
   './assets/palz-loading-dogs.gif',
   './assets/palz-loading-dog-leads.gif',
-  './assets/palz-loading-ball.gif',
-  './assets/palz-loading-tumble.gif',
+  './assets/palz-loading-ball.gif?v=2',
+  './assets/palz-loading-tumble.gif?v=2',
   './palz-icons.js?build=2026.08.28.01&rev=2026.11.15.01',
   './palz-sales.js?build=2026.08.28.01&rev=2026.11.15.01',
   './palz-sales.css?rev=2026.11.15.01',
