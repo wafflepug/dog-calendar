@@ -18,7 +18,7 @@ html[data-palz-navigating="true"] body > #palzLoadingScreen { display:grid; anim
 
 .palz-loading-animation { display:block; width:136px; max-width:100%; height:auto; }
 html[data-palz-loading-animation="dog-leads"] .palz-loading-animation { content:url("assets/palz-loading-dog-leads.gif"); }
-html[data-palz-loading-animation="ball"] .palz-loading-animation { content:url("assets/palz-loading-ball.gif"); }
-html[data-palz-loading-animation="tumble"] .palz-loading-animation { content:url("assets/palz-loading-tumble.gif"); }
+html[data-palz-loading-animation="ball"] .palz-loading-animation { content:url("assets/palz-loading-ball.gif?v=2"); }
+html[data-palz-loading-animation="tumble"] .palz-loading-animation { content:url("assets/palz-loading-tumble.gif?v=2"); }
 html[data-palz-loading-direction="mirrored"][data-palz-loading-animation$="-leads"] .palz-loading-animation { transform:scaleX(-1); }
 @media(prefers-reduced-motion:reduce) { .palz-loading-animation { display:none; } }
