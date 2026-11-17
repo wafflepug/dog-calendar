@@ -22,9 +22,27 @@ function syncLoadingTheme() {
   } catch (_) {}
 }
 syncLoadingTheme();
+const loadingAnimations = ['cat-leads', 'dog-leads', 'ball', 'tumble', 'sleep'];
+const rotationKey = 'palzLoadingRotation';
+let rotation = { remaining: [], last: null };
+try {
+  const saved = JSON.parse(sessionStorage.getItem(rotationKey));
+  if (loadingAnimations.includes(saved?.last) && Array.isArray(saved.remaining)) {
+    rotation = {
+      last: saved.last,
+      remaining: loadingAnimations.filter(name => name !== saved.last && saved.remaining.includes(name))
+    };
+  }
+} catch (_) {}
+
 function chooseLoadingAnimation() {
-  const animations = ['cat-leads', 'dog-leads', 'ball', 'tumble', 'sleep'];
-  root.dataset.palzLoadingAnimation = animations[Math.floor(Math.random() * animations.length)];
+  if (!rotation.remaining.length) rotation.remaining = [...loadingAnimations];
+  const choices = rotation.remaining.filter(name => name !== rotation.last);
+  const animation = choices[Math.floor(Math.random() * choices.length)];
+  rotation.remaining = rotation.remaining.filter(name => name !== animation);
+  rotation.last = animation;
+  try { sessionStorage.setItem(rotationKey, JSON.stringify(rotation)); } catch (_) {}
+  root.dataset.palzLoadingAnimation = animation;
   root.dataset.palzLoadingDirection = Math.random() < 0.5 ? 'original' : 'mirrored';
 }
 chooseLoadingAnimation();
