@@ -577,7 +577,7 @@ body[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused .v11
 body[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused .v1118-care-signal[data-v1118-signal-label="Separation anxiety"] { background: #fee2e2; border-color: #e5a0a0; color: #7f1d1d; }
 body[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused .v1118-care-signal[data-v1118-signal-label="Medication"],
 body[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused .v1118-care-signal[data-v1118-signal-label="Weight management"],
-body[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused .v1118-care-signal[data-v1118-signal-label="Link ready"] { background: #f1f5f9; border-color: #cbd5e1; color: #475569; }
+body[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused .v1118-care-signal[data-v1118-signal-label="Link ready"] { color: var(--wh75-accent, #7c3aed); }
 body.dark-theme[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused .v1118-care-status.is-at-home,
 body.dark-theme[data-waffle-page="directory"] .directory-card.is-profile-active .directory-status-tag.tag-at-home { background: #143322; border-color: #276749; color: #bbf7d0; }
 body.dark-theme[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused .v1118-care-status.is-upcoming,
@@ -594,7 +594,6 @@ body.dark-theme[data-waffle-page="directory"] #directoryTabPanel .directory-card
 body.dark-theme[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused .v1118-care-status.is-past-stay,
 body.dark-theme[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused .v1118-care-signal[data-v1118-signal-label="Medication"],
 body.dark-theme[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused .v1118-care-signal[data-v1118-signal-label="Weight management"],
-body.dark-theme[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused .v1118-care-signal[data-v1118-signal-label="Link ready"] { background: #22304a; border-color: #475569; color: #cbd5e1; }
 body.dark-theme[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused .v1118-care-signal[data-v1118-signal-label="Food allergy"],
 body.dark-theme[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused .v1118-care-signal[data-v1118-signal-label="Escape risk"],
 body.dark-theme[data-waffle-page="directory"] #directoryTabPanel .directory-card-fused .v1118-care-signal[data-v1118-signal-label="Separation anxiety"] { background: #3b1d25; border-color: #8b3a45; color: #fecdd3; }
@@ -2752,7 +2751,7 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-
   white-space: nowrap;
   border: 0;
 }
-body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-profile-roster-badges [data-v1118-safety-signal] {
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-profile-roster-badges :is([data-v1118-safety-signal], [data-v1118-signal-label="Link ready"]) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -2767,12 +2766,12 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-
   background: transparent !important;
   box-shadow: none;
 }
-body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-profile-roster-badges [data-v1118-safety-signal] .v1118-care-signal-icon {
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-profile-roster-badges :is([data-v1118-safety-signal], [data-v1118-signal-label="Link ready"]) .v1118-care-signal-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
 }
-body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-profile-roster-badges [data-v1118-safety-signal] .v1118-care-signal-icon .palz-icon {
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-profile-roster-badges :is([data-v1118-safety-signal], [data-v1118-signal-label="Link ready"]) .v1118-care-signal-icon .palz-icon {
   width: 16px;
   height: 16px;
 }
