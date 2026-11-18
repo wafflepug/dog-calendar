@@ -2049,14 +2049,14 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-
   position: relative;
 }
 body[data-waffle-page="directory"] .directory-card.is-profile-active[data-care-photo-options-mounted] .directory-card-identity {
-  padding-right: 50px;
+  padding-inline-end: 54px !important;
 }
 body[data-waffle-page="directory"] .directory-card.is-profile-active[data-care-photo-options-mounted] .directory-care-photo-tools [data-upload-dog-photo] {
   display: none !important;
 }
 body[data-waffle-page="directory"] .directory-card.is-profile-active .care-photo-options {
   position: absolute;
-  z-index: 4;
+  z-index: 6;
   top: 0;
   right: 0;
   width: 44px;
@@ -2213,13 +2213,6 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-
   flex: 1 1 180px;
   min-width: 0;
   padding-right: 0 !important;
-}
-body[data-waffle-page="directory"] .directory-card.is-profile-active .care-photo-options {
-  position: relative;
-  inset: auto;
-  order: 1;
-  flex: 0 0 44px;
-  width: 44px;
 }
 body[data-waffle-page="directory"] .directory-card.is-profile-active .v11112-care-source-host {
   position: static;
@@ -2752,7 +2745,7 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-
   height: 16px;
 }
 
-/* Keep the profile actions together and give them their own row on mobile. */
+/* Keep the profile actions together and center them underneath the profile details. */
 body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-card-header {
   display: grid !important;
   grid-template-columns: 84px minmax(0, 1fr) !important;
@@ -2797,17 +2790,15 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-
   width: auto;
   min-width: 0;
   flex-wrap: wrap;
-  justify-content: flex-end;
+  justify-content: center;
+  justify-self: stretch;
+  align-items: flex-start;
+  gap: 8px 20px;
   margin: 0;
 }
 @media (min-width: 901px) {
-  body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-card-header > [data-care-header-tools] {
-    grid-column: 3;
-    grid-row: 1;
-    flex-wrap: nowrap;
-  }
   body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-card-header {
-    grid-template-columns: 112px minmax(0, 1fr) auto !important;
+    grid-template-columns: 112px minmax(0, 1fr) !important;
     gap: 8px 16px;
   }
   body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-card-header > .directory-photo-shell {
@@ -2929,3 +2920,32 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-
 }
 body.dark-theme .directory-profile-name-line [data-care-intake-received] { color: #86efac; }
 .directory-profile-name-line [data-care-intake-received] .palz-icon { width: 18px; height: 18px; }
+
+/* Keep the labels below the circular actions while retaining their accessible names. */
+.care-header-tools > :is([data-care-host-again], [data-care-header-call-owner], [data-care-header-book-again]) {
+  position: relative;
+  margin-bottom: 36px;
+}
+.care-header-tools > :is([data-care-host-again], [data-care-header-call-owner], [data-care-header-book-again])::after,
+.care-header-tools > .v11112-care-source-host::after {
+  display: block;
+  width: 64px;
+  color: var(--care-card-text, var(--wh-text, #17243b));
+  font: 650 12px/1.25 system-ui, sans-serif;
+  text-align: center;
+  white-space: normal;
+}
+.care-header-tools > :is([data-care-host-again], [data-care-header-call-owner], [data-care-header-book-again])::after {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+.care-header-tools > [data-care-host-again]::after { content: "Would host again" / ""; }
+.care-header-tools > [data-care-header-call-owner]::after { content: "Call owner" / ""; }
+.care-header-tools > [data-care-header-book-again]::after { content: "Book again" / ""; }
+.care-header-tools > .v11112-care-source-host::after {
+  content: "Request source" / "";
+  margin: 4px -10px 0;
+}

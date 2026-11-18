@@ -161,14 +161,13 @@
       card.querySelector('[data-care-photo-options]')?.remove();
       return false;
     }
-    const tools = ensureHeaderTools(header);
     let details = header.querySelector('[data-care-photo-options]');
     if (!details) {
       details = document.createElement('details');
       details.className = 'care-photo-options';
       details.dataset.carePhotoOptions = '';
       details.innerHTML = '<summary aria-label="Photo options"><svg aria-hidden="true" viewBox="0 0 24 24" focusable="false"><path d="M4 7h3l1.5-2h7L17 7h3v12H4z"/><circle cx="12" cy="13" r="3.5"/></svg><span aria-hidden="true" class="care-photo-options-chevron"></span></summary><div class="care-photo-options-panel"><button type="button" data-care-change-profile-photo>Change profile photo</button><button type="button" data-care-upload-belongings-photo data-care-brief-action="belongings-photo">Upload belongings photos</button><button type="button" data-care-view-photos data-care-brief-action="belongings">View Photos</button></div>';
-      tools.append(details);
+      header.append(details);
       details.addEventListener('click', event => {
         const button = event.target.closest('[data-care-change-profile-photo], [data-care-upload-belongings-photo], [data-care-view-photos]');
         if (!button || !details.contains(button)) return;
