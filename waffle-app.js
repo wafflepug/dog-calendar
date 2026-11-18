@@ -12601,6 +12601,7 @@ registerWaffleServiceWorker();
             'is-profile-active'
         );
         moveDirectoryRosterBadgesIntoProfileHeader(card);
+        window.WAFFLE_V1118?.decorateCareCard?.(card);
         card.dataset.profileVisited = 'true';
 
         dashboard?.classList.add(

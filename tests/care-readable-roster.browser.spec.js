@@ -11,6 +11,8 @@ test('the 320px roster keeps long identity and care badges readable with enlarge
   await expect(row).toBeVisible();
   await expect(row.locator('.directory-guest-tile-name')).toHaveText(longName);
   await expect(row.locator('.v1118-care-status')).toHaveText('ARRIVING TODAY');
+  await expect(row.locator('.v1118-care-status')).toBeHidden();
+  await expect(row.locator('[data-care-photo-status="arrival"]')).toHaveAccessibleName('Arriving today');
   await expect(row.locator('.v1118-care-signal',{hasText:'Arrival today'})).toHaveCount(0);
   await expect(row.locator('.v1118-care-signal',{hasText:'Medication'})).toBeVisible();
   await row.evaluate(button=>{
@@ -19,12 +21,13 @@ test('the 320px roster keeps long identity and care badges readable with enlarge
     }
   });
   const measure=()=>row.evaluate(button=>{
-    const selectors=['.directory-roster-copy','.v1118-care-status','.v1118-care-signals'];
+    const selectors=['.directory-roster-copy','.v1118-care-signals'];
     const bounds=element=>{const r=element.getBoundingClientRect();return{left:r.left,right:r.right,top:r.top,bottom:r.bottom,width:r.width,height:r.height}};
     const items=selectors.map(selector=>({selector,...bounds(button.querySelector(selector))}));
     const avatar=bounds(button.querySelector('.directory-roster-avatar'));
-    const text=[...button.querySelectorAll('.directory-guest-tile-name,.v1118-care-status,.v1118-care-signal')].map(element=>({text:element.innerText,whiteSpace:getComputedStyle(element).whiteSpace,overflow:getComputedStyle(element).overflow,textOverflow:getComputedStyle(element).textOverflow,clientHeight:element.clientHeight,scrollHeight:element.scrollHeight}));
-    return{viewport:innerWidth,scrollWidth:document.documentElement.scrollWidth,row:bounds(button),avatar,display:getComputedStyle(button).display,name:button.querySelector('.directory-guest-tile-name').innerText,items,text};
+    const badge=bounds(button.querySelector('[data-care-photo-status]'));
+    const text=[...button.querySelectorAll('.directory-guest-tile-name,.v1118-care-signal')].map(element=>({text:element.innerText,whiteSpace:getComputedStyle(element).whiteSpace,overflow:getComputedStyle(element).overflow,textOverflow:getComputedStyle(element).textOverflow,clientHeight:element.clientHeight,scrollHeight:element.scrollHeight}));
+    return{viewport:innerWidth,scrollWidth:document.documentElement.scrollWidth,row:bounds(button),avatar,badge,display:getComputedStyle(button).display,name:button.querySelector('.directory-guest-tile-name').innerText,items,text};
   });
   for(const [width,dark] of [[320,false],[320,true],[390,false],[1280,true]]){
     await page.setViewportSize({width,height:width===1280?900:800});
@@ -36,9 +39,9 @@ test('the 320px roster keeps long identity and care badges readable with enlarge
     expect(layout.row.height,`touch target at ${width}px`).toBeGreaterThanOrEqual(44);
     expect(layout.name).toBe(longName);
     expect(layout.items.every(item=>item.left>=0&&item.right<=layout.viewport+1&&item.height>0),JSON.stringify({width,items:layout.items})).toBe(true);
-    expect(layout.items[0].bottom).toBeLessThanOrEqual(layout.items[1].top+1);
-    expect(layout.items[1].bottom).toBeLessThanOrEqual(layout.items[2].top+1);
-    expect(layout.avatar.bottom).toBeLessThanOrEqual(layout.items[2].top+1);
+    expect(Math.abs(layout.badge.top - layout.avatar.top)).toBeLessThanOrEqual(4);
+    expect(Math.abs(layout.badge.right - layout.avatar.right)).toBeLessThanOrEqual(4);
+    expect(layout.badge.right).toBeLessThanOrEqual(layout.items[0].left);
     expect(layout.text.every(item=>item.whiteSpace==='normal'&&item.textOverflow!=='ellipsis'&&item.scrollHeight<=item.clientHeight+6),JSON.stringify({width,text:layout.text})).toBe(true);
   }
 });
@@ -60,7 +63,7 @@ test('Care reading layout keeps identity text readable and bounds wide desktop c
       const rect=node=>node.getBoundingClientRect().toJSON();
       const heading=root.querySelector('.directory-roster-heading');
       const row=root.querySelector('#directory-grid .directory-guest-tile-open');
-      const selectors=['.directory-guest-tile-name','.directory-roster-context','.directory-roster-owner','.directory-dog-id','.directory-roster-status,.v1118-care-status'];
+      const selectors=['.directory-guest-tile-name','.directory-roster-context','.directory-roster-owner','.directory-dog-id','.directory-roster-status,.v1118-care-status,[data-care-photo-status]'];
       return{viewport:innerWidth,pageWidth:document.documentElement.scrollWidth,dashboard:rect(root),headingRow:rect(heading),headingContentWidth:heading.clientWidth-parseFloat(getComputedStyle(heading).paddingLeft)-parseFloat(getComputedStyle(heading).paddingRight),heading:rect(heading.firstElementChild),toolbar:rect(heading.querySelector('.guest-directory-toolbar')),searchFont:getComputedStyle(heading.querySelector('#guestDirectorySearch')).fontFamily,toolbarFont:getComputedStyle(heading.querySelector('.guest-directory-toolbar')).fontFamily,rowFont:getComputedStyle(row).fontFamily,cardFont:getComputedStyle(row.parentElement).fontFamily,text:selectors.map(selector=>{const el=[...row.querySelectorAll(selector)].find(node=>node.getClientRects().length&&getComputedStyle(node).display!=='none');return{selector,exists:!!el,size:el?parseFloat(getComputedStyle(el).fontSize):0,box:el?rect(el):null};})};
     });
     expect(geometry.pageWidth,JSON.stringify(geometry)).toBeLessThanOrEqual(width);

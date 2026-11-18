@@ -3042,6 +3042,23 @@ body[data-waffle-page="directory"] [data-directory-profile-care] .care-risk-opti
   background: var(--wh75-shell-2, #f8fafc);
 }
 .directory-dog-records h4 { margin: 0; }
+
+body[data-waffle-page="directory"] #directoryTabPanel .directory-card :is(.directory-guest-tile-open, .directory-card-header) [data-care-photo-status-hidden] {
+  display: none !important;
+}
+body[data-waffle-page="directory"] :is(.directory-guest-tile-open, .directory-card-header) > [data-care-photo-status] {
+  position: relative;
+  inset: auto;
+  grid-area: 1 / 1;
+  place-self: start end;
+  transform: translate(2px, -2px);
+  pointer-events: none;
+}
+body[data-waffle-page="directory"] [data-care-photo-status="arrival"] {
+  color: var(--wh75-accent-ink, #4c1d95);
+  background: var(--wh75-accent-soft, #f3e8ff);
+}
+[data-care-photo-status] .palz-icon { width: 16px; height: 16px; }
 .directory-dog-records-content { display: grid; gap: 8px; min-width: 0; }
 .directory-dog-records-content > div > :is(.v110-master-record, .v11160-simple-section) {
   padding: 0;

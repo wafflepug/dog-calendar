@@ -14,6 +14,10 @@ test('streamlined profile places records, belongings and destructive actions tog
   await expect(card.locator('[data-directory-detail="profile"]')).toHaveAttribute('data-profile-read-state', 'fresh');
   await expect(card.getByRole('heading', { name: 'Pet Notes' })).toBeVisible();
   await expect(card.getByText('More actions', {exact: true})).toHaveCount(0);
+  const arrivalBadge = card.locator('.directory-card-header [data-care-photo-status="arrival"]');
+  await expect(arrivalBadge).toHaveAccessibleName('Arriving today');
+  await expect(arrivalBadge.locator('[data-palz-icon="checkin"]')).toBeVisible();
+  await expect(card.locator('.directory-card-header .directory-status-tag')).toBeHidden();
   const handover = card.locator('[data-sitter-handover]');
   await expect(handover.locator('input[type="time"]')).toHaveCount(2);
   for (const width of [320, 390, 1280]) {
@@ -71,6 +75,20 @@ test('streamlined profile places records, belongings and destructive actions tog
   await card.getByRole('button', {name: /Health & Home/}).click();
   await expect(card.locator('[data-intake-read-attribute="insuranceNumber"]')).toBeVisible();
   await expect(card.locator('[data-intake-read-attribute="insuranceNumber"]')).toContainText('00AB-42');
+
+  await page.locator('#directoryBackToGuestsBtn').click();
+  const departure = page.locator(`#directory-grid [data-directory-stay-id="${bookings[2].stayId}"]`);
+  await expect(departure.locator('.directory-guest-tile-open [data-care-photo-status="departure"]')).toHaveAccessibleName('Check-out today');
+  await departure.locator('[data-open-directory-profile]').click();
+  const departureBadge = departure.locator('.directory-card-header [data-care-photo-status="departure"]');
+  await expect(departureBadge).toHaveAccessibleName('Check-out today');
+  await expect(departureBadge.locator('[data-palz-icon="luggage"]')).toBeVisible();
+  const cornerOffsets = await departureBadge.evaluate(badge => {
+    const picture = badge.parentElement.querySelector('.directory-photo-shell').getBoundingClientRect();
+    const position = badge.getBoundingClientRect();
+    return [Math.abs(picture.right - position.right), Math.abs(picture.top - position.top)];
+  });
+  expect(Math.max(...cornerOffsets)).toBeLessThanOrEqual(4);
 });
 
 test('desktop notification dot sits on the bell corner', async ({page, baseURL}) => {
