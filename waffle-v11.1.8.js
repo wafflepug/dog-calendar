@@ -493,6 +493,7 @@
     const label = arriving ? 'Arriving today' : 'Check-out today';
     badge.className = 'wh-home-departure-flag';
     badge.dataset.carePhotoStatus = kind;
+    badge.dataset.tone = arriving ? 'arrival' : 'urgent';
     badge.title = label;
     badge.setAttribute('role', 'img');
     badge.setAttribute('aria-label', label);

@@ -10,6 +10,7 @@ test('streamlined profile places records, belongings and destructive actions tog
   });
   await page.goto(`${baseURL}/directory.html`);
   const card = page.locator(`#directory-grid [data-directory-stay-id="${booking.stayId}"]`);
+  await expect(card.locator('.directory-guest-tile-open [data-care-photo-status="arrival"]')).toHaveCSS('background-color', 'rgb(21, 128, 61)');
   await card.locator('[data-open-directory-profile]').click();
   await expect(card.locator('[data-directory-detail="profile"]')).toHaveAttribute('data-profile-read-state', 'fresh');
   await expect(card.getByRole('heading', { name: 'Pet Notes' })).toBeVisible();
@@ -78,7 +79,10 @@ test('streamlined profile places records, belongings and destructive actions tog
 
   await page.locator('#directoryBackToGuestsBtn').click();
   const departure = page.locator(`#directory-grid [data-directory-stay-id="${bookings[2].stayId}"]`);
-  await expect(departure.locator('.directory-guest-tile-open [data-care-photo-status="departure"]')).toHaveAccessibleName('Check-out today');
+  const rosterDepartureBadge = departure.locator('.directory-guest-tile-open [data-care-photo-status="departure"]');
+  await expect(rosterDepartureBadge).toHaveAccessibleName('Check-out today');
+  await expect(rosterDepartureBadge).toHaveAttribute('data-tone', 'urgent');
+  await expect(rosterDepartureBadge).toHaveCSS('background-color', 'rgb(220, 38, 38)');
   await departure.locator('[data-open-directory-profile]').click();
   const departureBadge = departure.locator('.directory-card-header [data-care-photo-status="departure"]');
   await expect(departureBadge).toHaveAccessibleName('Check-out today');

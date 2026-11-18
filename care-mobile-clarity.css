@@ -3054,9 +3054,9 @@ body[data-waffle-page="directory"] :is(.directory-guest-tile-open, .directory-ca
   transform: translate(2px, -2px);
   pointer-events: none;
 }
-body[data-waffle-page="directory"] [data-care-photo-status="arrival"] {
-  color: var(--wh75-accent-ink, #4c1d95);
-  background: var(--wh75-accent-soft, #f3e8ff);
+.wh-home-departure-flag[data-tone="arrival"] {
+  background: #15803d;
+  color: #fff;
 }
 [data-care-photo-status] .palz-icon { width: 16px; height: 16px; }
 .directory-dog-records-content { display: grid; gap: 8px; min-width: 0; }
