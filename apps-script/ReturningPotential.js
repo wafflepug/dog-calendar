@@ -18,10 +18,9 @@ function linkReturningPotential_(sheet, rows, data) {
       sourceDog.dogId !== dogId || !/^#?[0-9]+$/.test(sourceDog.dogNumber)) {
     throw new Error('The potential stay or existing dog changed. Refresh both records.');
   }
-  var normalizedPhone = function(value) { return String(value || '').replace(/[^0-9]/g, ''); };
-  if (normalizeV108Identity_(source.ownerName) !== normalizeV108Identity_(target.ownerName) ||
-      !normalizedPhone(source.phone) || normalizedPhone(source.phone) !== normalizedPhone(target.phone)) {
-    throw new Error('The owner and contact number must match before linking this potential stay.');
+  var owner = normalizeV108Identity_(source.ownerName);
+  if (!owner || owner !== normalizeV108Identity_(target.ownerName)) {
+    throw new Error('The owner must match before linking this potential stay.');
   }
   if (targetDog.dogId && targetDog.dogId !== dogId) throw new Error('The potential stay already belongs to a different Dog ID.');
   var beforeKey = makeGuestStayKey_(target.dogName, target.startDate, target.endDate);
