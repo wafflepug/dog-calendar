@@ -24,6 +24,7 @@ test('the shipped Today page keeps profile links, exposes direct confirmed-stay 
   const rows = [
     ['Milo','Poodle','16/10/2026','20/10/2026','Boarding','aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','11111111-1111-4111-8111-111111111111','#00001',''],
     ['Coco','Poodle','12/10/2026','16/10/2026','Boarding','bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb','22222222-2222-4222-8222-222222222222','#00002',''],
+    ['Biscoff','Golden Retriever','16/10/2026','16/10/2026','Boarding','cccccccc-cccc-4ccc-8ccc-cccccccccccc','33333333-3333-4333-8333-333333333333','#00003',''],
     ['Scout','Collie','16/10/2026','16/10/2026','Meet & Greet','','','','Meet at 10:30']
   ];
   const csv = 'Timestamp,Dog Name,Breed,Start Date,End Date,Owner,Phone,Likes,Dislikes,Notes,Edit Link,Booking Type,Source,Dog ID,Stay ID,Dog Number\n' + rows.map(([dog,breed,start,end,type,dogId,stayId,number,notes]) => ['2026-10-01',dog,breed,start,end,'Fixture owner','0400123456','','',notes,'',type,'Direct',dogId,stayId,number].join(',')).join('\n');
@@ -39,6 +40,12 @@ test('the shipped Today page keeps profile links, exposes direct confirmed-stay 
       const callback = new URL(url).searchParams.get('callback');
       const response = {result:'success',bookings:[],records:[],summaries:[],identities:[],totalPastStays:0};
       if (resolved.action === 'get_belongings') response.records.push({stayKey:'coco|2026-10-12|2026-10-16',dogPhoto:{previewUrl:new URL('/fixture-coco.svg',baseURL).href}});
+      const [dogName, , , , , dogId, stayId] = rows[2];
+      if (resolved.action === 'get_stay_operations') response.records.push({dogName, dogId, stayId, stayKey:'biscoff|2026-10-16|2026-10-16', status:'checked_in'});
+      if (resolved.action === 'get_sitter_day_handovers') {
+        response.date = '2026-10-16';
+        response.entries = [{dogId, stayId, type:'Pickup', time:'17:30'}];
+      }
       return route.fulfill({contentType:'application/javascript',body:callback?`${callback}(${JSON.stringify(response)});`:JSON.stringify(response)});
     }
     if (/^https?:/.test(url) && new URL(url).hostname !== '127.0.0.1') return route.fulfill({body:'',contentType:req.resourceType()==='script'?'application/javascript':'text/css'});
@@ -49,7 +56,8 @@ test('the shipped Today page keeps profile links, exposes direct confirmed-stay 
     await page.goto(`${baseURL}/index.html?view=today&ownerWorkflowFixture=1`, {waitUntil:'domcontentloaded'});
     await page.waitForFunction(() => document.documentElement.dataset.waffleUiReady === 'true');
     const queue = page.locator('#v10TodayAgenda');
-    await expect(queue.locator('.v10-agenda-item')).toHaveCount(3);
+    await expect(queue.locator('.v10-agenda-item')).toHaveCount(4);
+    await expect(queue.getByRole('link', {name:/Open Biscoff care profile, Same Day Care · Checked in · Check-out 05:30pm/})).toBeVisible();
     await expect(queue).toBeVisible();
     await expect(queue.getByRole('button', {name:'Check-in Milo'})).toBeVisible();
     await expect(queue.getByRole('button', {name:'Check-out Coco'})).toBeVisible();
@@ -101,7 +109,7 @@ test('the shipped Today page keeps profile links, exposes direct confirmed-stay 
   await expect(page.locator('#v10TodayActionFeedback')).toHaveText('Meet & Greet marked done.');
   await expect(page.locator('[data-today-open-meet]')).toHaveCount(0);
   await page.reload();
-  await expect(page.locator('#v10TodayAgenda .v10-agenda-item')).toHaveCount(2);
+  await expect(page.locator('#v10TodayAgenda .v10-agenda-item')).toHaveCount(3);
   await expect(page.locator('[data-today-meet-done]')).toHaveCount(0);
   expect(writes).toEqual([]);
   expect(errors).toEqual([]);

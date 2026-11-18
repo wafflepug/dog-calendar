@@ -295,16 +295,17 @@
       agenda.querySelectorAll('a[data-today-identity]').forEach(link => {
         const meta = link.querySelector('[data-today-meta]');
         if (!meta) return;
-        const label = meta.textContent.trim();
-        const type = label === 'Arriving today' ? 'Drop-off' : label === 'Leaving today' ? 'Pickup' : '';
+        const label = meta.dataset.todayBaseLabel || meta.textContent.trim();
+        const sameDayCare = meta.hasAttribute('data-today-same-day-care');
+        const type = sameDayCare ? 'Pickup' : label === 'Arriving today' ? 'Drop-off' : label === 'Leaving today' ? 'Pickup' : '';
         if (!type) return;
         const id = String(link.dataset.todayStayId || '').toLowerCase() + '|' + String(link.dataset.todayDogId || '').toLowerCase();
         const matches = (groups.get(id) || []).filter(entry => entry.type === type);
-        if (matches.length !== 1 || !matches[0].time) return;
-        const time = formatTime(matches[0].time);
-        if (!time) return;
-        meta.textContent = label + ' @ ' + time;
-        link.setAttribute('aria-label', 'Open ' + (link.querySelector('strong')?.textContent || 'Guest') + ' care profile, ' + meta.textContent);
+        const time = matches.length === 1 ? formatTime(matches[0].time) : '';
+        const caption = sameDayCare ? label + (time ? ' · Check-out ' + time : ' · Check-out time not set') : (time ? label + ' @ ' + time : label);
+        if (meta.textContent !== caption) meta.textContent = caption;
+        const accessibleLabel = 'Open ' + (link.querySelector('strong')?.textContent || 'Guest') + ' care profile, ' + caption;
+        if (link.getAttribute('aria-label') !== accessibleLabel) link.setAttribute('aria-label', accessibleLabel);
       });
     };
     if (todayHandoversDate === today && Array.isArray(todayHandovers)) {
