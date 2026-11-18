@@ -16781,6 +16781,8 @@ registerWaffleServiceWorker();
         try {
             const response = await sendPayloadToAppsScript({
                 action: 'update_guest_detail',
+                stayId: context.card.dataset.directoryStayId || '',
+                dogId: context.card.dataset.directoryDogId || '',
                 fieldKey: context.fieldKey,
                 value,
                 originalDogName: context.originalDogName,
@@ -16842,6 +16844,7 @@ registerWaffleServiceWorker();
             // Re-render all dashboard and calendar references immediately
             // from the locally patched copy while the published CSV catches up.
             refreshCalendarData();
+            if (typeof v110LoadOperations === 'function') void v110LoadOperations({ noRender: true });
 
             const cachedCsv =
                 localStorage.getItem('boardingDataCache') || '';

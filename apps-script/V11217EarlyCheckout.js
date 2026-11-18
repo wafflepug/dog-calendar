@@ -502,6 +502,12 @@ function setStayOperationalStatusV11226_(data, status) {
     var rowNumber = prior ? prior.row : -1, existing = prior, now = new Date();
     status = String(status || '').trim().toLowerCase();
     if (status !== 'checked_in' && status !== 'checked_out') throw new Error('Unsupported stay operational status.');
+    if (status === 'checked_in' && prior && prior.status === 'checked_in' && prior.checkedInAt) {
+      return Object.assign({}, prior, {
+        stayKey: target.stayKey, dogName: target.booking.dogName,
+        startDate: target.booking.startDate, endDate: target.booking.endDate
+      });
+    }
     var earlyIntent = status === 'checked_out' && (String(data.checkoutType || '').toLowerCase() === 'early' || data.earlyCheckout === true || String(data.action || '') === 'early_checkout_stay');
     var early = earlyIntent || status === 'checked_out' && !!(existing && existing.isEarlyCheckout);
     var checkedInAt = existing && existing.checkedInAt || '', checkedOutAt = existing && existing.checkedOutAt || '';
@@ -569,6 +575,35 @@ function bindLegacyStayOperationToIdV11226_(sheet, oldStayKey, bookingRow, stayI
   schema = stayOperationHeaderMapV11226_(ops, true);
   ops.getRange(matching[0].row, schema.stayId).setValue(stayId);
   return true;
+}
+
+function prepareStayOperationBookingEditV11226_(sheet, stayKey, row, stayId) {
+  bindLegacyStayOperationToIdV11226_(sheet, stayKey, row, stayId);
+  var records = readStayOperationsV11226_({ stayIds: [stayId] });
+  return records.length === 1 && !records[0].identityConflict ? records[0] : null;
+}
+
+// The operation was verified before the edit under the same booking mutation lock.
+function syncStayOperationBookingDetailsV11226_(booking, operation) {
+  if (!operation) return;
+  var sheet = getStayOperationsSheet_();
+  var schema = stayOperationHeaderMapV11226_(sheet, false);
+  var range = sheet.getRange(operation.row, 1, 1, schema.width);
+  var row = range.getValues()[0];
+  if (String(row[schema.stayId - 1] || '').trim().toLowerCase() !== operation.stayId.toLowerCase()) {
+    throw new Error('The stay operation changed during the booking edit. Refresh the booking.');
+  }
+  var previous = row.slice();
+  var details = {
+    'stay key': makeGuestStayKey_(booking.dogName, booking.startDate, booking.endDate),
+    'dog name': booking.dogName,
+    'start date': booking.startDate,
+    'end date': booking.endDate
+  };
+  Object.keys(details).forEach(function(field) {
+    if (schema.map[field]) row[schema.map[field] - 1] = details[field];
+  });
+  if (row.some(function(value, index) { return value !== previous[index]; })) range.setValues([row]);
 }
 
 /* These assignments intentionally follow the legacy V11.2.17 assignments. */
