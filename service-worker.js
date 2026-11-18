@@ -1,6 +1,6 @@
 /* Waffle House Boarding — recovery service worker */
 
-const WAFFLE_SW_VERSION = 'v11.4.247-guest-loading-rotation-2026.11.18.04';
+const WAFFLE_SW_VERSION = 'v11.4.248-stay-paw-wordmark-2026.11.18.05';
 const WAFFLE_CACHE_PREFIX = 'waffle-house-';
 const APP_SHELL_CACHE = `${WAFFLE_CACHE_PREFIX}shell-${WAFFLE_SW_VERSION}`;
 const RUNTIME_CACHE = `${WAFFLE_CACHE_PREFIX}runtime-${WAFFLE_SW_VERSION}`;
@@ -19,7 +19,7 @@ const APP_SHELL = [
   './system-status-sync.js?build=2026.08.28.01&rev=2026.11.15.01',
   './system-status-release.js?build=2026.08.28.01&rev=2026.11.15.01',
   './waffle-build.json',
-  './palz-loading.css?rev=2026.11.18.01',
+  './palz-loading.css?rev=2026.11.18.05',
   './palz-loading.js?rev=2026.11.18.04',
   './assets/palz-loading-dogs.gif',
   './assets/palz-loading-dog-leads.gif',
@@ -31,7 +31,7 @@ const APP_SHELL = [
   './palz-sales.css?rev=2026.11.15.01',
   './sitter-planning.js?build=2026.08.28.01&rev=2026.11.15.01',
   './waffle-release.json',
-'./waffle-bootstrap.js?v=2026.08.28.01&rev=2026.11.18.04',
+'./waffle-bootstrap.js?v=2026.08.28.01&rev=2026.11.18.05',
   './waffle-diagnostics.js?build=2026.08.28.01',
   './waffle-csv.js?build=2026.08.28.01&rev=2026.11.15.01',
   './care-profile-performance.js?build=2026.08.28.01&rev=2026.11.15.01',
@@ -68,7 +68,7 @@ const APP_SHELL = [
   './waffle-logo.png',
   './waffle-logo-dark.png',
   './assets/palz-word-mask.png',
-  './assets/stay-word-mask.png?v=2',
+  './assets/stay-word-mask.png?v=3',
   './manifest.webmanifest?v=2026.11.15.01',
   './palz-favicon.png?v=2026.11.15.01',
   './pwa-icon-192.png?v=2026.11.15.01',
