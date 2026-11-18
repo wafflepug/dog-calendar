@@ -2853,6 +2853,7 @@ function waffleReadVariant_(action, data) {
 
   if (["get_stay_operations", "get_guest_directory", "get_past_guest_directory"].indexOf(actionName) !== -1) {
     variantPayload.stayOperationIdentityVersion = typeof STAY_OPERATION_IDENTITY_VERSION_V11226_ === "undefined" ? 0 : STAY_OPERATION_IDENTITY_VERSION_V11226_;
+    variantPayload.stayOperationRenameVersion = 1;
   }
 
   return waffleCacheFingerprint_(
@@ -5681,6 +5682,9 @@ function processSheetAction_(data) {
         guestBefore.startDate,
         guestBefore.endDate
       );
+      if (fieldKey === "dogName" && oldStayKey !== makeGuestStayKey_(newValue, guestBefore.startDate, guestBefore.endDate)) {
+        bindLegacyStayOperationToIdV11226_(sheet, oldStayKey, guestRow, mutationStayId);
+      }
 
       var editCell = fieldKey === "phone" ? phoneTextCell_(sheet, guestRow, fieldConfig.column) : sheet.getRange(guestRow, fieldConfig.column);
       editCell.setValue(fieldKey === "phone" ? String(newValue) : newValue);
@@ -13632,13 +13636,18 @@ function processIntakeSubmissionLocked_(prepared) {
     var newBreed = String(answers.breed || bookingBefore.breed).trim();
     var newOwner = String(answers.ownerName || bookingBefore.ownerName).trim();
     var newMobile = String(answers.mobile || bookingBefore.phone).trim();
+    oldStayKey = makeGuestStayKey_(bookingBefore.dogName, bookingBefore.startDate, bookingBefore.endDate);
+    var intakeBookingType = String(bookingBefore.bookingType || "Boarding").trim().toLowerCase();
+    if (["boarding", "confirmed boarding"].indexOf(intakeBookingType) >= 0 &&
+        oldStayKey !== makeGuestStayKey_(newDogName, bookingBefore.startDate, bookingBefore.endDate)) {
+      bindLegacyStayOperationToIdV11226_(mainSheet, oldStayKey, bookingRow, mutationStayId);
+    }
     mainSheet.getRange(bookingRow, 2).setValue(newDogName);
     mainSheet.getRange(bookingRow, 3).setValue(newBreed);
     mainSheet.getRange(bookingRow, 6).setValue(newOwner);
     mainSheet.getRange(bookingRow, 7).setValue(newMobile);
     SpreadsheetApp.flush();
     bookingAfter = auditBookingSnapshotFromSheetRow_(mainSheet, bookingRow);
-    oldStayKey = makeGuestStayKey_(bookingBefore.dogName, bookingBefore.startDate, bookingBefore.endDate);
     newStayKey = makeGuestStayKey_(bookingAfter.dogName, bookingAfter.startDate, bookingAfter.endDate);
   }, "Another update is being saved. This submission remains pending for manual review.");
   if (oldStayKey !== newStayKey) {
