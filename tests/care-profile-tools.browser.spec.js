@@ -211,12 +211,9 @@ for (const [name, width, colorScheme] of [['320-light', 320, 'light'], ['320-dar
     const stayMore = card.locator('.v11217-profile-more-actions');
     await expect(stayMore).toHaveCount(1);
     await expect(stayMore.locator(':scope > summary')).toBeVisible();
-    const deleteDisclosure = tools.locator(':scope > .directory-care-danger-disclosure');
-    const deleteGroup = deleteDisclosure.locator(':scope > .directory-care-danger-actions');
-    await expect(deleteDisclosure.locator(':scope > summary')).toHaveText('Remove stay');
-    await expect(deleteDisclosure).not.toHaveAttribute('open', '');
-    await expect(deleteGroup.locator('[data-v11198-delete-confirmed]')).toHaveCount(1);
-    await expect(deleteGroup.locator('[data-v11198-delete-confirmed]')).toBeHidden();
+    await expect(tools.locator('.directory-care-danger-disclosure')).toHaveCount(0);
+    await expect(card.locator('[data-care-header-intake-pdf] + [data-care-header-remove-stay]')).toHaveAccessibleName('Remove Stay');
+    await expect(card.locator('[data-v11198-delete-confirmed]')).toHaveCount(0);
 
     // Wait for the independent startup Past-count read before measuring tools-only reads.
     await expect.poll(() => reads.filter(action => action === 'get_past_guest_directory').length).toBe(1);

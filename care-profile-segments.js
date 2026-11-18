@@ -4,7 +4,7 @@
   'use strict';
 
   const segments = ['overview', 'activity', 'records', 'tools'];
-  const labels = { overview: 'Overview', activity: 'Activity', records: 'Records', tools: 'Tools' };
+  const labels = { overview: 'Overview', activity: 'Activity', records: 'Records', tools: 'Belongings' };
   const mounted = new WeakMap();
   let photoOutsideHandlerInstalled = false;
   let rosterPhotoOutsideHandlerInstalled = false;
@@ -221,7 +221,7 @@
     return true;
   }
 
-  function select(card, requested, focus = false, panel = 'profile') {
+  function select(card, requested, focus = false, panel = requested === 'tools' ? 'belongings' : 'profile') {
     if (!segments.includes(requested)) return;
     const brief = card.querySelector('[data-directory-care-brief]');
     if (!brief) return;
@@ -263,6 +263,7 @@
         if (details.tagName === 'DETAILS' && details.hasAttribute('data-care-segment-flat') && !details.open) details.open = true;
       });
     }
+    if (requested === 'records') window.WAFFLE_LOAD_CARE_DOG_RECORDS?.(card);
   }
 
   function mount(card) {
@@ -325,13 +326,16 @@
       if (records?.closest('.directory-main-profile-panel')) brief.append(records);
       mark(records, 'records');
       mark(readiness, 'records');
-      mark(brief.querySelector('[data-care-record-actions]'), 'records');
       // The owner form action is part of Records, including while the form
       // is rendered asynchronously by the directory profile.
       card.querySelectorAll('.directory-owner-care-action-group, [data-care-owner-link-group]').forEach(node => mark(node, 'records'));
       card.querySelectorAll('[data-p4-dir="owner"]').forEach(node => mark(node, 'records'));
       card.querySelectorAll('.directory-care-more-actions-list > *').forEach(node => {
         if (node === readiness) return;
+        if (node.matches('[data-directory-stay-contact]')) {
+          mark(node, 'overview');
+          return;
+        }
         if (node === records || (records && node.contains(records))) {
           if (node.dataset.careProfileSegment === 'tools') unmark(node);
           return;
@@ -365,8 +369,8 @@
       const shortcut = event.target.closest('[data-care-brief-action], [data-care-readiness-action]');
       const action = shortcut?.dataset.careReadinessAction || shortcut?.dataset.careBriefAction;
       if (action === 'intake') select(card, 'records');
-      else if (['handover', 'belongings'].includes(action)) select(card, 'tools');
-      else if (['full-profile', 'edit', 'edit-routine', 'feeding', 'medication', 'arrival-medication', 'emergency-contact', 'safety'].includes(action)) select(card, 'overview');
+      else if (action === 'belongings') select(card, 'tools');
+      else if (['handover', 'full-profile', 'edit', 'edit-routine', 'feeding', 'medication', 'arrival-medication', 'emergency-contact', 'safety'].includes(action)) select(card, 'overview');
     }, true);
 
     nav.addEventListener('click', event => {

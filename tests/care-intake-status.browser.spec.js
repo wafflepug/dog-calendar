@@ -344,7 +344,7 @@ test.describe('compact care intake status', () => {
     await expect(page.locator('.directory-card.is-profile-active #firstlevelOwnerCareLink span')).toHaveText('Prepare new form');
   });
 
-  test('More tools keeps owner sharing options secondary and reuses the existing owner flow', async ({ page }) => {
+  test('the owner update flow still opens sharing when the secondary menu is absent', async ({ page }) => {
     await page.setContent(markup());
     await page.addScriptTag({ content: source });
     await page.evaluate(() => {
@@ -352,12 +352,8 @@ test.describe('compact care intake status', () => {
       document.querySelector('#firstlevelOwnerCareLink').addEventListener('click', () => window.__ownerFlowCalls++);
       window.dispatchEvent(new CustomEvent('waffle:owner-care-link-ready', { detail: { dogName: 'Milo', startDate: '2026-10-20', endDate: '2026-10-22', link: 'https://secret.invalid/token', dogId: 'dog-1', stayId: 'stay-1', stayKey: 'milo|2026-10-20|2026-10-22' } }));
     });
-    const tools = page.locator('.directory-care-more-actions');
-    await expect(tools).not.toHaveAttribute('open', '');
-    await expect(tools.locator('[data-owner-care-sharing-options]')).toHaveCount(1);
-    await expect(tools.locator('[data-owner-care-sharing-options]')).toBeHidden();
-    await tools.locator(':scope > summary').click();
-    await tools.locator('[data-owner-care-sharing-options]').click();
+    await expect(page.locator('[data-owner-care-sharing-options]')).toHaveCount(0);
+    expect(await page.evaluate(() => WAFFLE_INTAKE_STATUS.openSharingOptions(document.querySelector('.directory-card')))).toBe(true);
     expect(await page.evaluate(() => window.__ownerFlowCalls)).toBe(1);
   });
 

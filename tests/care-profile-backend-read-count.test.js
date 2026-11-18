@@ -19,8 +19,9 @@ const bookingHeaders = ['Timestamp','Dog Name','Breed','Start Date','End Date','
 function fixture({ duplicateCareHeader = false, duplicateId = false, conflictingLegacyKey = false } = {}) {
   const calls = { bookingDataRange: 0, careGetRange: 0, careGetLastRow: 0, careGetLastColumn: 0, writes: 0 };
   const sandbox = {
+    INTAKE_ATTRIBUTE_CONFIG_: [{ key: 'handlingTips', enhanced: true }],
     BELONGINGS_ITEM_CONFIG_: [], BELONGINGS_RISK_CONFIG_: [],
-    PropertiesService: { getScriptProperties: () => ({ getProperty: () => 'Pet_Belongings' }) },
+    PropertiesService: { getScriptProperties: () => ({ getProperty: () => null }) },
     makeGuestStayKey_: (name, start, end) => `${String(name).trim().toLowerCase()}|${start}|${end}`,
     validStayIdV11225_: value => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || '').trim()),
     parseDogPhotoJson_: () => null,
@@ -46,7 +47,7 @@ function fixture({ duplicateCareHeader = false, duplicateId = false, conflicting
   if (conflictingLegacyKey) bookings.push([...booking, '']);
   const bookingSheet = {
     getDataRange() { calls.bookingDataRange++; return { getValues: () => [bookingHeaders, ...bookings] }; },
-    getParent: () => ({ getSheetByName: () => careSheet })
+    getParent: () => ({ getSheetByName: name => name === 'Pet_Belongings' ? careSheet : null })
   };
   sandbox.getTargetSheet_ = () => bookingSheet;
   vm.runInNewContext(`${source.slice(readStart, detailEnd)}\nthis.readProfile=getGuestProfileDetail_;`, sandbox);

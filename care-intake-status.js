@@ -127,23 +127,12 @@
     linked.set(card, prepared);
     return prepared;
   }
-  function ensureOwnerSharingOptions(card, owner, group) {
-    const more = card.querySelector('[data-care-secondary-actions]') || card.querySelector('.directory-care-more-actions-list');
-    if (!more || !owner || !group) return;
-    let button = more.querySelector(':scope > [data-owner-care-sharing-options]');
-    if (button) return;
-    button = document.createElement('button');
-    button.type = 'button';
-    button.dataset.ownerCareSharingOptions = '';
-    button.dataset.ownerCareOpenOptions = '';
-    button.className = 'directory-owner-care-sharing-options';
-    button.textContent = 'Owner sharing options';
-    button.addEventListener('click', () => {
-      if (!owner.isConnected || owner.disabled) return;
-      ownerOptionsDispatch.add(owner);
-      owner.click();
-    });
-    more.appendChild(button);
+  function openSharingOptions(card) {
+    const owner = card?.querySelector('.directory-care-brief-actions [data-p4-dir="owner"], .directory-care-brief-actions [data-firstlevel-owner-care-link]');
+    if (!card?.classList.contains('is-profile-active') || !owner?.isConnected || owner.disabled) return false;
+    ownerOptionsDispatch.add(owner);
+    owner.click();
+    return true;
   }
   function currentPdfLink(card) {
     if (!card.classList.contains('is-profile-active') || stateFor(card).code !== 'complete') return null;
@@ -154,7 +143,13 @@
   function syncIntakePdfButton(card) {
     const tools = card.querySelector('.directory-card-header > [data-care-header-tools]');
     if (!tools || !card.classList.contains('is-profile-active')) return;
-    let button = tools.querySelector('[data-care-header-intake-pdf]');
+    let group = tools.querySelector('[data-care-header-document-actions]');
+    if (!group) {
+      group = document.createElement('div');
+      group.dataset.careHeaderDocumentActions = '';
+      tools.append(group);
+    }
+    let button = group.querySelector('[data-care-header-intake-pdf]');
     if (!button) {
       button = document.createElement('button');
       button.type = 'button';
@@ -162,7 +157,7 @@
       button.dataset.careHeaderIntakePdf = '';
       button.setAttribute('aria-label', 'View intake PDF');
       button.addEventListener('click', () => currentPdfLink(card)?.click());
-      tools.append(button);
+      group.prepend(button);
     }
     if (!button.hasChildNodes() && window.PALZ_ICONS) button.innerHTML = window.PALZ_ICONS.svg('document');
     const available = Boolean(currentPdfLink(card));
@@ -207,7 +202,6 @@
       actions.insertBefore(group, owner);
     }
     if (owner.parentElement !== group) group.appendChild(owner);
-    ensureOwnerSharingOptions(card, owner, group);
     let node = actions.querySelector('[data-compact-intake-status]');
     if (!node) {
       node = document.createElement('span');
@@ -436,7 +430,8 @@
   }
   window.WAFFLE_INTAKE_STATUS = Object.freeze({
     getState(card) { return stateFor(card); },
-    refresh
+    refresh,
+    openSharingOptions
   });
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true });
   else start();

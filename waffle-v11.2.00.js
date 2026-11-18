@@ -333,7 +333,7 @@
     const button = event.target instanceof Element
       ? event.target.closest('[data-v11198-delete-confirmed]')
       : null;
-    if (!button) return;
+    if (!button || button.hasAttribute('data-care-header-remove-stay')) return;
     const card = button.closest('.directory-card[data-directory-stay-key]');
     if (!card) return;
 
