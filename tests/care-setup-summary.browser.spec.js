@@ -4,6 +4,7 @@ const path = require('node:path');
 
 const source = fs.readFileSync(path.join(__dirname, '..', 'care-intake-status.js'), 'utf8');
 const careSignalsRuntime = fs.readFileSync(path.join(__dirname, '..', 'waffle-v11.1.8.js'), 'utf8');
+const palzIcons = fs.readFileSync(path.join(__dirname, '..', 'palz-icons.js'), 'utf8');
 function fixture({ intake = '<span class="directory-intake-dot is-not-sent"></span>No digital intake on file', method = 'none' } = {}) {
   return `<body><main id="directory-grid"><article class="directory-card is-profile-active" data-directory-stay-key="milo|2026-10-20|2026-10-22" data-directory-dog-name="Milo" data-directory-start-date="2026-10-20" data-directory-end-date="2026-10-22" data-directory-dog-id="dog-1" data-directory-stay-id="stay-1" data-intake-method="${method}">
     <section data-directory-care-brief><div class="directory-care-brief-actions"><button data-p4-dir="owner" id="owner-care">Owner care</button></div>
@@ -83,6 +84,34 @@ test.describe('consolidated care setup summary', () => {
     await expect(profileInput).toHaveValue('unsaved profile draft');
     await expect(profileInput).toBeFocused();
     expect(await page.evaluate(() => window.__careRosterReads.length)).toBe(readsBefore);
+
+    for (const file of ['waffle-v11.1.8.css', 'care-mobile-clarity.css']) {
+      await page.addStyleTag({ content: fs.readFileSync(path.join(__dirname, '..', file), 'utf8') });
+    }
+    await page.addScriptTag({ content: palzIcons });
+    await page.evaluate(() => {
+      const card = document.querySelector('.directory-card');
+      card.classList.add('is-profile-active');
+      const profileBadges = document.createElement('div');
+      profileBadges.className = 'directory-profile-roster-badges';
+      profileBadges.dataset.directoryProfileRosterBadges = '';
+      profileBadges.append(card.querySelector('[data-v1118-care-signals]'));
+      card.append(profileBadges);
+      card.dataset.intakeMethod = 'digital';
+      window.dispatchEvent(new CustomEvent('waffle:owner-care-link-ready', {
+        detail: { dogName: 'Milo', startDate: '2026-10-20', endDate: '2026-10-22',
+          link: 'https://example.invalid/owner-link', stayId: 'stay-1', dogId: 'dog-1',
+          stayKey: 'milo|2026-10-20|2026-10-22' }
+      }));
+      WAFFLE_INTAKE_STATUS.refresh(card);
+    });
+    const ready = page.getByRole('img', { name: 'Link ready' });
+    await expect(ready).toBeVisible();
+    await expect(ready.locator('[data-palz-icon="link"]')).toBeVisible();
+    await expect(ready.locator('span[hidden]')).toHaveText('Link ready');
+    await expect(ready.locator('span[hidden]')).toBeHidden();
+    await expect(ready).toHaveCSS('border-top-width', '0px');
+    await expect(ready).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
   });
 
   test('enhancement refresh is a zero-write no-op and preserves an open setup draft', async ({ page }) => {

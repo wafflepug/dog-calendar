@@ -414,7 +414,7 @@
       try { intakeState = window.WAFFLE_INTAKE_STATUS.getState(card); } catch (_) {}
     }
     if (intakeState?.code === 'not_prepared') signals.push({ icon: '📋', label: 'Intake missing', weight: 45 });
-    else if (intakeState?.code === 'link_ready') signals.push({ icon: '📋', label: 'Link ready', weight: 45 });
+    else if (intakeState?.code === 'link_ready') signals.push({ icon: '🔗', label: 'Link ready', iconOnly: 'link', weight: 45 });
     else if (intakeState?.code === 'unknown') signals.push({ icon: '📋', label: 'Intake unverified', weight: 45 });
     else if (!intakeState && !Number(summary.intakeFieldCount || 0)) signals.push({ icon: '📋', label: 'Intake missing', weight: 45 });
     if (!phone || phone === 'N/A') signals.push({ icon: '☎️', label: 'Phone missing', weight: 55 });
@@ -453,9 +453,9 @@
       button.removeAttribute('aria-description');
     }
     const signalsMarkup = signals.map(signal => `
-      <span class="v1118-care-signal" data-v1118-signal-label="${esc(signal.label)}" title="${esc(signal.label)}"${signal.safety ? ' data-v1118-safety-signal' : ''}>
-        <span class="v1118-care-signal-icon" aria-hidden="true">${esc(signal.icon)}</span>
-        <span>${esc(signal.label)}</span>
+      <span class="v1118-care-signal" data-v1118-signal-label="${esc(signal.label)}" title="${esc(signal.label)}"${signal.safety ? ' data-v1118-safety-signal' : ''}${signal.iconOnly ? ` role="img" aria-label="${esc(signal.label)}"` : ''}>
+        <span class="v1118-care-signal-icon" aria-hidden="true">${signal.iconOnly && window.PALZ_ICONS?.svg(signal.iconOnly) || esc(signal.icon)}</span>
+        <span${signal.iconOnly ? ' hidden' : ''}>${esc(signal.label)}</span>
       </span>`).join('');
     if (signalsHost.innerHTML !== signalsMarkup) signalsHost.innerHTML = signalsMarkup;
     const isHidden = signals.length === 0;
