@@ -446,7 +446,8 @@
     if (signalsHost.parentElement !== destination) destination.append(signalsHost);
     const statusIcon = button.querySelector('.v1118-care-status:is(.is-at-home, .is-leaving-today)');
     if (name && statusIcon && statusIcon.parentElement !== destination) destination.append(statusIcon);
-    const description = [...(statusIcon ? [statusIcon.title] : []), ...signals.map(signal => signal.label)].join(', ');
+    const statusLabel = button.querySelector('[data-care-photo-status]')?.title || statusIcon?.title;
+    const description = [...(statusLabel ? [statusLabel] : []), ...signals.map(signal => signal.label)].join(', ');
     if (description && button.getAttribute('aria-description') !== description) {
       button.setAttribute('aria-description', description);
     } else if (!description && button.hasAttribute('aria-description')) {
@@ -479,11 +480,34 @@
     });
   }
 
+  function syncCarePhotoStatus(host, photo, status) {
+    const existing = host?.querySelector(':scope > [data-care-photo-status]');
+    const arriving = status === 'ARRIVING TODAY';
+    if (!photo || (!arriving && status !== 'LEAVING TODAY')) {
+      existing?.remove();
+      return false;
+    }
+    const kind = arriving ? 'arrival' : 'departure';
+    if (existing?.dataset.carePhotoStatus === kind) return true;
+    const badge = existing || document.createElement('span');
+    const label = arriving ? 'Arriving today' : 'Check-out today';
+    badge.className = 'wh-home-departure-flag';
+    badge.dataset.carePhotoStatus = kind;
+    badge.title = label;
+    badge.setAttribute('role', 'img');
+    badge.setAttribute('aria-label', label);
+    badge.textContent = arriving ? '🛬' : '🧳';
+    if (!existing) photo.after(badge);
+    return true;
+  }
+
   function decorateCareCard(card) {
     const button = card?.querySelector('.directory-guest-tile-open');
     if (!button) return;
     const host = card.querySelector('[data-directory-profile-roster-badges]') || button;
     const status = careCardStatus(card);
+    const rosterHasBadge = syncCarePhotoStatus(button, button.querySelector(':scope > .directory-guest-tile-photo'), status);
+    button.querySelector('.directory-roster-status')?.toggleAttribute('data-care-photo-status-hidden', rosterHasBadge);
     let chip = host.querySelector('[data-v1118-status-chip]');
     if (!chip) {
       chip = document.createElement('span');
@@ -492,6 +516,7 @@
     }
     const chipClass = 'v1118-status-chip v1118-care-status ' + statusClass(status);
     if (chip.className !== chipClass) chip.className = chipClass;
+    chip.toggleAttribute('data-care-photo-status-hidden', rosterHasBadge);
     const iconLabel = status === 'AT HOME' ? 'At Home' : status === 'LEAVING TODAY' && host === button ? 'Leaving Today' : '';
     if (!iconLabel && chip.parentElement !== host) host.append(chip);
     if (chip.textContent !== status) chip.textContent = status;
@@ -501,6 +526,9 @@
       ? card.querySelector('.directory-card-header .directory-status-tag')
       : null;
     if (profileStatus) {
+      const photo = card.querySelector('.directory-card-header > .directory-photo-shell');
+      const profileHasBadge = syncCarePhotoStatus(photo?.parentElement, photo, status);
+      profileStatus.toggleAttribute('data-care-photo-status-hidden', profileHasBadge);
       const labels = {
         'AT HOME': 'At Home',
         'ARRIVING TODAY': 'Arriving Today',
@@ -746,6 +774,7 @@
     wireDeleteUndo();
     wireSaveFeedback();
     wireIntakeSignalRefresh();
+    window.addEventListener('waffle:stay-operation-updated', decorateAllCareCards);
     wrapDirectoryRender();
     wrapOperationsRender();
     wireModalSkeletons();
@@ -761,7 +790,7 @@
     oneShotPolish();
     setTimeout(oneShotPolish, 300);
     setTimeout(oneShotPolish, 1000);
-    window.WAFFLE_V1118 = { version: VERSION, showToast, openSearch, openQuickAction, decorateAllCareCards, renderAttention };
+    window.WAFFLE_V1118 = { version: VERSION, showToast, openSearch, openQuickAction, decorateCareCard, decorateAllCareCards, renderAttention };
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once: true });

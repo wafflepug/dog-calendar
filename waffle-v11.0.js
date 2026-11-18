@@ -247,7 +247,10 @@ async function v110LoadOperations(options={}){
     const r=await queryAppsScriptSWR({action:'get_stay_operations'},{cacheKey:'directory:stay-operations',maxStaleMs:2*60*60*1000,maxAttempts:2,timeoutMs:30000,onCached:c=>v110IndexOperations(c.records)});
     if(r?.data?.result==='success'&&Array.isArray(r.data.records))v110IndexOperations(r.data.records,{authoritative:r.offlineFallback!==true});
     if(WAFFLE_PAGE==='calendar'&&!options.noRender)renderV10OperationsHome(globalCalendar?.getEvents()?.slice()||v110LatestCalendarEvents);
-    if(WAFFLE_PAGE==='directory')v110EnhanceAllCareCards();
+    if(WAFFLE_PAGE==='directory'){
+      v110EnhanceAllCareCards();
+      window.WAFFLE_V1118?.decorateAllCareCards?.();
+    }
   }catch(e){console.warn('Stay Operations unavailable:',e);}
 }
 

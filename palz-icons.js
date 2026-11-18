@@ -117,6 +117,10 @@
   let scheduled=false;const pending=new Set();
   function semanticControls(){
     document.querySelectorAll('.wh-home-departure-flag > span').forEach(icon => hostIcon(icon, 'luggage'));
+    document.querySelectorAll('[data-care-photo-status]').forEach(badge => {
+      const icon = badge.dataset.carePhotoStatus === 'arrival' ? 'checkin' : 'luggage';
+      if (!badge.querySelector(`[data-palz-icon="${icon}"]`)) badge.innerHTML = svg(icon);
+    });
     document.querySelectorAll('[data-v108-boarding-icon]').forEach(icon => hostIcon(icon, 'home'));
     document.querySelectorAll('.directory-guest-tile-open .v1118-care-status.is-at-home, .directory-profile-name-line .directory-status-tag.tag-at-home').forEach(chip => {
       if (!chip.querySelector('[data-palz-icon="home"]')) chip.insertAdjacentHTML('beforeend', svg('home'));
