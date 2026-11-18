@@ -56,6 +56,9 @@ function finish(force=false){if(!force&&(!parsed||pet||root.dataset.waffleUiRead
 const observer=new MutationObserver(()=>finish());observer.observe(root,{attributes:true,attributeFilter:['data-waffle-ui-ready']});
 document.addEventListener('DOMContentLoaded',()=>{parsed=true;finish();},{once:true});
 window.addEventListener('waffle:first-paint-ready',()=>finish());
+window.addEventListener('waffle:care-profile-loading', () => {
+  if (root.dataset.palzLoading === 'done' && root.dataset.palzNavigating !== 'true') chooseLoadingAnimation();
+});
 window.addEventListener('pageshow',event=>{if(event.persisted&&parsed)finish(true);else finish();});
 timer=setTimeout(()=>finish(true),8000);finish();
 document.addEventListener('click',event=>{if(event.defaultPrevented||event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;const link=event.target.closest?.('a[href]');if(!link||link.hasAttribute('download')||(link.target&&link.target!=='_self'))return;let url;try{url=new URL(link.href,location.href);}catch(_){return;}if(url.origin!==location.origin||!url.pathname.endsWith('.html')||(url.pathname===location.pathname&&url.search===location.search))return;setLabel(url.searchParams.get('pet'));
