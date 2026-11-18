@@ -155,9 +155,13 @@ for (const colorScheme of ['light', 'dark']) {
         shell.appendChild(image);
       });
     }
+    const loaderRoot = page.locator('html');
+    await expect(loaderRoot).toHaveAttribute('data-palz-loading', 'done');
+    const previousAnimation = await loaderRoot.getAttribute('data-palz-loading-animation');
     const card = await openProfile(page);
     const dashboard = page.locator('.directory-dashboard-fused');
     const loadingScreen = dashboard.locator('[data-care-profile-loading-screen]');
+    await expect(loaderRoot).not.toHaveAttribute('data-palz-loading-animation', previousAnimation);
     await expect(dashboard).toHaveAttribute('data-care-profile-loading', 'true');
     await expect(loadingScreen.locator('.palz-loading-label')).toHaveText('Loading Milo’s Care Profile…');
     await expect(loadingScreen.getByRole('img', { name: 'Palz Stay' })).toBeVisible();

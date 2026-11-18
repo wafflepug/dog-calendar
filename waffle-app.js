@@ -12439,6 +12439,7 @@ registerWaffleServiceWorker();
             }
             profileLoadingScreen = screen;
             if (shouldShowProfileLoader) {
+                window.dispatchEvent(new Event('waffle:care-profile-loading'));
                 const name = String(card.dataset.directoryDogName || card.dataset.dogName || 'pet').trim();
                 const title = screen?.querySelector('[data-care-profile-loading-title]');
                 if (title) title.textContent = `Loading ${name}’s Care Profile…`;
