@@ -97,6 +97,31 @@ assert.throws(() => api.setStayOperationalStatus_({ stayId: ID_A, stayKey: key, 
 assert.throws(() => api.setStayOperationalStatus_({ stayId: '00000000-0000-4000-8000-000000000099', stayKey: key, dogName: 'Ralph', startDate: '2026-10-04', endDate: '2026-10-09' }, 'checked_in'), /does not identify/i);
 
 const malformed = harness([headers, booking(ID_A, 'Ada')], [opHeaders.concat(['Stay ID']), op('not-a-uuid', key)]);
+const renamedBooking = booking(ID_A, 'Ada');
+renamedBooking[1] = 'Biscoff';
+const renamedKey = 'biscoff|2026-10-04|2026-10-09';
+const renamedRequest = { stayId: ID_A, stayKey: renamedKey, dogName: 'Biscoff', startDate: '2026-10-04', endDate: '2026-10-09' };
+const checkedIn = op(ID_A, key, 'checked_in');
+checkedIn[6] = '2026-10-04T01:00:00Z';
+const renamed = harness([headers, renamedBooking], [opHeaders.concat(['Stay ID']), checkedIn]);
+const renamedRecord = renamed.readStayOperations_({ stayKeys: [renamedKey] })[0];
+assert.equal(renamedRecord.stayId, ID_A);
+assert.equal(renamedRecord.dogName, 'Biscoff');
+assert.equal(renamedRecord.status, 'checked_in');
+assert.equal(renamed._ops.rows[1][1], key, 'reading the recovered operation preserves the stored history');
+const renamedCheckout = renamed.setStayOperationalStatus_(renamedRequest, 'checked_out');
+assert.equal(renamedCheckout.checkedInAt, '2026-10-04T01:00:00Z');
+assert.equal(renamed._ops.rows.length, 2, 'a later operation updates the original row');
+
+const conflictingName = harness([headers, renamedBooking, booking(ID_B, 'Lee')], [opHeaders.concat(['Stay ID']), checkedIn]);
+assert.equal(conflictingName.readStayOperations_({ stayIds: [ID_A] })[0].identityConflictReason, 'operation_name_mismatch');
+assert.throws(() => conflictingName.setStayOperationalStatus_(renamedRequest, 'checked_in'), /conflicting ownership/);
+assert.equal(conflictingName._ops.rows.length, 2);
+const mismatchedKey = harness([headers, renamedBooking], [opHeaders.concat(['Stay ID']), op(ID_A, renamedKey)]);
+assert.equal(mismatchedKey.readStayOperations_({ stayIds: [ID_A] })[0].identityConflictReason, 'operation_name_mismatch');
+const duplicateOperations = harness([headers, renamedBooking], [opHeaders.concat(['Stay ID']), checkedIn, checkedIn]);
+assert.throws(() => duplicateOperations.setStayOperationalStatus_(renamedRequest, 'checked_in'), /conflicting ownership/);
+
 assert.equal(malformed.readStayOperations_()[0].identityConflictReason, 'invalid_stay_id');
 const malformedBooking = harness([headers, booking('not-a-uuid', 'Ada')], [opHeaders, [new Date(), key, 'Ralph','2026-10-04','2026-10-09','checked_out']]);
 assert.equal(malformedBooking.readStayOperations_()[0].identityConflictReason, 'invalid_stay_id');
@@ -172,5 +197,6 @@ const variantEnd = code.indexOf('function waffleReadCacheKey_', variantStart);
 vm.runInContext(code.slice(variantStart, variantEnd), earlyRoute);
 assert.notEqual(earlyRoute.waffleReadVariant_('get_stay_operations', { stayIds: [ID_A] }), earlyRoute.waffleReadVariant_('get_stay_operations', { stayIds: [ID_B] }), 'server cache variants separate UUID-scoped operations');
 assert.equal(JSON.parse(earlyRoute.waffleReadVariant_('get_guest_directory', {})).stayOperationIdentityVersion, 1, 'legacy directory caches cannot validate as current operation-schema reads');
+assert.equal(JSON.parse(earlyRoute.waffleReadVariant_('get_guest_directory', {})).stayOperationRenameVersion, 1, 'directory caches invalidate pre-rename operation results');
 
 console.log('Stay operation identity backend tests passed');

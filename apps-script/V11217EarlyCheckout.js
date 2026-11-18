@@ -417,7 +417,17 @@ function readStayOperationsV11226_(filters, context) {
     }
     if (booking && !reason && !id && booking.stayId && inventory.idCounts[booking.stayId.toLowerCase()] > 1) reason = 'duplicate_stay_id';
     if (booking && !reason && !id && booking.stayId && !validStayIdV11225_(booking.stayId)) reason = 'invalid_stay_id';
-    if (booking && !reason && id && record.dogName && normalizeV108Identity_(record.dogName) !== normalizeV108Identity_(booking.dogName)) reason = 'missing_booking';
+    if (booking && !reason && id && record.dogName && normalizeV108Identity_(record.dogName) !== normalizeV108Identity_(booking.dogName)) {
+      // A rename can leave the unique ID-owned operation under its old name and key.
+      // Conflicting ownership or an inconsistent historical key still needs review.
+      var historicalKey = makeGuestStayKey_(record.dogName, record.startDate, record.endDate);
+      if (!record.startDate || !record.endDate || historicalKey !== record.stayKey || (inventory.byKey[record.stayKey] || []).length) {
+        reason = 'operation_name_mismatch';
+      } else {
+        record.dogName = booking.dogName;
+        record.stayKey = booking.stayKey;
+      }
+    }
     if (booking && !reason) record.stayId = booking.stayId || '';
     else {
       record.identityConflict = true;
@@ -479,6 +489,9 @@ function setStayOperationalStatusV11226_(data, status) {
     var target = resolveStayOperationTargetV11226_(data), sh = getStayOperationsSheet_(), schema = stayOperationHeaderMapV11226_(sh, true);
     var records = readStayOperations_({ stayKeys: [target.stayKey], stayIds: target.stayId ? [target.stayId] : [] }, data.stayId ? {inventory:target.inventory} : null);
     markTiming('lookupMs');
+    if (records.some(function(r) {
+      return r.identityConflict && r.identityStayId && r.identityStayId.toLowerCase() === target.stayId.toLowerCase();
+    })) throw new Error('An operation record for this Stay ID has conflicting ownership; no operation was changed.');
     var matches = records.filter(function(r) { return r.stayId && target.stayId && r.stayId.toLowerCase() === target.stayId.toLowerCase(); });
     var keyRows = records.filter(function(r) { return r.stayKey === target.stayKey; });
     if (!matches.length && keyRows.length === 1 && !keyRows[0].identityConflict && !keyRows[0].stayId) matches = keyRows;

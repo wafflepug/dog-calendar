@@ -298,6 +298,12 @@ function setupIntakeSubmissionHarness(options = {}) {
   const counts = { flags: 0, profiles: 0, pdf: 0, audit: 0, touch: 0, push: 0 };
   Object.assign(h.context, {
     ensureStableStayIdV11225_: () => { assert.equal(h.lockStats.depth, 0, 'stable-ID helper runs outside the submission lock'); if (options.onStable) options.onStable(); return stayIdA; },
+    bindLegacyStayOperationToIdV11226_(bookingSheet, stayKey, row, stayId) {
+      assert.equal(h.lockStats.depth, 1, 'the old stay key is bound under the booking lock');
+      assert.equal(bookingSheet.rows[row - 1][1], 'Cino', 'the stay still has its old name when bound');
+      assert.equal(stayKey, 'cino|2026-11-01|2026-11-11');
+      assert.equal(stayId, stayIdA);
+    },
     ensureIntakeBelongingsFlags_() { counts.flags++; if (options.failAt === 'flags') throw new Error('injected flags interruption'); },
     saveIntakeAttributesForStay_() { counts.profiles++; if (options.failAt === 'profile') throw new Error('injected profile interruption'); },
     auditObjectChangedFields_: () => [],
