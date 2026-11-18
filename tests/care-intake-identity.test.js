@@ -371,6 +371,28 @@ test('owner times are available on the exact stay when the intake receipt comple
   assert.equal(context.processIntakeSubmission_(payload).result, 'success');
 });
 
+test('Detailed Care fills only missing enhanced answers from the exact signed intake', () => {
+  const { h, intake } = setupIntakeSubmissionHarness();
+  Object.assign(intake.rows[1], {
+    2: new Date(), 3: 'Complete', 14: 'signed-pdf',
+    13: JSON.stringify({
+      enhancedIntakeVersion: '2026-11-12', handlingTips: 'Approach slowly',
+      walkingEquipment: ['Harness', 'Double lead'], preferredWalkTiming: 'Afternoons', insuranceNumber: '00AB-42'
+    })
+  });
+  const enrich = (dogId, fields) => h.context.enrichGuestProfileFromIntake_(
+    h.bookings.getParent(), h.context.PropertiesService.getScriptProperties(), { stayId: stayIdA, dogId }, fields
+  );
+  const fields = { handlingTips: '', preferredWalkTiming: 'Mornings' };
+  assert.equal(enrich(dogIdA, fields).walkingEquipment, 'Harness, Double lead');
+  assert.equal(fields.handlingTips, '', 'an explicit clear stays cleared');
+  assert.equal(fields.preferredWalkTiming, 'Mornings', 'a sitter edit takes precedence');
+  assert.equal(fields.insuranceNumber, '00AB-42');
+  assert.deepEqual(enrich(dogIdB, {}), {});
+  intake.rows[1][3] = 'Awaiting Owner';
+  assert.deepEqual(enrich(dogIdA, {}), {});
+});
+
 test('prefill and local submission resolve an already-migrated token to current confirmed dates', () => {
   const { h, intake, token, counts } = setupIntakeSubmissionHarness();
   h.context.getIntakeSheet_ = () => intake;
@@ -710,6 +732,8 @@ test('Palz Stay intake requires each current owner answer and accepts explicit n
     preferredContactMethod: ['Message'], walkingEquipment: 'None'
   });
   assert.doesNotThrow(() => h.context.assertPalzIntakeAnswers_(answers));
+  assert.doesNotThrow(() => h.context.assertPalzIntakeAnswers_({ ...answers, insuranceNumber: '00AB-42' }));
+  assert.throws(() => h.context.assertPalzIntakeAnswers_({ ...answers, insuranceNumber: ['00AB-42'] }), /Enter an insurance number/);
   assert.doesNotThrow(() => h.context.assertPalzIntakeAnswers_({ ...answers, dropOffTime: '', pickUpTime: '17:00' }));
   assert.throws(() => h.context.assertPalzIntakeAnswers_({ ...answers, dropOffTime: '25:00' }), /Enter valid drop-off and pick-up times/);
   for (const key of ['ownerEmail', 'emergencyPhone', 'medicationInstructions', 'preferredContactMethod', 'intakeAdditionalRemarks']) {

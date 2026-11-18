@@ -3,6 +3,79 @@ const fs=require('node:fs');
 const path=require('node:path');
 const {install,bookings}=require('./fixtures/care-daily-workflows');
 
+test('streamlined profile places records, belongings and destructive actions together', async ({page, baseURL}) => {
+  const booking = bookings[0];
+  const fixture = await install(page, {
+    profileOverrides: { [booking.stayId]: { approvedTreats: 'Plain chicken only', walkingEquipment: 'Blue harness', insuranceNumber: '00AB-42' } }
+  });
+  await page.goto(`${baseURL}/directory.html`);
+  const card = page.locator(`#directory-grid [data-directory-stay-id="${booking.stayId}"]`);
+  await card.locator('[data-open-directory-profile]').click();
+  await expect(card.locator('[data-directory-detail="profile"]')).toHaveAttribute('data-profile-read-state', 'fresh');
+  await expect(card.getByRole('heading', { name: 'Pet Notes' })).toBeVisible();
+  await expect(card.getByText('More actions', {exact: true})).toHaveCount(0);
+  expect(fixture.reads).not.toContain('get_dog_history');
+  expect(fixture.reads).not.toContain('get_dog_master_profile');
+
+  await card.getByRole('button', {name: 'Records', exact: true}).click();
+  const records = card.locator('.directory-care-records-disclosure');
+  await expect(records.locator('[data-directory-care]')).toBeHidden();
+  await expect(card.getByRole('button', {name: 'Refresh records', exact: true})).toHaveCount(0);
+  await expect(records.locator('[data-directory-legacy] + [data-care-dog-records]')).toBeVisible();
+  await expect(records.getByRole('heading', {name: 'Dog record & stay history'})).toBeVisible();
+  await expect.poll(() => fixture.reads.includes('get_dog_history') && fixture.reads.includes('get_dog_master_profile')).toBe(true);
+  await expect(records.locator('[data-care-dog-records] [data-v108-history]')).toBeVisible();
+  await expect(records.locator('[data-care-dog-records] [data-v110-master-host]')).toBeVisible();
+
+  const belongings = card.getByRole('button', {name: 'Belongings', exact: true});
+  await belongings.click();
+  await expect(card.locator('[data-directory-main-panel="belongings"]')).toBeVisible();
+  await expect(card.getByText('Blue lead and fitted harness')).toBeVisible();
+  await expect(card.locator('.belongings-photo-gallery')).toBeVisible();
+  await expect(records).toBeHidden();
+
+  const pdf = card.getByRole('button', {name: 'View intake PDF'});
+  const remove = card.getByRole('button', {name: 'Remove Stay', exact: true});
+  await expect(pdf).toBeVisible();
+  await expect(remove).toBeVisible();
+  await expect(card.locator('[data-care-header-intake-pdf] + [data-care-header-remove-stay]')).toHaveCount(1);
+  await page.evaluate(() => { window.confirm = () => { throw Error('First press must not confirm'); }; });
+  await remove.click();
+  const armed = card.getByRole('button', {name: 'Delete Confirmed Stay', exact: true});
+  await expect(armed).toBeVisible();
+  await page.evaluate(() => { window.__testDeleteConfirmations = 0; window.confirm = () => { window.__testDeleteConfirmations++; return false; }; });
+  await armed.click();
+  expect(await page.evaluate(() => window.__testDeleteConfirmations)).toBe(1);
+  await expect(remove).toBeVisible();
+  expect(fixture.reads).not.toContain('delete_confirmed_stay');
+
+  await card.getByRole('button', {name: 'Overview', exact: true}).click();
+  await card.getByRole('button', {name: /Food & Walks/}).click();
+  await expect(card.locator('[data-intake-read-attribute="approvedTreats"]')).toContainText('Plain chicken only');
+  await expect(card.locator('[data-intake-read-attribute="walkingEquipment"]')).toContainText('Blue harness');
+  await card.getByRole('button', {name: /Health & Home/}).click();
+  await expect(card.locator('[data-intake-read-attribute="insuranceNumber"]')).toBeVisible();
+  await expect(card.locator('[data-intake-read-attribute="insuranceNumber"]')).toContainText('00AB-42');
+});
+
+test('desktop notification dot sits on the bell corner', async ({page, baseURL}) => {
+  await page.setViewportSize({width: 1280, height: 800});
+  await install(page);
+  await page.goto(`${baseURL}/directory.html`);
+  const bell = page.locator('#whSitterDesktopTools #waffleNotificationButton');
+  await expect(bell).toBeVisible();
+  const geometry = await bell.evaluate(button => {
+    const icon = button.querySelector('.waffle-notification-button-icon').getBoundingClientRect();
+    const dot = button.querySelector('[data-notification-unread-badge]');
+    dot.hidden = false;
+    const bounds = dot.getBoundingClientRect();
+    return { top: Math.abs(bounds.top - icon.top), right: Math.abs(bounds.right - icon.right), width: bounds.width };
+  });
+  expect(geometry.top).toBeLessThanOrEqual(5);
+  expect(geometry.right).toBeLessThanOrEqual(5);
+  expect(geometry.width).toBeGreaterThan(0);
+});
+
 test('Care quick actions stay compact, truthful and bound to the selected stay',async({page,baseURL},info)=>{
   const fixture=await install(page);
   const profileReads=[];

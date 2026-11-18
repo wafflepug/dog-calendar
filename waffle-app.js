@@ -5172,7 +5172,8 @@ registerWaffleServiceWorker();
             title: 'Owner & Emergency',
             fields: [
                 { key: 'emergencyContact', label: 'Emergency Contact' },
-                { key: 'emergencyPhone', label: 'Emergency Phone' }
+                { key: 'emergencyPhone', label: 'Emergency Phone' },
+                { key: 'preferredContactMethod', label: 'Preferred Contact Method', type: 'textarea', enhanced: true }
             ]
         },
         {
@@ -5184,7 +5185,10 @@ registerWaffleServiceWorker();
                 { key: 'desexed', label: 'Desexed', type: 'yesno' },
                 { key: 'vaccinated', label: 'Vaccinated', type: 'yesno' },
                 { key: 'microchipped', label: 'Microchipped', type: 'yesno' },
-                { key: 'weightManagement', label: 'Weight Management', type: 'yesno' }
+                { key: 'weightManagement', label: 'Weight Management', type: 'yesno' },
+                { key: 'vaccinationDetails', label: 'Vaccination Details', type: 'textarea', enhanced: true },
+                { key: 'fleaTickTreatment', label: 'Flea and Tick Treatment', type: 'textarea', enhanced: true },
+                { key: 'fleaTickValidUntil', label: 'Flea and Tick Protection Until', type: 'textarea', enhanced: true }
             ]
         },
         {
@@ -5200,7 +5204,14 @@ registerWaffleServiceWorker();
                 { key: 'escapeAttempts', label: 'Escape Attempts', type: 'yesno' },
                 { key: 'indoorAccidents', label: 'Indoor Accidents', type: 'yesno' },
                 { key: 'chewingFurniture', label: 'Chewing Furniture', type: 'yesno' },
-                { key: 'triggersFears', label: 'Triggers or Fears', type: 'textarea', wide: true }
+                { key: 'triggersFears', label: 'Triggers or Fears', type: 'textarea', wide: true },
+                { key: 'aggressionDetails', label: 'Aggression or Bite History', type: 'textarea', enhanced: true },
+                { key: 'possessiveToysFood', label: 'Possessive of Toys or Food', type: 'textarea', enhanced: true },
+                { key: 'barkingIndoors', label: 'Barking Indoors', type: 'textarea', enhanced: true },
+                { key: 'unfamiliarDogsInteraction', label: 'Interaction with Unfamiliar Dogs', type: 'textarea', enhanced: true },
+                { key: 'handlingTips', label: 'Handling Tips', type: 'textarea', enhanced: true },
+                { key: 'favouriteActivities', label: 'Favourite Activities', type: 'textarea', enhanced: true },
+                { key: 'additionalHandlingInstructions', label: 'Additional Handling Instructions', type: 'textarea', enhanced: true }
             ]
         },
         {
@@ -5210,7 +5221,9 @@ registerWaffleServiceWorker();
                 { key: 'feedingTimes', label: 'Feeding Times' },
                 { key: 'foodAmount', label: 'Food Amount', type: 'textarea', wide: true },
                 { key: 'allowedTreats', label: 'Allowed Treats', type: 'yesno' },
-                { key: 'foodAllergies', label: 'Food Allergies', type: 'textarea', wide: true }
+                { key: 'foodAllergies', label: 'Food Allergies', type: 'textarea', wide: true },
+                { key: 'approvedTreats', label: 'Approved Treats and Restrictions', type: 'textarea', enhanced: true },
+                { key: 'otherFeedingInstructions', label: 'Other Feeding Instructions', type: 'textarea', enhanced: true }
             ]
         },
         {
@@ -5219,7 +5232,10 @@ registerWaffleServiceWorker();
                 { key: 'walksPerDay', label: 'Walks per Day' },
                 { key: 'walkDuration', label: 'Walk Duration' },
                 { key: 'offLeashAllowed', label: 'Off-Leash Allowed', type: 'yesno' },
-                { key: 'pullsOnLeash', label: 'Pulls on Leash', type: 'yesno' }
+                { key: 'pullsOnLeash', label: 'Pulls on Leash', type: 'yesno' },
+                { key: 'preferredWalkTiming', label: 'Preferred Walk Timing', type: 'textarea', enhanced: true },
+                { key: 'walkingEquipment', label: 'Walking Equipment', type: 'textarea', enhanced: true },
+                { key: 'outdoorRestrictions', label: 'Outdoor Restrictions', type: 'textarea', enhanced: true }
             ]
         },
         {
@@ -5228,7 +5244,12 @@ registerWaffleServiceWorker();
                 { key: 'medicalConditions', label: 'Medical Conditions', type: 'textarea', wide: true },
                 { key: 'medicationInstructions', label: 'Medication Instructions', type: 'textarea', wide: true },
                 { key: 'regularVetClinic', label: 'Regular Vet Clinic' },
-                { key: 'vetPhone', label: 'Vet Phone' }
+                { key: 'vetPhone', label: 'Vet Phone' },
+                { key: 'petInsurance', label: 'Pet Insurance', type: 'textarea', enhanced: true },
+                { key: 'insuranceDetails', label: 'Insurance Details', type: 'textarea', enhanced: true },
+                { key: 'insuranceNumber', label: 'Insurance Number', enhanced: true },
+                { key: 'emergencyVet', label: 'Emergency Vet', type: 'textarea', enhanced: true },
+                { key: 'medicalEmergencyInstructions', label: 'Medical Emergency Instructions', type: 'textarea', enhanced: true }
             ]
         },
         {
@@ -5237,7 +5258,42 @@ registerWaffleServiceWorker();
                 { key: 'sleepLocation', label: 'Where Dog Sleeps', type: 'textarea', wide: true },
                 { key: 'crateTrained', label: 'Crate Trained', type: 'yesno' },
                 { key: 'canBeLeftAlone', label: 'Can Be Left Alone', type: 'yesno' },
-                { key: 'aloneDuration', label: 'If Yes, How Long?', wide: true }
+                { key: 'aloneDuration', label: 'If Yes, How Long?', wide: true },
+                { key: 'ownBedCrateProvided', label: 'Own Bed or Crate Provided', type: 'textarea', enhanced: true },
+                { key: 'houseTrained', label: 'House-Trained', type: 'textarea', enhanced: true },
+                { key: 'toiletBreakFrequency', label: 'Toilet Break Frequency', type: 'textarea', enhanced: true },
+                { key: 'couchAllowed', label: 'Couch Allowed', type: 'textarea', enhanced: true },
+                { key: 'stairsSafe', label: 'Stairs Safe', type: 'textarea', enhanced: true },
+                { key: 'indoorRoutine', label: 'Indoor Routine', type: 'textarea', enhanced: true }
+            ]
+        },
+        {
+            title: 'Grooming & Transport',
+            fields: [
+                { key: 'needsBrushing', label: 'Needs Brushing', type: 'textarea', enhanced: true },
+                { key: 'brushingInstructions', label: 'Brushing Instructions', type: 'textarea', enhanced: true },
+                { key: 'needsBathing', label: 'Needs Bathing', type: 'textarea', enhanced: true },
+                { key: 'bathingInstructions', label: 'Bathing Instructions', type: 'textarea', enhanced: true },
+                { key: 'dryingInstructions', label: 'Drying Instructions', type: 'textarea', enhanced: true },
+                { key: 'otherGroomingCare', label: 'Other Grooming Care', type: 'textarea', enhanced: true },
+                { key: 'enjoysCarRides', label: 'Enjoys Car Rides', type: 'textarea', enhanced: true },
+                { key: 'transportPermission', label: 'Transport Permission', type: 'textarea', enhanced: true },
+                { key: 'carTravelMethod', label: 'Car Travel Method', type: 'textarea', enhanced: true },
+                { key: 'transportRestrictions', label: 'Transport Restrictions', type: 'textarea', enhanced: true }
+            ]
+        },
+        {
+            title: 'Commands & Other Instructions',
+            fields: [
+                { key: 'commandComeHere', label: 'Come Here', type: 'textarea', enhanced: true },
+                { key: 'commandDropIt', label: 'Drop It', type: 'textarea', enhanced: true },
+                { key: 'commandSit', label: 'Sit', type: 'textarea', enhanced: true },
+                { key: 'commandLeaveIt', label: 'Leave It', type: 'textarea', enhanced: true },
+                { key: 'commandDown', label: 'Down', type: 'textarea', enhanced: true },
+                { key: 'commandHeel', label: 'Heel', type: 'textarea', enhanced: true },
+                { key: 'commandStayWait', label: 'Stay / Wait', type: 'textarea', enhanced: true },
+                { key: 'commandOther', label: 'Other Commands', type: 'textarea', enhanced: true },
+                { key: 'additionalInstructions', label: 'Additional Instructions', type: 'textarea', enhanced: true }
             ]
         }
     ];
@@ -5248,21 +5304,25 @@ registerWaffleServiceWorker();
     const DIRECTORY_PROFILE_SECONDARY_TABS = [
         {
             key: 'foodWalks', label: 'Food & Walks', icon: '🥣',
-            groups: ['Feeding', 'Walking'], fields: ['foodBrandType', 'feedingTimes', 'foodAmount', 'allowedTreats', 'foodAllergies', 'walksPerDay', 'walkDuration', 'offLeashAllowed', 'pullsOnLeash']
+            groups: ['Feeding', 'Walking']
         },
         {
             key: 'behaviour', label: 'Behaviour', icon: '🧠',
-            groups: ['Behaviour & Personality'], fields: ['friendlyDogs', 'friendlyCats', 'friendlyChildren', 'friendlyStrangers', 'separationAnxiety', 'aggression', 'foodAggression', 'escapeAttempts', 'indoorAccidents', 'chewingFurniture', 'triggersFears']
+            groups: ['Behaviour & Personality', 'Commands & Other Instructions']
         },
         {
             key: 'healthHome', label: 'Health & Home', icon: '🩺',
-            groups: ['Owner & Emergency', 'Dog Information', 'Medical', 'Sleeping & Home Routine'], fields: ['emergencyContact', 'emergencyPhone', 'age', 'weight', 'sex', 'desexed', 'vaccinated', 'microchipped', 'weightManagement', 'medicalConditions', 'medicationInstructions', 'regularVetClinic', 'vetPhone', 'sleepLocation', 'crateTrained', 'canBeLeftAlone', 'aloneDuration']
+            groups: ['Owner & Emergency', 'Dog Information', 'Medical', 'Sleeping & Home Routine', 'Grooming & Transport']
         },
         {
             key: 'safety', label: 'Safety', icon: '🛡️',
-            groups: [], fields: []
+            groups: []
         }
-    ];
+    ].map(tab => ({
+        ...tab,
+        fields: INTAKE_ATTRIBUTE_UI_GROUPS.filter(group => tab.groups.includes(group.title))
+            .flatMap(group => group.fields.map(field => field.key))
+    }));
 
     // Keep blank descriptive fields out of the way while leaving care and safety
     // instructions directly visible in the editor.
@@ -5273,7 +5333,7 @@ registerWaffleServiceWorker();
     function directoryCareEditorGroupFields(group, tab, attributes) {
         const fields = (group?.fields || []).filter(field => tab.fields.includes(field.key));
         const optional = fields.filter(field =>
-            DIRECTORY_PROFILE_OPTIONAL_FIELDS.has(field.key) && !String(attributes?.[field.key] ?? '').trim()
+            (field.enhanced || DIRECTORY_PROFILE_OPTIONAL_FIELDS.has(field.key)) && !String(attributes?.[field.key] ?? '').trim()
         );
         const optionalKeys = new Set(optional.map(field => field.key));
         return {
@@ -9731,7 +9791,7 @@ registerWaffleServiceWorker();
             const unchangedRenderedNote = handoverNoteHost.dataset.careBriefNoteRendered === 'true'
                 && handoverNoteHost.dataset.careBriefHandoverNote === note;
             if (!unchangedRenderedNote) {
-                const displayNote = note || 'No handover note recorded';
+                const displayNote = note || 'No pet notes recorded';
                 const isLongNote = note.length > 240 || note.split(/\r\n|\r|\n/).length > 3;
                 const noteHtml = isLongNote
                     ? `<span data-care-brief-handover-preview>${escapeDashboardHtml(`${note.slice(0, 180).trimEnd()}…`)}</span><details class="directory-care-brief-handover-details" data-care-brief-handover-details><summary>Read full handover summary</summary><div data-care-brief-handover-full>${escapeDashboardHtml(note)}</div></details>`
@@ -13425,7 +13485,7 @@ registerWaffleServiceWorker();
             const summary = directoryCareCategorySummary(tab.key, attributes, profileReadState, safetyRecord, safetyState);
             const content = tab.key === 'safety'
                 ? '<div class="directory-profile-care-host" data-directory-profile-care><div class="intake-profile-empty">Loading safety settings…</div></div>'
-                : `${groupsHtml}<div class="intake-profile-read-view" data-intake-read-category="${escapeDashboardHtml(tab.key)}">${intakeAttributeReadViewHtml(categoryFields, attributes, profileReadState, tab.key)}</div>`;
+                : `${groupsHtml}<div class="intake-profile-read-view" data-intake-read-category="${escapeDashboardHtml(tab.key)}">${intakeAttributeReadViewHtml(categoryFields.filter(field => !field.enhanced || String(attributes[field.key] ?? '').trim()), attributes, profileReadState, tab.key)}</div>`;
             return `
                 <section class="care-category-card${active ? ' is-expanded' : ''}" data-care-category="${escapeDashboardHtml(tab.key)}">
                     <h5 class="care-category-heading">
@@ -16804,7 +16864,7 @@ registerWaffleServiceWorker();
                 const savedNote = String(record.notes ?? value).trim();
                 context.trigger.dataset.directoryCurrentValue = savedNote;
                 const fieldValue = context.trigger.querySelector('.directory-field-value');
-                if (fieldValue) fieldValue.textContent = savedNote || 'No handover note provided';
+                if (fieldValue) fieldValue.textContent = savedNote || 'No pet notes provided';
                 context.card.dataset.v1088Notes = savedNote;
                 renderDirectoryCareBrief(context.card);
             }
@@ -18539,10 +18599,10 @@ registerWaffleServiceWorker();
                                                 </div>
                                                 <section class="directory-care-brief-item directory-care-brief-note" aria-label="Handover note">
                                                     <div class="directory-care-brief-note-heading">
-                                                        <h4>Handover note</h4>
-                                                        <button type="button" class="directory-care-brief-action" data-care-brief-action="handover"><span class="care-tool-icon" aria-hidden="true"><svg viewBox="0 0 20 20"><path d="M4 3.5h12v13H4z"/><path d="M7 7h6M7 10h6M7 13h3"/></svg></span>Update handover</button>
+                                                        <h4>Pet Notes</h4>
+                                                        <button type="button" class="directory-care-brief-action" data-care-brief-action="handover"><span class="care-tool-icon" aria-hidden="true"><svg viewBox="0 0 20 20"><path d="M4 3.5h12v13H4z"/><path d="M7 7h6M7 10h6M7 13h3"/></svg></span>Edit pet notes</button>
                                                     </div>
-                                                    <div class="directory-care-brief-value" data-care-brief-handover-note>${escapeDashboardHtml(notes ? notes.trim() : 'No handover note recorded')}</div>
+                                                    <div class="directory-care-brief-value" data-care-brief-handover-note>${escapeDashboardHtml(notes ? notes.trim() : 'No pet notes recorded')}</div>
                                                 </section>
                                                 </div>
                                             </div>
@@ -18550,11 +18610,6 @@ registerWaffleServiceWorker();
 
 
                                             <div class="directory-care-brief-actions" aria-label="Care profile actions">
-                                                <div class="directory-care-record-actions" data-care-record-actions>
-                                                    <button type="button" class="directory-care-brief-action" data-care-brief-action="refresh">Refresh records</button>
-                                                    <button type="button" class="directory-care-brief-action" data-care-open-panel="history">Stay history</button>
-                                                    <button type="button" class="directory-care-brief-action" data-care-open-panel="master">Dog record</button>
-                                                </div>
                                                 <div class="directory-care-more-actions" aria-label="Profile tools">
                                                 <div class="directory-care-more-actions-list">
                                                 <section class="directory-care-photo-tools" aria-label="Photo tools">
@@ -18562,20 +18617,11 @@ registerWaffleServiceWorker();
                                                         <button type="button" class="directory-photo-edit-button" data-upload-dog-photo title="Change and position dog profile photo" aria-label="Change and position ${escapeDashboardHtml(dogName.trim())} profile photo">Change profile photo</button>
                                                     </div>
                                                 </section>
-                                                <button type="button" class="directory-care-brief-action" data-care-open-panel="belongings">Belongings</button>
-                                                <details class="directory-care-secondary-actions" data-care-secondary-actions>
-                                                    <summary>More actions</summary>
-                                                    <button type="button" class="directory-care-brief-action" data-care-sitter-summary="copy">Copy sitter summary</button>
-                                                    <div hidden data-care-sitter-summary-output>
-                                                        <p role="status" aria-live="polite" data-care-sitter-summary-status></p>
-                                                        <textarea hidden readonly aria-label="Sitter summary to copy" data-care-sitter-summary-manual></textarea>
-                                                    </div>
-                                                </details>
                                         <details class="directory-care-contact-disclosure" data-directory-stay-contact>
                                             <summary>
                                                 <span>
                                                     <strong>Stay contact &amp; handover</strong>
-                                                    <small>Owner details and handover note</small>
+                                                    <small>Owner details and pet notes</small>
                                                 </span>
                                                 <span class="directory-care-records-chevron" aria-hidden="true">⌄</span>
                                             </summary>
@@ -18607,9 +18653,9 @@ registerWaffleServiceWorker();
                                                 class="directory-attribute directory-attribute-wide"
                                                 data-directory-edit-field="notes"
                                                 data-directory-current-value="${escapeDashboardHtml(cleanHandoverNote)}"
-                                                aria-label="Edit ${escapeDashboardHtml(dogName.trim())} handover note">
+                                                aria-label="Edit ${escapeDashboardHtml(dogName.trim())} pet notes">
                                                 <span class="directory-field-label">Handover note</span>
-                                                <span class="directory-field-value">${escapeDashboardHtml(cleanHandoverNote || 'No handover note provided')}</span>
+                                                <span class="directory-field-value">${escapeDashboardHtml(cleanHandoverNote || 'No pet notes provided')}</span>
                                                 <span class="directory-contact-edit-hint" aria-hidden="true">Edit</span>
                                             </button>
                                         </div>
@@ -18670,7 +18716,7 @@ registerWaffleServiceWorker();
                                             <summary>
                                                 <span>
                                                     <strong>Records &amp; forms</strong>
-                                                    ${pastStay ? '<small data-v1082-records-status></small>' : '<small>Safety record, intake link and legacy documents</small>'}
+                                                    ${pastStay ? '<small data-v1082-records-status></small>' : '<small>Intake forms and saved documents</small>'}
                                                 </span>
                                                 <span class="directory-care-records-chevron" aria-hidden="true">⌄</span>
                                             </summary>
@@ -18679,8 +18725,7 @@ registerWaffleServiceWorker();
                                         <div
                                             class="directory-care-strip"
                                             data-directory-care="${escapeDashboardHtml(directoryStayKey)}"
-                                            role="status" aria-live="polite" aria-busy="true">
-                                            <span class="directory-record-loading">Loading safety record…</span>
+                                            hidden aria-busy="true">
                                         </div>
 
                                         <div
@@ -18700,6 +18745,10 @@ registerWaffleServiceWorker();
                                                 <span class="directory-record-loading">Loading PDF records…</span>
                                             </div>
                                         </div>
+                                        <section class="directory-dog-records" data-care-dog-records>
+                                            <h4>Dog record &amp; stay history</h4>
+                                            <div class="directory-dog-records-content" data-care-dog-records-content></div>
+                                        </section>
                                             </div>
                                         </details>
 

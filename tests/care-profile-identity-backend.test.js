@@ -24,9 +24,10 @@ const riskConfig = ['Escape Risk','Food Allergy','Medicated','Separation Anxiety
 function harness({ bookings = [], care = [{ stayKey: key, dogName: 'Milo', intakeAttributes: { medicationInstructions: 'Fixture care detail' } }], bookingHeaders = defaultBookingHeaders, careHeaderEdit = null, transportFailure = null } = {}) {
   const writes = [];
   const sandbox = {
+    INTAKE_ATTRIBUTE_CONFIG_: [{ key: 'handlingTips', enhanced: true }],
     BELONGINGS_ITEM_CONFIG_: itemConfig,
     BELONGINGS_RISK_CONFIG_: riskConfig,
-    PropertiesService: { getScriptProperties: () => ({ getProperty: () => 'Pet_Belongings' }) },
+    PropertiesService: { getScriptProperties: () => ({ getProperty: () => null }) },
     makeGuestStayKey_: (name, start, end) => `${String(name).trim().toLowerCase()}|${start}|${end}`,
     validStayIdV11225_: value => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || '').trim()),
     parseDogPhotoJson_: () => null,

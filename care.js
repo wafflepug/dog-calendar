@@ -43,6 +43,7 @@
   const wrapped = new Set();
   const prepareTimers = new Map();
   const panelReassertionTimers = new Map();
+  const inlineRecordLoads = new WeakMap();
   let cardAccessibilityId = 0;
   let stayLinkTrigger = null;
   let stayLinkPanel = null;
@@ -147,6 +148,14 @@
     if (!panel(card, 'history')) createPanel(card, 'history');
     if (!panel(card, 'media')) createPanel(card, 'media');
     if (!panel(card, 'master')) createPanel(card, 'master');
+
+    const inlineRecords = card.querySelector('[data-care-dog-records-content]');
+    if (inlineRecords) {
+      for (const [key, selector] of [['master', '[data-v110-master-host]'], ['history', '[data-v108-history]']]) {
+        const host = panel(card, key)?.querySelector(selector);
+        if (host) inlineRecords.append(host);
+      }
+    }
 
     return !!panel(card, 'profile') && !!panel(card, 'belongings');
   }
@@ -512,7 +521,7 @@
 
   async function fallbackHistory(card) {
     const target = panel(card, 'history');
-    const host = target?.querySelector('[data-v108-history]') || target;
+    const host = card?.querySelector('[data-v108-history]') || target;
     const dogName = String(card?.dataset?.directoryDogName || card?.dataset?.dogName || '').trim();
     const dogId = String(card?.dataset?.directoryDogId || '').trim();
     if (!host || !dogName || typeof window.queryAppsScript !== 'function') return;
@@ -636,7 +645,7 @@
 
   async function fallbackMaster(card) {
     const target = panel(card, 'master');
-    const host = target?.querySelector('[data-v110-master-host]') || target;
+    const host = card?.querySelector('[data-v110-master-host]') || target;
     const dogName = String(card?.dataset?.directoryDogName || card?.dataset?.dogName || '').trim();
     const dogId = String(card?.dataset?.directoryDogId || '').trim();
     const breed = String(card?.querySelector('.directory-primary-breed')?.textContent || card?.dataset?.v1088Breed || '').trim();
@@ -720,6 +729,26 @@
     }
   }
 
+  function loadInlineDogRecords(card) {
+    if (!card?.classList.contains('is-profile-active') || !card.querySelector('[data-care-dog-records-content]')) return;
+    ensurePanels(card);
+    const content = card.querySelector('[data-care-dog-records-content]');
+    const identity = [card.dataset.directoryStayId, card.dataset.directoryDogId, card.dataset.directoryStayKey].join('\u001f');
+    const previous = inlineRecordLoads.get(content);
+    if (previous === identity) return;
+    if (previous !== undefined) {
+      content.querySelectorAll('[data-v110-master-host], [data-v108-history]').forEach(host => {
+        const next = document.createElement('div');
+        next.setAttribute(host.hasAttribute('data-v108-history') ? 'data-v108-history' : 'data-v110-master-host', '');
+        host.replaceWith(next);
+      });
+    }
+    inlineRecordLoads.set(content, identity);
+    loadTab(card, 'master');
+    loadTab(card, 'history');
+  }
+  window.WAFFLE_LOAD_CARE_DOG_RECORDS = loadInlineDogRecords;
+
   function schedulePanelReassertions(card, key) {
     let timers = panelReassertionTimers.get(card);
     if (!timers) {
@@ -762,6 +791,7 @@
   function prepareCard(card) {
     if (!card || !isDesktopCare() || !contentHost(card)) return;
     if (!ensurePanels(card)) return;
+    if (card.dataset.careProfileSegmentActive === 'records') loadInlineDogRecords(card);
 
     card.classList.add('v11160-desktop-profile');
     const legacy = oldTabs(card);

@@ -1921,13 +1921,40 @@ function getGuestProfileDetail_(request) {
     resolution: { status: "resolved", method: method },
     dogName: record.dogName,
     updatedAt: record.updatedAt,
-    intakeAttributes: record.intakeAttributes || {},
+    intakeAttributes: enrichGuestProfileFromIntake_(bookingSheet.getParent(), properties, identity, record.intakeAttributes || {}),
     intakeAttributesSource: record.intakeAttributesSource || "",
     dogPhoto: record.dogPhoto || null,
     dogPhotoGallery: record.dogPhotoGallery || [],
     stayPhotos: record.stayPhotos || []
   };
 }
+
+// Older profiles kept the extra answers on the signed intake row. Fill only
+// fields missing from Care and only when both stable identifiers agree.
+function enrichGuestProfileFromIntake_(spreadsheet, properties, identity, attributes) {
+  if (!identity.stayId || !identity.dogId) return attributes;
+  var missing = INTAKE_ATTRIBUTE_CONFIG_.filter(function(field) {
+    return field.enhanced && !Object.prototype.hasOwnProperty.call(attributes, field.key);
+  });
+  if (!missing.length) return attributes;
+  var intakeName = String(properties.getProperty("INTAKE_SHEET_NAME") || "Dog_Intake_Records").trim();
+  var sheet = spreadsheet.getSheetByName(intakeName);
+  if (!sheet || sheet.getLastRow() < 2 || (sheet.getLastColumn && sheet.getLastColumn() < INTAKE_HEADERS_.length)) return attributes;
+  var intake;
+  try {
+    intake = findIntakeRecordByStableStayId_(sheet, identity.stayId, identity.dogId);
+  } catch (_) {
+    return attributes;
+  }
+  if (!intake || intake.status !== "Complete" || !intake.pdfFileId || !intake.submittedAt || !intake.answers ||
+      !intake.answers.enhancedIntakeVersion) return attributes;
+  var submitted = normalizeGuestIntakeAttributes_(intake.answers);
+  missing.forEach(function(field) {
+    if (Object.prototype.hasOwnProperty.call(submitted, field.key)) attributes[field.key] = submitted[field.key];
+  });
+  return attributes;
+}
+
 
 function getGuestBelongingsDetail_(
   stayKey
@@ -2850,6 +2877,7 @@ function waffleReadVariant_(action, data) {
     variantPayload.pastDirectorySchemaVersion = 2;
     if (data.rosterOnly === true) variantPayload.rosterOnly = true;
   }
+  if (actionName === "get_guest_profile") variantPayload.intakeCareSchemaVersion = 2;
 
   if (["get_stay_operations", "get_guest_directory", "get_past_guest_directory"].indexOf(actionName) !== -1) {
     variantPayload.stayOperationIdentityVersion = typeof STAY_OPERATION_IDENTITY_VERSION_V11226_ === "undefined" ? 0 : STAY_OPERATION_IDENTITY_VERSION_V11226_;
@@ -13250,6 +13278,9 @@ function buildIntakePdf_(
   appendPdfKeyValueTable_(body, [
     ["Medical conditions", answers.medicalConditions],
     ["Medication instructions", answers.medicationInstructions],
+    ["Pet insurance", answers.petInsurance],
+    ["Insurance provider / policy information", answers.insuranceDetails],
+    ["Insurance Number", answers.insuranceNumber],
     ["Regular vet clinic", answers.regularVetClinic],
     ["Vet phone number", answers.vetPhone]
   ]);
@@ -13418,6 +13449,9 @@ function assertPalzIntakeAnswers_(answers) {
   });
   if (missing || answers.accuracyConfirmed !== true) throw new Error("Complete all intake fields and confirm the declaration before submitting.");
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(answers.ownerEmail.trim())) throw new Error("Enter a valid email address.");
+  if (answers.insuranceNumber != null && (typeof answers.insuranceNumber !== "string" || answers.insuranceNumber.trim().length > 120)) {
+    throw new Error("Enter an insurance number up to 120 characters, or leave it blank.");
+  }
   if (![answers.dropOffTime, answers.pickUpTime].every(function(time) { return time == null || time === "" || (typeof time === "string" && /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(time)); })) throw new Error("Enter valid drop-off and pick-up times.");
   if (!validStableStayDateV11225_(answers.declarationDate)) throw new Error("Enter a valid declaration date.");
   if (!/^(?:not applicable|none|unknown|n\/a)$/i.test(answers.fleaTickValidUntil.trim()) && !validStableStayDateV11225_(answers.fleaTickValidUntil)) throw new Error("Enter a valid flea/tick expiry date or Not applicable.");
@@ -14075,7 +14109,53 @@ var INTAKE_ATTRIBUTE_CONFIG_ = [
   { key: "sleepLocation", label: "Where Dog Sleeps" },
   { key: "crateTrained", label: "Crate Trained" },
   { key: "canBeLeftAlone", label: "Can Be Left Alone" },
-  { key: "aloneDuration", label: "If Yes, How Long?" }
+  { key: "aloneDuration", label: "If Yes, How Long?" },
+  { key: "preferredContactMethod", label: "Preferred Contact Method", enhanced: true },
+  { key: "vaccinationDetails", label: "Vaccination Details", enhanced: true },
+  { key: "fleaTickTreatment", label: "Flea and Tick Treatment", enhanced: true },
+  { key: "fleaTickValidUntil", label: "Flea and Tick Protection Until", enhanced: true },
+  { key: "aggressionDetails", label: "Aggression or Bite History", enhanced: true },
+  { key: "possessiveToysFood", label: "Possessive of Toys or Food", enhanced: true },
+  { key: "barkingIndoors", label: "Barking Indoors", enhanced: true },
+  { key: "unfamiliarDogsInteraction", label: "Interaction with Unfamiliar Dogs", enhanced: true },
+  { key: "handlingTips", label: "Handling Tips", enhanced: true },
+  { key: "favouriteActivities", label: "Favourite Activities", enhanced: true },
+  { key: "additionalHandlingInstructions", label: "Additional Handling Instructions", enhanced: true },
+  { key: "approvedTreats", label: "Approved Treats and Restrictions", enhanced: true },
+  { key: "otherFeedingInstructions", label: "Other Feeding Instructions", enhanced: true },
+  { key: "preferredWalkTiming", label: "Preferred Walk Timing", enhanced: true },
+  { key: "walkingEquipment", label: "Walking Equipment", enhanced: true },
+  { key: "outdoorRestrictions", label: "Outdoor Restrictions", enhanced: true },
+  { key: "petInsurance", label: "Pet Insurance", enhanced: true },
+  { key: "insuranceDetails", label: "Insurance Details", enhanced: true },
+  { key: "insuranceNumber", label: "Insurance Number", enhanced: true },
+  { key: "emergencyVet", label: "Emergency Vet", enhanced: true },
+  { key: "medicalEmergencyInstructions", label: "Medical Emergency Instructions", enhanced: true },
+  { key: "ownBedCrateProvided", label: "Own Bed or Crate Provided", enhanced: true },
+  { key: "houseTrained", label: "House-Trained", enhanced: true },
+  { key: "toiletBreakFrequency", label: "Toilet Break Frequency", enhanced: true },
+  { key: "couchAllowed", label: "Couch Allowed", enhanced: true },
+  { key: "stairsSafe", label: "Stairs Safe", enhanced: true },
+  { key: "indoorRoutine", label: "Indoor Routine", enhanced: true },
+  { key: "needsBrushing", label: "Needs Brushing", enhanced: true },
+  { key: "brushingInstructions", label: "Brushing Instructions", enhanced: true },
+  { key: "needsBathing", label: "Needs Bathing", enhanced: true },
+  { key: "bathingInstructions", label: "Bathing Instructions", enhanced: true },
+  { key: "dryingInstructions", label: "Drying Instructions", enhanced: true },
+  { key: "otherGroomingCare", label: "Other Grooming Care", enhanced: true },
+  { key: "enjoysCarRides", label: "Enjoys Car Rides", enhanced: true },
+  { key: "transportPermission", label: "Transport Permission", enhanced: true },
+  { key: "carTravelMethod", label: "Car Travel Method", enhanced: true },
+  { key: "transportRestrictions", label: "Transport Restrictions", enhanced: true },
+  { key: "commandComeHere", label: "Come Here", enhanced: true },
+  { key: "commandDropIt", label: "Drop It", enhanced: true },
+  { key: "commandSit", label: "Sit", enhanced: true },
+  { key: "commandLeaveIt", label: "Leave It", enhanced: true },
+  { key: "commandDown", label: "Down", enhanced: true },
+  { key: "commandHeel", label: "Heel", enhanced: true },
+  { key: "commandStayWait", label: "Stay / Wait", enhanced: true },
+  { key: "commandOther", label: "Other Commands", enhanced: true },
+  { key: "additionalInstructions", label: "Additional Instructions", enhanced: true }
 ];
 
 
@@ -14090,8 +14170,11 @@ function normalizeGuestIntakeAttributes_(source) {
 
   INTAKE_ATTRIBUTE_CONFIG_
     .forEach(function(field) {
+      if (field.enhanced && !Object.prototype.hasOwnProperty.call(source, field.key)) return;
       var value =
         source[field.key];
+      if (field.key === "additionalInstructions" && source.enhancedIntakeVersion &&
+          typeof source.intakeAdditionalRemarks === "string") value = source.intakeAdditionalRemarks;
 
       if (
         value === null ||
@@ -14109,6 +14192,8 @@ function normalizeGuestIntakeAttributes_(source) {
             ? "Yes"
             : "No";
       }
+
+      if (Array.isArray(value)) value = value.join(", ");
 
       var text =
         String(value)

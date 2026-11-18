@@ -84,6 +84,10 @@ test('website intake sends the token in the POST body and shows the business log
   await expect(page.locator('#bookingDog')).toHaveText('Maple');
   await expect(page.getByText('Form timings', { exact: true })).toHaveCount(0);
   await expect(page.getByRole('img', { name: 'Waffle House' })).toBeVisible();
+  const insuranceNumber = page.getByLabel('Insurance Number (optional)');
+  await expect(insuranceNumber).not.toHaveAttribute('required');
+  await insuranceNumber.evaluate(field => { field.value = '00AB-42'; });
+  expect(await page.evaluate(() => getAnswers().insuranceNumber)).toBe('00AB-42');
   expect(requests).toHaveLength(1);
   expect(requests[0].method).toBe('POST');
   expect(requests[0].url).not.toContain('fixture-token');

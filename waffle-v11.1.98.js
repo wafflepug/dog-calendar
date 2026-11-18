@@ -278,36 +278,46 @@
     return !!identity.dogName && !!identity.startDate;
   }
 
-  function enhanceDeleteAction(card) {
-    if (!isDeletableConfirmedCard(card)) return;
-    const content = card.querySelector('.directory-profile-content');
-    const tools = content?.querySelector('.directory-care-more-actions');
-    if (!content || !tools) return;
+  function removalIdentity(card) {
+    return JSON.stringify([card.dataset.directoryStayId, card.dataset.directoryDogId, card.dataset.directoryStayKey]);
+  }
 
-    let action = tools.querySelector('[data-v11198-delete-confirmed]');
-    if (!action) {
-      action = document.createElement('button');
-      action.type = 'button';
-      action.className = 'v11198-delete-stay';
-      action.dataset.v11198DeleteConfirmed = '';
-      action.setAttribute('aria-label', 'Delete this confirmed stay');
-      action.textContent = 'Delete Confirmed Stay';
+  function enhanceDeleteAction(card) {
+    const existing = card.querySelector('[data-care-header-remove-stay]');
+    if (!isDeletableConfirmedCard(card) || !card.classList.contains('is-profile-active')) {
+      existing?.remove();
+      return;
     }
-    let dangerDisclosure = tools.querySelector(':scope > .directory-care-danger-disclosure');
-    if (!dangerDisclosure) {
-      dangerDisclosure = document.createElement('details');
-      dangerDisclosure.className = 'directory-care-danger-disclosure';
-      dangerDisclosure.innerHTML = '<summary>Remove stay</summary>';
-      tools.append(dangerDisclosure);
+    if (existing) {
+      if (!existing.querySelector('svg') && window.PALZ_ICONS) existing.innerHTML = window.PALZ_ICONS.svg('trash');
+      return;
     }
-    let danger = dangerDisclosure.querySelector(':scope > .directory-care-danger-actions');
-    if (!danger) {
-      danger = document.createElement('div');
-      danger.className = 'directory-care-danger-actions';
-      danger.setAttribute('role', 'group');
-      dangerDisclosure.append(danger);
-    }
-    if (action.parentElement !== danger) danger.append(action);
+    const group = card.querySelector('[data-care-header-document-actions]');
+    if (!group) return;
+    const action = document.createElement('button');
+    action.type = 'button';
+    action.dataset.careHeaderRemoveStay = '';
+    action.innerHTML = window.PALZ_ICONS?.svg('trash') || '🗑️';
+    const setArmed = armed => {
+      const label = armed ? 'Delete Confirmed Stay' : 'Remove Stay';
+      action.toggleAttribute('data-v11198-delete-confirmed', armed);
+      if (armed) action.dataset.armedStay = removalIdentity(card);
+      else delete action.dataset.armedStay;
+      action.dataset.actionLabel = label;
+      action.setAttribute('aria-label', label);
+      action.title = label;
+    };
+    setArmed(false);
+    action.addEventListener('click', () => setArmed(true));
+    action.addEventListener('keydown', event => {
+      if (event.key === 'Escape' && action.hasAttribute('data-v11198-delete-confirmed')) {
+        event.preventDefault();
+        event.stopPropagation();
+        setArmed(false);
+      }
+    });
+    action.addEventListener('waffle:stay-delete-reset', () => setArmed(false));
+    group.append(action);
   }
 
   function enhanceAllCards() {
@@ -447,11 +457,16 @@
       `${formatStay(identity)}\n\n` +
       `This removes the booking from Calendar and Care. The reusable dog/master profile and photos are kept.`
     );
-    if (!confirmed) return;
+    if (!confirmed) {
+      button.dispatchEvent(new Event('waffle:stay-delete-reset'));
+      return;
+    }
 
     const oldText = button.textContent;
     button.disabled = true;
-    button.textContent = '⏳ Deleting…';
+    const headerAction = button.hasAttribute('data-care-header-remove-stay');
+    if (headerAction) button.setAttribute('aria-busy', 'true');
+    else button.textContent = '⏳ Deleting…';
 
     try {
       if (typeof window.queryAppsScript !== 'function') {
@@ -496,7 +511,10 @@
     } catch (error) {
       console.error('Confirmed stay deletion failed:', error);
       button.disabled = false;
-      button.textContent = oldText;
+      if (headerAction) {
+        button.removeAttribute('aria-busy');
+        button.dispatchEvent(new Event('waffle:stay-delete-reset'));
+      } else button.textContent = oldText;
       window.alert(`Could not delete this confirmed stay.\n\n${error?.message || String(error)}`);
     }
   }
@@ -513,6 +531,11 @@
     event.preventDefault();
     event.stopPropagation();
     event.stopImmediatePropagation();
+    if (button.hasAttribute('data-care-header-remove-stay') &&
+        (!card.classList.contains('is-profile-active') || button.dataset.armedStay !== removalIdentity(card))) {
+      button.dispatchEvent(new Event('waffle:stay-delete-reset'));
+      return;
+    }
     deleteConfirmedStay(card, button);
   }
 
@@ -521,8 +544,10 @@
     ensureStyles();
     enhanceAllCards();
 
-    const observer = new MutationObserver(scheduleEnhance);
-    observer.observe(document.documentElement, { childList: true, subtree: true });
+    const observer = new MutationObserver(changes => {
+      if (changes.some(change => change.type === 'childList' || change.target.matches?.('.directory-card'))) scheduleEnhance();
+    });
+    observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
 
     const runDeepLink = () => {
       if (!requestedIdentity()) return;
