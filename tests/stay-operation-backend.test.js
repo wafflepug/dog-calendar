@@ -12,6 +12,8 @@ const coreEnd = code.indexOf('var WAFFLE_SPREADSHEET_CACHE_', coreStart);
 assert.ok(coreStart >= 0 && coreEnd > coreStart, 'actual core operation router is present');
 const dateStart = code.indexOf('function updateV108BoardingDates_(data) {');
 const dateEnd = code.indexOf('function updateV108MeetGreetSchedule_(data)', dateStart);
+const guestFieldsStart = code.indexOf('var GUEST_DIRECTORY_EDIT_FIELDS_');
+const guestFieldsEnd = code.indexOf('function migrateBelongingsIdentityForGuest_', guestFieldsStart);
 assert.ok(dateStart >= 0 && dateEnd > dateStart, 'actual date update handler is present');
 const ID_A = '00000000-0000-4000-8000-0000000000a1';
 const ID_B = '00000000-0000-4000-8000-0000000000b2';
@@ -57,7 +59,8 @@ function harness(bookings, operations) {
     findV108BoardingRowForUpdate_() { return 2; },
     auditBookingSnapshotFromSheetRow_(sh, row) { const r = sh.getRange(row, 1, 1, 14).getValues()[0]; return { dogName: r[1], startDate: String(r[3]), endDate: String(r[4]), bookingType: r[11], stayId: r[12] }; },
     updateStableStayRowV11225_(sh, row, changes) { Object.keys(changes).forEach(k => sh.getRange(row, Number(k)).setValue(changes[k])); },
-    migrateBelongingsIdentityForGuest_() {}, migrateIntakeIdentitiesForGuest_() {},
+    migrateBelongingsIdentityForGuest_() {}, migrateIntakeIdentitiesForGuest_() { return { digital: 0, legacy: 0 }; },
+    syncCoreBookingFieldsToIntakeAttributes_() {}, auditObjectChangedFields_() { return []; }, auditBookingFieldLabels_() { return {}; },
     touchWaffleDataVersion_() {}, logAuditEvent_() {}, syncDogMasterProfileFromStay_() {},
     normalizeDateValue: null,
     _held(value) { held = value; }, _tries() { return tries; }, _bookings: bookingSheet, _ops: ops
@@ -67,6 +70,7 @@ function harness(bookings, operations) {
   vm.runInContext(stayIdentity, sandbox);
   vm.runInContext(code.slice(coreStart, coreEnd), sandbox);
   vm.runInContext(code.slice(dateStart, dateEnd), sandbox);
+  vm.runInContext(code.slice(guestFieldsStart, guestFieldsEnd), sandbox);
   vm.runInContext(deleteSource, sandbox);
   vm.runInContext(source, sandbox);
   return sandbox;
@@ -109,6 +113,7 @@ assert.equal(renamedRecord.stayId, ID_A);
 assert.equal(renamedRecord.dogName, 'Biscoff');
 assert.equal(renamedRecord.status, 'checked_in');
 assert.equal(renamed._ops.rows[1][1], key, 'reading the recovered operation preserves the stored history');
+assert.equal(renamed.setStayOperationalStatus_(renamedRequest, 'checked_in').checkedInAt, checkedIn[6], 'a retry keeps the first arrival time');
 const renamedCheckout = renamed.setStayOperationalStatus_(renamedRequest, 'checked_out');
 assert.equal(renamedCheckout.checkedInAt, '2026-10-04T01:00:00Z');
 assert.equal(renamed._ops.rows.length, 2, 'a later operation updates the original row');
@@ -121,6 +126,19 @@ const mismatchedKey = harness([headers, renamedBooking], [opHeaders.concat(['Sta
 assert.equal(mismatchedKey.readStayOperations_({ stayIds: [ID_A] })[0].identityConflictReason, 'operation_name_mismatch');
 const duplicateOperations = harness([headers, renamedBooking], [opHeaders.concat(['Stay ID']), checkedIn, checkedIn]);
 assert.throws(() => duplicateOperations.setStayOperationalStatus_(renamedRequest, 'checked_in'), /conflicting ownership/);
+
+const edit = harness([headers, booking(ID_A, 'Ada'), booking(ID_B, 'Lee')], [opHeaders.concat(['Stay ID']), checkedIn, op(ID_B, key)]);
+const editRequest = { action: 'update_guest_detail', stayId: ID_A, originalDogName: 'Ralph', startDate: '2026-10-04', endDate: '2026-10-09' };
+assert.throws(() => edit.processSheetAction_({ ...editRequest, stayId: '', fieldKey: 'dogName', value: 'Biscoff' }), /multiple confirmed bookings/i);
+edit.processSheetAction_({ ...editRequest, fieldKey: 'dogName', value: 'Biscoff' });
+edit.processSheetAction_({ ...editRequest, originalDogName: 'Biscoff', fieldKey: 'ownerName', value: 'Sam' });
+edit.processSheetAction_({ action: 'update_boarding_dates', stayId: ID_A, startDate: '2026-10-04', endDate: '2026-10-12' });
+const editedOperation = edit.readStayOperations_({ stayIds: [ID_A] })[0];
+assert.equal(editedOperation.stayKey, 'biscoff|2026-10-04|2026-10-12');
+assert.equal(editedOperation.checkedInAt, checkedIn[6]);
+assert.equal(edit._ops.rows[1][1], editedOperation.stayKey, 'the saved operation uses the edited booking key');
+assert.equal(edit._ops.rows[2][1], key, 'a separate booking keeps its own operation');
+assert.equal(edit._bookings.rows[2][1], 'Ralph');
 
 assert.equal(malformed.readStayOperations_()[0].identityConflictReason, 'invalid_stay_id');
 const malformedBooking = harness([headers, booking('not-a-uuid', 'Ada')], [opHeaders, [new Date(), key, 'Ralph','2026-10-04','2026-10-09','checked_out']]);

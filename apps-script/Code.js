@@ -4569,14 +4569,14 @@ function updateV108BoardingDates_(data) {
   before.stayId = stayId;
   rows = sheet.getDataRange().getValues();
   var oldStayKey = makeGuestStayKey_(before.dogName, before.startDate, before.endDate);
-  if (typeof bindLegacyStayOperationToIdV11226_ === "function") {
-    bindLegacyStayOperationToIdV11226_(sheet, oldStayKey, row, stayId);
-  }
-  updateStableStayRowV11225_(sheet,row,{4:start,5:end},String(data.clientMutationId||""));
   var newStayKey = makeGuestStayKey_(before.dogName, start, end);
+  var operationBefore = oldStayKey !== newStayKey && typeof prepareStayOperationBookingEditV11226_ === "function" &&
+    prepareStayOperationBookingEditV11226_(sheet, oldStayKey, row, stayId);
+  updateStableStayRowV11225_(sheet,row,{4:start,5:end},String(data.clientMutationId||""));
   if (oldStayKey !== newStayKey) {
-    migrateBelongingsIdentityForGuest_(sheet.getParent(), oldStayKey, newStayKey, before.dogName, stayId);
     var updatedBooking = auditBookingSnapshotFromSheetRow_(sheet, row);
+    if (operationBefore) syncStayOperationBookingDetailsV11226_(updatedBooking, operationBefore);
+    migrateBelongingsIdentityForGuest_(sheet.getParent(), oldStayKey, newStayKey, before.dogName, stayId);
     var currentDogId = String(v108DogIdentityAt_(rows, row - 1).dogId || "").trim();
     migrateIntakeIdentitiesForGuest_(oldStayKey, newStayKey, before.dogName, {
       mainSheet: sheet,
@@ -5650,12 +5650,10 @@ function processSheetAction_(data) {
         throw new Error("Guest stay dates are required.");
       }
 
-      var guestRow = findGuestBookingRow_(
-        rows,
-        originalDogName,
-        guestStartDate,
-        guestEndDate
-      );
+      var requestedGuestStayId = String(data.stayId || "").trim();
+      var guestRow = requestedGuestStayId
+        ? findStayRowByIdV11225_(sheet, requestedGuestStayId)
+        : findGuestBookingRow_(rows, originalDogName, guestStartDate, guestEndDate);
 
       if (guestRow === -1) {
         throw new Error(
@@ -5667,6 +5665,13 @@ function processSheetAction_(data) {
         sheet,
         guestRow
       );
+      var guestType = String(guestBefore.bookingType || "Boarding").trim().toLowerCase();
+      if (["boarding", "confirmed boarding"].indexOf(guestType) === -1 ||
+          makeGuestStayKey_(guestBefore.dogName, guestBefore.startDate, guestBefore.endDate) !==
+          makeGuestStayKey_(originalDogName, guestStartDate, guestEndDate) ||
+          (data.dogId && String(v108DogIdentityAt_(rows, guestRow - 1).dogId || "") !== String(data.dogId))) {
+        throw new Error("This booking changed. Refresh the guest profile before editing.");
+      }
 
       var newValue = String(data.value === undefined ? "" : data.value).trim();
 
@@ -5682,9 +5687,9 @@ function processSheetAction_(data) {
         guestBefore.startDate,
         guestBefore.endDate
       );
-      if (fieldKey === "dogName" && oldStayKey !== makeGuestStayKey_(newValue, guestBefore.startDate, guestBefore.endDate)) {
-        bindLegacyStayOperationToIdV11226_(sheet, oldStayKey, guestRow, mutationStayId);
-      }
+      var guestOperationBefore = fieldKey === "dogName" &&
+        oldStayKey !== makeGuestStayKey_(newValue, guestBefore.startDate, guestBefore.endDate) &&
+        prepareStayOperationBookingEditV11226_(sheet, oldStayKey, guestRow, mutationStayId);
 
       var editCell = fieldKey === "phone" ? phoneTextCell_(sheet, guestRow, fieldConfig.column) : sheet.getRange(guestRow, fieldConfig.column);
       editCell.setValue(fieldKey === "phone" ? String(newValue) : newValue);
@@ -5709,6 +5714,8 @@ function processSheetAction_(data) {
       };
 
       if (oldStayKey !== newStayKey) {
+        guestAfter.stayId = mutationStayId;
+        syncStayOperationBookingDetailsV11226_(guestAfter, guestOperationBefore);
         belongingsMigrated = migrateBelongingsIdentityForGuest_(
           sheet.getParent(),
           oldStayKey,
@@ -13638,10 +13645,9 @@ function processIntakeSubmissionLocked_(prepared) {
     var newMobile = String(answers.mobile || bookingBefore.phone).trim();
     oldStayKey = makeGuestStayKey_(bookingBefore.dogName, bookingBefore.startDate, bookingBefore.endDate);
     var intakeBookingType = String(bookingBefore.bookingType || "Boarding").trim().toLowerCase();
-    if (["boarding", "confirmed boarding"].indexOf(intakeBookingType) >= 0 &&
-        oldStayKey !== makeGuestStayKey_(newDogName, bookingBefore.startDate, bookingBefore.endDate)) {
-      bindLegacyStayOperationToIdV11226_(mainSheet, oldStayKey, bookingRow, mutationStayId);
-    }
+    var intakeOperationBefore = ["boarding", "confirmed boarding"].indexOf(intakeBookingType) >= 0 &&
+      oldStayKey !== makeGuestStayKey_(newDogName, bookingBefore.startDate, bookingBefore.endDate) &&
+      prepareStayOperationBookingEditV11226_(mainSheet, oldStayKey, bookingRow, mutationStayId);
     mainSheet.getRange(bookingRow, 2).setValue(newDogName);
     mainSheet.getRange(bookingRow, 3).setValue(newBreed);
     mainSheet.getRange(bookingRow, 6).setValue(newOwner);
@@ -13649,6 +13655,7 @@ function processIntakeSubmissionLocked_(prepared) {
     SpreadsheetApp.flush();
     bookingAfter = auditBookingSnapshotFromSheetRow_(mainSheet, bookingRow);
     newStayKey = makeGuestStayKey_(bookingAfter.dogName, bookingAfter.startDate, bookingAfter.endDate);
+    syncStayOperationBookingDetailsV11226_(bookingAfter, intakeOperationBefore);
   }, "Another update is being saved. This submission remains pending for manual review.");
   if (oldStayKey !== newStayKey) {
     migrateBelongingsIdentityForGuest_(mainSheet.getParent(), oldStayKey, newStayKey, bookingAfter.dogName, mutationStayId);
@@ -16611,6 +16618,7 @@ function findGuestBookingRow_(rows, dogName, startDate, endDate) {
   var targetStart = normalizeDateValue_(startDate);
   var targetEnd = normalizeDateValue_(endDate || startDate);
 
+  var found = -1;
   for (var i = 1; i < rows.length; i++) {
     var rowDog = String(rows[i][1] || "").trim().toLowerCase();
     var rowType = String(rows[i][11] || "").trim().toLowerCase();
@@ -16623,10 +16631,11 @@ function findGuestBookingRow_(rows, dogName, startDate, endDate) {
     if (targetStart && rowStart !== targetStart) continue;
     if (targetEnd && rowEnd !== targetEnd) continue;
 
-    return i + 1;
+    if (found !== -1) throw new Error("Multiple confirmed bookings match this guest. Refresh and select the exact stay.");
+    found = i + 1;
   }
 
-  return -1;
+  return found;
 }
 
 
