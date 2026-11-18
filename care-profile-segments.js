@@ -326,12 +326,13 @@
       if (records?.closest('.directory-main-profile-panel')) brief.append(records);
       mark(records, 'records');
       mark(readiness, 'records');
+      mark(card.querySelector('.p4-directory-actions'), 'records');
       // The owner form action is part of Records, including while the form
       // is rendered asynchronously by the directory profile.
       card.querySelectorAll('.directory-owner-care-action-group, [data-care-owner-link-group]').forEach(node => mark(node, 'records'));
       card.querySelectorAll('[data-p4-dir="owner"]').forEach(node => mark(node, 'records'));
       card.querySelectorAll('.directory-care-more-actions-list > *').forEach(node => {
-        if (node === readiness) return;
+        if (node === readiness || node.matches('.p4-directory-actions')) return;
         if (node.matches('[data-directory-stay-contact]')) {
           mark(node, 'overview');
           return;
