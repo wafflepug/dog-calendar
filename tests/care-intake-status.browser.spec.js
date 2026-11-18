@@ -445,3 +445,31 @@ test('owner-link copying uses full-width feedback and manual fallback without cl
   await expect(feedback).not.toHaveAttribute('data-owner-link-feedback','true');
   await expect(fallback).toHaveCount(0);
 });
+
+
+test('profile intake PDF shortcut follows the completed record for the current stay', async ({ page }) => {
+  await page.setContent(markup().replace('<section data-directory-care-brief>', '<header class="directory-card-header"><div data-care-header-tools></div></header><section data-directory-care-brief>'));
+  await page.addScriptTag({ content: source });
+  const button = page.getByRole('button', { name: 'View intake PDF' });
+  await expect(button).toBeDisabled();
+  const strip = page.locator('[data-directory-intake]');
+  await strip.evaluate((host, identity) => {
+    host.innerHTML = '<span class="directory-intake-dot is-complete"></span>Intake complete <a href="https://example.test/intake.pdf" data-care-intake-pdf-link>View PDF</a>';
+    const link = host.querySelector('a');
+    link.dataset.careIntakePdfLink = identity;
+    link.addEventListener('click', event => {
+      event.preventDefault();
+      host.dataset.pdfOpened = 'true';
+    });
+  }, receiptIdentity);
+  await expect(button).toBeEnabled();
+  await button.click();
+  await expect(strip).toHaveAttribute('data-pdf-opened', 'true');
+  await strip.evaluate(host => host.setAttribute('aria-busy', 'true'));
+  await expect(button).toBeDisabled();
+  await strip.evaluate(host => {
+    host.querySelector('a').dataset.careIntakePdfLink = 'different stay';
+    host.setAttribute('aria-busy', 'false');
+  });
+  await expect(button).toBeDisabled();
+});

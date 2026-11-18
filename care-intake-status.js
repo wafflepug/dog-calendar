@@ -145,9 +145,36 @@
     });
     more.appendChild(button);
   }
+  function currentPdfLink(card) {
+    if (!card.classList.contains('is-profile-active') || stateFor(card).code !== 'complete') return null;
+    const link = card.querySelector('[data-directory-intake] [data-care-intake-pdf-link]');
+    return link?.dataset.careIntakePdfLink === identity(card) && /^https?:$/.test(link.protocol) ? link : null;
+  }
+
+  function syncIntakePdfButton(card) {
+    const tools = card.querySelector('.directory-card-header > [data-care-header-tools]');
+    if (!tools || !card.classList.contains('is-profile-active')) return;
+    let button = tools.querySelector('[data-care-header-intake-pdf]');
+    if (!button) {
+      button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'care-header-intake-pdf';
+      button.dataset.careHeaderIntakePdf = '';
+      button.setAttribute('aria-label', 'View intake PDF');
+      button.addEventListener('click', () => currentPdfLink(card)?.click());
+      tools.append(button);
+    }
+    if (!button.hasChildNodes() && window.PALZ_ICONS) button.innerHTML = window.PALZ_ICONS.svg('document');
+    const available = Boolean(currentPdfLink(card));
+    if (button.disabled === available) button.disabled = !available;
+    const title = available ? 'View intake PDF' : 'Available after the completed intake PDF is ready';
+    if (button.title !== title) button.title = title;
+  }
+
   function render(card) {
     const actions = card.querySelector('.directory-care-brief-actions');
     const owner = actions?.querySelector('[data-p4-dir="owner"], [data-firstlevel-owner-care-link], #firstlevelOwnerCareLink, .firstlevelOwnerCareLink');
+    syncIntakePdfButton(card);
     if (!actions || !owner) return null;
     const priorPrepared = linked.get(card);
     if (priorPrepared && priorPrepared.identity !== identity(card)) linked.delete(card);
