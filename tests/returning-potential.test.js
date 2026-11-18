@@ -10,11 +10,11 @@ const dogId = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
 const expectedStayKey = 'darwin dog owner|2026-11-26|2026-11-26';
 const request = { stayId, sourceStayId: sourceId, dogId, expectedStayKey };
 
-function fixture({ targetPhone = '0400000000', conflictingDestination = false } = {}) {
+function fixture({ targetOwner = 'Darwin', conflictingDestination = false } = {}) {
   const rows = [
     ['Timestamp', 'Dog Name', 'Breed', 'Start Date', 'End Date', 'Owner', 'Phone', '', '', 'Notes', '', 'Booking Type', 'Dog ID', 'Dog Number', 'Species'],
     ['', 'Biscoff', 'Golden Retriever', '2026-11-19', '2026-11-19', 'Darwin', '0400 000 000', '', '', 'Gentle handling', '', 'Confirmed Boarding', dogId, '#00066', 'Dog'],
-    ['', 'Darwin Dog Owner', 'Golden Retriever', '2026-11-26', '2026-11-26', 'Darwin', targetPhone, '', '', 'Keep the stay note', '', 'Potential Stay', '', '', 'Dog']
+    ['', 'Darwin Dog Owner', 'Golden Retriever', '2026-11-26', '2026-11-26', targetOwner, '*****', '', '', 'Keep the stay note', '', 'Potential Stay', '', '', 'Dog']
   ];
   const profilePhoto = { id: 'profile-portrait' };
   let care;
@@ -66,6 +66,7 @@ test('reuses the exact Dog ID and copies reusable care and portrait without conf
   assert.equal(result.stayKey, 'biscoff|2026-11-26|2026-11-26');
   assert.deepEqual(f.rows[2].slice(11, 14), ['Potential Stay', dogId, '#00066']);
   assert.equal(f.rows[2][9], 'Keep the stay note');
+  assert.equal(f.rows[2][6], '*****', 'the potential booking keeps its saved contact value');
   assert.equal(f.rows[1][1], 'Biscoff');
   assert.equal(f.care().intakeAttributes.feedingTimes, '5 pm');
   assert.equal(f.care().riskFlags.escapeRisk, true);
@@ -77,9 +78,9 @@ test('reuses the exact Dog ID and copies reusable care and portrait without conf
 });
 
 test('owner mismatch and duplicate destination stop before touching the booking', () => {
-  for (const options of [{targetPhone:'0411111111'}, {conflictingDestination:true}]) {
+  for (const options of [{targetOwner:'Different owner'}, {conflictingDestination:true}]) {
     const f = fixture(options);
-    assert.throws(f.run, /owner and contact|Another booking/);
+    assert.throws(f.run, /owner must match|Another booking/);
     assert.equal(f.bookingWrites(), 0);
     assert.equal(f.care(), undefined);
   }
