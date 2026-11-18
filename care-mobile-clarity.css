@@ -2418,8 +2418,40 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active[data-care-p
 }
 
 
-body[data-waffle-page="directory"] #directoryTabPanel .directory-card.is-profile-active[data-care-profile-segment-active]:not([data-care-profile-segment-active="tools"]) :is(.directory-main-profile-panel, .v11160-desktop-tabs, .directory-main-profile-tabs, .v1115-profile-danger, .directory-care-danger-disclosure) {
-  display:none !important;
+body[data-waffle-page="directory"] .directory-card.is-profile-active[data-care-profile-segment-active] :is(
+  .v11160-desktop-tabs, .directory-main-profile-tabs, [data-care-setup-complete],
+  [data-intake-profile-summary], .directory-profile-source-line, [data-p4-dir="history"], .directory-care-owner-inline
+),
+body[data-waffle-page="directory"] .directory-card.is-profile-active[data-care-photo-options-mounted] .directory-care-photo-tools,
+body[data-waffle-page="directory"] .directory-card.is-profile-active[data-care-profile-segment-active="activity"] [data-directory-main-panel="profile"],
+body[data-waffle-page="directory"] .directory-card.is-profile-active[data-care-profile-segment-active="records"] [data-directory-main-panel="profile"] {
+  display: none !important;
+}
+
+.directory-care-record-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.directory-care-record-actions > button,
+.directory-care-secondary-actions > button {
+  min-height: 44px;
+}
+.directory-care-secondary-actions {
+  flex: 1 0 100%;
+  min-width: 0;
+}
+.directory-care-secondary-actions > summary {
+  min-height: 44px;
+  align-content: center;
+  cursor: pointer;
+}
+.directory-care-secondary-actions > button {
+  margin: 0 8px 8px 0;
+}
+.directory-care-danger-disclosure {
+  margin-top: 16px;
 }
 
 /* Owner contact: name and number form one block; calling has one clear action. */

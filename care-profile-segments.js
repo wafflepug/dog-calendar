@@ -166,14 +166,20 @@
       details = document.createElement('details');
       details.className = 'care-photo-options';
       details.dataset.carePhotoOptions = '';
-      details.innerHTML = '<summary aria-label="Photo options"><svg aria-hidden="true" viewBox="0 0 24 24" focusable="false"><path d="M4 7h3l1.5-2h7L17 7h3v12H4z"/><circle cx="12" cy="13" r="3.5"/></svg><span aria-hidden="true" class="care-photo-options-chevron"></span></summary><div class="care-photo-options-panel"><button type="button" data-care-change-profile-photo>Change profile photo</button><button type="button" data-care-upload-belongings-photo data-care-brief-action="belongings-photo">Upload belongings photos</button><button type="button" data-care-view-photos data-care-brief-action="belongings">View Photos</button></div>';
+      details.innerHTML = '<summary aria-label="Photo options"><svg aria-hidden="true" viewBox="0 0 24 24" focusable="false"><path d="M4 7h3l1.5-2h7L17 7h3v12H4z"/><circle cx="12" cy="13" r="3.5"/></svg><span aria-hidden="true" class="care-photo-options-chevron"></span></summary><div class="care-photo-options-panel"><button type="button" data-care-change-profile-photo>Change profile photo</button><button type="button" data-care-upload-belongings-photo data-care-brief-action="belongings-photo">Upload belongings photos</button><button type="button" data-care-view-photos>View photo gallery</button><button type="button" data-care-view-stay-photos>View stay photos</button></div>';
       header.append(details);
       details.addEventListener('click', event => {
-        const button = event.target.closest('[data-care-change-profile-photo], [data-care-upload-belongings-photo], [data-care-view-photos]');
+        const button = event.target.closest('[data-care-change-profile-photo], [data-care-upload-belongings-photo], [data-care-view-photos], [data-care-view-stay-photos]');
         if (!button || !details.contains(button)) return;
         const belongings = button.hasAttribute('data-care-upload-belongings-photo');
-        const viewPhotos = button.hasAttribute('data-care-view-photos');
-        if(belongings || viewPhotos){
+        if (button.matches('[data-care-view-photos], [data-care-view-stay-photos]')) {
+          closePhotoMenu(card, true);
+          if (!card.isConnected || !card.classList.contains('is-profile-active')) return;
+          if (button.hasAttribute('data-care-view-stay-photos')) select(card, 'tools', false, 'media');
+          else card.querySelector('[data-v108-gallery]')?.click();
+          return;
+        }
+        if (belongings) {
           details.open=false;
           if(!card.isConnected || !card.classList.contains('is-profile-active')){event.stopPropagation();return;}
           if(belongings && card.dataset.v1082PastStay==='true'){event.stopPropagation();return;}
@@ -210,12 +216,12 @@
     }
     const belongingsAction=details.querySelector('[data-care-upload-belongings-photo]');
     if(belongingsAction)belongingsAction.hidden=card.dataset.v1082PastStay==='true';
-    if (tools && details.parentElement !== tools) tools.append(details);
+    if (details.parentElement !== header) header.append(details);
     if (card.dataset.carePhotoOptionsMounted !== 'true') card.dataset.carePhotoOptionsMounted = 'true';
     return true;
   }
 
-  function select(card, requested, focus = false) {
+  function select(card, requested, focus = false, panel = 'profile') {
     if (!segments.includes(requested)) return;
     const brief = card.querySelector('[data-directory-care-brief]');
     if (!brief) return;
@@ -248,9 +254,13 @@
       if (summary.getAttribute('tabindex') === '-1') summary.removeAttribute('tabindex');
     }
 
+    if (requested !== 'activity' && card.dataset.v11160ActiveTab !== panel) {
+      card.querySelector(`[data-v11160-tab="${panel}"]`)?.click();
+    }
+
     if (requested === 'records' || requested === 'tools') {
       card.querySelectorAll(`[data-care-profile-segment="${requested}"]`).forEach(details => {
-        if (details.tagName === 'DETAILS' && !details.matches('.directory-care-danger-disclosure') && !details.open) details.open = true;
+        if (details.tagName === 'DETAILS' && details.hasAttribute('data-care-segment-flat') && !details.open) details.open = true;
       });
     }
   }
@@ -303,27 +313,25 @@
 
     mark(brief.querySelector('.directory-care-brief-heading'), 'overview');
     mark(brief.querySelector('.directory-care-brief-grid'), 'overview');
-    mark(brief.querySelector('[data-care-brief-action="full-profile"]'), 'overview');
     mark(card.querySelector('[data-care-routine-log]'), 'activity');
 
     const assign = () => {
-      // Detailed editors and the older profile subnavigation belong to Tools,
-      // rather than repeating the overview underneath every primary section.
-      card.querySelectorAll('.v11160-desktop-tabs, .directory-main-profile-tabs, .directory-main-profile-panel, .v1115-profile-danger, .directory-care-danger-disclosure').forEach(node => mark(node, 'tools'));
-      const detailTabLabel = card.querySelector('.v11160-desktop-tabs [data-v11160-tab="profile"] span');
-      if (detailTabLabel && detailTabLabel.textContent !== 'Detailed care') detailTabLabel.textContent = 'Detailed care';
-      const duplicateEdit = card.querySelector('[data-care-brief-action="edit"]');
-      if (duplicateEdit) duplicateEdit.toggleAttribute('data-care-duplicate-edit', Boolean(card.querySelector('[data-toggle-profile-edit]')));
+      card.querySelectorAll('.v1115-profile-danger, .directory-care-danger-disclosure, [data-directory-main-panel="belongings"], [data-v110-panel="media"]').forEach(node => mark(node, 'tools'));
+      card.querySelectorAll('[data-directory-main-panel="history"], [data-v110-panel="master"]').forEach(node => mark(node, 'records'));
+      mark(card.querySelector('[data-directory-detail="profile"]'), 'overview');
+      mark(card.querySelector('.directory-profile-save-bar'), 'overview');
       const records = card.querySelector('.directory-care-records-disclosure');
       const readiness = card.querySelector('.directory-care-readiness, .directory-care-readiness-disclosure');
-      if (card.dataset.v1082PastStay === 'true' && records && records.parentElement !== brief) brief.append(records);
+      if (records?.closest('.directory-main-profile-panel')) brief.append(records);
       mark(records, 'records');
-      mark(readiness, 'tools');
+      mark(readiness, 'records');
+      mark(brief.querySelector('[data-care-record-actions]'), 'records');
       // The owner form action is part of Records, including while the form
       // is rendered asynchronously by the directory profile.
       card.querySelectorAll('.directory-owner-care-action-group, [data-care-owner-link-group]').forEach(node => mark(node, 'records'));
       card.querySelectorAll('[data-p4-dir="owner"]').forEach(node => mark(node, 'records'));
       card.querySelectorAll('.directory-care-more-actions-list > *').forEach(node => {
+        if (node === readiness) return;
         if (node === records || (records && node.contains(records))) {
           if (node.dataset.careProfileSegment === 'tools') unmark(node);
           return;
@@ -331,7 +339,7 @@
         mark(node, 'tools');
       });
       // These are section headings in the segmented view, not another navigation layer.
-      card.querySelectorAll('.directory-care-records-disclosure, .directory-care-contact-disclosure, .directory-care-readiness').forEach(details => {
+      card.querySelectorAll('.directory-care-records-disclosure').forEach(details => {
         if (!details.hasAttribute('data-care-segment-flat')) details.dataset.careSegmentFlat = '';
         const summary = details.querySelector(':scope > summary');
         if (summary && summary.getAttribute('tabindex') !== '-1') summary.setAttribute('tabindex', '-1');
@@ -344,6 +352,12 @@
     assign();
 
     card.addEventListener('click', event => {
+      const panelButton = event.target.closest('[data-care-open-panel]');
+      if (panelButton && card.contains(panelButton)) {
+        const panel = panelButton.dataset.careOpenPanel;
+        select(card, panel === 'belongings' ? 'tools' : 'records', false, panel);
+        return;
+      }
       const summary = event.target.closest('[data-care-segment-flat] > summary');
       if (summary && card.contains(summary)) event.preventDefault();
       // An already-open details node emits no new toggle when an existing
@@ -351,7 +365,8 @@
       const shortcut = event.target.closest('[data-care-brief-action], [data-care-readiness-action]');
       const action = shortcut?.dataset.careReadinessAction || shortcut?.dataset.careBriefAction;
       if (action === 'intake') select(card, 'records');
-      else if (['handover','full-profile','edit','edit-routine','emergency-contact','feeding','medication','safety','belongings'].includes(action)) select(card, 'tools');
+      else if (['handover', 'belongings'].includes(action)) select(card, 'tools');
+      else if (['full-profile', 'edit', 'edit-routine', 'feeding', 'medication', 'arrival-medication', 'emergency-contact', 'safety'].includes(action)) select(card, 'overview');
     }, true);
 
     nav.addEventListener('click', event => {

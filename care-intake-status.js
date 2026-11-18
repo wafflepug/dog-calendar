@@ -128,7 +128,7 @@
     return prepared;
   }
   function ensureOwnerSharingOptions(card, owner, group) {
-    const more = card.querySelector('.directory-care-more-actions-list');
+    const more = card.querySelector('[data-care-secondary-actions]') || card.querySelector('.directory-care-more-actions-list');
     if (!more || !owner || !group) return;
     let button = more.querySelector(':scope > [data-owner-care-sharing-options]');
     if (button) return;

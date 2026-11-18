@@ -623,3 +623,40 @@ async function revealSecondaryTools(page) {
   const tools = page.locator('.directory-card.is-profile-active .directory-care-more-actions');
   await expect(tools.locator('.directory-care-more-actions-list')).toBeVisible();
 }
+
+
+test('simplified guest profile keeps care, records, belongings and photo actions reachable', async ({ page, baseURL }) => {
+  const fixture = installReadOnlyRuntimeFixture(page);
+  await openDirectory(page, baseURL, fixture);
+  const card = await openProfile(page);
+  const section = name => card.getByRole('button', { name, exact: true });
+  await expect(card.locator('[data-directory-detail="profile"]')).toBeVisible();
+  await expect(card.locator('[data-toggle-profile-edit]')).toBeVisible();
+  await expect(card.locator('.v11160-desktop-tabs')).toBeHidden();
+  await expect(card.locator('[data-care-brief-handover-note]')).toContainText('Saved Milo care note');
+  await section('Emergency details').click();
+  await expect(card.locator('[data-profile-subtab="healthHome"]')).toHaveAttribute('aria-expanded', 'true');
+  await expect(card.locator('[data-directory-detail="profile"]')).toBeVisible();
+
+  await section('Records').click();
+  await expect(card.locator('.directory-care-records-disclosure')).toBeVisible();
+  await expect(section('Refresh records')).toBeVisible();
+  await section('Stay history').click();
+  await expect(card.locator('[data-directory-main-panel="history"]')).toBeVisible();
+  await section('Dog record').click();
+  await expect(card.locator('[data-v110-panel="master"]')).toBeVisible();
+
+  await section('Tools').click();
+  await expect(card.locator('[data-directory-stay-contact]')).toBeVisible();
+  await expect(section('Copy sitter summary')).toBeHidden();
+  await card.getByText('More actions', { exact: true }).click();
+  await expect(section('Copy sitter summary')).toBeVisible();
+  await section('Belongings').click();
+  await expect(card.locator('[data-directory-main-panel="belongings"]')).toBeVisible();
+  await card.locator('[data-care-photo-options] > summary').click();
+  await expect(section('View photo gallery')).toBeVisible();
+  await section('View stay photos').click();
+  await expect(card.locator('[data-v110-panel="media"]')).toBeVisible();
+  await section('Overview').click();
+  await expect(card.locator('[data-directory-detail="profile"]')).toBeVisible();
+});
