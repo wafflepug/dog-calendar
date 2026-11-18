@@ -9706,6 +9706,9 @@ registerWaffleServiceWorker();
             const summary = brief.querySelector('[data-care-readiness-summary]');
             if (summary) {
                 const identityNeedsReview = identityAmbiguous || identityBlocked;
+                const setup = summary.closest('.directory-care-readiness');
+                setup?.toggleAttribute('data-care-setup-complete',
+                    !identityNeedsReview && readinessItems.intake.ready && readinessItems.handover.ready);
                 setDirectorySummaryText(summary, identityNeedsReview ? 'Needs identity review'
                     : !readinessItems.handover.ready ? 'Add handover' : 'Details');
                 setDirectorySummaryData(summary, 'state', identityNeedsReview || !readinessItems.handover.ready ? 'attention' : 'neutral');
@@ -13326,10 +13329,16 @@ registerWaffleServiceWorker();
         const populatedCount = Object.values(attributes).filter(value => String(value ?? '').trim()).length;
         const source = String(record?.intakeAttributesSource || '').trim();
         const sourceLabel = source || (populatedCount ? 'Stored profile' : 'No intake saved yet');
+        const recordSource = card.querySelector('[data-care-record-form-source]');
+        if (recordSource) {
+            const text = source && populatedCount ? 'Form source: ' + sourceLabel : '';
+            if (recordSource.textContent !== text) recordSource.textContent = text;
+            if (recordSource.hidden === Boolean(text)) recordSource.hidden = !text;
+        }
         const summaryChip = card.querySelector('[data-intake-profile-summary]');
         if (summaryChip) {
             const hidden = populatedCount === 0;
-            const text = populatedCount ? `${populatedCount} fields · ${sourceLabel}` : '';
+            const text = populatedCount ? sourceLabel : '';
             if (summaryChip.hidden !== hidden) summaryChip.hidden = hidden;
             if (summaryChip.textContent !== text) summaryChip.textContent = text;
         }
@@ -18538,10 +18547,11 @@ registerWaffleServiceWorker();
 
 
                                             <div class="directory-care-brief-actions" aria-label="Care profile actions">
-                                                <button type="button" class="directory-care-brief-action is-primary" data-care-brief-action="full-profile">
-                                                    <span class="care-tool-icon" aria-hidden="true"><svg viewBox="0 0 20 20"><path d="M3 4.5h5a2 2 0 0 1 2 2v10a2 2 0 0 0-2-2H3zM17 4.5h-5a2 2 0 0 0-2 2v10a2 2 0 0 1 2-2h5z"/></svg></span>Care details
-                                                </button>
-
+                                                <div class="directory-care-record-actions" data-care-record-actions>
+                                                    <button type="button" class="directory-care-brief-action" data-care-brief-action="refresh">Refresh records</button>
+                                                    <button type="button" class="directory-care-brief-action" data-care-open-panel="history">Stay history</button>
+                                                    <button type="button" class="directory-care-brief-action" data-care-open-panel="master">Dog record</button>
+                                                </div>
                                                 <div class="directory-care-more-actions" aria-label="Profile tools">
                                                 <div class="directory-care-more-actions-list">
                                                 <section class="directory-care-photo-tools" aria-label="Photo tools">
@@ -18549,15 +18559,15 @@ registerWaffleServiceWorker();
                                                         <button type="button" class="directory-photo-edit-button" data-upload-dog-photo title="Change and position dog profile photo" aria-label="Change and position ${escapeDashboardHtml(dogName.trim())} profile photo">Change profile photo</button>
                                                     </div>
                                                 </section>
-                                                <button type="button" class="directory-care-brief-action" data-care-brief-action="edit">
-                                                    Edit care details
-                                                </button>
-                                                <button type="button" class="directory-care-brief-action" data-care-brief-action="refresh">Refresh records</button>
-                                                <button type="button" class="directory-care-brief-action" data-care-sitter-summary="copy">Copy sitter summary</button>
-                                                <div hidden data-care-sitter-summary-output>
-                                                    <p role="status" aria-live="polite" data-care-sitter-summary-status></p>
-                                                    <textarea hidden readonly aria-label="Sitter summary to copy" data-care-sitter-summary-manual></textarea>
-                                                </div>
+                                                <button type="button" class="directory-care-brief-action" data-care-open-panel="belongings">Belongings</button>
+                                                <details class="directory-care-secondary-actions" data-care-secondary-actions>
+                                                    <summary>More actions</summary>
+                                                    <button type="button" class="directory-care-brief-action" data-care-sitter-summary="copy">Copy sitter summary</button>
+                                                    <div hidden data-care-sitter-summary-output>
+                                                        <p role="status" aria-live="polite" data-care-sitter-summary-status></p>
+                                                        <textarea hidden readonly aria-label="Sitter summary to copy" data-care-sitter-summary-manual></textarea>
+                                                    </div>
+                                                </details>
                                         <details class="directory-care-contact-disclosure" data-directory-stay-contact>
                                             <summary>
                                                 <span>
@@ -18662,6 +18672,7 @@ registerWaffleServiceWorker();
                                                 <span class="directory-care-records-chevron" aria-hidden="true">⌄</span>
                                             </summary>
                                             <div class="directory-care-records-body">
+                                                <p data-care-record-form-source hidden></p>
                                         <div
                                             class="directory-care-strip"
                                             data-directory-care="${escapeDashboardHtml(directoryStayKey)}"
