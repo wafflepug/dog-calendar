@@ -3103,6 +3103,7 @@ function invalidateWaffleForAction_(action) {
     checkout_stay: true,
     save_dog_master_profile: true,
     link_stay_to_dog: true,
+    link_returning_potential: true,
     delete_stay_photo: true,
     create: true,
     update: true,
@@ -3264,6 +3265,7 @@ function readPotentialStayRecords_() {
             ""
           );
 
+    var petIdentity = v108DogIdentityAt_(rows, i);
     records.push({
       id:
         "sheet_pot_" +
@@ -3276,7 +3278,9 @@ function readPotentialStayRecords_() {
         timestamp,
       dogName:
         dogName,
-      species: v108DogIdentityAt_(rows,i).species,
+      species: petIdentity.species,
+      dogId: petIdentity.dogId,
+      dogNumber: petIdentity.dogNumber,
       breed:
         String(
           row[2] ||
@@ -3339,6 +3343,17 @@ function readPotentialStayRecords_() {
     }
   );
 
+  var linked = records.filter(function(record) { return record.dogId && record.stayId; });
+  if (linked.length) {
+    var keys = linked.map(function(record) { return makeGuestStayKey_(record.dogName, record.startDate, record.endDate); });
+    try {
+      var care = readBelongingsRecords_(getBelongingsSheetReadOnly_(), keys, rows);
+      linked.forEach(function(record, index) {
+        var matches = care.filter(function(item) { return item.stayKey === keys[index]; });
+        if (matches.length === 1 && matches[0].dogPhoto) record.dogPhoto = matches[0].dogPhoto;
+      });
+    } catch (_) {}
+  }
   return records;
 }
 
@@ -5100,6 +5115,7 @@ function processSheetAction_(data) {
 
     if (data.action === "backfill_dog_ids") return backfillV108DogIds_();
     if (data.action === "link_stay_to_dog") return linkV108StayToDog_(data);
+    if (data.action === "link_returning_potential") return linkReturningPotential_(sheet, rows, data);
 
     if (data.action === "save_dog_host_again") return dogHostAgain_(data, true);
     if (data.action === "save_business_name") return savePalzBusinessName_(data);

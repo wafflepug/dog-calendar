@@ -60,7 +60,7 @@ function v1104PotentialKeyFromEvent(
 function v1104PotentialEventFromRecord(
     record
 ) {
-    return buildPotentialEvent(
+    const event = buildPotentialEvent(
         String(
             record?.id ||
             (
@@ -103,6 +103,9 @@ function v1104PotentialEventFromRecord(
         String(record?.stayId || '').trim(),
         record?.species
     );
+    event.extendedProps.dogId = String(record?.dogId || '').trim();
+    event.extendedProps.dogPhoto = record?.dogPhoto || null;
+    return event;
 }
 
 

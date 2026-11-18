@@ -129,9 +129,10 @@ test('guest detail returns the stored shared-row timestamp unchanged', () => {
       ['Timestamp', 'Dog Name', 'Breed', 'Start Date', 'End Date', 'Stay ID', 'Dog ID'],
       [new Date(), 'Milo', '', '2026-10-01', '2026-10-03', stayId, dogId]
     ] }),
-    getParent: () => ({ getSheetByName: () => careSheet })
+    getParent: () => ({ getSheetByName: name => name === 'Care' ? careSheet : null })
   };
-  const sandbox = load(['readGuestProfileRowsReadOnly_', 'getGuestProfileDetail_'], {
+  const sandbox = load(['readGuestProfileRowsReadOnly_', 'getGuestProfileDetail_', 'enrichGuestProfileFromIntake_'], {
+    INTAKE_ATTRIBUTE_CONFIG_: [{ key: 'handlingTips', enhanced: true }],
     getBelongingsHeaders_: () => headers,
     parseDogPhotoJson_: () => null,
     parseIntakeAttributesJson_: () => ({}),
@@ -141,7 +142,7 @@ test('guest detail returns the stored shared-row timestamp unchanged', () => {
     makeGuestStayKey_: () => stayKey,
     getTargetSheet_: () => bookingSheet,
     Date,
-    PropertiesService: { getScriptProperties: () => ({ getProperty: () => 'Care' }) }
+    PropertiesService: { getScriptProperties: () => ({ getProperty: key => key === 'BELONGINGS_SHEET_NAME' ? 'Care' : null }) }
   });
 
   const result = sandbox.contractFns.getGuestProfileDetail_({ stayKey, stayId, dogId });
