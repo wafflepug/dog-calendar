@@ -47,12 +47,12 @@ function sitterPlanningAssert_(rows, start, end, name, excludeRow) {
     if (total > rules.maxDogs) throw new Error('Maximum '+rules.maxDogs+' dogs would be exceeded on '+date+'. Update Availability or choose other dates.');
   }
 }
-function sitterHandoverValidate_(data, start, end) {
+function sitterHandoverValidate_(data, start, end, previous) {
   var dropoff=sitterTime_(data.dropoffTime), pickup=sitterTime_(data.pickupTime);
   if (start===end && dropoff && pickup && pickup<dropoff) throw new Error('Same-day pickup cannot be before drop-off.');
   var r=sitterPlanningRules_();
-  if (dropoff && r.arrivalFrom && (dropoff<r.arrivalFrom || dropoff>r.arrivalTo)) throw new Error('Drop-off must be within the saved arrival window '+r.arrivalFrom+'–'+r.arrivalTo+'.');
-  if (pickup && r.pickupFrom && (pickup<r.pickupFrom || pickup>r.pickupTo)) throw new Error('Pickup must be within the saved pickup window '+r.pickupFrom+'–'+r.pickupTo+'.');
+  if (dropoff && (!previous || dropoff !== previous.dropoffTime) && r.arrivalFrom && (dropoff<r.arrivalFrom || dropoff>r.arrivalTo)) throw new Error('Drop-off must be within the saved arrival window '+r.arrivalFrom+'–'+r.arrivalTo+'.');
+  if (pickup && (!previous || pickup !== previous.pickupTime) && r.pickupFrom && (pickup<r.pickupFrom || pickup>r.pickupTo)) throw new Error('Pickup must be within the saved pickup window '+r.pickupFrom+'–'+r.pickupTo+'.');
   return {dropoffTime:dropoff,pickupTime:pickup};
 }
 function sitterHandoverSheet_(write) {
@@ -71,14 +71,40 @@ function getSitterHandover_(data) {
   return {result:'success',record:sitterHandoverRead_(id)};
 }
 function saveSitterHandover_(data) {
-  var id=careRoutineLogResolveStay_(data,false), old=sitterHandoverRead_(id), times=sitterHandoverValidate_(data,id.booking.startDate,id.booking.endDate);
+  var id=careRoutineLogResolveStay_(data,false), old=sitterHandoverRead_(id), times=sitterHandoverValidate_(data,id.booking.startDate,id.booking.endDate,old.times);
+  if (sitterHandoverTimesMatch_(old.times, times)) return {result:'success',record:old};
   if(String(data.expectedRevision || '')!==old.revision) {
-    if(old.times.dropoffTime===times.dropoffTime && old.times.pickupTime===times.pickupTime) return {result:'success',record:old};
     throw new Error('Handover times changed on another device. Reload before saving.');
   }
-  var sheet=sitterHandoverSheet_(true), revision=Utilities.getUuid();
-  sheet.getRange(old.row || sheet.getLastRow()+1,1,1,4).setValues([[id.stayId,id.dogId,JSON.stringify(times),revision]]);
-  return {result:'success',record:{stayId:id.stayId,dogId:id.dogId,times:times,revision:revision}};
+  return {result:'success',record:writeSitterHandover_(id, old, times)};
+}
+
+function sitterHandoverTimesMatch_(first, second) {
+  return first.dropoffTime === second.dropoffTime && first.pickupTime === second.pickupTime;
+}
+
+function writeSitterHandover_(identity, previous, times) {
+  var sheet = sitterHandoverSheet_(true);
+  var revision = Utilities.getUuid();
+  sheet.getRange(previous.row || sheet.getLastRow() + 1, 1, 1, 4)
+    .setValues([[identity.stayId, identity.dogId, JSON.stringify(times), revision]]);
+  return {stayId:identity.stayId, dogId:identity.dogId, times:times, revision:revision};
+}
+
+// Called while the intake receipt holds the script lock for the verified stay.
+function saveIntakeHandoverTimes_(identity, answers) {
+  var dropoff = sitterTime_(answers.dropOffTime);
+  var pickup = sitterTime_(answers.pickUpTime);
+  if (!dropoff && !pickup) return;
+  var previous = sitterHandoverRead_(identity);
+  // Owner estimates can fall outside the sitter's usual booking windows.
+  var times = {
+    dropoffTime: dropoff || previous.times.dropoffTime,
+    pickupTime: pickup || previous.times.pickupTime
+  };
+  if (!sitterHandoverTimesMatch_(previous.times, times)) {
+    writeSitterHandover_(identity, previous, times);
+  }
 }
 
 function getSitterDayHandovers_() {

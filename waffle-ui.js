@@ -382,17 +382,21 @@
     return ALLOWED_COLOURS.has(value) ? value : 'waffle-purple';
   }
 
+  function colourLuminance(channels) {
+    const linear = channels.map(channel => {
+      const value = channel / 255;
+      return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2];
+  }
+
   function readableAccent(hex, dark) {
     const channels = hex.slice(1).match(/../g).map(value => parseInt(value, 16));
     const backdropLuminance = dark ? 0.018 : 1;
     const target = dark ? 255 : 0;
     for (let step = 0; step <= 20; step += 1) {
       const mixed = channels.map(channel => Math.round(channel + (target - channel) * step / 20));
-      const linear = mixed.map(channel => {
-        const value = channel / 255;
-        return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
-      });
-      const luminance = 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2];
+      const luminance = colourLuminance(mixed);
       const contrast = (Math.max(luminance, backdropLuminance) + 0.05) / (Math.min(luminance, backdropLuminance) + 0.05);
       if (contrast >= 4.5) return `rgb(${mixed.join(', ')})`;
     }
@@ -403,6 +407,12 @@
     const root = document.documentElement;
     root.setAttribute('data-waffle-colour-style', selected);
     if (selected === 'custom') {
+      const luminance = colourLuminance(customAccent.slice(1).match(/../g).map(channel => parseInt(channel, 16)));
+      const whiteContrast = 1.05 / (luminance + 0.05);
+      const darkLuminance = colourLuminance([17, 24, 39]);
+      const darkContrast = (Math.max(luminance, darkLuminance) + 0.05) / (Math.min(luminance, darkLuminance) + 0.05);
+      root.style.setProperty('--wh75-custom-pet-bg', customAccent);
+      root.style.setProperty('--wh75-custom-pet-ink', darkContrast > whiteContrast ? '#111827' : '#fff');
       root.style.setProperty('--wh75-custom-light', readableAccent(customAccent, false));
       root.style.setProperty('--wh75-custom-dark', readableAccent(customAccent, true));
     }

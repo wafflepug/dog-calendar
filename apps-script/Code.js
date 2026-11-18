@@ -13695,6 +13695,7 @@ function processIntakeSubmissionLocked_(prepared) {
         receipt.profilePhotoStatus = "failed";
       }
     }
+    if (answers.dropOffTime || answers.pickUpTime) saveIntakeHandoverTimes_(current, answers);
     var row = currentIntake.row;
     var completedValues = getIntakeSheet_().getRange(row, 1, 1, INTAKE_HEADERS_.length).getValues()[0];
     completedValues[1] = new Date();
