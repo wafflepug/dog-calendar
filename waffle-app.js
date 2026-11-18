@@ -11942,7 +11942,9 @@ registerWaffleServiceWorker();
         directoryConsolidatedLoadInProgress =
             true;
         const rosterDashboard = document.querySelector('.directory-dashboard-fused');
-        if (rosterDashboard) rosterDashboard.dataset.directoryRosterLoadState = 'loading';
+        const hadRoster = ['success', 'cached', 'cached-failure', 'cached-offline']
+            .includes(rosterDashboard?.dataset.directoryRosterLoadState);
+        if (rosterDashboard && !hadRoster) rosterDashboard.dataset.directoryRosterLoadState = 'loading';
 
         const button =
             options.button ||
@@ -11966,6 +11968,7 @@ registerWaffleServiceWorker();
 
         if (
             grid &&
+            !hadRoster &&
             !options.quiet &&
             !grid.querySelector(
                 '.directory-card'
@@ -11978,9 +11981,8 @@ registerWaffleServiceWorker();
                 );
         }
 
+        let cachedRendered = false;
         try {
-            let cachedRendered = false;
-
             const swr =
                 await queryAppsScriptSWR(
                     {
@@ -11994,36 +11996,30 @@ registerWaffleServiceWorker();
                         timeoutMs: 45000,
                         maxStaleMs:
                             6 * 60 * 60 * 1000,
-                        onCached:
-                            cachedResponse => {
-                                if (getDirectoryRosterResponseState({ data: cachedResponse }) === 'failure') return;
-                                cachedRendered = true;
-
-                                applyGuestDirectoryResponse(
-                                    cachedResponse,
-                                    {
-                                        ...options,
-                                        quiet: false,
-                                        force: false,
-                                        fromCache: true
-                                    }
-                                );
-                            }
+                        shouldCacheResponse: data => getDirectoryRosterResponseState({ data }) === 'success',
+                        onCached: hadRoster ? undefined : cachedResponse => {
+                            applyGuestDirectoryResponse(cachedResponse, {
+                                ...options,
+                                quiet: false,
+                                force: false,
+                                fromCache: true
+                            });
+                            cachedRendered = true;
+                        }
                     }
                 );
 
             const rosterState = getDirectoryRosterResponseState(swr);
             if (rosterState === 'failure') throw new Error('Guest list response was unavailable or incomplete.');
-            if (
-                !swr.unchanged ||
-                !cachedRendered
-            ) {
+            // A failed background read may return an older stored copy.
+            // Keep the roster already on screen in that case.
+            if (!(swr.unchanged && cachedRendered) && (!hadRoster || rosterState === 'success')) {
                 applyGuestDirectoryResponse(
                     swr.data,
                     {
                         ...options,
                         quiet:
-                            cachedRendered
+                            cachedRendered || hadRoster
                                 ? true
                                 : options.quiet,
                         force:
@@ -12037,21 +12033,17 @@ registerWaffleServiceWorker();
             updateDirectoryEmptyState();
 
         } catch (error) {
-            if (rosterDashboard) rosterDashboard.dataset.directoryRosterLoadState = 'failure';
+            const keepRoster = hadRoster || cachedRendered;
+            if (rosterDashboard) rosterDashboard.dataset.directoryRosterLoadState = keepRoster ? 'cached-failure' : 'failure';
             updateDirectoryEmptyState();
             console.error(
                 'Guest Directory load failed:',
                 error
             );
 
-            document.querySelectorAll('.directory-card [aria-busy="true"] .directory-record-loading')
-                .forEach(status => {
-                    status.textContent = 'Status unavailable. Refresh the guest list to try again.';
-                    status.closest('[aria-busy="true"]')?.setAttribute('aria-busy', 'false');
-                });
-
             if (
                 grid &&
+                !keepRoster &&
                 !grid.querySelector(
                     '.directory-card'
                 )
@@ -19020,8 +19012,7 @@ registerWaffleServiceWorker();
         document.getElementById('leaving-list').innerHTML = leavingDogs.length > 0 ? leavingDogs.join('') : '<li class="no-dogs">No checkouts scheduled this week</li>';
         document.getElementById('upcoming-list').innerHTML = upcomingDogs.length > 0 ? upcomingDogs.join('') : '<li class="no-dogs">No new arrivals scheduled this week</li>';
         const directoryGrid = document.getElementById('directory-grid');
-        const generatedDirectoryHtml = directoryCardsHTML.length > 0 ? directoryCardsHTML.join('') : '<div class="no-dogs" style="grid-column: 1/-1; text-align: center; padding: 20px;">No active guests to display.</div>';
-        reconcileDirectoryGridCards(directoryGrid, generatedDirectoryHtml);
+        reconcileDirectoryGridCards(directoryGrid, directoryCardsHTML.join(''));
 
         document
             .querySelectorAll('.directory-card[data-directory-stay-key]')

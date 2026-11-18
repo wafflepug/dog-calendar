@@ -18,9 +18,9 @@ function harness(response, cached) {
     updateDirectoryEmptyState: () => states.push(dashboard.dataset.directoryRosterLoadState),
     applyGuestDirectoryResponse(data, options) { applied.push(data); dashboard.dataset.directoryRosterLoadState = options.fromCache ? 'cached' : 'success'; },
     async queryAppsScriptSWR(payload, options) {
-      if (cached) await options.onCached(cached);
+      if (cached && options.shouldCacheResponse(cached)) await options.onCached?.(cached);
       if (response instanceof Error) throw response;
-      return response;
+      return await response;
     }
   };
   vm.runInNewContext(`${source.slice(stateStart, stateEnd)}\n${source.slice(loadStart, loadEnd)}\nthis.load = loadGuestDirectoryConsolidated;`, context);
@@ -51,5 +51,36 @@ test('malformed, unsuccessful and failed reads never replace the roster with con
     await assert.rejects(() => h.context.load({ quiet: true }));
     assert.equal(h.applied.length, 0);
     assert.equal(h.dashboard.dataset.directoryRosterLoadState, 'failure');
+  }
+});
+
+test('background refresh keeps the displayed roster until a fresh response is ready', async () => {
+  const cached = { result: 'success', bookings: [] };
+  const data = { result: 'success', bookings: [{ dogName: 'Milo' }] };
+  let resolveRefresh;
+  const pending = new Promise(resolve => { resolveRefresh = resolve; });
+  const h = harness(pending, cached);
+  h.dashboard.dataset.directoryRosterLoadState = 'success';
+  const refresh = h.context.load({ quiet: true });
+  assert.equal(h.dashboard.dataset.directoryRosterLoadState, 'success');
+  assert.deepEqual(h.applied, []);
+
+  resolveRefresh({ data });
+  await refresh;
+  assert.deepEqual(h.applied, [data]);
+  assert.deepEqual(h.states, ['success']);
+});
+
+test('failed background refresh does not replay a stale roster or display a cold-load error', async () => {
+  const cached = { result: 'success', bookings: [] };
+  const failure = new Error('network unavailable');
+  const fallback = harness({ data: cached, unchanged: true, refreshFailed: true }, cached);
+  const failedRead = harness(failure, cached);
+  for (const h of [fallback, failedRead]) h.dashboard.dataset.directoryRosterLoadState = 'success';
+  await fallback.context.load({ quiet: true });
+  await assert.rejects(() => failedRead.context.load({ quiet: true }), failure);
+  for (const h of [fallback, failedRead]) {
+    assert.deepEqual(h.applied, []);
+    assert.deepEqual(h.states, ['cached-failure']);
   }
 });
