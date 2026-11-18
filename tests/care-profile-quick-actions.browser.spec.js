@@ -14,11 +14,25 @@ test('streamlined profile places records, belongings and destructive actions tog
   await expect(card.locator('[data-directory-detail="profile"]')).toHaveAttribute('data-profile-read-state', 'fresh');
   await expect(card.getByRole('heading', { name: 'Pet Notes' })).toBeVisible();
   await expect(card.getByText('More actions', {exact: true})).toHaveCount(0);
+  const handover = card.locator('[data-sitter-handover]');
+  await expect(handover.locator('input[type="time"]')).toHaveCount(2);
+  for (const width of [320, 390, 1280]) {
+    await page.setViewportSize({width, height: 848});
+    const centreOffset = await handover.evaluate(section => {
+      const outer = section.getBoundingClientRect();
+      const fields = section.querySelector('.sitter-planning-grid').getBoundingClientRect();
+      return Math.abs((outer.left + outer.right - fields.left - fields.right) / 2);
+    });
+    expect(centreOffset).toBeLessThanOrEqual(1);
+  }
+  await page.setViewportSize({width: 390, height: 848});
   expect(fixture.reads).not.toContain('get_dog_history');
   expect(fixture.reads).not.toContain('get_dog_master_profile');
 
   await card.getByRole('button', {name: 'Records', exact: true}).click();
   const records = card.locator('.directory-care-records-disclosure');
+  const bookingTools = card.locator('.p4-directory-actions');
+  await expect(bookingTools).toHaveAttribute('data-care-profile-segment', 'records');
   await expect(records.locator('[data-directory-care]')).toBeHidden();
   await expect(card.getByRole('button', {name: 'Refresh records', exact: true})).toHaveCount(0);
   await expect(records.locator('[data-directory-legacy] + [data-care-dog-records]')).toBeVisible();
@@ -33,6 +47,7 @@ test('streamlined profile places records, belongings and destructive actions tog
   await expect(card.getByText('Blue lead and fitted harness')).toBeVisible();
   await expect(card.locator('.belongings-photo-gallery')).toBeVisible();
   await expect(records).toBeHidden();
+  await expect(bookingTools).toBeHidden();
 
   const pdf = card.getByRole('button', {name: 'View intake PDF'});
   const remove = card.getByRole('button', {name: 'Remove Stay', exact: true});
