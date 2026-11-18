@@ -1,6 +1,6 @@
 /* Waffle House Boarding — recovery service worker */
 
-const WAFFLE_SW_VERSION = 'v11.4.250-safety-branding-intake-pdf-2026.11.19.02';
+const WAFFLE_SW_VERSION = 'v11.4.251-handover-times-avatar-contrast-2026.11.19.03';
 const WAFFLE_CACHE_PREFIX = 'waffle-house-';
 const APP_SHELL_CACHE = `${WAFFLE_CACHE_PREFIX}shell-${WAFFLE_SW_VERSION}`;
 const RUNTIME_CACHE = `${WAFFLE_CACHE_PREFIX}runtime-${WAFFLE_SW_VERSION}`;
@@ -29,15 +29,15 @@ const APP_SHELL = [
   './palz-icons.js?build=2026.08.28.01&rev=2026.11.15.01',
   './palz-sales.js?build=2026.08.28.01&rev=2026.11.15.01',
   './palz-sales.css?rev=2026.11.15.01',
-  './sitter-planning.js?build=2026.08.28.01&rev=2026.11.15.01',
+  './sitter-planning.js?build=2026.08.28.01&rev=2026.11.19.03',
   './waffle-release.json',
-'./waffle-bootstrap.js?v=2026.08.28.01&rev=2026.11.19.02',
+'./waffle-bootstrap.js?v=2026.08.28.01&rev=2026.11.19.03',
   './waffle-diagnostics.js?build=2026.08.28.01',
   './waffle-csv.js?build=2026.08.28.01&rev=2026.11.15.01',
   './care-profile-performance.js?build=2026.08.28.01&rev=2026.11.15.01',
   './care-startup-priority.js?build=2026.08.28.01&rev=2026.11.15.01',
   './owner-handoff.js?build=2026.08.28.01&rev=2026.11.15.01',
-  './care-intake-status.js?build=2026.08.28.01&rev=2026.11.19.02',
+  './care-intake-status.js?build=2026.08.28.01&rev=2026.11.19.03',
   './care-arrival-ready.js?build=2026.08.28.01&rev=2026.11.15.01',
   './care-roster-focus.js?build=2026.08.28.01&rev=2026.11.15.01',
   './care-departure-message.js?build=2026.08.28.01&rev=2026.11.15.01',
@@ -55,7 +55,7 @@ const APP_SHELL = [
   './floorplan.css?build=2026.08.28.01',
   './floorplan-area-labels.js?build=2026.08.28.01',
   './logs.js?build=2026.08.28.01',
-  './waffle-ui.js?build=2026.08.28.01&rev=2026.11.17.02',
+  './waffle-ui.js?build=2026.08.28.01&rev=2026.11.19.03',
   './waffle-ai.js?build=2026.08.28.01',
   './phase4.js?build=2026.08.28.01',
   './phase4-core.js?build=2026.08.28.01&rev=2026.11.15.01',
@@ -63,7 +63,7 @@ const APP_SHELL = [
   './phase4-booking.js?build=2026.08.28.01&rev=2026.11.15.01',
   './phase4-operations.js?build=2026.08.28.01',
   './phase4-ai-actions.js?build=2026.08.28.01',
-'./waffle-runtime.css?v=2026.08.28.01&rev=2026.11.17.03',
+'./waffle-runtime.css?v=2026.08.28.01&rev=2026.11.19.03',
   './waffle-maintenance-v2.webp?v=2026.08.28.02',
   './waffle-logo.png',
   './waffle-logo-dark.png',

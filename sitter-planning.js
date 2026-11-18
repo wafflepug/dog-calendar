@@ -9,7 +9,14 @@
   async function read(payload) {if(navigator.onLine===false)throw Error('You are offline. Reconnect and retry.');const r=await window.queryAppsScript(payload,{maxAttempts:1,timeoutMs:25000});if(r?.result!=='success')throw Error(r?.error || 'Planning service unavailable. Retry once connected.');return r;}
   async function write(payload) {if(navigator.onLine===false)throw Error('You are offline. Nothing was saved.');const r=await window.sendPayloadToAppsScript(payload);if(r?.result!=='success' || r.queued)throw Error(r?.error || 'Save was not confirmed. Reload to check before retrying.');return r;}
   const css=document.createElement('style');css.textContent=`
-  .sitter-planning{color:var(--wh-text,#172033);font-size:14px;line-height:1.5;box-sizing:border-box}.sitter-planning *{box-sizing:border-box}.sitter-planning button,.sitter-planning input{font:inherit;color:inherit}.sitter-planning button{min-height:44px;padding:9px 12px;border:1px solid var(--wh-border,#d6deeb);border-radius:10px;background:var(--wh-surface-soft,#f5f3ff);cursor:pointer}.sitter-planning button:focus-visible,.sitter-planning input:focus-visible{outline:3px solid var(--wh75-accent,#7c3aed);outline-offset:2px}.sitter-planning button:disabled{opacity:.6;cursor:wait}.sitter-planning label{display:grid;gap:5px;min-width:0;font-weight:700}.sitter-planning input{width:100%;min-width:0;min-height:44px;padding:8px;border:1px solid var(--wh-border,#d6deeb);border-radius:9px;background:var(--wh-surface,#fff)}.sitter-planning-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.sitter-planning-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:12px}.sitter-planning [role=status]{margin:8px 0;overflow-wrap:anywhere}.sitter-planning h3{margin:0 0 8px;font-size:18px}.sitter-planning h4{margin:16px 0 8px}.sitter-planning p{margin:6px 0 12px}.sitter-planning-block{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end;margin-bottom:10px}.sitter-planning-dialog{width:min(560px,calc(100vw - 24px));max-height:calc(100dvh - 24px);overflow:auto;border:1px solid var(--wh-border,#d6deeb);border-radius:16px;padding:20px;background:var(--wh-surface,#fff);color:var(--wh-text,#172033);z-index:2147483000}.sitter-planning-dialog::backdrop{background:#0f172a99}.sitter-planning-head{display:flex;justify-content:space-between;gap:12px;align-items:start}.sitter-handover{margin:12px 0;padding:12px;border:1px solid var(--wh-border,#d6deeb);border-radius:12px}.sitter-handover-summary{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px}.sitter-handover-summary span{font-size:13px;white-space:pre-line}.sitter-compose{margin:12px 0}.sitter-photo-preview{display:flex;gap:8px;flex-wrap:wrap}.sitter-photo-preview img{width:64px;height:64px;object-fit:cover;border-radius:10px}.sitter-planning [hidden]{display:none!important}@media(max-width:520px){.sitter-planning-block{grid-template-columns:1fr 1fr}.sitter-planning-block button{grid-column:1/-1}.sitter-planning-dialog{padding:14px}}
+  .sitter-planning{color:var(--wh-text,#172033);font-size:14px;line-height:1.5;box-sizing:border-box}.sitter-planning *{box-sizing:border-box}.sitter-planning button,.sitter-planning input{font:inherit;color:inherit}.sitter-planning button{min-height:44px;padding:9px 12px;border:1px solid var(--wh-border,#d6deeb);border-radius:10px;background:var(--wh-surface-soft,#f5f3ff);cursor:pointer}.sitter-planning button:focus-visible,.sitter-planning input:focus-visible{outline:3px solid var(--wh75-accent,#7c3aed);outline-offset:2px}.sitter-planning button:disabled{opacity:.6;cursor:wait}.sitter-planning label{display:grid;gap:5px;min-width:0;font-weight:700}.sitter-planning input{width:100%;min-width:0;min-height:44px;padding:8px;border:1px solid var(--wh-border,#d6deeb);border-radius:9px;background:var(--wh-surface,#fff)}.sitter-planning-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.sitter-planning-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:12px}.sitter-planning [role=status]{margin:8px 0;overflow-wrap:anywhere}.sitter-planning h3{margin:0 0 8px;font-size:18px}.sitter-planning h4{margin:16px 0 8px}.sitter-planning p{margin:6px 0 12px}.sitter-planning-block{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end;margin-bottom:10px}.sitter-planning-dialog{width:min(560px,calc(100vw - 24px));max-height:calc(100dvh - 24px);overflow:auto;border:1px solid var(--wh-border,#d6deeb);border-radius:16px;padding:20px;background:var(--wh-surface,#fff);color:var(--wh-text,#172033);z-index:2147483000}.sitter-planning-dialog::backdrop{background:#0f172a99}.sitter-planning-head{display:flex;justify-content:space-between;gap:12px;align-items:start}.sitter-compose{margin:12px 0}.sitter-photo-preview{display:flex;gap:8px;flex-wrap:wrap}.sitter-photo-preview img{width:64px;height:64px;object-fit:cover;border-radius:10px}.sitter-planning [hidden]{display:none!important}@media(max-width:520px){.sitter-planning-block{grid-template-columns:1fr 1fr}.sitter-planning-block button{grid-column:1/-1}.sitter-planning-dialog{padding:14px}}
+  .sitter-handover { margin: 8px 0 12px; }
+  .sitter-handover .sitter-planning-grid { max-width: 340px; gap: 8px; }
+  .sitter-handover label { gap: 3px; font-size: 11px; font-weight: 800; letter-spacing: .02em; text-transform: uppercase; }
+  .sitter-handover input { font-size: 14px; font-weight: 700; }
+  .sitter-handover .sitter-planning-actions { margin-top: 6px; }
+  .sitter-handover [role=status] { margin: 0; font-size: 13px; }
+  .sitter-handover [role=status]:empty { display: none; }
   `;document.head.append(css);
   let dialog, returnFocus, busy=false;
   function blockRow(start='',end='') {const row=document.createElement('div');row.className='sitter-planning-block';row.innerHTML=`<label>From<input type="date" data-sitter-block-start required value="${esc(start)}"></label><label>Through<input type="date" data-sitter-block-end required value="${esc(end)}"></label><button type="button" aria-label="Remove time-off period">Remove</button>`;row.querySelector('button').onclick=()=>row.remove();return row;}
@@ -26,20 +33,125 @@
     }
     if(!dialog.open){dialog.showModal();void loadRules();}
   }
-  function mountCard(card) {
-    if (card.dataset.v1082PastStay === 'true') return;
-    const brief=card.querySelector('[data-directory-care-brief]');if(!brief)return;const id=idFor(card);if(!id.stayId || !id.dogId || !id.stayKey)return;
-    let section=card.querySelector('[data-sitter-handover]');
-    if(section && section.dataset.identity!==key(id)){section.remove();section=null;}
-    if(!section){section=document.createElement('section');section.className='sitter-planning sitter-handover';section.dataset.sitterHandover='';section.dataset.identity=key(id);section.innerHTML='<div class="sitter-handover-summary"><span data-sitter-times-summary>Drop-off / pickup times</span><button type="button" data-sitter-times-edit>Set times</button></div><form data-sitter-times-form hidden><div class="sitter-planning-grid"><label>Drop-off<input type="time" name="dropoffTime"></label><label>Pickup<input type="time" name="pickupTime"></label></div><p>Local sitter time. Blank means not confirmed.</p><div class="sitter-planning-actions"><button type="submit">Save times</button><button type="button" data-sitter-times-cancel>Cancel</button></div></form><p role="status" data-sitter-times-status></p>';const header=card.querySelector('.directory-card-header');if(header)header.after(section);else brief.prepend(section);
-      const form=section.querySelector('form'),status=section.querySelector('[role=status]'),edit=section.querySelector('[data-sitter-times-edit]');let record=null,saving=false,loading=null;
-      const show=()=>{section.querySelector('[data-sitter-times-summary]').textContent=`Drop-off: ${record.times.dropoffTime || 'Not confirmed'} · Pickup: ${record.times.pickupTime || 'Not confirmed'}`;edit.textContent='Edit times';};
-      const load=()=>loading || (loading=(async()=>{const r=await read({action:'get_sitter_handover',...id});if(!current(card,id))return false;if(r.record.stayId!==id.stayId || r.record.dogId!==id.dogId)throw Error('Stay identity changed. Reopen the profile.');record=r.record;show();return true;})().finally(()=>{loading=null;}));
-      edit.onclick=async()=>{if(saving)return;edit.disabled=true;status.textContent='Loading saved times...';try{if(!await load())return;for(const n of ['dropoffTime','pickupTime'])form.elements[n].value=record.times[n] || '';form.hidden=false;status.textContent='';form.elements.dropoffTime.focus();}catch(e){if(current(card,id))status.textContent=e.message;}finally{edit.disabled=false;}};
-      void load().catch(()=>{if(current(card,id))section.querySelector('[data-sitter-times-summary]').textContent='Handover times unavailable - select Set times to retry';});
-      section.querySelector('[data-sitter-times-cancel]').onclick=()=>{if(!saving){form.hidden=true;status.textContent='';edit.focus();}};
-      form.onsubmit=async e=>{e.preventDefault();if(saving || !record || !current(card,id))return;saving=true;const times={dropoffTime:form.elements.dropoffTime.value,pickupTime:form.elements.pickupTime.value};form.querySelectorAll('button,input').forEach(n=>n.disabled=true);status.textContent='Saving…';try{const r=await write({action:'save_sitter_handover',...id,...times,expectedRevision:record.revision});if(!current(card,id))return;if(r.record.stayId!==id.stayId || r.record.dogId!==id.dogId || r.record.times.dropoffTime!==times.dropoffTime || r.record.times.pickupTime!==times.pickupTime)throw Error('Save confirmation did not match this stay. Reload to check.');record=r.record;pickupTimes.set(key(id), record.times.pickupTime);show();form.hidden=true;status.textContent='Handover times saved.';}catch(e){if(current(card,id))status.textContent=e.message;}finally{saving=false;form.querySelectorAll('button,input').forEach(n=>n.disabled=false);}};
+  const handoverSections = new WeakMap();
+  let openHandoverSections = new Set();
+
+  function mountHandover(card, brief, id) {
+    const section = document.createElement('section');
+    section.className = 'sitter-planning sitter-handover';
+    section.dataset.sitterHandover = '';
+    section.dataset.identity = key(id);
+    section.innerHTML = `
+      <form>
+        <div class="sitter-planning-grid">
+          <label>Drop-off<input type="time" name="dropoffTime" disabled></label>
+          <label>Pick-up<input type="time" name="pickupTime" disabled></label>
+        </div>
+        <div class="sitter-planning-actions" hidden>
+          <button type="submit" hidden>Save times</button>
+          <button type="button" data-sitter-times-reload hidden>Reload times</button>
+          <span role="status"></span>
+        </div>
+      </form>`;
+    const header = card.querySelector('.directory-card-header');
+    if (header) header.after(section);
+    else brief.prepend(section);
+
+    const form = section.querySelector('form');
+    const actions = section.querySelector('.sitter-planning-actions');
+    const status = section.querySelector('[role=status]');
+    const save = form.querySelector('[type=submit]');
+    const reload = form.querySelector('[data-sitter-times-reload]');
+    const fields = ['dropoffTime', 'pickupTime'].map(name => form.elements[name]);
+    const matchesStay = response => response?.stayId === id.stayId && response?.dogId === id.dogId;
+    const isOpen = () => section.isConnected && current(card, id);
+    let record, loading, saving = false, needsReload = false;
+    const isDirty = () => record && fields.some(field => field.value !== (record.times[field.name] || ''));
+    const updateControls = () => {
+      fields.forEach(field => { field.disabled = !record || Boolean(loading) || saving; });
+      save.hidden = !isDirty();
+      save.disabled = Boolean(loading) || saving;
+      reload.hidden = !needsReload;
+      reload.disabled = Boolean(loading) || saving;
+      actions.hidden = save.hidden && reload.hidden && !status.textContent;
+    };
+    const applyRecord = (next, preserveDraft = false) => {
+      for (const field of fields) {
+        if (!preserveDraft || field.value === (record?.times[field.name] || '')) {
+          field.value = next.times[field.name] || '';
+        }
+      }
+      record = next;
+      pickupTimes.set(key(id), record.times.pickupTime);
+    };
+    function load(force = false) {
+      if (loading || saving || (!force && isDirty())) return loading;
+      if (!record) status.textContent = 'Loading times…';
+      loading = read({action:'get_sitter_handover', ...id}).then(({record: next}) => {
+        if (!isOpen()) return;
+        if (!matchesStay(next)) throw Error('Stay identity changed. Reopen the profile.');
+        applyRecord(next, isDirty());
+        status.textContent = '';
+        needsReload = false;
+      }).catch(error => {
+        if (!isOpen()) return;
+        status.textContent = error.message;
+        needsReload = true;
+      }).finally(() => {
+        loading = null;
+        updateControls();
+      });
+      updateControls();
+      return loading;
     }
+    reload.onclick = () => { void load(true); };
+    form.oninput = updateControls;
+    form.onsubmit = async event => {
+      event.preventDefault();
+      if (saving || loading || !isDirty() || !isOpen()) return;
+      saving = true;
+      const times = Object.fromEntries(fields.map(field => [field.name, field.value]));
+      status.textContent = 'Saving…';
+      updateControls();
+      try {
+        const {record: next} = await write({
+          action:'save_sitter_handover', ...id, ...times, expectedRevision:record.revision
+        });
+        if (!isOpen()) return;
+        if (!matchesStay(next) || fields.some(field => next.times[field.name] !== times[field.name])) {
+          throw Error('Save confirmation did not match this stay. Reload to check.');
+        }
+        applyRecord(next);
+        needsReload = false;
+        status.textContent = 'Times saved.';
+      } catch (error) {
+        if (isOpen()) {
+          status.textContent = error.message;
+          needsReload = true;
+        }
+      } finally {
+        saving = false;
+        updateControls();
+      }
+    };
+    handoverSections.set(section, {load, stayKey:id.stayKey});
+    return section;
+  }
+
+  function mountCard(card, activeSections) {
+    if (card.dataset.v1082PastStay === 'true') return;
+    const brief = card.querySelector('[data-directory-care-brief]');
+    if (!brief) return;
+    const id = idFor(card);
+    if (!id.stayId || !id.dogId || !id.stayKey) return;
+    let section = card.querySelector('[data-sitter-handover]');
+    if (section && section.dataset.identity !== key(id)) {
+      section.remove();
+      section = null;
+    }
+    section ||= mountHandover(card, brief, id);
+    activeSections.add(section);
+    if (!openHandoverSections.has(section)) void handoverSections.get(section).load();
     const oldComposer=card.querySelector('.sitter-compose');if(oldComposer && oldComposer.dataset.identity!==key(id))oldComposer.remove();
     if(!card.querySelector('[data-sitter-compose]')){const host=document.createElement('div');host.className='sitter-planning sitter-compose';host.dataset.identity=key(id);host.dataset.careProfileSegment='activity';const button=document.createElement('button');button.type='button';button.dataset.sitterCompose='';button.textContent='Prepare owner update';button.onclick=()=>{if(!current(card,id))return;const trigger=card.querySelector('[data-owner-care-sharing-options]');if(!trigger)return;trigger.click();const purpose=$('#p4OwnerPurpose');if(purpose){purpose.value='update';purpose.dispatchEvent(new Event('change',{bubbles:true}));const template=$('#p4OwnerUpdateTemplate');template.value='daily';template.dispatchEvent(new Event('change',{bubbles:true}));$('#p4OwnerUpdatePreview')?.focus();}};host.append(button);brief.append(host);}
   }
@@ -368,8 +480,15 @@
     }).catch(() => {});
   }
 
-  function scan(){showBusinessName();mountBusinessSettings();refreshCheckoutButtons();mountToday();const panel=$('#wh75SettingsPanel');if(panel && !panel.querySelector('[data-sitter-planning-settings]')){const section=document.createElement('section');section.className='wh75-settings-section sitter-planning';section.innerHTML='<h3>Availability</h3><button type="button" data-sitter-planning-settings>Availability & handover windows</button>';section.querySelector('button').onclick=openSettings;panel.append(section);}document.querySelectorAll('.directory-card.is-profile-active').forEach(mountCard);}
-  document.addEventListener('visibilitychange',()=>{if(!document.hidden)mountToday();});
+  function scan(){showBusinessName();mountBusinessSettings();refreshCheckoutButtons();mountToday();const panel=$('#wh75SettingsPanel');if(panel && !panel.querySelector('[data-sitter-planning-settings]')){const section=document.createElement('section');section.className='wh75-settings-section sitter-planning';section.innerHTML='<h3>Availability</h3><button type="button" data-sitter-planning-settings>Availability & handover windows</button>';section.querySelector('button').onclick=openSettings;panel.append(section);}const activeSections = new Set();document.querySelectorAll('.directory-card.is-profile-active').forEach(card => mountCard(card, activeSections));openHandoverSections = activeSections;}
+  window.addEventListener('waffle:intake-status-updated', ({detail}) => {
+    if (detail?.code !== 'complete') return;
+    openHandoverSections.forEach(section => {
+      const handover = handoverSections.get(section);
+      if (handover.stayKey === detail.stayKey) void handover.load();
+    });
+  });
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden){mountToday();openHandoverSections.forEach(section => void handoverSections.get(section).load());}});
   let queued=false;new MutationObserver(()=>{if(!queued){queued=true;requestAnimationFrame(()=>{queued=false;scan();});}}).observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['class','data-directory-stay-id','data-directory-dog-id','data-directory-stay-key']});scan();
   window.PALZ_SITTER_PLANNING=Object.freeze({openSettings});
 })();

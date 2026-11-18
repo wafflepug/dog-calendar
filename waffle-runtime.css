@@ -3365,12 +3365,16 @@ body[data-waffle-page="calendar"] #whHomePotentials[data-home-state="loading"] .
   --palz-dog-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M8 7c2-3 5-4 8-4s6 1 8 4c3 0 6 3 6 7 0 2-1 4-3 4-1 0-2-1-3-2v4c0 5-4 8-8 8s-8-3-8-8v-4c-1 1-2 2-3 2-2 0-3-2-3-4 0-4 3-7 6-7z'/%3E%3C/svg%3E");
   --palz-cat-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M5 15 4 4c0-1 1-2 2-1l7 6a14 14 0 0 1 6 0l7-6c1-1 2 0 2 1l-1 11c2 2 3 4 3 6 0 5-6 8-14 8S2 26 2 21c0-2 1-4 3-6z'/%3E%3C/svg%3E");
 }
+:root[data-waffle-colour-style="custom"] {
+  --palz-pet-fallback-bg: var(--wh75-custom-pet-bg);
+  --palz-pet-fallback-ink: var(--wh75-custom-pet-ink);
+}
 [data-pet-species="cat"] { --palz-pet-mask: var(--palz-cat-mask); }
 body[data-waffle-page="directory"] #directoryTabPanel .directory-card .directory-roster-avatar,
 body[data-waffle-page="directory"] #directoryTabPanel .directory-card .directory-photo-placeholder,
 .wh-home-portrait:not(:has(img)) {
-  background: var(--wh75-accent, #7c3aed) !important;
-  color: white !important;
+  background: var(--palz-pet-fallback-bg, var(--wh75-accent, #7c3aed)) !important;
+  color: var(--palz-pet-fallback-ink, white) !important;
 }
 .directory-roster-avatar:empty,
 .directory-photo-placeholder:empty {
@@ -3382,7 +3386,7 @@ body[data-waffle-page="directory"] #directoryTabPanel .directory-card .directory
   content: "";
   position: absolute;
   inset: 22.5%;
-  background: white;
+  background: var(--palz-pet-fallback-ink, white);
   mask: var(--palz-pet-mask, var(--palz-dog-mask)) center / contain no-repeat;
 }
 .wh-home-portrait .wh-home-initials { display: none; }

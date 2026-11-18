@@ -6,6 +6,7 @@ const vm = require('node:vm');
 const crypto = require('node:crypto');
 
 const source = fs.readFileSync(path.join(__dirname, '..', 'apps-script', 'Code.js'), 'utf8');
+const sitterPlanningSource = fs.readFileSync(path.join(__dirname, '..', 'apps-script', 'SitterPlanning.js'), 'utf8');
 const dogIdA = 'dog-a-0001';
 const dogIdB = 'dog-b-0002';
 const stayIdA = 'stay-a-0001';
@@ -47,15 +48,20 @@ function isoDate(date, timezone) {
 function fixture({ end = '2026-11-11', bookingType = 'Confirmed Boarding', records = [], extraBookings = [], audit = [] } = {}) {
   let intakeSheet = null;
   let receiptSheet = null;
+  let handoverSheet = null;
   const reads = {};
   const lockStats = { depth: 0, acquired: 0, released: 0 };
   const spreadsheet = {
     getSpreadsheetTimeZone: () => { reads.timezoneLookups = (reads.timezoneLookups || 0) + 1; return 'Australia/Sydney'; },
-    getSheetByName(name) { return name === 'Audit_Log' ? auditSheet : name === 'Dog_Intake_Records' ? intakeSheet : name === 'Intake_Submission_Receipts' ? receiptSheet : null; },
+    getSheetByName(name) {
+      if (name === 'Stay_Handover_Times') return handoverSheet;
+      return name === 'Audit_Log' ? auditSheet : name === 'Dog_Intake_Records' ? intakeSheet : name === 'Intake_Submission_Receipts' ? receiptSheet : null;
+    },
     insertSheet(name) {
       const added = sheet(name, [], spreadsheet, null, reads);
       if (name === 'Dog_Intake_Records') intakeSheet = added;
       if (name === 'Intake_Submission_Receipts') receiptSheet = added;
+      if (name === 'Stay_Handover_Times') handoverSheet = added;
       return added;
     }
   };
@@ -332,6 +338,30 @@ test('owner photo is bound to the verified stay and replayed without another wri
   assert.equal(calls.length, 1);
   assert.equal(calls[0][0].dogId, dogIdA);
   assert.equal(calls[0][0].stayId, stayIdA);
+});
+
+test('owner times are available on the exact stay when the intake receipt completes', () => {
+  const { h, token } = setupIntakeSubmissionHarness();
+  const { context, lockStats } = h;
+  vm.runInContext(sitterPlanningSource, context, { filename: 'SitterPlanning.js' });
+  context.Utilities.getUuid = () => {
+    assert.equal(lockStats.depth, 1);
+    return 'owner-time-revision';
+  };
+  const handovers = context.sitterHandoverSheet_(true);
+  handovers.appendRow([stayIdA, dogIdA, '{"dropoffTime":"09:30","pickupTime":"16:30"}', 'sitter-time-revision']);
+  handovers.appendRow([stayIdB, dogIdA, '{"dropoffTime":"10:00","pickupTime":"17:00"}', 'another-stay-revision']);
+  const payload = intakeSubmissionPayload(token, 'time-submission-0001');
+  Object.assign(payload.answers, { dropOffTime: '08:45', pickUpTime: '' });
+
+  assert.equal(context.processIntakeSubmission_(payload).result, 'success');
+  const { times, revision } = context.sitterHandoverRead_({ stayId: stayIdA, dogId: dogIdA });
+  assert.equal(times.dropoffTime, '08:45');
+  assert.equal(times.pickupTime, '16:30');
+  assert.equal(revision, 'owner-time-revision');
+  assert.equal(context.sitterHandoverRead_({ stayId: stayIdB, dogId: dogIdA }).times.dropoffTime, '10:00');
+  context.Utilities.getUuid = () => assert.fail('A replay must not write handover times again');
+  assert.equal(context.processIntakeSubmission_(payload).result, 'success');
 });
 
 test('prefill and local submission resolve an already-migrated token to current confirmed dates', () => {
