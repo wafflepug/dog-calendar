@@ -5159,11 +5159,11 @@ registerWaffleServiceWorker();
 
 
     const CARE_SAFETY_FLAGS = [
-        { key: 'escapeRisk', label: 'Escape Risk', icon: '🚪', className: 'risk-escape' },
-        { key: 'foodAllergy', label: 'Food Allergy', icon: '⚠️', className: 'risk-allergy' },
-        { key: 'medicated', label: 'Medicated', icon: '💊', className: 'risk-medicated' },
-        { key: 'separationAnxiety', label: 'Separation Anxiety', icon: '😟', className: 'risk-anxiety' },
-        { key: 'weightManagement', label: 'Weight Management', icon: '⚖️', className: 'risk-weight' }
+        { key: 'escapeRisk', label: 'Escape Risk', icon: '🚪', brandIcon: "checkout", className: 'risk-escape' },
+        { key: 'foodAllergy', label: 'Food Allergy', icon: '⚠️', brandIcon: "alert", className: 'risk-allergy' },
+        { key: 'medicated', label: 'Medicated', icon: '💊', brandIcon: "medicine", className: 'risk-medicated' },
+        { key: 'separationAnxiety', label: 'Separation Anxiety', icon: '😟', brandIcon: "heart", className: 'risk-anxiety' },
+        { key: 'weightManagement', label: 'Weight Management', icon: '⚖️', brandIcon: "scale", className: 'risk-weight' }
     ];
 
 
@@ -13549,7 +13549,7 @@ registerWaffleServiceWorker();
                             type="checkbox"
                             data-care-risk-flag="${escapeDashboardHtml(flag.key)}"
                             ${riskFlags[flag.key] ? 'checked' : ''}>
-                        <span class="care-risk-icon" aria-hidden="true">${escapeDashboardHtml(flag.icon)}</span>
+                        <span class="care-risk-icon" aria-hidden="true">${window.PALZ_ICONS?.svg(flag.brandIcon) || escapeDashboardHtml(flag.icon)}</span>
                         <span class="care-risk-label">${escapeDashboardHtml(flag.label)}</span>
                     </label>
                 `)
@@ -17290,7 +17290,7 @@ registerWaffleServiceWorker();
                             href="${escapeDashboardHtml(record.pdfUrl)}"
                             target="_blank"
                             rel="noopener"
-                            class="directory-intake-action is-pdf is-primary"
+                            class="directory-intake-action is-pdf is-primary" data-care-intake-pdf-link="${escapeDashboardHtml(receiptIdentity)}"
                             aria-label="View ${escapeDashboardHtml(dogName)} submitted intake PDF">
                             📄 View PDF
                         </a>
