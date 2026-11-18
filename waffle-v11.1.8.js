@@ -497,7 +497,7 @@
     badge.title = label;
     badge.setAttribute('role', 'img');
     badge.setAttribute('aria-label', label);
-    badge.textContent = arriving ? '🛬' : '🧳';
+    badge.innerHTML = window.PALZ_ICONS?.svg(arriving ? 'checkin' : 'luggage') || '';
     if (!existing) photo.after(badge);
     return true;
   }
@@ -578,7 +578,7 @@
     const wrapped = function(response, options = {}) {
       state.directory = response || state.directory;
       const result = base(response, options);
-      setTimeout(() => { removeCareSort(); decorateAllCareCards(); }, 40);
+      decorateAllCareCards();
       return result;
     };
     wrapped.v1118Wrapped = true;

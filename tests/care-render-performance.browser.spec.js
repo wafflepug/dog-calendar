@@ -25,6 +25,7 @@ const pastBookings = [
 async function installContinuityFixture(page) {
   let profileReadCount = 0;
   let fixtureBookings = [booking];
+  let rosterGate;
   // Freeze only the business date. Keep native input timestamps, timers and paint scheduling.
   await page.addInitScript(() => {
     const NativeDate = Date;
@@ -56,6 +57,12 @@ async function installContinuityFixture(page) {
       let payload = {}; try { payload = JSON.parse(params.get('payload') || '{}'); } catch (_) {}
       const stayKey = 'continuity dog|2026-09-17|2026-09-22';
       if (policy.action === 'get_guest_profile') profileReadCount += 1;
+      if (policy.action === 'get_guest_directory' && rosterGate) {
+        const gate = rosterGate;
+        rosterGate = null;
+        gate.started();
+        await gate.pending;
+      }
       const response = policy.action === 'get_guest_directory'
         ? { result: 'success', bookings: fixtureBookings, summaries: [{ stayKey }] }
         : policy.action === 'get_past_guest_directory'
@@ -78,8 +85,38 @@ async function installContinuityFixture(page) {
   });
   const reads = () => profileReadCount;
   reads.setBookings = records => { fixtureBookings = records; };
+  reads.pauseNextRosterRead = () => {
+    let started;
+    let release;
+    const requested = new Promise(resolve => { started = resolve; });
+    const pending = new Promise(resolve => { release = resolve; });
+    rosterGate = { started, pending };
+    return { requested, release };
+  };
   return reads;
 }
+
+test('background refresh keeps visible guest cards until replacement data arrives', async ({ page, baseURL }) => {
+  const fixture = await installContinuityFixture(page);
+  await page.goto(`${baseURL}/directory.html`);
+  const dashboard = page.locator('.directory-dashboard-fused');
+  const guest = page.locator('#directory-grid [data-open-directory-profile]');
+  await expect(dashboard).toHaveAttribute('data-directory-roster-load-state', 'success');
+  await expect(guest).toBeVisible();
+  const refresh = fixture.pauseNextRosterRead();
+  fixture.setBookings([]);
+  try {
+    await page.evaluate(() => window.dispatchEvent(new Event('online')));
+    await refresh.requested;
+    await expect(dashboard).toHaveAttribute('data-directory-roster-load-state', 'success');
+    await expect(guest).toBeVisible();
+    await expect(page.locator('#directory-empty-state')).toBeHidden();
+  } finally {
+    refresh.release();
+  }
+  await expect(guest).toHaveCount(0);
+  await expect(page.locator('#directory-empty-state')).toBeVisible();
+});
 
 
 for (const width of [390, 1440]) {
