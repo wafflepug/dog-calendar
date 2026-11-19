@@ -2906,6 +2906,11 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-
   cursor: pointer;
 }
 
+body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-care-brief-heading > [data-care-brief-action="emergency-contact"] {
+  margin-inline-start: auto;
+}
+.directory-care-brief-heading > [data-care-brief-action="emergency-contact"] + .directory-care-brief-refresh { margin-inline-start: 0; }
+
 .directory-care-brief-refresh .palz-inline-icon { margin: 0; }
 .directory-care-brief-refresh:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
 .directory-care-brief-refresh[aria-busy="true"] .palz-icon { animation: care-brief-refresh-spin 1s linear infinite; }

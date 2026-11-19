@@ -98,7 +98,8 @@ test('care essentials and the quiet routine shortcut stay readable across phone,
   const ownerName=brief.locator('[data-care-brief-owner-name]');
   const callOwner=brief.locator('[data-care-brief-call-owner] > .directory-care-brief-action');
   const routineEdit=brief.locator('button[data-care-brief-action="edit-routine"]');
-  for(const essential of [feeding,walks,safety,medication,ownerName,callOwner,routineEdit])await expect(essential).toBeVisible();
+  for(const essential of [feeding,walks,medication,ownerName,callOwner,routineEdit])await expect(essential).toBeVisible();
+  await expect(safety).toBeHidden();
   await expect(routineEdit).toHaveAccessibleName('Edit routine');
   await expect(brief.locator('details[open]')).toHaveCount(0);
   await expect(feeding).toContainText('One measured cup at each meal');
@@ -240,16 +241,16 @@ test('selected Care profile preserves whole labels and contact details at true 2
         };
         const textRects=element=>{const range=document.createRange();range.selectNodeContents(element);return[...range.getClientRects()].map(value=>({left:value.left,right:value.right,top:value.top,bottom:value.bottom}))};
         const dates=root.querySelector('.directory-profile-stay-dates');
-        const safety=root.querySelector('.directory-care-brief-safety');
+        const essentials=root.querySelector('.directory-care-brief-heading');
         const handover=root.querySelector('.directory-care-brief-note');
-        const safetyHeading=safety.querySelector('.directory-care-brief-note-heading h4');
+        const essentialsHeading=essentials.querySelector('h3');
         const handoverHeading=handover.querySelector('.directory-care-brief-note-heading h4');
         const phone=root.querySelector('.directory-care-owner-phone');
         const call=root.querySelector('[data-care-brief-call-owner] > a');
         return{
           pageWidth:document.documentElement.scrollWidth,
           dates:{box:rect(dates),labels:[...dates.querySelectorAll(':scope > span')].map(element=>({text:element.innerText,box:rect(element),words:wordsKeepTogether(element)}))},
-          safety:{heading:rect(safetyHeading),headingText:safetyHeading.innerText,headingWords:wordsKeepTogether(safetyHeading),textRects:textRects(safetyHeading),value:rect(safety.querySelector('[data-care-brief-safety]')),action:rect(safety.querySelector('[data-care-brief-action="emergency-contact"]'))},
+          essentials:{heading:rect(essentialsHeading),headingText:essentialsHeading.innerText,headingWords:wordsKeepTogether(essentialsHeading),textRects:textRects(essentialsHeading),action:rect(essentials.querySelector('[data-care-brief-action="emergency-contact"]'))},
           handover:{heading:rect(handoverHeading),headingText:handoverHeading.innerText,headingWords:wordsKeepTogether(handoverHeading),textRects:textRects(handoverHeading),value:rect(handover.querySelector('[data-care-brief-handover-note]')),action:rect(handover.querySelector('[data-care-brief-action="handover"]'))},
           owner:{name:rect(root.querySelector('[data-care-brief-owner-name]')),phone:rect(phone),phoneText:phone.innerText,phoneWords:wordsKeepTogether(phone),call:rect(call)}
         };
@@ -262,7 +263,7 @@ test('selected Care profile preserves whole labels and contact details at true 2
         expect(label.box.right).toBeLessThanOrEqual(viewport.width+1);
         expect(label.words.filter(item=>item.word.includes('CHECK')).every(item=>item.lines===1),JSON.stringify({viewport,dark,label})).toBe(true);
       }
-      for(const group of [layout.safety,layout.handover]){
+      for(const group of [layout.essentials,layout.handover]){
         expect(group.heading.left).toBeGreaterThanOrEqual(-1);
         expect(group.heading.right).toBeLessThanOrEqual(viewport.width+1);
         expect(group.action.left).toBeGreaterThanOrEqual(-1);
@@ -270,7 +271,7 @@ test('selected Care profile preserves whole labels and contact details at true 2
         for(const textRect of group.textRects){
           expect(textRect.left).toBeGreaterThanOrEqual(group.heading.left-1);
           expect(textRect.right).toBeLessThanOrEqual(group.heading.right+1);
-          expect(intersects(textRect,group.value),JSON.stringify({viewport,dark,heading:group.headingText,textRect,value:group.value})).toBe(false);
+          if(group.value)expect(intersects(textRect,group.value),JSON.stringify({viewport,dark,heading:group.headingText,textRect,value:group.value})).toBe(false);
           expect(intersects(textRect,group.action),JSON.stringify({viewport,dark,heading:group.headingText,textRect,action:group.action})).toBe(false);
         }
         expect(group.headingWords.every(item=>item.lines===1),JSON.stringify({viewport,dark,heading:group.headingText,words:group.headingWords})).toBe(true);
@@ -285,7 +286,7 @@ test('selected Care profile preserves whole labels and contact details at true 2
       if([320,390,700].includes(viewport.width)){
         await card.locator('.directory-profile-stay-dates').scrollIntoViewIfNeeded();
         await page.screenshot({path:testInfo.outputPath(`care-profile-header-2x-${viewport.width}-${dark?'dark':'light'}.png`)});
-        await card.locator('.directory-care-brief-safety').scrollIntoViewIfNeeded();
+        await card.locator('.directory-care-brief-heading').scrollIntoViewIfNeeded();
         await page.screenshot({path:testInfo.outputPath(`care-profile-2x-${viewport.width}-${dark?'dark':'light'}.png`)});
         await card.locator('.directory-care-owner-line').scrollIntoViewIfNeeded();
         await page.screenshot({path:testInfo.outputPath(`care-profile-contact-2x-${viewport.width}-${dark?'dark':'light'}.png`)});

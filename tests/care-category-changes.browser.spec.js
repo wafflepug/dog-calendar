@@ -69,7 +69,7 @@ test('changed fields identify only their categories and survive collapse, refres
   await expect(card.locator('[data-care-brief-medication]')).toHaveText(record.intakeAttributes.medicationInstructions);
   const urgentMedication=card.locator('.directory-care-brief-item[data-care-priority="attention"]');
   await expect(urgentMedication).toContainText('Give with dinner.');
-  await expect(card.locator('.directory-care-brief-safety[data-state="attention"]')).toBeVisible();
+  await expect(card.locator('[data-care-brief-safety]')).toHaveAttribute('data-state', 'attention');
   expect(await urgentMedication.evaluate(element=>getComputedStyle(element).borderInlineStartWidth)).toBe('3px');
   await expect(card.locator('.directory-care-more-actions-list')).toBeVisible();
   await card.locator('[data-care-brief-action="edit"]').click();

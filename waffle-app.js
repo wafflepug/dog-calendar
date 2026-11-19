@@ -18578,20 +18578,14 @@ registerWaffleServiceWorker();
                                                 <div>
                                                     <h3>Care essentials</h3>
                                                 </div>
+                                                <button type="button" class="directory-care-brief-action" data-care-brief-action="emergency-contact"><span class="care-tool-icon" aria-hidden="true"><svg viewBox="0 0 20 20"><path d="M10 2.5 16 5v4.2c0 3.8-2.4 6.5-6 8.3-3.6-1.8-6-4.5-6-8.3V5z"/><path d="M10 6.2v5.2M7.4 8.8h5.2"/></svg></span>Emergency details</button>
                                                 <button type="button" class="directory-care-brief-refresh" data-care-brief-action="refresh" data-care-brief-refresh aria-label="Refresh care records" title="Refresh care records"></button>
                                                 <span class="directory-care-brief-announcement" data-care-brief-freshness role="status" aria-live="polite">Loading care record…</span>
                                             </div>
 
+                                            <!-- Arrival review and sitter summaries use the same resolved safety state. -->
+                                            <div data-care-brief-safety hidden></div>
                                             <div class="directory-care-brief-grid">
-                                                <section class="directory-care-brief-item directory-care-brief-safety">
-                                                    <div class="directory-care-brief-note-heading">
-                                                        <h4>Safety</h4>
-                                                        <button type="button" class="directory-care-brief-action" data-care-brief-action="emergency-contact"><span class="care-tool-icon" aria-hidden="true"><svg viewBox="0 0 20 20"><path d="M10 2.5 16 5v4.2c0 3.8-2.4 6.5-6 8.3-3.6-1.8-6-4.5-6-8.3V5z"/><path d="M10 6.2v5.2M7.4 8.8h5.2"/></svg></span>Emergency details</button>
-                                                    </div>
-                                                    <div class="directory-care-brief-value" data-care-brief-safety aria-live="polite">
-                                                        <span class="care-brief-state is-pending">Safety profile not yet available</span>
-                                                    </div>
-                                                </section>
                                                 <section class="directory-care-brief-item">
                                                     <div class="directory-care-brief-note-heading"><h4>Medication</h4></div>
                                                     <p class="directory-care-brief-value is-pending" data-care-brief-medication>

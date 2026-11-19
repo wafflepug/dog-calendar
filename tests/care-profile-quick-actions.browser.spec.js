@@ -15,6 +15,11 @@ test('streamlined profile places records, belongings and destructive actions tog
   await expect(card.locator('[data-directory-detail="profile"]')).toHaveAttribute('data-profile-read-state', 'fresh');
   await expect(card.getByRole('heading', { name: 'Pet Notes' })).toBeVisible();
   await expect(card.getByText('More actions', {exact: true})).toHaveCount(0);
+  const essentials = card.getByRole('region', { name: 'Care essentials' });
+  await expect(essentials.getByRole('heading', { name: 'Safety', exact: true })).toHaveCount(0);
+  await expect(essentials.locator('[data-care-brief-safety]')).toBeHidden();
+  await expect(essentials.getByRole('button', { name: 'Emergency details' })).toBeVisible();
+  await expect(card.locator('[data-profile-subtab="safety"]')).toBeVisible();
   const arrivalBadge = card.locator('.directory-card-header [data-care-photo-status="arrival"]');
   await expect(arrivalBadge).toHaveAccessibleName('Arriving today');
   await expect(arrivalBadge.locator('[data-palz-icon="checkin"]')).toBeVisible();
@@ -23,6 +28,9 @@ test('streamlined profile places records, belongings and destructive actions tog
   await expect(handover.locator('input[type="time"]')).toHaveCount(2);
   for (const width of [320, 390, 1280]) {
     await page.setViewportSize({width, height: 848});
+    const emergency = await essentials.getByRole('button', {name:'Emergency details'}).boundingBox();
+    expect(emergency.x).toBeGreaterThanOrEqual(0);
+    expect(emergency.x + emergency.width).toBeLessThanOrEqual(width);
     const centreOffset = await handover.evaluate(section => {
       const outer = section.getBoundingClientRect();
       const fields = section.querySelector('.sitter-planning-grid').getBoundingClientRect();

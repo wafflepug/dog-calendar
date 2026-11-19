@@ -89,7 +89,7 @@ for (const [width, colorScheme] of [[320, 'light'], [320, 'dark'], [390, 'light'
     await expect(operationBar).not.toContainText(/STAY STATUS|Date-based/i);
     const brief = profile.locator('[data-directory-care-brief]');
     await expect(brief.getByRole('heading', { name: 'Care essentials' })).toBeVisible();
-    await expect(brief.locator('[data-care-brief-safety]')).toBeVisible();
+    await expect(brief.locator('[data-care-brief-safety]')).toBeHidden();
     await expect(brief.locator('[data-care-brief-feeding]')).toContainText(longCareInstruction.slice(0, 28));
     await expect(brief.locator('[data-care-brief-medication]')).toContainText(longCareInstruction.slice(0, 28));
     await expect(brief.locator('.directory-care-readiness')).not.toHaveAttribute('open', '');
@@ -399,8 +399,7 @@ for (const [name, viewport, colorScheme] of [['320-light', { width: 320, height:
     await expect(readiness).toBeVisible();
     await expect(readiness).not.toHaveAttribute('open', '');
     await expect(careBrief.locator('[data-care-readiness-summary]')).toHaveText(/Needs identity review|Add handover|Details/);
-    await expect(careBrief.locator('[data-care-brief-safety]')).toBeVisible();
-    await expect(careBrief.locator('[data-care-brief-safety]')).toBeVisible();
+    await expect(careBrief.locator('[data-care-brief-safety]')).toBeHidden();
     await expect(careBrief.locator('[data-care-brief-medication]')).toBeVisible();
     await expect(careBrief.locator('[data-care-brief-feeding]')).toBeVisible();
     await expect(careBrief.locator('[data-care-brief-walks]')).toBeVisible();
