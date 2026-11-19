@@ -138,13 +138,16 @@ async function openFixtureProfile(page, fixture, viewport = { width: 390, height
   return card;
 }
 
-test('Detailed Care toggles stay local and preserve drafts across Profile and Belongings', async ({ page }) => {
+test('Detailed Care opens a modal and preserves drafts while browsing categories', async ({ page }) => {
   const fixture = await installReadOnlyFixture(page);
   for (const width of [390, 1440]) {
     const card = await openFixtureProfile(page, fixture, { width, height: width === 390 ? 844 : 900 });
-    await card.locator('[data-toggle-profile-edit]').click();
-    const category = key => card.locator(`[data-profile-subtab="${key}"]`);
-    const panel = key => card.locator(`[data-profile-subpanel="${key}"]`);
+    const edit = card.locator('[data-toggle-profile-edit]');
+    await edit.click();
+    const dialog = card.getByRole('dialog', { name: /Edit detailed care for/ });
+    await expect(dialog).toBeVisible();
+    const category = key => dialog.locator(`[data-profile-subtab="${key}"]`);
+    const panel = key => dialog.locator(`[data-profile-subpanel="${key}"]`);
     const beforeFirstExpand = fixture.actions.map(item => item.action);
     const blockedAtSettle = JSON.stringify(fixture.blocked);
     await category('foodWalks').click();
@@ -171,10 +174,6 @@ test('Detailed Care toggles stay local and preserve drafts across Profile and Be
     await expect(category('healthHome')).toHaveAttribute('aria-expanded', 'false');
     await expect(panel('healthHome')).toBeHidden();
 
-    await card.locator('[data-v11160-tab="belongings"]').click();
-    await expect(card.locator('[data-v11160-tab="belongings"]')).toHaveAttribute('aria-selected', 'true');
-    await card.locator('[data-v11160-tab="profile"]').click();
-    await expect(card.locator('[data-v11160-tab="profile"]')).toHaveAttribute('aria-selected', 'true');
     const beforeKeyboardReopen = fixture.actions.map(item => item.action);
     await category('healthHome').focus();
     await page.keyboard.press('Space');
@@ -186,6 +185,13 @@ test('Detailed Care toggles stay local and preserve drafts across Profile and Be
     await expect(panel('foodWalks')).toBeVisible();
     await expect(panel('healthHome')).toBeVisible();
     await expect(feeding).toHaveValue('Synthetic draft: breakfast at 06:45 with a full bowl of water.');
+    await dialog.getByRole('button', { name: /Discard detailed care changes/ }).click();
+    await expect(dialog).toBeHidden();
+    await expect(edit).toBeFocused();
+    const readCategory = card.locator('[data-profile-subtab="foodWalks"]');
+    if (await readCategory.getAttribute('aria-expanded') !== 'true') await readCategory.click();
+    await expect(card.locator('[data-intake-read-attribute="feedingTimes"]')).toBeVisible();
+    await expect(card.locator('[data-intake-read-attribute="feedingTimes"]')).not.toContainText('Synthetic draft');
   }
   console.log('DETAILED_CARE_LEDGER', JSON.stringify({ actions: fixture.actions.map(item => item.action), blocked: fixture.blocked }));
   assertNoUnexpectedBackendRequests(fixture);
@@ -244,18 +250,17 @@ test('Detailed Care enlarged text wraps at phone, tablet, and desktop widths in 
         if (width === 320 && accent.includes('#7562db')) {
           const save = card.locator('.directory-profile-save-bar');
           await save.scrollIntoViewIfNeeded();
-          const box = await save.boundingBox();
-          const navigation = page.locator('nav[aria-label="Primary mobile navigation"]');
-          const navBox = await navigation.boundingBox();
-          expect(navBox, 'fixed mobile navigation should be visible at the short viewport').not.toBeNull();
+          const dialog = card.locator('dialog[data-care-edit-dialog]');
+          expect(await dialog.evaluate(node => node.matches(':modal'))).toBe(true);
+          const dialogBox = await dialog.boundingBox();
           const reachableActions = [save.locator('button').first(), card.locator('[data-cancel-profile-edit]')];
           for (const button of reachableActions) {
             await expect(button).toBeVisible();
             const buttonBox = await button.boundingBox();
-            expect(buttonBox.y, `save action starts above visible navigation: ${JSON.stringify({ buttonBox, navBox })}`).toBeLessThan(navBox.y);
-            expect(buttonBox.y + buttonBox.height, `save action clears visible navigation: ${JSON.stringify({ buttonBox, navBox })}`).toBeLessThanOrEqual(navBox.y);
+            expect(buttonBox.y).toBeGreaterThanOrEqual(dialogBox.y);
+            expect(buttonBox.y + buttonBox.height).toBeLessThanOrEqual(dialogBox.y + dialogBox.height);
           }
-          expect(box.y + box.height).toBeLessThanOrEqual(navBox.y);
+          expect(dialogBox.y + dialogBox.height).toBeLessThanOrEqual(380);
         }
       }
     }

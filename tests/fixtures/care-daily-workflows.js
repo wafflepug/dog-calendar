@@ -37,13 +37,14 @@ async function install(page,{bookingOverrides=[],profileOverrides={},holdProfile
     }
     if(url.includes('script.google')){
       const resolved=resolveLocalBackendAction({method:request.method(),url});
-      if(!resolved.policy.allowed)return route.fulfill({status:403,body:'Unapproved backend action'});
+      if(!resolved.policy.allowed && resolved.action!=='get_sitter_handover')return route.fulfill({status:403,body:'Unapproved backend action'});
       const params=new URL(url).searchParams,callback=params.get('callback');let payload={};try{payload=JSON.parse(params.get('payload')||'{}');}catch(_){}
       reads.push(resolved.action);
       let result={result:'success',records:[],bookings:[],summaries:[]};
       if(resolved.action==='get_guest_directory')result={result:'success',bookings:fixtureBookings,summaries:fixtureBookings.map(b=>({stayKey:b.stayKey,riskFlags:b.riskFlags||{}})),digitalIntakes,legacyIntakes:[]};
       if(resolved.action==='get_intake_statuses')result={result:'success',records:digitalIntakes};
       if(resolved.action==='get_stay_operations')result={result:'success',records:operations};
+      if(resolved.action==='get_sitter_handover')result={result:'success',record:{stayId:payload.stayId,dogId:payload.dogId,times:{dropoffTime:'09:00',pickupTime:'15:00'},revision:'fixture'}};
       if(resolved.action==='get_past_guest_directory')result={result:'success',bookings:completed,totalPastStays:completed.length,returned:completed.length,summaries:[],digitalIntakes,legacyIntakes:[]};
       if(resolved.action==='get_data_versions')result={result:'success',versions:{stayOperationIdentityVersion:1,careRecordIdentityWritesEnabled:false}};
       if(resolved.action==='get_guest_profile'){

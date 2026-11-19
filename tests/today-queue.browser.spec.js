@@ -15,7 +15,7 @@ const queueSource = app.slice(
 
 async function loadQueue(page) {
   await page.setContent(`<base href="https://today.test/"><body data-waffle-page="calendar">
-    <span id="v10TodayDateLabel"></span><span id="v10TodayStatus"></span>
+    <span id="v10TodayDateLabel"></span><span id="v10TodayStatus" role="img"></span>
     <span id="v10AtHomeCount"></span><span id="v10ArrivalCount"></span>
     <span id="v10DepartureCount"></span><span id="v10MeetCount"></span>
     <div id="v10TodayAgenda"></div>
@@ -134,7 +134,8 @@ test('potential and unconfirmed visits never expose operational actions; complet
   });
   await expect(page.getByRole('button', { name: 'Check-in Coco' })).toHaveCount(0);
   await expect(page.locator('#v10TodayAgenda')).not.toContainText('Coco');
-  await expect(page.locator('#v10TodayStatus')).toHaveText('1 item today');
+  await expect(page.locator('#v10TodayStatus')).toHaveAccessibleName('1 action today');
+  await expect(page.locator('#v10TodayStatus')).toBeEmpty();
   await expect(page.getByRole('button', { name: /Nori|Biscuit/ })).toHaveCount(0);
   await expect(page.locator('#v10TodayAgenda .v10-agenda-operation')).toHaveCount(0);
 });
@@ -142,6 +143,7 @@ test('potential and unconfirmed visits never expose operational actions; complet
 test('Today queue has a clear empty state without a Care profiles footer link', async ({ page }) => {
   await loadQueue(page);
   await page.evaluate(() => renderV10OperationsHome([]));
+  await expect(page.locator('#v10TodayStatus')).toBeHidden();
   await expect(page.locator('.v10-all-clear')).toContainText('You’re all caught up');
   await expect(page.locator('.v10-agenda-care-link')).toHaveCount(0);
   await expect(page.locator('#v10TodayAgenda > a.v10-agenda-item')).toHaveCount(0);

@@ -13,6 +13,7 @@
   .sitter-handover { margin: 8px 0 12px; }
   .sitter-handover > form { max-width: 340px; margin-inline: auto; }
   .sitter-handover .sitter-planning-grid { gap: 8px; }
+  .sitter-handover .sitter-planning-grid:has(> label[hidden]) { grid-template-columns: minmax(0, 1fr); max-width: 166px; margin-inline: auto; }
   .sitter-handover label { gap: 3px; font-size: 11px; font-weight: 800; letter-spacing: .02em; text-transform: uppercase; }
   .sitter-handover input { font-size: 14px; font-weight: 700; }
   .sitter-handover .sitter-planning-actions { margin-top: 6px; }
@@ -64,10 +65,15 @@
     const save = form.querySelector('[type=submit]');
     const reload = form.querySelector('[data-sitter-times-reload]');
     const fields = ['dropoffTime', 'pickupTime'].map(name => form.elements[name]);
+    const dropoff = form.elements.dropoffTime;
+    const dropoffLabel = dropoff.closest('label');
     const matchesStay = response => response?.stayId === id.stayId && response?.dogId === id.dogId;
     const isOpen = () => section.isConnected && current(card, id);
     let record, loading, saving = false, needsReload = false;
-    const isDirty = () => record && fields.some(field => field.value !== (record.times[field.name] || ''));
+    const editValue = field => field === dropoff && dropoffLabel.hidden
+      ? record.times.dropoffTime || ''
+      : field.value;
+    const isDirty = () => record && fields.some(field => editValue(field) !== (record.times[field.name] || ''));
     const updateControls = () => {
       fields.forEach(field => { field.disabled = !record || Boolean(loading) || saving; });
       save.hidden = !isDirty();
@@ -75,6 +81,13 @@
       reload.hidden = !needsReload;
       reload.disabled = Boolean(loading) || saving;
       actions.hidden = save.hidden && reload.hidden && !status.textContent;
+    };
+    const syncOperation = () => {
+      const checkedIn = Boolean(card.querySelector('[data-v110-operation-bar][data-state="checked_in"]'));
+      if (dropoffLabel.hidden === checkedIn) return;
+      dropoffLabel.hidden = checkedIn;
+      if (checkedIn && record) dropoff.value = record.times.dropoffTime || '';
+      updateControls();
     };
     const applyRecord = (next, preserveDraft = false) => {
       for (const field of fields) {
@@ -111,7 +124,7 @@
       event.preventDefault();
       if (saving || loading || !isDirty() || !isOpen()) return;
       saving = true;
-      const times = Object.fromEntries(fields.map(field => [field.name, field.value]));
+      const times = Object.fromEntries(fields.map(field => [field.name, editValue(field)]));
       status.textContent = 'Saving…';
       updateControls();
       try {
@@ -135,7 +148,7 @@
         updateControls();
       }
     };
-    handoverSections.set(section, {load, stayKey:id.stayKey});
+    handoverSections.set(section, {load, syncOperation, stayKey:id.stayKey});
     return section;
   }
 
@@ -151,8 +164,10 @@
       section = null;
     }
     section ||= mountHandover(card, brief, id);
+    const handover = handoverSections.get(section);
+    handover.syncOperation();
     activeSections.add(section);
-    if (!openHandoverSections.has(section)) void handoverSections.get(section).load();
+    if (!openHandoverSections.has(section)) void handover.load();
     const oldComposer=card.querySelector('.sitter-compose');if(oldComposer && oldComposer.dataset.identity!==key(id))oldComposer.remove();
     if(!card.querySelector('[data-sitter-compose]')){const host=document.createElement('div');host.className='sitter-planning sitter-compose';host.dataset.identity=key(id);host.dataset.careProfileSegment='activity';const button=document.createElement('button');button.type='button';button.dataset.sitterCompose='';button.textContent='Prepare owner update';button.onclick=()=>{if(!current(card,id))return;if(!window.WAFFLE_INTAKE_STATUS?.openSharingOptions(card))return;const purpose=$('#p4OwnerPurpose');if(purpose){purpose.value='update';purpose.dispatchEvent(new Event('change',{bubbles:true}));const template=$('#p4OwnerUpdateTemplate');template.value='daily';template.dispatchEvent(new Event('change',{bubbles:true}));$('#p4OwnerUpdatePreview')?.focus();}};host.append(button);brief.append(host);}
   }

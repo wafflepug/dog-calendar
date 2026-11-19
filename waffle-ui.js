@@ -1404,9 +1404,7 @@
         }
 
         body[data-waffle-page="calendar"] .v10-ops-heading .v10-eyebrow,
-        body[data-waffle-page="calendar"] #v10OperationsTitle,
-        body[data-waffle-page="calendar"] #v10TodayStatus,
-        body[data-waffle-page="calendar"] .v10-today-status {
+        body[data-waffle-page="calendar"] #v10OperationsTitle {
           display:none!important;
           visibility:hidden!important;
           pointer-events:none!important;

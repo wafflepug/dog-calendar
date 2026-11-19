@@ -57,6 +57,9 @@ test('the shipped Today page keeps profile links, exposes direct confirmed-stay 
     await page.waitForFunction(() => document.documentElement.dataset.waffleUiReady === 'true');
     const queue = page.locator('#v10TodayAgenda');
     await expect(queue.locator('.v10-agenda-item')).toHaveCount(4);
+    const alert = page.getByRole('img', {name:'4 actions today'});
+    await expect(alert.locator('svg')).toBeVisible();
+    await expect(alert).toHaveText('');
     await expect(queue.getByRole('link', {name:/Open Biscoff care profile, Same Day Care · Checked in · Check-out 05:30pm/})).toBeVisible();
     await expect(queue).toBeVisible();
     await expect(queue.getByRole('button', {name:'Check-in Milo'})).toBeVisible();
