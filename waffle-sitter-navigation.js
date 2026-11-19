@@ -131,11 +131,11 @@
         #whSitterDesktopTools{display:grid;gap:4px}
         #whSitterDesktopTools>button{width:100%!important;min-width:0!important;min-height:46px!important;height:auto!important;margin:0!important;padding:7px 9px!important;display:grid!important;grid-template-columns:32px minmax(0,1fr)!important;gap:9px!important;align-items:center!important;justify-content:stretch!important;border:0!important;border-radius:12px!important;background:transparent!important;color:var(--wh75-text,#172033)!important;box-shadow:none!important;text-align:left!important;font:inherit!important;font-size:12px!important;font-weight:850!important;cursor:pointer!important}
         #whSitterDesktopTools>button:hover{background:var(--wh75-shell-2,#f8fafc)!important}#whSitterDesktopTools>button:focus-visible{outline:3px solid var(--wh75-ring,rgba(124,58,237,.22))!important;outline-offset:2px!important}
-        #whSitterDesktopTools>button .waffle-notification-button-icon,#whSitterDesktopTools>button>span:first-child{width:32px;height:32px;display:grid!important;place-items:center;border-radius:10px;background:var(--wh75-shell-2,#f8fafc);font-size:16px!important;color:var(--wh75-text,#172033)!important;line-height:1!important}
+        #whSitterDesktopTools>button>span:first-child{width:32px;height:32px;display:grid!important;grid-area:1 / 1;place-items:center;border-radius:10px;background:var(--wh75-shell-2,#f8fafc);font-size:16px!important;color:var(--wh75-text,#172033)!important;line-height:1!important}
         #whSitterDesktopTools>button .waffle-notification-button-label,#whSitterDesktopTools>button .v1118-search-button-label{display:block!important;grid-column:2;color:inherit!important;font-size:12px!important;line-height:1.2!important}
-        #whSitterDesktopTools>button .waffle-notification-button-dot,#whSitterDesktopTools>button .wh81-header-avatar{display:none!important}
+        #whSitterDesktopTools>button .waffle-notification-button-dot,#whSitterDesktopTools>button .wh81-header-avatar,#whSitterDesktopTools>button>:is([data-palz-icon],.palz-inline-icon){display:none!important}
         #whSitterDesktopTools > #waffleNotificationButton > .waffle-notification-button-icon { grid-area: 1 / 1; }
-        #whSitterDesktopTools > #waffleNotificationButton > .waffle-notification-button-label { grid-row: 1; }
+        #whSitterDesktopTools > button > :is(.waffle-notification-button-label,.v1118-search-button-label) { grid-area: 1 / 2; }
         #whSitterDesktopTools > #waffleNotificationButton > [data-notification-unread-badge] {
           position: relative; inset: auto; grid-area: 1 / 1; place-self: start end;
           transform: translate(2px, -2px);

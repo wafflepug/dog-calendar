@@ -247,6 +247,8 @@ body[data-waffle-page="calendar"] .wh-home-guests {
 body .wh-home-departure-flag > span.palz-icon-host { color: inherit; }
 .wh-home-departure-flag .palz-icon-host > .palz-icon { width: 16px; height: 16px; }
 .wh-home-departure-flag[hidden] { display: none; }
+.v10-today-status[role="img"]:not([hidden]) { display: grid; place-items: center; width: 30px; height: 30px; padding: 0; }
+.v10-today-status[role="img"] svg { width: 17px; height: 17px; }
 .wh-home-guest.is-leaving .wh-home-guest-label { font-weight: 750; color: var(--wh75-accent-ink, #4338ca); }
 .wh-home-guest:hover .wh-home-portrait { outline-width: 3px; }
 .wh-home-guest:focus-visible, .wh-home-link:focus-visible { outline: 3px solid var(--wh75-accent, #7562db); outline-offset: 4px; }

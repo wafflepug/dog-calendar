@@ -100,7 +100,25 @@ test('desktop notification dot sits on the bell corner', async ({page, baseURL})
   await install(page);
   await page.goto(`${baseURL}/directory.html`);
   const bell = page.locator('#whSitterDesktopTools #waffleNotificationButton');
+  const search = page.locator('#whSitterDesktopTools [data-v1118-search-open]');
   await expect(bell).toBeVisible();
+  await expect(search).toBeVisible();
+  for (const [button, glyph, labelSelector] of [
+    [bell, 'bell', '.waffle-notification-button-label'],
+    [search, 'search', '.v1118-search-button-label']
+  ]) {
+    await button.evaluate((node, name) => {
+      node.insertAdjacentHTML('beforeend', window.PALZ_ICONS.svg(name));
+    }, glyph);
+    await expect(button.locator(`:scope > [data-palz-icon="${glyph}"]`)).toBeHidden();
+    await expect(button.locator(`:scope > span:first-child > [data-palz-icon="${glyph}"]`)).toBeVisible();
+    const alignment = await button.evaluate((node, selector) => {
+      const icon = node.firstElementChild.getBoundingClientRect();
+      const label = node.querySelector(selector).getBoundingClientRect();
+      return Math.abs((icon.top + icon.bottom - label.top - label.bottom) / 2);
+    }, labelSelector);
+    expect(alignment).toBeLessThanOrEqual(1);
+  }
   const geometry = await bell.evaluate(button => {
     const icon = button.querySelector('.waffle-notification-button-icon').getBoundingClientRect();
     const dot = button.querySelector('[data-notification-unread-badge]');
@@ -111,6 +129,57 @@ test('desktop notification dot sits on the bell corner', async ({page, baseURL})
   expect(geometry.top).toBeLessThanOrEqual(5);
   expect(geometry.right).toBeLessThanOrEqual(5);
   expect(geometry.width).toBeGreaterThan(0);
+});
+
+test('checking in hides Drop-off and a Pick-up edit preserves the saved Drop-off time', async ({page, baseURL}) => {
+  const fixture = await install(page);
+  await page.goto(`${baseURL}/directory.html`);
+  const card = page.locator(`#directory-grid [data-directory-stay-id="${bookings[0].stayId}"]`);
+  await card.locator('[data-open-directory-profile]').click();
+  const handover = card.locator('[data-sitter-handover]');
+  const dropoff = handover.locator('[name="dropoffTime"]');
+  const pickup = handover.locator('[name="pickupTime"]');
+  await expect(dropoff).toBeVisible();
+  await expect(pickup).toHaveValue('15:00');
+  await page.evaluate(record => {
+    v110MergeOperationRead([record]);
+    v110EnsureCareOperationBar(document.querySelector('.directory-card.is-profile-active'));
+    const send = window.sendPayloadToAppsScript;
+    window.sendPayloadToAppsScript = async payload => {
+      if (payload.action !== 'save_sitter_handover') return send(payload);
+      window.__savedHandover = payload;
+      return {result:'success',record:{...payload,times:{dropoffTime:payload.dropoffTime,pickupTime:payload.pickupTime}}};
+    };
+  }, fixture.recordCheckIn(bookings[0]).record);
+  await expect(dropoff).toBeHidden();
+  await expect(pickup).toBeEnabled();
+  await pickup.fill('16:30');
+  await handover.getByRole('button', {name:'Save times'}).click();
+  await expect(handover.getByRole('status')).toHaveText('Times saved.');
+  expect(await page.evaluate(() => window.__savedHandover)).toMatchObject({dropoffTime:'09:00',pickupTime:'16:30'});
+});
+
+test('Detailed Care opens in a viewport-sized modal and Escape returns to the Edit button', async ({page, baseURL}) => {
+  await page.setViewportSize({width:320, height:620});
+  await install(page);
+  await page.goto(`${baseURL}/directory.html`);
+  const card = page.locator(`#directory-grid [data-directory-stay-id="${bookings[0].stayId}"]`);
+  await card.locator('[data-open-directory-profile]').click();
+  await expect(card.locator('[data-directory-detail="profile"]')).toHaveAttribute('data-profile-read-state', 'fresh');
+  const edit = card.getByRole('button', {name:'Edit detailed care for Milo'});
+  await edit.click();
+  const modal = page.getByRole('dialog', {name:'Edit detailed care for Milo'});
+  await expect(modal).toBeVisible();
+  await expect(modal.getByRole('button', {name:/Food & Walks/})).toBeVisible();
+  await expect(modal.getByRole('button', {name:'Save changes'})).toBeDisabled();
+  const bounds = await modal.boundingBox();
+  expect(bounds.x).toBeGreaterThanOrEqual(0);
+  expect(bounds.x + bounds.width).toBeLessThanOrEqual(320);
+  expect(bounds.y).toBeGreaterThanOrEqual(0);
+  expect(bounds.y + bounds.height).toBeLessThanOrEqual(620);
+  await page.keyboard.press('Escape');
+  await expect(modal).toBeHidden();
+  await expect(edit).toBeFocused();
 });
 
 test('Care quick actions stay compact, truthful and bound to the selected stay',async({page,baseURL},info)=>{

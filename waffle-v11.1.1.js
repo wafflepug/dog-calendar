@@ -60,7 +60,7 @@ function v1111NormaliseMobileNotificationButton() {
     button.setAttribute('aria-label', 'Notifications');
 
     const icon = button.querySelector('.waffle-notification-button-icon');
-    if (icon && !String(icon.textContent || '').trim()) {
+    if (icon && !icon.querySelector('svg') && !String(icon.textContent || '').trim()) {
         icon.textContent = '🔔';
     }
 }

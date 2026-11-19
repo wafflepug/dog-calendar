@@ -1994,10 +1994,7 @@ function renderV10OperationsHome(events) {
         const attentionCount =
             queue.length;
 
-        todayStatus.textContent =
-            attentionCount
-                ? `${attentionCount} item${attentionCount === 1 ? '' : 's'} today`
-                : '';
+        todayStatus.setAttribute('aria-label', `${attentionCount} action${attentionCount === 1 ? '' : 's'} today`);
 
         todayStatus.hidden = attentionCount === 0;
         todayStatus.dataset.mode =
@@ -2894,8 +2891,13 @@ function applyDirectoryProfileEditMode(card) {
     if (cancelButton) {
         cancelButton.hidden =
             !editing;
-        cancelButton.disabled = card.dataset.profileSaving === 'true' || !!directoryProfileEditDrafts.get(directoryProfileEditKey(card))?.queued;
-        if (editing) cancelButton.textContent = 'Discard changes';
+        const queued = !!directoryProfileEditDrafts.get(directoryProfileEditKey(card))?.queued;
+        const inDialog = !!cancelButton.closest?.('dialog');
+        cancelButton.disabled = card.dataset.profileSaving === 'true' || (queued && !inDialog);
+        if (editing) {
+            cancelButton.textContent = queued ? 'Close' : 'Discard changes';
+            if (inDialog) cancelButton.setAttribute('aria-label', `${queued ? 'Close detailed care for' : 'Discard detailed care changes for'} ${card.dataset.directoryDogName || 'guest'}`);
+        }
     }
 
     const saveButton = card.querySelector('[data-save-belongings]');
@@ -2945,16 +2947,42 @@ function setDirectoryProfileEditMode(
         card
     );
     if (editing) updateDirectoryProfileEditFeedback(card);
+    const dialog = card.querySelector('[data-care-edit-dialog]');
+    if (dialog && editing && !dialog.open && card.isConnected) {
+        const fields = card.querySelector('[data-directory-intake-attributes]');
+        const saveBar = card.querySelector('[data-directory-main-panel="profile"] .directory-profile-save-bar');
+        dialog.querySelector('[data-care-edit-fields]').append(fields);
+        dialog.querySelector('[data-care-edit-footer]').prepend(saveBar);
+        dialog.oncancel = event => {
+            event.preventDefault();
+            if (card.dataset.profileSaving === 'true') return;
+            if (!directoryProfileEditIsDirty(card) || directoryProfileEditDrafts.get(editKey)?.queued ||
+                window.confirm('Discard unsaved care changes?')) cancelDirectoryProfileEdit(card);
+        };
+        dialog.showModal();
+    } else if (dialog?.open && !editing) {
+        closeDirectoryProfileEditDialog(card);
+        card.querySelector('[data-toggle-profile-edit]')?.focus({ preventScroll: true });
+    }
     window.WAFFLE_CARE_SITTER_SUMMARY?.syncCard?.(card);
 }
 
+function closeDirectoryProfileEditDialog(card) {
+    const dialog = card.querySelector('[data-care-edit-dialog][open]');
+    if (!dialog) return;
+    dialog.before(dialog.querySelector('[data-directory-intake-attributes]'));
+    dialog.parentElement.after(dialog.querySelector('.directory-profile-save-bar'));
+    dialog.close();
+}
 
 function cancelDirectoryProfileEdit(card) {
     if (!card) return;
     const editKey = directoryProfileEditKey(card);
     const draft = directoryProfileEditDrafts.get(editKey);
+    if (card.dataset.profileSaving === 'true') return;
     if (draft?.queued) {
-        updateDirectoryProfileEditFeedback(card);
+        if (card.querySelector('[data-care-edit-dialog][open]')) setDirectoryProfileEditMode(card, false);
+        else updateDirectoryProfileEditFeedback(card);
         return;
     }
     if (draft) applyDirectoryProfileEditValues(card, draft.initial);
@@ -12581,6 +12609,7 @@ registerWaffleServiceWorker();
             )
             .forEach(otherCard => {
                 if (otherCard !== card) {
+                    closeDirectoryProfileEditDialog(otherCard);
                     restoreDirectoryRosterBadgesToList(otherCard);
                     otherCard.classList.remove(
                         'is-profile-active'
@@ -12745,6 +12774,7 @@ registerWaffleServiceWorker();
                 '.directory-card.is-profile-active'
             )
             .forEach(card => {
+                closeDirectoryProfileEditDialog(card);
                 restoreDirectoryRosterBadgesToList(card);
                 card.classList.remove(
                     'is-profile-active'
@@ -18770,16 +18800,9 @@ registerWaffleServiceWorker();
                                                         type="button"
                                                         class="directory-profile-edit-toggle"
                                                         data-toggle-profile-edit
+                                                        aria-haspopup="dialog"
                                                         aria-label="Edit detailed care for ${escapeDashboardHtml(dogName.trim())}">
                                                         ✏️ Edit
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        class="directory-profile-edit-cancel"
-                                                        data-cancel-profile-edit
-                                                        aria-label="Discard detailed care changes for ${escapeDashboardHtml(dogName.trim())}"
-                                                        hidden>
-                                                        Discard changes
                                                     </button>
                                                 </div>
                                             </div>
@@ -18790,6 +18813,14 @@ registerWaffleServiceWorker();
                                                     Loading profile…
                                                 </div>
                                             </div>
+                                            <dialog class="directory-care-edit-dialog" data-care-edit-dialog aria-label="Edit detailed care for ${escapeDashboardHtml(dogName.trim())}">
+                                                <header><h3>Edit detailed care</h3><span>${escapeDashboardHtml(dogName.trim())}</span></header>
+                                                <div class="directory-care-edit-fields" data-care-edit-fields></div>
+                                                <footer data-care-edit-footer>
+                                                    <button type="button" class="directory-profile-edit-cancel" data-cancel-profile-edit
+                                                        aria-label="Discard detailed care changes for ${escapeDashboardHtml(dogName.trim())}" hidden>Discard changes</button>
+                                                </footer>
+                                            </dialog>
                                         </section>
 
                                         <div class="directory-profile-save-bar">
