@@ -28,6 +28,9 @@ test('streamlined profile places records, belongings and destructive actions tog
   await expect(handover.locator('input[type="time"]')).toHaveCount(2);
   for (const width of [320, 390, 1280]) {
     await page.setViewportSize({width, height: 848});
+    const emergency = await essentials.getByRole('button', {name:'Emergency details'}).boundingBox();
+    expect(emergency.x).toBeGreaterThanOrEqual(0);
+    expect(emergency.x + emergency.width).toBeLessThanOrEqual(width);
     const centreOffset = await handover.evaluate(section => {
       const outer = section.getBoundingClientRect();
       const fields = section.querySelector('.sitter-planning-grid').getBoundingClientRect();
