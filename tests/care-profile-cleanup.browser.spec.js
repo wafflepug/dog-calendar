@@ -42,7 +42,7 @@ test('Care profile back bar, handover note and section tabs stay clear and reada
   const careReadsAfterOpen=fixture.reads.filter(action=>['get_guest_profile','get_dog_history','get_belongings','get_guest_belongings'].includes(action));
 
   const noteHost=card.locator('[data-care-brief-handover-note]');
-  await expect(card.locator('[data-care-brief-safety]')).toBeVisible();
+  await expect(card.locator('[data-care-brief-safety]')).toBeHidden();
   await expect(card.locator('[data-care-brief-medication]')).toBeVisible();
   await expect(card.locator('[data-care-brief-feeding]')).toBeVisible();
   await expect(card.locator('[data-care-brief-walks]')).toBeVisible();

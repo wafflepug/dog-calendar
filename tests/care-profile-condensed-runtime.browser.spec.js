@@ -82,7 +82,7 @@ test('actual Care profile stays compact, keeps exceptions visible and preserves 
     await expect(card.locator('[data-care-brief-walks]')).toBeVisible();
     await expect(card.locator('.directory-care-owner-line')).toBeVisible();
     await expect(card.locator('[data-care-brief-handover-note]')).toBeVisible();
-    await expect(card.locator('[data-care-brief-safety]')).toBeVisible();
+    await expect(card.locator('[data-care-brief-safety]')).toBeHidden();
     await expect(card.locator('[data-care-brief-medication]')).toBeVisible();
     await expect(page.locator('#wh75SettingsPanel')).not.toHaveClass(/is-open/);
     const early = card.locator('[data-v110-operation-bar] [data-v11217-early-checkout]');
@@ -114,7 +114,7 @@ test('actual Care profile stays compact, keeps exceptions visible and preserves 
     }
     const readsBeforeTools = reads.filter(x => x === 'get_guest_profile').length;
     const handoverAction = brief.locator('.directory-care-brief-note [data-care-brief-action="handover"]');
-    const emergencyAction = brief.locator('.directory-care-brief-safety [data-care-brief-action="emergency-contact"]');
+    const emergencyAction = brief.locator('.directory-care-brief-heading [data-care-brief-action="emergency-contact"]');
     await expect(handoverAction).toHaveCount(1);
     await expect(handoverAction).toBeVisible();
     await expect(emergencyAction).toHaveCount(1);

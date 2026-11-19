@@ -79,25 +79,18 @@ test('selected guest controls stay compact, readable and usable at phone and des
       const briefHeading=card.querySelector('.directory-care-brief-heading');
       const title=briefHeading?.firstElementChild;
       const freshness=briefHeading?.querySelector('.directory-care-brief-freshness');
-      const safety=card.querySelector('.directory-care-brief-safety');
-      const safetyTitle=safety?.querySelector('.directory-care-brief-note-heading h4');
-      const flags=safety?.querySelector('[data-care-brief-safety]');
-      const emergency=safety?.querySelector('[data-care-brief-action="emergency-contact"]');
+      const emergency=briefHeading?.querySelector('[data-care-brief-action="emergency-contact"]');
+      const refresh=briefHeading?.querySelector('[data-care-brief-refresh]');
       const box=node=>{const r=node.getBoundingClientRect();return {left:r.left,right:r.right,top:r.top,bottom:r.bottom,centerY:(r.top+r.bottom)/2}};
-      return {title:box(title),freshness:box(freshness),safetyTitle:box(safetyTitle),flags:box(flags),emergency:box(emergency),titleAlign:getComputedStyle(title).textAlign,freshnessAlign:getComputedStyle(freshness).textAlign};
+      return {title:box(title),freshness:box(freshness),emergency:box(emergency),refresh:box(refresh),titleAlign:getComputedStyle(title).textAlign,freshnessAlign:getComputedStyle(freshness).textAlign};
     });
     expect(alignment.titleAlign).toBe('left');
     expect(alignment.freshnessAlign).toBe('left');
     expect(alignment.freshness.left).toBeGreaterThanOrEqual(alignment.title.left-0.01);
-    if(width>=769){
-      expect(alignment.safetyTitle.centerY).toBeCloseTo(alignment.flags.centerY,0);
-      expect(alignment.flags.centerY).toBeCloseTo(alignment.emergency.centerY,0);
-      expect(alignment.safetyTitle.left).toBeLessThan(alignment.flags.left);
-      expect(alignment.flags.right).toBeLessThan(alignment.emergency.left);
-    }else{
-      expect(alignment.safetyTitle.centerY).toBeCloseTo(alignment.emergency.centerY,0);
-      expect(alignment.flags.top).toBeGreaterThanOrEqual(Math.max(alignment.safetyTitle.bottom,alignment.emergency.bottom)-0.01);
-    }
+    expect(alignment.title.centerY).toBeCloseTo(alignment.emergency.centerY,0);
+    expect(alignment.emergency.centerY).toBeCloseTo(alignment.refresh.centerY,0);
+    expect(alignment.title.right).toBeLessThan(alignment.emergency.left);
+    expect(alignment.emergency.right).toBeLessThan(alignment.refresh.left);
 
     if(process.env.WAFFLE_CAPTURE_SOLO==='1'&&info.project.name==='chromium-390'){
       const screenshotDir=path.resolve(__dirname,'../output/solo-sitter-six/screenshots');
