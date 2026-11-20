@@ -9,7 +9,6 @@
   const DESKTOP_QUERY = '(min-width: 821px)';
   const DEFAULT_TOOLS_HREF = 'reminders.html';
   const MOBILE_SEARCH_AVATAR = 'waffle-search-avatar-v1181.svg?v=1.0.2';
-  const MOBILE_NOTIFICATION_AVATAR = 'waffle-notification-avatar-v1181.svg?v=1.0.2';
   let originalToolsLauncher = null;
   let originalToolsHref = '';
   const desktopActionLocations = new Map();
@@ -354,7 +353,7 @@
     const section = document.createElement('div');
     section.id = 'whSitterMobileHeaderTools';
     section.className = 'wh75-nav-section';
-    section.innerHTML = `<div class="wh75-nav-heading">Tools</div><div class="wh75-nav-list">${mobileToolButton('search', MOBILE_SEARCH_AVATAR, 'Search', 'Find')}${mobileToolButton('notification', MOBILE_NOTIFICATION_AVATAR, 'Notifications', 'Alerts')}</div>`;
+    section.innerHTML = `<div class="wh75-nav-heading">Tools</div><div class="wh75-nav-list">${mobileToolButton('search', MOBILE_SEARCH_AVATAR, 'Search', 'Find')}</div>`;
     const sync = document.createElement('button');
     sync.type = 'button';
     sync.className = 'wh75-nav-item';
