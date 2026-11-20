@@ -1024,7 +1024,7 @@ function isWaffleNotificationFocusTargetVisible(element) {
 }
 
 function focusWaffleNotificationCentreOpener() {
-    const candidates = [waffleNotificationCentreOpener, document.getElementById('wh75MenuButton'), document.getElementById('waffleNotificationButton'), document.querySelector('#wh80MobileHeaderRail [data-wh80-role="notification"]'), document.querySelector('[data-wh-sitter-mobile-action="notification"]')];
+    const candidates = [waffleNotificationCentreOpener, document.querySelector('[data-wh-sitter-calendar-notifications]'), document.getElementById('wh75MenuButton'), document.getElementById('waffleNotificationButton'), document.querySelector('#wh80MobileHeaderRail [data-wh80-role="notification"]')];
     const target = candidates.find(isWaffleNotificationFocusTargetVisible);
     if (target) { target.focus(); return; }
     if (!document.body.hasAttribute('tabindex')) document.body.setAttribute('tabindex', '-1');
@@ -3450,7 +3450,7 @@ function ensureWaffleNotificationModal() {
     });
     document.addEventListener('click', event => {
         const notificationButton = event.target instanceof Element && event.target.closest(
-            '#waffleNotificationButton, [data-wh-sitter-calendar-notifications], [data-wh-sitter-mobile-action="notification"]'
+            '#waffleNotificationButton, [data-wh-sitter-calendar-notifications]'
         );
         if (!modal.hidden && !modal.contains(event.target) && !notificationButton && !waffleNotificationCentreOpener?.contains(event.target)) {
             closeWaffleNotificationCentre(false);

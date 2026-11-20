@@ -103,6 +103,26 @@ test('streamlined profile places records, belongings and destructive actions tog
   expect(Math.max(...cornerOffsets)).toBeLessThanOrEqual(4);
 });
 
+test('mobile Notifications opens from the top bar and stays out of the side menu', async ({page, baseURL}) => {
+  await install(page);
+  await page.goto(`${baseURL}/directory.html`);
+  const menu = page.locator('#wh75MenuButton');
+  const drawer = page.locator('#wh75MobileDrawer');
+  await menu.click();
+  await expect(drawer.getByRole('button', {name:'Search', exact:true})).toBeVisible();
+  await expect(drawer.getByRole('button', {name:'Notifications', exact:true, includeHidden:true})).toHaveCount(0);
+  await expect(drawer.locator('[data-wh-sitter-sync-review]')).toHaveCount(1);
+  await drawer.locator('[data-wh75-close-drawer]').first().click();
+
+  const bell = page.locator('#wh75MobileTopbar').getByRole('button', {name:'Notifications', exact:true});
+  const notifications = page.locator('#waffleNotificationModal');
+  await expect(bell).toBeVisible();
+  await bell.click();
+  await expect(notifications).toBeVisible();
+  await bell.click();
+  await expect(notifications).toBeHidden();
+});
+
 test('desktop notification dot sits on the bell corner', async ({page, baseURL}) => {
   await page.setViewportSize({width: 1280, height: 800});
   await install(page);
