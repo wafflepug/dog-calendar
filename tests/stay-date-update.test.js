@@ -63,7 +63,7 @@ assert.equal(sandbox.lookup(rows, {
 assert.match(client, /sourceRow: sourceRow >= 2 \? sourceRow : ''/);
 assert.match(client, /originalEndDate,/);
 assert.match(calendar, /sourceRow: i \+ 1/);
-assert.match(calendar, /data-directory-source-row="\$\{i \+ 1\}"/);
-assert.match(future, /data-directory-source-row="\$\{escapeHtml\(props\.sourceRow \|\| ''\)\}"/);
+assert.match(calendar, /data-directory-source-row="\$\{escapeDashboardHtml\(sourceRow\)\}"/);
+assert.match(future, /renderDirectoryStayCardMarkup\(\{[\s\S]*?sourceRow: props\.sourceRow \|\| ''/);
 
 console.log('Stay date update identity tests passed.');

@@ -2518,9 +2518,30 @@ body[data-waffle-page="directory"] #directoryTabPanel .directory-card .v11217-ro
   border:1px solid var(--wh-border,#d5dee9); border-radius:10px; background:var(--wh-surface-soft,#f8fafc);
   color:var(--wh-text,#17243b); font:inherit; font-size:12px; font-weight:850; line-height:1.25; text-decoration:none;
 }
-body[data-waffle-page="directory"] #directoryTabPanel .v11217-roster-actions:has(.care-roster-handover-actions > [data-v11217-roster-checkout]) { max-width: none; }
+body[data-waffle-page="directory"] #directoryTabPanel .v11217-roster-actions:has(.care-roster-handover-actions > :is([data-v11217-roster-checkout],[data-v11113-roster-extend])) { max-width: none; }
 .care-roster-handover-actions {
   display:flex; flex:1 0 100%; flex-wrap:wrap; align-items:flex-start; gap:8px; min-width:0;
+}
+body[data-waffle-page="directory"] #directoryTabPanel .care-roster-handover-actions:has(> [data-v11113-roster-extend]) > :is(a,button) {
+  min-width:0; padding-inline:9px;
+}
+body[data-waffle-page="directory"] #directoryTabPanel .care-roster-handover-actions > .v11113-extend-stay-button {
+  display:inline-flex; align-items:center; justify-content:center; min-width:0;
+  box-sizing:border-box; border-radius:10px; font-size:12px; line-height:1.25;
+  border-color:var(--wh75-accent-ink,#561bc9);
+  background:var(--wh75-accent-ink,#561bc9);
+  color:var(--wh75-shell,#fff);
+}
+body[data-waffle-page="directory"] #directoryTabPanel .care-roster-handover-actions > .v11113-extend-stay-button:focus-visible {
+  outline:3px solid var(--wh-focus, var(--wh75-accent, #7562db)); outline-offset:2px;
+}
+@media (max-width:600px) {
+  body[data-waffle-page="directory"] #directoryTabPanel .care-roster-handover-actions:has(> [data-v11113-roster-extend]) {
+    display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); align-items:stretch;
+  }
+  body[data-waffle-page="directory"] #directoryTabPanel .care-roster-handover-actions:has(> [data-v11113-roster-extend]) > :is(a,button) {
+    width:100%; min-width:0; padding-inline:6px;
+  }
 }
 body[data-waffle-page="directory"] #directoryTabPanel .directory-card .care-roster-handover-actions > :is(button, a) {
   flex:0 0 auto; max-width:100%;

@@ -4775,6 +4775,22 @@ function processSheetActionWithV108Receipt_(data) {
     }
     if (!createsStay) recoverPendingStayForTargetV11225_(receiptSheet, bookingSheet, stayId);
 
+    if (data.action === "update_boarding_dates" && data.source === "Extend stay") {
+      var currentStay = auditBookingSnapshotFromSheetRow_(bookingSheet, row);
+      if (currentStay.startDate !== normalizeDateValue_(data.originalStartDate) ||
+          currentStay.endDate !== normalizeDateValue_(data.originalEndDate)) {
+        throw new Error("The stay dates changed. Refresh Guests before extending the stay.");
+      }
+      if (normalizeDateValue_(data.startDate) !== currentStay.startDate ||
+          normalizeDateValue_(data.endDate) <= currentStay.endDate) {
+        throw new Error("Choose a new check-out date after the scheduled check-out.");
+      }
+      var extensionOperations = readStayOperationsV11226_({ stayIds: [stayId] });
+      if (extensionOperations.some(function(operation) { return operation.identityConflict || operation.status === "checked_out"; })) {
+        throw new Error("This stay is no longer available to extend. Refresh Guests to review its status.");
+      }
+    }
+
     data.stayId = stayId;
     var pending = { id: id, action: String(data.action || ""), digest: digest, state: "pending", stayId: stayId };
     reserveStayMutationV11225_(receiptSheet, pending, row, data);

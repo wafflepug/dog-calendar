@@ -253,6 +253,29 @@ function potentialRequest(action, id, stayId, values = {}) {
   assert.equal(exactReplay.duplicate, true);
 }
 
+// A second device cannot extend from a stale checkout date or after checkout.
+{
+  const dogId = '00000000-0000-4000-8000-000000000888';
+  const row = ['', 'Pip', 'Kelpie', '2026-10-01', '2026-10-03', 'Sam', '0400000000', '', '', '', '', 'Confirmed Boarding', dogId, '#00002', stayB, ''];
+  const h = makeHarness({ rows: [header.concat(['Stay ID', 'Last Stay Mutation ID']), row] });
+  let status = 'checked_in';
+  h.sandbox.readStayOperationsV11226_ = ({ stayIds }) => {
+    assert.equal(stayIds[0], stayB);
+    assert.equal(h.lockHeld, true);
+    return [{ status }];
+  };
+  const extension = { action: 'update_boarding_dates', source: 'Extend stay', clientMutationId: 'extension-one',
+    dogName: 'Pip', dogId, stayId: stayB, originalStartDate: '2026-10-01', originalEndDate: '2026-10-03',
+    startDate: '2026-10-01', endDate: '2026-10-05' };
+  const save = h.sandbox.processSheetActionWithV108Receipt_;
+  assert.equal(save(extension).booking.endDate, '2026-10-05');
+  assert.throws(() => save({ ...extension, clientMutationId: 'extension-stale', endDate: '2026-10-04' }), /stay dates changed/);
+  status = 'checked_out';
+  assert.throws(() => save({ ...extension, clientMutationId: 'extension-checked-out', originalEndDate: '2026-10-05', endDate: '2026-10-06' }), /no longer available/);
+  assert.equal(h.bookings.rows[1][4], '2026-10-05');
+  assert.equal(save(extension).duplicate, true, 'a previously confirmed extension still has a recoverable receipt');
+}
+
 // Pending with no matching primary marker is explicitly unresolved, never
 // blindly dispatched; retry payload changes and old timestamp-only IDs fail.
 {

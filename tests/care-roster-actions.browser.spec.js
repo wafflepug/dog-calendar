@@ -161,17 +161,69 @@ test('identity ambiguity and offline failures offer review guidance without a re
   await expect(offline.getByRole('button', { name: 'Retry' })).toHaveCount(0);
 });
 
-test('a checked-in guest keeps Early check-out as the sole direct action when no primary check-in or checkout is due', async ({ page }) => {
+test('a checked-in guest can extend the exact stay directly from Guests', async ({ page }) => {
+  await page.route('https://palz-stay.test/directory.html', route => route.fulfill({ body: '<title>Guests</title>', contentType: 'text/html' }));
+  await page.goto('https://palz-stay.test/directory.html');
   await setup(page);
-  const early = page.locator('[data-directory-stay-id="stay-b"]');
+  const card = page.locator('[data-directory-stay-id="stay-b"]');
+  await page.addScriptTag({ path: 'waffle-v11.1.13.js' });
+  await page.addStyleTag({ path: 'waffle-v11.1.13.css' });
+  await page.addStyleTag({ path: 'care-mobile-clarity.css' });
   await page.evaluate(() => {
+    document.querySelector('main').id = 'directoryTabPanel';
+    document.querySelector('[data-directory-stay-id="stay-b"]').dataset.ownerPhone = '0400000000';
     window.operations.set('stay-b', { stayId: 'stay-b', stayKey: 'same-name|2026-10-11|2026-10-14|b', dogId: '22222222-2222-4222-8222-222222222222', status: 'checked_in' });
     window.v110EnsureCareOperationBar(document.querySelector('[data-directory-stay-id="stay-b"]'));
   });
-  await expect(early.locator('[data-v11217-roster-checkin]')).toHaveCount(0);
-  await expect(early.locator('[data-v11217-roster-checkout]')).toHaveCount(0);
-  await expect(early.locator('[data-v11217-early-checkout]')).toBeVisible();
-  await expect(early.locator('.v11217-roster-more-actions')).toHaveCount(0);
+  await expect(card.locator('[data-v11217-roster-checkin]')).toHaveCount(0);
+  await expect(card.locator('[data-v11217-roster-checkout]')).toHaveCount(0);
+  await expect(card.locator('[data-v11217-early-checkout]')).toBeVisible();
+  const extend = card.getByRole('button', { name: /Extend stay for Twin Pup, owner Owner b/ });
+  await expect(page.locator('[data-v11113-roster-extend]')).toHaveCount(1);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  expect((await extend.boundingBox()).y).toEqual((await card.locator('[data-v11217-early-checkout]').boundingBox()).y);
+  await page.setViewportSize({ width: 320, height: 780 });
+  const [earlyBounds, extendBounds] = await Promise.all([card.locator('[data-v11217-early-checkout]').boundingBox(), extend.boundingBox()]);
+  expect(extendBounds.y).toEqual(earlyBounds.y);
+  expect(extendBounds.x + extendBounds.width).toBeLessThanOrEqual(320);
+  expect(extendBounds.height).toBeGreaterThanOrEqual(44);
+
+  await extend.click();
+  const modal = page.getByRole('dialog', { name: 'Extend stay' });
+  await expect(modal).toBeVisible();
+  const days = modal.getByLabel('Additional days');
+  await days.fill('2');
+  await expect(modal.locator('[data-v11113-extension-preview]')).toHaveText('New check-out date · 16 Oct 2026');
+  await modal.getByRole('button', { name: 'Cancel' }).click();
+  await expect(extend).toBeFocused();
+  await expect(modal).toBeHidden();
+
+  await page.evaluate(() => {
+    window.sendPayloadToAppsScript = async payload => {
+      localStorage.setItem('fixture-extension-request', JSON.stringify(payload));
+      return { result: 'success', stayId: payload.stayId };
+    };
+  });
+  await extend.click();
+  await days.fill('2');
+  await card.evaluate(element => { element.dataset.directoryEndDate = '2026-10-15'; });
+  await modal.getByRole('button', { name: 'Extend stay' }).click();
+  await expect(modal.locator('[data-v11113-stay-dates-status]')).toContainText('This stay changed');
+  expect(await page.evaluate(() => localStorage.getItem('fixture-extension-request'))).toBeNull();
+  await card.evaluate(element => { element.dataset.directoryEndDate = '2026-10-14'; });
+  await modal.getByRole('button', { name: 'Cancel' }).click();
+  await extend.click();
+  await days.fill('2');
+  const rosterReload = page.waitForNavigation({ timeout: 6000 });
+  await modal.getByRole('button', { name: 'Extend stay' }).click();
+  await rosterReload;
+  expect(new URL(page.url()).search).toBe('');
+  const result = await page.evaluate(() => ({
+    payload: JSON.parse(localStorage.getItem('fixture-extension-request')),
+    calendar: JSON.parse(localStorage.getItem('temporaryConfirmedStays'))[0]
+  }));
+  expect(result.payload).toMatchObject({ stayId: 'stay-b', dogId: '22222222-2222-4222-8222-222222222222', startDate: '2026-10-11', endDate: '2026-10-16', source: 'Extend stay' });
+  expect(result.calendar).toMatchObject({ end: '2026-10-17', extendedProps: { stayId: 'stay-b', rawEndDate: '2026-10-16' } });
 });
 
 test('Early check-out stays hidden until the guest checks in', async ({ page }) => {

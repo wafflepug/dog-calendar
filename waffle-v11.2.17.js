@@ -365,7 +365,8 @@
     const ownerCall = ownerTel ? `<a class="care-roster-direct-call" data-v11217-roster-owner-call href="tel:${esc(ownerTel)}" aria-label="Call ${esc(p.ownerName || 'owner')} about ${esc(p.dogName || 'this dog')} · ${esc(contactNumber)}"><span>Call Owner</span></a>` : '';
     const ownerDetail = ownerTel ? `<span class="care-roster-contact-detail">${esc(p.ownerName || 'Owner')} · ${esc(contactNumber)}</span>` : '';
     const estimate = canSetEstimate ? '<button type="button" class="care-roster-checkout-estimate" data-roster-checkout-estimate>Set check-out time</button>' : '';
-    const handoverActions = `<div class="care-roster-handover-actions">${ownerCall}${estimate}${checkOutMarkup}${earlyButtonMarkup}</div>`;
+    const extend = canSetEstimate ? `<button type="button" class="v11113-extend-stay-button" data-v11113-extend-stay data-v11113-roster-extend aria-label="${esc(accessibleStayActionLabel('Extend stay for', card, p))}">Extend stay</button>` : '';
+    const handoverActions = `<div class="care-roster-handover-actions">${ownerCall}${estimate}${checkOutMarkup}${earlyButtonMarkup}${extend}</div>`;
     const contact = ownerCall ? `<div class="care-roster-contact">${ownerCall}${ownerDetail}</div>` : '';
     actions.innerHTML = estimate
       ? `${handoverActions}${ownerDetail}`
@@ -387,7 +388,7 @@
     const saveKey = String(p.stayId || '').trim().toLowerCase() ||
       `${String(p.stayKey || '').trim()}|${String(p.dogId || '').trim().toLowerCase()}|${String(p.dogName || '').trim().toLowerCase()}`;
     const saving = activeStatusSaves.has(saveKey);
-    actions.querySelectorAll('[data-v11217-roster-checkin],[data-v11217-roster-checkout],[data-v11217-early-checkout]').forEach(control => { control.disabled = saving; });
+    actions.querySelectorAll('[data-v11217-roster-checkin],[data-v11217-roster-checkout],[data-v11217-early-checkout],[data-v11113-roster-extend]').forEach(control => { control.disabled = saving; });
   }
 
   if (typeof baseEnsureCareOperationBar === 'function') {
