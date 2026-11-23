@@ -77,27 +77,43 @@ function palzCareRecovery_(payload, id) {
   var sheet = getBelongingsSheetReadOnly_(), main = getTargetSheet_(), bookingRows = main.getDataRange().getValues();
   var state = readCareRecordIdentityState_(sheet);
   if (!state.ok) throw new Error('Care records need review before recovery.');
+  var intake, checkedIntake = false;
+  function canRelink(record) {
+    if (!record.valid || record.stayKey === id.stayKey || (state.byKey[id.stayKey] || []).length ||
+        (state.byKey[record.stayKey] || []).length !== 1 ||
+        (record.stayId && record.stayId !== id.stayId) || (record.dogId && record.dogId !== id.dogId)) return false;
+    var values = state.values[record.rowNumber-1];
+    if (normalizeDateValue_(values[3]) !== id.booking.startDate || normalizeDateValue_(values[4]) !== id.booking.endDate) return false;
+    var hasStableIds = record.stayId === id.stayId && record.dogId === id.dogId;
+    if (!hasStableIds) {
+      if (!checkedIntake) {
+        checkedIntake = true;
+        var intakeSheet = main.getParent().getSheetByName(String(
+          PropertiesService.getScriptProperties().getProperty('INTAKE_SHEET_NAME') || 'Dog_Intake_Records').trim());
+        if (intakeSheet && intakeSheet.getMaxColumns() >= INTAKE_HEADERS_.length) {
+          intake = findIntakeRecordByStableStayId_(intakeSheet,id.stayId,id.dogId);
+        }
+      }
+      if (!intake || intake.stayKey !== record.stayKey || intake.startDate !== id.booking.startDate ||
+          intake.endDate !== id.booking.endDate ||
+          intake.dogName.trim().toLowerCase() !== String(values[2] || '').trim().toLowerCase()) return false;
+    }
+    return resolveCareBookingIdentity_(record.stayKey,'','',bookingRows).reason === 'no-booking-proves-stay-key';
+  }
   if (!previousKey) {
-    var candidates = state.rows.filter(function(record) {
-      var values = state.values[record.rowNumber-1];
-      return record.valid && record.stayId === id.stayId && record.dogId === id.dogId &&
-        record.stayKey !== id.stayKey && !(state.byKey[id.stayKey] || []).length &&
-        normalizeDateValue_(values[3]) === id.booking.startDate && normalizeDateValue_(values[4]) === id.booking.endDate;
-    });
+    var candidates = state.rows.filter(canRelink);
     return {candidates:candidates.map(function(record){return {key:record.stayKey,name:String(state.values[record.rowNumber-1][2] || '')};})};
   }
   var records = state.byKey[previousKey] || [];
-  if (records.length !== 1 || !records[0].valid || records[0].stayId !== id.stayId || records[0].dogId !== id.dogId ||
-      (state.byKey[id.stayKey] || []).length || resolveCareBookingIdentity_(previousKey,'','',bookingRows).reason !== 'no-booking-proves-stay-key') {
+  if (records.length !== 1 || !canRelink(records[0])) {
     throw new Error('No matching Care record can be safely relinked.');
   }
   var old = state.values[records[0].rowNumber-1];
   var before = {dogName:String(old[2] || ''),startDate:normalizeDateValue_(old[3]),endDate:normalizeDateValue_(old[4]),stayId:id.stayId};
-  if (before.startDate !== id.booking.startDate || before.endDate !== id.booking.endDate) throw new Error('Only same-date records can be recovered here.');
   if (!migrateBelongingsIdentityForGuest_(main.getParent(),previousKey,id.stayKey,id.booking.dogName,id.stayId)) throw new Error('The Care record changed. Review it again.');
-  var intake = migrateIntakeIdentitiesForGuest_(previousKey,id.stayKey,id.booking.dogName,{before:before,after:id.booking,row:id.booking.row,dogId:id.dogId});
+  var migratedIntake = migrateIntakeIdentitiesForGuest_(previousKey,id.stayKey,id.booking.dogName,{before:before,after:id.booking,row:id.booking.row,dogId:id.dogId});
   touchWaffleDataVersion_('directory');
-  return {recovered:true,intake:intake};
+  return {recovered:true,intake:migratedIntake};
 }
 
 function palzOwnerStayResponse_(action, raw) {

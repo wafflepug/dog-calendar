@@ -113,4 +113,23 @@ test('Care recovery rejects different dog IDs and an occupied destination', () =
   assert.equal(writes,0);
   assert.equal(ctx.palzCareRecovery_({previousKey:oldKey},id).intake.digital,1);
   assert.equal(writes,1);
+
+  entry.stayId = '';
+  entry.dogId = '';
+  ctx.INTAKE_HEADERS_ = Array(20);
+  const intakeSheet = {getMaxColumns:()=>20};
+  ctx.getTargetSheet_ = () => ({getParent:()=>({getSheetByName:()=>intakeSheet}),getDataRange:()=>({getValues:()=>[]})});
+  const intake = {stayKey:'unrelated',dogName:'Old name',startDate:booking.startDate,endDate:booking.endDate};
+  ctx.findIntakeRecordByStableStayId_ = (sheet, requestedStay, requestedDog) => {
+    assert.equal(sheet,intakeSheet);
+    assert.equal(requestedStay,stayId);
+    assert.equal(requestedDog,dogId);
+    return intake;
+  };
+  assert.equal(ctx.palzCareRecovery_({},id).candidates.length,0);
+  assert.throws(()=>ctx.palzCareRecovery_({previousKey:oldKey},id),/safely relinked/);
+  intake.stayKey = oldKey;
+  assert.equal(ctx.palzCareRecovery_({},id).candidates[0].key,oldKey);
+  assert.equal(ctx.palzCareRecovery_({previousKey:oldKey},id).recovered,true);
+  assert.equal(writes,2);
 });
