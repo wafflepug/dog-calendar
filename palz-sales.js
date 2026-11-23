@@ -6,7 +6,8 @@
   const today = () => new Intl.DateTimeFormat('sv-SE', {timeZone: 'Australia/Sydney', year: 'numeric', month: '2-digit', day: '2-digit'}).format(new Date());
   const validId = value => /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(value || '');
   const money = cents => currency.format(cents / 100);
-  const paid = record => record?.payments.reduce((sum, item) => sum + item.cents, 0) || 0;
+  const paymentAmount = item => item.kind === 'refund' ? -item.cents : item.cents;
+  const paid = record => record?.payments.reduce((sum, item) => sum + paymentAmount(item), 0) || 0;
   const stayNights = stay => Math.max(1, Math.round((Date.parse(stay.endDate) - Date.parse(stay.startDate)) / 86400000));
   const stayDates = stay => dates.format(new Date(stay.startDate)) + ' – ' + dates.format(new Date(stay.endDate));
   const cents = value => /^\d{1,6}(?:\.\d{1,2})?$/.test(value) ? Math.round(Number(value) * 100) : 0;
@@ -17,12 +18,229 @@
   const portraits = new Map();
   let dialog, editorPopup, opener, chosenId = '', month = today().slice(0, 7), mode = 'price';
   let paymentEdit = null;
+  let editorRevision = '';
   let showing = 'due', calendarMonth = '', isMaster = false, masterCsv;
+  let sharedRecords = null, sharedKey = '', committing = false;
 
-  function read() {
+  function readLocal() {
     const records = JSON.parse(localStorage.getItem(storageKey) || '{}');
     if (!records || typeof records !== 'object' || Array.isArray(records)) throw Error('Sales records could not be read.');
     return records;
+  }
+
+  function read() { return sharedRecords || readLocal(); }
+
+  async function sharedRequest(operation, extra = {}, key = sharedKey) {
+    const endpoint = masterPage?.dataset.photoEndpoint || window.WAFFLE_MAINTENANCE_GATE?.endpoint;
+    if (!endpoint) throw Error('Shared Sales is unavailable on this page.');
+    const response = await fetch(endpoint, {method:'POST',credentials:'omit',cache:'no-store',referrerPolicy:'no-referrer',
+      body:new URLSearchParams({action:'private_sales',payloadJson:JSON.stringify({operation,key,...extra})})});
+    const result = await response.json();
+    if (!response.ok || result.result !== 'success' || !result.records) throw Error(result.error || 'Shared Sales is unavailable.');
+    return result.records;
+  }
+
+  const revisionFor = record => record?.revision || (record ? 'browser' : '');
+
+  async function commitSales(entries) {
+    if (committing) throw Error('A Sales update is already saving.');
+    committing = true;
+    try {
+      const changeId = crypto.randomUUID();
+      if (sharedRecords) {
+        sharedRecords = await sharedRequest('commit', {entries, changeId});
+      } else {
+        const write = () => {
+          const records = readLocal();
+          for (const entry of entries) {
+            if (revisionFor(records[entry.stayId]) !== entry.expectedRevision) throw Error('Sales changed in another tab. Review the entries again.');
+            records[entry.stayId] = {...entry.record,revision:changeId};
+          }
+          localStorage.setItem(storageKey, JSON.stringify(records));
+        };
+        if (navigator.locks) await navigator.locks.request(storageKey, write);
+        else write();
+      }
+      updateLinks();
+    } finally { committing = false; }
+  }
+
+  const csvColumns = ['Stay ID','Revision','Pet','Check-in','Check-out','Payment source','Price type','Price (AUD)','Due date','Expenses (AUD)','Bookkeeping note'];
+  const reportColumns = ['Total (AUD)','Received (AUD)','Balance (AUD)'];
+  const dollars = value => ((value || 0) / 100).toFixed(2);
+
+  function spreadsheetDate(value) {
+    const local = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(value);
+    const iso = local ? local[3]+'-'+local[2].padStart(2,'0')+'-'+local[1].padStart(2,'0') : value;
+    const stamp = new Date(iso+'T00:00:00Z');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(iso) || !Number.isFinite(+stamp) || stamp.toISOString().slice(0,10) !== iso) throw Error('Enter dates as YYYY-MM-DD or DD/MM/YYYY.');
+    return iso;
+  }
+
+  function downloadSalesCsv(template) {
+    const from = dialog.querySelector('[data-sales-from]').value, to = dialog.querySelector('[data-sales-to]').value;
+    if (from && to && from > to) throw Error('Choose a valid check-in date range.');
+    const records = read();
+    const heading = template ? csvColumns : [...csvColumns,...reportColumns];
+    const rows = [...stays().values()].filter(stay => (!from || stay.startDate >= from) && (!to || stay.startDate <= to));
+    const escapeCell = value => {
+      const text = String(value ?? '');
+      return '"' + (/^[\s\uFEFF]*[=+\-@]|^['\t\r\n]/.test(text) ? "'" : '') + text.replaceAll('"','""') + '"';
+    };
+    const data = rows.map(stay => {
+      const record = records[stay.stayId];
+      const values = [stay.stayId,revisionFor(record),stay.dogName,stay.startDate,stay.endDate,record?.channel || 'direct',
+        record?.priceType || 'fixed',record ? dollars(record.rate) : '',record?.dueDate || stay.endDate,record ? dollars(record.expenses) : '',record?.bookkeepingNote || ''];
+      return template ? values : [...values,record ? dollars(record.total) : '',record ? dollars(paid(record)) : '',record ? dollars(record.total-paid(record)) : ''];
+    });
+    const csv = '\uFEFF' + [heading,...data].map(row => row.map(escapeCell).join(',')).join('\r\n') + '\r\n';
+    const url = URL.createObjectURL(new Blob([csv], {type:'text/csv;charset=utf-8'}));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = template ? 'palz-stay-sales-import-template.csv' : 'palz-stay-sales.csv';
+    document.body.append(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  function parseSalesCsv(contents) {
+    const result = window.WaffleCsv.parse(contents);
+    if (!result.ok || !result.records.length) throw Error('Choose a valid Palz Stay CSV file.');
+    const [header,...rows] = result.records.map(row => row.cells);
+    if (csvColumns.some((label,index) => header[index] !== label)) throw Error('Use the Palz Stay import template and keep the column headers.');
+    const records = read(), bookings = stays(), seen = new Set(), entries = [];
+    const amount = value => {
+      if (!/^\d{1,6}(?:\.\d{1,2})?$/.test(value)) throw Error('Use AUD amounts such as 125.50.');
+      return cents(value);
+    };
+    rows.forEach((row,index) => {
+      if (!row.some(Boolean)) return;
+      try {
+        if (row.length !== header.length) throw Error('The column count does not match the template.');
+        const [id,revision,,start,end,channel,priceType,price,due,expenses,rawNote] = row;
+        const previous = records[id], stay = bookings.get(id);
+        if (!price && !expenses && !rawNote && !previous) return;
+        if (!stay || seen.has(id)) throw Error('The Stay ID is missing, unknown or duplicated.');
+        seen.add(id);
+        if (revision !== revisionFor(previous)) throw Error('This entry changed. Download a fresh template.');
+        if (spreadsheetDate(start) !== stay.startDate || spreadsheetDate(end) !== stay.endDate) throw Error('The stay dates have changed.');
+        if (!['direct','marketplace'].includes(channel) || !['fixed','nightly'].includes(priceType)) throw Error('Choose direct or marketplace and fixed or nightly.');
+        const rate = price ? amount(price) : previous?.rate || 0;
+        const total = previous && rate === previous.rate && priceType === previous.priceType ? previous.total : rate * (priceType === 'nightly' ? stayNights(stay) : 1);
+        if (total < paid(previous)) throw Error('The price is below recorded payments.');
+        const bookkeepingNote = rawNote.replace(/^'(?=[\s\uFEFF]*[=+\-@]|['\t\r\n])/, '');
+        if (bookkeepingNote.length > 240) throw Error('Keep notes to 240 characters.');
+        const record = {dogName:stay.dogName,startDate:stay.startDate,endDate:stay.endDate,channel,priceType,rate,total,
+          dueDate:spreadsheetDate(due),expenses:expenses ? amount(expenses) : 0,payments:previous?.payments || [],bookkeepingNote};
+        const fields = ['channel','priceType','rate','total','dueDate','expenses','bookkeepingNote'];
+        if (!previous || fields.some(field => record[field] !== (previous[field] ?? (field === 'expenses' ? 0 : '')))) {
+          entries.push({stayId:id,expectedRevision:revision,record});
+        }
+      } catch (error) { throw Error('Row '+(index+2)+'. '+error.message); }
+    });
+    if (entries.length > 200) throw Error('Import up to 200 changed stays at a time.');
+    return entries;
+  }
+
+  function showSalesImport(host, entries, message, onConfirm) {
+    host.replaceChildren();
+    host.hidden = !entries.length;
+    if (!entries.length) return;
+    const heading = document.createElement('p');
+    heading.textContent = message;
+    const list = document.createElement('ul');
+    for (const {record} of entries) {
+      const row = document.createElement('li');
+      row.textContent = record.dogName+' · '+stayDates(record)+' · '+money(record.total)+' · Expenses '+money(record.expenses);
+      list.append(row);
+    }
+    const apply = document.createElement('button');
+    apply.type = 'button';
+    apply.textContent = 'Apply '+entries.length+(entries.length === 1 ? ' entry' : ' entries');
+    apply.onclick = async () => {
+      apply.disabled = true;
+      try { await commitSales(entries); host.hidden = true; render(); onConfirm('Sales entries saved.'); }
+      catch (error) { onConfirm(error.message); }
+      finally { apply.disabled = false; }
+    };
+    host.append(heading,list,apply);
+  }
+
+  function wireLedgerTools() {
+    const find = selector => dialog.querySelector(selector);
+    const unlock = find('[data-sales-unlock]'), actions = find('[data-sales-shared-actions]');
+    const shareStatus = find('[data-sales-share-status]');
+    const localPreview = find('[data-sales-local-preview]');
+    function syncMode() {
+      const shared = Boolean(sharedRecords);
+      unlock.hidden = shared;
+      actions.hidden = !shared;
+      localPreview.hidden = true;
+      const csvPreview = find('[data-sales-import-preview]');
+      if (csvPreview) csvPreview.hidden = true;
+      find('[data-sales-storage]').textContent = shared ? 'Using the shared Sales ledger.' : 'Sales records are saved in this browser.';
+      render();
+      updateLinks();
+    }
+    unlock.onsubmit = async event => {
+      event.preventDefault();
+      const button = unlock.querySelector('button'), key = unlock.elements.key.value.trim();
+      button.disabled = true;
+      try { sharedRecords = await sharedRequest('read', {}, key); sharedKey = key; unlock.reset(); syncMode(); shareStatus.textContent = ''; }
+      catch (error) { shareStatus.textContent = error.message; }
+      finally { button.disabled = false; }
+    };
+    find('[data-sales-lock]').onclick = () => {
+      if (committing) return;
+      sharedRecords = null;
+      sharedKey = '';
+      shareStatus.textContent = '';
+      syncMode();
+    };
+    find('[data-sales-refresh]').onclick = async event => {
+      if (committing) return;
+      const button = event.currentTarget, key = sharedKey;
+      button.disabled = true;
+      try {
+        const records = await sharedRequest('read');
+        if (sharedKey !== key || committing) return;
+        sharedRecords = records;
+        syncMode();
+        shareStatus.textContent = 'Ledger refreshed.';
+      } catch (error) { shareStatus.textContent = error.message; }
+      finally { button.disabled = false; }
+    };
+    find('[data-sales-copy-local]').onclick = () => {
+      const local = Object.entries(readLocal()), bookings = stays();
+      const entries = local.filter(([id]) => bookings.has(id) && !sharedRecords[id]).map(([stayId,record]) => ({stayId,expectedRevision:'',record,importLocal:true}));
+      const skipped = local.length - entries.length;
+      shareStatus.textContent = skipped ? skipped+' browser entries already exist in Shared Sales or could not be matched. They remain in this browser.' : '';
+      showSalesImport(localPreview, entries, 'Copy these entries to the shared ledger?', message => { shareStatus.textContent = message; });
+      if (!entries.length && !skipped) shareStatus.textContent = 'No browser entries to copy.';
+    };
+    const file = find('[data-sales-file]');
+    if (!file) return;
+    const fileStatus = find('[data-sales-file-status]'), preview = find('[data-sales-import-preview]');
+    const download = template => {
+      try { downloadSalesCsv(template); fileStatus.textContent = ''; }
+      catch (error) { fileStatus.textContent = error.message; }
+    };
+    find('[data-sales-export]').onclick = () => download(false);
+    find('[data-sales-template]').onclick = () => download(true);
+    find('[data-sales-file-open]').onclick = () => file.click();
+    file.onchange = async () => {
+      const selected = file.files[0];
+      file.value = '';
+      preview.hidden = true;
+      if (!selected) return;
+      try {
+        if (selected.size > 1000000) throw Error('Choose a CSV smaller than 1 MB.');
+        const entries = parseSalesCsv(await selected.text());
+        fileStatus.textContent = entries.length ? '' : 'No Sales changes found.';
+        showSalesImport(preview,entries,'Review prices and expenses before importing.',message => { fileStatus.textContent = message; });
+      } catch (error) { fileStatus.textContent = error.message; }
+    };
   }
 
   function confirmedRows() {
@@ -57,7 +275,9 @@
     dialog.setAttribute('aria-labelledby', 'palz-sales-title');
     if (!masterPage) dialog.setAttribute('aria-modal', 'true');
     dialog.innerHTML = '<header><h1 id="palz-sales-title">Sales</h1>' + (masterPage ? '<a href="index.html?view=today">Back to Palz Stay</a>' : '<button type="button" data-sales-close aria-label="Close Sales">×</button>') + '</header>' +
-      '<div class="palz-sales-body"><p class="palz-sales-local">Sales records are saved in this browser.</p>' +
+      '<div class="palz-sales-body"><p class="palz-sales-local" data-sales-storage>Sales records are saved in this browser.</p>' +
+      (masterPage ? '<details class="palz-sales-spreadsheet"><summary>Spreadsheet tools</summary><div class="palz-sales-fields"><label>Check-in from<input type="date" data-sales-from></label><label>Check-in to<input type="date" data-sales-to></label></div><div class="palz-sales-file-actions"><button type="button" data-sales-export>Export CSV</button><button type="button" data-sales-template>Download import template</button><button type="button" data-sales-file-open>Import CSV</button><input type="file" accept=".csv,text/csv" data-sales-file hidden></div><p data-sales-file-status role="status"></p><div data-sales-import-preview hidden></div></details>' : '') +
+      '<details class="palz-sales-spreadsheet"><summary>Shared Sales</summary><form data-sales-unlock><label>Owner access key<input type="password" name="key" autocomplete="current-password" required></label><button type="submit">Unlock</button></form><div data-sales-shared-actions hidden><button type="button" data-sales-refresh>Refresh ledger</button><button type="button" data-sales-copy-local>Review browser entries</button><button type="button" data-sales-lock>Lock</button></div><p data-sales-share-status role="status"></p><div data-sales-local-preview hidden></div></details>' +
       '<label class="palz-sales-month">Reporting month <input type="month" aria-label="Reporting month"></label>' +
       '<div data-sales-totals class="palz-sales-totals"></div>' +
       '<div class="palz-sales-list-head"><h2>Stays</h2><button type="button" data-sales-filter>Sales history</button></div>' +
@@ -85,6 +305,7 @@
       dialog.querySelector('[data-sales-close]').onclick = () => dialog.close();
     }
     dialog.addEventListener('close', () => opener?.focus());
+    wireLedgerTools();
     dialog.querySelector('input[type=month]').addEventListener('change', event => { month = event.target.value || today().slice(0, 7); render(); });
     dialog.querySelector('[data-sales-master-search]').oninput = () => renderMaster(read());
     dialog.querySelector('[data-sales-master-period]').onchange = () => renderMaster(read());
@@ -143,7 +364,7 @@
     dialog.addEventListener('error', event => {
       if (event.target.matches?.('.palz-sales-portrait img')) event.target.remove();
     }, true);
-    dialog.querySelector('form').addEventListener('submit', save);
+    dialog.querySelector('[data-sales-form]').addEventListener('submit', save);
   }
 
   function renderHistory(entries, bookings) {
@@ -290,7 +511,7 @@
     const bookings = stays();
     const entries = Object.entries(records);
     const booked = entries.filter(([id, record]) => (bookings.get(id)?.startDate || record.startDate).startsWith(month)).reduce((sum, [, record]) => sum + record.total, 0);
-    const received = entries.flatMap(([, record]) => record.payments).filter(item => item.date.startsWith(month)).reduce((sum, item) => sum + item.cents, 0);
+    const received = entries.flatMap(([, record]) => record.payments).filter(item => item.date.startsWith(month)).reduce((sum, item) => sum + paymentAmount(item), 0);
     const outstanding = entries.reduce((sum, [, record]) => sum + record.total - paid(record), 0);
     dialog.querySelector('input[type=month]').value = month;
     dialog.querySelector('[data-sales-totals]').innerHTML = [
@@ -320,24 +541,26 @@
     const host = dialog.querySelector('[data-sales-editor]');
     host.oninput = null;
     const record = read()[chosenId];
+    editorRevision = revisionFor(record);
     const stay = stays().get(chosenId) || record;
     dialog.querySelector('[data-sales-status]').textContent = '';
     renderStayCalendar(stay);
     if (!stay) { host.innerHTML = ''; return; }
     const summary = record ? '<p><strong>'+money(record.total - paid(record))+' outstanding</strong> · '+money(paid(record))+' received</p>' : '';
     const history = record?.payments.length ? '<details'+(paymentEdit ? ' open' : '')+'><summary>Payment history</summary><ul class="palz-sales-payments">'+record.payments.map((item, index) =>
-      '<li><span>'+money(item.cents)+' · '+esc(item.method)+' · '+esc(item.date)+'</span><button type="button" data-sales-edit-payment="'+index+'" aria-label="Edit payment '+(index + 1)+'">Edit</button></li>'
-    ).join('')+'</ul></details>' : '';
+      '<li><span>'+(item.kind === 'refund' ? 'Refund · ' : '')+money(paymentAmount(item))+' · '+esc(item.method)+' · '+esc(item.date)+'</span><button type="button" data-sales-edit-payment="'+index+'" aria-label="Edit payment '+(index + 1)+'">Edit</button></li>'
+    ).join('')+'</ul>'+(paid(record) > 0 ? '<button type="button" data-sales-mode="refund">Record refund</button>' : '')+'</details>' : '';
     const editing = paymentEdit ? JSON.parse(paymentEdit.snapshot) : null;
-    if (mode === 'payment' && record && (editing || record.total > paid(record))) {
+    const refund = mode === 'refund' || editing?.kind === 'refund';
+    if (record && (mode === 'refund' && paid(record) > 0 || mode === 'payment' && (editing || record.total > paid(record)))) {
       const payout = record.channel === 'marketplace';
       const methods = editing ? [...new Set([...paymentMethods, editing.method].filter(Boolean))] : payout ? ['Marketplace payout'] : paymentMethods.slice(0, 3);
-      const amount = editing?.cents ?? record.total - paid(record);
+      const amount = editing?.cents ?? (refund ? 0 : record.total - paid(record));
       host.innerHTML = summary +
         '<div class="palz-sales-fields"><label>Amount (AUD)<input name="amount" inputmode="decimal" required value="'+(amount / 100).toFixed(2)+'"></label>'+
-        '<label>Payment date<input name="date" type="date" required max="'+today()+'" value="'+esc(editing?.date || today())+'"></label>'+
+        '<label>'+(refund ? 'Refund date' : 'Payment date')+'<input name="date" type="date" required max="'+today()+'" value="'+esc(editing?.date || today())+'"></label>'+
         '<label>Method<select name="method">'+methods.map(method => '<option'+(method === editing?.method ? ' selected' : '')+'>'+esc(method)+'</option>').join('')+'</select></label></div>'+
-        '<div class="palz-sales-actions"><button type="submit" class="palz-sales-primary">'+(editing ? 'Save payment changes' : payout ? 'Save payout' : 'Save payment')+'</button>'+
+        '<div class="palz-sales-actions"><button type="submit" class="palz-sales-primary">'+(editing ? 'Save payment changes' : refund ? 'Save refund' : payout ? 'Save payout' : 'Save payment')+'</button>'+
         '<button type="button" data-sales-mode="'+(editing ? 'payment' : 'price')+'">'+(editing ? 'Cancel edit' : 'Edit price')+'</button></div>'+history;
       return;
     }
@@ -347,7 +570,7 @@
       host.querySelector('[name=amount]').required = false;
       host.querySelector('[data-sales-expenses]').innerHTML = '<div class="palz-sales-fields"><label>Stay expenses (AUD)<input name="expenses" inputmode="decimal" value="'+(record?.expenses ? (record.expenses/100).toFixed(2) : '')+'"></label><label>Bookkeeping note<input name="bookkeepingNote" maxlength="240" value="'+esc(record?.bookkeepingNote || '')+'"></label></div>';
     }
-    const form = dialog.querySelector('form');
+    const form = dialog.querySelector('[data-sales-form]');
     const preview = () => {
       const count = form.elements.priceType.value === 'nightly' ? stayNights(stay) : 1;
       const total = cents(form.elements.amount.value.trim()) * count;
@@ -377,20 +600,29 @@
     const priceText = String(values.get('amount') || '').trim();
     const expensesOnly = isMaster && action === 'price' && !priceText && cents(expenseText) > 0;
     const zeroPrice = action === 'price' && /^0{1,6}(?:\.0{1,2})?$/.test(priceText);
-    if (!validId(id) || (!amount && !expensesOnly && !zeroPrice) || !/^\d{4}-\d{2}-\d{2}$/.test(date)) { status('Enter a valid amount and date.'); return; }
+    const reversePayment = action === 'payment' && edit && /^0{1,6}(?:\.0{1,2})?$/.test(priceText);
+    if (!validId(id) || (!amount && !expensesOnly && !zeroPrice && !reversePayment)) { status('Enter a valid amount and date.'); return; }
+    try { spreadsheetDate(date); } catch (_) { status('Enter a valid amount and date.'); return; }
     if (submit) submit.disabled = true;
-    const write = () => {
+    const prepare = () => {
       const records = read();
-      const previous = records[id];
+      const current = records[id];
+      if (revisionFor(current) !== editorRevision) throw Error('Sales changed. Reopen the editor to review the latest figures.');
+      const previous = current ? structuredClone(current) : null;
       const stay = stays().get(id) || previous;
       if (!stay) throw Error('This confirmed stay could not be found.');
-      if (action === 'payment') {
+      if (action === 'payment' || action === 'refund') {
         const existing = edit ? previous?.payments[edit.index] : null;
         if (edit && JSON.stringify(existing) !== edit.snapshot) throw Error('This payment changed. Cancel the edit and select it again.');
-        if (!previous || date > today() || amount > previous.total - paid(previous) + (existing?.cents || 0)) throw Error('Check the payment date and outstanding balance.');
+        if (!previous || date > today()) throw Error('Check the payment date.');
         const payment = {cents: amount, date, method: String(values.get('method'))};
+        if (action === 'refund' || existing?.kind === 'refund') payment.kind = 'refund';
         if (edit) previous.payments[edit.index] = payment;
         else previous.payments.push(payment);
+        let net = 0;
+        const ordered = [...previous.payments].sort((a,b) => a.date.localeCompare(b.date) || Number(a.kind === 'refund') - Number(b.kind === 'refund'));
+        if (ordered.some(item => (net += paymentAmount(item)) < 0) || net > previous.total) throw Error('Check the payment date, refund amount and outstanding balance.');
+        return previous;
       } else {
         const priceType = values.get('priceType') === 'nightly' ? 'nightly' : 'fixed';
         const total = amount * (priceType === 'nightly' ? stayNights(stay) : 1);
@@ -399,19 +631,17 @@
         const payments = previous?.payments || [];
         const balance = total - paid(previous);
         if (markPaid && balance > 0) payments.push({ cents: balance, date: today(), method: channel === 'marketplace' ? 'Marketplace payout' : 'Other' });
-        records[id] = {dogName: stay.dogName, startDate: stay.startDate, endDate: stay.endDate,
+        return {dogName: stay.dogName, startDate: stay.startDate, endDate: stay.endDate,
           channel, priceType, rate: amount, total, dueDate: date, payments,
           expenses: expenseInput === null ? previous?.expenses || 0 : cents(expenseText),
           bookkeepingNote: values.has('bookkeepingNote') ? String(values.get('bookkeepingNote')).trim().slice(0, 240) : previous?.bookkeepingNote || ''};
       }
-      localStorage.setItem(storageKey, JSON.stringify(records));
     };
     try {
-      if (navigator.locks) await navigator.locks.request(storageKey, write);
-      else write();
+      await commitSales([{stayId:id,expectedRevision:editorRevision,record:prepare()}]);
       paymentEdit = null;
       render();
-      status(action === 'payment' ? (edit ? 'Payment updated.' : 'Payment recorded.') : markPaid ? 'Price saved and payment recorded.' : expensesOnly ? 'Expenses saved.' : zeroPrice ? 'Price reset to $0.00.' : 'Price saved.');
+      status(action === 'refund' ? 'Refund recorded.' : action === 'payment' ? (edit ? 'Payment updated.' : 'Payment recorded.') : markPaid ? 'Price saved and payment recorded.' : expensesOnly ? 'Expenses saved.' : zeroPrice ? 'Price reset to $0.00.' : 'Price saved.');
       updateLinks();
     } catch (error) { status(error.message || 'Sales record could not be saved.'); }
     finally { if (submit) submit.disabled = false; }

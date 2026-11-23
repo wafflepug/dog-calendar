@@ -1805,6 +1805,17 @@ function hydrateTodayDeparturePhotos(host) {
         }).catch(() => { /* Keep the default portrait when photos are unavailable. */ });
 }
 
+function updatePalzTodayActionsAlert() {
+    const todayStatus = document.getElementById('v10TodayStatus');
+    if (!todayStatus) return;
+    const extra = [...document.querySelectorAll('[data-palz-today-work]')].reduce((total, section) => total + Number(section.dataset.palzTodayWork || 0), 0);
+    const count = Number(todayStatus.dataset.queueCount || 0) + extra;
+    todayStatus.setAttribute('aria-label', `${count} action${count === 1 ? '' : 's'} today`);
+    todayStatus.hidden = count === 0;
+    todayStatus.dataset.mode = count ? 'active' : 'clear';
+    todayStatus.closest('.v10-agenda-card')?.toggleAttribute('data-extra-today-work', extra > 0);
+}
+
 function renderV10OperationsHome(events) {
     if (WAFFLE_PAGE !== 'calendar') {
         return;
@@ -1990,18 +2001,8 @@ function renderV10OperationsHome(events) {
             'v10TodayStatus'
         );
 
-    if (todayStatus) {
-        const attentionCount =
-            queue.length;
-
-        todayStatus.setAttribute('aria-label', `${attentionCount} action${attentionCount === 1 ? '' : 's'} today`);
-
-        todayStatus.hidden = attentionCount === 0;
-        todayStatus.dataset.mode =
-            attentionCount
-                ? 'active'
-                : 'clear';
-    }
+    if (todayStatus) todayStatus.dataset.queueCount = String(queue.length);
+    updatePalzTodayActionsAlert();
 
     const agendaHost =
         document.getElementById(
