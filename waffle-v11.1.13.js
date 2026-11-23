@@ -117,19 +117,23 @@
   }
 
   function openStayDatesModal(card, trigger) {
-    if (!card || card.dataset.v1082PastStay === 'true' || !card.classList.contains('is-profile-active')) return;
+    const fromRoster = Boolean(trigger?.matches('[data-v11113-roster-extend]'));
+    if (!card || card.dataset.v1082PastStay === 'true' || trigger?.disabled) return;
+    if (fromRoster ? window.v110OperationDisplayState?.(card)?.code !== 'checked_in' : !card.classList.contains('is-profile-active')) return;
     const startDate = String(card.dataset.directoryStartDate || card.dataset.startDate || '').trim();
     const endDate = String(card.dataset.directoryEndDate || card.dataset.endDate || startDate).trim();
     if (!startDate || !endDate) return;
     pendingStayDateCard = card;
-    pendingExtension = trigger?.matches('[data-v11113-extend-stay]') ? { endDate, trigger } : null;
+    pendingExtension = trigger?.matches('[data-v11113-extend-stay]')
+      ? { startDate, endDate, trigger, fromRoster, stayId: card.dataset.directoryStayId, dogId: card.dataset.directoryDogId, stayKey: card.dataset.directoryStayKey }
+      : null;
     const modal = ensureStayDatesModal();
     const dogName = String(card.dataset.directoryDogName || card.dataset.dogName || 'this dog').trim();
     modal.querySelector('#v11113StayDatesTitle').textContent = pendingExtension ? 'Extend stay' : 'Edit Stay Dates';
     modal.querySelector('[data-v11113-extension]').hidden = !pendingExtension;
     modal.querySelector('[data-v11113-start-date]').closest('.v11113-stay-dates-fields').hidden = Boolean(pendingExtension);
     modal.querySelector('[data-v11113-stay-dates-copy]').textContent = pendingExtension
-      ? `Add days to ${dogName}'s scheduled checkout.`
+      ? `Add days to ${dogName}'s scheduled check-out.`
       : `Update ${dogName}'s boarding dates. Linked Care and intake records will follow the new stay dates.`;
     modal.querySelector('[data-v11113-start-date]').value = startDate;
     modal.querySelector('[data-v11113-end-date]').value = endDate;
@@ -185,10 +189,17 @@
     ).trim();
 
     if (saveButton.disabled) return;
-    if (pendingExtension && (!pendingExtension.trigger.isConnected || card.dataset.v1082PastStay === 'true' || originalEndDate !== pendingExtension.endDate)) {
-      status.textContent = 'This stay changed. Close and reopen the profile to try again.';
-      status.className = 'v11113-stay-dates-status is-error';
-      return;
+    if (pendingExtension) {
+      const extension = pendingExtension;
+      const sameStay = originalStartDate === extension.startDate && originalEndDate === extension.endDate &&
+        card.dataset.directoryStayId === extension.stayId && card.dataset.directoryDogId === extension.dogId &&
+        card.dataset.directoryStayKey === extension.stayKey;
+      const stillCheckedIn = !extension.fromRoster || window.v110OperationDisplayState?.(card)?.code === 'checked_in';
+      if (!extension.trigger.isConnected || extension.trigger.disabled || card.dataset.v1082PastStay === 'true' || !sameStay || !stillCheckedIn) {
+        status.textContent = 'This stay changed. Close this window and review the stay before trying again.';
+        status.className = 'v11113-stay-dates-status is-error';
+        return;
+      }
     }
     if (!startDate || !endDate) {
       status.textContent = pendingExtension ? 'Enter a valid whole number of additional days.' : 'Choose both dates.';
@@ -255,8 +266,9 @@
         try { nextStayKey = window.v110MakeStayKey(dogName, startDate, endDate); } catch (_) {}
       }
       const nextStayId = String(response?.stayId || response?.booking?.stayId || stayId).trim();
+      const fromRoster = pendingExtension?.fromRoster;
       setTimeout(() => {
-        window.location.href = nextStayId
+        window.location.href = fromRoster ? 'directory.html' : nextStayId
           ? `directory.html?stayId=${encodeURIComponent(nextStayId)}&stayKey=${encodeURIComponent(nextStayKey)}`
           : nextStayKey
           ? `directory.html?stayKey=${encodeURIComponent(nextStayKey)}`
@@ -529,7 +541,7 @@
       const dates = event.target.closest('.v11113-editable-stay-dates, [data-v11113-extend-stay]');
       if (!dates) return;
       const card = profileCardFromElement(dates);
-      if (!card?.classList.contains('is-profile-active')) return;
+      if (!card) return;
       event.preventDefault();
       event.stopPropagation();
       openStayDatesModal(card, dates);
