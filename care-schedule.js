@@ -120,12 +120,17 @@
   void refresh();
 
   const arrivals = document.createElement('details');
-  arrivals.className = 'palz-care-schedule';
+  arrivals.className = 'palz-care-schedule palz-before-arrival';
   arrivals.dataset.palzTodayWork = '0';
   arrivals.hidden = true;
-  arrivals.innerHTML = '<summary>Before arrival</summary><div></div>';
+  arrivals.innerHTML = `
+    <summary><span>Before arrival</span><span class="palz-before-arrival-count"></span></summary>
+    <ul class="palz-before-arrival-list" role="list"></ul>`;
   todayCare.after(arrivals);
-  let arrivalsPending = false;
+  const arrivalSummary = arrivals.querySelector('summary');
+  const arrivalCount = arrivals.querySelector('.palz-before-arrival-count');
+  const arrivalList = arrivals.querySelector('.palz-before-arrival-list');
+  let arrivalsPending = false, lastArrivalMarkup = '';
   async function refreshArrivals() {
     if (arrivalsPending || document.hidden) return;
     arrivalsPending = true;
@@ -134,11 +139,29 @@
       arrivals.hidden = !checks.length;
       arrivals.dataset.palzTodayWork = String(checks.length);
       window.updatePalzTodayActionsAlert?.();
-      arrivals.querySelector('summary').textContent = 'Before arrival · '+checks.length+' to review';
-      arrivals.querySelector('div').innerHTML = checks.map(check => {
-        const href = 'directory.html?'+new URLSearchParams({stayKey:check.stayKey,stayId:check.stayId,dogId:check.dogId,pet:'1'});
-        return '<div class="palz-care-slot"><span><strong>'+esc(check.dogName)+'</strong><small>'+esc(check.startDate)+' · '+esc(check.needs.join(' · '))+'</small></span><a href="'+esc(href)+'">Review</a></div>';
+      const countLabel = checks.length + ' to review';
+      if (arrivalCount.textContent !== countLabel) arrivalCount.textContent = countLabel;
+      const markup = checks.map(check => {
+        const href = 'directory.html?' + new URLSearchParams({stayKey:check.stayKey,stayId:check.stayId,dogId:check.dogId,pet:'1'});
+        const arrivalDate = window.v10FormatDateLabel(check.startDate);
+        return `<li class="palz-before-arrival-row">
+          <div class="palz-before-arrival-guest">
+            <strong>${esc(check.dogName)}</strong>
+            <time datetime="${esc(check.startDate)}">Arrives ${esc(arrivalDate)}</time>
+          </div>
+          <a class="wh-home-link palz-before-arrival-review" href="${esc(href)}" aria-label="Review ${esc(check.dogName)}, arriving ${esc(arrivalDate)}">Review</a>
+          <ul class="palz-before-arrival-checks">${check.needs.map(need => '<li>' + esc(need) + '</li>').join('')}</ul>
+        </li>`;
       }).join('');
+      if (markup !== lastArrivalMarkup) {
+        const focusedLink = arrivalList.contains(document.activeElement) ? document.activeElement.href : '';
+        arrivalList.innerHTML = markup;
+        lastArrivalMarkup = markup;
+        if (focusedLink && !arrivals.hidden) {
+          const restored = [...arrivalList.querySelectorAll('a')].find(link => link.href === focusedLink);
+          (restored || arrivalSummary).focus({preventScroll:true});
+        }
+      }
     } catch (_) { /* Keep the last displayed checklist if a refresh fails. */ }
     finally { arrivalsPending = false; }
   }

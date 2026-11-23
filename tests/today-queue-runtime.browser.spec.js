@@ -7,6 +7,7 @@ const calendar = fs.readFileSync(path.join(__dirname, 'fixtures/fullcalendar.glo
 test('the shipped Today page keeps profile links, exposes direct confirmed-stay actions and opens its exact Meet & Greet', async ({page, baseURL}, info) => {
   const writes = [];
   const errors = [];
+  let arrivalReads = 0;
   page.on('pageerror', error => errors.push(error.message));
   await page.addInitScript(() => {
     const NativeDate = Date;
@@ -46,6 +47,14 @@ test('the shipped Today page keeps profile links, exposes direct confirmed-stay 
         response.date = '2026-10-16';
         response.entries = [{dogId, stayId, type:'Pickup', time:'17:30'}];
       }
+      if (resolved.action === 'get_prearrival_checks') {
+        arrivalReads++;
+        response.checks = [{
+          dogName:'Nigel with a long registered name', stayKey:'nigel|2026-10-17|2026-10-20',
+          stayId:'44444444-4444-4444-8444-444444444444', dogId:'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+          startDate:'2026-10-17', needs:['Review intake','Confirm handover times','Review vaccination record']
+        }];
+      }
       return route.fulfill({contentType:'application/javascript',body:callback?`${callback}(${JSON.stringify(response)});`:JSON.stringify(response)});
     }
     if (/^https?:/.test(url) && new URL(url).hostname !== '127.0.0.1') return route.fulfill({body:'',contentType:req.resourceType()==='script'?'application/javascript':'text/css'});
@@ -57,7 +66,7 @@ test('the shipped Today page keeps profile links, exposes direct confirmed-stay 
     await page.waitForFunction(() => document.documentElement.dataset.waffleUiReady === 'true');
     const queue = page.locator('#v10TodayAgenda');
     await expect(queue.locator('.v10-agenda-item')).toHaveCount(4);
-    const alert = page.getByRole('img', {name:'4 actions today'});
+    const alert = page.getByRole('img', {name:'5 actions today'});
     await expect(alert.locator('svg')).toBeVisible();
     await expect(alert).toHaveText('');
     await expect(queue.getByRole('link', {name:/Open Biscoff care profile, Same Day Care · Checked in · Check-out 05:30pm/})).toBeVisible();
@@ -75,6 +84,28 @@ test('the shipped Today page keeps profile links, exposes direct confirmed-stay 
     expect(headingFonts[0]).toBe(headingFonts[1]);
     await expect(queue.getByRole('link', {name:/Open Milo care profile/})).toHaveAttribute('href', /stayId=11111111-1111-4111-8111-111111111111.*dogId=aaaaaaaa/);
     await page.evaluate(dark => document.body.classList.toggle('dark-theme', dark), width === 1440);
+
+    const beforeArrival = page.locator('.palz-before-arrival');
+    const review = beforeArrival.getByRole('link', {name:/Review Nigel/});
+    await expect(review).toBeHidden();
+    await beforeArrival.getByText('Before arrival', {exact:true}).click();
+    await expect(beforeArrival.getByText('1 to review')).toBeVisible();
+    await expect(beforeArrival.locator('time')).toHaveText(/Arrives Sat,? 17 Oct/);
+    await expect(beforeArrival.locator('.palz-before-arrival-checks li')).toHaveText(['Review intake','Confirm handover times','Review vaccination record']);
+    await expect(review).toHaveAttribute('href', /stayId=44444444-4444-4444-8444-444444444444.*dogId=dddddddd-dddd-4ddd-8ddd-dddddddddddd/);
+    expect((await review.boundingBox()).height).toBeGreaterThanOrEqual(44);
+    if (width === 320) {
+      await review.focus();
+      const previousReads = arrivalReads;
+      await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+      await expect.poll(() => arrivalReads).toBeGreaterThan(previousReads);
+      await expect(review).toBeFocused();
+    }
+    await info.attach(`before-arrival-${width}`, {
+      body:await beforeArrival.screenshot({path:info.outputPath(`before-arrival-${width}.png`)}), contentType:'image/png'
+    });
+    await beforeArrival.getByText('Before arrival', {exact:true}).click();
+
     await expect.poll(() => queue.locator('[data-today-meet-done]:visible').first().evaluate(element => {
       // A scheduled render can replace a row between locator resolution and
       // evaluation. Unknown/detached colours remain below the threshold.
