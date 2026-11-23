@@ -119,6 +119,12 @@ function doPost(e) {
     if (earlyAction === "website_intake") {
       return websiteIntakeResponse_(params.payloadJson);
     }
+    if (earlyAction === "private_sales") {
+      return privateSalesResponse_(params.payloadJson);
+    }
+    if (earlyAction === "palz_operator" || earlyAction === "owner_stay") {
+      return palzOwnerStayResponse_(earlyAction, params.payloadJson);
+    }
 
     // Put action/uploadToken in the URL query string as well as the POST form.
     // This lets us report a useful status even if a large form body fails to
@@ -3155,6 +3161,9 @@ var READ_ONLY_SHEET_ACTIONS_ = {
   get_intake_prefill: true,
   get_belongings: true,
   get_care_routine_log: true,
+  get_care_schedule: true,
+  get_today_care_schedule: true,
+  get_prearrival_checks: true,
   get_sitter_planning: true,
   get_business_name: true,
   get_sitter_handover: true,
@@ -3617,6 +3626,9 @@ function processReadOnlySheetAction_(data) {
   if (action === "get_sitter_roster_pickups") return getSitterRosterPickups_();
   if (action === "get_sitter_handover") return getSitterHandover_(data);
 
+  if (action === "get_care_schedule") return careScheduleGet_(data);
+  if (action === "get_today_care_schedule") return careScheduleToday_();
+  if (action === "get_prearrival_checks") return palzPrearrivalChecks_();
   if (action === "get_care_routine_log") {
     return getVersionedWaffleRead_("careRoutineLog", action, data, 20, function() {
       return getCareRoutineLog_(data);
@@ -5123,6 +5135,8 @@ function processSheetAction_(data) {
     if (data.action === "save_sitter_handover") return saveSitterHandover_(data);
 
     if (data.action === "record_care_routine_event") return recordCareRoutineEvent_(data);
+    if (data.action === "save_care_schedule") return careScheduleSave_(data);
+    if (data.action === "complete_scheduled_care") return careScheduleComplete_(data);
 
     if (data.action === "checkin_stay") { result.record=setStayOperationalStatus_(data,"checked_in"); return result; }
     if (data.action === "checkout_stay") { result.record=setStayOperationalStatus_(data,"checked_out"); return result; }

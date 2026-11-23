@@ -3,7 +3,7 @@
    Historical base styles remain compatibility sources during Phase 3A, but pages no longer
    reference them individually. Preserve this import order until modules are folded in. */
 @import url("waffle-app.css?build=2026.08.27.04&rev=2026.11.15.01");
-@import url("palz-sales.css?rev=2026.11.15.01");
+@import url("palz-sales.css?rev=2026.11.24.01");
 @import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.11.15.01");
 @import url("waffle-v10.8.2.css?build=2026.08.27.04");
 @import url("waffle-v10.8.3.css?build=2026.08.27.04");
@@ -249,6 +249,16 @@ body .wh-home-departure-flag > span.palz-icon-host { color: inherit; }
 .wh-home-departure-flag[hidden] { display: none; }
 .v10-today-status[role="img"]:not([hidden]) { display: grid; place-items: center; width: 30px; height: 30px; padding: 0; }
 .v10-today-status[role="img"] svg { width: 17px; height: 17px; }
+.v10-agenda-card[data-extra-today-work] .v10-all-clear { display:none; }
+.palz-care-schedule { margin-block-start:8px; border-top:1px solid var(--v10-border,#d6deeb); }
+.palz-care-schedule > summary { min-height:44px; align-content:center; font-weight:750; cursor:pointer; }
+.palz-care-schedule [hidden], .palz-care-schedule p:empty { display:none; }
+.palz-care-schedule small { display:block; color:var(--v10-muted,#526174); }
+.palz-care-schedule :is(button,input,select) { min-height:44px; max-width:100%; font:inherit; color:inherit; background:var(--v10-card,#fff); border:1px solid var(--v10-border,#d6deeb); border-radius:9px; padding:5px 8px; }
+.palz-care-schedule input[type=checkbox] { min-height:0; }
+.palz-care-schedule form button { margin-block:4px; }
+.palz-care-schedule label { display:block; }
+.palz-care-slot { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:6px; margin-block:5px; }
 .wh-home-guest.is-leaving .wh-home-guest-label { font-weight: 750; color: var(--wh75-accent-ink, #4338ca); }
 .wh-home-guest:hover .wh-home-portrait { outline-width: 3px; }
 .wh-home-guest:focus-visible, .wh-home-link:focus-visible { outline: 3px solid var(--wh75-accent, #7562db); outline-offset: 4px; }

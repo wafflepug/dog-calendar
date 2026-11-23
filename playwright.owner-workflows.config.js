@@ -2,7 +2,7 @@ const { defineConfig } = require('@playwright/test');
 const python = process.env.WAFFLE_PYTHON || (process.platform === 'win32' ? 'python' : 'python3');
 module.exports = defineConfig({
   testDir: './tests',
-  testMatch: ['today-queue.browser.spec.js','today-queue-runtime.browser.spec.js'],
+  testMatch: ['today-queue.browser.spec.js','today-queue-runtime.browser.spec.js','palz-owner-roadmap.browser.spec.js'],
   timeout: 60000,
   expect: { timeout: 12000 },
   workers: 1,

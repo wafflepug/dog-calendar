@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="referrer" content="no-referrer">
+  <title>Your pet’s stay | Palz Stay</title>
+  <link rel="icon" href="palz-favicon.png" type="image/png">
+  <link rel="stylesheet" href="palz-sales.css?rev=2026.11.24.01">
+  <script src="owner-stay.js?rev=1" defer></script>
+</head>
+<body class="palz-sales-page palz-owner-page">
+  <main class="palz-sales" data-owner-stay data-endpoint="https://script.google.com/macros/s/AKfycbwn4HL49K9c3AZbXJRUjPw3UYWxJt8DmqXwMtNtytyqdSstj3ZIJwWdDEC2IsBjetOf3pw/exec">
+    <header><h1>Palz Stay</h1></header>
+    <div class="palz-sales-body">
+      <p role="status" data-owner-status>Loading your pet’s stay…</p>
+      <section data-owner-content hidden>
+        <h2 data-owner-pet></h2>
+        <p data-owner-dates></p>
+        <img data-owner-photo hidden alt="Photo shared by your sitter">
+        <p data-owner-update hidden></p>
+        <a data-owner-intake hidden>Complete intake form</a>
+        <p data-owner-complete hidden>Intake received</p>
+        <form data-owner-handover>
+          <h2>Handover times</h2>
+          <div class="palz-sales-fields">
+            <label>Drop-off<input type="time" name="dropoffTime"></label>
+            <label>Pick-up<input type="time" name="pickupTime"></label>
+          </div>
+          <button type="submit" class="palz-sales-primary">Confirm times</button>
+        </form>
+      </section>
+    </div>
+  </main>
+</body>
+</html>
