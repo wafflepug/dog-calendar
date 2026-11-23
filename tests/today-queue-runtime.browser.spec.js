@@ -94,6 +94,7 @@ test('the shipped Today page keeps profile links, exposes direct confirmed-stay 
     await expect(beforeArrival.locator('.palz-before-arrival-checks li')).toHaveText(['Review intake','Confirm handover times','Review vaccination record']);
     await expect(review).toHaveAttribute('href', /stayId=44444444-4444-4444-8444-444444444444.*dogId=dddddddd-dddd-4ddd-8ddd-dddddddddddd/);
     expect((await review.boundingBox()).height).toBeGreaterThanOrEqual(44);
+    await expect(review).toHaveCSS('border-top-left-radius', '999px');
     if (width === 320) {
       await review.focus();
       const previousReads = arrivalReads;

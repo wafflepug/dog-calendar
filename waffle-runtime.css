@@ -3,7 +3,7 @@
    Historical base styles remain compatibility sources during Phase 3A, but pages no longer
    reference them individually. Preserve this import order until modules are folded in. */
 @import url("waffle-app.css?build=2026.08.27.04&rev=2026.11.15.01");
-@import url("palz-sales.css?rev=2026.11.24.03");
+@import url("palz-sales.css?rev=2026.11.24.04");
 @import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.11.15.01");
 @import url("waffle-v10.8.2.css?build=2026.08.27.04");
 @import url("waffle-v10.8.3.css?build=2026.08.27.04");
@@ -266,6 +266,7 @@ body .wh-home-departure-flag > span.palz-icon-host { color: inherit; }
 .palz-before-arrival > summary::-webkit-details-marker { display:none; }
 .palz-before-arrival > summary::after {
   content:''; width:7px; height:7px; flex:none; margin-inline-end:3px;
+  color:var(--wh75-accent-ink,#4338ca);
   border:solid currentColor; border-width:0 1.5px 1.5px 0; transform:rotate(-45deg);
 }
 .palz-before-arrival[open] > summary::after { transform:rotate(45deg); }
@@ -288,8 +289,11 @@ body .wh-home-departure-flag > span.palz-icon-host { color: inherit; }
 .palz-before-arrival-guest strong { display:block; line-height:1.3; }
 .palz-before-arrival-guest time { color:var(--v10-muted,#526174); font-size:.85em; }
 .palz-before-arrival-review {
-  padding-inline:12px; border:1px solid var(--v10-border,#d6deeb); border-radius:9px;
-  background:var(--v10-card,#fff); text-align:center;
+  padding-inline:16px; border:1px solid var(--wh75-ring,#c4b5fd); border-radius:999px;
+  background:var(--wh75-accent-soft,#ede9fe); text-align:center;
+}
+.palz-before-arrival-review:hover {
+  border-color:var(--wh75-accent,#7562db); text-decoration:none;
 }
 .palz-before-arrival-checks {
   grid-column:1 / -1; margin:0; padding-inline-start:18px; list-style:disc;
