@@ -15,6 +15,8 @@ Record device/model, OS version, browser, app revision, pass/fail, screenshot an
 | Fold/unfold with an open profile or modal | Not applicable | Not verified | Layout reflows without loss of draft or focus |
 | VoiceOver/TalkBack disclosure controls | Not verified | Not verified | Correct section name and expanded/collapsed state announced |
 | Staying quick check-in/checkout | Not verified | Not verified | Correct stay, distinct action controls, busy state and retry |
+| Open each Before arrival review link | Not verified | Not verified | Intake opens Records, handover shows Drop-off and Pick-up times, and vaccination opens Health & Home for the exact stay |
+| Extend a checked-in stay and rotate before saving | Not verified | Not verified | Preview follows the extra days, confirmation stays reachable and the same stay returns to Guests |
 | Failed/offline refresh | Not verified | Not verified | Saved content remains readable with honest freshness/error |
 
 Do not record customer notes, contacts or medication details in shared screenshots. A physical failure should identify the affected control and its route so the fix can be mapped to a focused code regression.

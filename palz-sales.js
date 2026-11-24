@@ -213,11 +213,16 @@
     };
     find('[data-sales-copy-local]').onclick = () => {
       const local = Object.entries(readLocal()), bookings = stays();
-      const entries = local.filter(([id]) => bookings.has(id) && !sharedRecords[id]).map(([stayId,record]) => ({stayId,expectedRevision:'',record,importLocal:true}));
-      const skipped = local.length - entries.length;
-      shareStatus.textContent = skipped ? skipped+' browser entries already exist in Shared Sales or could not be matched. They remain in this browser.' : '';
+      const matched = local.filter(([id]) => bookings.has(id));
+      const entries = matched.filter(([id]) => !sharedRecords[id]).map(([stayId,record]) => ({stayId,expectedRevision:'',record,importLocal:true}));
+      const unmatched = local.length - matched.length;
+      const duplicates = matched.length - entries.length;
+      const messages = [];
+      if (duplicates) messages.push(`${duplicates} already in Shared Sales`);
+      if (unmatched) messages.push(`${unmatched} without a matching stay`);
+      shareStatus.textContent = messages.length ? messages.join(' · ') + '. These entries remain in this browser.' : '';
       showSalesImport(localPreview, entries, 'Copy these entries to the shared ledger?', message => { shareStatus.textContent = message; });
-      if (!entries.length && !skipped) shareStatus.textContent = 'No browser entries to copy.';
+      if (!entries.length && !messages.length) shareStatus.textContent = 'No browser entries to copy.';
     };
     const file = find('[data-sales-file]');
     if (!file) return;

@@ -14,7 +14,7 @@
     <title>Palz Stay — Audit Log</title>
 <link rel="stylesheet" href="palz-loading.css?rev=2026.11.18.05">
 <script src="palz-loading.js?rev=2026.11.18.04"></script>
-<link rel="stylesheet" href="waffle-runtime.css?v=2026.08.28.01&amp;rev=2026.11.24.04">
+<link rel="stylesheet" href="waffle-runtime.css?v=2026.08.28.01&amp;rev=2026.11.24.05">
     </head>
 <body data-waffle-page="audit">
 <div id="palzLoadingScreen" role="status" aria-live="polite" aria-label="Loading Palz Stay">
@@ -377,6 +377,15 @@
             <span id="auditResultCount" class="audit-result-count">0 records</span>
         </div>
 
+        <details class="palz-care-schedule" id="palzCareIdentityAudit">
+            <summary>Care record audit</summary>
+            <form>
+                <label>Owner access key <input type="password" name="key" autocomplete="current-password" required></label>
+                <button type="submit">Run audit</button>
+            </form>
+            <p role="status"></p>
+            <ul hidden></ul>
+        </details>
         <div id="auditLogContainer" class="audit-log-container">
             <div class="audit-empty">Open this tab to load recent audit activity.</div>
         </div>
@@ -520,6 +529,6 @@
     body.dark-theme .modal-content-panel input { background: #334155; border-color: #475569; color: white; }
 </style>
 
-<script src="waffle-bootstrap.js?v=2026.08.28.01&amp;rev=2026.11.24.04"></script>
+<script src="waffle-bootstrap.js?v=2026.08.28.01&amp;rev=2026.11.24.05"></script>
     </html>
 

@@ -8,6 +8,13 @@ test('the shipped Today page keeps profile links, exposes direct confirmed-stay 
   const writes = [];
   const errors = [];
   let arrivalReads = 0;
+  const arrival = {
+    dogName:'Nigel with a long registered name', breed:'Poodle', bookingType:'Boarding',
+    stayKey:'nigel with a long registered name|2026-10-17|2026-10-20',
+    stayId:'44444444-4444-4444-8444-444444444444', dogId:'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+    startDate:'2026-10-17', endDate:'2026-10-20',
+    needs:['Review intake','Confirm handover times','Review vaccination record']
+  };
   page.on('pageerror', error => errors.push(error.message));
   await page.addInitScript(() => {
     const NativeDate = Date;
@@ -26,7 +33,8 @@ test('the shipped Today page keeps profile links, exposes direct confirmed-stay 
     ['Milo','Poodle','16/10/2026','20/10/2026','Boarding','aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','11111111-1111-4111-8111-111111111111','#00001',''],
     ['Coco','Poodle','12/10/2026','16/10/2026','Boarding','bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb','22222222-2222-4222-8222-222222222222','#00002',''],
     ['Biscoff','Golden Retriever','16/10/2026','16/10/2026','Boarding','cccccccc-cccc-4ccc-8ccc-cccccccccccc','33333333-3333-4333-8333-333333333333','#00003',''],
-    ['Scout','Collie','16/10/2026','16/10/2026','Meet & Greet','','','','Meet at 10:30']
+    ['Scout','Collie','16/10/2026','16/10/2026','Meet & Greet','','','','Meet at 10:30'],
+    [arrival.dogName,arrival.breed,'17/10/2026','20/10/2026','Boarding',arrival.dogId,arrival.stayId,'#00004','']
   ];
   const csv = 'Timestamp,Dog Name,Breed,Start Date,End Date,Owner,Phone,Likes,Dislikes,Notes,Edit Link,Booking Type,Source,Dog ID,Stay ID,Dog Number\n' + rows.map(([dog,breed,start,end,type,dogId,stayId,number,notes]) => ['2026-10-01',dog,breed,start,end,'Fixture owner','0400123456','','',notes,'',type,'Direct',dogId,stayId,number].join(',')).join('\n');
   await page.route('**/*', async route => {
@@ -37,7 +45,7 @@ test('the shipped Today page keeps profile links, exposes direct confirmed-stay 
     if (url.endsWith('/fixture-coco.svg')) return route.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><circle cx="32" cy="32" r="30" fill="teal"/></svg>'});
     if (url.includes('script.google')) {
       const resolved = resolveLocalBackendAction({method:req.method(),url});
-      if (!resolved.policy.allowed && !['get_business_name','get_sitter_day_handovers'].includes(resolved.action)) { writes.push(resolved.action); return route.fulfill({status:403,body:'Read-only fixture'}); }
+      if (!resolved.policy.allowed && !['get_business_name','get_sitter_day_handovers','get_sitter_handover','get_dog_host_again'].includes(resolved.action)) { writes.push(resolved.action); return route.fulfill({status:403,body:'Read-only fixture'}); }
       const callback = new URL(url).searchParams.get('callback');
       const response = {result:'success',bookings:[],records:[],summaries:[],identities:[],totalPastStays:0};
       if (resolved.action === 'get_belongings') response.records.push({stayKey:'coco|2026-10-12|2026-10-16',dogPhoto:{previewUrl:new URL('/fixture-coco.svg',baseURL).href}});
@@ -49,12 +57,16 @@ test('the shipped Today page keeps profile links, exposes direct confirmed-stay 
       }
       if (resolved.action === 'get_prearrival_checks') {
         arrivalReads++;
-        response.checks = [{
-          dogName:'Nigel with a long registered name', stayKey:'nigel|2026-10-17|2026-10-20',
-          stayId:'44444444-4444-4444-8444-444444444444', dogId:'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
-          startDate:'2026-10-17', needs:['Review intake','Confirm handover times','Review vaccination record']
-        }];
+        response.checks = [arrival];
       }
+      if (resolved.action === 'get_guest_directory') response.bookings.push(arrival);
+      if (resolved.action === 'get_guest_profile') response.record = {
+        stayKey:arrival.stayKey, identity:{stayKey:arrival.stayKey,stayId:arrival.stayId,dogId:arrival.dogId},
+        resolution:{status:'resolved'}, intakeAttributes:{vaccinated:'Yes',vaccinationDetails:'Fixture clinic'}
+      };
+      if (resolved.action === 'get_sitter_handover') response.record = {
+        stayId:arrival.stayId,dogId:arrival.dogId,stayKey:arrival.stayKey,times:{dropoffTime:'',pickupTime:'16:00'},revision:'fixture'
+      };
       return route.fulfill({contentType:'application/javascript',body:callback?`${callback}(${JSON.stringify(response)});`:JSON.stringify(response)});
     }
     if (/^https?:/.test(url) && new URL(url).hostname !== '127.0.0.1') return route.fulfill({body:'',contentType:req.resourceType()==='script'?'application/javascript':'text/css'});
@@ -92,7 +104,9 @@ test('the shipped Today page keeps profile links, exposes direct confirmed-stay 
     await expect(beforeArrival.getByText('1 to review')).toBeVisible();
     await expect(beforeArrival.locator('time')).toHaveText(/Arrives Sat,? 17 Oct/);
     await expect(beforeArrival.locator('.palz-before-arrival-checks li')).toHaveText(['Review intake','Confirm handover times','Review vaccination record']);
-    await expect(review).toHaveAttribute('href', /stayId=44444444-4444-4444-8444-444444444444.*dogId=dddddddd-dddd-4ddd-8ddd-dddddddddddd/);
+    await expect(review).toHaveAttribute('href', /stayId=44444444-4444-4444-8444-444444444444.*dogId=dddddddd-dddd-4ddd-8ddd-dddddddddddd.*prearrival=intake$/);
+    await expect(beforeArrival.getByRole('link', {name:'Confirm handover times'})).toHaveAttribute('href', /prearrival=handover-times$/);
+    await expect(beforeArrival.getByRole('link', {name:'Review vaccination record'})).toHaveAttribute('href', /prearrival=vaccination$/);
     expect((await review.boundingBox()).height).toBeGreaterThanOrEqual(44);
     await expect(review).toHaveCSS('border-top-left-radius', '999px');
     if (width === 320) {
@@ -146,6 +160,24 @@ test('the shipped Today page keeps profile links, exposes direct confirmed-stay 
   await page.reload();
   await expect(page.locator('#v10TodayAgenda .v10-agenda-item')).toHaveCount(3);
   await expect(page.locator('[data-today-meet-done]')).toHaveCount(0);
+
+  await page.setViewportSize({width:360,height:440});
+  const beforeArrival = page.locator('.palz-before-arrival');
+  await beforeArrival.getByText('Before arrival',{exact:true}).click();
+  const reviewLinks = await beforeArrival.locator('.palz-before-arrival-checks a').evaluateAll(links => links.map(link => link.href));
+  const profile = page.locator('.directory-card.is-profile-active');
+  await page.goto(reviewLinks[0]);
+  await expect(profile).toHaveAttribute('data-directory-stay-id',arrival.stayId);
+  await expect(profile.locator('[data-care-profile-segment-button="records"]')).toHaveAttribute('aria-pressed','true');
+  await expect(profile.locator('.directory-care-records-disclosure [data-create-intake-link]')).toBeInViewport();
+  await page.goto(reviewLinks[1]);
+  const handover = profile.locator('[data-sitter-handover]');
+  await expect(handover).toBeInViewport();
+  await expect(handover.getByLabel('Drop-off')).toBeEnabled();
+  await page.setViewportSize({width:720,height:800});
+  await page.goto(reviewLinks[2]);
+  await expect(profile.locator('[data-profile-subtab="healthHome"]')).toHaveAttribute('aria-expanded','true');
+  await expect(profile.locator('[data-intake-read-attribute="vaccinationDetails"]')).toBeInViewport();
   expect(writes).toEqual([]);
   expect(errors).toEqual([]);
 });

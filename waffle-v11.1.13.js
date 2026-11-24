@@ -195,7 +195,9 @@
         card.dataset.directoryStayId === extension.stayId && card.dataset.directoryDogId === extension.dogId &&
         card.dataset.directoryStayKey === extension.stayKey;
       const stillCheckedIn = !extension.fromRoster || window.v110OperationDisplayState?.(card)?.code === 'checked_in';
-      if (!extension.trigger.isConnected || extension.trigger.disabled || card.dataset.v1082PastStay === 'true' || !sameStay || !stillCheckedIn) {
+      // The roster may rebuild its action buttons while the same stay remains selected.
+      const currentTrigger = extension.fromRoster ? card.querySelector('[data-v11113-roster-extend]') : extension.trigger;
+      if (!currentTrigger?.isConnected || currentTrigger.disabled || card.dataset.v1082PastStay === 'true' || !sameStay || !stillCheckedIn) {
         status.textContent = 'This stay changed. Close this window and review the stay before trying again.';
         status.className = 'v11113-stay-dates-status is-error';
         return;

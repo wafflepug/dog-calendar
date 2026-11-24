@@ -10087,7 +10087,28 @@ registerWaffleServiceWorker();
         else switchDirectoryProfileMainTab(card, 'profile');
 
         let target = null;
-        if (action === 'handover') {
+        if (action === 'arrival-intake') {
+            card.querySelector('[data-care-profile-segment-button="records"]')?.click();
+            const disclosure = card.querySelector('.directory-care-records-disclosure');
+            if (disclosure) disclosure.open = true;
+            target = disclosure?.querySelector('[data-create-intake-link]:not(:disabled)') || disclosure?.querySelector('summary');
+        } else if (action === 'arrival-handover-times') {
+            const handover = card.querySelector('[data-sitter-handover]');
+            const fields = [...(handover?.querySelectorAll('input[type="time"]') || [])].filter(field => !field.closest('[hidden]') && !field.disabled);
+            target = fields.find(field => !field.value) || fields[0] || handover;
+            if (target && target === handover) target.tabIndex = -1;
+        } else if (action === 'arrival-vaccination') {
+            card.querySelector('[data-care-profile-segment-button="overview"]')?.click();
+            const healthHome = card.querySelector('[data-profile-subtab="healthHome"]');
+            if (healthHome?.getAttribute('aria-expanded') !== 'true') healthHome?.click();
+            const panel = card.querySelector('[data-profile-subpanel="healthHome"]');
+            target = panel?.querySelector('[data-intake-read-attribute="vaccinationDetails"]') || healthHome;
+            if (target && target !== healthHome) {
+                const missing = target.closest('details');
+                if (missing) missing.open = true;
+                target.tabIndex = -1;
+            }
+        } else if (action === 'handover') {
             const disclosure = card.querySelector('[data-directory-stay-contact]');
             if (disclosure) disclosure.open = true;
             target = disclosure?.querySelector('[data-directory-edit-field="notes"]');
@@ -10143,7 +10164,7 @@ registerWaffleServiceWorker();
             Number(window.innerWidth || 0) <= 768 || prefersReducedMotion
                 ? 'auto'
                 : 'smooth';
-        if (action === 'emergency-contact') target?.scrollIntoView({ behavior: actionScrollBehavior, block: 'center' });
+        if (action === 'emergency-contact' || action.startsWith('arrival-')) target?.scrollIntoView({ behavior: actionScrollBehavior, block: 'center' });
         else target?.closest('section, details, [data-directory-detail]')?.scrollIntoView({ behavior: actionScrollBehavior, block: 'start' });
         if (target && action !== 'handover') {
             try { target.focus({ preventScroll: true }); }
@@ -12740,6 +12761,22 @@ registerWaffleServiceWorker();
         if (!isCurrentProfile()) return;
 
         if (preserved?.editor) restoreDirectoryGuestDetailDraft(preserved, card);
+        // Several startup loaders can open a future stay. Resolve the review in
+        // the shared profile entry point after the latest exact read settles.
+        if (options.instant && initialIdentity.valid && initialIdentity.stayId && initialIdentity.dogId &&
+            profileDashboard?.dataset.careProfileLoadToken === profileLoadToken &&
+            window.WAFFLE_DIRECTORY_PROFILE_NAV.isCurrent(directoryProfileStartupSelectionVersion)) {
+            const query = new URLSearchParams(window.location.search);
+            const current = getDirectoryProfileReadIdentity(card);
+            const action = query.get('prearrival');
+            if (['intake', 'handover-times', 'vaccination'].includes(action) &&
+                current.valid && current.cacheKey === initialIdentity.cacheKey &&
+                query.get('stayKey') === current.stayKey &&
+                query.get('stayId')?.toLowerCase() === current.stayId.toLowerCase() &&
+                query.get('dogId')?.toLowerCase() === current.dogId.toLowerCase()) {
+                openCareReadinessTarget(card, 'arrival-' + action);
+            }
+        }
     }
 
 

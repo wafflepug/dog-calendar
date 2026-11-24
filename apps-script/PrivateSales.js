@@ -1,6 +1,32 @@
 /* Private, append-only sales ledger. The owner key is accepted only in POST bodies. */
 var PRIVATE_SALES_HEADERS_ = ['Stay ID', 'Revision', 'Change ID', 'Saved at', 'Sale JSON'];
 
+// Run explicitly from the Apps Script editor for this project.
+function setupPalzSharedSales_() {
+  var lock = LockService.getScriptLock();
+  lock.waitLock(15000);
+  try {
+    var properties = PropertiesService.getScriptProperties();
+    var sheetId = properties.getProperty('PALZ_SALES_SPREADSHEET_ID');
+    if (!sheetId) {
+      var workbook = SpreadsheetApp.create('Palz Stay · Private Sales');
+      sheetId = workbook.getId();
+      if (DriveApp.getFileById(sheetId).getSharingAccess() !== DriveApp.Access.PRIVATE) {
+        throw new Error('The new workbook must have restricted sharing before setup can continue.');
+      }
+      properties.setProperty('PALZ_SALES_SPREADSHEET_ID',sheetId);
+    }
+    palzPrivateWorkbook_();
+    if (!properties.getProperty('PALZ_SALES_ACCESS_KEY')) {
+      properties.setProperty('PALZ_SALES_ACCESS_KEY',(Utilities.getUuid() + Utilities.getUuid()).replace(/-/g,''));
+    }
+    privateSalesAuthorize_(properties.getProperty('PALZ_SALES_ACCESS_KEY'));
+    return 'Shared Sales is configured.';
+  } finally {
+    lock.releaseLock();
+  }
+}
+
 function privateSalesAuthorize_(key) {
   var secret = PropertiesService.getScriptProperties().getProperty('PALZ_SALES_ACCESS_KEY');
   if (!secret || !/^[a-zA-Z0-9_-]{32,128}$/.test(secret)) throw new Error('Shared Sales has not been enabled.');

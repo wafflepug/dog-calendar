@@ -7,6 +7,52 @@ const csv = 'Timestamp,Dog Name,Breed,Start Date,End Date,Owner,Phone,Likes,Disl
   '2026-11-20,Maple,Poodle,24/11/2026,26/11/2026,Fixture,0400000000,,,,,Boarding,Other,bbbbbbbb-bbbb-4bbb-8bbb-000000000001,'+stayId+',00001';
 const encode = rows => rows.map(row=>row.map(cell=>'"'+String(cell).replaceAll('"','""')+'"').join(',')).join('\r\n');
 
+test('desktop and phone see the same shared balance and skip duplicate browser entries', async ({page,browser,baseURL}) => {
+  const mobile = await browser.newContext({ viewport:{width:390,height:760}, hasTouch:true });
+  const phone = await mobile.newPage();
+  const initial = {dogName:'Maple',startDate:'2026-11-24',endDate:'2026-11-26',dueDate:'2026-11-26',
+    channel:'direct',priceType:'fixed',rate:12500,total:12500,expenses:0,payments:[],bookkeepingNote:''};
+  let records = {[stayId]:{...initial,revision:'r1'}}, saves = 0;
+  const key = 'a-fixture-owner-access-key-32-characters';
+  try {
+    await page.addInitScript(({id,entry}) => localStorage.setItem('palz-stay:sales:v1',JSON.stringify({[id]:entry})),
+      {id:stayId,entry:{...initial,rate:9900,total:9900}});
+    for (const device of [page,phone]) {
+      await device.route('https://docs.google.com/**',route=>route.fulfill({body:csv,contentType:'text/csv'}));
+      await device.route('https://script.google.com/**',async route=>{
+        const body = new URLSearchParams(route.request().postData() || '');
+        if (body.get('action') !== 'private_sales') return route.abort();
+        const payload = JSON.parse(body.get('payloadJson'));
+        expect(payload.key).toBe(key);
+        if (payload.operation === 'commit') {
+          const [entry] = payload.entries;
+          expect(entry.expectedRevision).toBe(records[stayId].revision);
+          records = {[entry.stayId]:{...entry.record,revision:'r2'}};
+          saves++;
+        }
+        await route.fulfill({headers:{'Access-Control-Allow-Origin':'*'},json:{result:'success',records}});
+      });
+      await device.goto(baseURL+'/sales-master.html');
+      await device.getByRole('rowheader',{name:/Maple/}).waitFor();
+      await device.getByText('Shared Sales',{exact:true}).click();
+      await device.getByLabel('Owner access key').fill(key);
+      await device.getByRole('button',{name:'Unlock'}).click();
+      await expect(device.getByRole('row',{name:/Maple/})).toContainText('$125.00');
+    }
+    await page.getByRole('button',{name:'Review browser entries'}).click();
+    await expect(page.locator('[data-sales-share-status]')).toContainText('1 already in Shared Sales');
+    expect(saves).toBe(0);
+    await page.getByRole('button',{name:'Edit Maple'}).click();
+    const editor = page.getByRole('dialog',{name:'Manage a stay'});
+    await editor.getByLabel('Price (AUD)',{exact:true}).fill('135.50');
+    await editor.getByRole('button',{name:'Save price'}).click();
+    await expect.poll(()=>saves).toBe(1);
+    await phone.getByRole('button',{name:'Refresh ledger'}).click();
+    await expect(phone.getByRole('row',{name:/Maple/})).toContainText('$135.50');
+    await expect(page.getByRole('row',{name:/Maple/})).toContainText('$135.50');
+  } finally { await mobile.close(); }
+});
+
 test('Sales template can be edited in spreadsheet format and imported after preview', async ({page,baseURL}) => {
   await page.route('https://docs.google.com/**',route=>route.fulfill({body:csv,contentType:'text/csv'}));
   await page.route('https://script.google.com/**',route=>route.abort());
