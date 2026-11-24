@@ -159,6 +159,41 @@ test('desktop notification dot sits on the bell corner', async ({page, baseURL})
   expect(geometry.width).toBeGreaterThan(0);
 });
 
+test('touch handover picker keeps Set in view and changes only the draft until saved', async ({browser, baseURL}) => {
+  const page = await browser.newPage({hasTouch:true,viewport:{width:320,height:560}});
+  try {
+    await install(page);
+    await page.goto(`${baseURL}/directory.html`);
+    const card = page.locator(`#directory-grid [data-directory-stay-id="${bookings[0].stayId}"]`);
+    await card.locator('[data-open-directory-profile]').click();
+    const handover = card.locator('[data-sitter-handover]');
+    const input = handover.locator('[name="pickupTime"]');
+    await expect(input).toBeHidden();
+    const edit = handover.getByRole('button',{name:'Pick-up time: 3:00 PM'});
+    await edit.click();
+    const picker = page.getByRole('dialog',{name:'Pick-up time'});
+    await page.setViewportSize({width:320,height:300});
+    const set = picker.getByRole('button',{name:'Set',exact:true});
+    const bounds = await set.boundingBox();
+    expect(bounds.x).toBeGreaterThanOrEqual(0);
+    expect(bounds.x + bounds.width).toBeLessThanOrEqual(320);
+    expect(bounds.y + bounds.height).toBeLessThanOrEqual(300);
+    await picker.getByLabel('Hour').selectOption('4');
+    await picker.getByRole('button',{name:'Cancel'}).click();
+    await expect(input).toHaveValue('15:00');
+    await expect(edit).toBeFocused();
+    await edit.click();
+    await picker.getByLabel('Hour').selectOption('4');
+    await picker.getByLabel('Minute').selectOption('35');
+    await set.click();
+    await expect(input).toHaveValue('16:35');
+    await expect(handover.getByRole('button',{name:'Save times'})).toBeVisible();
+    await handover.getByRole('button',{name:'Pick-up time: 4:35 PM'}).click();
+    await picker.getByRole('button',{name:'Clear'}).click();
+    await expect(input).toHaveValue('');
+  } finally { await page.close(); }
+});
+
 test('checking in hides Drop-off and a Pick-up edit preserves the saved Drop-off time', async ({page, baseURL}) => {
   const fixture = await install(page);
   await page.goto(`${baseURL}/directory.html`);
