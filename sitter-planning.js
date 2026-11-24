@@ -13,12 +13,30 @@
   .sitter-handover { margin: 8px 0 12px; }
   .sitter-handover > form { max-width: 340px; margin-inline: auto; }
   .sitter-handover .sitter-planning-grid { gap: 8px; }
-  .sitter-handover .sitter-planning-grid:has(> label[hidden]) { grid-template-columns: minmax(0, 1fr); max-width: 166px; margin-inline: auto; }
+  .sitter-handover .sitter-planning-grid:has(> [hidden]) { grid-template-columns: minmax(0, 1fr); max-width: 166px; margin-inline: auto; }
   .sitter-handover label { gap: 3px; font-size: 11px; font-weight: 800; letter-spacing: .02em; text-transform: uppercase; }
   .sitter-handover input { font-size: 14px; font-weight: 700; }
   .sitter-handover .sitter-planning-actions { margin-top: 6px; }
   .sitter-handover [role=status] { margin: 0; font-size: 13px; }
   .sitter-handover [role=status]:empty { display: none; }
+  .sitter-planning .sitter-touch-time { display:none; }
+  @media (pointer:coarse) {
+    .sitter-time-field input { display:none; }
+    .sitter-planning .sitter-touch-time { display:block; width:100%; margin-top:3px; text-align:start; }
+  }
+  .sitter-time-dialog { width:min(360px,calc(100vw - 24px)); }
+  .sitter-time-dialog .sitter-time-options { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
+  .sitter-time-dialog select {
+    width:100%; min-width:0; min-height:44px; padding:6px;
+    border:1px solid var(--wh-border,#d6deeb); border-radius:9px;
+    background:var(--wh-surface-soft,#f5f3ff); color:inherit; font:inherit;
+  }
+  .sitter-time-dialog .sitter-planning-actions { justify-content:flex-end; }
+  .sitter-time-dialog .sitter-planning-actions button { flex:1 1 auto; }
+  .sitter-time-dialog button[type=submit] {
+    border-color:var(--wh75-accent,#7562db); background:var(--wh75-accent-soft,#ede9fe);
+    color:var(--wh75-accent-ink,#4338ca); font-weight:750;
+  }
   `;document.head.append(css);
   let dialog, returnFocus, busy=false;
   function blockRow(start='',end='') {const row=document.createElement('div');row.className='sitter-planning-block';row.innerHTML=`<label>From<input type="date" data-sitter-block-start required value="${esc(start)}"></label><label>Through<input type="date" data-sitter-block-end required value="${esc(end)}"></label><button type="button" aria-label="Remove time-off period">Remove</button>`;row.querySelector('button').onclick=()=>row.remove();return row;}
@@ -37,6 +55,75 @@
   }
   const handoverSections = new WeakMap();
   let openHandoverSections = new Set();
+
+  function bindTouchTime(input, label, isCurrent) {
+    const field = document.createElement('div');
+    field.className = 'sitter-time-field';
+    const nativeLabel = input.closest('label');
+    nativeLabel.before(field);
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'sitter-touch-time';
+    button.setAttribute('aria-haspopup','dialog');
+    field.append(nativeLabel,button);
+
+    function sync() {
+      const [hours,minutes] = input.value.split(':');
+      const time = hours ? `${Number(hours) % 12 || 12}:${minutes} ${Number(hours) < 12 ? 'AM' : 'PM'}` : 'Set time';
+      button.disabled = input.disabled;
+      button.textContent = time;
+      button.setAttribute('aria-label', `${label}: ${time}`);
+    }
+    button.onclick = () => {
+      if (input.disabled || !isCurrent()) return;
+      const picker = document.createElement('dialog');
+      picker.className = 'sitter-planning sitter-planning-dialog sitter-time-dialog';
+      picker.setAttribute('aria-label', label);
+      picker.innerHTML = `<h3>${esc(label)}</h3><form>
+        <div class="sitter-time-options">
+          <label>Hour<select name="hour" autofocus></select></label>
+          <label>Minute<select name="minute"></select></label>
+          <label>AM / PM<select name="period"><option>AM</option><option>PM</option></select></label>
+        </div>
+        <div class="sitter-planning-actions">
+          <button type="button" data-time-clear>Clear</button>
+          <button type="button" data-time-cancel>Cancel</button>
+          <button type="submit">Set</button>
+        </div>
+      </form>`;
+      const form = picker.querySelector('form');
+      const {hour,minute,period} = form.elements;
+      const [hours,minutes] = (input.value || '12:00').split(':');
+      const pad = value => String(value).padStart(2,'0');
+      for (let value = 1; value <= 12; value++) hour.add(new Option(value,value));
+      for (let value = 0; value < 60; value++) minute.add(new Option(pad(value),pad(value)));
+      hour.value = String(Number(hours) % 12 || 12);
+      minute.value = minutes;
+      period.value = Number(hours) < 12 ? 'AM' : 'PM';
+      function apply(value) {
+        if (input.isConnected && !input.disabled && !field.hidden && isCurrent()) {
+          input.value = value;
+          input.dispatchEvent(new Event('input',{bubbles:true}));
+          sync();
+        }
+        picker.close();
+      }
+      form.onsubmit = event => {
+        event.preventDefault();
+        apply(pad(Number(hour.value) % 12 + (period.value === 'PM' ? 12 : 0)) + ':' + minute.value);
+      };
+      picker.querySelector('[data-time-clear]').onclick = () => apply('');
+      picker.querySelector('[data-time-cancel]').onclick = () => picker.close();
+      picker.addEventListener('close', () => {
+        picker.remove();
+        if (button.isConnected && isCurrent()) button.focus({preventScroll:true});
+      });
+      document.body.append(picker);
+      picker.showModal();
+    };
+    sync();
+    return {field, sync, focus: () => (button.getClientRects().length ? button : input).focus()};
+  }
 
   function mountHandover(card, brief, id) {
     const section = document.createElement('section');
@@ -66,16 +153,20 @@
     const reload = form.querySelector('[data-sitter-times-reload]');
     const fields = ['dropoffTime', 'pickupTime'].map(name => form.elements[name]);
     const dropoff = form.elements.dropoffTime;
-    const dropoffLabel = dropoff.closest('label');
     const matchesStay = response => response?.stayId === id.stayId && response?.dogId === id.dogId;
     const isOpen = () => section.isConnected && current(card, id);
+    const timeControls = [bindTouchTime(dropoff,'Drop-off time',isOpen), bindTouchTime(form.elements.pickupTime,'Pick-up time',isOpen)];
+    const dropoffLabel = timeControls[0].field;
     let record, loading, saving = false, needsReload = false;
     const editValue = field => field === dropoff && dropoffLabel.hidden
       ? record.times.dropoffTime || ''
       : field.value;
     const isDirty = () => record && fields.some(field => editValue(field) !== (record.times[field.name] || ''));
     const updateControls = () => {
-      fields.forEach(field => { field.disabled = !record || Boolean(loading) || saving; });
+      fields.forEach((field,index) => {
+        field.disabled = !record || Boolean(loading) || saving;
+        timeControls[index].sync();
+      });
       save.hidden = !isDirty();
       save.disabled = Boolean(loading) || saving;
       reload.hidden = !needsReload;
@@ -216,6 +307,7 @@
     const save = form.querySelector('[type=submit]');
     const cancel = form.querySelector('[type=button]');
     const status = form.querySelector('[role=status]');
+    const timeControl = bindTouchTime(input,'Pick-up time',() => editor.open && isCurrent());
     let record;
     let saving = false;
     cancel.onclick = () => editor.close();
@@ -238,7 +330,8 @@
       pickupTimes.set(key(identity), input.value);
       refreshCheckoutButtons();
       input.disabled = save.disabled = false;
-      input.focus();
+      timeControl.sync();
+      timeControl.focus();
       status.textContent = '';
     } catch (error) {
       status.textContent = error.message;
@@ -253,6 +346,7 @@
       saving = true;
       const time = input.value;
       input.disabled = save.disabled = cancel.disabled = true;
+      timeControl.sync();
       status.textContent = 'Saving...';
       try {
         const result = await write({action:'save_sitter_handover', ...identity,
@@ -269,6 +363,7 @@
       } finally {
         saving = false;
         input.disabled = save.disabled = cancel.disabled = false;
+        timeControl.sync();
       }
     };
   }

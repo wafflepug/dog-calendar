@@ -10095,7 +10095,9 @@ registerWaffleServiceWorker();
         } else if (action === 'arrival-handover-times') {
             const handover = card.querySelector('[data-sitter-handover]');
             const fields = [...(handover?.querySelectorAll('input[type="time"]') || [])].filter(field => !field.closest('[hidden]') && !field.disabled);
-            target = fields.find(field => !field.value) || fields[0] || handover;
+            const field = fields.find(field => !field.value) || fields[0];
+            const touchControl = field?.closest('.sitter-time-field')?.querySelector('.sitter-touch-time');
+            target = touchControl?.getClientRects().length ? touchControl : field || handover;
             if (target && target === handover) target.tabIndex = -1;
         } else if (action === 'arrival-vaccination') {
             card.querySelector('[data-care-profile-segment-button="overview"]')?.click();
