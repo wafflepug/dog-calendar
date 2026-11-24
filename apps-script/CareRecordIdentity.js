@@ -5,6 +5,91 @@ var CARE_RECORD_STAY_ID_HEADER_ = 'Stay ID';
 var CARE_RECORD_DOG_ID_HEADER_ = 'Dog ID';
 var CARE_RECORD_IDENTITY_VERSION_ = 1;
 
+// Read-only inventory for the owner. Return row references and reasons, with no care data.
+function palzCareIdentityAudit_() {
+  var main = getTargetSheet_();
+  var workbook = main.getParent();
+  var properties = PropertiesService.getScriptProperties();
+  var inventory = stayOperationBookingIndexV11226_({sheet:main});
+  var report = {linked:0, legacy:0, review:0, issues:[]};
+
+  function note(source, row, status, reason) {
+    report[status]++;
+    if (status === 'review' && report.issues.length < 100) report.issues.push({source:source,row:row,reason:reason});
+  }
+
+  function inspect(source, row, key, stayId, dogId) {
+    var matches = inventory.byKey[key] || [];
+    if (matches.length !== 1) {
+      note(source,row,'review',matches.length ? 'Multiple bookings share this stay key' : 'No booking matches this stay key');
+      return;
+    }
+    var booking = matches[0];
+    var bookingStay = String(booking.stayId || '').toLowerCase();
+    var bookingDog = String(booking.dogId || '').toLowerCase();
+    if (!careRoutineLogUuidValid_(bookingStay) || !careRoutineLogUuidValid_(bookingDog) || inventory.idCounts[bookingStay] !== 1) {
+      note(source,row,'review','Booking needs unique Stay and Dog IDs');
+    } else if ((stayId && stayId !== bookingStay) || (dogId && dogId !== bookingDog)) {
+      note(source,row,'review','Stored IDs conflict with the booking');
+    } else {
+      note(source,row,stayId && dogId ? 'linked' : 'legacy');
+    }
+  }
+
+  var care = readCareRecordIdentityState_(getBelongingsSheetReadOnly_());
+  var careLabel = 'Care, belongings and photos';
+  if (!care.ok) note(careLabel,1,'review','Care identity columns need review');
+  else {
+    care.values.slice(1).forEach(function(row,index) {
+      if (!String(row[1] || '').trim() && row.some(function(value) { return value !== '' && value != null && value !== false; })) {
+        note(careLabel,index+2,'review','Missing stay key');
+      }
+    });
+    care.rows.forEach(function(record) {
+      if (!record.valid || care.byKey[record.stayKey].length !== 1) {
+        note(careLabel,record.rowNumber,'review','Duplicate Care record or invalid stored ID');
+      } else inspect(careLabel,record.rowNumber,record.stayKey,record.stayId,record.dogId);
+    });
+  }
+
+  function inspectIntake(property, name, label, headers, keyColumn, legacyWidth) {
+    var sheet = workbook.getSheetByName(String(properties.getProperty(property) || name).trim());
+    if (!sheet || sheet.getLastRow() < 2) return;
+    var width = sheet.getLastColumn();
+    var expectedWidth = width >= headers.length ? headers.length : legacyWidth;
+    if (width < expectedWidth || (width > legacyWidth && width < headers.length) ||
+        sheet.getRange(1,1,1,expectedWidth).getValues()[0].some(function(value,index) { return String(value).trim() !== headers[index]; })) {
+      note(label,1,'review','Intake identity columns need review');
+      return;
+    }
+    var count = sheet.getLastRow() - 1;
+    var keys = sheet.getRange(2,keyColumn - 1,count,2).getValues();
+    var hasIds = expectedWidth > legacyWidth;
+    var ids = hasIds ? sheet.getRange(2,legacyWidth + 1,count,2).getValues() : [];
+    var occurrences = Object.create(null), keyOccurrences = Object.create(null);
+    ids.forEach(function(pair) {
+      var id = String(pair[0] || '').trim().toLowerCase();
+      if (id) occurrences[id] = (occurrences[id] || 0) + 1;
+    });
+    if (headers.length > legacyWidth) keys.forEach(function(cell) {
+      var key = String(cell[1] || '').trim();
+      if (key) keyOccurrences[key] = (keyOccurrences[key] || 0) + 1;
+    });
+    keys.forEach(function(cell,index) {
+      var key = String(cell[1] || '').trim();
+      var stayId = String(ids[index] && ids[index][0] || '').trim().toLowerCase();
+      var dogId = String(ids[index] && ids[index][1] || '').trim().toLowerCase();
+      if (!key && !stayId && !dogId && !cell[0]) return;
+      if (stayId && occurrences[stayId] > 1) note(label,index+2,'review','Multiple intake records use this Stay ID');
+      else if (key && keyOccurrences[key] > 1) note(label,index+2,'review','Multiple intake records share this stay key');
+      else inspect(label,index+2,key,stayId,dogId);
+    });
+  }
+  inspectIntake('INTAKE_SHEET_NAME','Dog_Intake_Records','Website intake',INTAKE_HEADERS_,6,18);
+  inspectIntake('LEGACY_INTAKE_SHEET_NAME','Legacy_Intake_Documents','Legacy intake PDFs',LEGACY_INTAKE_HEADERS_,4,LEGACY_INTAKE_HEADERS_.length);
+  return report;
+}
+
 function careRecordIdentityWritesEnabled_() {
   return String(PropertiesService.getScriptProperties().getProperty('CARE_RECORD_IDENTITY_WRITES_ENABLED') || '').trim().toLowerCase() === 'true';
 }

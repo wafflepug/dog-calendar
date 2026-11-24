@@ -125,6 +125,9 @@ function palzOwnerStayResponse_(action, raw) {
     if (action === 'palz_operator') privateSalesAuthorize_(payload.key);
     lock = LockService.getScriptLock();
     lock.waitLock(15000);
+    if (action === 'palz_operator' && payload.operation === 'care_identity_audit') {
+      return jsonResponse_({result:'success',value:palzCareIdentityAudit_()});
+    }
     if (action === 'owner_stay' && ['read','handover'].indexOf(payload.operation) >= 0) result = palzOwnerStayRead_(payload);
     else if (action === 'palz_operator') {
       var id = careRoutineLogResolveStay_(payload,false);

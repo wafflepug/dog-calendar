@@ -1,5 +1,56 @@
 (() => {
   'use strict';
+  async function ownerTool(payload) {
+    const response = await fetch(window.WAFFLE_MAINTENANCE_GATE.endpoint,{method:'POST',cache:'no-store',credentials:'omit',
+      referrerPolicy:'no-referrer',body:new URLSearchParams({action:'palz_operator',payloadJson:JSON.stringify(payload)})});
+    const result = await response.json();
+    if (!response.ok || result.result !== 'success') throw Error(result.error || 'Could not confirm the request.');
+    return result.value;
+  }
+
+  const audit = document.getElementById('palzCareIdentityAudit');
+  if (audit) {
+    const form = audit.querySelector('form'), status = audit.querySelector('[role=status]'), issues = audit.querySelector('ul');
+    let revision = 0;
+    audit.addEventListener('toggle', () => {
+      if (audit.open) return;
+      revision++;
+      form.reset();
+      form.querySelector('button').disabled = false;
+      status.textContent = '';
+      issues.replaceChildren();
+      issues.hidden = true;
+    });
+    form.addEventListener('submit', async event => {
+      event.preventDefault();
+      const button = form.querySelector('button');
+      if (button.disabled) return;
+      button.disabled = true;
+      const current = ++revision;
+      issues.replaceChildren();
+      issues.hidden = true;
+      status.textContent = 'Checking Care records…';
+      try {
+        const result = await ownerTool({operation:'care_identity_audit',key:form.elements.key.value.trim()});
+        if (current !== revision || !audit.open) return;
+        status.textContent = `${result.linked} linked by ID · ${result.legacy} linked by legacy key · ${result.review} need review` +
+          (result.review > result.issues.length ? ` · Showing first ${result.issues.length}` : '');
+        for (const issue of result.issues) {
+          const row = document.createElement('li');
+          row.textContent = `${issue.source} · Row ${issue.row} · ${issue.reason}`;
+          issues.append(row);
+        }
+        issues.hidden = !result.issues.length;
+      } catch (error) {
+        if (current === revision && audit.open) status.textContent = error.message;
+      } finally {
+        if (current === revision) {
+          form.reset();
+          button.disabled = false;
+        }
+      }
+    });
+  }
   if (document.body.dataset.wafflePage !== 'directory') return;
   let queued = false;
 
@@ -40,12 +91,7 @@
       buttons.forEach(button => { button.disabled = true; });
       try {
         const extra = typeof values === 'function' ? await values() : values;
-        const response = await fetch(window.WAFFLE_MAINTENANCE_GATE.endpoint,{method:'POST',cache:'no-store',credentials:'omit',
-          referrerPolicy:'no-referrer',body:new URLSearchParams({action:'palz_operator',
-            payloadJson:JSON.stringify({operation,key:form.elements.key.value.trim(),...id,...extra})})});
-        const result = await response.json();
-        if (!response.ok || result.result !== 'success') throw Error(result.error || 'Could not confirm the change.');
-        return result.value;
+        return await ownerTool({operation,key:form.elements.key.value.trim(),...id,...extra});
       } catch (error) { status.textContent = error.message; }
       finally { busy = false; buttons.forEach(button => { button.disabled = false; }); }
     }

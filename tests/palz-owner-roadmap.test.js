@@ -42,9 +42,50 @@ function fixture() {
     sitterHandoverRead_:()=>({times:{dropoffTime:'09:00',pickupTime:'16:00'},revision:'r1'}),
     sitterDate_:value=>value,sitterTime_:value=>value,makeIntakeToken_:()=> 'a'.repeat(64)
   });
-  vm.runInContext(['PrivateSales.js','CareSchedule.js','PalzOwnerStay.js'].map(source).join('\n'),ctx);
+  vm.runInContext(['PrivateSales.js','CareSchedule.js','CareRecordIdentity.js','PalzOwnerStay.js'].map(source).join('\n'),ctx);
   return {ctx,tabs,key};
 }
+
+test('authenticated Care audit uses read-only row references without names or credentials', () => {
+  const {ctx,tabs,key} = fixture();
+  const legacyKey = 'maple|2026-12-01|2026-12-05';
+  const legacyStayId = 'aaaaaaaa-aaaa-4aaa-8aaa-000000000002';
+  const linked = {rowNumber:2,stayKey:booking.stayKey,stayId,dogId,valid:true};
+  const orphan = {rowNumber:3,stayKey:'old-name',stayId,dogId,valid:true};
+  const legacy = {rowNumber:4,stayKey:legacyKey,stayId:'',dogId:'',valid:true};
+  ctx.readCareRecordIdentityState_ = () => ({ok:true,rows:[linked,orphan,legacy],values:[['header']],
+    byKey:{[linked.stayKey]:[linked],[orphan.stayKey]:[orphan],[legacyKey]:[legacy]}});
+  ctx.getBelongingsSheetReadOnly_ = () => null;
+  ctx.stayOperationBookingIndexV11226_ = () => ({
+    byKey:{[booking.stayKey]:[booking],[legacyKey]:[{stayId:legacyStayId,dogId}]},
+    idCounts:{[stayId]:1,[legacyStayId]:1}
+  });
+  ctx.INTAKE_HEADERS_ = Array.from({length:20},(_,index)=>'h'+index);
+  ctx.LEGACY_INTAKE_HEADERS_ = Array.from({length:22},(_,index)=>'h'+index);
+  const intakeRow = Array(20).fill('');
+  intakeRow[4] = 'private-token';
+  intakeRow[5] = booking.stayKey;
+  intakeRow[18] = stayId;
+  intakeRow[19] = 'cccccccc-cccc-4ccc-8ccc-000000000001';
+  const intakeRows = [ctx.INTAKE_HEADERS_, intakeRow];
+  tabs.set('Dog_Intake_Records',{
+    getLastRow:()=>intakeRows.length,getLastColumn:()=>20,
+    getRange:(row,column,height,width)=>({getValues:()=>intakeRows.slice(row-1,row-1+height).map(values=>values.slice(column-1,column-1+width))})
+  });
+  ctx.assertWaffleActionAllowedDuringMaintenance_ = () => {};
+  ctx.jsonResponse_ = value => JSON.parse(JSON.stringify(value));
+  ctx.LockService = {getScriptLock:()=>({waitLock(){},hasLock:()=>true,releaseLock(){}})};
+  const audit = supplied => ctx.palzOwnerStayResponse_('palz_operator',JSON.stringify({operation:'care_identity_audit',key:supplied}));
+  assert.match(audit('wrong').error,/access denied/);
+  const result = audit(key);
+  assert.equal(result.result,'success');
+  assert.deepEqual(result.value,{linked:1,legacy:1,review:2,issues:[
+    {source:'Care, belongings and photos',row:3,reason:'No booking matches this stay key'},
+    {source:'Website intake',row:2,reason:'Stored IDs conflict with the booking'}
+  ]});
+  assert.doesNotMatch(JSON.stringify(result),/Maple|private-token|aaaaaaaa/i);
+  assert.equal(tabs.size,1);
+});
 
 test('Sales ledger requires access, prevents stale writes and retains one immutable revision per change', () => {
   const {ctx,tabs,key} = fixture();
@@ -61,6 +102,27 @@ test('Sales ledger requires access, prevents stale writes and retains one immuta
   const updated = {operation:'commit',changeId:crypto.randomUUID(),entries:[{stayId,expectedRevision:first.revision,record:{...sale,payments:[{method:'Cash',date:'2026-11-24',cents:10000}]}}]};
   assert.equal(ctx.privateSalesLedger_(updated).records[stayId].payments[0].cents,10000);
   assert.equal(tabs.get('Palz_Private_Sales').getLastRow(),3);
+});
+
+test('editor setup provisions one restricted workbook and keeps the original access key on retry', () => {
+  const {ctx} = fixture();
+  const properties = new Map();
+  const scriptProperties = {getProperty:name=>properties.get(name),setProperty:(name,value)=>properties.set(name,value)};
+  ctx.PropertiesService.getScriptProperties = () => scriptProperties;
+  let created = 0;
+  let locked = false;
+  ctx.LockService = {getScriptLock:()=>({waitLock:()=>{locked = true;},releaseLock:()=>{locked = false;}})};
+  ctx.SpreadsheetApp.create = () => { assert.equal(locked,true); created++; return {getId:()=> 'private'}; };
+  assert.equal(ctx.setupPalzSharedSales_(),'Shared Sales is configured.');
+  const firstKey = properties.get('PALZ_SALES_ACCESS_KEY');
+  assert.match(firstKey,/^[0-9a-f]{64}$/i);
+  assert.equal(ctx.setupPalzSharedSales_(),'Shared Sales is configured.');
+  assert.equal(properties.get('PALZ_SALES_ACCESS_KEY'),firstKey);
+  assert.equal(created,1);
+  assert.equal(locked,false);
+  properties.set('PALZ_SALES_SPREADSHEET_ID','booking');
+  assert.throws(()=>ctx.setupPalzSharedSales_(),/separate private spreadsheet/);
+  assert.equal(properties.get('PALZ_SALES_ACCESS_KEY'),firstKey);
 });
 
 test('scheduled medication requires sitter confirmation and retry uses the same routine-log event', () => {

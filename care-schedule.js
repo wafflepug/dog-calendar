@@ -1,6 +1,10 @@
 (() => {
   'use strict';
   const labels = {feeding:'Feeding',walk:'Walk',medication:'Medication'};
+  const arrivalTargets = new Map([
+    ['Review intake', 'intake'], ['Confirm handover times', 'handover-times'],
+    ['Review vaccination record', 'vaccination']
+  ]);
   const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
   const identity = card => ({stayId:card.dataset.directoryStayId,dogId:card.dataset.directoryDogId,stayKey:card.dataset.directoryStayKey});
   async function request(action, values = {}, write = false) {
@@ -142,7 +146,10 @@
       const countLabel = checks.length + ' to review';
       if (arrivalCount.textContent !== countLabel) arrivalCount.textContent = countLabel;
       const markup = checks.map(check => {
-        const href = 'directory.html?' + new URLSearchParams({stayKey:check.stayKey,stayId:check.stayId,dogId:check.dogId,pet:'1'});
+        const identity = new URLSearchParams({stayKey:check.stayKey,stayId:check.stayId,dogId:check.dogId,pet:check.dogName});
+        const linkFor = target => 'directory.html?' + identity + (target ? '&prearrival=' + target : '');
+        const targets = check.needs.map(need => arrivalTargets.get(need));
+        const href = linkFor(targets.find(Boolean));
         const arrivalDate = window.v10FormatDateLabel(check.startDate);
         return `<li class="palz-before-arrival-row">
           <div class="palz-before-arrival-guest">
@@ -150,7 +157,10 @@
             <time datetime="${esc(check.startDate)}">Arrives ${esc(arrivalDate)}</time>
           </div>
           <a class="wh-home-link palz-before-arrival-review" href="${esc(href)}" aria-label="Review ${esc(check.dogName)}, arriving ${esc(arrivalDate)}">Review</a>
-          <ul class="palz-before-arrival-checks">${check.needs.map(need => '<li>' + esc(need) + '</li>').join('')}</ul>
+          <ul class="palz-before-arrival-checks">${check.needs.map((need, index) => {
+            const target = targets[index];
+            return '<li>' + (target ? '<a href="' + esc(linkFor(target)) + '">' + esc(need) + '</a>' : esc(need)) + '</li>';
+          }).join('')}</ul>
         </li>`;
       }).join('');
       if (markup !== lastArrivalMarkup) {
