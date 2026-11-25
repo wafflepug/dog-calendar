@@ -13,7 +13,7 @@
 
   const BUILD = '2026.08.28.01';
   // Increment with coordinated shell releases so entry pages and SW stay aligned.
-  const ASSET_REVISION = '2026.11.25.04';
+  const ASSET_REVISION = '2026.11.25.05';
   window.WAFFLE_ASSET_REVISION = ASSET_REVISION;
   const ENDPOINT = 'https://script.google.com/macros/s/AKfycbwn4HL49K9c3AZbXJRUjPw3UYWxJt8DmqXwMnTytyqdSstj3ZIJwWdDEC2IsBjetOf3pw/exec';
   const RUNTIME = [
@@ -64,7 +64,11 @@
   ];
   // This Care-only action does not add a script request to Today or Calendar.
   if (document.body?.dataset?.wafflePage === 'directory') RUNTIME.push('care-sitter-summary.js', 'care-routine-log.js', 'care-profile-segments.js');
-  RUNTIME.push('sitter-planning.js', 'palz-icons.js', 'palz-sales.js', 'care-schedule.js', 'palz-owner-tools.js');
+  const isCalendarPage = document.body?.dataset?.wafflePage === 'calendar';
+  if (isCalendarPage) RUNTIME.splice(RUNTIME.indexOf('waffle-app.js') + 1, 0, 'care-schedule.js');
+  RUNTIME.push('sitter-planning.js', 'palz-icons.js', 'palz-sales.js');
+  if (!isCalendarPage) RUNTIME.push('care-schedule.js');
+  RUNTIME.push('palz-owner-tools.js');
   const maintenanceUrl = new URL('maintenance.html', window.location.href);
   let buildBanner = null;
   let firstPaintSettled = false;

@@ -7,8 +7,8 @@
   ]);
   const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
   const identity = card => ({stayId:card.dataset.directoryStayId,dogId:card.dataset.directoryDogId,stayKey:card.dataset.directoryStayKey});
-  async function request(action, values = {}, write = false) {
-    const response = await (write ? window.sendPayloadToAppsScript : window.queryAppsScript)({action,...values});
+  async function request(action, values = {}, write = false, options) {
+    const response = await (write ? window.sendPayloadToAppsScript : window.queryAppsScript)({action,...values}, options);
     if (response?.result !== 'success' || response.queued) throw Error(response?.error || 'Could not confirm this change. Reopen to check.');
     return response;
   }
@@ -134,49 +134,76 @@
   const arrivalSummary = arrivals.querySelector('summary');
   const arrivalCount = arrivals.querySelector('.palz-before-arrival-count');
   const arrivalList = arrivals.querySelector('.palz-before-arrival-list');
-  let arrivalsPending = false, lastArrivalMarkup = '';
+  const arrivalCacheKey = 'today:prearrival-checks';
+  const arrivalRefreshMs = 2 * 60 * 1000;
+  let arrivalsPending = false, arrivalsQueued = false, hasFreshArrivals = false, lastArrivalMarkup = '';
+  function showArrivals(checks) {
+    arrivals.hidden = !checks.length;
+    arrivals.dataset.palzTodayWork = String(checks.length);
+    window.updatePalzTodayActionsAlert?.();
+    const countLabel = checks.length + ' to review';
+    if (arrivalCount.textContent !== countLabel) arrivalCount.textContent = countLabel;
+    const markup = checks.map(check => {
+      const identity = new URLSearchParams({stayKey:check.stayKey,stayId:check.stayId,dogId:check.dogId,pet:check.dogName});
+      const linkFor = target => 'directory.html?' + identity + (target ? '&prearrival=' + target : '');
+      const targets = check.needs.map(need => arrivalTargets.get(need));
+      const href = linkFor(targets.find(Boolean));
+      const arrivalDate = window.v10FormatDateLabel(check.startDate);
+      return `<li class="palz-before-arrival-row">
+        <div class="palz-before-arrival-guest">
+          <strong>${esc(check.dogName)}</strong>
+          <time datetime="${esc(check.startDate)}">Arrives ${esc(arrivalDate)}</time>
+        </div>
+        <a class="wh-home-link palz-before-arrival-review" href="${esc(href)}" aria-label="Review ${esc(check.dogName)}, arriving ${esc(arrivalDate)}">Review</a>
+        <ul class="palz-before-arrival-checks">${check.needs.map((need, index) => {
+          const target = targets[index];
+          return '<li>' + (target ? '<a href="' + esc(linkFor(target)) + '">' + esc(need) + '</a>' : esc(need)) + '</li>';
+        }).join('')}</ul>
+      </li>`;
+    }).join('');
+    if (markup !== lastArrivalMarkup) {
+      const focusedLink = arrivalList.contains(document.activeElement) ? document.activeElement.href : '';
+      arrivalList.innerHTML = markup;
+      lastArrivalMarkup = markup;
+      if (focusedLink && !arrivals.hidden) {
+        const restored = [...arrivalList.querySelectorAll('a')].find(link => link.href === focusedLink);
+        (restored || arrivalSummary).focus({preventScroll:true});
+      }
+    }
+  }
+
   async function refreshArrivals() {
     if (arrivalsPending || document.hidden) return;
     arrivalsPending = true;
+    const day = getLocalTodayDateString();
     try {
-      const {checks} = await request('get_prearrival_checks');
-      arrivals.hidden = !checks.length;
-      arrivals.dataset.palzTodayWork = String(checks.length);
-      window.updatePalzTodayActionsAlert?.();
-      const countLabel = checks.length + ' to review';
-      if (arrivalCount.textContent !== countLabel) arrivalCount.textContent = countLabel;
-      const markup = checks.map(check => {
-        const identity = new URLSearchParams({stayKey:check.stayKey,stayId:check.stayId,dogId:check.dogId,pet:check.dogName});
-        const linkFor = target => 'directory.html?' + identity + (target ? '&prearrival=' + target : '');
-        const targets = check.needs.map(need => arrivalTargets.get(need));
-        const href = linkFor(targets.find(Boolean));
-        const arrivalDate = window.v10FormatDateLabel(check.startDate);
-        return `<li class="palz-before-arrival-row">
-          <div class="palz-before-arrival-guest">
-            <strong>${esc(check.dogName)}</strong>
-            <time datetime="${esc(check.startDate)}">Arrives ${esc(arrivalDate)}</time>
-          </div>
-          <a class="wh-home-link palz-before-arrival-review" href="${esc(href)}" aria-label="Review ${esc(check.dogName)}, arriving ${esc(arrivalDate)}">Review</a>
-          <ul class="palz-before-arrival-checks">${check.needs.map((need, index) => {
-            const target = targets[index];
-            return '<li>' + (target ? '<a href="' + esc(linkFor(target)) + '">' + esc(need) + '</a>' : esc(need)) + '</li>';
-          }).join('')}</ul>
-        </li>`;
-      }).join('');
-      if (markup !== lastArrivalMarkup) {
-        const focusedLink = arrivalList.contains(document.activeElement) ? document.activeElement.href : '';
-        arrivalList.innerHTML = markup;
-        lastArrivalMarkup = markup;
-        if (focusedLink && !arrivals.hidden) {
-          const restored = [...arrivalList.querySelectorAll('a')].find(link => link.href === focusedLink);
-          (restored || arrivalSummary).focus({preventScroll:true});
-        }
-      }
+      const {checks} = await request('get_prearrival_checks', {}, false, { maxAttempts: 2, timeoutMs: 15000 });
+      if (!Array.isArray(checks) || arrivalsQueued || day !== getLocalTodayDateString()) return;
+      hasFreshArrivals = true;
+      showArrivals(checks);
+      void putWaffleCachedResponse(arrivalCacheKey, {day, checks});
     } catch (_) { /* Keep the last displayed checklist if a refresh fails. */ }
-    finally { arrivalsPending = false; }
+    finally {
+      arrivalsPending = false;
+      if (arrivalsQueued) {
+        arrivalsQueued = false;
+        void refreshArrivals();
+      }
+    }
   }
-  window.addEventListener('waffle:stay-operation-updated',refreshArrivals);
+  function arrivalDataChanged() {
+    if (arrivalsPending) arrivalsQueued = true;
+    else void refreshArrivals();
+  }
+  void getWaffleCachedResponse(arrivalCacheKey, arrivalRefreshMs).then(entry => {
+    const saved = entry?.payload;
+    if (!hasFreshArrivals && !arrivalsQueued && saved?.day === getLocalTodayDateString() && Array.isArray(saved.checks)) showArrivals(saved.checks);
+  }).catch(() => {});
+  window.addEventListener('waffle:stay-operation-updated',arrivalDataChanged);
+  window.addEventListener('waffle:phase4-data-changed',arrivalDataChanged);
+  window.addEventListener('waffle:boarding-data-updated',arrivalDataChanged);
+  window.addEventListener('online',refreshArrivals);
   document.addEventListener('visibilitychange',() => { if (!document.hidden) void refreshArrivals(); });
-  setInterval(refreshArrivals,300000);
+  setInterval(refreshArrivals,arrivalRefreshMs);
   void refreshArrivals();
 })();

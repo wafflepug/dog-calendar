@@ -1786,23 +1786,30 @@ function hydrateTodayDeparturePhotos(host) {
     const portraits = [...host.querySelectorAll('.type-departure .wh-home-portrait')];
     if (!portraits.length) return;
     const stayKeys = [...new Set(portraits.map(portrait => portrait.closest('[data-today-photo-stay-key]').dataset.todayPhotoStayKey))];
-    queryAppsScriptSWR({ action: 'get_belongings', stayKeys }, { cacheKey: 'today:departure-photos:' + JSON.stringify(stayKeys), maxAttempts: 1, timeoutMs: 12000 })
-        .then(({data}) => {
-            const photos = new Map((data?.records || []).map(record => [record.stayKey, record.dogPhoto]));
-            portraits.forEach(portrait => {
-                if (!portrait.isConnected) return;
-                const key = portrait.closest('[data-today-photo-stay-key]').dataset.todayPhotoStayKey;
-                const photo = photos.get(key);
-                const url = v10HomeThumbnailUrl(photo?.previewUrl || photo?.url || photo?.driveUrl || '');
-                if (!url) return;
-                const image = document.createElement('img');
-                image.alt = '';
-                image.decoding = 'async';
-                image.addEventListener('error', () => image.remove(), { once: true });
-                image.src = url;
-                portrait.append(image);
-            });
-        }).catch(() => { /* Keep the default portrait when photos are unavailable. */ });
+    const applyPhotos = data => {
+        if (!Array.isArray(data?.records)) return;
+        const photos = new Map(data.records.map(record => [record.stayKey, record.dogPhoto]));
+        portraits.forEach(portrait => {
+            if (!portrait.isConnected) return;
+            const key = portrait.closest('[data-today-photo-stay-key]').dataset.todayPhotoStayKey;
+            const photo = photos.get(key);
+            const url = v10HomeThumbnailUrl(photo?.previewUrl || photo?.url || photo?.driveUrl || '');
+            const previous = portrait.querySelector('img');
+            if (previous?.src === url) return;
+            previous?.remove();
+            if (!url) return;
+            const image = document.createElement('img');
+            image.alt = '';
+            image.decoding = 'async';
+            image.addEventListener('error', () => image.remove(), { once: true });
+            image.src = url;
+            portrait.append(image);
+        });
+    };
+    queryAppsScriptSWR({ action: 'get_belongings', stayKeys }, {
+        cacheKey: 'today:departure-photos:' + JSON.stringify(stayKeys.sort()),
+        maxAttempts: 1, timeoutMs: 12000, onCached: applyPhotos
+    }).then(({data}) => applyPhotos(data)).catch(() => { /* Keep the last available portrait. */ });
 }
 
 function updatePalzTodayActionsAlert() {
@@ -5145,6 +5152,10 @@ registerWaffleServiceWorker();
     const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT63UsPjcg3GB4lTB6cewLaTRS_yJP4kpOMSMsTTnvTw1Wbjn3CgtZc_c6li28ihjzkHnphFt0XcFTt/pub?gid=1639615540&single=true&output=csv';
     const APPS_SCRIPT_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbwn4HL49K9c3AZbXJRUjPw3UYWxJt8DmqXwMnTytyqdSstj3ZIJwWdDEC2IsBjetOf3pw/exec';
 
+    // Let the first spreadsheet read overlap script loading. Only Calendar/Home consumes it.
+    let startupBoardingRead = WAFFLE_PAGE === 'calendar' ? fetchSpreadsheetCsv() : null;
+    startupBoardingRead?.catch(() => {}); // The initial sync handles rejection once the UI is mounted.
+
     let globalCalendar = null;
     let dailyCapacityCounts = {};
     let auditLogRecords = [];
@@ -5571,14 +5582,9 @@ registerWaffleServiceWorker();
 
 
         if (WAFFLE_PAGE === 'calendar') {
-            setTimeout(function() {
-                if (globalCalendar) globalCalendar.refetchEvents();
-            }, 100);
-
             // Calendar owns the live Google Sheet polling.
-            setTimeout(function() {
-                syncSpreadsheetData().catch(() => {});
-            }, 300);
+            syncSpreadsheetData({ read: startupBoardingRead }).catch(() => {});
+            startupBoardingRead = null;
 
             setInterval(function() {
                 syncSpreadsheetData().catch(() => {});
@@ -7558,7 +7564,7 @@ registerWaffleServiceWorker();
             btn.disabled = true;
         }
 
-        return fetchSpreadsheetCsv()
+        return (options.read || fetchSpreadsheetCsv())
             .then(csvText => {
                 localStorage.setItem('boardingDataCache', csvText);
                 reconcileTemporaryEvents(csvText);
@@ -7566,6 +7572,9 @@ registerWaffleServiceWorker();
                 directoryIntakeStatusCache = {};
                 directoryLegacyIntakeCache = {};
                 refreshCalendarData();
+                if (WAFFLE_PAGE === 'calendar' && backupCache && csvText !== backupCache) {
+                    window.dispatchEvent(new Event('waffle:boarding-data-updated'));
+                }
                 loadCareRiskDashboard(csvText).catch(() => {});
 
                 if (btn) {
