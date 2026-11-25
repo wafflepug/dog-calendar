@@ -197,7 +197,36 @@ test('touch handover picker keeps Set in view and changes only the draft until s
 test('compact profile aligns identity above actions and keeps stay confirmations visible on short screens', async ({page,baseURL}) => {
   await page.setViewportSize({width:320,height:700});
   const fixture = await install(page);
+  await page.addInitScript(() => {
+    localStorage.setItem('waffleColourStyle', 'custom');
+    localStorage.setItem('waffleCustomAccent', '#ffffff');
+  });
   await page.goto(`${baseURL}/directory.html`);
+  const selectedFilter = page.locator('.directory-roster-filters .v1082-stay-tab.is-active');
+  await expect(selectedFilter).toBeVisible();
+  const expectAccentStyle = async (control, surface = '--wh75-accent-soft') => {
+    const palette = await control.evaluate((node, token) => {
+      const sample = document.createElement('span');
+      sample.style.backgroundColor = `var(${token})`;
+      sample.style.color = 'var(--wh75-accent-ink)';
+      node.append(sample);
+      const style = getComputedStyle(sample);
+      const colours = { background: style.backgroundColor, text: style.color };
+      sample.remove();
+      return colours;
+    }, surface);
+    await expect(control).toHaveCSS('background-color', palette.background);
+    await expect(control).toHaveCSS('color', palette.text);
+    return palette.background;
+  };
+  await expectAccentStyle(selectedFilter);
+  await expectAccentStyle(selectedFilter.locator(':scope > :is(strong, .v1086-stay-tab-count)'), '--wh75-shell');
+  const rosterCard = page.locator(`#directory-grid [data-directory-stay-id="${bookings[2].stayId}"]`);
+  await expectAccentStyle(rosterCard.locator('[data-v11113-roster-extend]'));
+  await rosterCard.getByRole('button', {name:'Set check-out time'}).click();
+  const estimate = page.locator('[data-roster-checkout-dialog]');
+  await expectAccentStyle(estimate.getByRole('button', {name:'Save time'}));
+  await estimate.getByRole('button', {name:'Cancel'}).click();
   const card = page.locator(`#directory-grid [data-directory-stay-id="${bookings[0].stayId}"]`);
   await card.locator('[data-open-directory-profile]').click();
   await expect(card.locator('.directory-card-header .directory-photo-shell')).toHaveCSS('width','64px');
@@ -210,11 +239,23 @@ test('compact profile aligns identity above actions and keeps stay confirmations
     v110EnsureCareOperationBar(document.querySelector('.directory-card.is-profile-active'));
   }, fixture.recordCheckIn(bookings[0]).record);
 
+  const selectedTab = card.locator('.care-profile-segment-button[aria-pressed="true"]');
+  const extendButton = card.getByRole('button',{name:'Extend stay',exact:true});
+  const earlyButton = card.getByRole('button',{name:/early checkout for/i});
+  for (const [width, dark] of [[320, false], [1280, true]]) {
+    await page.setViewportSize({width,height:700});
+    await page.evaluate(enabled => document.body.classList.toggle('dark-theme', enabled), dark);
+    await expectAccentStyle(selectedTab);
+    const accentSurface = await expectAccentStyle(extendButton);
+    await expect(earlyButton).not.toHaveCSS('background-color', accentSurface);
+  }
+  await page.setViewportSize({width:320,height:700});
+
   const stays = page.locator('#v11113StayDatesModal');
   const checkout = page.locator('#v11217EarlyCheckoutModal');
   for (const [open, panel, confirm] of [
-    [card.getByRole('button',{name:'Extend stay',exact:true}), stays, 'Extend stay'],
-    [card.getByRole('button',{name:/early checkout for/i}), checkout, 'Confirm early check-out']
+    [extendButton, stays, 'Extend stay'],
+    [earlyButton, checkout, 'Confirm early check-out']
   ]) {
     await open.click();
     await page.setViewportSize({width:320,height:275});
@@ -222,6 +263,7 @@ test('compact profile aligns identity above actions and keeps stay confirmations
     const action = panel.getByRole('button',{name:confirm,exact:true});
     await expect(cancel).toBeInViewport({ratio:1});
     await expect(action).toBeInViewport({ratio:1});
+    if (panel === stays) await expectAccentStyle(action);
     const [cancelBox, actionBox] = await Promise.all([cancel.boundingBox(), action.boundingBox()]);
     expect(cancelBox.width).toBeCloseTo(actionBox.width,0);
     expect(actionBox.height).toBeGreaterThanOrEqual(44);

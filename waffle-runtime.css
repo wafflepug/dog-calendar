@@ -3,7 +3,7 @@
    Historical base styles remain compatibility sources during Phase 3A, but pages no longer
    reference them individually. Preserve this import order until modules are folded in. */
 @import url("waffle-app.css?build=2026.08.27.04&rev=2026.11.15.01");
-@import url("palz-sales.css?rev=2026.11.25.01");
+@import url("palz-sales.css?rev=2026.11.25.02");
 @import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.11.15.01");
 @import url("waffle-v10.8.2.css?build=2026.08.27.04");
 @import url("waffle-v10.8.3.css?build=2026.08.27.04");
@@ -870,12 +870,6 @@ body[data-waffle-page="directory"] .directory-roster-filters .v1082-stay-tab {
 body[data-waffle-page="directory"] .directory-roster-filters .v1082-stay-tab:hover {
   background: color-mix(in srgb, var(--wh75-accent, #7562db) 7%, var(--v10-card, #fff)) !important;
 }
-body[data-waffle-page="directory"] .directory-roster-filters .v1082-stay-tab.is-active {
-  border-color: var(--v10-border, var(--wh75-line, #dce3eb)) !important;
-  background: color-mix(in srgb, var(--wh75-accent, #7562db) 11%, var(--v10-card, #fff)) !important;
-  color: var(--v10-text, #172033) !important;
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--wh75-accent, #7562db) 24%, transparent) !important;
-}
 body[data-waffle-page="directory"] .directory-roster-filters .v1082-stay-tab.is-active::after {
   display: none !important;
 }
@@ -894,10 +888,6 @@ body[data-waffle-page="directory"] .directory-roster-filters .v1082-stay-tab > s
   color: var(--v10-muted, #526174) !important;
   font-size: 11px !important;
   font-weight: 800 !important;
-}
-body[data-waffle-page="directory"] .directory-roster-filters .v1082-stay-tab.is-active > strong {
-  background: var(--wh75-accent, #7562db) !important;
-  color: #fff !important;
 }
 body[data-waffle-page="directory"] .v1082-stay-panels {
   padding: 10px;
@@ -998,9 +988,6 @@ body[data-waffle-page="directory"] .directory-profile-tools .directory-legacy-gl
 body[data-waffle-page="directory"] .directory-profile-tools .belongings-refresh-btn {
   min-height: 38px;
   padding-inline: 11px;
-}
-body.dark-theme[data-waffle-page="directory"] .directory-roster-filters .v1082-stay-tab.is-active {
-  background: color-mix(in srgb, var(--wh75-accent, #a78bfa) 19%, var(--v10-card, #1e293b)) !important;
 }
 body.dark-theme[data-waffle-page="directory"] .directory-roster-status {
   background: var(--v10-card, #1e293b);
@@ -3815,6 +3802,7 @@ body:has(#v10QuickAddSheet:not([hidden])) :is(#v10QuickAddButton, #aw37launch, #
   color: var(--wh75-text, #172033);
 }
 #waffleNotificationModal [data-notification-filter][aria-pressed="true"] {
+  border-color: var(--wh75-ring, #ddd6fe);
   background: var(--wh75-accent-soft, #ede9fe);
   color: var(--wh75-accent-ink, #4c1d95);
 }
@@ -3903,6 +3891,27 @@ html body #customBookingModal #saveModalBtn {
 #customBookingModal .v1112-source-tile { min-width:0; padding:0; }
 @media (max-width:340px) {
   #customBookingModal .v1112-source-circle { width:44px; height:44px; }
+}
+
+.v110-operation-actions > .v11113-extend-stay-button,
+.care-roster-handover-actions > .v11113-extend-stay-button,
+#v11113StayDatesModal [data-v11113-stay-dates-save],
+[data-roster-checkout-dialog] button[type="submit"] {
+  border-color: var(--wh75-ring, #ddd6fe);
+  background: var(--wh75-accent-soft, #ede9fe);
+  color: var(--wh75-accent-ink, #4c1d95);
+}
+:is(.v110-operation-actions, .care-roster-handover-actions) > .v11113-extend-stay-button:hover:not(:disabled),
+#v11113StayDatesModal [data-v11113-stay-dates-save]:hover:not(:disabled),
+[data-roster-checkout-dialog] button[type="submit"]:hover:not(:disabled) {
+  border-color: var(--wh75-accent, #7c3aed);
+}
+:is(.v110-operation-actions, .care-roster-handover-actions) > .v11113-extend-stay-button:focus-visible,
+#v11113StayDatesModal [data-v11113-stay-dates-save]:focus-visible,
+[data-roster-checkout-dialog] button[type="submit"]:focus-visible,
+#waffleNotificationModal [data-notification-filter]:focus-visible {
+  outline: 2px solid var(--wh75-accent-ink, #4c1d95);
+  outline-offset: 2px;
 }
 
 /* Keep stay actions outside the scrolling content when the phone viewport shrinks. */
