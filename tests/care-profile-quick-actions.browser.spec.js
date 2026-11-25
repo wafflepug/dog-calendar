@@ -6,6 +6,7 @@ const {install,bookings}=require('./fixtures/care-daily-workflows');
 test('streamlined profile places records, belongings and destructive actions together', async ({page, baseURL}) => {
   const booking = bookings[0];
   const fixture = await install(page, {
+    intakePdfUrl: 'https://example.test/intake.pdf',
     profileOverrides: { [booking.stayId]: { approvedTreats: 'Plain chicken only', walkingEquipment: 'Blue harness', insuranceNumber: '00AB-42' } }
   });
   await page.goto(`${baseURL}/directory.html`);
@@ -66,7 +67,29 @@ test('streamlined profile places records, belongings and destructive actions tog
   const remove = card.getByRole('button', {name: 'Remove Stay', exact: true});
   await expect(pdf).toBeVisible();
   await expect(remove).toBeVisible();
-  await expect(card.locator('[data-care-header-intake-pdf] + [data-care-header-remove-stay]')).toHaveCount(1);
+  const tools = card.locator('[data-care-header-tools]');
+  const actions = '[data-care-host-again], [data-care-header-call-owner], [data-v11112-care-source-host], [data-care-header-book-again], [data-care-header-intake-link], [data-care-header-intake-pdf], [data-care-header-remove-stay]';
+  await expect.poll(() => tools.locator(actions).evaluateAll(nodes =>
+    nodes.map(node => [...node.attributes].find(({name}) => name.startsWith('data-care-header-') ||
+      name === 'data-care-host-again' || name === 'data-v11112-care-source-host').name)
+  )).toEqual([
+    'data-care-host-again', 'data-care-header-call-owner', 'data-v11112-care-source-host',
+    'data-care-header-book-again', 'data-care-header-intake-link', 'data-care-header-intake-pdf',
+    'data-care-header-remove-stay'
+  ]);
+  for (const [width, dark, red] of [[320, false, 'rgb(153, 27, 27)'], [1280, true, 'rgb(254, 202, 202)']]) {
+    await page.setViewportSize({width,height:844});
+    await page.evaluate(enabled => document.body.classList.toggle('dark-theme', enabled), dark);
+    await expect(remove).toHaveCSS('color', red);
+    const positions = await tools.locator(actions).evaluateAll(nodes => nodes.map(node => {
+      const {x, y} = node.getBoundingClientRect();
+      return {x, y};
+    }));
+    for (let i = 1; i < positions.length; i++) {
+      const preceding = positions[i - 1], current = positions[i];
+      expect(current.y > preceding.y + 20 || current.x > preceding.x).toBe(true);
+    }
+  }
   await page.evaluate(() => { window.confirm = () => { throw Error('First press must not confirm'); }; });
   await remove.click();
   const armed = card.getByRole('button', {name: 'Delete Confirmed Stay', exact: true});
@@ -314,6 +337,7 @@ test('profile intake link copies only for the selected stay and opens preparatio
   await expect(page.locator('#p4OwnerEnd')).toHaveValue(bookings[1].endDate);
   await page.locator('#p4Modal [data-p4-close]').click();
   await expect(otherShortcut).toBeFocused();
+  await expect(other.getByRole('button', {name:'View intake PDF'})).toBeHidden();
   expect(await page.evaluate(() => window.__copied)).toEqual([link]);
 });
 

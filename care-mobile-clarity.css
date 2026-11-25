@@ -3029,7 +3029,7 @@ body[data-waffle-page="directory"] [data-directory-profile-care] .care-risk-opti
   outline-offset: 2px;
 }
 
-[data-care-header-document-actions] > [data-care-header-intake-pdf] { order: 1; padding: 0; cursor: pointer; }
+[data-care-header-document-actions] > [data-care-header-intake-pdf] { padding: 0; cursor: pointer; }
 [data-care-header-document-actions] > [data-care-header-intake-pdf]::after { content: "View intake PDF" / ""; }
 .care-header-tools > [data-care-header-intake-link] { padding: 0; cursor: pointer; }
 .care-header-tools > [data-care-header-intake-link]::after { content: "Copy intake link" / ""; }
@@ -3043,7 +3043,7 @@ body[data-waffle-page="directory"] [data-directory-profile-care] .care-risk-opti
   text-align: center;
   overflow-wrap: anywhere;
 }
-[data-care-header-document-actions] > [data-care-header-intake-pdf]:disabled { opacity: .55; cursor: default; }
+body[data-waffle-page="directory"] .directory-card.is-profile-active [data-care-header-intake-pdf][hidden] { display: none; }
 @media (max-width: 390px) {
   body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-card-header > [data-care-header-tools] {
     column-gap: 10px;
@@ -3115,15 +3115,29 @@ body[data-waffle-page="directory"] :is(.directory-guest-tile-open, .directory-ca
   background: transparent;
 }
 [data-care-header-document-actions] { display: flex; gap: 20px; order: 1; flex: none; }
+[data-care-header-document-actions]:not(:has(> :not([hidden]))) { display: none; }
 [data-care-header-document-actions] > [data-care-header-remove-stay] { padding: 0; cursor: pointer; }
-[data-care-header-document-actions] > [data-care-header-remove-stay]::after { content: attr(data-action-label) / ""; }
-body[data-waffle-page="directory"] .directory-card.is-profile-active [data-care-header-remove-stay][data-v11198-delete-confirmed] {
+[data-care-header-document-actions] > [data-care-header-remove-stay]::after {
+  content: attr(data-action-label) / "";
+  color: inherit;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active [data-care-header-remove-stay] {
   background: #fef2f2;
+  border-color: #fca5a5;
+  color: #991b1b;
+}
+body.dark-theme[data-waffle-page="directory"] .directory-card.is-profile-active [data-care-header-remove-stay] {
+  background: #3d1b24;
+  border-color: #b94b58;
+  color: #fecaca;
+}
+body[data-waffle-page="directory"] .directory-card.is-profile-active [data-care-header-remove-stay][data-v11198-delete-confirmed] {
+  background: #fee2e2;
   border-color: #ef4444;
   color: #991b1b;
 }
 body.dark-theme[data-waffle-page="directory"] .directory-card.is-profile-active [data-care-header-remove-stay][data-v11198-delete-confirmed] {
-  background: #3d1b24;
+  background: #541f2a;
   border-color: #f87171;
   color: #fecaca;
 }

@@ -212,7 +212,8 @@ for (const [name, width, colorScheme] of [['320-light', 320, 'light'], ['320-dar
     await expect(stayMore).toHaveCount(1);
     await expect(stayMore.locator(':scope > summary')).toBeVisible();
     await expect(tools.locator('.directory-care-danger-disclosure')).toHaveCount(0);
-    await expect(card.locator('[data-care-header-intake-pdf] + [data-care-header-remove-stay]')).toHaveAccessibleName('Remove Stay');
+    await expect(card.locator('[data-care-header-intake-pdf]')).toBeHidden();
+    await expect(card.getByRole('button', { name: 'Remove Stay', exact: true })).toBeVisible();
     await expect(card.locator('[data-v11198-delete-confirmed]')).toHaveCount(0);
 
     // Wait for the independent startup Past-count read before measuring tools-only reads.
