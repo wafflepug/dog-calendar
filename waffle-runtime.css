@@ -3,7 +3,7 @@
    Historical base styles remain compatibility sources during Phase 3A, but pages no longer
    reference them individually. Preserve this import order until modules are folded in. */
 @import url("waffle-app.css?build=2026.08.27.04&rev=2026.11.15.01");
-@import url("palz-sales.css?rev=2026.11.25.05");
+@import url("palz-sales.css?rev=2026.11.26.01");
 @import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.11.15.01");
 @import url("waffle-v10.8.2.css?build=2026.08.27.04");
 @import url("waffle-v10.8.3.css?build=2026.08.27.04");
@@ -3962,4 +3962,34 @@ html body #customBookingModal #saveModalBtn {
     padding:0;
     border:0;
   }
+}
+
+#wh65Calendar .wh65-sync .palz-icon { width: 18px; height: 18px; }
+#wh94LastUpdated:empty { display: none; }
+
+#customBookingModal[data-meet-greet-mode="view"] :is(.meet-greet-fields, .v1112-meet-source-field, .meet-greet-actions),
+#customBookingModal .meet-greet-view[hidden] { display: none !important; }
+#customBookingModal .meet-greet-view dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin: 0 0 18px;
+}
+#customBookingModal .meet-greet-view dt { color: var(--wh-text-muted, #526174); font-size: 12px; }
+#customBookingModal .meet-greet-view dd { margin: 3px 0 0; font-weight: 700; overflow-wrap: anywhere; }
+#customBookingModal .meet-greet-view-actions { display: flex; justify-content: flex-end; gap: 8px; }
+#customBookingModal .meet-greet-view-actions button {
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--wh75-line, #d5dee9);
+  border-radius: 10px;
+  background: var(--wh75-shell-2, #f8fafc);
+  color: var(--wh75-text, #172033);
+  font-weight: 750;
+  cursor: pointer;
+}
+#customBookingModal .meet-greet-view-actions [data-meet-edit] {
+  border-color: var(--wh75-ring, #ddd6fe);
+  background: var(--wh75-accent-soft, #ede9fe);
+  color: var(--wh75-accent-ink, #4c1d95);
 }

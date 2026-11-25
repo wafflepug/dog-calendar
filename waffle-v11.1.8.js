@@ -517,7 +517,8 @@
     }
     const chipClass = 'v1118-status-chip v1118-care-status ' + statusClass(status);
     if (chip.className !== chipClass) chip.className = chipClass;
-    chip.toggleAttribute('data-care-photo-status-hidden', rosterHasBadge);
+    const rosterHasNameIcon = host === button && !!button.querySelector('[data-care-roster-stay-icon]');
+    chip.toggleAttribute('data-care-photo-status-hidden', rosterHasBadge || rosterHasNameIcon);
     const iconLabel = status === 'AT HOME' ? 'At Home' : status === 'LEAVING TODAY' && host === button ? 'Leaving Today' : '';
     if (!iconLabel && chip.parentElement !== host) host.append(chip);
     if (chip.textContent !== status) chip.textContent = status;

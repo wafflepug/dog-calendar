@@ -59,6 +59,31 @@ test('Today queue deduplicates stable event identity and opens the exact stay pr
   await expect(page.locator('#v10TodayAgenda')).not.toContainText('Medication due');
 });
 
+test('arrival portraits use the matching dog profile and fall back to the default', async ({ page }) => {
+  await loadQueue(page);
+  await page.route('https://today.test/**', route => route.fulfill({
+    contentType:'image/svg+xml', body:'<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"/>'
+  }));
+  await page.evaluate(() => {
+    const dogId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+    const events = [
+      {title:'Milo', extendedProps:{start:'2026-10-16', end:'2026-10-20', stayKey:'milo-stay', dogId, stayId:'stay-a'}},
+      {title:'Milo', extendedProps:{start:'2026-10-16', end:'2026-10-22', stayKey:'other-milo-stay', dogId:'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', stayId:'stay-b'}}
+    ];
+    window.v10HomeThumbnailUrl = value => value;
+    window.queryAppsScriptSWR = async payload => ({data: payload.action === 'get_belongings'
+      ? {records:[]}
+      : {record:{dogId, primaryPhoto:{previewUrl:'https://today.test/portrait.svg'}}}
+    });
+    renderV10OperationsHome(events);
+  });
+  const arrival = page.locator('[data-today-stay-id="stay-a"].type-arrival');
+  await expect(arrival.locator('.wh-home-portrait img')).toHaveAttribute('src', 'https://today.test/portrait.svg');
+  const other = page.locator('[data-today-stay-id="stay-b"].type-arrival');
+  await expect(other.locator('.wh-home-portrait[data-pet-species="dog"]')).toHaveCount(1);
+  await expect(other.locator('.wh-home-portrait img')).toHaveCount(0);
+});
+
 test('confirmed same-day arrivals expose one direct Check-in action and transition to Check-out after confirmation', async ({ page }) => {
   await loadQueue(page);
   await page.evaluate(() => {

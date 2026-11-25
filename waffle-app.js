@@ -823,50 +823,19 @@ function v101SkeletonHtml(
 }
 
 
-function formatNotificationCentreTime(
-    timestamp
-) {
+const notificationTimeFormatter = new Intl.DateTimeFormat('en-GB', {
+    day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit',
+    hourCycle: 'h23', timeZone: 'Australia/Sydney'
+});
+
+function formatNotificationCentreTime(timestamp) {
     if (!timestamp) return '';
-
-    const date =
-        new Date(timestamp);
-
-    if (
-        Number.isNaN(
-            date.getTime()
-        )
-    ) {
-        return '';
-    }
-
-    const now =
-        new Date();
-
-    const sameDay =
-        date.toDateString() ===
-        now.toDateString();
-
-    if (sameDay) {
-        return date.toLocaleTimeString(
-            'en-AU',
-            {
-                hour:
-                    'numeric',
-                minute:
-                    '2-digit'
-            }
-        );
-    }
-
-    return date.toLocaleDateString(
-        'en-AU',
-        {
-            day:
-                'numeric',
-            month:
-                'short'
-        }
+    const date = new Date(timestamp);
+    if (Number.isNaN(date.getTime())) return '';
+    const { day, month, hour, minute } = Object.fromEntries(
+        notificationTimeFormatter.formatToParts(date).map(({ type, value }) => [type, value])
     );
+    return `${day}-${month} ${hour}:${minute}`;
 }
 
 
@@ -956,6 +925,7 @@ function renderWaffleNotificationCentre() {
                     item.id
                 );
 
+            const timestamp = formatNotificationCentreTime(item.timestamp);
             return `
                 <button
                     type="button"
@@ -971,7 +941,7 @@ function renderWaffleNotificationCentre() {
                         <span>${escapeDashboardHtml(item.body || '')}</span>
                         <small>
                             ${escapeDashboardHtml(item.category || 'Activity')}
-                            ${item.timestamp ? ` · ${escapeDashboardHtml(formatNotificationCentreTime(item.timestamp))}` : ''}
+                            ${timestamp ? ` · <time datetime="${escapeDashboardHtml(item.timestamp)}">${timestamp}</time>` : ''}
                         </small>
                     </span>
                 </button>
@@ -1407,7 +1377,7 @@ function todayQueueIdentity(event) {
     return JSON.stringify([event?.id || '', stayKey, props.dogId || '', props.dogName || event?.title || '', dates.start || '', dates.end || '', props.ownerName || props.owner || '', props.phone || '']);
 }
 
-function todayQueueItem(event, type, icon, title, meta, sort) {
+function todayQueueItem(event, type, title, meta, sort) {
     const props = event?.extendedProps || {};
     const stayKey = typeof v110StayKeyForEvent === 'function' ? v110StayKeyForEvent(event) : String(props.stayKey || '');
     const dates = v10EventRawDates(event);
@@ -1444,7 +1414,7 @@ function todayQueueItem(event, type, icon, title, meta, sort) {
     const lockKey = stayId.toLowerCase();
     const activeActions = typeof v110ActiveOperationalActions !== 'undefined' ? v110ActiveOperationalActions : window.todayQueueActionLocks;
     const actionPending = !!action && !!activeActions?.has(lockKey);
-    return { identity, href, action, actionLabel, actionPending, stayId, dogId, stayKey, type: actionType, icon, title, meta, sort, species: props.species, isMeet: type === 'meet', sameDayCare };
+    return { identity, href, action, actionLabel, actionPending, stayId, dogId, stayKey, type: actionType, title, meta, sort, species: props.species, isMeet: type === 'meet', sameDayCare };
 }
 
 const todayBelongingsUploads = new Map();
@@ -1782,34 +1752,61 @@ async function runTodayQueueStayAction(button) {
 }
 
 
-function hydrateTodayDeparturePhotos(host) {
-    const portraits = [...host.querySelectorAll('.type-departure .wh-home-portrait')];
-    if (!portraits.length) return;
-    const stayKeys = [...new Set(portraits.map(portrait => portrait.closest('[data-today-photo-stay-key]').dataset.todayPhotoStayKey))];
+function hydrateTodayGuestPhotos(host) {
+    const portraits = [...host.querySelectorAll('[data-today-photo-stay-key] .wh-home-portrait')];
+    if (!portraits.length || typeof queryAppsScriptSWR !== 'function') return;
+    const stayKeyFor = portrait => portrait.closest('[data-today-photo-stay-key]').dataset.todayPhotoStayKey;
+    const stayKeys = [...new Set(portraits.map(stayKeyFor).filter(Boolean))].sort();
+    if (!stayKeys.length) return;
+    const photoUrl = photo => v10HomeThumbnailUrl(photo?.previewUrl || photo?.url || photo?.driveUrl || '');
+    const applyPhoto = (portrait, url) => {
+        if (!portrait.isConnected) return;
+        const previous = portrait.querySelector('img');
+        if (previous?.src === url) return;
+        previous?.remove();
+        if (!url) return;
+        const image = document.createElement('img');
+        image.alt = '';
+        image.decoding = 'async';
+        image.addEventListener('error', () => image.remove(), { once: true });
+        image.src = url;
+        portrait.append(image);
+    };
     const applyPhotos = data => {
         if (!Array.isArray(data?.records)) return;
-        const photos = new Map(data.records.map(record => [record.stayKey, record.dogPhoto]));
-        portraits.forEach(portrait => {
-            if (!portrait.isConnected) return;
-            const key = portrait.closest('[data-today-photo-stay-key]').dataset.todayPhotoStayKey;
-            const photo = photos.get(key);
-            const url = v10HomeThumbnailUrl(photo?.previewUrl || photo?.url || photo?.driveUrl || '');
-            const previous = portrait.querySelector('img');
-            if (previous?.src === url) return;
-            previous?.remove();
-            if (!url) return;
-            const image = document.createElement('img');
-            image.alt = '';
-            image.decoding = 'async';
-            image.addEventListener('error', () => image.remove(), { once: true });
-            image.src = url;
-            portrait.append(image);
-        });
+        const records = new Map(data.records.map(record => [record.stayKey, record]));
+        for (const portrait of portraits) {
+            if (!portrait.isConnected) continue;
+            const {todayDogId, todayStayId} = portrait.closest('[data-today-identity]').dataset;
+            const record = records.get(stayKeyFor(portrait));
+            if ((record?.dogId && record.dogId.toLowerCase() !== todayDogId.toLowerCase()) ||
+                (record?.stayId && record.stayId.toLowerCase() !== todayStayId.toLowerCase())) continue;
+            const url = photoUrl(record?.dogPhoto || record?.dogPhotoGallery?.at(-1));
+            applyPhoto(portrait, url);
+        }
     };
     queryAppsScriptSWR({ action: 'get_belongings', stayKeys }, {
-        cacheKey: 'today:departure-photos:' + JSON.stringify(stayKeys.sort()),
+        cacheKey: 'today:guest-photos:' + JSON.stringify(stayKeys),
         maxAttempts: 1, timeoutMs: 12000, onCached: applyPhotos
-    }).then(({data}) => applyPhotos(data)).catch(() => { /* Keep the last available portrait. */ });
+    }).then(({data}) => applyPhotos(data)).catch(() => { /* Keep cached portraits if the stay read fails. */ }).then(() => {
+        for (const portrait of portraits) {
+            if (!portrait.isConnected || portrait.querySelector('img')) continue;
+            const arrival = portrait.closest('.type-arrival');
+            const dogId = arrival?.dataset.todayDogId;
+            if (!dogId || !v110ValidStayId(dogId)) continue;
+            const applyMasterPhoto = response => {
+                const record = response?.record;
+                if (record?.dogId?.toLowerCase() === dogId.toLowerCase()) {
+                    applyPhoto(portrait, photoUrl(record.primaryPhoto || record.photoGallery?.at(-1)));
+                }
+            };
+            // Returning guests may have a profile photo at dog level only.
+            void queryAppsScriptSWR({ action: 'get_dog_master_profile', dogId }, {
+                cacheKey: 'today:dog-photo:' + dogId.toLowerCase(),
+                maxAttempts: 1, timeoutMs: 12000, onCached: applyMasterPhoto
+            }).then(({data}) => applyMasterPhoto(data)).catch(() => {});
+        }
+    });
 }
 
 function updatePalzTodayActionsAlert() {
@@ -1915,7 +1912,7 @@ function renderV10OperationsHome(events) {
             if (dates.start === today) {
                 meets++;
 
-                if (!todayCompletedMeetGreets().includes(todayQueueIdentity(event))) agenda.push(todayQueueItem(event, 'meet', '🤝', dogName, String(props.time || '') || 'Meet & Greet', 300 + meetGreetTimeToMinutes(props.time || '')));
+                if (!todayCompletedMeetGreets().includes(todayQueueIdentity(event))) agenda.push(todayQueueItem(event, 'meet', dogName, String(props.time || '') || 'Meet & Greet', 300 + meetGreetTimeToMinutes(props.time || '')));
             }
 
             if (
@@ -1955,12 +1952,12 @@ function renderV10OperationsHome(events) {
 
         if (dates.start === today) {
             arrivals++;
-            agenda.push(todayQueueItem(event, 'arrival', '🛬', dogName, 'Arriving today', 100));
+            agenda.push(todayQueueItem(event, 'arrival', dogName, 'Arriving today', 100));
         }
 
         if (dates.end === today) {
             departures++;
-            agenda.push(todayQueueItem(event, 'departure', '👋', dogName, 'Leaving today', 200));
+            agenda.push(todayQueueItem(event, 'departure', dogName, 'Leaving today', 200));
         }
 
         if (
@@ -2019,7 +2016,7 @@ function renderV10OperationsHome(events) {
     if (agendaHost) {
         wireTodayQueueActions();
         agendaHost.innerHTML = queue.length
-            ? queue.map(item => item.isMeet ? '<div class="v10-agenda-row"><div class="v10-agenda-row-main"><button type="button" class="v10-agenda-item type-meet" data-today-open-meet="' + escapeDashboardHtml(item.identity) + '" aria-label="Open ' + escapeDashboardHtml(item.title) + ' Meet & Greet in calendar"><span class="v10-agenda-icon" aria-hidden="true">' + item.icon + '</span><span class="v10-agenda-copy"><strong>' + escapeDashboardHtml(item.title) + '</strong><span>' + escapeDashboardHtml(item.meta) + '</span></span><span class="v10-agenda-action">Open event <span aria-hidden="true">↗</span></span></button><button type="button" class="v10-agenda-operation" data-today-meet-done="' + escapeDashboardHtml(item.identity) + '" aria-label="Mark ' + escapeDashboardHtml(item.title) + ' Meet &amp; Greet done">Done</button></div></div>' : '<div class="v10-agenda-row" data-today-photo-stay-key="' + escapeDashboardHtml(item.stayKey) + '"><div class="v10-agenda-row-main"><a class="v10-agenda-item type-' + escapeDashboardHtml(item.type) + '" data-today-identity="' + escapeDashboardHtml(item.identity) + '" data-today-stay-id="' + escapeDashboardHtml(item.stayId) + '" data-today-dog-id="' + escapeDashboardHtml(item.dogId) + '" href="' + escapeDashboardHtml(item.href) + '" aria-label="Open ' + escapeDashboardHtml(item.title) + ' care profile, ' + escapeDashboardHtml(item.meta) + '">' + (item.type === 'departure' ? '<span class="v10-agenda-icon wh-home-portrait" data-pet-species="' + (item.species === 'cat' ? 'cat' : 'dog') + '" aria-hidden="true"></span>' : '<span class="v10-agenda-icon" aria-hidden="true">' + item.icon + '</span>') + '<span class="v10-agenda-copy"><strong>' + escapeDashboardHtml(item.title) + '</strong><span data-today-meta data-today-base-label="' + escapeDashboardHtml(item.meta) + '"' + (item.sameDayCare ? ' data-today-same-day-care' : '') + '>' + escapeDashboardHtml(item.meta) + '</span></span><span class="v10-agenda-action" aria-hidden="true">↗</span></a>' + (item.action ? (item.action === 'checkout' ? '<div class="v10-agenda-checkout-controls">' : '') + '<button type="button" class="v10-agenda-operation" data-today-action="' + item.action + '" data-today-identity="' + escapeDashboardHtml(item.identity) + '" data-today-stay-id="' + escapeDashboardHtml(item.stayId) + '" data-today-dog-id="' + escapeDashboardHtml(item.dogId) + '" data-today-stay-key="' + escapeDashboardHtml(item.stayKey) + '" aria-label="' + item.actionLabel + ' ' + escapeDashboardHtml(item.title) + '"' + (item.actionPending ? ' disabled aria-busy="true"' : '') + '>' + item.actionLabel + '</button>' + (item.action === 'checkout' ? '<button type="button" data-today-view-photos aria-haspopup="dialog" aria-label="View belongings for ' + escapeDashboardHtml(item.title) + '">View belongings</button></div>' : '') : '') + '</div>' + (item.action ? '<span class="v10-agenda-action-status" data-today-action-status role="status" hidden></span>' : '') + '</div>').join('')
+            ? queue.map(item => item.isMeet ? '<div class="v10-agenda-row"><div class="v10-agenda-row-main"><button type="button" class="v10-agenda-item type-meet" data-today-open-meet="' + escapeDashboardHtml(item.identity) + '" aria-label="Open ' + escapeDashboardHtml(item.title) + ' Meet & Greet in calendar"><span class="v10-agenda-icon" aria-hidden="true">🤝</span><span class="v10-agenda-copy"><strong>' + escapeDashboardHtml(item.title) + '</strong><span>' + escapeDashboardHtml(item.meta) + '</span></span><span class="v10-agenda-action">Open event <span aria-hidden="true">↗</span></span></button><button type="button" class="v10-agenda-operation" data-today-meet-done="' + escapeDashboardHtml(item.identity) + '" aria-label="Mark ' + escapeDashboardHtml(item.title) + ' Meet &amp; Greet done">Done</button></div></div>' : '<div class="v10-agenda-row" data-today-photo-stay-key="' + escapeDashboardHtml(item.stayKey) + '"><div class="v10-agenda-row-main"><a class="v10-agenda-item type-' + escapeDashboardHtml(item.type) + '" data-today-identity="' + escapeDashboardHtml(item.identity) + '" data-today-stay-id="' + escapeDashboardHtml(item.stayId) + '" data-today-dog-id="' + escapeDashboardHtml(item.dogId) + '" href="' + escapeDashboardHtml(item.href) + '" aria-label="Open ' + escapeDashboardHtml(item.title) + ' care profile, ' + escapeDashboardHtml(item.meta) + '">' + '<span class="v10-agenda-icon wh-home-portrait" data-pet-species="' + (item.species === 'cat' ? 'cat' : 'dog') + '" aria-hidden="true"></span>' + '<span class="v10-agenda-copy"><strong>' + escapeDashboardHtml(item.title) + '</strong><span data-today-meta data-today-base-label="' + escapeDashboardHtml(item.meta) + '"' + (item.sameDayCare ? ' data-today-same-day-care' : '') + '>' + escapeDashboardHtml(item.meta) + '</span></span><span class="v10-agenda-action" aria-hidden="true">↗</span></a>' + (item.action ? (item.action === 'checkout' ? '<div class="v10-agenda-checkout-controls">' : '') + '<button type="button" class="v10-agenda-operation" data-today-action="' + item.action + '" data-today-identity="' + escapeDashboardHtml(item.identity) + '" data-today-stay-id="' + escapeDashboardHtml(item.stayId) + '" data-today-dog-id="' + escapeDashboardHtml(item.dogId) + '" data-today-stay-key="' + escapeDashboardHtml(item.stayKey) + '" aria-label="' + item.actionLabel + ' ' + escapeDashboardHtml(item.title) + '"' + (item.actionPending ? ' disabled aria-busy="true"' : '') + '>' + item.actionLabel + '</button>' + (item.action === 'checkout' ? '<button type="button" data-today-view-photos aria-haspopup="dialog" aria-label="View belongings for ' + escapeDashboardHtml(item.title) + '">View belongings</button></div>' : '') : '') + '</div>' + (item.action ? '<span class="v10-agenda-action-status" data-today-action-status role="status" hidden></span>' : '') + '</div>').join('')
             : '<div class="v10-empty v10-all-clear" role="status"><span aria-hidden="true">✓</span><div><strong>You’re all caught up</strong><small>There are no scheduled actions for today.</small></div></div>';
         const actionFeedback = document.createElement('span');
         actionFeedback.id = 'v10TodayActionFeedback';
@@ -2027,7 +2024,7 @@ function renderV10OperationsHome(events) {
         actionFeedback.setAttribute('role', 'status');
         actionFeedback.setAttribute('aria-live', 'polite');
         agendaHost.appendChild(actionFeedback);
-        hydrateTodayDeparturePhotos(agendaHost);
+        hydrateTodayGuestPhotos(agendaHost);
     }
 
     const nextHost =
@@ -2209,16 +2206,51 @@ function findV10PotentialEvent(key) {
 }
 
 
+function setV10MeetGreetMode(mode, title) {
+    const modal = document.getElementById('customBookingModal');
+    modal.dataset.meetGreetMode = mode;
+    const view = modal.querySelector('[data-meet-greet-view]');
+    if (view) view.hidden = mode !== 'view';
+    document.getElementById('modalTitle').innerText = '🤝 ' + title;
+    return modal;
+}
+
+function openV10MeetGreetView(event) {
+    const props = event.extendedProps || {};
+    activeEditingEvent = event;
+    selectedClickDateStr = v10EventRawDates(event).start;
+    const modal = setV10MeetGreetMode('view', 'Meet & Greet');
+    const details = {
+        dog: props.dogName,
+        breed: props.breed === 'N/A' ? '' : props.breed,
+        date: formatStayDateShort(selectedClickDateStr),
+        time: props.time,
+        source: props.requestSource || props.source
+    };
+    for (const [key, value] of Object.entries(details)) {
+        const field = modal.querySelector(`[data-meet-detail="${key}"]`);
+        if (field) field.textContent = String(value || '').trim() || '—';
+    }
+    document.getElementById('modalDogName').value = details.dog || '';
+    document.getElementById('modalBreed').value = details.breed || '';
+    document.getElementById('modalBookingTime').value = details.time || '10:00';
+    const date = document.getElementById('modalBookingDate');
+    if (date) {
+        date.value = selectedClickDateStr;
+        date.disabled = false;
+    }
+    document.getElementById('deleteModalBtn').style.display = 'inline-block';
+    modal.style.display = 'flex';
+    modal.querySelector('[data-meet-view-close]')?.focus();
+}
+
 function openV10MeetGreetModal(dateString = '') {
     activeEditingEvent = null;
     selectedClickDateStr =
         dateString ||
         getLocalTodayDateString();
 
-    document.getElementById(
-        'modalTitle'
-    ).innerText =
-        '🤝 New Meet & Greet';
+    const modal = setV10MeetGreetMode('edit', 'New Meet & Greet');
 
     document.getElementById(
         'modalDogName'
@@ -2249,10 +2281,7 @@ function openV10MeetGreetModal(dateString = '') {
     ).style.display =
         'none';
 
-    document.getElementById(
-        'customBookingModal'
-    ).style.display =
-        'flex';
+    modal.style.display = 'flex';
 
     document.getElementById(
         'modalDogName'
@@ -5480,48 +5509,19 @@ registerWaffleServiceWorker();
             },
             
             dateClick: function(info) {
-                activeEditingEvent = null;
-                selectedClickDateStr = info.dateStr;
-                
-                document.getElementById('modalTitle').innerText = "🤝 New Meet & Greet";
-                document.getElementById('modalDogName').value = "";
-                document.getElementById('modalBreed').value = "";
-                document.getElementById('modalBookingTime').value = "10:00";
-                const modalDateInput = document.getElementById('modalBookingDate');
-                if (modalDateInput) {
-                    modalDateInput.value = info.dateStr;
-                    modalDateInput.disabled = false;
-                }
-                document.getElementById('deleteModalBtn').style.display = "none";
-                
-                document.getElementById('customBookingModal').style.display = "flex";
-                document.getElementById('modalDogName').focus();
+                openV10MeetGreetModal(info.dateStr);
             },
-            
+
             eventClick: function(info) {
                 if (info.event.extendedProps.isPotential) {
                     openEditPotentialModal(info.event);
                 } else if (info.event.extendedProps.isMeetGreet) {
-                    activeEditingEvent = info.event;
-                    selectedClickDateStr = info.event.startStr;
-                    
-                    document.getElementById('modalTitle').innerText = "🤝 Edit Meet & Greet";
-                    document.getElementById('modalDogName').value = info.event.extendedProps.dogName || "";
-                    document.getElementById('modalBreed').value = info.event.extendedProps.breed === "N/A" ? "" : info.event.extendedProps.breed;
-                    document.getElementById('modalBookingTime').value = info.event.extendedProps.time || "10:00";
-                    const modalDateInput = document.getElementById('modalBookingDate');
-                    if (modalDateInput) {
-                        modalDateInput.value = info.event.startStr;
-                        modalDateInput.disabled = true;
-                    }
-                    document.getElementById('deleteModalBtn').style.display = "inline-block";
-                    
-                    document.getElementById('customBookingModal').style.display = "flex";
+                    openV10MeetGreetView(info.event);
                 } else {
                     routeToDatabaseCell(info.event.extendedProps.editLink, 'B', info.event.title);
                 }
             },
-            
+
             events: function(info, successCallback, failureCallback) {
                 const csvText = localStorage.getItem('boardingDataCache') || "";
                 const spreadsheetEvents = parseCSVToEvents(csvText);
@@ -5592,8 +5592,13 @@ registerWaffleServiceWorker();
         }
 
         // Modal Controls
-        document.getElementById('closeModalBtn').addEventListener('click', function() {
-            document.getElementById('customBookingModal').style.display = "none";
+        const meetModal = document.getElementById('customBookingModal');
+        const closeMeetModal = () => { meetModal.style.display = 'none'; };
+        document.getElementById('closeModalBtn').addEventListener('click', closeMeetModal);
+        meetModal.querySelector('[data-meet-view-close]')?.addEventListener('click', closeMeetModal);
+        meetModal.querySelector('[data-meet-edit]')?.addEventListener('click', () => {
+            setV10MeetGreetMode('edit', 'Edit Meet & Greet');
+            document.getElementById('modalDogName').focus();
         });
         document.getElementById('closePotentialModalBtn').addEventListener('click', function() {
             document.getElementById('potentialStayModal').hidden = true;
@@ -18529,6 +18534,9 @@ registerWaffleServiceWorker();
         const rosterStatus = pastStay ? pastStatus : hasBeenPickedUp
             ? 'Checked out'
             : (isCurrentlyAtHome ? 'Staying' : 'Arriving');
+        const rosterIcon = pastStay?.checkedOut ? 'checkout'
+            : !pastStay && !hasBeenPickedUp && startParsed > localTodayStr ? 'checkin' : '';
+        const rosterIconLabel = rosterIcon === 'checkout' ? 'Checked out' : 'Upcoming';
         const cleanOwnerName = String(ownerName || '').trim();
         const cleanPhone = String(phone || '').trim();
         const cleanHandoverNote = String(notes || '').trim();
@@ -18565,12 +18573,15 @@ registerWaffleServiceWorker();
                                                 aria-hidden="true"></span>
                                             <span class="directory-roster-avatar" aria-hidden="true"></span>
                                             <span class="directory-roster-copy">
-                                                <span class="directory-guest-tile-name">${escapeDashboardHtml(dogName.trim())}</span>
+                                                <span class="directory-roster-name-line">
+                                                    <span class="directory-guest-tile-name">${escapeDashboardHtml(dogName.trim())}</span>
+                                                    ${rosterIcon ? `<span data-care-roster-stay-icon="${rosterIcon}" title="${rosterIconLabel}" aria-hidden="true">${window.PALZ_ICONS?.svg(rosterIcon) || (rosterIcon === 'checkout' ? '↗' : '↪')}</span>` : ''}
+                                                </span>
                                                 ${dogNumber ? `<span class="directory-dog-id">${species === 'cat' ? 'Pet ID' : 'Dog ID'} ${escapeDashboardHtml(dogNumber)}</span>` : ''}
                                                 <span class="directory-roster-context">${escapeDashboardHtml(rosterContext)}</span>
                                                 ${startParsed >= localTodayStr && cleanOwnerName && !/^(n\/a|unknown)$/i.test(cleanOwnerName) ? `<span class="directory-roster-owner">Owner: ${escapeDashboardHtml(cleanOwnerName)}</span>` : ''}
                                             </span>
-                                            <span class="directory-roster-status${pastStay || hasBeenPickedUp ? ' is-past' : ''}">${rosterStatus}</span>
+                                            ${rosterIcon ? '' : `<span class="directory-roster-status${pastStay || hasBeenPickedUp ? ' is-past' : ''}">${rosterStatus}</span>`}
                                         </button>
 
                                         ${rosterOnly ? '' : `<div class="directory-profile-content">

@@ -70,6 +70,70 @@ async function buildNotificationFixture(page) {
   await expect(page.locator('#waffleNotificationModal [data-notification-item-id="fixture-unread"]')).toBeVisible();
 }
 
+test('Waffle AI docks without blocking the page and keeps the draft when hidden', async ({page, baseURL}) => {
+  await openReadOnlyRuntime(page, baseURL);
+  await page.setViewportSize({width:1280,height:800});
+  await page.goto(`${baseURL}/directory.html`, {waitUntil:'domcontentloaded'});
+  await page.waitForFunction(() => document.documentElement.dataset.waffleUiReady === 'true' && !!window.WAFFLE_AI_CHAT);
+  const panel = page.locator('#v11133AskWaffleModal');
+  const input = panel.getByRole('textbox', {name:'Message Waffle AI'});
+  await page.evaluate(() => {
+    const control = document.createElement('button');
+    control.id = 'chat-background-control';
+    control.type = 'button';
+    control.textContent = 'Background control';
+    Object.assign(control.style, {position:'fixed', left:'16px', top:'150px', zIndex:'2147481500'});
+    control.onclick = () => { control.dataset.clicked = 'true'; };
+    document.body.append(control);
+  });
+  const desktopToggle = page.locator('#aw37launch');
+  await desktopToggle.click();
+  await expect(panel.getByRole('dialog')).toBeVisible();
+  await expect(panel.getByRole('dialog')).not.toHaveAttribute('aria-modal', 'true');
+  await expect(desktopToggle).toHaveAttribute('aria-expanded', 'true');
+  const dock = await panel.boundingBox();
+  expect(dock.x + dock.width).toBeGreaterThan(1230);
+  expect(dock.width).toBeLessThan(420);
+  expect(dock.y + dock.height).toBeLessThan(800);
+  const outside = page.locator('#chat-background-control');
+  await outside.click();
+  await expect(outside).toHaveAttribute('data-clicked','true');
+  await expect(panel).toBeVisible();
+
+  await input.fill('A draft for later');
+  await panel.getByRole('button', {name:'Hide Waffle AI'}).click();
+  await expect(panel).toBeHidden();
+  await expect(desktopToggle).toBeFocused();
+  await desktopToggle.click();
+  await expect(input).toHaveValue('A draft for later');
+  await input.press('Escape');
+  await expect(panel).toBeHidden();
+  await expect(desktopToggle).toHaveAttribute('aria-expanded','false');
+
+  await page.setViewportSize({width:320,height:560});
+  const mobileToggle = page.locator('#wh75MobileBottomNav [data-wh78-ai]');
+  await mobileToggle.click();
+  await expect(panel).toBeVisible();
+  await expect(input).toHaveValue('A draft for later');
+  await expect(panel.getByRole('button', {name:'Send', exact:true})).toBeInViewport({ratio:1});
+  const [mobileDock, nav] = await Promise.all([panel.boundingBox(), page.locator('#wh75MobileBottomNav').boundingBox()]);
+  expect(mobileDock.y).toBeGreaterThanOrEqual(0);
+  expect(mobileDock.y + mobileDock.height).toBeLessThanOrEqual(nav.y);
+  await mobileToggle.click();
+  await expect(panel).toBeHidden();
+  await expect(mobileToggle).toHaveAttribute('aria-expanded','false');
+});
+
+test('notifications show the event date and 24-hour time in Sydney', async ({page, baseURL}) => {
+  await openReadOnlyRuntime(page, baseURL);
+  await page.goto(`${baseURL}/directory.html`, {waitUntil:'domcontentloaded'});
+  await page.waitForFunction(() => document.documentElement.dataset.waffleUiReady === 'true');
+  await buildNotificationFixture(page);
+  await expect(page.locator('[data-notification-item-id="fixture-unread"] time')).toHaveText('07-10 13:30');
+  await expect(page.locator('[data-notification-item-id="fixture-read"] time')).toHaveText('06-10 13:30');
+  await expect(page.locator('[data-notification-item-id="fixture-unread"] time')).toHaveAttribute('datetime', longItems[0].timestamp);
+});
+
 for (const theme of ['light', 'dark']) {
   test(`notification centre remains readable at four widths across five ${theme} palettes`, async ({ page, baseURL }) => {
     await openReadOnlyRuntime(page, baseURL);

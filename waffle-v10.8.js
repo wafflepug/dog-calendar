@@ -322,14 +322,7 @@ function v108EventClasses(arg) {
 }
 
 function v108OpenMeet(event) {
-    activeEditingEvent=event; selectedClickDateStr=event.startStr;
-    document.getElementById('modalTitle').innerText='🤝 Edit Meet & Greet';
-    document.getElementById('modalDogName').value=event.extendedProps.dogName||'';
-    document.getElementById('modalBreed').value=event.extendedProps.breed==='N/A'?'':(event.extendedProps.breed||'');
-    document.getElementById('modalBookingTime').value=event.extendedProps.time||'10:00';
-    const date=document.getElementById('modalBookingDate'); if(date){date.value=event.startStr;date.disabled=false;}
-    document.getElementById('deleteModalBtn').style.display='inline-block';
-    document.getElementById('customBookingModal').style.display='flex';
+    openV10MeetGreetView(event);
 }
 
 function v108EventDates(event) {

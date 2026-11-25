@@ -89,7 +89,10 @@ test('Care defers later arrivals until requested, keeps total count, and leaves 
   expect(await page.evaluate(() => window.WAFFLE_V11196_FUTURE_RANGE.totalFutureCount())).toBe(2);
 
   await page.getByRole('button', { name: /View 1 later arrivals/ }).click();
-  await expect(page.locator('#directory-grid [data-v11196-synthetic-future="true"]')).toHaveCount(1);
+  const expanded = page.locator('#directory-grid [data-v11196-synthetic-future="true"]');
+  await expect(expanded).toHaveCount(1);
+  await expect(expanded.locator('.directory-roster-name-line > .directory-guest-tile-name + [data-care-roster-stay-icon="checkin"]')).toHaveAttribute('title', 'Upcoming');
+  await expect(expanded.locator('.directory-roster-status')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Show next 7 days only' })).toBeVisible();
   await expect(page.locator('#v11195FutureStayHeading')).toContainText('Next 6+ months');
   await expect(page.locator('[data-directory-detail="profile"]')).toHaveAttribute('data-detail-loaded', 'false');
