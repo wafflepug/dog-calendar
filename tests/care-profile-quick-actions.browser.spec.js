@@ -194,6 +194,43 @@ test('touch handover picker keeps Set in view and changes only the draft until s
   } finally { await page.close(); }
 });
 
+test('compact profile aligns identity above actions and keeps stay confirmations visible on short screens', async ({page,baseURL}) => {
+  await page.setViewportSize({width:320,height:700});
+  const fixture = await install(page);
+  await page.goto(`${baseURL}/directory.html`);
+  const card = page.locator(`#directory-grid [data-directory-stay-id="${bookings[0].stayId}"]`);
+  await card.locator('[data-open-directory-profile]').click();
+  await expect(card.locator('.directory-card-header .directory-photo-shell')).toHaveCSS('width','64px');
+  await expect(card.locator('.directory-card-header .directory-profile-name-line .directory-dog-name-btn')).toHaveText('Milo');
+  await expect(card.locator('.directory-card-header [data-care-photo-status="arrival"]')).toHaveAccessibleName('Arriving today');
+  await expect(card.locator('.directory-card-header [data-care-header-tools]')).toHaveCSS('grid-row-start','2');
+  await expect(card.locator('.directory-profile-stay-dates')).toContainText('Check-out');
+  await page.evaluate(record => {
+    v110MergeOperationRead([record]);
+    v110EnsureCareOperationBar(document.querySelector('.directory-card.is-profile-active'));
+  }, fixture.recordCheckIn(bookings[0]).record);
+
+  const stays = page.locator('#v11113StayDatesModal');
+  const checkout = page.locator('#v11217EarlyCheckoutModal');
+  for (const [open, panel, confirm] of [
+    [card.getByRole('button',{name:'Extend stay',exact:true}), stays, 'Extend stay'],
+    [card.getByRole('button',{name:/early checkout for/i}), checkout, 'Confirm early check-out']
+  ]) {
+    await open.click();
+    await page.setViewportSize({width:320,height:275});
+    const cancel = panel.getByRole('button',{name:'Cancel',exact:true});
+    const action = panel.getByRole('button',{name:confirm,exact:true});
+    await expect(cancel).toBeInViewport({ratio:1});
+    await expect(action).toBeInViewport({ratio:1});
+    const [cancelBox, actionBox] = await Promise.all([cancel.boundingBox(), action.boundingBox()]);
+    expect(cancelBox.width).toBeCloseTo(actionBox.width,0);
+    expect(actionBox.height).toBeGreaterThanOrEqual(44);
+    await cancel.click();
+    await expect(panel).toBeHidden();
+    await page.setViewportSize({width:320,height:700});
+  }
+});
+
 test('checking in hides Drop-off and a Pick-up edit preserves the saved Drop-off time', async ({page, baseURL}) => {
   const fixture = await install(page);
   await page.goto(`${baseURL}/directory.html`);

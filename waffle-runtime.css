@@ -3,7 +3,7 @@
    Historical base styles remain compatibility sources during Phase 3A, but pages no longer
    reference them individually. Preserve this import order until modules are folded in. */
 @import url("waffle-app.css?build=2026.08.27.04&rev=2026.11.15.01");
-@import url("palz-sales.css?rev=2026.11.24.06");
+@import url("palz-sales.css?rev=2026.11.25.01");
 @import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.11.15.01");
 @import url("waffle-v10.8.2.css?build=2026.08.27.04");
 @import url("waffle-v10.8.3.css?build=2026.08.27.04");
@@ -3903,4 +3903,54 @@ html body #customBookingModal #saveModalBtn {
 #customBookingModal .v1112-source-tile { min-width:0; padding:0; }
 @media (max-width:340px) {
   #customBookingModal .v1112-source-circle { width:44px; height:44px; }
+}
+
+/* Keep stay actions outside the scrolling content when the phone viewport shrinks. */
+@media (max-width:820px) {
+  #v11113StayDatesModal > .v11113-stay-dates-card,
+  html body .v11217-modal > .v11217-modal-card {
+    display:flex; flex-direction:column; overflow:hidden !important;
+  }
+  html body :is(.sitter-time-dialog, [data-roster-checkout-dialog])[open] {
+    position:fixed;
+    inset-inline:0;
+    inset-block:calc(var(--waffle-mobile-visual-top, 0px) + var(--waffle-mobile-visual-height, 100dvh) / 2) auto;
+    transform:translateY(-50%);
+    margin-block:0;
+    display:flex;
+    flex-direction:column;
+    max-height:calc(var(--waffle-mobile-visual-height, 100dvh) - 24px);
+    overflow:hidden;
+  }
+  :is(.sitter-time-dialog, [data-roster-checkout-dialog]) > form {
+    display:flex; flex-direction:column; min-height:0;
+  }
+  :is(.care-stay-dialog-body, #v11217GuidedCheckout .v11217-modal-body) {
+    flex:1 1 auto; min-height:0; overflow:auto; overscroll-behavior:contain;
+    scroll-padding-block:8px;
+  }
+  html body :is(#v11113StayDatesModal .v11113-stay-dates-actions, .v11217-modal .v11217-modal-actions, .sitter-time-dialog .sitter-planning-actions, [data-roster-checkout-dialog] .sitter-planning-actions) {
+    display:flex !important;
+    flex:0 0 auto;
+    flex-wrap:wrap;
+    gap:8px !important;
+    margin:0;
+    padding:8px 10px !important;
+    border-top:1px solid var(--wh-border,var(--v10-border,#d9e2ec));
+    background:var(--wh-surface,var(--v10-card,#fff)) !important;
+  }
+  html body :is(#v11113StayDatesModal .v11113-stay-dates-actions, .v11217-modal .v11217-modal-actions, .sitter-time-dialog .sitter-planning-actions, [data-roster-checkout-dialog] .sitter-planning-actions) > button {
+    flex:1 1 0 !important;
+    width:auto !important;
+    min-height:44px;
+    min-width:0;
+    padding:6px;
+    white-space:normal;
+    overflow-wrap:anywhere;
+  }
+  .v11217-modal-actions > .v11217-discard-prompt {
+    flex:1 1 100%;
+    padding:0;
+    border:0;
+  }
 }

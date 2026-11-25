@@ -18587,10 +18587,9 @@ registerWaffleServiceWorker();
                                                         title="Tap to edit Dog Name">
                                                         ${escapeDashboardHtml(dogName.trim())}
                                                     </button>
-                                                    ${isCurrentlyAtHome && !hasBeenPickedUp ? statusTag : ''}
+                                                    ${statusTag}
                                                   </div>
                                                     ${dogNumber ? `<span class="directory-dog-id">${species === 'cat' ? 'Pet ID' : 'Dog ID'} ${escapeDashboardHtml(dogNumber)}</span>` : ''}
-                                                    ${isCurrentlyAtHome && !hasBeenPickedUp ? '' : statusTag}
                                                 </div>
 
                                                 <button
