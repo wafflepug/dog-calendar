@@ -80,7 +80,7 @@
       picker.className = 'sitter-planning sitter-planning-dialog sitter-time-dialog';
       picker.setAttribute('aria-label', label);
       picker.innerHTML = `<h3>${esc(label)}</h3><form>
-        <div class="sitter-time-options">
+        <div class="sitter-time-options care-stay-dialog-body">
           <label>Hour<select name="hour" autofocus></select></label>
           <label>Minute<select name="minute"></select></label>
           <label>AM / PM<select name="period"><option>AM</option><option>PM</option></select></label>
@@ -296,10 +296,12 @@
     editor.setAttribute('aria-labelledby', 'rosterCheckoutTitle');
     editor.innerHTML = `<h3 id="rosterCheckoutTitle">Estimated check-out time</h3>
       <p data-checkout-dog></p><form>
-        <label>Pickup time<input type="time" name="pickupTime" disabled></label>
-        <p>Use local time on the scheduled checkout day. Leave blank to clear the estimate.</p>
-        <div class="sitter-planning-actions"><button type="submit" disabled>Save time</button><button type="button">Cancel</button></div>
-        <p role="status"></p>
+        <div class="care-stay-dialog-body">
+          <label>Pickup time<input type="time" name="pickupTime" disabled></label>
+          <p>Use local time on the scheduled checkout day. Leave blank to clear the estimate.</p>
+          <p role="status"></p>
+        </div>
+        <div class="sitter-planning-actions"><button type="button">Cancel</button><button type="submit" disabled>Save time</button></div>
       </form>`;
     editor.querySelector('[data-checkout-dog]').textContent = card.dataset.directoryDogName || 'Guest';
     const form = editor.querySelector('form');

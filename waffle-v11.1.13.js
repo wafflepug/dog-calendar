@@ -70,15 +70,17 @@
           </div>
           <button type="button" data-v11113-stay-dates-close aria-label="Close">×</button>
         </div>
-        <div class="v11113-stay-dates-fields">
-          <label><span>Check-in date</span><input type="date" data-v11113-start-date></label>
-          <label><span>Check-out date</span><input type="date" data-v11113-end-date></label>
+        <div class="care-stay-dialog-body">
+          <div class="v11113-stay-dates-fields">
+            <label><span>Check-in date</span><input type="date" data-v11113-start-date></label>
+            <label><span>Check-out date</span><input type="date" data-v11113-end-date></label>
+          </div>
+          <div class="v11113-stay-dates-fields" data-v11113-extension hidden>
+            <label><span>Additional days</span><input type="number" min="1" step="1" inputmode="numeric" data-v11113-extra-days></label>
+            <p data-v11113-extension-preview aria-live="polite"></p>
+          </div>
+          <div class="v11113-stay-dates-status" data-v11113-stay-dates-status aria-live="polite"></div>
         </div>
-        <div class="v11113-stay-dates-fields" data-v11113-extension hidden>
-          <label><span>Additional days</span><input type="number" min="1" step="1" inputmode="numeric" data-v11113-extra-days></label>
-          <p data-v11113-extension-preview aria-live="polite"></p>
-        </div>
-        <div class="v11113-stay-dates-status" data-v11113-stay-dates-status aria-live="polite"></div>
         <div class="v11113-stay-dates-actions">
           <button type="button" data-v11113-stay-dates-close>Cancel</button>
           <button type="button" class="is-primary" data-v11113-stay-dates-save>Save Dates</button>

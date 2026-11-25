@@ -29,7 +29,7 @@
   function visualViewportHeight() {
     const vv = window.visualViewport;
     const height = Number(vv?.height || window.innerHeight || document.documentElement?.clientHeight || 0);
-    return Math.max(320, Math.round(height || 720));
+    return Math.max(1, Math.round(height || 720));
   }
 
   function visualViewportTop() {
