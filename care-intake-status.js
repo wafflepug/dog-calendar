@@ -7,6 +7,14 @@
   const lastStates = new WeakMap();
   const renderedLinks = new WeakMap();
   const headerCopies = new WeakMap();
+  const headerActionOrder = [
+    '[data-care-host-again]',
+    '[data-care-header-call-owner]',
+    '[data-v11112-care-source-host]',
+    '[data-care-header-book-again]',
+    '[data-care-header-intake-link]',
+    '[data-care-header-document-actions]'
+  ];
   const refreshingBrief = new WeakSet();
   const ownerOptionsDispatch = new WeakSet();
   let observers = new Map();
@@ -199,6 +207,22 @@
     if (button.title !== title) button.title = title;
   }
 
+  function orderHeaderActions(card) {
+    const tools = card.querySelector('.directory-card-header > [data-care-header-tools]');
+    if (!tools || !card.classList.contains('is-profile-active')) return;
+    const focused = document.activeElement;
+    let previous;
+    for (const selector of headerActionOrder) {
+      const action = tools.querySelector(`:scope > ${selector}`);
+      if (!action) continue;
+      if (previous && (previous.compareDocumentPosition(action) & Node.DOCUMENT_POSITION_PRECEDING)) {
+        previous.after(action);
+      }
+      previous = action;
+    }
+    if (tools.contains(focused) && document.activeElement !== focused) focused.focus({ preventScroll: true });
+  }
+
   function syncIntakePdfButton(card) {
     const tools = card.querySelector('.directory-card-header > [data-care-header-tools]');
     if (!tools || !card.classList.contains('is-profile-active')) return;
@@ -215,14 +239,12 @@
       button.className = 'care-header-intake-pdf';
       button.dataset.careHeaderIntakePdf = '';
       button.setAttribute('aria-label', 'View intake PDF');
+      button.title = 'View intake PDF';
       button.addEventListener('click', () => currentPdfLink(card)?.click());
       group.prepend(button);
     }
     if (!button.hasChildNodes() && window.PALZ_ICONS) button.innerHTML = window.PALZ_ICONS.svg('document');
-    const available = Boolean(currentPdfLink(card));
-    if (button.disabled === available) button.disabled = !available;
-    const title = available ? 'View intake PDF' : 'Available after the completed intake PDF is ready';
-    if (button.title !== title) button.title = title;
+    button.hidden = !currentPdfLink(card);
   }
 
   function render(card) {
@@ -257,6 +279,7 @@
       headerCopies.delete(card);
     }
     syncIntakeLinkButton(card, owner);
+    orderHeaderActions(card);
     let group = actions.querySelector(':scope > .directory-owner-care-action-group');
     if (!group) {
       group = document.createElement('div');
@@ -407,6 +430,7 @@
       const changedStayKeys = new Set();
       rows.forEach(row => {
         if (row.target?.closest?.('[data-compact-intake-status]')) return;
+        if (row.attributeName === 'href' && !row.target.matches?.('[data-care-intake-pdf-link]')) return;
         const card = row.target?.closest?.('.directory-card');
         if (card) {
           affected.add(card);
@@ -435,7 +459,7 @@
       });
       affected.forEach(render);
     });
-    observer.observe(grid, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['aria-busy', 'class', 'data-intake-method', 'data-intake-received-at', 'data-intake-received-for', 'data-directory-stay-key', 'data-stay-key', 'data-directory-dog-id', 'data-directory-stay-id', 'data-directory-dog-name', 'data-directory-start-date', 'data-directory-end-date'] });
+    observer.observe(grid, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['aria-busy', 'class', 'href', 'data-care-intake-pdf-link', 'data-intake-method', 'data-intake-received-at', 'data-intake-received-for', 'data-directory-stay-key', 'data-stay-key', 'data-directory-dog-id', 'data-directory-stay-id', 'data-directory-dog-name', 'data-directory-start-date', 'data-directory-end-date'] });
     observers.set(grid, observer);
   }
   function validLink(value) {

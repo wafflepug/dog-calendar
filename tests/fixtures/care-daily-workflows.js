@@ -7,11 +7,11 @@ const bookings = [
   {dogName:'Milo',breed:'Poodle',startDate:'2026-10-18',endDate:'2026-10-18',ownerName:'Bea',notes:'',dogNumber:'#00018'},
   {dogName:'Fern',breed:'Kelpie',startDate:'2026-10-17',endDate:'2026-10-18',ownerName:'Casey',notes:'Private care note should not be shared.',dogNumber:'#00019'}
 ].map((row,index)=>({...row,timestamp:'2026-10-17',phone:'0400000000',bookingType:'Boarding',stayKey:`${row.dogName.toLowerCase()}|${row.startDate}|${row.endDate}`,dogId:`11111111-1111-4111-8111-${String(index+1).padStart(12,'0')}`,stayId:`aaaaaaaa-aaaa-4aaa-8aaa-${String(index+1).padStart(12,'0')}`}));
-const digitalIntakes=[{stayKey:bookings[0].stayKey,status:'Complete',submittedAt:'2026-10-18T00:00:00Z'}];
 function profile(booking,overrides={}) {
   return {stayKey:booking.stayKey,identity:{stayKey:booking.stayKey,stayId:booking.stayId,dogId:booking.dogId},resolution:{status:'resolved',method:'fixture'},updatedAt:'2026-10-18T00:00:00Z',riskFlags:{},intakeAttributesSource:'Saved profile',intakeAttributes:{feedingTimes:'8am and 6pm',foodAmount:'1 cup',foodBrandType:'Sensitive formula',notes:booking.notes,...(overrides[booking.stayId]||{})}};
 }
-async function install(page,{bookingOverrides=[],profileOverrides={},holdProfileRead=false,fernMedication=''}={}) {
+async function install(page,{bookingOverrides=[],profileOverrides={},holdProfileRead=false,fernMedication='',intakePdfUrl=''}={}) {
+  const digitalIntakes=[{stayKey:bookings[0].stayKey,status:'Complete',submittedAt:'2026-10-18T00:00:00Z',pdfUrl:intakePdfUrl}];
   const fixtureBookings=bookings.map(booking=>({...booking,...(bookingOverrides.find(override=>override.stayId===booking.stayId)||{})}));
   const reads=[];
   const profileLookups=[];

@@ -473,7 +473,7 @@ function cardData(card){const dog=String(card?.dataset?.directoryDogName||card?.
 function groupProfileTools(card){const list=card?.querySelector('.directory-care-more-actions-list');const records=card?.querySelector('.directory-care-records-disclosure');if(list&&records&&card.dataset.v1082PastStay!=='true'&&records.parentElement!==list)list.appendChild(records);const booking=card?.querySelector('.p4-directory-actions');if(list&&booking&&booking.parentElement!==list)list.appendChild(booking);const again=card?.querySelector('[data-p4-dir="again"]');
   const headerTools=card?.classList.contains('is-profile-active') && card.querySelector('[data-care-header-tools]');
   if(again && headerTools){
-    if(headerTools.lastElementChild!==again) headerTools.append(again);
+    if(again.parentElement!==headerTools) headerTools.append(again);
     again.removeAttribute('data-care-profile-segment');
     if(!again.hasAttribute('data-care-header-book-again')){
       again.setAttribute('data-care-header-book-again','');
