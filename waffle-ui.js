@@ -14,6 +14,8 @@
   if (window.WAFFLE_HOME_GUESTS) return;
   const photos = new Map();
   const photoRequests = new Map();
+  const cachedPhotos = new Map();
+  const photoCacheReads = new Map();
   const failedPhotoUrls = new Set();
   let pending = false;
   let scheduleHasData = false;
@@ -48,6 +50,15 @@
     const photo = record?.dogPhoto || record?.primaryPhoto || gallery[gallery.length - 1];
     return safePhoto(photo?.previewUrl || photo?.url || photo?.driveUrl);
   }
+  function photoIdentity(event) {
+    const {stayId, dogId} = event.extendedProps || {};
+    return v110ValidStayId(stayId) && v110ValidStayId(dogId)
+      ? `home:portrait:${stayId.toLowerCase()}:${dogId.toLowerCase()}`
+      : v110StayKeyForEvent(event);
+  }
+  function knownPhoto(key) {
+    return photos.get(key) ?? cachedPhotos.get(key) ?? '';
+  }
   function applyPhoto(link, url) {
     const shell = link.querySelector('.wh-home-portrait');
     const thumbnail = homeThumbnailUrl(url);
@@ -58,7 +69,7 @@
     const image = document.createElement('img');
     image.alt = '';
     image.decoding = 'async';
-    image.loading = 'lazy';
+    image.loading = link.dataset.homePhotoPriority === 'true' ? 'eager' : 'lazy';
     image.addEventListener('error', () => {
       if (shell.querySelector('img') !== image) return;
       failedPhotoUrls.add(thumbnail);
@@ -78,36 +89,51 @@
   async function fallbackPhoto(event) {
     const key = v110StayKeyForEvent(event);
     // Care's single-stay record also exposes the stay gallery and inherited photo.
-    const response = await queryAppsScript({ action: 'get_guest_profile', stayKey: key }, { maxAttempts: 1, timeoutMs: 20000 });
+    const props = event.extendedProps || {};
+    const response = await queryAppsScript({ action: 'get_guest_profile', stayKey: key, stayId: props.stayId, dogId: props.dogId }, { maxAttempts: 1, timeoutMs: 20000 });
     const url = photoUrl(response?.record);
     if (url) return url;
-    const props = event.extendedProps || {};
-    const master = await queryAppsScript({ action: 'get_dog_master_profile', dogName: props.dogName || event.title, breed: props.breed || '' }, { maxAttempts: 1, timeoutMs: 20000 });
+    const master = await queryAppsScript({ action: 'get_dog_master_profile', dogId: props.dogId, dogName: props.dogName || event.title, breed: props.breed || '' }, { maxAttempts: 1, timeoutMs: 20000 });
     return photoUrl(master?.record);
   }
   async function loadPhotos(events, onPhoto) {
-    const missing = events.filter(event => {
-      const key = v110StayKeyForEvent(event);
-      return !photos.has(key) && !photoRequests.has(key);
-    });
+    const unique = new Map(events.map(event => [photoIdentity(event), event]));
+    const missing = [...unique].filter(([identity]) => !photos.has(identity) && !photoRequests.has(identity));
     if (missing.length && typeof queryAppsScript === 'function') {
-      const recordsTask = queryAppsScript({ action: 'get_belongings', stayKeys: missing.map(v110StayKeyForEvent) }, { maxAttempts: 2, timeoutMs: 30000 }).then(response => {
+      const stayKeys = [...new Set(missing.map(([, event]) => v110StayKeyForEvent(event)))];
+      const recordsTask = queryAppsScript({ action: 'get_belongings', stayKeys }, { maxAttempts: 2, timeoutMs: 30000 }).then(response => {
         if (!Array.isArray(response?.records)) throw new Error('Photo records unavailable');
         return new Map(response.records.map(record => [String(record.stayKey), record]));
       });
-      missing.forEach(event => {
-        const key = v110StayKeyForEvent(event);
+      for (const [identity, event] of missing) {
         const request = recordsTask.then(async records => {
           const key = v110StayKeyForEvent(event);
           const url = photoUrl(records.get(key)) || await fallbackPhoto(event);
-          photos.set(key, url);
-          onPhoto(key, url);
+          photos.set(identity, url);
+          if (identity.startsWith('home:portrait:') && typeof putWaffleCachedResponse === 'function') {
+            void putWaffleCachedResponse(identity, {url}).catch(() => {});
+          }
+          return url;
         });
-        photoRequests.set(key, request);
-        request.then(() => {}, () => {}).then(() => photoRequests.delete(key));
-      });
+        photoRequests.set(identity, request);
+        const clear = () => photoRequests.delete(identity);
+        request.then(clear, clear);
+      }
     }
-    const results = await Promise.allSettled(events.map(event => photoRequests.get(v110StayKeyForEvent(event))).filter(Boolean));
+    const results = await Promise.allSettled([...unique.keys()].map(identity => {
+      if (identity.startsWith('home:portrait:') && typeof getWaffleCachedResponse === 'function') {
+        if (!photoCacheReads.has(identity)) {
+          photoCacheReads.set(identity, getWaffleCachedResponse(identity, 24 * 60 * 60 * 1000).then(entry => {
+            const cached = safePhoto(entry?.payload?.url);
+            if (cached && !photos.has(identity)) cachedPhotos.set(identity, cached);
+          }).catch(() => {}));
+        }
+        void photoCacheReads.get(identity).then(() => {
+          if (!photos.has(identity) && cachedPhotos.has(identity)) onPhoto(identity, knownPhoto(identity));
+        });
+      }
+      return photoRequests.get(identity)?.then(url => onPhoto(identity, url));
+    }));
     if (results.some(result => result.status === 'rejected')) throw new Error('Some profile photos could not load');
   }
   function statusFor(event) {
@@ -228,7 +254,9 @@
         flag.dataset.tone = departure?.tone || '';
         flag.title = departure ? `${name} ${departure.label.toLowerCase()}` : '';
         link.classList.toggle('is-leaving', !!departure);
-        applyPhoto(link, photos.get(key) || '');
+        link.dataset.homePhotoKey = photoIdentity(event);
+        link.dataset.homePhotoPriority = String(!upcoming && index < 3);
+        applyPhoto(link, knownPhoto(link.dataset.homePhotoKey));
         if (host.children[index] !== link) host.insertBefore(link, host.children[index] || null);
       });
       host.dataset.homeState = events.length ? 'populated' : 'empty';
@@ -241,13 +269,13 @@
       try {
         await loadPhotos(events, (key, url) => {
           if (token !== generation) return;
-          const link = Array.from(host.querySelectorAll('[data-home-stay]')).find(item => item.dataset.homeStay === key);
-          if (link) applyPhoto(link, url);
+          for (const link of host.children) {
+            if (link.dataset.homePhotoKey === key) applyPhoto(link, url);
+          }
         });
       } catch (_) { photoError = true; }
       if (token !== generation) return;
-      host.querySelectorAll('[data-home-stay]').forEach(link => applyPhoto(link, photos.get(link.dataset.homeStay) || ''));
-      const failedInRow = events.some(event => failedPhotoUrls.has(homeThumbnailUrl(photos.get(v110StayKeyForEvent(event)) || '')));
+      const failedInRow = events.some(event => failedPhotoUrls.has(homeThumbnailUrl(knownPhoto(photoIdentity(event)))));
       if (photoError || failedInRow) {
         host.dataset.homePhotoError = 'true';
         if (!upcoming && !status.textContent.includes('Profile photos could not load')) status.textContent += ' Profile photos could not load. You can still open every guest’s care details.';

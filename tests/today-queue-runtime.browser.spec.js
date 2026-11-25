@@ -5,9 +5,11 @@ const {resolveLocalBackendAction} = require('../scripts/local-network-policy');
 const calendar = fs.readFileSync(path.join(__dirname, 'fixtures/fullcalendar.global.min.js'), 'utf8');
 
 test('the shipped Today page keeps profile links, exposes direct confirmed-stay actions and opens its exact Meet & Greet', async ({page, baseURL}, info) => {
+  test.setTimeout(90000);
   const writes = [];
   const errors = [];
-  let arrivalReads = 0;
+  let arrivalReads = 0, bookingReads = 0;
+  let deferredStartup, deferredReviews;
   const arrival = {
     dogName:'Nigel with a long registered name', breed:'Poodle', bookingType:'Boarding',
     stayKey:'nigel with a long registered name|2026-10-17|2026-10-20',
@@ -40,7 +42,11 @@ test('the shipped Today page keeps profile links, exposes direct confirmed-stay 
   await page.route('**/*', async route => {
     const req = route.request(), url = req.url();
     if (!['GET','HEAD'].includes(req.method())) { writes.push(req.method()); return route.fulfill({status:405,body:'Read-only fixture'}); }
-    if (url.includes('docs.google.com/spreadsheets') && url.includes('output=csv')) return route.fulfill({contentType:'text/csv',body:csv});
+    if (url.includes('docs.google.com/spreadsheets') && url.includes('output=csv')) {
+      bookingReads++;
+      return route.fulfill({contentType:'text/csv',body:csv});
+    }
+    if (new URL(url).pathname.endsWith('/palz-owner-tools.js') && deferredStartup) await deferredStartup;
     if (url.includes('cdn.jsdelivr.net') && url.includes('fullcalendar')) return route.fulfill({contentType:'application/javascript',body:calendar});
     if (url.endsWith('/fixture-coco.svg')) return route.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><circle cx="32" cy="32" r="30" fill="teal"/></svg>'});
     if (url.includes('script.google')) {
@@ -57,6 +63,7 @@ test('the shipped Today page keeps profile links, exposes direct confirmed-stay 
       }
       if (resolved.action === 'get_prearrival_checks') {
         arrivalReads++;
+        if (deferredReviews) await deferredReviews;
         response.checks = [arrival];
       }
       if (resolved.action === 'get_guest_directory') response.bookings.push(arrival);
@@ -74,7 +81,32 @@ test('the shipped Today page keeps profile links, exposes direct confirmed-stay 
   });
   for (const width of [320,390,1440]) {
     await page.setViewportSize({width,height:900});
-    await page.goto(`${baseURL}/index.html?view=today&ownerWorkflowFixture=1`, {waitUntil:'domcontentloaded'});
+    const url = `${baseURL}/index.html?view=today&ownerWorkflowFixture=1`;
+    if (width === 320) {
+      let release;
+      deferredStartup = new Promise(resolve => { release = resolve; });
+      try {
+        await page.goto(url, {waitUntil:'commit'});
+        await expect.poll(() => [bookingReads, arrivalReads]).toEqual([1, 1]);
+        expect(await page.evaluate(() => document.readyState)).toBe('loading');
+      } finally {
+        release();
+        deferredStartup = null;
+      }
+    } else if (width === 390) {
+      let release;
+      deferredReviews = new Promise(resolve => { release = resolve; });
+      try {
+        await page.goto(url, {waitUntil:'domcontentloaded'});
+        await expect(page.locator('.palz-before-arrival')).toBeVisible();
+        await expect(page.locator('.palz-before-arrival-count')).toHaveText('1 to review');
+      } finally {
+        release();
+        deferredReviews = null;
+      }
+    } else {
+      await page.goto(url, {waitUntil:'domcontentloaded'});
+    }
     await page.waitForFunction(() => document.documentElement.dataset.waffleUiReady === 'true');
     const queue = page.locator('#v10TodayAgenda');
     await expect(queue.locator('.v10-agenda-item')).toHaveCount(4);
@@ -112,9 +144,10 @@ test('the shipped Today page keeps profile links, exposes direct confirmed-stay 
     if (width === 320) {
       await review.focus();
       const previousReads = arrivalReads;
-      await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+      await page.evaluate(() => window.dispatchEvent(new Event('waffle:phase4-data-changed')));
       await expect.poll(() => arrivalReads).toBeGreaterThan(previousReads);
       await expect(review).toBeFocused();
+      await expect.poll(() => page.evaluate(async () => (await getWaffleCachedResponse('today:prearrival-checks'))?.payload.checks.length)).toBe(1);
     }
     await info.attach(`before-arrival-${width}`, {
       body:await beforeArrival.screenshot({path:info.outputPath(`before-arrival-${width}.png`)}), contentType:'image/png'
@@ -173,7 +206,7 @@ test('the shipped Today page keeps profile links, exposes direct confirmed-stay 
   await page.goto(reviewLinks[1]);
   const handover = profile.locator('[data-sitter-handover]');
   await expect(handover).toBeInViewport();
-  await expect(handover.getByLabel('Drop-off')).toBeEnabled();
+  await expect(handover.getByLabel('Drop-off', {exact:true})).toBeEnabled();
   await page.setViewportSize({width:720,height:800});
   await page.goto(reviewLinks[2]);
   await expect(profile.locator('[data-profile-subtab="healthHome"]')).toHaveAttribute('aria-expanded','true');

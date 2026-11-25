@@ -104,7 +104,7 @@ async function setup(page, options = {}) {
     return route.fulfill({ contentType: 'text/html', body: `<!doctype html><html><head><style>body{font-family:system-ui;margin:20px;--v10-card:#fff;--v10-border:#ddd;--wh75-text:#172033;--wh75-muted:#526174;}@media(prefers-color-scheme:dark){body{background:#111827;--v10-card:#192236;--v10-border:#38435a;--wh75-text:#edf2ff;--wh75-muted:#b9c5db;--wh75-accent-ink:#d9c9ff;--wh75-accent-soft:#36254e;}}/* Sitter Home:${css}</style></head><body>${options.includeArrivals ? sections.join('') : html}</body></html>` });
   });
   await page.goto('http://home.test/');
-  await page.evaluate(({ events, loaded, failure, localToday, operations, fallback, progressive }) => {
+  await page.evaluate(({ events, loaded, failure, localToday, operations, fallback, progressive, cachedPhoto }) => {
     window.fixtureEvents = events;
     window.fixtureFailure = failure;
     window.fixtureCalls = [];
@@ -116,8 +116,16 @@ async function setup(page, options = {}) {
     window.applyGuestDirectoryResponse = () => {};
     window.getLocalTodayDateString = () => localToday;
     window.v10EventRawDates = e => ({ start: e.extendedProps.rawStartDate, end: e.extendedProps.rawEndDate });
+    if (cachedPhoto) window.getWaffleCachedResponse = async key => cachedPhoto.key === key ? { payload: cachedPhoto } : null;
     window.queryAppsScript = async payload => {
       window.fixtureCalls.push(payload);
+      if (cachedPhoto && payload.action === 'get_belongings') {
+        return new Promise(resolve => {
+          window.releaseFreshPortrait = () => resolve({ records: payload.stayKeys.map(stayKey => ({
+            stayKey, dogPhoto: { url: 'http://home.test/photo.svg' }
+          })) });
+        });
+      }
       if (window.fixtureFailure) throw new Error('fixture unavailable');
       if (progressive && payload.action === 'get_guest_profile') {
         return await new Promise(resolve => {
@@ -129,7 +137,7 @@ async function setup(page, options = {}) {
       return { records: payload.stayKeys.map((stayKey, i) => ({ stayKey, dogPhoto: progressive && i === 0 ? { previewUrl: 'https://drive.google.com/thumbnail?id=fixture-photo&sz=w1600' } : fallback ? null : i === 0 ? { previewUrl: 'http://home.test/photo.svg' } : i === 2 ? { previewUrl: 'http://home.test/broken.jpg' } : null })) };
     };
     if (loaded) localStorage.setItem('boardingDataCache', 'fixture');
-  }, { events: options.events || guests, loaded: options.loaded !== false, failure: !!options.failure, localToday: options.today || today, operations: options.operations, fallback: !!options.fallback, progressive: !!options.progressive });
+  }, { events: options.events || guests, loaded: options.loaded !== false, failure: !!options.failure, localToday: options.today || today, operations: options.operations, fallback: !!options.fallback, progressive: !!options.progressive, cachedPhoto: options.cachedPhoto });
   await page.addScriptTag({ content: identity + '\n' + selector });
   await page.evaluate(records => v110IndexOperations(Object.entries(records || {}).map(([stayKey, record]) => ({ stayKey, ...record }))), options.operations);
   if (options.checkedOut) await page.evaluate(key => { v110OperationsMap[key] = { status: 'checked_out' }; }, options.checkedOut);
@@ -142,13 +150,27 @@ test('Home requests 180px thumbnails and paints available photos before a delaye
   await setup(page, { progressive: true, events: [event('Available'), event('Delayed')] });
   const available = page.locator('[data-home-stay^="available|"] img');
   await expect(available).toHaveAttribute('src', /drive\.google\.com\/thumbnail\?id=fixture-photo&sz=w180/);
-  await expect(available).toHaveAttribute('loading', 'lazy');
+  await expect(available).toHaveAttribute('loading', 'eager');
   await expect(available).toHaveAttribute('decoding', 'async');
   await expect.poll(() => requests).toContain('https://drive.google.com/thumbnail?id=fixture-photo&sz=w180');
   expect(await page.evaluate(() => typeof window.releaseDelayedHomePhoto)).toBe('function');
   await expect(page.locator('[data-home-stay^="delayed|"] img')).toHaveCount(0);
   await page.evaluate(() => window.releaseDelayedHomePhoto());
   await expect(page.locator('[data-home-stay^="delayed|"] img')).toHaveAttribute('src', 'http://home.test/photo.svg');
+});
+
+test('Home restores a portrait for the exact stay while fresh photos are still loading', async ({ page }) => {
+  const stayId = '11111111-1111-4111-8111-111111111111';
+  const dogId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+  const cachedPhoto = { key: `home:portrait:${stayId}:${dogId}`, url: 'https://drive.google.com/thumbnail?id=cached&sz=w180' };
+  await setup(page, { events: [event('Coco', '2026-09-01', '2026-09-10', { stayId, dogId }),
+    event('Coco', '2026-09-02', '2026-09-10', { stayId:'22222222-2222-4222-8222-222222222222', dogId:'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb' })], cachedPhoto });
+  const portrait = page.locator(`[data-home-stay-id="${stayId}"] img`);
+  await expect(portrait).toHaveAttribute('src', cachedPhoto.url);
+  await expect(page.locator('.wh-home-portrait img')).toHaveCount(1);
+  await page.evaluate(() => window.releaseFreshPortrait());
+  await expect(portrait).toHaveAttribute('src', 'http://home.test/photo.svg');
+  await expect(page.locator('.wh-home-portrait img')).toHaveCount(2);
 });
 
 test('Potential Home photos use the same bounded Google thumbnail request and lazy decoding', async ({ page }) => {
