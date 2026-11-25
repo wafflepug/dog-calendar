@@ -2161,7 +2161,7 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active [data-care-
   width: 100%;
   min-width: 0;
 }
-body[data-waffle-page="directory"] .directory-card.is-profile-active :is(.care-header-call-owner, [data-care-header-book-again], [data-care-header-intake-pdf], [data-care-header-remove-stay]) {
+body[data-waffle-page="directory"] .directory-card.is-profile-active :is(.care-header-call-owner, [data-care-header-book-again], [data-care-header-intake-pdf], [data-care-header-intake-link], [data-care-header-remove-stay]) {
   display: grid;
   place-items: center;
   flex: 0 0 44px;
@@ -2204,7 +2204,7 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active .care-heade
   stroke-linecap: round;
   stroke-linejoin: round;
 }
-body[data-waffle-page="directory"] .directory-card.is-profile-active :is(.care-header-call-owner, [data-care-header-book-again], [data-care-header-intake-pdf], [data-care-header-remove-stay]):focus-visible {
+body[data-waffle-page="directory"] .directory-card.is-profile-active :is(.care-header-call-owner, [data-care-header-book-again], [data-care-header-intake-pdf], [data-care-header-intake-link], [data-care-header-remove-stay]):focus-visible {
   outline: 3px solid var(--care-focus, #2459d3);
   outline-offset: 2px;
 }
@@ -2963,11 +2963,11 @@ body.dark-theme .directory-profile-name-line [data-care-intake-received] { color
 .directory-profile-name-line [data-care-intake-received] .palz-icon { width: 18px; height: 18px; }
 
 /* Keep the labels below the circular actions while retaining their accessible names. */
-:is(.care-header-tools, [data-care-header-document-actions]) > :is([data-care-host-again], [data-care-header-call-owner], [data-care-header-book-again], [data-care-header-intake-pdf], [data-care-header-remove-stay]) {
+:is(.care-header-tools, [data-care-header-document-actions]) > :is([data-care-host-again], [data-care-header-call-owner], [data-care-header-book-again], [data-care-header-intake-pdf], [data-care-header-intake-link], [data-care-header-remove-stay]) {
   position: relative;
   margin-bottom: 36px;
 }
-:is(.care-header-tools, [data-care-header-document-actions]) > :is([data-care-host-again], [data-care-header-call-owner], [data-care-header-book-again], [data-care-header-intake-pdf], [data-care-header-remove-stay])::after,
+:is(.care-header-tools, [data-care-header-document-actions]) > :is([data-care-host-again], [data-care-header-call-owner], [data-care-header-book-again], [data-care-header-intake-pdf], [data-care-header-intake-link], [data-care-header-remove-stay])::after,
 .care-header-tools > .v11112-care-source-host::after {
   display: block;
   width: 64px;
@@ -2976,7 +2976,7 @@ body.dark-theme .directory-profile-name-line [data-care-intake-received] { color
   text-align: center;
   white-space: normal;
 }
-:is(.care-header-tools, [data-care-header-document-actions]) > :is([data-care-host-again], [data-care-header-call-owner], [data-care-header-book-again], [data-care-header-intake-pdf], [data-care-header-remove-stay])::after {
+:is(.care-header-tools, [data-care-header-document-actions]) > :is([data-care-host-again], [data-care-header-call-owner], [data-care-header-book-again], [data-care-header-intake-pdf], [data-care-header-intake-link], [data-care-header-remove-stay])::after {
   position: absolute;
   top: calc(100% + 4px);
   left: 50%;
@@ -3031,12 +3031,24 @@ body[data-waffle-page="directory"] [data-directory-profile-care] .care-risk-opti
 
 [data-care-header-document-actions] > [data-care-header-intake-pdf] { order: 1; padding: 0; cursor: pointer; }
 [data-care-header-document-actions] > [data-care-header-intake-pdf]::after { content: "View intake PDF" / ""; }
+.care-header-tools > [data-care-header-intake-link] { padding: 0; cursor: pointer; }
+.care-header-tools > [data-care-header-intake-link]::after { content: "Copy intake link" / ""; }
+.care-header-tools > [data-care-header-intake-link]:disabled { opacity: .6; cursor: wait; }
+.care-header-intake-feedback {
+  flex-basis: 100%;
+  order: 2;
+  min-width: 0;
+  color: var(--care-card-muted, #526174);
+  font-size: 13px;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
 [data-care-header-document-actions] > [data-care-header-intake-pdf]:disabled { opacity: .55; cursor: default; }
 @media (max-width: 390px) {
   body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-card-header > [data-care-header-tools] {
     column-gap: 10px;
   }
-  :is(.care-header-tools, [data-care-header-document-actions]) > :is([data-care-host-again], [data-care-header-call-owner], [data-care-header-book-again], [data-care-header-intake-pdf], [data-care-header-remove-stay])::after,
+  :is(.care-header-tools, [data-care-header-document-actions]) > :is([data-care-host-again], [data-care-header-call-owner], [data-care-header-book-again], [data-care-header-intake-pdf], [data-care-header-intake-link], [data-care-header-remove-stay])::after,
   .care-header-tools > .v11112-care-source-host::after { width: 54px; }
   .care-header-tools > .v11112-care-source-host::after { margin-inline: -5px; }
 }

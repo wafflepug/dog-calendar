@@ -273,6 +273,50 @@ test('compact profile aligns identity above actions and keeps stay confirmations
   }
 });
 
+test('profile intake link copies only for the selected stay and opens preparation when needed', async ({page, baseURL}) => {
+  await page.setViewportSize({width: 320, height: 740});
+  await install(page);
+  await page.goto(`${baseURL}/directory.html`);
+  const booking = bookings[0];
+  const card = page.locator(`#directory-grid [data-directory-stay-id="${booking.stayId}"]`);
+  await card.locator('[data-open-directory-profile]').click();
+  const tools = card.locator('[data-care-header-tools]');
+  const shortcut = tools.getByRole('button', {name: 'Copy intake link', exact: true});
+  await expect(shortcut).toBeVisible();
+  await expect(shortcut).toHaveCSS('border-radius', '50%');
+  await expect(shortcut.locator('[data-palz-icon="link"]')).toBeVisible();
+  await expect(card.locator('[data-care-intake-received]')).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+
+  const link = 'https://care.example.test/palz-intake.html#token=prepared-fixture';
+  await page.evaluate(detail => window.dispatchEvent(new CustomEvent('waffle:owner-care-link-ready', {detail})), {...booking, link});
+  await shortcut.click();
+  await expect(tools.getByRole('status').filter({hasText: 'Intake link copied.'})).toBeVisible();
+  expect(await page.evaluate(() => window.__copied)).toEqual([link]);
+
+  await page.evaluate(() => Object.defineProperty(navigator, 'clipboard', {
+    configurable: true, value: {writeText: async () => { throw Error('blocked'); }}
+  }));
+  await shortcut.click();
+  const fallback = tools.getByRole('textbox', {name: 'Owner care link for manual copying'});
+  await expect(fallback).toHaveValue(link);
+  await expect(fallback).toBeInViewport();
+  await page.locator('#directoryBackToGuestsBtn').click();
+  await expect(fallback).toHaveCount(0);
+
+  await page.setViewportSize({width: 1280, height: 800});
+  const other = page.locator(`#directory-grid [data-directory-stay-id="${bookings[1].stayId}"]`);
+  await other.locator('[data-open-directory-profile]').click();
+  const otherShortcut = other.locator('[data-care-header-tools]').getByRole('button', {name: 'Copy intake link', exact: true});
+  await otherShortcut.click();
+  await expect(page.locator('#p4Modal')).toBeVisible();
+  await expect(page.locator('#p4OwnerDog')).toHaveValue(bookings[1].dogName);
+  await expect(page.locator('#p4OwnerEnd')).toHaveValue(bookings[1].endDate);
+  await page.locator('#p4Modal [data-p4-close]').click();
+  await expect(otherShortcut).toBeFocused();
+  expect(await page.evaluate(() => window.__copied)).toEqual([link]);
+});
+
 test('checking in hides Drop-off and a Pick-up edit preserves the saved Drop-off time', async ({page, baseURL}) => {
   const fixture = await install(page);
   await page.goto(`${baseURL}/directory.html`);

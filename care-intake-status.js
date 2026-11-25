@@ -6,6 +6,7 @@
   const linked = new WeakMap();
   const lastStates = new WeakMap();
   const renderedLinks = new WeakMap();
+  const headerCopies = new WeakMap();
   const refreshingBrief = new WeakSet();
   const ownerOptionsDispatch = new WeakSet();
   let observers = new Map();
@@ -140,6 +141,64 @@
     return link?.dataset.careIntakePdfLink === identity(card) && /^https?:$/.test(link.protocol) ? link : null;
   }
 
+  function copyableLink(card) {
+    const prepared = linked.get(card);
+    if (!prepared?.canDirectCopy || prepared.identity !== identity(card)
+      || !prepared.link || prepared.link !== validLink(prepared.link)) return null;
+    return strictSelected(card, {
+      ...prepared,
+      dogName: card.dataset.directoryDogName || card.dataset.dogName,
+      startDate: card.dataset.directoryStartDate || card.dataset.startDate,
+      endDate: card.dataset.directoryEndDate || card.dataset.endDate
+    }) ? prepared : null;
+  }
+
+  function copyProfileLink(card, button, tools) {
+    render(card);
+    const prepared = copyableLink(card);
+    const api = window.WAFFLE_OWNER_HANDOFF;
+    if (!prepared || typeof api?.copyLink !== 'function') {
+      window.WAFFLE_PHASE4_BOOKING?.openProfileOwnerCare?.(card, button);
+      return;
+    }
+    let feedback = headerCopies.get(card)?.feedback;
+    if (!feedback?.isConnected) {
+      feedback = document.createElement('div');
+      feedback.className = 'care-header-intake-feedback';
+      const status = document.createElement('div');
+      status.setAttribute('role', 'status');
+      feedback.append(status);
+      tools.append(feedback);
+      headerCopies.set(card, { prepared, feedback });
+    }
+    const status = feedback.querySelector('[role="status"]');
+    void api.copyLink(prepared.link, {
+      button,
+      status,
+      host: feedback,
+      isCurrent: () => button.isConnected && copyableLink(card) === prepared
+    }).then(copied => {
+      if (copied && feedback.isConnected) status.textContent = 'Intake link copied.';
+    }).finally(() => { button.disabled = false; });
+  }
+
+  function syncIntakeLinkButton(card, owner) {
+    const tools = card.querySelector('.directory-card-header > [data-care-header-tools]');
+    if (!tools || !owner || !card.classList.contains('is-profile-active')) return;
+    let button = tools.querySelector('[data-care-header-intake-link]');
+    if (!button) {
+      button = document.createElement('button');
+      button.type = 'button';
+      button.dataset.careHeaderIntakeLink = '';
+      button.setAttribute('aria-label', 'Copy intake link');
+      button.addEventListener('click', () => copyProfileLink(card, button, tools));
+      tools.append(button);
+    }
+    if (!button.hasChildNodes() && window.PALZ_ICONS) button.innerHTML = window.PALZ_ICONS.svg('link');
+    const title = copyableLink(card) ? 'Copy intake link' : 'Open the owner care form to prepare its link';
+    if (button.title !== title) button.title = title;
+  }
+
   function syncIntakePdfButton(card) {
     const tools = card.querySelector('.directory-card-header > [data-care-header-tools]');
     if (!tools || !card.classList.contains('is-profile-active')) return;
@@ -192,6 +251,12 @@
     })) {
       rememberLink(card, remembered.link, { ...remembered, stayKey: remembered.stayKey }, false, remembered.source);
     }
+    const headerCopy = headerCopies.get(card);
+    if (headerCopy && (!headerCopy.feedback.isConnected || headerCopy.prepared !== copyableLink(card))) {
+      headerCopy.feedback.remove();
+      headerCopies.delete(card);
+    }
+    syncIntakeLinkButton(card, owner);
     let group = actions.querySelector(':scope > .directory-owner-care-action-group');
     if (!group) {
       group = document.createElement('div');
@@ -387,10 +452,9 @@
       return;
     }
     const card = owner.closest('.directory-card');
-    const prepared = linked.get(card);
-    const currentIdentity = identity(card);
-    const d = prepared && { dogName: card?.dataset.directoryDogName || card?.dataset.dogName, dogId: prepared.dogId, stayId: prepared.stayId, stayKey: prepared.stayKey, startDate: card?.dataset.directoryStartDate || card?.dataset.startDate, endDate: card?.dataset.directoryEndDate || card?.dataset.endDate };
-    if (!card?.classList.contains('is-profile-active') || !prepared || !prepared.canDirectCopy || !prepared.link || prepared.identity !== currentIdentity || !strictSelected(card, d) || stateFor(card).action !== 'Copy existing link') return;
+    if (!card) return;
+    const prepared = copyableLink(card);
+    if (!prepared || stateFor(card).action !== 'Copy existing link') return;
     const api = window.WAFFLE_OWNER_HANDOFF;
     if (typeof api?.copyLink !== 'function') return;
     event.preventDefault();
@@ -410,10 +474,7 @@
       button: owner,
       status,
       host,
-      isCurrent: () => card.isConnected && owner.isConnected && card.classList.contains('is-profile-active')
-        && linked.get(card) === prepared && identity(card) === currentIdentity
-        && prepared.identity === identity(card) && prepared.link === validLink(prepared.link)
-        && prepared.canDirectCopy && strictSelected(card, d) && stateFor(card).action === 'Copy existing link'
+      isCurrent: () => owner.isConnected && copyableLink(card) === prepared && stateFor(card).action === 'Copy existing link'
     });
   }, true);
   function findGrids(root) {
