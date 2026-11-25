@@ -2569,6 +2569,15 @@ body[data-waffle-page="directory"] .directory-card.is-profile-active .directory-
 .directory-roster-name-line {
   display:flex; flex-wrap:wrap; align-items:center; gap:4px 8px; min-width:0;
 }
+.directory-roster-name-line > [data-care-roster-stay-icon] {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  color: var(--wh75-accent-ink, #4338ca);
+}
+.directory-roster-name-line > [data-care-roster-stay-icon="checkout"] { color: #b91c1c; }
+body.dark-theme .directory-roster-name-line > [data-care-roster-stay-icon="checkout"] { color: #fca5a5; }
+.directory-roster-name-line > [data-care-roster-stay-icon] .palz-icon { width: 17px; height: 17px; }
 .directory-roster-name-line > .v1118-care-signals {
   display:inline-flex; flex-wrap:wrap; align-items:center; gap:5px; min-width:0; max-width:100%;
 }

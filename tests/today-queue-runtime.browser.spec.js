@@ -48,13 +48,16 @@ test('the shipped Today page keeps profile links, exposes direct confirmed-stay 
     }
     if (new URL(url).pathname.endsWith('/palz-owner-tools.js') && deferredStartup) await deferredStartup;
     if (url.includes('cdn.jsdelivr.net') && url.includes('fullcalendar')) return route.fulfill({contentType:'application/javascript',body:calendar});
-    if (url.endsWith('/fixture-coco.svg')) return route.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><circle cx="32" cy="32" r="30" fill="teal"/></svg>'});
+    if (/\/fixture-(coco|milo)\.svg$/.test(url)) return route.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><circle cx="32" cy="32" r="30" fill="teal"/></svg>'});
     if (url.includes('script.google')) {
       const resolved = resolveLocalBackendAction({method:req.method(),url});
       if (!resolved.policy.allowed && !['get_business_name','get_sitter_day_handovers','get_sitter_handover','get_dog_host_again'].includes(resolved.action)) { writes.push(resolved.action); return route.fulfill({status:403,body:'Read-only fixture'}); }
       const callback = new URL(url).searchParams.get('callback');
       const response = {result:'success',bookings:[],records:[],summaries:[],identities:[],totalPastStays:0};
-      if (resolved.action === 'get_belongings') response.records.push({stayKey:'coco|2026-10-12|2026-10-16',dogPhoto:{previewUrl:new URL('/fixture-coco.svg',baseURL).href}});
+      if (resolved.action === 'get_belongings') response.records.push(
+        {stayKey:'coco|2026-10-12|2026-10-16',dogPhoto:{previewUrl:new URL('/fixture-coco.svg',baseURL).href}},
+        {stayKey:'milo|2026-10-16|2026-10-20',dogPhoto:{previewUrl:new URL('/fixture-milo.svg',baseURL).href}}
+      );
       const [dogName, , , , , dogId, stayId] = rows[2];
       if (resolved.action === 'get_stay_operations') response.records.push({dogName, dogId, stayId, stayKey:'biscoff|2026-10-16|2026-10-16', status:'checked_in'});
       if (resolved.action === 'get_sitter_day_handovers') {
@@ -108,6 +111,13 @@ test('the shipped Today page keeps profile links, exposes direct confirmed-stay 
       await page.goto(url, {waitUntil:'domcontentloaded'});
     }
     await page.waitForFunction(() => document.documentElement.dataset.waffleUiReady === 'true');
+    if (width === 1440) {
+      const refresh = page.locator('[data-wh69-sync]');
+      await expect(refresh).toHaveAccessibleName('Refresh calendar data');
+      await expect(refresh.locator('[data-palz-icon="refresh"]')).toBeVisible();
+      await expect(refresh).toHaveText('');
+      await expect(page.locator('#wh94LastUpdated')).toHaveText('');
+    }
     const queue = page.locator('#v10TodayAgenda');
     await expect(queue.locator('.v10-agenda-item')).toHaveCount(4);
     const alert = page.getByRole('img', {name:'5 actions today'});
@@ -116,6 +126,9 @@ test('the shipped Today page keeps profile links, exposes direct confirmed-stay 
     await expect(queue.getByRole('link', {name:/Open Biscoff care profile, Same Day Care · Checked in · Check-out 05:30pm/})).toBeVisible();
     await expect(queue).toBeVisible();
     await expect(queue.getByRole('button', {name:'Check-in Milo'})).toBeVisible();
+    const arrivalPhoto = queue.getByRole('link', {name:/Open Milo care profile/}).locator('.wh-home-portrait img');
+    await expect(arrivalPhoto).toHaveAttribute('src', /fixture-milo\.svg$/);
+    await expect.poll(() => arrivalPhoto.evaluate(image => image.naturalWidth)).toBeGreaterThan(0);
     await expect(queue.getByRole('button', {name:'Check-out Coco'})).toBeVisible();
     const portrait = queue.getByRole('link', {name:/Open Coco care profile/}).locator('.wh-home-portrait img');
     await expect(queue.getByRole('button', {name:'Set price'})).toHaveCount(0);
@@ -174,8 +187,17 @@ test('the shipped Today page keeps profile links, exposes direct confirmed-stay 
     await queue.scrollIntoViewIfNeeded();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBeTruthy();
     await info.attach(`today-${width}`, {body:await page.screenshot({path:info.outputPath(`today-${width}.png`)}),contentType:'image/png'});
-    await queue.getByRole('button', {name:/^Open Scout Meet & Greet/}).click();
-    await expect(page.locator('#customBookingModal')).toBeVisible();
+    if (width === 1440) {
+      await page.locator('#wh65Calendar').getByRole('button', {name:/Meet & Greet · .*Scout/}).click();
+    } else {
+      await queue.getByRole('button', {name:/^Open Scout Meet & Greet/}).click();
+    }
+    const meet = page.locator('#customBookingModal');
+    await expect(meet).toBeVisible();
+    await expect(meet.locator('[data-meet-detail="dog"]')).toHaveText('Scout');
+    await expect(meet.getByLabel('Pet name', {exact:true})).toBeHidden();
+    await expect(meet.getByRole('button', {name:'Delete',exact:true})).toBeHidden();
+    await meet.getByRole('button', {name:'Edit',exact:true}).click();
     await expect(page.locator('#modalTitle')).toHaveText(/Edit Meet & Greet/);
     await expect(page.locator('#modalDogName')).toHaveValue('Scout');
     await expect(page.locator('#modalBookingTime')).toHaveValue('10:30');

@@ -122,6 +122,9 @@
       const icon = badge.dataset.carePhotoStatus === 'arrival' ? 'checkin' : 'luggage';
       if (!badge.querySelector(`[data-palz-icon="${icon}"]`)) badge.innerHTML = svg(icon);
     });
+    document.querySelectorAll('[data-care-roster-stay-icon]').forEach(icon => {
+      if (!icon.querySelector('[data-palz-icon]')) icon.innerHTML = svg(icon.dataset.careRosterStayIcon);
+    });
     document.querySelectorAll('[data-v108-boarding-icon]').forEach(icon => hostIcon(icon, 'home'));
     document.querySelectorAll('.directory-guest-tile-open .v1118-care-status.is-at-home, .directory-profile-name-line .directory-status-tag.tag-at-home').forEach(chip => {
       if (!chip.querySelector('[data-palz-icon="home"]')) chip.insertAdjacentHTML('beforeend', svg('home'));

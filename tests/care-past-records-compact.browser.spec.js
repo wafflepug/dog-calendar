@@ -42,6 +42,26 @@ async function fixture(page, bookings = [booking]) {
   return reads;
 }
 
+test('loading more past stays keeps the Checked out icon beside each pet name', async ({page, baseURL}) => {
+  const stays = Array.from({length:21}, (_,index) => {
+    const suffix = String(index + 1).padStart(12, '0');
+    const dogName = `Pet ${suffix.slice(-2)}`;
+    return {...booking, dogName, stayId:`aaaaaaaa-aaaa-4aaa-8aaa-${suffix}`, dogId:`11111111-1111-4111-8111-${suffix}`,
+      stayKey:`${dogName.toLowerCase()}|2026-10-02|2026-10-06`};
+  });
+  await fixture(page, stays);
+  await page.setViewportSize({width:390,height:844});
+  await page.goto(`${baseURL}/directory.html`, {waitUntil:'domcontentloaded'});
+  await page.waitForFunction(() => document.documentElement.dataset.waffleUiReady === 'true' && directoryConsolidatedLastFetch > 0);
+  await page.locator('[data-v1082-stay-tab="past"]').click();
+  const grid = page.locator('#past-directory-grid');
+  const icons = grid.locator('.directory-guest-tile-name + [data-care-roster-stay-icon="checkout"]');
+  await expect(icons).toHaveCount(20);
+  await grid.getByRole('button', {name:'Load more past pets'}).click();
+  await expect(icons).toHaveCount(21);
+  await expect(grid.locator('.v1118-care-status:visible, .directory-roster-status.is-past:visible')).toHaveCount(0);
+});
+
 test.describe('compact past contact and records', () => {
   for (const width of [320, 390, 1440]) test(`keeps owner contact and handover clear at ${width}px`, async ({ page, baseURL }) => {
     test.skip(!baseURL, 'Requires the local read-only directory fixture server.');
@@ -55,6 +75,8 @@ test.describe('compact past contact and records', () => {
     await page.waitForFunction(() => v1082PastLoaded && !v1082PastLoadPromise);
     const tile = page.locator('#past-directory-grid [data-v1082-past-stay="true"] [data-open-directory-profile]');
     await expect(tile).toBeVisible();
+    await expect(tile.locator('.directory-guest-tile-name + [data-care-roster-stay-icon="checkout"] [data-palz-icon="checkout"]')).toBeVisible();
+    await expect(tile.locator('.v1118-care-status')).toBeHidden();
     await expect(page.locator('#past-directory-grid .directory-profile-content')).toHaveCount(0);
     await tile.click();
     const card = page.locator('#directoryTabPanel .directory-card[data-v1082-past-stay="true"].is-profile-active');

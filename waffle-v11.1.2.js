@@ -24,7 +24,7 @@ function v1112SourceTilesHtml(selected = '') {
 }
 
 function v1112EnhanceSourceSelect(select) {
-  if (!select || select.dataset.v1112Enhanced === 'true') return;
+  if (!select || select.hasAttribute('data-native-source') || select.dataset.v1112Enhanced === 'true') return;
   select.dataset.v1112Enhanced = 'true';
   select.classList.add('v1112-source-native');
 

@@ -611,18 +611,82 @@ function style(){
  if(document.getElementById('aw37style'))return;
  const s=document.createElement('style');s.id='aw37style';s.textContent=`
  .aw37-launch{display:inline-flex;align-items:center;gap:7px;min-height:40px;padding:7px 11px;border:1px solid color-mix(in srgb,var(--wh-accent,#0f6292) 30%,transparent);border-radius:999px;background:var(--wh-surface,#fff);color:var(--wh-text,#10243a);font:inherit;font-size:11px;font-weight:900;cursor:pointer;box-shadow:0 8px 24px rgba(15,23,42,.12);z-index:2147481000}.aw37-launch img{width:30px;height:30px;object-fit:contain}.aw37-launch.float{position:fixed;right:18px;bottom:22px}body.dark-theme .aw37-launch{background:#18253a;border-color:#31557c;color:#f8fafc}
- #v11133AskWaffleModal{position:fixed;inset:0;z-index:2147482200;display:grid;place-items:center;padding:18px;background:rgba(15,23,42,.52);backdrop-filter:blur(8px)}#v11133AskWaffleModal[hidden]{display:none!important}.aw37-card{display:grid;grid-template-rows:auto auto minmax(220px,1fr) auto auto;width:min(720px,calc(100vw - 36px));max-height:min(88dvh,820px);overflow:hidden;border:1px solid var(--wh-border,#d9e2ec);border-radius:24px;background:var(--wh-surface,#fff);box-shadow:0 28px 80px rgba(15,23,42,.28)}.aw37-head{display:flex;justify-content:space-between;gap:12px;padding:18px 20px 14px;border-bottom:1px solid var(--wh-border,#d9e2ec)}.aw37-brand{display:flex;align-items:center;gap:10px}.aw37-brand>img{width:52px;height:52px;object-fit:contain}.aw37-brand small,.aw37-brand h3,.aw37-brand p{margin:0}.aw37-brand small{color:var(--wh-accent,#0f6292);font-size:9px;font-weight:950;letter-spacing:.08em}.aw37-brand h3{font-size:20px;color:var(--wh-text,#111827)}.aw37-brand p{font-size:10px;color:var(--wh-text-muted,#64748b)}.aw37-close{width:38px;height:38px;border:0;border-radius:50%;background:var(--wh-surface-soft,#f8fafc);color:var(--wh-text,#111827);font-size:20px;cursor:pointer}.aw37-prompts{display:flex;gap:7px;padding:10px 20px;overflow:auto;border-bottom:1px solid var(--wh-border,#d9e2ec)}.aw37-prompts button{flex:none;padding:7px 10px;border:1px solid var(--wh-border,#d9e2ec);border-radius:999px;background:var(--wh-surface-soft,#f8fafc);color:var(--wh-text,#111827);font:inherit;font-size:9px;font-weight:850}.aw37-thread{display:flex;flex-direction:column;gap:13px;padding:18px 20px;overflow:auto;background:var(--wh-surface-soft,#f8fafc)}.aw37-msg{display:flex;width:100%}.aw37-msg.user{justify-content:flex-end}.aw37-msg.bot{align-items:flex-end;gap:8px}.aw37-bubble{max-width:82%;padding:11px 13px;border-radius:16px;font-size:11px;line-height:1.48}.user .aw37-bubble{background:var(--wh-accent,#0f6292);color:#fff;border-bottom-right-radius:5px}.bot .aw37-bubble{background:var(--wh-surface,#fff);color:var(--wh-text,#111827);border:1px solid var(--wh-border,#d9e2ec);border-bottom-right-radius:5px}.aw37-bubble ul{display:grid;gap:5px;margin:9px 0 0;padding-left:17px}.aw37-face{width:56px;height:56px;object-fit:contain;filter:drop-shadow(0 4px 8px rgba(15,23,42,.16))}.aw37-face.latest{width:66px;height:66px}.aw37-form{display:grid;grid-template-columns:1fr auto;gap:8px;padding:13px 20px;background:var(--wh-surface,#fff);border-top:1px solid var(--wh-border,#d9e2ec)}.aw37-form input{min-width:0;min-height:44px;padding:10px 12px;border:1px solid var(--wh-border,#d9e2ec);border-radius:13px;background:var(--wh-surface-soft,#f8fafc);color:var(--wh-text,#111827)}.aw37-form button{border:0;border-radius:13px;padding:0 17px;background:var(--wh-accent,#0f6292);color:#fff;font-weight:900}.aw37-foot{padding:0 20px 12px;background:var(--wh-surface,#fff);color:var(--wh-text-muted,#64748b);font-size:8px}body.dark-theme .aw37-card,body.dark-theme .aw37-head,body.dark-theme .aw37-form,body.dark-theme .aw37-foot,body.dark-theme .bot .aw37-bubble{background:#18253a}body.dark-theme .aw37-thread{background:#121d2d}body.dark-theme .aw37-close,body.dark-theme .aw37-prompts button,body.dark-theme .aw37-form input{background:#22304a;border-color:#334155;color:#f8fafc}
+#v11133AskWaffleModal[hidden]{display:none!important}.aw37-card{display:grid;grid-template-rows:auto auto minmax(220px,1fr) auto auto;width:min(720px,calc(100vw - 36px));max-height:min(88dvh,820px);overflow:hidden;border:1px solid var(--wh-border,#d9e2ec);border-radius:24px;background:var(--wh-surface,#fff);box-shadow:0 28px 80px rgba(15,23,42,.28)}.aw37-head{display:flex;justify-content:space-between;gap:12px;padding:18px 20px 14px;border-bottom:1px solid var(--wh-border,#d9e2ec)}.aw37-brand{display:flex;align-items:center;gap:10px}.aw37-brand>img{width:52px;height:52px;object-fit:contain}.aw37-brand small,.aw37-brand h3,.aw37-brand p{margin:0}.aw37-brand small{color:var(--wh-accent,#0f6292);font-size:9px;font-weight:950;letter-spacing:.08em}.aw37-brand h3{font-size:20px;color:var(--wh-text,#111827)}.aw37-brand p{font-size:10px;color:var(--wh-text-muted,#64748b)}.aw37-close{width:38px;height:38px;border:0;border-radius:50%;background:var(--wh-surface-soft,#f8fafc);color:var(--wh-text,#111827);font-size:20px;cursor:pointer}.aw37-prompts{display:flex;gap:7px;padding:10px 20px;overflow:auto;border-bottom:1px solid var(--wh-border,#d9e2ec)}.aw37-prompts button{flex:none;padding:7px 10px;border:1px solid var(--wh-border,#d9e2ec);border-radius:999px;background:var(--wh-surface-soft,#f8fafc);color:var(--wh-text,#111827);font:inherit;font-size:9px;font-weight:850}.aw37-thread{display:flex;flex-direction:column;gap:13px;padding:18px 20px;overflow:auto;background:var(--wh-surface-soft,#f8fafc)}.aw37-msg{display:flex;width:100%}.aw37-msg.user{justify-content:flex-end}.aw37-msg.bot{align-items:flex-end;gap:8px}.aw37-bubble{max-width:82%;padding:11px 13px;border-radius:16px;font-size:11px;line-height:1.48}.user .aw37-bubble{background:var(--wh-accent,#0f6292);color:#fff;border-bottom-right-radius:5px}.bot .aw37-bubble{background:var(--wh-surface,#fff);color:var(--wh-text,#111827);border:1px solid var(--wh-border,#d9e2ec);border-bottom-right-radius:5px}.aw37-bubble ul{display:grid;gap:5px;margin:9px 0 0;padding-left:17px}.aw37-face{width:56px;height:56px;object-fit:contain;filter:drop-shadow(0 4px 8px rgba(15,23,42,.16))}.aw37-face.latest{width:66px;height:66px}.aw37-form{display:grid;grid-template-columns:1fr auto;gap:8px;padding:13px 20px;background:var(--wh-surface,#fff);border-top:1px solid var(--wh-border,#d9e2ec)}.aw37-form input{min-width:0;min-height:44px;padding:10px 12px;border:1px solid var(--wh-border,#d9e2ec);border-radius:13px;background:var(--wh-surface-soft,#f8fafc);color:var(--wh-text,#111827)}.aw37-form button{border:0;border-radius:13px;padding:0 17px;background:var(--wh-accent,#0f6292);color:#fff;font-weight:900}.aw37-foot{padding:0 20px 12px;background:var(--wh-surface,#fff);color:var(--wh-text-muted,#64748b);font-size:8px}body.dark-theme .aw37-card,body.dark-theme .aw37-head,body.dark-theme .aw37-form,body.dark-theme .aw37-foot,body.dark-theme .bot .aw37-bubble{background:#18253a}body.dark-theme .aw37-thread{background:#121d2d}body.dark-theme .aw37-close,body.dark-theme .aw37-prompts button,body.dark-theme .aw37-form input{background:#22304a;border-color:#334155;color:#f8fafc}
  @media(max-width:768px){.aw37-launch.float{right:12px;bottom:calc(88px + env(safe-area-inset-bottom));width:52px;height:52px;padding:0;border-radius:50%}.aw37-launch.float span{display:none}.aw37-launch.float img{width:40px;height:40px}.aw37-card{width:calc(100vw - 16px);max-height:calc(100dvh - 18px);border-radius:20px}.aw37-head{padding:14px}.aw37-thread{padding:14px}.aw37-bubble{max-width:78%;font-size:10px}.aw37-face{width:50px;height:50px}.aw37-face.latest{width:58px;height:58px}.aw37-form{padding:10px 14px}.aw37-foot{padding:0 14px 10px}}
+ #v11133AskWaffleModal[data-aw37] {
+   --aw-chat-bottom: max(86px, env(safe-area-inset-bottom));
+   position: fixed;
+   inset: auto max(12px, env(safe-area-inset-right)) var(--aw-chat-bottom) auto;
+   z-index: 2147481740;
+   display: block;
+   width: min(400px, calc(100vw - 24px)) !important;
+   height: min(520px, calc(100dvh - var(--aw-chat-bottom) - 12px));
+   padding: 0 !important;
+   overflow: visible !important;
+ }
+ #v11133AskWaffleModal[data-aw37] .aw37-card {
+   display: flex;
+   flex-direction: column;
+   width: 100% !important;
+   height: 100%;
+   max-height: 100% !important;
+   border-radius: 16px;
+   box-shadow: 0 12px 36px rgb(15 23 42 / 26%);
+ }
+ #v11133AskWaffleModal[data-aw37] .aw37-thread {
+   flex: 1 1 0;
+   min-height: 0;
+   overscroll-behavior-y: contain;
+ }
+ #v11133AskWaffleModal[data-aw37] .aw37-bubble { font-size: 13px !important; overflow-wrap: anywhere; }
+ #v11133AskWaffleModal[data-aw37] .aw37-head { align-items: center; padding: 8px 12px !important; }
+ #v11133AskWaffleModal[data-aw37] .aw37-close {
+   flex: 0 0 44px;
+   width: 44px !important;
+   height: 44px !important;
+ }
+ @media (max-width: 820px) {
+   #v11133AskWaffleModal[data-aw37] {
+     --aw-visible-gap: var(--waffle-mobile-visual-bottom-gap, 0px);
+     --aw-chat-bottom: max(calc(var(--wh75-mobile-nav-height, 76px) + 8px), calc(var(--aw-visible-gap) + 8px));
+     height: min(430px, calc(var(--waffle-mobile-visual-height, 100dvh) - max(0px, var(--aw-chat-bottom) - var(--aw-visible-gap)) - 12px));
+   }
+   #v11133AskWaffleModal[data-aw37] .aw37-form input { font-size: 16px !important; }
+ }
  `;document.head.appendChild(s)
 }
 function settle(t){t?.querySelectorAll('.aw37-face').forEach(i=>{i.src=A.closed||i.src;i.classList.remove('latest')})}
 function user(t,q){const r=document.createElement('div');r.className='aw37-msg user';r.innerHTML=`<div class="aw37-bubble">${esc(q)}</div>`;t.appendChild(r)}
 function bot(t,a){settle(t);const r=document.createElement('div');r.className='aw37-msg bot';const li=Array.isArray(a?.list)&&a.list.length?`<ul>${a.list.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:'';r.innerHTML=`<div class="aw37-bubble">${esc(a?.text||'')}${li}</div><img class="aw37-face latest" src="${A.open||''}" alt="">`;t.appendChild(r)}
+let chatTrigger;
+const chatTriggerSelector = '#aw37launch, [data-wh75-ask], [data-wh78-ai]';
+function setChatOpen(open, trigger) {
+ const panel = modal();
+ if (open) chatTrigger = trigger || document.getElementById('aw37launch');
+ panel.hidden = !open;
+ document.querySelectorAll(chatTriggerSelector).forEach(button => {
+   button.setAttribute('aria-controls', panel.id);
+   button.setAttribute('aria-expanded', String(open));
+ });
+ if (open) {
+   const target = window.matchMedia('(max-width: 820px)').matches ? '.aw37-close' : 'input:not(:disabled)';
+   (panel.querySelector(target) || panel.querySelector('.aw37-close'))?.focus({preventScroll:true});
+   const thread = panel.querySelector('.aw37-thread');
+   if (thread) thread.scrollTop = thread.scrollHeight;
+ } else {
+   if (chatTrigger?.getClientRects().length) chatTrigger.focus({preventScroll:true});
+   chatTrigger = null;
+ }
+ window.dispatchEvent(new CustomEvent('waffle:ai-chat-visibility', {detail:{open}}));
+}
+function toggleChat(trigger) {
+ setChatOpen(modal().hidden, trigger);
+}
 function modal(){
  let m=document.getElementById('v11133AskWaffleModal');if(m?.dataset.aw37==='1')return m;if(m)m.remove();
  m=document.createElement('div');m.id='v11133AskWaffleModal';m.hidden=true;m.dataset.aw37='1';m.dataset.v11133Wired='true';m.dataset.v11135FreshIntent='true';
- m.innerHTML=`<section class="aw37-card" role="dialog" aria-modal="true"><header class="aw37-head"><div class="aw37-brand"><img src="${A.icon||''}" alt=""><div><small>WAFFLE OPERATIONS ASSISTANT</small><h3>Ask Waffle</h3><p>Bookings, dogs, Meet & Greets and capacity</p></div></div><button class="aw37-close" type="button">×</button></header><div class="aw37-prompts"><button data-q="Who is staying this weekend?">This weekend</button><button data-q="Any Meet & Greets next week?">Next week M&Gs</button><button data-q="Who is arriving tomorrow?">Arriving tomorrow</button><button data-q="Do we have capacity 2-9 December?">Check capacity</button></div><div class="aw37-thread"><div class="aw37-msg bot"><div class="aw37-bubble"><b>Hi — I’m Waffle.</b><br>Ask me what’s happening across bookings, stays, Meet & Greets or capacity.</div><img class="aw37-face latest" src="${A.open||''}" alt=""></div></div><form class="aw37-form"><input autocomplete="off" placeholder="Ask Waffle about a dog, date or booking…"><button>Send</button></form><footer class="aw37-foot">Live/saved Waffle Calendar data</footer></section>`;
- document.body.appendChild(m);m.querySelector('.aw37-close').onclick=()=>m.hidden=true;m.onclick=e=>{if(e.target===m)m.hidden=true;const b=e.target.closest?.('[data-q]');if(b)ask(b.dataset.q)};m.querySelector('form').onsubmit=e=>{e.preventDefault();const i=m.querySelector('input'),q=i.value.trim();if(q){i.value='';ask(q)}};return m
+ m.innerHTML=`<section class="aw37-card" role="dialog" aria-labelledby="waffleAiChatTitle"><header class="aw37-head"><div class="aw37-brand"><img src="${A.icon||''}" alt=""><div><small>WAFFLE OPERATIONS ASSISTANT</small><h3 id="waffleAiChatTitle">Waffle AI</h3><p>Bookings, dogs, Meet & Greets and capacity</p></div></div><button class="aw37-close" type="button" aria-label="Hide Waffle AI" title="Hide Waffle AI">−</button></header><div class="aw37-prompts"><button data-q="Who is staying this weekend?">This weekend</button><button data-q="Any Meet & Greets next week?">Next week M&Gs</button><button data-q="Who is arriving tomorrow?">Arriving tomorrow</button><button data-q="Do we have capacity 2-9 December?">Check capacity</button></div><div class="aw37-thread" role="log" aria-label="Waffle AI conversation"><div class="aw37-msg bot"><div class="aw37-bubble"><b>Hi — I’m Waffle.</b><br>Ask me what’s happening across bookings, stays, Meet & Greets or capacity.</div><img class="aw37-face latest" src="${A.open||''}" alt=""></div></div><form class="aw37-form"><input aria-label="Message Waffle AI" autocomplete="off" placeholder="Ask Waffle about a dog, date or booking…"><button>Send</button></form><footer class="aw37-foot">Live/saved Waffle Calendar data</footer></section>`;
+ document.body.appendChild(m);m.querySelector('.aw37-close').onclick=()=>setChatOpen(false);m.onclick=e=>{const b=e.target.closest?.('[data-q]');if(b)ask(b.dataset.q)};m.querySelector('form').onsubmit=e=>{e.preventDefault();const i=m.querySelector('input'),q=i.value.trim();if(q){i.value='';ask(q)}};return m
 }
 function ask(q){
  const m=modal(),t=m.querySelector('.aw37-thread');user(t,q);const src=events(),ev=src.rows;let a=null;
@@ -633,10 +697,17 @@ function ask(q){
 }
 function decorate(){const m=document.getElementById('v11133AskWaffleModal');if(!m)return;const t=m.querySelector('.aw37-thread,.v11133-thread');if(!t)return;const bots=[...t.querySelectorAll('.v11133-message.is-assistant')];if(!bots.length)return;settle(t);bots.forEach((r,i)=>{if(!r.querySelector('.aw37-face')){const img=document.createElement('img');img.className='aw37-face';img.alt='';r.appendChild(img)}const img=r.querySelector('.aw37-face');img.src=i===bots.length-1?(A.open||''):(A.closed||'');img.classList.toggle('latest',i===bots.length-1)})}
 function launch(){
- document.getElementById('v11133AskWaffleButton')?.remove();let b=document.getElementById('aw37launch');if(b)return b;b=document.createElement('button');b.id='aw37launch';b.className='aw37-launch';b.type='button';b.innerHTML=`<img src="${A.icon||''}" alt=""><span>Ask Waffle</span>`;const h=document.querySelector('.calendar-header-branding');if(page()==='calendar'&&h){const th=document.getElementById('themeToggle');h.insertBefore(b,th||null)}else{b.classList.add('float');document.body.appendChild(b)}b.onclick=()=>{const m=modal();m.hidden=false;m.querySelector('input')?.focus()};return b
+ document.getElementById('v11133AskWaffleButton')?.remove();let b=document.getElementById('aw37launch');if(b)return b;b=document.createElement('button');b.id='aw37launch';b.className='aw37-launch';b.type='button';b.innerHTML=`<img src="${A.icon||''}" alt=""><span>Ask Waffle</span>`;const h=document.querySelector('.calendar-header-branding');if(page()==='calendar'&&h){const th=document.getElementById('themeToggle');h.insertBefore(b,th||null)}else{b.classList.add('float');document.body.appendChild(b)}b.setAttribute('aria-controls','v11133AskWaffleModal');b.setAttribute('aria-expanded','false');b.onclick=()=>toggleChat(b);return b
 }
 function apply(){style();modal();launch();if(page()==='calendar')saveSnap()}
-function start(){apply();[150,500,1200,2600,5000].forEach(x=>setTimeout(apply,x));if(page()==='calendar')[800,2200,6000,12000].forEach(x=>setTimeout(saveSnap,x));window.addEventListener('pageshow',apply);window.addEventListener('focus',apply);document.addEventListener('keydown',e=>{if(e.key==='Escape'){const m=document.getElementById('v11133AskWaffleModal');if(m)m.hidden=true}});window.v11137AskWaffle=ask;window.v11137AskWaffleVersion=VERSION}
+function start(){apply();[150,500,1200,2600,5000].forEach(x=>setTimeout(apply,x));if(page()==='calendar')[800,2200,6000,12000].forEach(x=>setTimeout(saveSnap,x));window.addEventListener('pageshow',apply);window.addEventListener('focus',apply);document.addEventListener('keydown', event => {
+ const panel = document.getElementById('v11133AskWaffleModal');
+ if (event.key === 'Escape' && !event.defaultPrevented && panel && !panel.hidden &&
+    (panel.contains(event.target) || event.target === chatTrigger)) {
+   event.preventDefault();
+   setChatOpen(false);
+ }
+});window.addEventListener('waffle:ask-open-request',()=>setChatOpen(true));window.WAFFLE_AI_CHAT=Object.freeze({toggle:toggleChat});window.v11137AskWaffle=ask;window.v11137AskWaffleVersion=VERSION}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();
 
@@ -2602,16 +2673,6 @@ if (String(window.WAFFLE_PAGE || document.body?.dataset?.wafflePage || 'calendar
     if (m.dataset.v11147Ai !== 'true') {
       m.dataset.v11147Ai = 'true';
       m.onclick = event => {
-        if (event.target === m) {
-          m.hidden = true;
-          return;
-        }
-
-        if (event.target.closest?.('.aw37-close')) {
-          m.hidden = true;
-          return;
-        }
-
         const prompt = event.target.closest?.('[data-q]');
         if (prompt) {
           event.preventDefault();
@@ -3392,10 +3453,10 @@ if (String(window.WAFFLE_PAGE || document.body?.dataset?.wafflePage || 'calendar
         setTimeout(ensure, 0);
         setTimeout(ensure, 80);
       }
-      if (listening && (target.closest('.aw37-close') || target.id === 'v11133AskWaffleModal')) {
-        setTimeout(() => { const m = modal(); if (!m || m.hidden) stop(); }, 0);
-      }
     }, true);
+    window.addEventListener('waffle:ai-chat-visibility', event => {
+      if (listening && !event.detail.open) stop();
+    });
     [120, 420, 1000, 2000].forEach(delay => setTimeout(ensure, delay));
     window.addEventListener('pageshow', ensure);
     window.addEventListener('focus', ensure);

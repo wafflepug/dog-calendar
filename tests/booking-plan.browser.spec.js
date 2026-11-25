@@ -388,8 +388,10 @@ test('guided steps announce progress and require each section before advancing',
   await expect(page.locator('#p4Paste')).toBeHidden();
   await expect(page.locator('#p4SaveConfirmed')).toBeHidden();
   const nav = page.getByRole('group', { name: 'Visit plan progress' });
-  await expect(nav.getByRole('button')).toHaveCount(4);
+  await expect(nav.getByRole('button')).toHaveText(['Owner', 'Dogs', 'Dates', 'Review']);
+  await expect(nav.getByRole('button', {name:'Owner'})).toHaveCSS('border-top-width', '0px');
   await nav.locator('[data-p4-plan-step="0"]').click();
+  await expect(page.locator('#p4Source')).toBeVisible();
   await expect(nav.locator('[aria-current="step"]')).toContainText('Owner');
   if (['chromium', 'chromium-390'].includes(testInfo.project.name)) await capturePlanEvidence(page, 'owner-320-light.png', 320, false);
   await page.locator('#p4PlanNext').click();

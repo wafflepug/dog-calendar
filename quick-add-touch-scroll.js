@@ -36,8 +36,7 @@
     '.v10-quick-add-sheet',
     '.waffle-install-guide',
     '.p4-modal',
-    '.v11115-modal',
-    '#v11133AskWaffleModal'
+    '.v11115-modal'
   ].join(',');
   const MODAL_SELECTOR = `${QUICK_ADD_SELECTOR},${GENERAL_MODAL_SELECTOR}`;
   const PANEL_SELECTOR = ':scope > .modal-content-panel, :scope > .v108-modal-card';
@@ -140,8 +139,7 @@
         html body .v10-quick-add-sheet,
         html body .waffle-install-guide,
         html body .p4-modal,
-        html body .v11115-modal,
-        html body #v11133AskWaffleModal {
+        html body .v11115-modal {
           z-index: 2147482500 !important;
           box-sizing: border-box !important;
           max-height: var(--waffle-mobile-visual-height, 100dvh) !important;
@@ -165,8 +163,7 @@
         html body .v10-quick-add-sheet > *,
         html body .waffle-install-guide > *,
         html body .p4-modal > .p4-card,
-        html body .v11115-modal > .v11115-modal-card,
-        html body #v11133AskWaffleModal > .aw37-card {
+        html body .v11115-modal > .v11115-modal-card {
           max-height: calc(var(--waffle-mobile-visual-height, 100dvh) - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom)) !important;
           min-height: 0 !important;
           overflow-x: hidden !important;
@@ -227,6 +224,7 @@
     if (!isMobile()) return;
     document.documentElement.style.setProperty('--waffle-mobile-visual-height', `${visualViewportHeight()}px`);
     document.documentElement.style.setProperty('--waffle-mobile-visual-top', `${visualViewportTop()}px`);
+    document.documentElement.style.setProperty('--waffle-mobile-visual-bottom-gap', `${visualViewportBottomGap()}px`);
     document.querySelectorAll(QUICK_ADD_SELECTOR).forEach(prepareModal);
     document.querySelectorAll(GENERAL_MODAL_SELECTOR).forEach(prepareGeneralModal);
   }

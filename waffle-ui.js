@@ -689,7 +689,7 @@
         <div class="wh75-nav-heading">Quick Actions</div>
         <div class="wh75-nav-list">
           <button class="wh75-nav-item" type="button" data-wh75-quick-add><span class="wh75-nav-icon" aria-hidden="true">＋</span><span>Quick Add</span><span class="wh75-nav-meta">New stay</span></button>
-          <button class="wh75-nav-item" type="button" data-wh75-ask><span class="wh75-nav-icon" aria-hidden="true">🐶</span><span>Ask Waffle</span><span class="wh75-nav-meta">AI</span></button>
+          <button class="wh75-nav-item" type="button" data-wh75-ask aria-controls="v11133AskWaffleModal" aria-expanded="false"><span class="wh75-nav-icon" aria-hidden="true">🐶</span><span>Ask Waffle</span><span class="wh75-nav-meta">AI</span></button>
         </div>
       </div>
       <div class="wh75-nav-section">
@@ -710,7 +710,7 @@
       ${bottomItem('index.html?view=calendar','▦','Calendar','calendar')}
       ${bottomItem('directory.html','🐾','Care','directory')}
       <button class="wh75-bottom-item wh75-bottom-add" type="button" data-wh75-quick-add><span class="wh75-bottom-icon" aria-hidden="true">＋</span><span>Add</span></button>
-      <button class="wh75-bottom-item" type="button" data-wh75-ask><span class="wh75-bottom-icon" aria-hidden="true">🐶</span><span>Ask Waffle</span></button>
+      <button class="wh75-bottom-item" type="button" data-wh75-ask aria-controls="v11133AskWaffleModal" aria-expanded="false"><span class="wh75-bottom-icon" aria-hidden="true">🐶</span><span>Ask Waffle</span></button>
     `;
 
     const settingsBackdrop = document.createElement('div');
@@ -815,8 +815,13 @@
     document.getElementById('wh75SettingsPanel')?.classList.remove('is-open');
   }
 
-  function triggerAskWaffle() {
+  function triggerAskWaffle(event) {
     closeDrawer(false);
+    if (window.WAFFLE_AI_CHAT) {
+      const mobileTrigger = document.querySelector('#wh75MobileBottomNav :is([data-wh78-ai], [data-wh75-ask])');
+      window.WAFFLE_AI_CHAT.toggle(event.currentTarget.closest('#wh75MobileDrawer') ? mobileTrigger : event.currentTarget);
+      return;
+    }
     const launcher = document.getElementById('aw37launch') || document.getElementById('v11133AskWaffleButton');
     if (launcher) {
       launcher.click();
@@ -1179,7 +1184,7 @@
       `<a class="wh75-bottom-item" href="index.html?view=calendar" data-wh75-route="calendar">${avatarMarkup(CALENDAR_AVATAR, '')}<span>Calendar</span></a>`,
       `<button class="wh75-bottom-item wh75-bottom-add" type="button" data-wh78-quick-add aria-label="Add">${avatarMarkup(ADD_AVATAR, '')}<span>Add</span></button>`,
       `<a class="wh75-bottom-item" href="directory.html" data-wh75-route="directory">${avatarMarkup(CARE_AVATAR, '')}<span>Care</span></a>`,
-      '<button class="wh75-bottom-item wh78-bottom-ai" type="button" data-wh78-ai aria-label="Waffle AI"><span class="wh75-bottom-icon wh78-avatar-shell" aria-hidden="true"><img class="wh78-nav-avatar" data-wh78-ai-avatar alt="" hidden></span><span>Waffle AI</span></button>'
+      '<button class="wh75-bottom-item wh78-bottom-ai" type="button" data-wh78-ai aria-label="Waffle AI" aria-controls="v11133AskWaffleModal" aria-expanded="false"><span class="wh75-bottom-icon wh78-avatar-shell" aria-hidden="true"><img class="wh78-nav-avatar" data-wh78-ai-avatar alt="" hidden></span><span>Waffle AI</span></button>'
     ].join('');
   }
 
@@ -1196,11 +1201,9 @@
     document.getElementById('openPotentialBtn')?.click();
   }
 
-  function triggerWaffleAI() {
-    const modal = document.getElementById('v11133AskWaffleModal');
-    if (modal) {
-      modal.hidden = false;
-      modal.querySelector('input')?.focus();
+  function triggerWaffleAI(event) {
+    if (window.WAFFLE_AI_CHAT) {
+      window.WAFFLE_AI_CHAT.toggle(event.currentTarget);
       return;
     }
     const launcher = document.getElementById('aw37launch') || document.getElementById('v11133AskWaffleButton');

@@ -23,7 +23,7 @@
 
   function formatRelativeTime(timestamp) {
     const value = Number(timestamp || 0);
-    if (!value) return 'Ready';
+    if (!value) return '';
 
     const ageMs = Math.max(0, Date.now() - value);
     const minutes = Math.floor(ageMs / 60000);
@@ -85,9 +85,9 @@
     const button = toolbar?.querySelector('[data-wh69-sync]');
     if (!toolbar || !button) return;
 
-    if (button.textContent.trim() !== '↻ Refresh') {
-      button.textContent = '↻ Refresh';
-    }
+    const icon = window.PALZ_ICONS?.svg('refresh');
+    if (icon && !button.querySelector('[data-palz-icon="refresh"]')) button.innerHTML = icon;
+    else if (!icon && button.textContent.trim() !== '↻') button.textContent = '↻';
     button.setAttribute('aria-label', 'Refresh calendar data');
     button.title = 'Refresh calendar data';
 

@@ -392,7 +392,7 @@
             ${viewButton('month', 'Month')}${viewButton('fortnight', 'Fortnight')}${viewButton('week', 'Week')}
           </div>
         </div>
-        <div class="wh65-toolbar-right"><button type="button" class="wh65-btn wh65-sync" data-wh69-sync>↻ Sync</button></div>
+        <div class="wh65-toolbar-right"><button type="button" class="wh65-btn wh65-sync" data-wh69-sync aria-label="Refresh calendar data" title="Refresh calendar data">↻</button></div>
       </header>
       <div class="wh65-legend" aria-label="Calendar key">
         <span class="wh65-legend-item"><i class="wh65-legend-swatch"></i>Confirmed Stay</span>

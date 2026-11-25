@@ -17,7 +17,7 @@
     <link rel="preconnect" href="https://docs.google.com" crossorigin>
     <link rel="preconnect" href="https://script.google.com">
     <script src="palz-loading.js?rev=2026.11.18.04"></script>
-    <link rel="stylesheet" href="waffle-runtime.css?v=2026.08.28.01&amp;rev=2026.11.25.05">
+    <link rel="stylesheet" href="waffle-runtime.css?v=2026.08.28.01&amp;rev=2026.11.26.01">
     <link rel="stylesheet" href="desktop-home-layout.css?rev=2026.11.15.01">
     </head>
 <body data-waffle-page="calendar">
@@ -479,6 +479,19 @@
 <div id="customBookingModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle" style="display: none;">
     <div class="modal-content-panel">
         <h3 id="modalTitle">Meet &amp; Greet</h3>
+        <section class="meet-greet-view" data-meet-greet-view hidden>
+            <dl>
+                <div><dt>Pet name</dt><dd data-meet-detail="dog"></dd></div>
+                <div><dt>Breed</dt><dd data-meet-detail="breed"></dd></div>
+                <div><dt>Date</dt><dd data-meet-detail="date"></dd></div>
+                <div><dt>Time</dt><dd data-meet-detail="time"></dd></div>
+                <div><dt>Request source</dt><dd data-meet-detail="source"></dd></div>
+            </dl>
+            <div class="meet-greet-view-actions">
+                <button type="button" data-meet-view-close>Close</button>
+                <button type="button" data-meet-edit>Edit</button>
+            </div>
+        </section>
         <div class="meet-greet-fields">
             <label for="modalDogName">Pet name <input type="text" id="modalDogName" placeholder="e.g. Buster" required></label>
             <div class="meet-greet-schedule">
@@ -557,6 +570,6 @@
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
-<script src="waffle-bootstrap.js?v=2026.08.28.01&amp;rev=2026.11.25.05"></script>
+<script src="waffle-bootstrap.js?v=2026.08.28.01&amp;rev=2026.11.26.01"></script>
     </html>
 
