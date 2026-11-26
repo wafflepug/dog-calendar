@@ -48,13 +48,28 @@
       Number.isFinite(new Date(event.recordedAt).getTime());
   }
 
-  function eventLabel(type) { return ({ feeding: 'Feeding', walk: 'Walk', medication: 'Medication given' })[type] || type; }
+  const activityLabels = { feeding: 'Feeding', walk: 'Walk', medication: 'Medication given' };
+  const activityIcons = { feeding: 'food', walk: 'walk', medication: 'medicine' };
+  function eventLabel(type) { return activityLabels[type] || type; }
+  function activityIcon(type) {
+    return window.PALZ_ICONS?.svg(activityIcons[type]) || '';
+  }
   function renderEvents(host, events) {
     if (!events.length) {
       host.innerHTML = '<p class="care-routine-empty">No completed activities have been recorded for this stay.</p>';
       return;
     }
-    host.innerHTML = `<ol class="care-routine-events">${events.map(event => `<li><div><strong>${esc(eventLabel(event.type))}</strong><time datetime="${esc(event.recordedAt)}">${esc(formatTime(event.recordedAt))}</time></div>${clean(event.note) ? `<p>${esc(event.note)}</p>` : ''}</li>`).join('')}</ol>`;
+    host.innerHTML = `<ol class="care-routine-events" role="list">${events.map(event => `
+      <li>
+        <span class="care-routine-event-icon" aria-hidden="true">${activityIcon(event.type)}</span>
+        <div class="care-routine-event-copy">
+          <div class="care-routine-event-heading">
+            <strong>${esc(eventLabel(event.type))}</strong>
+            <time datetime="${esc(event.recordedAt)}">${esc(formatTime(event.recordedAt))}</time>
+          </div>
+          ${clean(event.note) ? `<p>${esc(event.note)}</p>` : ''}
+        </div>
+      </li>`).join('')}</ol>`;
   }
 
   async function readEvents(identity, card, host, status) {
@@ -90,7 +105,28 @@
     section.dataset.careRoutineLog = '';
     section.dataset.careRoutineIdentity = key;
     section.dataset.careRoutineAllowed = String(allowed);
-    section.innerHTML = '<details><summary><span><strong>Recent care activity</strong><small>Completed feeding, walks and medication for this stay</small></span><span class="care-routine-count" data-care-routine-count>Not loaded</span></summary><div class="care-routine-body"><p class="care-routine-status" data-care-routine-status role="status" aria-live="polite">Activity loads when you open this section.</p><div data-care-routine-events></div><form data-care-routine-form><fieldset><legend>Record a completed activity</legend><div class="care-routine-types"><button type="button" data-care-routine-type="feeding" aria-pressed="false" disabled>Feeding</button><button type="button" data-care-routine-type="walk" aria-pressed="false" disabled>Walk</button><button type="button" data-care-routine-type="medication" aria-pressed="false" disabled>Medication given</button></div><label>Optional note<textarea data-care-routine-note rows="2" maxlength="500" placeholder="Add a brief note" disabled></textarea></label><button type="submit" data-care-routine-submit disabled>Record completed activity</button><p data-care-routine-unavailable hidden></p></fieldset></form></div></details>';
+    section.innerHTML = `
+      <details>
+        <summary>
+          <span><strong>Recent care activity</strong><small>Completed feeding, walks and medication for this stay</small></span>
+          <span class="care-routine-count" data-care-routine-count>Not loaded</span>
+        </summary>
+        <div class="care-routine-body">
+          <p class="care-routine-status" data-care-routine-status role="status" aria-live="polite">Activity loads when you open this section.</p>
+          <div data-care-routine-events></div>
+          <form data-care-routine-form>
+            <fieldset>
+              <legend>Record a completed activity</legend>
+              <div class="care-routine-types">${TYPES.map(type => `
+                <button type="button" data-care-routine-type="${type}" aria-pressed="false" disabled>${activityIcon(type)}${eventLabel(type)}</button>
+              `).join('')}</div>
+              <label>Optional note<textarea data-care-routine-note rows="2" maxlength="500" placeholder="Add a brief note" disabled></textarea></label>
+              <button type="submit" data-care-routine-submit disabled>Record completed activity</button>
+              <p data-care-routine-unavailable hidden></p>
+            </fieldset>
+          </form>
+        </div>
+      </details>`;
     const actionBar = brief?.querySelector('.directory-care-brief-actions');
     if (actionBar) actionBar.insertAdjacentElement('beforebegin', section);
     else host.appendChild(section);

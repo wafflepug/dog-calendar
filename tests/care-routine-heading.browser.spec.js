@@ -39,3 +39,29 @@ test('routine edit stays beside its heading when there is room and wraps without
   await expect(card.locator('[data-directory-detail="profile"]')).toBeVisible();
   await expect(card.locator('[data-intake-attribute="feedingTimes"]')).toBeVisible();
 });
+
+test('guest Activity shows readable routine entries with a type icon and timestamp', async ({page, baseURL}) => {
+  await install(page);
+  const stay = bookings[0];
+  const recordedAt = '2026-10-18T02:00:00Z';
+  const note = 'Activity note '.repeat(14).trim();
+  await page.route(url => url.hostname === 'script.google.com' && url.searchParams.get('payload')?.includes('"action":"get_care_routine_log"'), async route => {
+    const callback = new URL(route.request().url()).searchParams.get('callback');
+    const result = {result:'success', careRoutineLogVersion:1, events:[{
+      stayKey:stay.stayKey, stayId:stay.stayId, dogId:stay.dogId,
+      eventId:'aaaaaaaa-aaaa-4aaa-8aaa-000000000009', type:'walk', recordedAt, note
+    }]};
+    return route.fulfill({contentType:'application/javascript', body:callback ? `${callback}(${JSON.stringify(result)});` : JSON.stringify(result)});
+  });
+  await page.setViewportSize({width:320,height:800});
+  await page.goto(`${baseURL}/directory.html`, {waitUntil:'domcontentloaded'});
+  const card = page.locator(`#directory-grid [data-directory-stay-id="${stay.stayId}"]`);
+  await card.locator('[data-open-directory-profile]').click();
+  await card.getByRole('button', {name:'Activity',exact:true}).click();
+  const row = card.locator('.care-routine-events li');
+  await expect(row.getByText('Walk', {exact:true})).toBeVisible();
+  await expect(row.locator('[data-palz-icon="walk"]')).toBeVisible();
+  await expect(row.locator('time')).toHaveAttribute('datetime', recordedAt);
+  await expect(row).toContainText(note);
+  expect(await row.evaluate(node => node.scrollWidth <= node.clientWidth + 1)).toBe(true);
+});

@@ -70,6 +70,33 @@ async function buildNotificationFixture(page) {
   await expect(page.locator('#waffleNotificationModal [data-notification-item-id="fixture-unread"]')).toBeVisible();
 }
 
+test('Activity log groups entries and keeps its filters usable on narrow screens', async ({page, baseURL}) => {
+  await openReadOnlyRuntime(page, baseURL);
+  await page.setViewportSize({width:320,height:800});
+  await page.goto(`${baseURL}/audit.html`, {waitUntil:'domcontentloaded'});
+  await page.waitForFunction(() => document.documentElement.dataset.waffleUiReady === 'true');
+  const records = [
+    {category:'Boarding',action:'Boarding updated',dogName:'Milo',summary:'Adjusted arrival time',timestamp:'2026-10-07T02:30:00Z'},
+    {category:'Belongings',action:'Belongings saved',dogName:'Coco',summary:'Updated belongings',timestamp:'2026-10-07T03:30:00Z'},
+    {category:'Boarding',action:'Boarding added',dogName:'A'.repeat(120),summary:'New booking',timestamp:'2026-10-06T02:30:00Z'}
+  ];
+  await expect(page.locator('#auditLogContainer')).toContainText('No matching activity');
+  await page.evaluate(items => { auditLogRecords = items; renderAuditLog(); }, records);
+  const log = page.locator('#auditLogContainer');
+  await expect(page.getByRole('heading', {name:'Activity log'})).toBeVisible();
+  await expect(log.locator('.v101-audit-day-heading h4')).toHaveCount(2);
+  await expect(log.locator('time').first()).toHaveAttribute('datetime','2026-10-07T02:30:00.000Z');
+  await expect(page.locator('#auditResultCount')).toHaveText('3 activities');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+  const boarding = page.getByRole('button', {name:/^Boarding/});
+  await boarding.click();
+  await expect(boarding).toHaveAttribute('aria-pressed','true');
+  await expect(log.locator('article')).toHaveCount(2);
+  await page.getByRole('searchbox', {name:'Search activity'}).fill('Milo');
+  await expect(log.locator('article')).toHaveCount(1);
+  await expect(log.locator('article')).toContainText('Milo');
+});
+
 test('Waffle AI docks without blocking the page and keeps the draft when hidden', async ({page, baseURL}) => {
   await openReadOnlyRuntime(page, baseURL);
   await page.setViewportSize({width:1280,height:800});
