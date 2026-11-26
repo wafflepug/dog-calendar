@@ -106,9 +106,11 @@ test('confirmed same-day arrivals expose one direct Check-in action and transiti
   const action = page.getByRole('button', { name: 'Check-in Pip' });
   await expect(action).toHaveCount(1);
   await expect(action).toHaveAttribute('data-today-action', 'checkin');
+  await expect(page.locator('[data-today-meta]')).toHaveText('Same Day Care · Arriving today');
   await action.dblclick();
   await expect.poll(() => page.evaluate(() => window.todayWrites.length)).toBe(1);
   await expect(page.getByRole('button', { name: 'Check-out Pip' })).toHaveAttribute('data-today-action', 'checkout');
+  await expect(page.locator('[data-today-meta]')).toHaveText('Same Day Care · Checked in');
   await page.getByRole('button', { name: 'Check-out Pip' }).click();
   await expect.poll(() => page.evaluate(() => window.todayWrites.length)).toBe(2);
   const writes = await page.evaluate(() => window.todayWrites.map(write => ({
