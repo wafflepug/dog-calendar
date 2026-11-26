@@ -1995,8 +1995,12 @@ function renderV10OperationsHome(events) {
     agenda.forEach(item => {
         if (!item) return;
         const existing = uniqueAgenda.get(item.identity);
-        if (!existing) uniqueAgenda.set(item.identity, item);
-        else if (!existing.meta.split(' · ').includes(item.meta)) existing.meta += ' · ' + item.meta;
+        if (!existing) {
+            uniqueAgenda.set(item.identity, item);
+            return;
+        }
+        const details = new Set(existing.meta.split(' · ').concat(item.meta.split(' · ')));
+        existing.meta = [...details].join(' · ');
     });
     const queue = Array.from(uniqueAgenda.values()).sort((a, b) => a.sort - b.sort || a.title.localeCompare(b.title) || a.identity.localeCompare(b.identity));
 
