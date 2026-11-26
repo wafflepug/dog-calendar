@@ -14,7 +14,7 @@
     <title>Palz Stay — Audit Log</title>
 <link rel="stylesheet" href="palz-loading.css?rev=2026.11.18.05">
 <script src="palz-loading.js?rev=2026.11.18.04"></script>
-<link rel="stylesheet" href="waffle-runtime.css?v=2026.08.28.01&amp;rev=2026.11.26.01">
+<link rel="stylesheet" href="waffle-runtime.css?v=2026.08.28.01&amp;rev=2026.11.26.02">
     </head>
 <body data-waffle-page="audit">
 <div id="palzLoadingScreen" role="status" aria-live="polite" aria-label="Loading Palz Stay">
@@ -337,8 +337,8 @@
     <div id="auditTabPanel" class="app-tab-panel active" data-app-panel="audit">
         <div class="audit-header">
             <div>
-                <h3>🧾 Audit Log</h3>
-                <p>Operational history for bookings, Meet & Greets, Potential Stays, detail changes, belongings and photos.</p>
+                <h3>Activity log</h3>
+                <p>Review changes to bookings, guest records and care.</p>
             </div>
             <button type="button" id="refreshAuditBtn" class="audit-refresh-btn">🔄 Refresh Log</button>
         </div>
@@ -348,21 +348,9 @@
                 type="search"
                 id="auditSearch"
                 class="audit-search"
-                placeholder="🔍 Search dog, action, field or source..."
+                aria-label="Search activity"
+                placeholder="Search dogs, actions or details"
                 autocomplete="off">
-            <div
-                class="v101-audit-filter-chips"
-                role="tablist"
-                aria-label="Activity categories">
-                <button type="button" class="v101-audit-filter-chip is-active" data-audit-category-chip="">All <span data-audit-chip-count="">0</span></button>
-                <button type="button" class="v101-audit-filter-chip" data-audit-category-chip="Boarding">Boarding <span data-audit-chip-count="Boarding">0</span></button>
-                <button type="button" class="v101-audit-filter-chip" data-audit-category-chip="Potential Stay">Potential <span data-audit-chip-count="Potential Stay">0</span></button>
-                <button type="button" class="v101-audit-filter-chip" data-audit-category-chip="Meet & Greet">Meet <span data-audit-chip-count="Meet & Greet">0</span></button>
-                <button type="button" class="v101-audit-filter-chip" data-audit-category-chip="Intake">Intake <span data-audit-chip-count="Intake">0</span></button>
-                <button type="button" class="v101-audit-filter-chip" data-audit-category-chip="Belongings">Care <span data-audit-chip-count="Belongings">0</span></button>
-                <button type="button" class="v101-audit-filter-chip" data-audit-category-chip="Reminders & Notes">Reminder <span data-audit-chip-count="Reminders & Notes">0</span></button>
-            </div>
-
             <select id="auditCategoryFilter" class="audit-filter" aria-label="Filter audit category">
                 <option value="">All activity</option>
                 <option value="Boarding">Boarding</option>
@@ -374,7 +362,20 @@
                 <option value="Reminders & Notes">Reminders &amp; Notes</option>
                 <option value="System">System</option>
             </select>
-            <span id="auditResultCount" class="audit-result-count">0 records</span>
+            <span id="auditResultCount" class="audit-result-count" role="status">0 activities</span>
+            <div
+                class="v101-audit-filter-chips"
+                role="group"
+                aria-label="Activity categories">
+                <button type="button" class="v101-audit-filter-chip is-active" data-audit-category-chip="">All <span data-audit-chip-count="">0</span></button>
+                <button type="button" class="v101-audit-filter-chip" data-audit-category-chip="Boarding">Boarding <span data-audit-chip-count="Boarding">0</span></button>
+                <button type="button" class="v101-audit-filter-chip" data-audit-category-chip="Potential Stay">Potential <span data-audit-chip-count="Potential Stay">0</span></button>
+                <button type="button" class="v101-audit-filter-chip" data-audit-category-chip="Meet & Greet">Meet <span data-audit-chip-count="Meet & Greet">0</span></button>
+                <button type="button" class="v101-audit-filter-chip" data-audit-category-chip="Intake">Intake <span data-audit-chip-count="Intake">0</span></button>
+                <button type="button" class="v101-audit-filter-chip" data-audit-category-chip="Belongings">Care <span data-audit-chip-count="Belongings">0</span></button>
+                <button type="button" class="v101-audit-filter-chip" data-audit-category-chip="Reminders & Notes">Reminder <span data-audit-chip-count="Reminders & Notes">0</span></button>
+            </div>
+
         </div>
 
         <details class="palz-care-schedule" id="palzCareIdentityAudit">
@@ -387,7 +388,7 @@
             <ul hidden></ul>
         </details>
         <div id="auditLogContainer" class="audit-log-container">
-            <div class="audit-empty">Open this tab to load recent audit activity.</div>
+            <div class="audit-empty">Loading activity…</div>
         </div>
     </div>
 </div>
@@ -529,6 +530,6 @@
     body.dark-theme .modal-content-panel input { background: #334155; border-color: #475569; color: white; }
 </style>
 
-<script src="waffle-bootstrap.js?v=2026.08.28.01&amp;rev=2026.11.26.01"></script>
+<script src="waffle-bootstrap.js?v=2026.08.28.01&amp;rev=2026.11.26.02"></script>
     </html>
 

@@ -3,7 +3,7 @@
    Historical base styles remain compatibility sources during Phase 3A, but pages no longer
    reference them individually. Preserve this import order until modules are folded in. */
 @import url("waffle-app.css?build=2026.08.27.04&rev=2026.11.15.01");
-@import url("palz-sales.css?rev=2026.11.26.01");
+@import url("palz-sales.css?rev=2026.11.26.02");
 @import url("waffle-v10.8.css?build=2026.08.27.04&rev=2026.11.15.01");
 @import url("waffle-v10.8.2.css?build=2026.08.27.04");
 @import url("waffle-v10.8.3.css?build=2026.08.27.04");
@@ -3992,4 +3992,115 @@ html body #customBookingModal #saveModalBtn {
   border-color: var(--wh75-ring, #ddd6fe);
   background: var(--wh75-accent-soft, #ede9fe);
   color: var(--wh75-accent-ink, #4c1d95);
+}
+
+/* Activity log */
+body[data-waffle-page="audit"] #auditTabPanel {
+  --activity-line: var(--wh75-line, #d5dee9);
+  --activity-muted: var(--wh75-muted, #526174);
+}
+body[data-waffle-page="audit"] #auditTabPanel .audit-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+body[data-waffle-page="audit"] #auditTabPanel .audit-header h3 {
+  color: var(--wh75-text, #172033);
+  font-size: clamp(1.35rem, 2.7vw, 1.75rem);
+  letter-spacing: -.02em;
+}
+body[data-waffle-page="audit"] #auditTabPanel .audit-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 14rem) auto;
+  gap: 10px;
+  align-items: center;
+  background: var(--wh75-shell, #fff);
+  border-color: var(--activity-line);
+}
+body[data-waffle-page="audit"] #auditTabPanel :is(.audit-search, .audit-filter, .audit-refresh-btn) { min-height: 44px; }
+body[data-waffle-page="audit"] #auditTabPanel :is(.audit-search, .audit-filter) {
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  box-sizing: border-box;
+}
+body[data-waffle-page="audit"] #auditTabPanel .v101-audit-filter-chips {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+body[data-waffle-page="audit"] #auditTabPanel .v101-audit-filter-chip {
+  min-height: 44px;
+  color: var(--wh75-text, #172033);
+}
+body[data-waffle-page="audit"] #auditTabPanel .v101-audit-filter-chip.is-active {
+  border-color: var(--wh75-accent, #7c3aed);
+  background: var(--wh75-accent-soft, #f3e8ff);
+  color: var(--wh75-accent-ink, #4c1d95);
+}
+body[data-waffle-page="audit"] #auditTabPanel .v101-audit-day-group { margin-block: 18px; }
+body[data-waffle-page="audit"] #auditTabPanel .v101-audit-day-heading {
+  position: static;
+  margin: 0 0 8px;
+  padding: 4px 2px;
+  border: 0;
+  background: transparent;
+  backdrop-filter: none;
+}
+body[data-waffle-page="audit"] #auditTabPanel .v101-audit-day-heading h4 {
+  margin: 0;
+  color: var(--wh75-text, #172033);
+  font-size: .95rem;
+}
+body[data-waffle-page="audit"] #auditTabPanel .v101-audit-day-heading span { font-size: .8rem; }
+body[data-waffle-page="audit"] #auditTabPanel .v101-audit-timeline {
+  background: var(--wh75-shell, #fff);
+  border: 1px solid var(--activity-line);
+  border-radius: 12px;
+}
+body[data-waffle-page="audit"] #auditTabPanel .v101-audit-timeline::before { content: none; }
+body[data-waffle-page="audit"] #auditTabPanel .v101-audit-entry {
+  margin: 0;
+  padding: 12px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  transform: none;
+  animation: none;
+}
+body[data-waffle-page="audit"] #auditTabPanel .v101-audit-entry + .v101-audit-entry { border-top: 1px solid var(--activity-line); }
+body[data-waffle-page="audit"] #auditTabPanel .audit-entry-icon {
+  border-color: transparent;
+  background: var(--wh75-accent-soft, #f3e8ff);
+  color: var(--wh75-accent-ink, #4c1d95);
+}
+body[data-waffle-page="audit"] #auditTabPanel .audit-entry-title strong { font-size: .95rem; }
+body[data-waffle-page="audit"] #auditTabPanel :is(.audit-entry-body, .audit-entry-summary, .audit-entry-meta, .audit-readable-changes) {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+body[data-waffle-page="audit"] #auditTabPanel .audit-entry-topline time {
+  color: var(--activity-muted);
+  white-space: nowrap;
+  font-size: .8rem;
+  font-variant-numeric: tabular-nums;
+}
+body[data-waffle-page="audit"] #auditTabPanel .v101-audit-dog-chip {
+  background: var(--wh75-accent-soft, #f3e8ff);
+  color: var(--wh75-accent-ink, #4c1d95);
+}
+body[data-waffle-page="audit"] #auditTabPanel summary:focus-visible {
+  outline: 2px solid var(--wh75-accent-ink, #4c1d95);
+  outline-offset: 2px;
+}
+@media (max-width: 560px) {
+  body[data-waffle-page="audit"] #auditTabPanel .audit-toolbar { grid-template-columns: minmax(0, 1fr) auto; }
+  body[data-waffle-page="audit"] #auditTabPanel .audit-search { grid-column: 1 / -1; }
+  body[data-waffle-page="audit"] #auditTabPanel .v101-audit-filter-chips { grid-row: auto; }
+  body[data-waffle-page="audit"] #auditTabPanel .audit-result-count { white-space: normal; text-align: end; }
+  body[data-waffle-page="audit"] #auditTabPanel .audit-entry-topline { align-items: flex-start; gap: 4px; }
 }

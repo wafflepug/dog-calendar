@@ -9125,18 +9125,9 @@ registerWaffleServiceWorker();
                 '[data-audit-category-chip]'
             )
             .forEach(button => {
-                button.classList.toggle(
-                    'is-active',
-                    String(
-                        button.dataset
-                            .auditCategoryChip ||
-                        ''
-                    ) ===
-                    String(
-                        category ||
-                        ''
-                    )
-                );
+                const selected = (button.dataset.auditCategoryChip || '') === category;
+                button.classList.toggle('is-active', selected);
+                button.setAttribute('aria-pressed', String(selected));
             });
 
         if (!filtered.length) {
@@ -9216,6 +9207,8 @@ registerWaffleServiceWorker();
                           `
                         : '';
 
+                const timestamp = new Date(record.timestamp);
+                const datetime = record.timestamp && Number.isFinite(timestamp.getTime()) ? timestamp.toISOString() : '';
                 return `
                     <article class="audit-entry v101-audit-entry">
                         <div class="audit-entry-icon" aria-hidden="true">${icon}</div>
@@ -9229,9 +9222,7 @@ registerWaffleServiceWorker();
                                     </span>
                                 </div>
 
-                                <time>
-                                    ${escapeDashboardHtml(formatAuditTimestamp(record.timestamp))}
-                                </time>
+                                ${datetime ? `<time datetime="${datetime}">${escapeDashboardHtml(timestamp.toLocaleTimeString('en-AU', {hour:'numeric', minute:'2-digit'}))}</time>` : ''}
                             </div>
 
                             <div class="audit-entry-summary">
@@ -9269,10 +9260,10 @@ registerWaffleServiceWorker();
                 .map(
                     ([label, records]) => `
                         <section class="v101-audit-day-group">
-                            <div class="v101-audit-day-heading">
-                                <strong>${escapeDashboardHtml(label)}</strong>
-                                <span>${records.length}</span>
-                            </div>
+                            <header class="v101-audit-day-heading">
+                                <h4>${escapeDashboardHtml(label)}</h4>
+                                <span aria-label="${records.length} ${records.length === 1 ? 'activity' : 'activities'}">${records.length}</span>
+                            </header>
 
                             <div class="v101-audit-timeline">
                                 ${records
